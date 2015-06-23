@@ -4,6 +4,8 @@ InVEST - Integrated Valuation of Ecosystem Services and Tradeoffs
 
 Common functionality provided by setup.py:
     build_sphinx
+
+For other commands, try `python setup.py --help-commands`
 """
 
 import os
