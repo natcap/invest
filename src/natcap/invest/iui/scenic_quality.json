@@ -1,0 +1,213 @@
+{
+  "id": "window",
+  "label": "Scenic Quality",
+  "targetScript": "natcap.invest.scenic_quality.scenic_quality",
+  "modelName": "scenic_quality",
+  "localDocURI": "../documentation/scenic_quality.html",
+  "height": 600,
+  "width": 700,
+  "elements": [
+    {
+      "id": "scenic_quality_tab_group",
+      "type": "tabbedGroup",
+      "elements": [
+        {
+          "id": "general_tab",
+          "label": "General",
+          "type": "tab",
+          "enabled": true,
+          "elements": [
+            {
+              "id": "workspace_list",
+              "type": "list",
+              "elements": [
+                {
+                  "id": "workspace_dir",
+                  "args_id": "workspace_dir",
+                  "type": "folder",
+                  "label": "Workspace",
+                  "defaultValue": "../ScenicQuality",
+                  "required": true,
+                  "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+                },
+                {
+                  "id": "aoi_uri",
+                  "args_id": "aoi_uri",
+                  "type": "file",
+                  "label": "Area of Interest (Vector)",
+                  "defaultValue": "../ScenicQuality/Input/AOI_WCVI.shp",
+                  "validateAs": {
+                    "type": "OGR"
+                  },
+                  "required": true,
+                  "helpText": "An OGR-supported vector file.  This AOI instructs the model where to clip the input data and the extent of analysis. Users will create a polygon feature layer that defines their area of interest. The AOI must intersect the Digital Elevation Model (DEM)."
+                },
+                {
+                  "id": "cell_size",
+                  "args_id": "cell_size",
+                  "type": "text",
+                  "label": "Cell Size (meters)",
+                  "defaultValue": "500",
+                  "validText": "[0-9]+(\\.[0-9][0-9])?",
+                  "dataType": "float",
+                  "required": false,
+                  "returns": {
+                    "ifEmpty": "pass"
+                  },
+                  "helpText": "Length (in meters) of each side of the (square) cell."
+                },
+                {
+                  "id": "structure_uri",
+                  "args_id": "structure_uri",
+                  "type": "file",
+                  "label": "Features Impacting Scenic Quality (Vector)",
+                  "defaultValue": "../ScenicQuality/Input/AquaWEM_points.shp",
+                  "validateAs": {
+                    "type": "OGR"
+                  },
+                  "required": true,
+                  "helpText": "An OGR-supported vector file.  The user must specify a point feature layer that indicates locations of objects that contribute to negative scenic quality, such as aquaculture netpens or wave energy facilities. In order for the viewshed analysis to run correctly, the projection of this input must be consistent with the project of the DEM input."
+                },
+                {
+                  "id": "dem_uri",
+                  "args_id": "dem_uri",
+                  "type": "file",
+                  "label": "Digital Elevation Model (Raster)",
+                  "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
+                  "validateAs": {
+                    "type": "GDAL"
+                  },
+                  "required": true,
+                  "helpText": "A GDAL-supported raster file. An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI’s land-seascape where point features contributing to negative scenic quality are visible."
+                },
+                {
+                  "id": "refraction",
+                  "args_id": "refraction",
+                  "type": "text",
+                  "label": "Refractivity Coefficient",
+                  "defaultValue": "0.13",
+                  "validText": "[0-9]+(\\.[0-9][0-9])?",
+                  "dataType": "float",
+                  "required": true,
+                  "helpText": "The earth curvature correction option corrects for the curvature of the earth and refraction of visible light in air. Changes in air density curve the light downward causing an observer to see further and the earth to appear less curved. While the magnitude of this effect varies with atmospheric conditions, a standard rule of thumb is that refraction of visible light reduces the apparent curvature of the earth by one-seventh. By default, this model corrects for the curvature of the earth and sets the refractivity coefficient to 0.13."
+                },
+                {
+                  "id": "pop_uri",
+                  "args_id": "pop_uri",
+                  "type": "file",
+                  "label": "Population (Raster)",
+                  "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
+                  "validateAs": {
+                    "type": "GDAL"
+                  },
+                  "required": false,
+                  "returns": {
+                    "ifEmpty": "pass"
+                  },
+                  "helpText": "A GDAL-supported raster file.  A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative scenic quality are visible and not visible."
+                },
+                {
+                  "id": "overlap_uri",
+                  "args_id": "overlap_uri",
+                  "type": "file",
+                  "label": "Overlap Analysis Features (Vector)",
+                  "defaultValue": "../ScenicQuality/Input/BC_parks.shp",
+                  "validateAs": {
+                    "type": "OGR"
+                  },
+                  "required": false,
+                  "returns": {
+                    "ifEmpty": "pass"
+                  },
+                  "helpText": "An OGR-supported vector file.  The user has the option of providing a polygon feature layer where they would like to determine the impact of objects on visual quality. This input must be a polygon and projected in meters. The model will use this layer to determine what percent of the total area of each polygon feature can see at least one of the point features impacting scenic quality."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "valuation_tab",
+          "label": "Valuation",
+          "type": "tab",
+          "enabled": true,
+          "elements": [
+            {
+              "id": "equation_coefficient_list",
+              "type": "list",
+              "elements": [
+                {
+                  "id": "valuation_function",
+                  "args_id": "valuation_function",
+                  "type": "dropdown",
+                  "label": "Valuation Function",
+                  "options": [
+                    "polynomial: a + bx + cx^2 + dx^3",
+                    "logarithmic: a + b ln(x)"
+                  ],
+                  "returns": "strings",
+                  "defaultValue": 0,
+                  "helpText": "This field indicates the functional form f(x) the model will use to value the visual impact for each viewpoint. For distances less than 1 km (x&lt;1), the model uses a linear form g(x) where the line passes through f(1) (i.e. g(1) == f(1)) and extends to zero with the same slope as f(1) (i.e. g'(x) == f'(1))."
+                },
+                {
+                  "id": "a_coefficient",
+                  "args_id": "a_coefficient",
+                  "type": "text",
+                  "label": "'a' Coefficient (polynomial/logarithmic)",
+                  "defaultValue": "1.0",
+                  "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                  "dataType": "float",
+                  "required": true,
+                  "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
+                },
+                {
+                  "id": "b_coefficient",
+                  "args_id": "b_coefficient",
+                  "type": "text",
+                  "label": "'b' Coefficient (polynomial/logarithmic)",
+                  "defaultValue": "0.0",
+                  "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                  "dataType": "float",
+                  "required": true,
+                  "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
+                },
+                {
+                  "id": "c_coefficient",
+                  "args_id": "c_coefficient",
+                  "type": "text",
+                  "label": "'c' Coefficient (polynomial only)",
+                  "defaultValue": "0.0",
+                  "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                  "dataType": "float",
+                  "required": true,
+                  "helpText": "Third coefficient for the polynomial's quadratic term."
+                },
+                {
+                  "id": "d_coefficient",
+                  "args_id": "d_coefficient",
+                  "type": "text",
+                  "label": "'d' Coefficient (polynomial only)",
+                  "defaultValue": "0.0",
+                  "validText": "[0-9]+(\\.[0-9]{18})?",
+                  "dataType": "float",
+                  "required": true,
+                  "helpText": "Fourth coefficient for the polynomial's cubic exponent."
+                },
+                {
+                  "id": "max_valuation_radius",
+                  "args_id": "max_valuation_radius",
+                  "type": "text",
+                  "label": "Maximum Valuation Radius (meters)",
+                  "defaultValue": "8000.0",
+                  "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                  "dataType": "float",
+                  "required": true,
+                  "helpText": "Radius beyond which the valuation is set to zero. The valuation function 'f' cannot be negative at the radius 'r' (f(r)&gt;=0)."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "id": "window",
+  "label": "Non-Timber Forest Products",
+  "targetScript": "natcap.invest.ntfp.ntfp",
+  "modelName": "ntfp",
+  "localDocURI": "../documentation/ntfp.html",
+  "height": 800,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../ntfp",
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>",
+          "required": true
+        },
+        {
+          "id": "calc_sequestration",
+          "args_id": "sequestration_checkbox",
+          "type": "checkbox",
+          "label": "Calculate Sequestration",
+          "defaultValue": false,
+          "required": false
+        },
+        {
+          "id": "lulc1_uri",
+          "args_id": "lulc1_uri",
+          "type": "file",
+          "label": "Land Use/Land Cover, Time 1 (Raster)",
+          "defaultValue": "../BlueCarbon/input/GBJC_2004_mean.tif",
+          "helpText": "A GDAL-supported raster file representing the land-use/land-cover for time 1. <p>For more information see 'Data Needs' section in the model's documentation</a>",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

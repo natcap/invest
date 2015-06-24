@@ -1,0 +1,139 @@
+{
+  "id": "window",
+  "label": "GLOBIO",
+  "targetScript": "natcap.invest.globio.globio",
+  "modelName": "globio",
+  "localDocURI": "../documentation/globio.html",
+  "height": 600,
+  "width": 900,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "~/Documents/globio_workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "AOI (Shapefile) (optional)",
+          "defaultValue": "",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons",
+                "projection": {
+                  "exists": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "land_use",
+          "args_id": "lulc_uri",
+          "type": "file",
+          "label": "Land Use (Raster)",
+          "defaultValue": "../globio/input/lulc_2008.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A raster with landcover IDs that are to be mapped to GLOBIO ids."
+        },
+        {
+          "id": "lulc_to_globio_table_uri",
+          "args_id": "lulc_to_globio_table_uri",
+          "type": "file",
+          "label": "Landcover to GLOBIO Landcover Table (CSV)",
+          "defaultValue": "../globio/input/lulc_conversion_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": ["lucode", "globio_lucode"]
+          },
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
+        },
+        {
+          "id": "infrastructure_dir",
+          "args_id": "infrastructure_dir",
+          "type": "folder",
+          "label": "Infrastructure Directory",
+          "defaultValue": "../globio/input/infrastructure_dir",
+          "required": true,
+          "helpText": "A directory containing projected rasters or shapefiles that represent infrastructure in the area."
+        },
+        {
+          "id": "cropland",
+          "args_id": "cropland_uri",
+          "type": "file",
+          "label": "Cropland (Raster)",
+          "defaultValue": "../globio/input/cropland.tif",
+          "required": false,
+          "validateAs": {
+            "type": "GDAL"
+          }
+        },
+        {
+          "id": "pasture_uri",
+          "args_id": "pasture_uri",
+          "type": "file",
+          "label": "Pasture (Raster)",
+          "defaultValue": "../globio/input/pasture.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          }
+        },
+        {
+          "id": "potential_vegetation_uri",
+          "args_id": "potential_vegetation_uri",
+          "type": "file",
+          "label": "Potential Vegetation (Raster)",
+          "defaultValue": "../globio/input/potential_vegetation.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          }
+        },
+        {
+          "id": "sum_yieldgap_uri",
+          "args_id": "sum_yieldgap_uri",
+          "type": "file",
+          "label": "Sum Yieldgap (Raster)",
+          "defaultValue": "../globio/input/sum_yieldgap.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          }
+        }
+      ]
+    }
+  ]
+}

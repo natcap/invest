@@ -1,0 +1,164 @@
+{
+  "id": "window",
+  "label": "Habitat Risk Assessment Preprocessor",
+  "targetScript": "natcap.invest.habitat_risk_assessment.hra_preprocessor",
+  "modelName": "hra_preprocess",
+  "localDocURI": "../documentation/habitat_risk_assessment.html",
+  "height": 700,
+  "width": 700,
+  "elements": [
+    {
+      "id": "hra_preprocess_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "output_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "args_id": "workspace_dir",
+          "defaultValue": "../HabitatRiskAssess",
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "habs_dir",
+          "args_id": "habitats_dir",
+          "type": "hideableFileEntry",
+          "label": "Calculate Risk to Habitats?",
+          "required": false,
+          "validateAs": {
+            "type": "folder",
+            "mustExist": true
+          },
+          "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
+          "helpText": "Checking this box indicates that habitats should be used as a base for overlap with provided stressors. If checked, the path to the habitat layers folder must be provided."
+        },
+        {
+          "id": "species_dir",
+          "args_id": "species_dir",
+          "type": "hideableFileEntry",
+          "label": "Calculate Risk to Species?",
+          "required": false,
+          "validateAs": {
+            "type": "folder",
+            "mustExist": true
+          },
+          "defaultValue": "",
+          "helpText": "Checking this box indicates that species should be used as a base for overlap with provided stressors. If checked, the path to the species layers folder must be provided."
+        },
+        {
+          "id": "stressor_dir",
+          "type": "folder",
+          "label": "Stressors Layers Folder",
+          "required": true,
+          "validateAs": {
+            "type": "folder",
+            "mustExist": true
+          },
+          "args_id": "stressors_dir",
+          "defaultValue": "../HabitatRiskAssess/Input/StressorLayers",
+          "helpText": "This is the path to the stressors layers folder."
+        }
+      ]
+    },
+    {
+      "id": "cur_lulc_box",
+      "type": "container",
+      "collapsible": false,
+      "label": "Criteria",
+      "elements": [
+        {
+          "id": "help_label",
+          "type": "label",
+          "label": "(Choose at least 1 criteria for each category below, and at least 4 total.)"
+        },
+        {
+          "id": "exp_crit",
+          "type": "multi",
+          "args_id": "exposure_crits",
+          "label": "Exposure",
+          "sampleElement": {
+            "id": "sample_id",
+            "type": "text",
+            "label": "Input Criteria",
+            "validateAs": {
+              "type": "text"
+            },
+            "helpText": "Exposure criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run. These criteria will be applied to the exposure portion of habitat risk."
+          },
+          "defaultValue": [
+            "Temporal Overlap Rating",
+            "Management Effectiveness",
+            "Intensity Rating"
+          ],
+          "linkText": "Add Another"
+        },
+        {
+          "id": "sens_crit",
+          "type": "multi",
+          "args_id": "sensitivity_crits",
+          "label": "Consequence: Sensitivity",
+          "sampleElement": {
+            "id": "sample_id",
+            "type": "text",
+            "label": "Input Criteria",
+            "validateAs": {
+              "type": "text"
+            },
+            "helpText": "Sensitivity criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run. These criteria will be applied to the consequence portion of habitat risk."
+          },
+          "defaultValue": [
+            "Frequency of Disturbance",
+            "Change in Area Rating",
+            "Change in Structure Rating"
+          ],
+          "linkText": "Add Another"
+        },
+        {
+          "id": "res_crit",
+          "type": "multi",
+          "args_id": "resilience_crits",
+          "label": "Consequence: Resilience",
+          "sampleElement": {
+            "id": "sample_id",
+            "type": "text",
+            "label": "Input Criteria",
+            "validateAs": {
+              "type": "text"
+            },
+            "helpText": "Resilience criteria apply ONLY to the habitats or species being used within this model run. These criteria will be applied to the consequence portion of habitat risk."
+          },
+          "defaultValue": [
+            "Recruitment Rate",
+            "Natural Mortality Rate",
+            "Connectivity Rate",
+            "Recovery Time"
+          ],
+          "linkText": "Add Another"
+        }
+      ]
+    },
+    {
+      "id": "hra_preprocess_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "crit_dir",
+          "args_id": "criteria_dir",
+          "type": "hideableFileEntry",
+          "label": "Use Spatially Explicit Risk Score in Shapefiles",
+          "defaultValue": "../HabitatRiskAssess/Input/Spatially_Explicit_Criteria",
+          "validateAs": {
+            "type": "folder",
+            "mustExist": true
+          },
+          "required": false,
+          "helpText": "Checking this box indicates that model should use criteria from provided shapefiles. Each shapefile in the folder directories will need to contain a 'Rating' attribute to be used for calculations in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+        }
+      ]
+    }
+  ]
+}

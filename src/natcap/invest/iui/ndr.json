@@ -1,0 +1,186 @@
+{
+  "id": "window",
+  "label": "Nutrient Delivery Ratio Model (NDR)",
+  "targetScript": "natcap.invest.ndr.ndr",
+  "modelName": "nutrient",
+  "localDocURI": "../documentation/waterpurification.html",
+  "height": 600,
+  "width": 900,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../NDR",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "dem_uri",
+          "args_id": "dem_uri",
+          "type": "file",
+          "label": "DEM (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/dem",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file containing elevation values for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the Working with the DEM section of the InVEST User's Guide for more information."
+        },
+        {
+          "id": "land_use",
+          "args_id": "lulc_uri",
+          "type": "file",
+          "label": "Land Use (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/landuse_90",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file containing integer values representing the LULC code for each cell. The LULC code should be an integer."
+        },
+        {
+          "id": "watersheds_uri",
+          "args_id": "watersheds_uri",
+          "type": "file",
+          "label": "Watersheds (Vector)",
+          "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons",
+                "projection": {
+                  "exists": true
+                }
+              }
+            ],
+            "fieldsExist": [
+              "ws_id"
+            ]
+          },
+          "helpText": "An OGR-supported vector file containing watersheds such that each watershed contributes to a point of interest where water quality will be analyzed.  It must have the integer field 'ws_id' where the values uniquely identify each watershed."
+        },
+        {
+          "id": "biophysical_table_uri",
+          "args_id": "biophysical_table_uri",
+          "type": "file",
+          "label": "Biophysical Table (CSV)",
+          "defaultValue": "../WP_Nutrient_Retention/Input/water_biophysical_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode"
+            ]
+          },
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
+        },
+        {
+          "id": "calc_p",
+          "args_id": "calc_p",
+          "type": "checkbox",
+          "label": "Calculate phosphorous retention",
+          "defaultValue": false,
+          "required": false,
+          "helpText": "Select to calculate phosphorous export."
+        },
+        {
+          "id": "calc_n",
+          "args_id": "calc_n",
+          "type": "checkbox",
+          "label": "Calculate Nitrogen Retention",
+          "defaultValue": false,
+          "required": false,
+          "helpText": "Select to calcualte nitrogen export."
+        },
+        {
+          "id": "threshold_flow_accumulation",
+          "args_id": "threshold_flow_accumulation",
+          "type": "text",
+          "label": "Threshold Flow Accumluation",
+          "defaultValue": "1000",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
+        },
+        {
+          "id": "k_param",
+          "args_id": "k_param",
+          "type": "text",
+          "label": "Borselli k Parameter",
+          "defaultValue": "2",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "helpText": "Borselli k parameter."
+        },
+        {
+          "id": "subsurface_critical_length_n",
+          "args_id": "subsurface_critical_length_n",
+          "type": "text",
+          "label": "Subsurface Critical Length (Nitrogen)",
+          "defaultValue": "150",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "enabledBy": "calc_n",
+          "helpText": ""
+        },
+        {
+          "id": "subsurface_critical_length_p",
+          "args_id": "subsurface_critical_length_p",
+          "type": "text",
+          "label": "Subsurface Critical Length (Phosphorous)",
+          "defaultValue": "150",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "enabledBy": "calc_p",
+          "helpText": ""
+        },
+        {
+          "id": "subsurface_eff_n",
+          "args_id": "subsurface_eff_n",
+          "type": "text",
+          "label": "Subsurface Maximum Retention Efficiency (Nitrogen)",
+          "defaultValue": "0.8",
+          "required": true,
+          "validText": "^[0-9]\\.?[0-9]*$",
+          "enabledBy": "calc_n",
+          "helpText": ""
+        },
+        {
+          "id": "subsurface_eff_p",
+          "args_id": "subsurface_eff_p",
+          "type": "text",
+          "label": "Subsurface Maximum Retention Efficiency (Phosphorous)",
+          "defaultValue": "0.8",
+          "required": true,
+          "validText": "^[0-9]\\.?[0-9]*$",
+          "enabledBy": "calc_p",
+          "helpText": ""
+        }
+      ]
+    }
+  ]
+}
