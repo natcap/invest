@@ -118,6 +118,7 @@ def get_version_from_hg():
 
 def _increment_tag(version_string):
     split_string = version_string.split('.dev')
+
     if len(split_string) == 1:
         # When the version string is just the tag, we return the tag
         return version_string
@@ -126,7 +127,7 @@ def _increment_tag(version_string):
         tag = split_string[0].split('.')
 
         # If there's never been a tag, assume 0.0.0 was the tag at rev 0.
-        if tag == ['null']:
+        if len(tag) == 1 and tag[0] in ['null', 'None']:
             tag = ['0', '0', '0']
 
         tag[-2] = str(int(tag[-2]) + 1)
@@ -144,11 +145,11 @@ def get_pep440(branch=True):
     if is_archive():
         data = {
             'tagdist': get_archive_attr('latesttagdistance'),
-            'latesttag': _increment_tag(get_archive_attr('latesttag')),
+            'latesttag': get_archive_attr('latesttag'),
             'node': get_archive_attr('node')[:8],
             'branch': get_archive_attr('branch'),
         }
-        return template_string % data
+        return _increment_tag(template_string % data)
     else:
         data = {
             'tagdist': '{latesttagdistance}',

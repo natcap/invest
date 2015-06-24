@@ -118,8 +118,8 @@ def load_version():
     """
     Load the version string.
 
-    If we're in a source tree, load the version from the opal __init__ file.
-    If we're in an installed version of opal, use the __version__attribute.
+    If we're in a source tree, load the version from the invest __init__ file.
+    If we're in an installed version of invest use the __version__ attribute.
     """
     try:
         import natcap.invest as invest
