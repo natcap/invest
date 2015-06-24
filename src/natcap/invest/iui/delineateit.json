@@ -1,0 +1,93 @@
+{
+  "id": "window",
+  "label": "DelineateIT: Watershed Delineation",
+  "targetScript": "natcap.invest.routing.delineateit",
+  "modelName": "delineateit",
+  "localDocURI": "../documentation/delineateit.html",
+  "height": 360,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../DelineateIt",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "dem_uri",
+          "args_id": "dem_uri",
+          "type": "file",
+          "label": "Digital Elevation Model (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/dem",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the 'Working with the DEM' section of the InVEST User's Guide for more information."
+        },
+        {
+          "id": "outlet_shapefile_uri",
+          "args_id": "outlet_shapefile_uri",
+          "type": "file",
+          "label": "Outlet Points (Vector)",
+          "defaultValue": "../Base_Data/Freshwater/outlets.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "points",
+                "projection": {
+                  "exists": true
+                }
+              }
+            ]
+          },
+          "helpText": "This is a layer of points representing outlet points that the watersheds should be built around."
+        },
+        {
+          "id": "flow_threshold",
+          "args_id": "flow_threshold",
+          "type": "text",
+          "label": "Threshold Flow Accumulation",
+          "defaultValue": "1000",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
+        },
+        {
+          "id": "snap_distance",
+          "args_id": "snap_distance",
+          "type": "text",
+          "label": "Pixel Distance to Snap Outlet Points",
+          "defaultValue": "10",
+          "required": true,
+          "validText": "^[0-9]+$"
+        }
+      ]
+    }
+  ]
+}

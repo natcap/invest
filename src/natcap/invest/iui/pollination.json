@@ -1,0 +1,298 @@
+{
+  "id": "window",
+  "label": "Crop Pollination",
+  "targetScript": "natcap.invest.pollination.pollination",
+  "modelName": "pollination",
+  "localDocURI": "../documentation/croppollination.html",
+  "condenseElements": true,
+  "height": 700,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../Pollination",
+          "required": true,
+          "validateAs": {
+            "type": "folder",
+            "permissions": "rwx"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "type": "text",
+          "label": "Results Suffix (Optional)",
+          "args_id": "results_suffix",
+          "required": false,
+          "width": 120,
+          "dataType": "string",
+          "helpText": "Optional.  The results suffix will be appended to the end of all output filenames. If provided, it must be alphanumeric."
+        }
+      ]
+    },
+    {
+      "id": "landcover_container",
+      "type": "container",
+      "label": "Land Use/Land Cover",
+      "elements": [
+        {
+          "id": "landcover_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "cur_lulc_raster",
+              "args_id": "landuse_cur_uri",
+              "type": "file",
+              "label": "Current Land Cover Scenario (Raster)",
+              "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
+              "required": true,
+              "validateAs": {
+                "type": "GDAL"
+              },
+              "helpText": "A GDAL-supported vector file."
+            },
+            {
+              "id": "landcover_attribute_table",
+              "type": "file",
+              "label": "Land Cover Attributes Table (CSV)",
+              "args_id": "landuse_attributes_uri",
+              "required": true,
+              "defaultValue": "../Pollination/Input/LU.csv",
+              "validateAs": {
+                "type": "CSV",
+                "fieldsExist": [
+                  "LULC"
+                ],
+                "restrictions": [
+                  {
+                    "field": "LULC",
+                    "validateAs": {
+                      "type": "number"
+                    }
+                  },
+                  {
+                    "field": {
+                      "pattern": "N_.*",
+                      "flag": "ignoreCase"
+                    },
+                    "validateAs": {
+                      "type": "number",
+                      "gteq": 0,
+                      "lteq": 1
+                    }
+                  },
+                  {
+                    "field": {
+                      "pattern": "F_.*",
+                      "flag": "ignoreCase"
+                    },
+                    "validateAs": {
+                      "type": "number",
+                      "gteq": 0,
+                      "lteq": 1
+                    }
+                  }
+                ]
+              },
+              "helpText": "A CSV table of land-cover attributes."
+            },
+            {
+              "id": "fut_lulc_raster",
+              "type": "hideableFileEntry",
+              "label": "Calculate Future Scenario (Raster) (Optional)",
+              "args_id": "landuse_fut_uri",
+              "required": false,
+              "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
+              "validateAs": {
+                "type": "GDAL"
+              },
+              "helpText": "Optional. An GDAL-supported raster file representing a future land-cover scenario.<br/><br/>Providing a future land-cover scenario will cause pollinator supply and abundance to be calculated for both the current and future scenarios.  The future scenario land cover raster should use the same land cover attribute table as the current land cover raster."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "valuation_container",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "do_valuation",
+      "label": "Valuation Options (enable to trigger valuation)",
+      "elements": [
+        {
+          "id": "valuation_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "half_saturation_const",
+              "type": "text",
+              "label": "Half-saturation constant",
+              "args_id": "half_saturation",
+              "required": true,
+              "width": 60,
+              "defaultValue": "0.125",
+              "validateAs": {
+                "type": "number",
+                "lteq": 1,
+                "gteq": 0
+              },
+              "dataType": "float",
+              "helpText": "This should be a number between 0 and 1.  It represents the abundance of pollinators required to reach 50% of pollinator-dependent yield."
+            },
+            {
+              "id": "wild_pollination_proportion",
+              "type": "text",
+              "label": "Proportion of Total Yield Due to Wild Pollinators",
+              "args_id": "wild_pollination_proportion",
+              "required": true,
+              "width": 60,
+              "defaultValue": "1",
+              "validateAs": {
+                "type": "number",
+                "lteq": 1,
+                "gteq": 0
+              },
+              "dataType": "float",
+              "helpText": "This should be a number between 0 and 1.  It represents the proportion of all crop yield attributed to wild pollinators on this landscape."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "remaining_items_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "guilds",
+          "type": "file",
+          "label": "Guilds Table (CSV) (Optional)",
+          "defaultValue": "../Pollination/Input/Guild.csv",
+          "args_id": "guilds_uri",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "SPECIES",
+              "ALPHA"
+            ],
+            "restrictions": [
+              {
+                "field": "ALPHA",
+                "validateAs": {
+                  "type": "number"
+                }
+              },
+              {
+                "field": "SPECIES_WEIGHT",
+                "required": false,
+                "validateAs": {
+                  "type": "number"
+                }
+              },
+              {
+                "field": {
+                  "pattern": "NS_.*",
+                  "flag": "ignoreCase"
+                },
+                "validateAs": {
+                  "type": "number",
+                  "allowedValues": {
+                    "pattern": "^(1\\.?0*)|(0\\.?0*)$"
+                  }
+                }
+              },
+              {
+                "field": {
+                  "pattern": "FS_.*",
+                  "flag": "ignoreCase"
+                },
+                "validateAs": {
+                  "type": "number",
+                  "gteq": 0,
+                  "lteq": 1
+                }
+              },
+              {
+                "field": {
+                  "pattern": "crp_.*",
+                  "flag": "ignoreCase"
+                },
+                "validateAs": {
+                  "type": "number",
+                  "allowedValues": {
+                    "pattern": "^(1\\.?0*)|(0\\.?0*)$"
+                  }
+                }
+              }
+            ]
+          },
+          "helpText": "A CSV table containing information specific to the various pollinators to be modeled.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If aggregating by crops, the table should contain fields matching 'crp_*', where the value is either 1 or 0.  For each crop column in this table, the 'Aggregate by Farms' shapefile (below) must also have a field with a matching name."
+        },
+        {
+          "id": "ag_classes",
+          "type": "text",
+          "label": "Agricultural Classes (space-separated) (Optional)",
+          "args_id": "ag_classes",
+          "required": false,
+          "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
+          "validText": "[0-9 ]*",
+          "validateAs": {
+            "type": "string",
+            "allowedValues": {
+              "pattern": "[0-9 ]*"
+            }
+          },
+          "dataType": "string",
+          "helpText": "A space-separated list of agricultural land-cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If agricultural classes are not provided here, the entire land-cover raster will be considered as agricultural."
+        },
+        {
+          "id": "aggregate_by_farms",
+          "args_id": "farms_shapefile",
+          "type": "hideableFileEntry",
+          "defaultValue": "../Pollination/Input/farms.shp",
+          "label": "Aggregate Results by Farm Sites (Vector) (Optional)",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "validateAs": {
+            "type": "OGR",
+            "fieldsExist": [
+              "ID"
+            ],
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "points"
+              }
+            ],
+            "restrictions": [
+              {
+                "field": {
+                  "pattern": "crp_.*",
+                  "flag": "ignoreCase"
+                },
+                "validateAs": {
+                  "type": "number",
+                  "allowedValues": {
+                    "pattern": "^(1\\.?0*)|(0\\.?0*)$"
+                  }
+                }
+              }
+            ]
+          },
+          "helpText": "Optional. An OGR-supported vector file. If provided, it must contain points representing data collection points on the landscape.  This table must contain crop fields matching those in the Guilds table, with a value of 1 indicating that this crop is present at this farm site and a 0 indicating that the crop is not present.  Values are then aggregated per farm site based on which species visit which crops using the corresponding fields in the Guilds table."
+        }
+      ]
+    }
+  ]
+}

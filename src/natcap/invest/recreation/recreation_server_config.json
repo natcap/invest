@@ -1,0 +1,109 @@
+{
+    "server": "http://ncp-skookum.stanford.edu/~recreation/",
+    "paths": {
+        "absolute": {
+            "repository": "/usr/local/recreation/workspace/invest3/",
+            "userroot": "/usr/local/public_html/",
+            "webroot": "/usr/local/recreation/public_html/"
+        },
+        "relative": {
+            "data": "data/",
+            "predictors": "pred/",
+            "download": "download/",
+            "core": "natcap.invest/recreation/",
+            "computation": "natcap.invest/recreation/"
+        }
+    },
+    "files": {
+        "PHP": {
+            "predictor": "recreation_server_predictors.php",
+            "recreation": "recreation_server_initial.php",
+            "scenario": "recreation_server_scenario.php",
+            "regression": "recreation_server_regression.php"
+        },
+        "JSON": {
+            "init" : "init.json",
+            "scenario" : "scenario.json"
+        },
+        "regression": "recreation_server_regression.r",
+        "model": "model.json",
+        "init": "recreation_server_initial.py",
+        "scenario": "recreation_server_scenario.py",
+        "aoi": {
+            "shp": "aoi.shp",
+            "shx": "aoi.shx",
+            "dbf": "aoi.dbf",
+            "prj": "aoi.prj"
+        },
+        "grid": {
+            "shp": "grid_private.shp",
+            "shx": "grid_private.shx",
+            "dbf": "grid_private.dbf",
+            "prj": "grid_private.prj"
+        },
+        "grid_public": {
+            "shp": "grid_public.shp",
+            "shx": "grid_public.shx",
+            "dbf": "grid_public.dbf",
+            "prj": "grid_public.prj"
+        },
+        "grid_tmp": {
+            "shp": "grid.shp",
+            "shx": "grid.shx",
+            "dbf": "grid.dbf",
+            "prj": "grid.prj"
+        },        
+        "flickr": "flickr.csv",
+        "log": "log.txt",
+        "comments": "comments.txt",
+        "PHPlog": "php.log",
+        "Rlog": "r.log",
+        "params": "aoi_params.csv",
+        "regression_summary": "regression_summary.pdf",
+        "results": "results.zip"
+    },
+    "postgis": {
+        "table": {
+            "names": {
+                "point_name" : "planet_osm_point",
+                "line_name" : "planet_osm_line",
+                "poly_name" : "planet_osm_polygon",
+                "point_category_name" : "category_point",
+                "line_category_name" : "category_line",
+                "poly_category_name" : "category_polygon",
+                "flickr_name" : "photos_gis",
+                "landscan_name" : "predictor_landscan",
+                "borders_name" : "borders",
+                "protected_name" : "predictor_protected",
+                "lulc_1_name" : "predictor_lulc_1",
+                "lulc_2_name" : "predictor_lulc_2",
+                "lulc_3_name" : "predictor_lulc_3",
+                "lulc_4_name" : "predictor_lulc_4",
+                "lulc_5_name" : "predictor_lulc_5",
+                "lulc_6_name" : "predictor_lulc_6",
+                "lulc_7_name" : "predictor_lulc_7",
+                "lulc_8_name" : "predictor_lulc_8",                
+                "mangrove_name" : "predictor_mangrove",
+                "reef_name" : "predictor_reef",
+                "seagrass_name" : "predictor_seagrass"
+            },
+            "alias": {
+                "predictor_landscan": "landscan",
+                "predictor_protected": "protected",
+                "predictor_mangrove": "mangrove",
+                "predictor_reef": "reef",
+                "predictor_seagrass": "seagrass",
+                "planet_osm_point": "osmcount",
+                "planet_osm_line": "osmlength",
+                "planet_osm_polygon": "osmarea"
+            },
+            "restrict": [
+                "landscan"
+            ]
+        },
+        "geometry_column_name" : "way",
+        "grid_column_name" : "cell"
+    },
+    "min_cell_size" : 250,
+    "max_grid_size" : 1000000000000
+}

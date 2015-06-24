@@ -1,0 +1,338 @@
+{
+  "id": "window",
+  "label": "Fisheries",
+  "targetScript": "natcap.invest.fisheries.fisheries",
+  "modelName": "fisheries",
+  "localDocURI": "../documentation/fisheries.html",
+  "height": 800,
+  "width": 800,
+  "elements": [
+    {
+      "id": "alpha_only",
+      "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
+      "type": "label",
+      "helpText": "Alpha tools are considered unstable."
+    },
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../Fisheries",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate outputs from multiple runs."
+        },
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "Area of Interest (Vector) (Optional)",
+          "defaultValue": "../Fisheries/input/shapefile_galveston/Galveston_Subregion.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                }
+              }
+            ],
+            "mustExist": true,
+            "fieldsExist": [
+              "NAME"
+            ]
+          },
+          "helpText": "An OGR-supported vector file used to display outputs within the region(s) of interest.<br><br>The layer should contain one feature for every region of interest, each feature of which should have a ‘NAME’ attribute. The 'NAME' attribute can be numeric or alphabetic, but must be unique within the given file."
+        },
+        {
+          "id": "total_timesteps",
+          "args_id": "total_timesteps",
+          "type": "text",
+          "dataType": "int",
+          "label": "Number of Time Steps for Model Run",
+          "validateAs": {
+            "type": "number"
+          },
+          "validText": "[0-9]+",
+          "defaultValue": "100",
+          "required": true,
+          "helpText": "The number of time steps the simulation shall execute before completion.<br><br>Must be a positive integer."
+        }
+      ]
+    },
+    {
+      "id": "popu_cont",
+      "label": "Population Parameters",
+      "type": "container",
+      "elements": [
+        {
+          "id": "popu_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "population_type",
+              "args_id": "population_type",
+              "type": "dropdown",
+              "label": "Population Model Type",
+              "defaultValue": "Age-Based",
+              "required": true,
+              "options": [
+                "Age-Based",
+                "Stage-Based"
+              ],
+              "returns": "strings",
+              "dataType": "string",
+              "helpText": "Specifies whether the lifecycle classes provided in the Population Parameters CSV file represent ages (uniform duration) or stages.<br><br>Age-based models (e.g. Lobster, Dungeness Crab) are separated by uniform, fixed-length time steps (usually representing a year).<br><br>Stage-based models (e.g. White Shrimp) allow lifecycle-classes to have nonuniform durations based on the assumed resolution of the provided time step.<br><br>If the stage-based model is selected, the Population Parameters CSV file must include a ‘Duration’ vector alongside the survival matrix that contains the number of time steps that each stage lasts."
+            },
+            {
+              "id": "sexsp",
+              "args_id": "sexsp",
+              "type": "dropdown",
+              "label": "Population Classes are Sex-Specific",
+              "defaultValue": "No",
+              "required": true,
+              "options": [
+                "No",
+                "Yes"
+              ],
+              "returns": "strings",
+              "dataType": "string",
+              "helpText": "Specifies whether or not the lifecycle classes provided in the Populaton Parameters CSV file are distinguished by sex."
+            },
+            {
+              "id": "harvest_units",
+              "args_id": "harvest_units",
+              "type": "dropdown",
+              "label": "Harvest by Individuals or Weight",
+              "defaultValue": "Individuals",
+              "required": true,
+              "options": [
+                "Individuals",
+                "Weight"
+              ],
+              "returns": "strings",
+              "dataType": "string",
+              "helpText": "Specifies whether the harvest output values are calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If ‘Weight’ is selected, the Population Parameters CSV file must include a 'Weight' vector alongside the survival matrix that contains the weight of each lifecycle class and sex if model is sex-specific."
+            },
+            {
+              "id": "do_batch",
+              "args_id": "do_batch",
+              "type": "checkbox",
+              "label": "Batch Processing",
+              "required": true,
+              "defaultValue": false,
+              "helpText": "Specifies whether program will perform a single model run or a batch (set) of model runs.<br><br>For single model runs, users submit a filepath pointing to a single Population Parameters CSV file. For batch model runs, users submit a directory path pointing to a set of Population Parameters CSV files."
+            },
+            {
+              "id": "population_csv_uri",
+              "args_id": "population_csv_uri",
+              "type": "file",
+              "label": "Population Parameters File (CSV)",
+              "defaultValue": "../Fisheries/input/input_blue_crab/population_params.csv",
+              "required": true,
+              "disabledBy": "do_batch",
+              "validateAs": {
+                "type": "CSV"
+              },
+              "helpText": "The provided CSV file should contain all necessary attributes for the sub-populations based on lifecycle class, sex, and area - excluding possible migration information.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
+            },
+            {
+              "id": "population_csv_dir",
+              "args_id": "population_csv_dir",
+              "type": "folder",
+              "label": "Population Parameters CSV Folder",
+              "defaultValue": "../Fisheries/input/input_blue_crab/",
+              "required": true,
+              "enabledBy": "do_batch",
+              "helpText": "The provided CSV folder should contain a set of Population Parameters CSV files with all necessary attributes for sub-populations based on lifecycle class, sex, and area - excluding possible migration information.<br><br>The name of each file will serve as the prefix of the outputs created by the model run.<br><br>Please consult the documentation to learn more about what content should be provided and how the CSV file should be structured."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "recr_cont",
+      "label": "Recruitment Parameters",
+      "type": "container",
+      "elements": [
+        {
+          "id": "recr_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "total_init_recruits",
+              "args_id": "total_init_recruits",
+              "type": "text",
+              "dataType": "float",
+              "label": "Total Initial Recruits",
+              "required": true,
+              "defaultValue": "200000",
+              "validateAs": {
+                "type": "number"
+              },
+              "helpText": "The initial number of recruits in the population model at time equal to zero.<br><br>If the model contains multiple regions of interest or is distinguished by sex, this value will be evenly divided and distributed into each sub-population."
+            },
+            {
+              "id": "recruitment_type",
+              "args_id": "recruitment_type",
+              "type": "dropdown",
+              "label": "Recruitment Function Type",
+              "defaultValue": "Ricker",
+              "required": true,
+              "options": [
+                "Beverton-Holt",
+                "Ricker",
+                "Fecundity",
+                "Fixed"
+              ],
+              "returns": "strings",
+              "dataType": "string",
+              "helpText": "The selected equation is used to calculate recruitment into the subregions at the beginning of each time step. Corresponding parameters must be specified with each function:<br><br>The Beverton-Holt and Ricker functions both require arguments for the ‘Alpha’ and ‘Beta’ parameters.<br><br>The Fecundity function requires a 'Fecundity' vector alongside the survival matrix in the Population Parameters CSV file indicating the per-capita offspring for each lifecycle class.<br><br>The Fixed function requires an argument for the ‘Total Recruits per Time Step’ parameter that represents a single total recruitment value to be distributed into the population model at the beginning of each time step."
+            },
+            {
+              "id": "spawn_units",
+              "args_id": "spawn_units",
+              "type": "dropdown",
+              "label": "Spawners by Individuals or Weight (Beverton-Holt / Ricker)",
+              "defaultValue": "Individuals",
+              "required": true,
+              "options": [
+                "Individuals",
+                "Weight"
+              ],
+              "returns": "strings",
+              "dataType": "string",
+              "helpText": "Specifies whether the spawner abundance used in the recruitment function should be calculated in terms of number of individuals or in terms of biomass (weight).<br><br>If 'Weight' is selected, the user must provide a 'Weight' vector alongside the survival matrix in the Population Parameters CSV file. The 'Alpha' and 'Beta' parameters provided by the user should correspond to the selected choice.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+            },
+            {
+              "id": "alpha",
+              "args_id": "alpha",
+              "type": "text",
+              "dataType": "float",
+              "label": "Alpha (Beverton-Holt / Ricker)",
+              "defaultValue": "6050000",
+              "required": false,
+              "validateAs": {
+                "type": "number"
+              },
+              "helpText": "Specifies the shape of the stock-recruit curve. Used only for the Beverton-Holt and Ricker recruitment functions.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+            },
+            {
+              "id": "beta",
+              "args_id": "beta",
+              "type": "text",
+              "dataType": "float",
+              "label": "Beta (Beverton-Holt / Ricker)",
+              "defaultValue": "0.0000000414",
+              "required": false,
+              "validateAs": {
+                "type": "number"
+              },
+              "helpText": "Specifies the shape of the stock-recruit curve.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
+            },
+            {
+              "id": "total_recur_recruits",
+              "args_id": "total_recur_recruits",
+              "type": "text",
+              "dataType": "float",
+              "label": "Total Recruits per Time Step (Fixed)",
+              "required": false,
+              "validateAs": {
+                "type": "number"
+              },
+              "helpText": "Specifies the total number of recruits that come into the population at each time step (a fixed number).<br><br>Used only for the Fixed recruitment function."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "migr_cont",
+      "args_id": "migr_cont",
+      "label": "Migration Parameters",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "migr_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "migration_dir",
+              "args_id": "migration_dir",
+              "type": "folder",
+              "label": "Migration Matrix CSV Folder (Optional)",
+              "defaultValue": "",
+              "required": false,
+              "validateAs": {
+                "type": "folder"
+              },
+              "helpText": "The selected folder contain CSV migration matrices to be used in the simulation.  Each CSV file contains a single migration matrix corresponding to an lifecycle class that migrates.  The folder should contain one CSV file for each lifecycle class that migrates.<br><br>The files may be named anything, but must end with an underscore followed by the name of the age or stage.  The name of the age or stage must correspond to an age or stage within the Population Parameters CSV file.  For example, a migration file might be named 'migration_adult.csv'.<br><br>Each matrix cell should contain a decimal fraction indicating the percetage of the population that will move from one area to another.  Each column should sum to one."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "val_cont",
+      "args_id": "val_cont",
+      "label": "Valuation Parameters",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "val_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "frac_post_process",
+              "args_id": "frac_post_process",
+              "type": "text",
+              "label": "Fraction of Harvest Kept After Processing",
+              "defaultValue": "0.351487513",
+              "required": true,
+              "dataType": "float",
+              "validateAs": {
+                "type": "number"
+              },
+              "helpText": "Decimal fraction indicating the percentage of harvested catch remaining after post-harvest processing is complete."
+            },
+            {
+              "id": "unit_price",
+              "args_id": "unit_price",
+              "type": "text",
+              "label": "Unit Price",
+              "defaultValue": "1.0",
+              "required": true,
+              "dataType": "float",
+              "validateAs": {
+                "type": "number"
+              },
+              "helpText": "Specifies the price per harvest unit.<br><br>If ‘Harvest by Individuals or Weight’ was set to ‘Individuals’, this should be the price per individual.  If set to ‘Weight’, this should be the price per unit weight."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

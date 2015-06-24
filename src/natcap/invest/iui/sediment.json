@@ -1,0 +1,199 @@
+{
+  "id": "window",
+  "label": "Sediment",
+  "targetScript": "natcap.invest.sediment.sediment",
+  "modelName": "sediment",
+  "localDocURI": "../documentation/sediment_retention.html",
+  "height": 700,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../Sedimentation",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "dem_uri",
+          "args_id": "dem_uri",
+          "type": "file",
+          "label": "Digital Elevation Model (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/dem",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the 'Working with the DEM' section of the InVEST User's Guide for more information."
+        },
+        {
+          "id": "erosivity_uri",
+          "args_id": "erosivity_uri",
+          "type": "file",
+          "label": "Erosivity (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/erosivity",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file that contains an erosivity index value for each cell. This variable depends on the intensity and duration of rainfall in the area of interest. The greater the intensity and duration of the rain storm, the higher the erosion potential. The erosivity index is widely used, but in case of its absence, there are methods and equations to help generate a grid using climatic data. The units are MJ*mm/(ha*h*yr)."
+        },
+        {
+          "id": "erodibility_uri",
+          "args_id": "erodibility_uri",
+          "type": "file",
+          "label": "Erodibility (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/erodibility",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file that contains a soil erodibility value for each cell.  The value is a measure of the susceptibility of soil particles to detachment and transport by rainfall and runoff.  Units are in T*ha*h/(ha*MJ*mm)."
+        },
+        {
+          "id": "landuse_uri",
+          "args_id": "landuse_uri",
+          "type": "file",
+          "label": ":Land-Use/Land-Cover (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/landuse_90",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file that contains an integer LULC code for each cell."
+        },
+        {
+          "id": "watersheds_uri",
+          "args_id": "watersheds_uri",
+          "type": "file",
+          "label": "Watershed Polygons (Vector)",
+          "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons",
+                "projection": {
+                  "exists": true
+                }
+              }
+            ],
+            "fieldsExist": [
+              "ws_id"
+            ]
+          },
+          "helpText": "An OGR-supported vector file.  This is a layer of watersheds such that each watershed contributes to a point of interest where water quality will be analyzed.  It must have the integer field 'ws_id' where the values uniquely identify each watershed."
+        },
+        {
+          "id": "biophysical_table_uri",
+          "args_id": "biophysical_table_uri",
+          "type": "file",
+          "label": "Biophysical Table (CSV)",
+          "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode",
+              "sedret_eff",
+              "usle_c",
+              "usle_p"
+            ]
+          },
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', 'usle_p', and 'sedret_eff'.  See the InVEST sediment User's Guide for more information about these fields."
+        },
+        {
+          "id": "threshold_flow_accumulation",
+          "args_id": "threshold_flow_accumulation",
+          "type": "text",
+          "label": "Threshold Flow Accumulation",
+          "defaultValue": "1000",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
+        },
+        {
+          "id": "drainage_uri",
+          "args_id": "drainage_uri",
+          "type": "file",
+          "label": "Drainages (Raster) (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "Optional. A GDAL-supported raster file mask that indicates areas that drain to the watershed.  Format is that 1's indicate drainage areas and 0's or nodata indicate areas with no additional drainage.  This model is most accurate when the drainage raster aligns with the DEM."
+        },
+        {
+          "id": "sediment_threshold_table_uri",
+          "args_id": "sediment_threshold_table_uri",
+          "type": "file",
+          "label": "Sediment Threshold Table (CSV)",
+          "defaultValue": "../Sedimentation/input/sediment_threshold_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "ws_id",
+              "dr_time",
+              "dr_deadvol",
+              "wq_annload"
+            ]
+          },
+          "helpText": "A CSV table containing annual sediment load threshold information for each of the watersheds. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_time', 'dr_deadvol', and 'wq_annload'.  See the User's Guide for the meaning of these fields."
+        }
+      ]
+    },
+    {
+      "id": "valuation_container",
+      "args_id": "valuation_container",
+      "type": "container",
+      "label": "Valuation",
+      "collapsible": true,
+      "defaultValue": false,
+      "elements": [
+        {
+          "id": "valuation_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "sediment_valuation_table_uri",
+              "args_id": "sediment_valuation_table_uri",
+              "type": "file",
+              "label": "Sediment Valuation Table (CSV)",
+              "defaultValue": "../Sedimentation/input/sediment_valuation_table.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV"
+              },
+              "helpText": "A CSV table containing valuation information for each of the reservoirs. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost', 'wq_time', wq_disc'. See the User's Guide for the meaning of these fields."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,240 @@
+{
+  "id": "window",
+  "label": "Crop Production",
+  "targetScript": "natcap.invest.crop_production.crop_production",
+  "modelName": "crop_production",
+  "localDocURI": "../documentation/crop_production.html",
+  "height": 800,
+  "width": 800,
+  "elements": [
+    {
+      "id": "alpha_only",
+      "label": "This tool is in an ALPHA testing stage.",
+      "type": "label",
+      "helpText": "Alpha tools are considered unstable."
+    },
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../CropProduction",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and final output files will be written. <br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "helpText": "This text will be appended to the end of the yield function output folders to help seperate outputs from multiple runs."
+        },
+        {
+          "id": "crop_lookup_table_uri",
+          "args_id": "crop_lookup_table_uri",
+          "type": "file",
+          "label": "Crop Lookup Table (CSV)",
+          "defaultValue": "../CropProduction/input/crop_lookup_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": "The provided CSV table is used to convert the crop code provided in the Crop Map to the crop name that can be used for searching through inputs and formatting outputs.<br><br>The table should contain two columns: a 'crop' column and a 'code' column.  The 'crop' column contains the names of each crop used in the model, and the 'code' column contains the associated code used to represent that crop in the Crop Map."
+        },
+        {
+          "id": "lulc_map_uri",
+          "args_id": "lulc_map_uri",
+          "type": "file",
+          "label": "Land Use Map (Raster)",
+          "defaultValue": "../CropProduction/input/lulc_raster.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster representing a crop management scenario.<br><br>Each cell value in the raster should correspond to a valid crop that can be found in the Crop Lookup Table CSV file inputted below."
+        },
+        {
+          "id": "spatial_dataset_dir",
+          "args_id": "spatial_dataset_dir",
+          "type": "folder",
+          "label": "Crop Production Model Spatial Dataset Folder",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The provided folder should contain a set of folders and data specified in the 'Running the Model' section of the model's User Guide."
+        },
+        {
+          "id": "create_crop_production_maps",
+          "args_id": "create_crop_production_maps",
+          "type": "checkbox",
+          "label": "Create Crop Production Maps",
+          "required": true,
+          "defaultValue": false,
+          "helpText": "If checked, a set of crop production maps is saved within the folder of each yield function."
+        }
+      ]
+    },
+    {
+      "id": "do_fertilizer_maps",
+      "args_id": "do_fertilizer_maps",
+      "label": "Use Fertilizer Maps",
+      "type": "container",
+      "defaultValue": true,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "fertilizer_list",
+          "type": "list",
+          "elements": [
+          {
+            "id": "fertilizer_maps_dir",
+            "args_id": "fertilizer_maps_dir",
+            "type": "folder",
+            "label": "Fertilizer Application Rate Maps Folder",
+            "defaultValue": "../CropProduction/input/fertilizer_maps/",
+            "required": false,
+            "helpText": "A set of GDAL-supported rasters representing the amount of Nitrogen (N), Phosphorous (P2O5), and Potash (K2O) applied to each area of land in kilograms per hectare.<br><br>These maps are required when running the regression model yield function and are an optional input for all yield functions when calculating economic returns.<br><br>Each cell value in the raster should be a non-negative float value representing the amount of fertilizer applied in units of kilograms per hectare (kg/hectare).  Each file should be prepended with the name of the fertilizer (nitrogen, phosphorous, potash) in lowercase, followed by an underscore to help the program search for the matching file. The Fertilizer Maps must have the same dimensions and projection as the provided Land Use Map."
+          }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yield_functions",
+      "label": "Calculate Yield and Production",
+      "type": "container",
+      "defaultValue": true,
+      "collapsible": false,
+      "elements": [
+	    {
+		      "id": "do_yield_observed",
+		      "args_id": "do_yield_observed",
+		      "label": "Method 1: Observed Regional Yields",
+		      "type": "container",
+		      "defaultValue": false,
+          "required": true,
+		      "collapsible": true,
+		      "elements": [
+		        {
+		          "id": "yield_observed_list",
+		          "type": "list",
+		          "elements": []
+		        }
+		      ]
+		    },
+		    {
+		      "id": "do_yield_percentile",
+		      "args_id": "do_yield_percentile",
+		      "label": "Method 2: Climate-specific Distribution of Observed Yields",
+		      "type": "container",
+		      "defaultValue": false,
+          "required": true,
+		      "collapsible": true,
+		      "elements": [
+		        {
+		          "id": "yield_percentile_list",
+		          "type": "list",
+		          "elements": []
+		        }
+		      ]
+		    },
+		    {
+		      "id": "do_yield_regression",
+		      "args_id": "do_yield_regression",
+		      "label": "Method 3: Yield Regression Model with Climate-specific Parameters",
+		      "type": "container",
+		      "defaultValue": false,
+          "required": true,
+		      "collapsible": true,
+		      "elements": [
+		        {
+		          "id": "yield_modeled_list",
+		          "type": "list",
+		          "elements": [
+		            {
+		              "id": "modeled_irrigation_map_uri",
+		              "args_id": "modeled_irrigation_map_uri",
+		              "type": "file",
+		              "label": "Irrigation Map (Raster)",
+		              "defaultValue": "../CropProduction/input/irrigation_raster.tif",
+		              "required": true,
+		              "validateAs": {
+		                "type": "GDAL"
+		              },
+		              "helpText": "A GDAL-supported raster representing whether irrigation occurs or not. A zero value indicates an area of land that is not irrigated.  A one value indicates an area of land that is irrigated.<br><br>The Irrigation Map must have the same dimensions and projection as the provided Land Use Map."
+		            }
+		          ]
+		      }
+		   ]
+		}
+	  ]
+	},
+    {
+      "id": "do_nutrition",
+      "args_id": "do_nutrition",
+      "label": "Calculate Nutritional Contents from Production",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "nutrition_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "nutrition_table_uri",
+              "args_id": "nutrition_table_uri",
+              "type": "file",
+              "label": "Nutritional Contents Table (CSV)",
+              "defaultValue": "../CropProduction/input/nutrient_contents_table.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV"
+              },
+              "helpText": "A CSV table containing information about the nutritional contents of each crop.<br><br>Please consult the User Guide to learn more about how the table should be formatted."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "do_economic_returns",
+      "args_id": "do_economic_returns",
+      "label": "Calculate Economic Returns",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "economics_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "economics_table_uri",
+              "args_id": "economics_table_uri",
+              "type": "file",
+              "label": "Economics Table (CSV)",
+              "defaultValue": "../CropProduction/input/economics_table.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV"
+              },
+              "helpText": "A CSV table containing information related to the earnings a producer receives for selling a given crop and the expenses involved with producing that crop.<br><br>Please consult the User Guide to learn more about how the table should be formatted."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

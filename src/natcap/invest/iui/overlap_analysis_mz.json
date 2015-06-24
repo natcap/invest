@@ -1,0 +1,53 @@
+{
+  "id": "window",
+  "label": "Overlap Analysis Management Zone Model: Fisheries and Recreation",
+  "targetScript": "natcap.invest.overlap_analysis.overlap_analysis_mz",
+  "modelName": "overlap_analysis_mz",
+  "localDocURI": "../documentation/overlap_analysis.html",
+  "height": 550,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../OverlapAnalysis",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "aoi",
+          "args_id": "zone_layer_loc",
+          "type": "file",
+          "label": "Analysis Zones Layer (Vector)",
+          "defaultValue": "../OverlapAnalysis/Input/ManagementZones_WCVI.shp",
+          "validateAs": {
+            "type": "OGR"
+          },
+          "required": true,
+          "helpText": "An OGR-supported vector file. This should be a vector file containing multiple polygons since the Management Zones tool is used to analyze overlap data."
+        },
+        {
+          "id": "data_dir",
+          "args_id": "overlap_data_dir_loc",
+          "type": "folder",
+          "label": "Overlap Analysis Data Directory",
+          "defaultValue": "../OverlapAnalysis/Input/FisheriesLayers_RI",
+          "validateAs": {
+            "type": "folder"
+          },
+          "required": true,
+          "helpText": "The path to a folder containing ONLY the input data for the Overlap Analysis model. Input data can be point, line or polygon data layers indicating where in the coastal and marine environment the human use activity takes place."
+        }
+      ]
+    }
+  ]
+}

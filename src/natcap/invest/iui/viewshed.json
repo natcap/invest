@@ -1,0 +1,87 @@
+{
+  "id": "window",
+  "label": "Viewshed",
+  "targetScript": "natcap.invest.aesthetic_quality.viewshed_grass",
+  "modelName": "viewshed_grass",
+  "localDocURI": "../documentation/aesthetic_quality.html",
+  "height": 600,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "in_raster",
+          "args_id": "in_raster",
+          "type": "file",
+          "label": "Digial Elevation Model (Raster)",
+          "validateAs": {
+            "type": "GDAL",
+            "mustExist": true
+          },
+          "required": true,
+          "helpText": "A GDAL-supported raster file containing a digital elevation model over the area of interest."
+        },
+        {
+          "id": "in_observer_features",
+          "args_id": "in_observer_features",
+          "type": "file",
+          "label": "Features (Vector)",
+          "validateAs": {
+            "type": "OGR",
+            "mustExist": true
+          },
+          "required": true,
+          "helpText": "An OGR-supported vector file."
+        },
+        {
+          "id": "z_factor",
+          "args_id": "z_factor",
+          "type": "text",
+          "label": "Z Factor",
+          "defaultValue": "1",
+          "validText": "[0-9]+(\\.[0-9][0-9])?",
+          "dataType": "float",
+          "required": true
+        },
+        {
+          "id": "earth",
+          "args_id": "earth",
+          "type": "dropdown",
+          "label": "Earth",
+          "options": [
+            "flat",
+            "curved"
+          ],
+          "returns": {
+            "mapValues": {
+              "flat": 0,
+              "curved": 1
+            }
+          },
+          "defaultValue": 0,
+          "required": true
+        },
+        {
+          "id": "refractivity_coefficient",
+          "args_id": "refractivity_coefficient",
+          "type": "text",
+          "label": "Refractivity",
+          "defaultValue": "0.13",
+          "validText": "[0-9]+(\\.[0-9][0-9])?",
+          "dataType": "float",
+          "required": true
+        }
+      ]
+    }
+  ]
+}
