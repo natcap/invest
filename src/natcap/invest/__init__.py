@@ -25,7 +25,8 @@ except ImportError:
     pass
 
 try:
-    __version__ = build_utils.invest_version()
+    #__version__ = build_utils.invest_version()
+    __version__ = '3.3.0dev'
 except:
     __version__ = 'dev'
 

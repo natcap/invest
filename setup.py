@@ -124,7 +124,6 @@ REQUIREMENTS = [
     'pyamg',
     'pygeoprocessing==0.3.0a3',
     'setuptools',
-    'setuptools_scm',
     ]
 
 setup(
@@ -174,13 +173,14 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
+    package_data={
+        'natcap.invest.iui': ['*.json', '*.png', 'iui_resources/resources.json', 'iui_resources/images/*.png'],
+    },
     include_package_data=True,
     install_requires=REQUIREMENTS,
     include_dirs=[numpy.get_include()],
     setup_requires=['nose>=1.0'],
-    use_scm_version={
-        'write_to': 'src/natcap/invest/version.py',
-    },
+    version='3.3.0dev',
     cmdclass=CMDCLASS,
     license=LICENSE,
     zip_safe=False,
@@ -197,4 +197,5 @@ setup(
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,
+
 )
