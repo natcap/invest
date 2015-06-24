@@ -1,0 +1,153 @@
+{
+  "id": "window",
+  "label": "Overlap Analysis Model: Fisheries and Recreation",
+  "targetScript": "natcap.invest.overlap_analysis.overlap_analysis",
+  "modelName": "overlap_analysis",
+  "localDocURI": "../documentation/overlap_analysis.html",
+  "height": 550,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../OverlapAnalysis",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "aoi",
+          "args_id": "zone_layer_uri",
+          "type": "file",
+          "label": "Analysis Zones Layer (Vector)",
+          "defaultValue": "../OverlapAnalysis/Input/AOI_WCVI.shp",
+          "validateAs": {
+            "type": "OGR"
+          },
+          "required": true,
+          "helpText": "An OGR-supported vector file.  If Management Zones is being used to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, gridding is being used in order to separate the area, this can be a single polygon shapefile."
+        },
+        {
+          "id": "grid_size",
+          "args_id": "grid_size",
+          "type": "text",
+          "label": "Analysis Cell Size (meters)",
+          "defaultValue": "1000",
+          "validateAs": {
+            "type": "number"
+          },
+          "required": true,
+          "helpText": "By specifying a number in the interface, an analysis grid within the AOI of size x size will be created."
+        },
+        {
+          "id": "data_dir",
+          "args_id": "overlap_data_dir_uri",
+          "type": "folder",
+          "label": "Overlap Analysis Data Directory",
+          "defaultValue": "../OverlapAnalysis/Input/FisheriesLayers_RI",
+          "validateAs": {
+            "type": "folder"
+          },
+          "required": true,
+          "helpText": "Users are required to specify the path on their system to a folder containing only the input data for the Overlap Analysis model. Input data can be point, line or polygon data layers indicating where in the coastal and marine environment the human use activity takes place."
+        },
+        {
+          "id": "intra",
+          "args_id": "do_intra",
+          "type": "checkbox",
+          "label": "Intra-Activity Weighting?",
+          "defaultValue": false,
+          "required": true,
+          "helpText": "Checking this box indicates that intra-activity valuation of the data should be used. These weights will be retrieved from the column in the attribute table of the shapefile specified in 'Analysis Zones Layer' that bears the name specified in the 'Intra-Activity Field Name' field below."
+        },
+        {
+          "id": "IS_field_name",
+          "args_id": "intra_name",
+          "type": "text",
+          "label": "Intra-Activity Attribute Name",
+          "defaultValue": "RI",
+          "required": false,
+          "requiredIf": [
+            "intra"
+          ],
+          "enabledBy": "intra",
+          "helpText": "The column heading to look for in the activity layers' attribute tables that gives intra-activity weights."
+        },
+        {
+          "id": "inter",
+          "args_id": "do_inter",
+          "type": "checkbox",
+          "label": "Inter-Activity Weighting?",
+          "defaultValue": false,
+          "required": true,
+          "helpText": "Checking this box indicates that inter-activity valuation of the data should be used. These weights will be derived from the data included in the CSV provided in the 'Overlap Analysis Importance Score Table' field."
+        },
+        {
+          "id": "IS_tbl",
+          "args_id": "overlap_layer_tbl",
+          "type": "file",
+          "label": "Inter-Activity Weight Table (CSV)",
+          "defaultValue": "../OverlapAnalysis/Input/Fisheries_Inputs.csv",
+          "required": false,
+          "requiredIf": [
+            "inter"
+          ],
+          "enabledBy": "inter",
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": "The name of the CSV table that links each provided activity layer to the desired inter-activity weight."
+        },
+        {
+          "id": "HU_Hubs",
+          "args_id": "do_hubs",
+          "type": "checkbox",
+          "label": "Human Use Hubs?",
+          "defaultValue": "False",
+          "required": false,
+          "helpText": "Checking this box indicates taht a layer of human use hubs should be used to weight the raster file output. This input should be in the form of a point shapefile."
+        },
+        {
+          "id": "HU_Hub_URI",
+          "args_id": "hubs_uri",
+          "type": "file",
+          "label": "Points Layer of Human Use Hubs (Vector)",
+          "defaultValue": "../OverlapAnalysis/Input/PopulatedPlaces_WCVI.shp",
+          "required": false,
+          "requiredIf": [
+            "HU_Hubs"
+          ],
+          "enabledBy": "HU_Hubs",
+          "validateAs": {
+            "type": "OGR"
+          },
+          "helpText": "An OGR-supported vector file.  If human use hubs are desired, this is the file that shows the hubs themselves. This should be a shapefile of points where each point is a hub."
+        },
+        {
+          "id": "hub_decay",
+          "args_id": "decay_amt",
+          "type": "text",
+          "label": "Distance Decay Rate",
+          "defaultValue": "0.0001",
+          "validateAs": {
+            "type": "number"
+          },
+          "required": false,
+          "requiredIf": [
+            "HU_Hubs"
+          ],
+          "enabledBy": "HU_Hubs",
+          "helpText": "This number is the rate (r) of interest decay from each of the human use hubs for use in the final weighted raster for the function exp(-r*d) where d is the distance from the closest hub."
+        }
+      ]
+    }
+  ]
+}

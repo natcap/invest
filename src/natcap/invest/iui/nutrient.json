@@ -1,0 +1,216 @@
+{
+    "id" : "window",
+    "label": "Nutrient",
+    "targetScript" : "natcap.invest.nutrient.nutrient",
+    "modelName" : "nutrient",
+    "localDocURI": "../documentation/waterpurification.html",
+    "height": 900,
+    "width" : 900,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+        {
+            "id" : "workspace",
+            "args_id" : "workspace_dir",
+            "type": "folder",
+            "label": "Workspace",
+            "defaultValue": "../Nutrient_Retention",
+            "required": true,
+            "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+            "id" : "results_suffix",
+            "args_id" : "results_suffix",
+            "type": "text",
+            "dataType": "string",
+            "label": "Results Suffix (Optional)",
+            "defaultValue": "",
+            "returns": {"ifEmpty": "pass"},
+            "required": false,
+            "helpText":"This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+            "id" : "dem_uri",
+            "args_id" : "dem_uri",
+            "type": "file",
+            "label": "Digital Elevation Model (Raster)",
+            "defaultValue": "../Base_Data/Freshwater/dem",
+            "required": true,
+            "validateAs": {"type": "GDAL"},
+            "helpText": "A GDAL-supported raster file containing elevation values for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the 'Working with the DEM' section of the InVEST User's Guide for more information."
+        },
+        {
+            "id" : "precipitation",
+            "args_id" : "precipitation_uri",
+            "type": "file",
+            "label": "Precipitation (Raster)",
+            "defaultValue": "../Base_Data/Freshwater/precip",
+            "required": true,
+            "validateAs": {"type": "GDAL"},
+            "helpText": "A GDAL-supported raster file containing non-zero values for each cell representing the average annual precipitation over that area. The precipitation units should be in millimeters."
+        },
+        {
+            "id" : "potential_evapotranspiration",
+            "args_id" : "eto_uri",
+            "type": "file",
+            "label": "Reference Evapotranspiration (Raster)",
+            "defaultValue": "../Base_Data/Freshwater/eto",
+            "required": true,
+            "validateAs": {"type": "GDAL"},
+            "helpText": "A GDAL-supported raster file containing annual average evapotranspiration values for each cell. Potential evapotranspiration is the potential loss of water from soil by both evaporation from the soil and transpiration by healthy Alfalfa (or grass) if sufficient water is available. The evapotranspiration values should be in millimeters."
+        },
+        {
+            "id" : "soil_depth",
+            "args_id" : "depth_to_root_rest_layer_uri",
+            "type": "file",
+            "label": "Depth To Root Restricting Layer (Raster)",
+            "defaultValue": "../Base_Data/Freshwater/depth_to_root_rest_layer",
+            "required": true,
+            "validateAs": {"type": "GDAL"},
+            "helpText": "A GDAL-supported raster file with an average root restricting layer depth value for each cell. Root restricting layer depth is the soil depth at which root penetration is strongly inhibited because of physical or chemical characteristics. The root restricting layer depth values should be in millimeters."
+        },
+        {
+            "id" : "plant_available_water_fraction",
+            "args_id" : "pawc_uri",
+            "type": "file",
+            "label": "Plant Available Water Fraction (Raster)",
+            "defaultValue": "../Base_Data/Freshwater/pawc",
+            "required": true,
+            "validateAs": {"type": "GDAL"},
+            "helpText": "A GDAL-supported raster file with a plant available water content value for each cell. Plant Available Water Content fraction (PAWC) is the fraction of water that can be stored in the soil profile that is available for plants' use."
+        },
+        {
+            "id" : "land_use",
+            "args_id" : "lulc_uri",
+            "type": "file",
+            "label": "Land Use (Raster)",
+            "defaultValue": "../Base_Data/Freshwater/landuse_90",
+            "required": true,
+            "validateAs": {"type": "GDAL"},
+            "helpText": "A GDAL-supported raster file, with an integer LULC code for each cell. The LULC code should be an integer."
+        },
+        {
+            "id" : "seasonality_constant",
+            "args_id" : "seasonality_constant",
+            "type": "text",
+            "label": "Seasonality Constant",
+            "defaultValue": "5",
+            "required": true,
+            "validText": "^[0-9]+\\.?[0-9]+$",
+            "helpText": "Floating point value on the order of 1 to 20 corresponding to the seasonal distribution of precipitation. See the User's Guide for a detailed explanation."
+        },
+        {
+            "id" : "watersheds_uri",
+            "args_id" : "watersheds_uri",
+            "type": "file",
+            "label": "Watersheds (Vector)",
+            "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
+            "required": true,
+            "validateAs": {"type": "OGR",
+                   "layers": [{"name": {"inheritFrom": "file"}, 
+                           "type": "polygons",
+                           "projection": {"exists": true}
+                          }],
+                   "fieldsExist": ["ws_id"]
+                  },
+            "helpText": "An OGR-supported vector file representing watersheds such that each watershed contributes to a point of interest where water quality will be analyzed.  It must have the integer field 'ws_id' where the values uniquely identify each watershed."
+        },
+        {
+            "id" : "biophysical_table_uri",
+            "args_id" : "biophysical_table_uri",
+            "type": "file",
+            "label": "Biophysical Table (CSV)",
+            "defaultValue": "../WP_Nutrient_Retention/Input/water_biophysical_table.csv",
+            "required": true,
+            "validateAs": {"type": "CSV",
+                  "fieldsExist": ["lucode", "Kc", "root_depth", "LULC_veg"],
+                                    "restrictions": [{"field": "lucode",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"^[0-9]+$"}
+                                                                  }},
+                                                     {"field": "Kc",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"^[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                     }},
+                                                     {"field": "LULC_veg",
+                                                      "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"^[01]"}
+                                                                  }}, 
+                                                     {"field": "root_depth",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"^[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                     }}]},
+            "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
+        },
+        {
+            "id" : "calc_p",
+            "args_id": "calc_p",
+            "type": "checkbox",
+            "label": "Calculate Phosphorous Retention",
+            "defaultValue": true,
+            "required": false,
+            "helpText": "Select to calculate phosphorous export."
+        },
+        {
+            "id" : "calc_n",
+            "args_id": "calc_n",
+            "type": "checkbox",
+            "label": "Calculate Nitrogen Retention",
+            "defaultValue": true,
+            "required": false,
+            "helpText": "Select to calculate nitrogen export."
+        },
+        {        
+            "id" : "threshold_flow_accumulation",
+            "args_id" : "accum_threshold",
+            "type": "text",
+            "label": "Threshold Flow Accumluation",
+            "defaultValue": "1000",
+            "required": true,
+            "validText": "^[0-9]+$",
+            "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
+        },
+        {        
+            "id" : "water_purification_threshold_table_uri",
+            "args_id" : "water_purification_threshold_table_uri",
+            "type": "file",
+            "label": "Water Purification Threshold Table (CSV)",
+            "defaultValue": "../WP_Nutrient_Retention/Input/water_purification_threshold.csv",
+            "required": true,
+            "validateAs": {"type": "CSV",
+                   "fieldsExist": ["ws_id"]
+                  },
+            "helpText": "A table containing annual nutrient load threshold information.  Must have a ws_id index and thres_n (or p) field depending if nitrogen and/or phosphorous is simulated."
+        }
+        ]
+    },
+    {
+        "id" : "valuation_container",
+        "args_id" : "valuation_enabled",
+        "type" : "container",
+        "label" : "Valuation",
+        "collapsible" : true,
+        "defaultValue" : false,
+        "elements" : [
+        {
+            "id" : "valuation_list",
+            "type" : "list",
+            "elements" : [
+            {        
+                "id" : "water_purification_valuation_table_uri",
+                "args_id" : "water_purification_valuation_table_uri",
+                "type": "file",
+                "label": "Water Purification Valuation Table (CSV)",
+                "defaultValue": "../WP_Nutrient_Retention/Input/water_purification_valuation.csv",
+                "required": true,
+                "validateAs": {"type": "CSV"},
+                "helpText": "The table containing valuation information.  It must be indexed by ws_id and contain fields cost_n (or p), time_span_n (or p), discount_n (or p) depending on which nutrients are selected."
+            }
+            ]
+        }
+        ]
+    }
+    ]
+}

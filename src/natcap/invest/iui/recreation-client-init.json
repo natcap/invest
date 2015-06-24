@@ -1,0 +1,340 @@
+{
+  "id": "window",
+  "label": "Recreation Model - Initial Run",
+  "targetScript": "natcap.invest.recreation.recreation_client",
+  "modelName": "recreation_client_init",
+  "localDocURI": "../documentation/recreation.html",
+  "height": 600,
+  "width": 700,
+  "elements": [
+    {
+      "id": "mode",
+      "args_id": "mode",
+      "type": "hiddenElement",
+      "returns": "initial",
+      "required": true
+    },
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../Recreation",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "aoi_file_name",
+          "args_id": "aoi_file_name",
+          "type": "file",
+          "label": "Area of Interest (Vector)",
+          "defaultValue": "../Recreation/input/initial/BC_AOI.shp",
+          "validateAs": {
+            "type": "OGR"
+          },
+          "required": true,
+          "helpText": "An OGR-supported vector file representing the area of interest where the model will run the analysis."
+        },
+        {
+          "id": "grid",
+          "args_id": "grid",
+          "type": "checkbox",
+          "label": "Grid AOI",
+          "defaultValue": true,
+          "helpText": "Checked box indicates for the area of interest to be gridded. If unchecked, the AOI must contain multiple shapes."
+        },
+        {
+          "id": "grid_type",
+          "args_id": "grid_type",
+          "type": "dropdown",
+          "label": "Grid Type",
+          "options": [
+            "rectangular",
+            "hexagonal"
+          ],
+          "returns": {
+            "mapValues": {
+              "rectangular": 0,
+              "hexagonal": 1
+            }
+          },
+          "defaultValue": 1,
+          "required": true,
+          "enabledBy": "grid",
+          "helpText": "Select whether the grid should contain rectangular or hexagonal units."
+        },
+        {
+          "id": "cell_size",
+          "args_id": "cell_size",
+          "type": "text",
+          "label": "Cell Size",
+          "validText": "[0-9]+(\\.[0-9][0-9])?",
+          "dataType": "float",
+          "required": true,
+          "enabledBy": "grid",
+          "defaultValue": "5000",
+          "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
+        },
+        {
+          "id": "comments",
+          "args_id": "comments",
+          "type": "text",
+          "label": "Comments",
+          "required": false,
+          "helpText": "Any comments to be included as part of the model run."
+        },
+        {
+          "id": "data_dir",
+          "args_id": "data_dir",
+          "type": "folder",
+          "label": "Data Directory",
+          "required": false,
+          "defaultValue": "../Recreation/input/initial/predictors",
+          "helpText": "A directory that contains any data to be included in the model run."
+        },
+        {
+          "id": "download",
+          "args_id": "download",
+          "type": "checkbox",
+          "label": "Download Data",
+          "defaultValue": false,
+          "required": false,
+          "helpText": "Includes the processed unrestricted data (including from the data directory) in the results, which could be useful for scenarios."
+        }
+      ]
+    },
+    {
+      "id": "global_data",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "global_data",
+      "label": "Use Global Datasets.",
+      "defaultValue": false,
+      "helpText": "For more information, see the 'Default Predictors' section in the model's documentation</a>",
+      "elements": [
+        {
+          "id": "global_data_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "landscan",
+              "args_id": "landscan",
+              "type": "checkbox",
+              "label": "Population",
+              "defaultValue": false,
+              "required": false,
+              "helpText": "2010 Landscan global distribution of ambient population from Oak Ridge National Laboratory</a>"
+            }
+          ]
+        },
+        {
+          "id": "protected",
+          "args_id": "protected",
+          "type": "hiddenElement",
+          "label": "Protected Areas",
+          "defaultValue": false,
+          "required": false,
+          "helpText": "2012 World Database on Protected Areas from the International Union for Conservation of Nature's World Commission on Protected Areas</a>"
+        },
+        {
+          "id": "osm",
+          "args_id": "osm",
+          "type": "container",
+          "collapsible": true,
+          "defaultValue": false,
+          "label": "Open Street Maps",
+          "elements": [
+            {
+              "id": "osm_list",
+              "args_id": "osm_list",
+              "type": "list",
+              "elements": [
+                {
+                  "id": "osm_1",
+                  "args_id": "osm_1",
+                  "type": "checkbox",
+                  "label": "Cultural",
+                  "defaultValue": true,
+                  "required": false,
+                  "helpText": "2012 data from OpenStreetMap"
+                },
+                {
+                  "id": "osm_2",
+                  "args_id": "osm_2",
+                  "type": "checkbox",
+                  "label": "Industrial",
+                  "defaultValue": true,
+                  "required": false,
+                  "helpText": "2012 data from OpenStreetMap"
+                },
+                {
+                  "id": "osm_3",
+                  "args_id": "osm_3",
+                  "type": "checkbox",
+                  "label": "Natural",
+                  "defaultValue": true,
+                  "required": false,
+                  "helpText": "2012 data from OpenStreetMap"
+                },
+                {
+                  "id": "osm_4",
+                  "args_id": "osm_4",
+                  "type": "checkbox",
+                  "label": "Superstructure",
+                  "defaultValue": true,
+                  "required": false,
+                  "helpText": "2012 data from OpenStreetMap"
+                },
+                {
+                  "id": "osm_0",
+                  "args_id": "osm_0",
+                  "type": "checkbox",
+                  "label": "Miscellaneous",
+                  "defaultValue": true,
+                  "required": false,
+                  "helpText": "2012 data from OpenStreetMap"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lulc",
+          "args_id": "lulc",
+          "type": "container",
+          "defaultValue": false,
+          "collapsible": true,
+          "label": "Land Use and Land Coverage (requires long processing times)",
+          "elements": [
+            {
+              "id": "lulc_list",
+              "args_id": "lulc_list",
+              "type": "list",
+              "elements": [
+                {
+                  "id": "lulc_1",
+                  "args_id": "lulc_1",
+                  "type": "checkbox",
+                  "label": "Agriculture",
+                  "defaultValue": false,
+                  "required": false,
+                  "helpText": "2008 GlobCover from the European Space Agency"
+                },
+                {
+                  "id": "lulc_2",
+                  "args_id": "lulc_2",
+                  "type": "checkbox",
+                  "label": "Bare",
+                  "defaultValue": false,
+                  "required": false,
+                  "helpText": "2008 GlobCover from the European Space Agency"
+                },
+                {
+                  "id": "lulc_3",
+                  "args_id": "lulc_3",
+                  "type": "checkbox",
+                  "label": "Forest",
+                  "defaultValue": false,
+                  "required": false,
+                  "helpText": "2008 GlobCover from the European Space Agency"
+                },
+                {
+                  "id": "lulc_4",
+                  "args_id": "lulc_4",
+                  "type": "checkbox",
+                  "label": "Grassland",
+                  "defaultValue": false,
+                  "required": false,
+                  "helpText": "2008 GlobCover from the European Space Agency"
+                },
+                {
+                  "id": "lulc_5",
+                  "args_id": "lulc_5",
+                  "type": "checkbox",
+                  "label": "Shrubland",
+                  "defaultValue": false,
+                  "required": false,
+                  "helpText": "2008 GlobCover from the European Space Agency"
+                },
+                {
+                  "id": "lulc_6",
+                  "args_id": "lulc_6",
+                  "type": "checkbox",
+                  "label": "Snow and Ice",
+                  "defaultValue": false,
+                  "required": false,
+                  "helpText": "2008 GlobCover from the European Space Agency"
+                },
+                {
+                  "id": "lulc_7",
+                  "args_id": "lulc_7",
+                  "type": "checkbox",
+                  "label": "Urban",
+                  "defaultValue": false,
+                  "required": false,
+                  "helpText": "2008 GlobCover from the European Space Agency"
+                },
+                {
+                  "id": "lulc_8",
+                  "args_id": "lulc_8",
+                  "type": "checkbox",
+                  "label": "Water",
+                  "defaultValue": false,
+                  "required": false,
+                  "helpText": "2008 GlobCover from the European Space Agency"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ouoc",
+          "args_id": "ouoc",
+          "type": "hiddenElement",
+          "collapsible": true,
+          "label": "Ocean Use and Ocean Coverage",
+          "elements": [
+            {
+              "id": "ouoc_list",
+              "args_id": "ouoc_list",
+              "type": "list",
+              "elements": [
+                {
+                  "id": "mangroves",
+                  "args_id": "mangroves",
+                  "type": "checkbox",
+                  "label": "Mangroves",
+                  "defaultValue": true,
+                  "required": false,
+                  "helpText": "1997 global composite dataset of mangrove distribution from the United Nation Environment Programme's World Conservation Monitoring Centre"
+                },
+                {
+                  "id": "reefs",
+                  "args_id": "reefs",
+                  "type": "checkbox",
+                  "label": "Coral Reefs",
+                  "defaultValue": true,
+                  "required": false,
+                  "helpText": "2010 global composite dataset from the United Nation Environment Programme's World Conservation Monitoring Centre"
+                },
+                {
+                  "id": "grass",
+                  "args_id": "grass",
+                  "type": "checkbox",
+                  "label": "Seagrasses",
+                  "defaultValue": true,
+                  "required": false,
+                  "helpText": "2005 global composite dataset from the United Nation Environment Programme's World Conservation Monitoring Centre"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

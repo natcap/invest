@@ -1,0 +1,791 @@
+ModelUI JSON object syntax
+==========================
+
+overview of json syntax
+idea of an 'element'
+The different element types and what they mean.
+
+
+
+
+Two broad categories of element types:
+
+Groups:
+  - container
+  - list
+  - embeddedUI
+  - MultiFile
+  - Tabs
+
+Primitive elements:
+  - label
+  - hiddenElement
+  - file
+  - folder
+  - text
+  - sliderSpinBox
+  - hideableFileEntry
+  - dropdown
+  - checkbox
+
+GROUPS
+================================
+================================
+
+
+container
+=================
+
+The container group allows for the convenient grouping of elements.  It is
+commonly displayed like an HTML fieldset, with a thin line drawn aroung its
+contents and its label featured in the upper-left hand corner.  Display will
+vary based on the style used.
+
+Attributes
+--------------
+    "label"     : A string. Required.  The label of the container.
+    "collapsible: A boolean.  If True, a checkbox will be shown just to the
+                  left of the container's label. When this checkbox is checked,
+                  the contents of the container will be visible.  Container 
+                  contents are invisible with the checkbox is unchecked.
+
+ 
+
+
+list
+==================
+
+The list element allows elements to be grouped together in a grid.  If, for
+example, you were to have a grid with several 'file' elements, all of the 
+labels of the file elements would be nicely aligned, as would the uri fields
+and the buttons.
+
+Attributes
+-------------
+None other than those expected by all containers.
+
+
+embeddedUI
+==================
+
+The embeddedUI element allows a user to embed another user interface into this UI.
+
+Attributes
+-------------
+    "configURI" : A string uri relative to the current directory that points to
+
+
+Multi Element
+=================
+Defines a class that allows the user to select an arbitrary number of the
+same input by providing an hyperlink by which to add another element.
+Validation applies as usual and the same validation is applied to all
+elements.  As a result, it is best to have a single multi-input element for
+each desired validation or input type as inputs cannot be mixed and matched.
+
+example JSON:
+    "id": "multi-file",
+    "type": "multi",
+    "label": "Test multi-file",
+    "sampleElement": {"id": "sample_id",
+                      "type": "text",
+                      "label": "Input raster",
+                      "validateAs": {"type": "GDAL"}},
+    "linkText": "Add another"
+
+Tabs
+==============================
+Tabs allow for a convenient way for elements to be aggregated according to
+usability or whatever other organization strategy the developer prefers.
+
+Note that to use tabs, you must use a TabbedGroup, where the elements of the
+TabbedGroup must all be tabs.  Individual tabs may have primitive and group
+elements as normal.
+
+Example JSON:
+    {
+        "id": "objectiveTabGroup",
+        "type": "tabbedGroup",
+        "elements": 
+        [
+            {
+                "id": "erosion_drinking_objective_tab",
+                "label": "Erosion Control for Drinking Water Quality",
+                "type": "tab",
+                "enabledBy": "use_erosion_drinking",
+                "enabled": false,
+                "elements":
+                [
+                    ... create elements here as normal ...
+                ]
+            },
+            {
+                "id": "erosion_reservoir_objective_tab",
+                "label": "Erosion Control for Reservoir Maintenance",
+                "type": "tab",
+                "enabledBy": "use_erosion_reservoir",
+                "elements":
+                [
+                    ... create elements here as normal ...
+                ]
+            }
+        ]
+    }
+
+
+
+PRIMITIVE ELEMENTS:
+==============================
+==============================
+
+
+Attributes common to all primitive input elements:
+    "args_id"   : A string value representing the dictionary key with which this
+                  element's value will be associated when the model is run.
+                  This is the standard way of allowing the UI to assemble
+                  arguments for the model.
+    "validateAs": A dictionary defining how to validate the input element and
+                  what restrictions are to be placed on the user's input.  See
+                  the section on Validation in this document for details.  If
+                  this attribute is not provided, no validation will be
+                  performed on this element unless it's a folder or file
+                  elements (each of which have default validation).
+                  To make all validation pass, use "validateAs": {"type":
+                  "disabled"} for a specific element.
+    "label"     : A string value that will be set as the element's label.  The
+                  particular display of the label depends on the element.
+                  This is a required attribute.
+    "required"  : A boolean.  Indicates whether this element is absolutely
+                  required.  If this element is omitted, this element is assumed
+                  to be not required.
+    "requiredIf": An array of element IDs.  This element is assumed to be
+                  optional unless one of the elements in this list becomes
+                  enabled.
+    "enabledBy" : A string element ID.  If the element represented by the string
+                  element ID is satisfied (the satisfaction of an element's
+                  requirements depends on the element), the current element is
+                  enabled.
+    "helpText"  : A string of text.  May contain unicode.  If provided, this
+                  will be provided to the user when the user clicks the info
+                  button next to this element.  If a "helpText" attribute is not
+                  defined in your json file, help text will instead request that
+                  the user check out the model's documentation. if you set
+                  "helpText": null in your json configuration, the helpText
+                  button will not be displayed.
+
+Attributes common to text-based primitive elements (file, folder, text elements):
+   "defaultValue" : A string.  The text of the textfield will be set to this
+                    string when the element is created or when the UI is reset
+                    to defaults.
+                    NOTE: If this element is of the type 'file' or 'folder', the
+                    URI given will be turned into an absolute path before it is
+                    entered into the textfield.  It is therefore recommended to
+                    use filepaths relative to the InVEST root wherever possible.
+   "validText"    : A string regular expression using Perl regexp syntax.  This
+                    regular expression is given to the UI to restrict the user's
+                    input to the textfield.  This field should not be necessary
+                    to use on an element of type 'file' or 'folder' if you are
+                    using validation.
+
+label
+==================
+The label element allows you to display text in the ui and has the ability to
+return a pre-set value, dictionary, list or whatever to the executor.  Anything
+that can be specified in the JSON definition in the "returns" attribute can be
+returned.  Text to be displayed may be formatted with HTML tags.  Use the
+"label" attribute to define the text to be displayed.
+
+hiddenElement
+=================
+The hiddenElement element allows the user to specify an element that is not
+displayed in the UI, but still allows anything to be returned with an args_id,
+rather like the label element.
+
+
+file
+==================
+
+The file attribute allows the user to enter a filepath into a textfield, or to
+click a button that will present a file selectino dialog.  If the user selects
+a file through the dialog, the URI to the selected file will be set in the
+textfield.
+
+Attributes
+--------------
+None unique to this element type.
+
+Example file object from carbon_biophysical:
+{
+    "id" : "cur_lulc_raster",
+    "args_id" : "lulc_cur_uri",
+    "type": "file",
+    "label": "Raster location",
+    "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
+    "validateAs": {"type": "GDAL"},
+    "required": true,
+    "permissions": "r",
+    "returns": {"ifEmpty": "pass"}
+},
+
+Validation
+----------------------------------------
+IUI contains significant validation capabilities for files that can be specified
+entirely through the JSON configuration of an object.  All validation for a
+given element is found in the JSON object associated with the "validateAs"
+attribute.
+
+Currently, the following filetypes are supported:
+
+    Filetype     | Available validation operations
+    -------------|-------------------------------------------------------------
+    generic file | open file, check permissions
+    -------------|-------------------------------------------------------------
+    GDAL         | open file, check permissions, verify filetype
+    -------------|-------------------------------------------------------------
+    OGR          | open file, check permissions, verify filetype, verify layer exists,
+                 | check field names, validate field contents
+    -------------|-------------------------------------------------------------
+    DBF          | open file, check permissions, verify filetype, check field names, validate 
+                 | field contents as regexp, validate field against other fields
+    -------------|-------------------------------------------------------------
+    CSV          | open file, check permissions, verify filetype, check field names, validate field
+                 | contents as regexp, validate field against other fields.
+    -------------|-------------------------------------------------------------
+
+
+    NOTE: Before any other filetype-specific validation takes place, the file's
+          URI is checked to ensure that it exists on the present filesystem.  If
+          This check fails, further validation is cancelled.
+
+Each operation has its own syntax for use in the JSON configuration file.
+Individual checks will only be performed if the option exists in the
+configuration.  The only required validation option is the "type" option.  All
+others are optional.
+
+NOTE: For details on validating file permissions, see the permissions section
+later in this document.
+
+
+    generic file:
+    ------------------------
+    This checker is a fallback validator for an input file.  If possible, use a
+    specialized filetype or define a custom input filetype if further validation
+    is desired.  Validation for this file is limited to ensuring that the file
+    exists, that it can be opened by Python, and that it has necessary file permissions.
+
+    example:
+    ------------------------
+    "validateAs": {"type": "file"}
+
+
+
+    GDAL
+    --------------------------
+    This checker tries to ensure that the given element is a GDAL dataset.  This
+    is done by seeing if GDAL can open the user-provided URI.  This is the
+    limit of GDAL-specific validation.  Other errors are assumed to be
+    documented and/or handled within the module code.  
+
+    example:
+    --------------------------
+    "validateAs": {"type": "GDAL"}
+
+
+
+    OGR
+    --------------------------
+    This checker verified several attributes of an OGR data source as configured
+    in the JSON configuration file.
+
+    "type": "OGR"
+    This option verifies that the provided file can be opened by
+    OGR and that it is an OGR-recognizeable file.
+
+    "layer": [{...}]
+    This option allows the user to define specific characteristics about the
+    input layer:
+        "name" : Required.  A String.  The name of the layer.  If a layer with
+                 this name is not found in the shapefile, an error is returned.
+                 If "name" correlates to a dictionary with the key "inheritFrom"
+                 and the value "file", the OGR datasource's filename will be
+                 examined and a layer will be opened with the file's name (minus
+                 the suffix).  Uses os.path.splitext for finding the layer name.
+        "type" : Optional.  A string.  Allowed values: "polygons", "points".
+                 This option allows the user to specify the type of the given
+                 layer.  Returns an error if this layer is not of the correct
+                 type.
+        "projection":
+                 Optional.  A python dictionary with the following possible
+                 validation options:
+                 "units" : possible options: "meters", "latLong".  Providing
+                    option will return an error if the shapefile provided is not
+                    projected in the defined unit of measurement.
+                 "exists" : A boolean.  Validates whether the layer is projected
+                    at all.
+                 "name" : A string.  If the specified layer is not projected in
+                    this projection, an error is returned.  For example, if
+                    "name": "Transverse_Mercator" and the layer's projection
+                    does not match "Transverse_Mercator", an error will be
+                    returned.
+
+    "fieldsExist" : ["field1", "field2", "field3", ...]
+    This option verifies that the fields in this array all exist in the OGR
+    file.  Note that this list is not exclusive ... it merely defines the fields
+    that are required to exist.
+
+    example:
+    --------------------------
+    "validateAs": {"type": "OGR", 
+                   "layers": [{"name": "layer_name",
+                               "type": "polygons"},
+                              {"name": "layer_name_2",
+                               "projection" : {"name": "Transverse_Mercator"}},
+                              {"name": {"inheritFrom": "file"},
+                               "type": "polygons"}],
+                   "fieldsExist": ["field1", "field2", "field3", ...]}
+
+
+
+    DBF
+    ---------------------------------
+    This checker, verifies several characteristics of an input DBF file using
+    the dbfpy module included with the installation of invest_core.
+
+    "type": "DBF"
+    This option verifies that the provided file can be opened as a DBF file.
+    Note that this check is not 100% accurate because dbfpy can open some
+    unexpected filetypes without error.
+
+    "fieldsExist": ["field1", "field2", "field3", ... ]
+    This option verifies that the fields in this array all exist within this DBF
+    file.  Note that this list is not exclusive ... it merely defines the DBF
+    fields required in this file.
+
+    "restrictions" : [....]
+    This option defines per-row restrictions.  Use this option to specify the
+    sorts of values required in a given column of the table or to specify how
+    the value of a given field should relate to another field in the same table
+    row.
+
+    See the section below on per-record restrictions for details.
+
+
+    
+    CSV
+    --------------------------------
+    This checker verifies several characteristics of an input CSV file using
+    python's built-in csv module.
+
+    "type": "CSV"
+    This option verifies that the provided file can be opened as a CSV file.
+
+    "fieldsExist": ["field1", "field2", "field3", ....]
+    This option verifies that the fields in this array all exist within this CSV
+    file.  Note that this list is not exclusive ... it merely defines the fields
+    that are required to exist in this file.
+
+    "restrictions": [...]
+    This option defines per-row restrictions.  Use this option to specify the
+    sorts of values required in a fiven column of the table or to specify how
+    the value of a given field should relate to another field within the same
+    table row.
+
+    See the section below on per-record restrictions for details.
+
+
+
+    per-record restrictions
+    -----------------------
+    Defined by the "restrictions" option, this allows for the configuration of 
+    restrictions per record.  There are two types of per-record restrictions:
+    absolute and relative.  Absolute restrictions allow the value of a given
+    field to be defined by a regular expression.  Relative restrictions allow
+    the value of a field to be verified to be greater than or less than (or
+    equal to) another field in the same record or a number specified in the
+    configuration file.
+
+    The "restrictions" attribute should point to an array of per-record
+    restrictions.  This allows multiple restrictions to be placed on a given
+    file.
+
+    All per-record restrictions have two attributes:
+        "field": string or dictionary
+        ----------------
+        This is the field that is being checked against either some
+        value or against the value in another field.
+
+        If this field is a dictionary, it must define a regular expression that
+        will select a set of fields.  This dictionary must have the same
+        structure of primitive number checking.
+
+        "validateAs" : JSON object
+        ---------------------------
+        This object defines the specific restrictions for this particular
+        field for every row.  It contains the details of how the field should
+        be validated. 
+
+    example absolute restriction:
+    "validateAs": { "type": "CSV",
+                    "fieldsExist": ["NAME", "VALUE", "NOTE"],
+                    "restrictions": [{"field": "NAME",
+                                    "validateAs": {"type": "string",
+                                                   "allowedValues": {"pattern":"[a-z]*",
+                                                                     "flag": "ignoreCase"}},
+                                     {"field": "VALUE",
+                                      "validateAs": {"type": "number",
+                                                     "allowedValues":{"pattern":"[0-9]*"}}
+                                        }                                    
+                                    }]}
+
+    example relative restrictions
+    "validateAs": { "type": "CSV",
+                    "fieldsExist": ["NAME", "VALUE1", "VALUE2", "VALUE3", "NOTE"],
+                    "restrictions": [{"field": "VALUE1",
+                                      "validateAs": {"type": "number",
+                                                     "lessThan": "VALUE2",
+                                                     "gteq": "VALUE3"}
+                                     },
+                                     {"field": "VALUE2",
+                                      "validateAs": {"type": "number",
+                                                     "lessThan": 42}
+                                     }                                     
+                                    ]}
+
+    example regex field selection
+    "validateAs": {"type": "CSV",
+                    "fieldsExist": ["NAME", "VALUE1", "VALUE2", "VALUE3", "NOTE"],
+                    "restrictions": [{"field": {"pattern": "VALUE[0-3]",
+                                                "flag": "ignoreCase"}},
+                                      "validateAs": {"type": "number",
+                                                     "lessThan": "10",
+                                                     "gteq": "0"}
+                                     }
+                                    ]}
+
+
+hideableFileEntry
+=========================
+
+The hideableFileEntry object is identical to the 'file' object except that is
+contains an added feature:  There is a checkbox in front of the file object that
+hides and shows the URI field and button that opens the file dialog.  When the
+checkbox is checked, the URI field and button appear to the user.  When the
+checkbox is unchecked, the URI field and button are hidden from view.
+
+Attributes
+-----------------
+Attributes for this object are identical to the file object.
+
+Example file object from carbon_biophysical:
+{
+    "id" : "cur_lulc_raster",
+    "args_id" : "lulc_cur_uri",
+    "type": "hideableFileEntry",
+    "label": "Raster location",
+    "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
+    "validateAs": {"type": "GDAL"},
+    "required": true
+},
+
+
+folder
+====================
+
+The 'folder' element type is identical to the 'file' type except that when the
+user clicks the button to select a file, the user is instead expected to select
+a folder (the UI will only permit the user to select an existing folder).
+
+Attributes
+-------------------
+None unique to this element type.
+
+
+Validation
+-------------------
+Folder validation is limited to checking that the provided URI is a directory on
+the filesystem.  It is configured with the following syntax:
+
+    "validateAs": {"type": "folder",
+                   "mustExist": false,
+                   "permissions": "rwx",
+                   "contains": ['file_1.tif', 'file_2.shp']}
+
+The contains attribute is not used if it is not provided.
+
+The mustExist attribute is assumed to be false unless you specify otherwise.  It
+must be a boolean.  NOTE: if you do not specify validation for a folder element,
+validation defaults to "validateAs": {"type": "folder", "mustExist": false}.  To
+disable validation, use "validateAs": {"type": "disabled"}.
+
+The folder, like all other URI-based element, can validate permissions.  See the
+relevant permissions section later in this document for details.
+
+Example folder object from carbon_biophysical:
+{
+    "id" : "workspace",
+    "args_id" : "workspace_dir",
+    "type": "folder",
+    "label": "Workspace",
+    "validateAs": {"type": "folder"},
+    "defaultValue": "./carbon",
+    "required": true
+}
+
+
+
+
+text
+=======================
+
+The 'text' element type allows the user to enter text, regardless of the type of
+input text.  The set of characters the user may enter can be restricted by using
+the 'validText' attribute, described above and demonstrated below.
+
+To clarify the purpose of a given text element, the 'width' attribute is
+provided.  Use it wisely according to what width makes the element's purpose
+most clear.  For an expected four-digit number, for example, a width of 70
+should suffice, whereas a width of 150 (or to omit declaring the 'width'
+attribute) might be more appropriate for an email address.
+
+Attributes
+------------------------
+    "width" : an int representing the pixel width of the textfield.  If this
+              attribute is not defined in the JSON configuration, no width is
+              assigned and the textfield will expand to fit the space it is
+              permitted.
+
+Validation
+------------------------
+Textfield validation comes in two forms: Numeric and String.
+
+Numeric validation for textfields has two possibile forms of comparison.  You
+may either compare the field's value against another field or a fixed value
+using one of the available comparators.
+
+    Available comparators:
+    "lessThan"    - equivalent to '<'
+    "greaterThan" - equivalent to '>'
+    "gteq"        - equivalent to '>='
+    "lteq"        - equivalent to '<='
+    
+A single field may use an assortment of the available comparators, but a single
+comparator may only be used once.  All comparators use the following syntax: 
+
+    "comparator_name": value
+    
+where value is either a field name or a numeric value.
+
+It is also possible to compare the value of the field against a regular
+expression.  The syntax for this is:
+
+    "allowedValues": "regexp_string"
+
+Where the regexp_string is a string regular expression that can operate with
+python's re module.
+
+String validation is restricted to regular expression matching.  The syntax for
+this is:
+    
+    "allowedValues": "regexp_string"
+
+Where the regexp_string is a string regular expression compatible with python's
+re module.
+
+***NOTE***
+Both the string and number validation types have defaule regular expressions
+that are checked even if the user does not specify a different regular
+expression.  The default string regex is ".*".  The default number regex is
+"[0-9]*(\\.[0-9]*)?".
+
+
+Example text object from carbon_biophysical:
+{
+    "id" : "cur_lulc_year",
+    "type": "text",
+    "width": 70,
+    "validText": "-?[0-9]+",
+    "dataType": "int",
+    "args_id": "lulc_cur_year",
+    "label": "Year of land cover",
+    "required": false,
+    "enabledBy": "calc_sequestration",
+    "defaultValue": "2000",
+    "validateAs": {"type": "number",
+                   "lteq": "fut_lulc_year"},
+    "requiredIf": ["cur_harvest_map", "fut_harvest_map"]
+}
+
+
+sliderSpinBox
+==============================
+
+The sliderSpinBox object produces a draggable slider widget with a spinbox (a
+little numeric textfield with small, clickable up/down arrows within) associated
+with the slider.  When the user drags the slider, the value in the spinbox is
+updated.  Likewise, if the user updates the value in the spinbox, the slider is
+updated to the user's provided value.
+
+Attributes
+-----------------------------
+    "min" : Required.  A number.  This value represents the minimum allowed
+            value of the slider and the spinbox.
+    "max" : Required.  A number.  This value represents the maximum allowed
+            value of the slider and the spinbox.
+    "sliderSteps" : Required.  An int.  Although the slider represents a
+                    continuum, its values are defined as a series of discreet
+                    steps.  This attribute defines the number of steps permitted
+                    to the slider.
+    "spinboxSteps": Required.  An int.  Defines the number of steps allowed the
+                    spinBox.  When the user clicks either the 'up' or 'down'
+                    arrow on the spinbox, the number entered is incremented or
+                    decremented by the difference between the max and the min
+                    values divided by the number of spinboxSteps.
+
+Example sliderSpinBox object:
+{
+    "id": "slider_spinbox",
+    "type": "sliderSpinBox",
+    "label": "Enter a number between 1 and 100",
+    "min": 0,
+    "max": 100,
+    "sliderSteps": 100,
+    "spinboxSteps": 100
+}
+
+
+dropdown
+================================
+
+The dropdown element produces a dropdown menu with options defined by the user
+in the JSON configuration.  The user may opt to have the string value of the
+user's selection returned as the element's value or to have the numeric ordinal
+of the user's selection returned instead.
+
+Note that the defaultValue attribute should be a zero-based integer that
+corresponds to one of the options specified.
+
+Attributes
+-------------------------------
+    "options": Required.  An array of strings.  This is the ordered list of
+               strings to be displayed in the dropdown menu.
+    "returns": Optional.  A string.  There are two possible values to this
+               string: "strings" and "ordinals".  If this option is set to
+               "strings", the string of the user's selection will be returned.
+               Otherwise, the ordinal (index of the user's selection) will be
+               returned instead.  NOTE:  if this option is not provided in the
+               configuration, the string of the user's selection will be
+               returned.
+
+Example dropdown object:
+{
+    "id": "dropdown_example",
+    "type": "dropdown",
+    "label": "What is your cell phone carrier?",
+    "options":["verizon", "t-mobile", "sprint", "at&t", "other"],
+    "returns": "strings",
+    "defaultValue": 0
+}
+
+specialized dropdown menus:
+---------------------------
+
+There is a specialized dropdown menu that exists for selecting an OGR field from
+a specific shapefile: OGRFieldDropdown.  This element appears as a dropdown menu
+that is disabled in the UI, but is connected to an OGR file field behind the
+scenes.  When a file is provided to the OGR file field, the dropdown is
+populated with the file field's fieldnames.
+
+Example OGRFieldDropdown object:
+{
+    "id": "OGRDropdown_example",
+    "type": "OGRFieldDropdown",
+    "label": "What is your cell phone carrier?",
+    "enabledBy": "id_of_an_OGR_file_element",
+    "returns": "strings"
+}
+
+
+
+
+checkbox
+=================================
+
+The checkbox element produces a checkbox that can be toggled on or off.  Its
+single attribute is a label.
+
+Example checkbox from carbon_biophysical:
+{
+    "id" : "calc_sequestration",
+    "type": "checkbox",
+    "label": "Calculate sequestration",
+    "defaultValue": false,
+    "required": false
+}
+
+
+VALIDATING PERMISSIONS:
+=================================
+To check permissions on files or folders (any URI-based input) use the 'permissions'
+flag.  For example:
+
+    "validateAs": {"type":"GDAL",
+                   "permissions": "r"}
+
+Like the file permission modes in the Linux/Unix OS, there are similar checks
+available to validation.  Note that all permissions checks are done only for the
+user, not for 'group' or 'other'.  Available permissions checks are:
+
+    'r' - Check that the user has read-access to this file
+    'w' - Check that the user has write-access to this file
+    'x' - Check that the user has executable access to this file.
+
+These mode characters may be combined to form a string of permissions checks,
+though it will not significantly affect validation: each permissions check will
+at most be performed once.  Here are some example permission check strings:
+
+    "permissions": "rw"  // this will check read and write.
+    "permissions": "wx"  // check write and execute
+    "permissions": ""    // performs no permissions checks
+    "permissions": "rwx" // perform all permissions checks
+
+While it is up to the developer to select sensible permissions for your specific
+use-case, IUI does assume certain defaults, which you may override in your 
+UI's JSON configuration file.  Here are the defaults IUI assumes:
+
+    folder: "r"
+    file: "r"
+
+For validating a workspace, a common class of folder, you will probably want
+to add the "w" mode so that your model can write its output files there.
+
+IMPORTANT: permissions validation ONLY works if the file or folder it is
+validating exists on disk.  If the path does not exist, we cannot validate its
+permission, so we instead validate the permissions of the parent folder of the
+specified URI.  It is up to the user to specify if the file or folder is required
+to exist, according to the needs of the model.
+
+
+
+IUI METADATA:
+===============================
+There may be circumstances when some metadata from the UI is useful to the
+operation of the model itself.  If this is the case for your model, then add
+the following to the root level of your JSON configuration object:
+
+   "include_meta": true
+
+This will then trigger a new entry to be added to the args dictionary before it
+is passed to your execute() function.  This new entry will have the key
+"_iui_meta" and will be a dictionary with the following structure:
+
+    "_iui_meta": {
+        "logfile": {
+            "uri": <uri to the logfile's temp location>,
+            "timestamp": <the logfile's timestamp>,
+        },
+        "ui_state": <dict representation of the element state.  This is
+            a python representation of the lastRun dictionary.  To use this as
+            a saved run or scenario file, be sure to serialize this to a JSON
+            object.>,
+        "lastrun_uri": <the URI to the lastrun file on disk>,
+    }

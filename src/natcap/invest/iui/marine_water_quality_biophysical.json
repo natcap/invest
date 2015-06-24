@@ -1,0 +1,153 @@
+{
+  "id": "window",
+  "label": "Marine Water Quality Biophysical",
+  "targetScript": "natcap.invest.marine_water_quality.marine_water_quality_biophysical",
+  "modelName": "marine_water_quality_biophysical",
+  "localDocURI": "../documentation/marine_water_quality.html",
+  "height": 700,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../MarineWaterQuality",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "aoi_poly",
+          "args_id": "aoi_poly_uri",
+          "type": "file",
+          "label": "Area of Interest (Vector)",
+          "defaultValue": "../MarineWaterQuality/input/AOI_clay_soundwideWQ.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR"
+          },
+          "helpText": "An OGR-supported vector file that contains a polygon indicating the target area. The output raster will align with the area of extents of this polygon. The polygon itself should be projected."
+        },
+        {
+          "id": "land_poly",
+          "args_id": "land_poly_uri",
+          "type": "file",
+          "label": "Land Polygon (Vector)",
+          "defaultValue": "../MarineWaterQuality/input/3005_VI_landPolygon.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR"
+          },
+          "helpText": "An OGR-supported vector file that contains a polygon indicating where the landmass lies.  It should be in the same projection as the AOI polygon."
+        },
+        {
+          "id": "pixel_size",
+          "type": "text",
+          "label": "Output Pixel Size (in units of the AOI polygon)",
+          "args_id": "pixel_size",
+          "required": true,
+          "defaultValue": "100",
+          "validateAs": {
+            "type": "number",
+            "gteq": 0
+          },
+          "dataType": "float",
+          "helpText": "Horizontal grid size, which determines the output resolution of the pollutant density raster. A larger number will make the output grid coarser but the model will run faster, while a finer resolution will require more computation and memory. Try making this number larger if a model run causes an out of memory error."
+        },
+        {
+          "id": "layer_depth",
+          "type": "text",
+          "label": "Grid Cell Depth",
+          "args_id": "layer_depth",
+          "required": true,
+          "defaultValue": "1.0",
+          "validateAs": {
+            "type": "number",
+            "gteq": 0
+          },
+          "dataType": "float",
+          "helpText": "This is a floating point value indicating the depth at which to simulate pollutant in the system.  A larger number will yield a lower overall concentration."
+        },
+        {
+          "id": "source_points",
+          "args_id": "source_points_uri",
+          "type": "file",
+          "label": "Source Point Centroids (Vector)",
+          "defaultValue": "../MarineWaterQuality/input/floathomes_centroids.shx",
+          "required": true,
+          "validateAs": {
+            "type": "OGR"
+          },
+          "helpText": "An OGR-supported vector file that contains a point layer indicating the centroids of point pollutant sources that must have a field called 'Id' that indicates the unique identification number for that point. This file must be in the same projection as the AOI polygon."
+        },
+        {
+          "id": "source_point_data",
+          "args_id": "source_point_data_uri",
+          "type": "file",
+          "label": "Source Point Loading Table (CSV)",
+          "defaultValue": "../MarineWaterQuality/input/WQM_PAR.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": "Point source loading g/day ororganism count/day at the loading points that contains at least the headers ID and WPS which correspond to the identification number in the Source Point Centroids shapefile and the loading of pollutant at that point source."
+        },
+        {
+          "id": "kps",
+          "type": "text",
+          "label": "Decay Coefficient (Kb)",
+          "args_id": "kps",
+          "required": true,
+          "defaultValue": "0.001",
+          "validateAs": {
+            "type": "number",
+            "gteq": 0
+          },
+          "dataType": "float",
+          "helpText": "Indicates the rate at which a pollutant is absorbed.  Consult Table 2 or Equation 6 in the the User's Guide for guidance."
+        },
+        {
+          "id": "tide_e",
+          "args_id": "tide_e_points_uri",
+          "type": "file",
+          "label": "Tidal Diffusion Constants (E) (Vector)",
+          "defaultValue": "../MarineWaterQuality/input/TideE_WGS1984_BCAlbers.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR"
+          },
+          "helpText": "An OGR-supported vector file that contains a point layer with a field named kx_km2_day indicating the dispersion coefficients km^2/day. This file must be in the same projection as the AOI polygon."
+        },
+        {
+          "id": "advection_uv",
+          "args_id": "adv_uv_points_uri",
+          "type": "file",
+          "label": "Advection Vectors (UV as Point Data) (Vector) (Optional)",
+          "defaultValue": "../MarineWaterQuality/input/ADVuv_WGS1984_BCAlbers.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR"
+          },
+          "helpText": "An OGR-supported vector file that contains a point layer with two fields named U_m_sec_ and V_m_sec_ which correspond to the U and V components (m/s) of the 2D advective velocity vector as referenced in Equation 1 in the User's Guide. This file must be in the same projection as the AOI polygon."
+        }
+      ]
+    }
+  ]
+}
