@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 750,
+  "height": 800,
   "width": 900,
   "elements": [
     {
@@ -167,7 +167,7 @@
           "args_id": "yieldgap_threshold",
           "type": "text",
           "label": "Yieldgap Threshold",
-          "defaultValue": "0.456804906897",
+          "defaultValue": "0.46",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
           "disabledBy": "predefined_globio"
