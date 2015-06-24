@@ -121,9 +121,8 @@ REQUIREMENTS = [
     'shapely',
     'poster',
     'h5py',
-    'psycopg2',
     'pyamg',
-    'pygeoprocessing',
+    'pygeoprocessing==0.3.0a3',
     'setuptools',
     'setuptools_scm',
     ]
