@@ -208,4 +208,28 @@ setup(
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,
+    package_data={
+        'natcap.invest.iui': [
+            '*.png',
+            '*.json',
+            'iui_resources/resources.json',
+            'iui_resources/images/*.png',
+        ],
+        'natcap.invest.reporting': [
+            'reporting_data/*.js',
+            'reporting_data/*.css',
+        ],
+        'natcap.invest.scenario_generator': [
+            '*.js',
+        ],
+        'natcap.invest.recreation': [
+            '*.php',
+            '*.r',
+            '*.json',
+        ],
+        'natcap.invest.wave_energy': [
+            'wave_energy_scripts/*.sh',
+            'wave_energy_scripts/*.txt'
+        ],
+    }
 )
