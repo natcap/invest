@@ -10,7 +10,7 @@ import yaml
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
-LOGGER = logging.getLogger('natcap.opal.versioning')
+LOGGER = logging.getLogger('natcap.invest.versioning')
 LOGGER.setLevel(logging.ERROR)
 
 
