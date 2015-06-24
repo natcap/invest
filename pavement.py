@@ -261,7 +261,7 @@ def env(options):
     requirements = [
         "numpy",
         "scipy",
-        "pygeoprocessing==0.2.2",
+        "pygeoprocessing==0.3.0a2",
         "psycopg2",
     ]
 
