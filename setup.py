@@ -146,7 +146,7 @@ setup(
     long_description=readme + '\n\n' + history,
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
-    url='http://bitbucket.org/jdouglass/invest-py',
+    url='http://bitbucket.org/natcap/invest',
     namespace_packages=['natcap'],
     packages=[
         'natcap',
