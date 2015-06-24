@@ -1,0 +1,123 @@
+{
+  "id": "window",
+  "label": "Fisheries Habitat Scenario Tool",
+  "targetScript": "natcap.invest.fisheries.fisheries_hst",
+  "modelName": "fisheries_hst",
+  "localDocURI": "../documentation/fisheries.html",
+  "height": 650,
+  "width": 700,
+  "elements": [
+    {
+      "id": "alpha_only",
+      "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
+      "type": "label",
+      "helpText": "Alpha tools are considered unstable."
+    },
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../Fisheries",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        }
+      ]
+    },
+    {
+      "id": "pop_cont",
+      "args_id": "pop_cont",
+      "label": "Population Parameters",
+      "type": "container",
+      "defaultValue": true,
+      "elements": [
+        {
+          "id": "pop_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "population_csv_uri",
+              "args_id": "population_csv_uri",
+              "type": "file",
+              "label": "Population Parameters File (CSV)",
+              "defaultValue": "../Fisheries/input/Habitat_Scenario_Tool/pop_params.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV"
+              },
+              "helpText": "A CSV file containing all necessary attributes for population classes based on age/stage, sex, and area - excluding possible migration information.<br><br>See the 'Running the Model >> Core Model >> Population Parameters' section in the model's documentation for help on how to format this file."
+            },
+            {
+              "id": "sexsp",
+              "args_id": "sexsp",
+              "type": "dropdown",
+              "label": "Population Classes are Sex-Specific",
+              "defaultValue": "No",
+              "required": true,
+              "options": [
+                "No",
+                "Yes"
+              ],
+              "returns": "strings",
+              "dataType": "string",
+              "helpText": "Specifies whether or not the population classes provided in the Populaton Parameters CSV file are distinguished by sex."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hab_cont",
+      "args_id": "hab_cont",
+      "label": "Habitat Parameters",
+      "type": "container",
+      "defaultValue": true,
+      "elements": [
+        {
+          "id": "hab_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "habitat_csv_dep_uri",
+              "args_id": "habitat_dep_csv_uri",
+              "type": "file",
+              "label": "Habitat Dependency Parameters File (CSV)",
+              "defaultValue": "../Fisheries/input/Habitat_Scenario_Tool/habitat_dep_params.csv",
+              "required": true,
+              "helpText": "A CSV file containing the habitat dependencies (0-1) for each life stage or age and for each habitat type included in the Habitat Change CSV File.<br><br>See the 'Running the Model >> Habitat Scenario Tool >> Habitat Parameters' section in the model's documentation for help on how to format this file."
+            },
+            {
+              "id": "habitat_chg_csv_uri",
+              "args_id": "habitat_chg_csv_uri",
+              "type": "file",
+              "label": "Habitat Area Change File (CSV)",
+              "defaultValue": "../Fisheries/input/Habitat_Scenario_Tool/habitat_chg_params.csv",
+              "required": true,
+              "helpText": "A CSV file containing the percent changes in habitat area by subregion (if applicable). The habitats included should be those which the population depends on at any life stage.<br><br>See the 'Running the Model >> Habitat Scenario Tool >> Habitat Parameters' section in the model's documentation for help on how to format this file."
+            },
+            {
+              "id": "gamma",
+              "args_id": "gamma",
+              "type": "text",
+              "label": "Gamma",
+              "defaultValue": "0.5",
+              "required": true,
+              "dataType": "float",
+              "validateAs": {
+                "type": "number"
+              },
+              "helpText": "Gamma describes the relationship between a change in habitat area and a change in survival of life stages dependent on that habitat. Specify a value between 0 and 1.<br><br>See the documentation for advice on selecting a gamma value."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

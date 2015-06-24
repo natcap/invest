@@ -1,0 +1,284 @@
+{
+  "id": "window",
+  "label": "Wave Energy",
+  "targetScript": "natcap.invest.wave_energy.wave_energy",
+  "modelName": "wave_energy",
+  "localDocURI": "../documentation/wave_energy.html",
+  "height": 800,
+  "width": 800,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../WaveEnergy",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "suffix",
+          "type": "text",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "A string that will be added to the end of the output file paths."
+        },
+        {
+          "id": "wave_base_data",
+          "args_id": "wave_base_data_uri",
+          "type": "folder",
+          "label": "Wave Base Data Folder",
+          "defaultValue": "../WaveEnergy/input/WaveData",
+          "required": true,
+          "validateAs": {
+            "type": "folder",
+            "mustExist": true
+          },
+          "helpText": "Select the folder that has the packaged Wave Energy Data."
+        },
+        {
+          "id": "analysis_area",
+          "args_id": "analysis_area_uri",
+          "type": "dropdown",
+          "label": "Analysis Area",
+          "options": [
+            "West Coast of North America and Hawaii",
+            "East Coast of North America and Puerto Rico",
+            "North Sea 4 meter resolution",
+            "North Sea 10 meter resolution",
+            "Australia",
+            "Global"
+          ],
+          "defaultValue": 0,
+          "required": true,
+          "helpText": "A list of analysis areas for which the model can currently be run. All the wave energy data needed for these areas are pre-packaged in the WaveData folder."
+        },
+        {
+          "id": "aoi",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "Area of Interest (Vector)",
+          "defaultValue": "../WaveEnergy/input/AOI_WCVI.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons",
+                "projection": {
+                  "units": "meters",
+                  "exists": true
+                },
+                "datum": "WGS_1984"
+              }
+            ]
+          },
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "helpText": "An OGR-supported vector file containing a single polygon representing the area of interest. This input is required for computing valuation and is recommended for biophysical runs as well. The AOI should be projected in linear units of meters."
+        },
+        {
+          "id": "machine_perf_table",
+          "args_id": "machine_perf_uri",
+          "type": "file",
+          "label": "Machine Performance Table (CSV)",
+          "defaultValue": "../WaveEnergy/input/Machine_Pelamis_Performance.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": "A CSV Table that has the performance of a particular wave energy machine at certain sea state conditions."
+        },
+        {
+          "id": "machine_param_table",
+          "args_id": "machine_param_uri",
+          "type": "file",
+          "label": "Machine Parameter Table (CSV)",
+          "required": true,
+          "defaultValue": "../WaveEnergy/input/Machine_Pelamis_Parameter.csv",
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "NAME",
+              "VALUE",
+              "NOTE"
+            ],
+            "restrictions": [
+              {
+                "field": "NAME",
+                "validateAs": {
+                  "type": "string",
+                  "allowedValues": {
+                    "pattern": "capmax|hsmax|tpmax",
+                    "flag": "ignoreCase"
+                  }
+                }
+              },
+              {
+                "field": "VALUE",
+                "validateAs": {
+                  "type": "number",
+                  "allowedValues": {
+                    "pattern": "[0-9]*\\.?[0-9]+$"
+                  }
+                }
+              }
+            ]
+          },
+          "helpText": "A CSV Table that has parameter values for a wave energy machine. This includes information on the maximum capacity of the device and the upper limits for wave height and period."
+        },
+        {
+          "id": "dem",
+          "args_id": "dem_uri",
+          "type": "file",
+          "label": "Global Digital Elevation Model (Raster)",
+          "defaultValue": "../Base_Data/Marine/DEMs/global_dem",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file containing a digital elevation model dataset that has elevation values in meters. Used to get the cable distance for wave energy transmission."
+        }
+      ]
+    },
+    {
+      "id": "valuation_container",
+      "args_id": "valuation_container",
+      "type": "container",
+      "label": "Valuation",
+      "collapsible": true,
+      "defaultValue": false,
+      "enabledBy": "aoi",
+      "elements": [
+        {
+          "id": "valuation_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "land_grid_points",
+              "args_id": "land_gridPts_uri",
+              "type": "file",
+              "label": "Grid Connection Points File (CSV)",
+              "defaultValue": "../WaveEnergy/input/LandGridPts_WCVI.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV",
+                "fieldsExist": [
+                  "ID",
+                  "TYPE",
+                  "LAT",
+                  "LONG",
+                  "LOCATION"
+                ],
+                "restrictions": [
+                  {
+                    "field": "ID",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[0-9]+"
+                      }
+                    }
+                  },
+                  {
+                    "field": "TYPE",
+                    "validateAs": {
+                      "type": "string",
+                      "allowedValues": {
+                        "pattern": "LAND|GRID",
+                        "flag": "ignoreCase"
+                      }
+                    }
+                  },
+                  {
+                    "field": "LAT",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "LONG",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+$"
+                      }
+                    }
+                  }
+                ]
+              },
+              "helpText": "A CSV Table that has the landing points and grid points locations for computing cable distances."
+            },
+            {
+              "id": "machine_econ_table",
+              "args_id": "machine_econ_uri",
+              "type": "file",
+              "label": "Machine Economic Table (CSV)",
+              "defaultValue": "../WaveEnergy/input/Machine_Pelamis_Economic.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV",
+                "fieldsExist": [
+                  "NAME",
+                  "VALUE",
+                  "NOTE"
+                ],
+                "restrictions": [
+                  {
+                    "field": "NAME",
+                    "validateAs": {
+                      "type": "string",
+                      "allowedValues": {
+                        "pattern": "capmax|cc|cml|cul|col|omc|p|r|smlpm",
+                        "flag": "ignoreCase"
+                      }
+                    }
+                  },
+                  {
+                    "field": "VALUE",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+$"
+                      }
+                    }
+                  }
+                ]
+              },
+              "helpText": "A CSV Table that has the economic parameters for the wave energy machine."
+            },
+            {
+              "id": "number_of_machines",
+              "args_id": "number_of_machines",
+              "type": "text",
+              "label": "Number of Machines",
+              "defaultValue": "28",
+              "required": true,
+              "validText": "[0-9]+",
+              "helpText": "An integer for how many wave energy machines will be in the wave farm."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

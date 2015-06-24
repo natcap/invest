@@ -1,0 +1,34 @@
+{
+  "server": "http://vulpes.sefs.uw.edu/~recreation/",
+  "server_list": "http://data.naturalcapitalproject.org/recreation_config/server_list.json",
+  "paths": {
+    "relative": {
+      "data": "data/",
+      "predictors": "pred/",
+      "download": "download/",
+      "core": "natcap.invest/recreation/",
+      "computation": "computation/"
+    }
+  },
+  "files": {
+    "PHP": {
+      "predictor": "recreation_server_predictors.php",
+      "recreation": "recreation_server_initial.php",
+      "scenario": "recreation_server_scenario.php",
+      "regression": "recreation_server_regression.php",
+      "results": "recreation_server_results.php",
+      "version": "recreation_server_version.php"
+    },
+    "grid_tmp": {
+      "shp": "grid.shp",
+      "shx": "grid.shx",
+      "dbf": "grid.dbf",
+      "prj": "grid.prj"
+    },
+    "log": "log.txt",
+    "results": "results.zip"
+  },
+  "timeout": 15,
+  "tries": 3,
+  "delay": 15
+}

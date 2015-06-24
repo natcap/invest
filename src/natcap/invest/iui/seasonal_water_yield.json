@@ -1,0 +1,182 @@
+{
+  "id": "window",
+  "label": "Seasonal Water Yield",
+  "targetScript": "natcap.invest.seasonal_water_yield.seasonal_water_yield",
+  "modelName": "seasonal_water_yield",
+  "localDocURI": "../documentation/seasonalwateryield.html",
+  "height": 700,
+  "width": 900,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "~/Documents/seasonal_water_yield_workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "returns": {
+            "ifEmpty": "pass"
+          }
+        },
+        {
+          "id": "threshold_flow_accumulation",
+          "args_id": "threshold_flow_accumulation",
+          "type": "text",
+          "label": "Threshold Flow Accumulation",
+          "defaultValue": "1000",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
+        },
+        {
+          "id": "et0_dir",
+          "args_id": "et0_dir",
+          "type": "folder",
+          "label": "ET0 Directory",
+          "defaultValue": "../SeasonalWaterYield/input/et0_proj",
+          "required": true,
+          "helpText": "The selected folder has a list of ET0 files with a specified format."
+        },
+        {
+          "id": "precip_dir",
+          "args_id": "precip_dir",
+          "type": "folder",
+          "label": "Precipitation Directory",
+          "defaultValue": "../SeasonalWaterYield/input/precip_proj",
+          "required": true,
+          "helpText": "The selected folder has a list of monthly precipitation files with a specified format."
+        },
+        {
+          "id": "dem_uri",
+          "args_id": "dem_uri",
+          "type": "file",
+          "label": "Digital Elevation Model (Raster)",
+          "defaultValue": "../SeasonalWaterYield/input/DEM/fillFinalSaga.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the 'Working with the DEM' section of the InVEST User's Guide for more information."
+        },
+        {
+          "id": "lulc_uri",
+          "args_id": "lulc_uri",
+          "type": "file",
+          "label": "Land-Use/Land-Cover (Raster)",
+          "defaultValue": "../SeasonalWaterYield/input/nass_sw_lulc.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file, with an integer LULC code for each cell."
+        },
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "AOI/Watershed (Vector)",
+          "defaultValue": "../SeasonalWaterYield/input/Subwatershed7/subws_id7.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons",
+                "projection": {
+                  "exists": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "biophysical_table_uri",
+          "args_id": "biophysical_table_uri",
+          "type": "file",
+          "label": "Biophysical Table (CSV)",
+          "defaultValue": "../SeasonalWaterYield/input/biophysical_Cape_Fear.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode",
+              "Kc"
+            ]
+          },
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', and 'Kc'."
+        },
+        {
+          "id": "cn_table_uri",
+          "args_id": "cn_table_uri",
+          "type": "file",
+          "label": "Curve Number Table (CSV)",
+          "defaultValue": "../SeasonalWaterYield/input/cn.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode",
+              "cn"
+            ]
+          }
+        },
+        {
+          "id": "rain_events_table_uri",
+          "args_id": "rain_events_table_uri",
+          "type": "file",
+          "label": "Rain Events Table (CSV)",
+          "defaultValue": "../SeasonalWaterYield/input/Number of events.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "month",
+              "events"
+            ]
+          }
+        },
+        {
+          "id": "alpha_m",
+          "args_id": "alpha_m",
+          "type": "text",
+          "label": "alpha_m Parameter",
+          "defaultValue": "1/12",
+          "required": true
+        },
+        {
+          "id": "beta_i",
+          "args_id": "beta_i",
+          "type": "text",
+          "label": "beta_i Parameter",
+          "defaultValue": "1.0",
+          "required": true
+        },
+        {
+          "id": "gamma",
+          "args_id": "gamma",
+          "type": "text",
+          "label": "gamma Parameter",
+          "defaultValue": "1.0",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

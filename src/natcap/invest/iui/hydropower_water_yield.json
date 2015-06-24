@@ -1,0 +1,378 @@
+{
+  "id": "window",
+  "label": "Hydropower / Water Yield",
+  "targetScript": "natcap.invest.hydropower.hydropower_water_yield",
+  "modelName": "hydropower_water_yield",
+  "localDocURI": "../documentation/reservoirhydropowerproduction.html",
+  "height": 685,
+  "width": 900,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../Hydropower",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "helpText": "A string that will be added to the end of the output uris."
+        },
+        {
+          "id": "precipitation",
+          "args_id": "precipitation_uri",
+          "type": "file",
+          "label": "Precipitation (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/precip",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file containing non-zero, average annual precipitation values for each cell. The precipitation values should be in millimeters (mm). "
+        },
+        {
+          "id": "potential_evapotranspiration",
+          "args_id": "eto_uri",
+          "type": "file",
+          "label": "Reference Evapotranspiration (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/eto",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file containing annual average reference evapotranspiration values for each cell. The reference evapotranspiration values should be in millimeters (mm)."
+        },
+        {
+          "id": "depth_to_root_rest_layer",
+          "args_id": "depth_to_root_rest_layer_uri",
+          "type": "file",
+          "label": "Depth To Root Restricting Layer (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/depth_to_root_rest_layer",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file containing an average root restricting layer depth value for each cell. The root restricting layer depth value should be in millimeters (mm)."
+        },
+        {
+          "id": "plant_available_water_fraction",
+          "args_id": "pawc_uri",
+          "type": "file",
+          "label": "Plant Available Water Fraction (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/pawc",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file containing plant available water content values for each cell. The plant available water content fraction should be a value between 0 and 1."
+        },
+        {
+          "id": "land_use",
+          "args_id": "lulc_uri",
+          "type": "file",
+          "label": "Land Use (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/landuse_90",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file containing LULC code (expressed as integers) for each cell."
+        },
+        {
+          "id": "watersheds",
+          "args_id": "watersheds_uri",
+          "type": "file",
+          "label": "Watersheds (Vector)",
+          "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons",
+                "projection": {
+                  "exists": true
+                }
+              }
+            ],
+            "fieldsExist": [
+              "ws_id"
+            ]
+          },
+          "helpText": "An OGR-supported vector file containing one polygon per watershed. Each polygon that represents a watershed is required to have a field 'ws_id' that is a unique integer which identifies that watershed."
+        },
+        {
+          "id": "sub_watersheds",
+          "args_id": "sub_watersheds_uri",
+          "type": "file",
+          "label": "Sub-Watersheds (Vector) (Optional)",
+          "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons",
+                "projection": {
+                  "exists": true
+                }
+              }
+            ],
+            "fieldsExist": [
+              "subws_id"
+            ]
+          },
+          "helpText": "An OGR-supported vector file with one polygon per sub-watershed within the main watersheds specified in the Watersheds shapefile. Each polygon that represents a sub-watershed is required to have a field 'subws_id' that is a unique integer which identifies that sub-watershed."
+        },
+        {
+          "id": "biophysical_table",
+          "args_id": "biophysical_table_uri",
+          "type": "file",
+          "label": "Biophysical Table (CSV)",
+          "defaultValue": "../Hydropower/input/biophysical_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode",
+              "Kc",
+              "root_depth",
+              "LULC_veg"
+            ],
+            "restrictions": [
+              {
+                "field": "lucode",
+                "validateAs": {
+                  "type": "number",
+                  "allowedValues": {
+                    "pattern": "^[0-9]+$"
+                  }
+                }
+              },
+              {
+                "field": "LULC_veg",
+                "validateAs": {
+                  "type": "number",
+                  "allowedValues": {
+                    "pattern": "^[01]"
+                  }
+                }
+              },
+              {
+                "field": "Kc",
+                "validateAs": {
+                  "type": "number",
+                  "allowedValues": {
+                    "pattern": "^[-+]?[0-9]*\\.?[0-9]+$"
+                  }
+                }
+              },
+              {
+                "field": "root_depth",
+                "validateAs": {
+                  "type": "number",
+                  "allowedValues": {
+                    "pattern": "^[-+]?[0-9]*\\.?[0-9]+$"
+                  }
+                }
+              }
+            ]
+          },
+          "helpText": "A CSV table of land use/land cover (LULC) classes, containing data on biophysical coefficients used in this model. The following columns are required: 'lucode' (integer), 'root_depth' (mm), 'Kc' (coefficient)."
+        },
+        {
+          "id": "seasonality_constant",
+          "args_id": "seasonality_constant",
+          "type": "text",
+          "label": "Seasonality Factor",
+          "defaultValue": "5",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]+$",
+          "helpText": "Floating point value on the order of 1 to 30 corresponding to the seasonal distribution of precipitation."
+        }
+      ]
+    },
+    {
+      "id": "water_scarcity_container",
+      "args_id": "water_scarcity_container",
+      "type": "container",
+      "label": "Water Scarcity",
+      "collapsible": true,
+      "defaultValue": false,
+      "elements": [
+        {
+          "id": "water_scarcity_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "demand_table",
+              "args_id": "demand_table_uri",
+              "type": "file",
+              "label": "Water Demand Table (CSV)",
+              "defaultValue": "../Hydropower/input/water_demand_table.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV",
+                "fieldsExist": [
+                  "lucode",
+                  "demand"
+                ],
+                "restrictions": [
+                  {
+                    "field": "lucode",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "^[0-9]+$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "demand",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"
+                      }
+                    }
+                  }
+                ]
+              },
+              "helpText": "A CSV table of LULC classes, showing consumptive water use for each land-use/land-cover type. The table requires two column fields: 'lucode' and 'demand'. The demand values should be the estimated average consumptive water use for each land-use/land-cover type. Water use should be given in cubic meters per year for a pixel in the land-use/land-cover map. NOTE: the accounting for pixel area is important since larger areas will consume more water for the same land-cover type."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "valuation_container",
+      "args_id": "valuation_container",
+      "type": "container",
+      "label": "Valuation",
+      "collapsible": true,
+      "defaultValue": false,
+      "enabledBy": "water_scarcity_container",
+      "elements": [
+        {
+          "id": "valuation_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "hydropower_valuation_table",
+              "args_id": "valuation_table_uri",
+              "type": "file",
+              "label": "Hydropower Valuation Table (CSV)",
+              "defaultValue": "../Hydropower/input/hydropower_valuation_table.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV",
+                "fieldsExist": [
+                  "ws_id",
+                  "time_span",
+                  "discount",
+                  "efficiency",
+                  "fraction",
+                  "cost",
+                  "height",
+                  "kw_price"
+                ],
+                "restrictions": [
+                  {
+                    "field": "ws_id",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "^[0-9]+$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "time_span",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "^[0-9]+$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "discount",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "efficiency",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "fraction",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "cost",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "height",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"
+                      }
+                    }
+                  },
+                  {
+                    "field": "kw_price",
+                    "validateAs": {
+                      "type": "number",
+                      "allowedValues": {
+                        "pattern": "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"
+                      }
+                    }
+                  }
+                ]
+              },
+              "helpText": "A CSV table of hydropower stations with associated model values. The table should have the following column fields: 'ws_id', 'efficiency', 'fraction', 'height', 'kw_price', 'cost', 'time_span', and 'discount'."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
