@@ -1,0 +1,137 @@
+{
+  "id": "window",
+  "label": "Habitat Risk Assessment",
+  "targetScript": "natcap.invest.habitat_risk_assessment.hra",
+  "modelName": "habitat_risk_assessment",
+  "localDocURI": "../documentation/habitat_risk_assessment.html",
+  "height": 550,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../HabitatRiskAssess",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "csv_uri",
+          "args_id": "csv_uri",
+          "type": "folder",
+          "label": "Criteria Scores CSV Folder",
+          "defaultValue": "../HabitatRiskAssess/habitat_stressor_ratings_sample",
+          "required": true,
+          "validateAs": {
+            "type": "folder",
+            "mustExist": true
+          },
+          "helpText": "A folder containing multiple CSV files. Each file refers to the overlap between a habitat and a stressor pulled from habitat and stressor shapefiles during the run of the HRA Preprocessor."
+        },
+        {
+          "id": "grid_size",
+          "args_id": "grid_size",
+          "type": "text",
+          "label": "Resolution of Analysis (meters)",
+          "defaultValue": "200",
+          "required": true,
+          "validateAs": {
+            "type": "number"
+          },
+          "dataType": "int",
+          "helpText": "The size that should be used to grid the given habitat and stressor shapefiles into rasters. This value will be the pixel size of the completed raster files."
+        },
+        {
+          "id": "risk_eq",
+          "args_id": "risk_eq",
+          "type": "dropdown",
+          "label": "Risk Equation",
+          "defaultValue": "Euclidean",
+          "options": [
+            "Multiplicative",
+            "Euclidean"
+          ],
+          "required": true,
+          "returns": "strings",
+          "dataType": "string",
+          "helpText": "Each of these represents an option of a risk calculation equation. This will determine the numeric output of risk for every habitat and stressor overlap area."
+        },
+        {
+          "id": "decay_eq",
+          "args_id": "decay_eq",
+          "type": "dropdown",
+          "label": "Decay Equation",
+          "defaultValue": "None",
+          "required": true,
+          "options": [
+            "None",
+            "Linear",
+            "Exponential"
+          ],
+          "returns": "strings",
+          "dataType": "string",
+          "helpText": "Each of these represents an option for decay equations for the buffered stressors. If stressor buffering is desired, these equtions will determine the rate at which stressor data is reduced."
+        },
+        {
+          "id": "max_rating",
+          "args_id": "max_rating",
+          "type": "text",
+          "label": "Maximum Criteria Score",
+          "defaultValue": "3",
+          "required": true,
+          "validateAs": {
+            "type": "number"
+          },
+          "validText": "[1-9][0-9]*",
+          "dataType": "int",
+          "helpText": "This is the highest score that is used to rate a criteria within this model run. These values would be placed within the Rating column of the habitat, species, and stressor CSVs."
+        },
+        {
+          "id": "max_stress",
+          "args_id": "max_stress",
+          "type": "text",
+          "label": "Maximum Overlapping Stressors",
+          "defaultValue": "4",
+          "required": true,
+          "validateAs": {
+            "type": "number"
+          },
+          "validText": "[1-9][0-9]*",
+          "dataType": "int",
+          "helpText": "This is the largest number of stressors that are suspected to overlap. This will be used in order to make determinations of low, medium, and high risk for any given habitat."
+        },
+        {
+          "id": "aoi_tables",
+          "args_id": "aoi_tables",
+          "type": "file",
+          "label": "Subregions (Vector)",
+          "required": true,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                }
+              }
+            ],
+            "mustExist": true,
+            "fieldsExist": [
+              "NAME"
+            ]
+          },
+          "defaultValue": "../HabitatRiskAssess/Input/subregions.shp",
+          "helpText": "An OGR-supported vector file containing feature subregions. The program will create additional summary outputs across each subregion."
+        }
+      ]
+    }
+  ]
+}

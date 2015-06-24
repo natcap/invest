@@ -1,0 +1,65 @@
+{
+  "id": "window",
+  "label": "Blue Carbon Preprocessor",
+  "targetScript": "natcap.invest.blue_carbon.blue_carbon_preprocessor",
+  "modelName": "blue_carbon_preprocessor",
+  "localDocURI": "../documentation/blue_carbon.html",
+  "height": 600,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../BlueCarbon/output",
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b> <p>For more information, see 'Data Needs' section in the model's documentation",
+          "required": true
+        },
+        {
+          "id": "preprocessor_key_uri",
+          "args_id": "preprocessor_key_uri",
+          "type": "file",
+          "label": "Preprocessor Key File (CSV)",
+          "defaultValue": "../BlueCarbon/input/preprocessor.csv",
+          "helpText": "The preprocessor key file contains the default values for transitions between all vegetation types.",
+          "required": true
+        },
+        {
+          "id": "labels",
+          "type": "file",
+          "args_id": "labels",
+          "label": "Labels File (CSV)",
+          "defaultValue": "../BlueCarbon/input/carbon.csv",
+          "helpText": "",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "lulc",
+      "type": "multi",
+      "args_id": "lulc",
+      "label": "Land Use/Land Cover Rasters (GDAL-supported)",
+      "sampleElement": {
+        "id": "sample_id",
+        "type": "file",
+        "label": "Input",
+        "validateAs": {
+          "type": "GDAL"
+        }
+      },
+      "defaultValue": [
+        "../BlueCarbon/input/GBJC_2004_mean_Resample.tif",
+        "../BlueCarbon/input/GBJC_2050_mean_Resample.tif",
+        "../BlueCarbon/input/GBJC_2100_mean_Resample.tif"
+      ],
+      "linkText": "Add Another",
+      "helpText": ""
+    }
+  ]
+}

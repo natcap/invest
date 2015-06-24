@@ -1,0 +1,244 @@
+{
+  "id": "window",
+  "label": "Marine Aquaculture: Finfish",
+  "targetScript": "natcap.invest.finfish_aquaculture.finfish_aquaculture",
+  "modelName": "finfish_aquaculture",
+  "localDocURI": "../documentation/marine_fish.html",
+  "height": 550,
+  "width": 700,
+  "elements": [
+    {
+      "id": "list_1",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../Aquaculture",
+          "required": true,
+          "validateAs": {
+            "type": "folder"
+          },
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "farm_location",
+          "args_id": "ff_farm_loc",
+          "type": "file",
+          "label": "Finfish Farm Location (Vector)",
+          "defaultValue": "../Aquaculture/Input/Finfish_Netpens.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR"
+          },
+          "helpText": "An OGR-supported vector file containing polygon or point, with a latitude and longitude value and a numerical identifier for each farm. File can be named anything, but no spaces in the name.<br><br>File type: polygon shapefile or .gdb<br>Rows: each row is a specific netpen or entire aquaculture farm<br>Columns: columns contain attributes about each netpen (area, location, etc.).<br>Sample data set: \\InVEST\\Aquaculture\\Input\\Finfish_Netpens.shp"
+        },
+        {
+          "id": "farm_identifier",
+          "args_id": "farm_ID",
+          "type": "OGRFieldDropdown",
+          "enabledBy": "farm_location",
+          "label": "Farm Identifier Name",
+          "defaultValue": "FarmID",
+          "required": true,
+          "helpText": "The name of a column heading used to identify each farm and link the spatial information from the shapefile to subsequent table input data (farm operation and daily water temperature at farm tables). Additionally, the numbers underneath this farm identifier name must be unique integers for all the inputs."
+        },
+        {
+          "id": "param_a",
+          "args_id": "g_param_a",
+          "type": "text",
+          "label": "Fish Growth Parameter (a)",
+          "defaultValue": "0.038",
+          "required": true,
+          "validateAs": {
+            "type": "number"
+          },
+          "dataType": "float",
+          "helpText": "Default a  = (0.038 g/day). If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
+        },
+        {
+          "id": "param_b",
+          "args_id": "g_param_b",
+          "type": "text",
+          "label": "Fish Growth Parameter (b)",
+          "defaultValue": "0.6667",
+          "required": true,
+          "validateAs": {
+            "type": "number"
+          },
+          "dataType": "float",
+          "helpText": "Default b  = (0.6667 g/day). If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
+        },
+        {
+          "id": "param_tau",
+          "args_id": "g_param_tau",
+          "type": "text",
+          "label": "Fish Growth Parameter (tau)",
+          "defaultValue": "0.08",
+          "required": true,
+          "validateAs": {
+            "type": "number"
+          },
+          "dataType": "float",
+          "helpText": "Default tau = (0.08 C^-1).  Specifies how sensitive finfish growth is to temperature. If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
+        }
+      ]
+    },
+    {
+      "id": "uncertainty_data_container",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "use_uncertainty",
+      "label": "Enable Uncertainty Analysis",
+      "elements": [
+        {
+          "id": "uncertainty_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "param_a_sd",
+              "args_id": "g_param_a_sd",
+              "type": "text",
+              "label": "Standard Deviation for Parameter (a)",
+              "validateAs": {
+                "type": "number"
+              },
+              "defaultValue": "0.005",
+              "dataType": "float",
+              "helpText": "Standard deviation for fish growth parameter a. This indicates the level of uncertainty in the estimate for parameter a."
+            },
+            {
+              "id": "param_b_sd",
+              "args_id": "g_param_b_sd",
+              "type": "text",
+              "label": "Standard Deviation for Parameter (b)",
+              "defaultValue": "0.05",
+              "validateAs": {
+                "type": "number"
+              },
+              "dataType": "float",
+              "helpText": "Standard deviation for fish growth parameter b. This indicates the level of uncertainty in the estimate for parameter b."
+            },
+            {
+              "id": "num_monte_carlo_runs",
+              "args_id": "num_monte_carlo_runs",
+              "type": "text",
+              "label": "Number of Monte Carlo Simulation Runs",
+              "validateAs": {
+                "type": "number"
+              },
+              "defaultValue": "1000",
+              "dataType": "int",
+              "helpText": "Number of runs of the model to perform as part of a Monte Carlo simulation. A larger number will tend to produce more consistent and reliable output, but will also take longer to run."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "list_2",
+      "type": "list",
+      "elements": [
+        {
+          "id": "water_temperature",
+          "args_id": "water_temp_tbl",
+          "type": "file",
+          "label": "Table of Daily Water Temperature at Farm (CSV)",
+          "defaultValue": "../Aquaculture/Input/Temp_Daily.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": "Users must provide a time series of daily water temperature (C) for each farm in the shapefile. When daily temperatures are not available, users can interpolate seasonal or monthly temperatures to a daily resolution. Water temperatures collected at existing aquaculture facilities are preferable, but if unavailable, users can consult online sources such as NOAAs 4 km AVHRR Pathfinder Data and Canadas Department of Fisheries and Oceans Oceanographic Database. The most appropriate temperatures to use are those from the upper portion of the water column, which are the temperatures experienced by the fish in the netpens."
+        },
+        {
+          "id": "farm_operations",
+          "args_id": "farm_op_tbl",
+          "type": "file",
+          "label": "Farm Operations Table (CSV)",
+          "defaultValue": "../Aquaculture/Input/Farm_Operations.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": "A table of general and farm-specific operations parameters. Please refer to the sample data table for reference to ensure correct incorporation of data in the model.<br><br>The values for 'farm operations' (applied to all farms) and 'add new farms' (beginning with row 32) may be modified according to the user's needs . However, the location of cells in this template must not be modified. If for example, if the model is to run for three farms only, the farms should be listed in rows 10, 11 and 12 (farms 1, 2, and 3, respectively). Several default values that are applicable to Atlantic salmon farming in British Columbia are also included in the sample data table."
+        },
+        {
+          "id": "outplant_buffer",
+          "args_id": "outplant_buffer",
+          "type": "text",
+          "label": "Outplant Date Buffer",
+          "defaultValue": "3",
+          "required": true,
+          "validateAs": {
+            "type": "number"
+          },
+          "dataType": "int",
+          "helpText": "This value will allow the outplant start day to start plus or minus the number of days specified here."
+        },
+        {
+          "id": "valuation",
+          "args_id": "do_valuation",
+          "type": "checkbox",
+          "label": "Run Valuation?",
+          "required": true,
+          "defaultValue": false,
+          "helpText": "By checking this box, a valuation analysis will be run on the model."
+        },
+        {
+          "id": "market_price",
+          "type": "text",
+          "label": "Market Price per Kilogram of Processed Fish",
+          "args_id": "p_per_kg",
+          "required": false,
+          "enabledBy": "valuation",
+          "defaultValue": "2.25",
+          "requiredIf": [
+            "valuation"
+          ],
+          "dataType": "float",
+          "validateAs": {
+            "type": "number"
+          },
+          "helpText": "Default value comes from Urner-Berry monthly fresh sheet reports on price of farmed Atlantic salmon."
+        },
+        {
+          "id": "fraction_price",
+          "type": "text",
+          "label": "Fraction of Price that Accounts to Costs",
+          "args_id": "frac_p",
+          "required": false,
+          "enabledBy": "valuation",
+          "defaultValue": "0.3",
+          "requiredIf": [
+            "valuation"
+          ],
+          "dataType": "float",
+          "validateAs": {
+            "type": "number"
+          },
+          "helpText": "Fraction of market price that accounts for costs rather than profit. Default value is 0.3 (30%)."
+        },
+        {
+          "id": "discount_rate",
+          "type": "text",
+          "label": "Daily Market Discount Rate",
+          "args_id": "discount",
+          "required": false,
+          "enabledBy": "valuation",
+          "defaultValue": "0.000192",
+          "requiredIf": [
+            "valuation"
+          ],
+          "dataType": "float",
+          "validateAs": {
+            "type": "number"
+          },
+          "helpText": "We use a 7% annual discount rate, adjusted to a daily rate of 0.000192 for 0.0192% (7%/365 days)."
+        }
+      ]
+    }
+  ]
+}

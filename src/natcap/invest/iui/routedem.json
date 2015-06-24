@@ -1,0 +1,144 @@
+{
+  "id": "window",
+  "label": "RouteDEM",
+  "targetScript": "natcap.invest.routing.routedem",
+  "modelName": "routedem",
+  "localDocURI": "../documentation/routedem.html",
+  "height": 570,
+  "width": 700,
+  "elements": [
+    {
+      "id": "routedem_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "../RouteDEM",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "dem",
+          "args_id": "dem_uri",
+          "type": "file",
+          "label": "Digital Elevation Model (Raster)",
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "required": true,
+          "defaultValue": "../Base_Data/Freshwater/dem",
+          "helpText": "A GDAL-supported raster file containing a base Digital Elevation Model to execute the routing functionality across."
+        },
+        {
+          "id": "pit_filled_filename",
+          "args_id": "pit_filled_filename",
+          "type": "text",
+          "label": "Pit Filled DEM Filename",
+          "defaultValue": "pit_filled_dem.tif",
+          "required": true,
+          "helpText": "The filename of the output raster with pits filled in. It will go in the project workspace."
+        },
+        {
+          "id": "flow_direction_filename",
+          "args_id": "flow_direction_filename",
+          "type": "text",
+          "label": "Flow Direction Filename",
+          "defaultValue": "flow_direction.tif",
+          "required": true,
+          "helpText": "The filename of the flow direction raster. It will go in the project workspace."
+        },
+        {
+          "id": "flow_accumulation_filename",
+          "args_id": "flow_accumulation_filename",
+          "type": "text",
+          "label": "Flow Accumulation Filename",
+          "defaultValue": "flow_accumulation.tif",
+          "required": true,
+          "helpText": "The filename of the flow accumulation raster. It will go in the project workspace."
+        },
+        {
+          "id": "threshold_flow_accumulation",
+          "args_id": "threshold_flow_accumulation",
+          "type": "text",
+          "label": "Threshold Flow Accumulation",
+          "defaultValue": "1000",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "helpText": "The number of upstream cells that must flow into a cell before it's classified as a stream."
+        },
+        {
+          "id": "multiple_stream_thresholds",
+          "args_id": "multiple_stream_thresholds",
+          "type": "checkbox",
+          "label": "Calculate Multiple Stream Thresholds",
+          "defaultValue": true,
+          "required": false,
+          "helpText": "Select to calculate multiple stream maps. If enabled set stream threshold to lowest amount, then set upper and step size thresholds."
+        },
+        {
+          "id": "threshold_flow_accumulation_upper",
+          "args_id": "threshold_flow_accumulation_upper",
+          "type": "text",
+          "label": "Threshold Flow Accumulation Upper Limit",
+          "defaultValue": "2000",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "enabledBy": "multiple_stream_thresholds",
+          "helpText": "The number of upstream cells that must flow into a cell before it's classified as a stream."
+        },
+        {
+          "id": "threshold_flow_accumulation_stepsize",
+          "args_id": "threshold_flow_accumulation_stepsize",
+          "type": "text",
+          "label": "Threshold Flow Accumulation Range Stepsize",
+          "defaultValue": "100",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "enabledBy": "multiple_stream_thresholds",
+          "helpText": "The number cells to step up from lower to upper threshold range."
+        },
+        {
+          "id": "calculate_slope",
+          "args_id": "calculate_slope",
+          "type": "checkbox",
+          "label": "Calculate Slope",
+          "defaultValue": true,
+          "required": false,
+          "helpText": "Select to output a slope raster."
+        },
+        {
+          "id": "slope_filename",
+          "args_id": "slope_filename",
+          "type": "text",
+          "label": "Slope Filename",
+          "defaultValue": "slope.tif",
+          "required": true,
+          "enabledBy": "calculate_slope",
+          "helpText": "The filename of the output slope raster. It will go in the project workspace."
+        },
+        {
+          "id": "calculate_downstream_distance",
+          "args_id": "calculate_downstream_distance",
+          "type": "checkbox",
+          "label": "Calculate Distance to stream",
+          "defaultValue": true,
+          "required": false,
+          "helpText": "Select to calculate a distance to stream raster, based on uppper threshold limit."
+        },
+        {
+          "id": "downstream_distance_filename",
+          "args_id": "downstream_distance_filename",
+          "type": "text",
+          "label": "Downstream Distance Filename",
+          "defaultValue": "downstream_distance.tif",
+          "required": true,
+          "enabledBy": "calculate_downstream_distance",
+          "helpText": "The filename of the output slope raster. It will go in the project workspace."
+        }
+      ]
+    }
+  ]
+}
