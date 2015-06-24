@@ -261,8 +261,7 @@ def env(options):
     requirements = [
         "numpy",
         "scipy",
-        "pygeoprocessing==0.3.0a2",
-        "psycopg2",
+        "pygeoprocessing==0.3.0a3",
     ]
 
     install_string = """
