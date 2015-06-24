@@ -185,6 +185,43 @@
       ]
     },
     {
+      "id": "aoi_summary",
+      "args_id": "aoi_summary",
+      "label": "Summarize MSA by AOI",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "AOI (Vector)",
+          "defaultValue": "../globio/input/sub_aoi.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that can be used to aggregate MSA by a given field"
+        },
+        {
+          "id": "aoi_summary_key",
+          "args_id": "aoi_summary_key",
+          "type": "text",
+          "label": "Unique feature key in AOI",
+          "required": true
+        },
+      ]
+    },
+    {
       "id": "predefined_globio",
       "args_id": "predefined_globio",
       "label": "Predefined land use map for GLOBIO",
