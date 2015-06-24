@@ -2,6 +2,8 @@
 
 import os
 import logging
+import collections
+import csv
 
 import gdal
 import osr
@@ -11,7 +13,7 @@ import pygeoprocessing
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('natcap.invest.globio.globio')
+LOGGER = logging.getLogger('invest_natcap.globio.globio')
 
 def execute(args):
     """main execute entry point"""
@@ -476,3 +478,30 @@ def make_gaussian_kernel_uri(sigma, kernel_uri):
             xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
         kernel_row /= integration
         kernel_band.WriteArray(kernel_row, 0, row_index)
+
+
+def load_msa_parameter_table(msa_parameter_table_filename):
+    """Loads a specifically formatted parameter table into a dictionary that
+        can be used to dymanicaly define the MSA ranges.
+
+        msa_parameter_table_filename - (string) path to msa csv table
+
+        returns a dictionary of the form
+            {
+
+            }
+
+    """
+
+    with open(msa_parameter_table_filename, 'rb') as msa_parameter_table_file:
+        reader = csv.DictReader(msa_parameter_table_file)
+        msa_dict = collections.defaultdict(dict)
+        for line in reader:
+            if line['Value'][0] in ['<', '>']:
+                value = line['Value'][0]
+            elif '-' in line['Value']:
+                value = float(line['Value'].split('-')[1])
+            else:
+                value = float(line['Value'])
+            msa_dict[line['MSA calculation']][value] = float(line['MSA_x'])
+    return msa_dict
