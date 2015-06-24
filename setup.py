@@ -4,6 +4,8 @@ InVEST - Integrated Valuation of Ecosystem Services and Tradeoffs
 
 Common functionality provided by setup.py:
     build_sphinx
+
+For other commands, try `python setup.py --help-commands`
 """
 
 import os
@@ -119,9 +121,8 @@ REQUIREMENTS = [
     'shapely',
     'poster',
     'h5py',
-    'psycopg2',
     'pyamg',
-    'pygeoprocessing',
+    'pygeoprocessing==0.3.0a3',
     'setuptools',
     'setuptools_scm',
     ]
