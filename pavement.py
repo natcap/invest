@@ -821,7 +821,7 @@ def _build_fpm(version, bindir, pkg_type):
 
 def _build_nsis(version, bindir, arch):
     # determine makensis path
-    makensis = 'C:\Program Files\NSIS\makensis.exe'
+    makensis = '"C:\Program Files\NSIS\makensis.exe"'
     if platform.system() != 'Windows':
         makensis = 'wine "%s"' % makensis
 
