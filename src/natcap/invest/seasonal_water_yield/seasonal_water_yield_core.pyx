@@ -2983,6 +2983,9 @@ def route_sf(
 
     cdef time_t last_time, current_time
     time(&last_time)
+    LOGGER.info(
+                'START cells_to_process on SF route size: %d',
+                cells_to_process.size())
     while cells_to_process.size() > 0:
         flat_index = cells_to_process.front()
         cells_to_process.pop_front()
@@ -3123,15 +3126,17 @@ def route_sf(
                             neighbor_sf = sf_block[
                                 neighbor_row_index, neighbor_col_index,
                                 neighbor_row_block_offset, neighbor_col_block_offset]
+                            block_cache.update_cache(
+                                global_row, global_col, &row_index, &col_index,
+                                &row_block_offset, &col_block_offset)
                             r_sum_avail = r_sum_avail_block[
                                 row_index, col_index, row_block_offset, col_block_offset]
                             if neighbor_sf > neighbor_sf_down:
                                 LOGGER.error('%f, %f, %f, %f, %f', neighbor_sf,
                                     neighbor_sf_down, r_sum_avail, neighbor_r_sum_avail_pour,
                                     outflow_weight)
-                                sys.exit(-1)
                             sf_down_frac = outflow_weight * r_sum_avail / neighbor_r_sum_avail_pour
-                            if sf_down_frac > 1.0:
+                            if sf_down_frac > 1.0: #can happen because of roundoff error
                                 sf_down_frac = 1.0
                             sf_down_sum +=  outflow_weight * (neighbor_sf_down - neighbor_sf) * sf_down_frac
                             if sf_down_sum < 0:

@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 600,
+  "height": 750,
   "width": 900,
   "elements": [
     {
@@ -56,18 +56,6 @@
           }
         },
         {
-          "id": "land_use",
-          "args_id": "lulc_uri",
-          "type": "file",
-          "label": "Land Use (Raster)",
-          "defaultValue": "../globio/input/lulc_2008.tif",
-          "required": true,
-          "validateAs": {
-            "type": "GDAL"
-          },
-          "helpText": "A raster with landcover IDs that are to be mapped to GLOBIO ids."
-        },
-        {
           "id": "lulc_to_globio_table_uri",
           "args_id": "lulc_to_globio_table_uri",
           "type": "file",
@@ -78,7 +66,34 @@
             "type": "CSV",
             "fieldsExist": ["lucode", "globio_lucode"]
           },
-          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields.",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "msa_lookup_table_uri",
+          "args_id": "msa_lookup_table_uri",
+          "type": "file",
+          "label": "MSA Threshold Values (CSV)",
+          "defaultValue": "../globio/input/msa_lookup_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": "A CSV table containing lookup threshold values for MSA classifications. Default is provided but could be changed by user.",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "land_use",
+          "args_id": "lulc_uri",
+          "type": "file",
+          "label": "Land Use/Cover (Raster)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "defaultValue": "../globio/input/lulc_2008.tif",
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "infrastructure_dir",
@@ -86,19 +101,7 @@
           "type": "folder",
           "label": "Infrastructure Directory",
           "defaultValue": "../globio/input/infrastructure_dir",
-          "required": true,
-          "helpText": "A directory containing projected rasters or shapefiles that represent infrastructure in the area."
-        },
-        {
-          "id": "cropland",
-          "args_id": "cropland_uri",
-          "type": "file",
-          "label": "Cropland (Raster)",
-          "defaultValue": "../globio/input/cropland.tif",
-          "required": false,
-          "validateAs": {
-            "type": "GDAL"
-          }
+          "required": true
         },
         {
           "id": "pasture_uri",
@@ -109,7 +112,9 @@
           "required": true,
           "validateAs": {
             "type": "GDAL"
-          }
+          },
+          "defaultValue": "../globio/input/pasture.tif",
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "potential_vegetation_uri",
@@ -120,7 +125,9 @@
           "required": true,
           "validateAs": {
             "type": "GDAL"
-          }
+          },
+          "defaultValue": "../globio/input/potential_vegetation.tif",
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "sum_yieldgap_uri",
@@ -131,7 +138,76 @@
           "required": true,
           "validateAs": {
             "type": "GDAL"
-          }
+          },
+          "defaultValue": "../globio/input/sum_yieldgap.tif",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "high_intensity_agriculture_threshold",
+          "args_id": "high_intensity_agriculture_threshold",
+          "type": "text",
+          "label": "High Intensity Agriculture Threshold",
+          "defaultValue": "1.0",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "pasture_threshold",
+          "args_id": "pasture_threshold",
+          "type": "text",
+          "label": "Pasture Threshold",
+          "defaultValue": "0.5",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "yieldgap_threshold",
+          "args_id": "yieldgap_threshold",
+          "type": "text",
+          "label": "Yieldgap Threshold",
+          "defaultValue": "0.456804906897",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "primary_threshold",
+          "args_id": "primary_threshold",
+          "type": "text",
+          "label": "Primary Threshold",
+          "defaultValue": "0.66",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
+        }
+      ]
+    },
+    {
+      "id": "predefined_globio",
+      "args_id": "predefined_globio",
+      "label": "Predefined land use map for GLOBIO",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "predefined_globio_land_use_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "globio_land_use",
+              "args_id": "globio_lulc_uri",
+              "type": "file",
+              "label": "GLOBIO Classified Land Use (Raster)",
+              "defaultValue": "",
+              "required": true,
+              "validateAs": {
+                "type": "GDAL"
+              }
+            }
+          ]
         }
       ]
     }

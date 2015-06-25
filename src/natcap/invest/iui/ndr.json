@@ -96,7 +96,7 @@
               "lucode"
             ]
           },
-          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'load_n' (or p), 'eff_n' (or p), and 'crit_len_n' (or p) depending on which nutrients are selected."
         },
         {
           "id": "calc_p",

@@ -8,6 +8,7 @@ import pprint
 
 import gdal
 import numpy as np
+import pygeoprocessing
 
 import crop_production_io as io
 from raster import Raster
@@ -344,51 +345,63 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
     CostPerHectareInputTotal_crop = Mask_raster * CostPerHectare_input *
         ha_per_cell
     '''
+
+    # Determine the crop lucode based on its name
+    crop_lucode = None
+    for lucode, luname in vars_dict['crop_lookup_dict'].iteritems():
+        if luname == crop:
+            crop_lucode = lucode
+            continue
+
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_raster.uri)
     economics_table_crop = vars_dict['economics_table_dict'][crop]
-    masked_lulc_raster = _get_masked_lulc_raster(vars_dict, crop, lulc_raster)
-    masked_lulc_raster_float = masked_lulc_raster.set_datatype_and_nodata(
-        gdal.GDT_Float64, NODATA_FLOAT)
-    CostPerHectareInputTotal_raster = masked_lulc_raster_float.zeros()
+    datatype_out = gdal.GDT_Float32
+    nodata_out = NODATA_FLOAT
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(lulc_raster.uri)
     ha_per_m2 = 0.0001
-    ha_per_cell = masked_lulc_raster.get_cell_area() * ha_per_m2
+    cell_area_ha = pixel_size_out**2 * ha_per_m2
 
-    try:
-        cost_labor_per_cell = economics_table_crop[
-            'cost_labor_per_ha'] * ha_per_cell
-        CostLabor_raster = masked_lulc_raster_float * cost_labor_per_cell
-        CostPerHectareInputTotal_raster += CostLabor_raster
-    except KeyError:
-        LOGGER.warning("Skipping labor cost because 'cost_labor_per_ha' not "
-                       "provided in economics table.")
-    try:
-        cost_machine_per_cell = economics_table_crop[
-            'cost_machine_per_ha'] * ha_per_cell
-        CostMachine_raster = masked_lulc_raster_float * cost_machine_per_cell
-        CostPerHectareInputTotal_raster += CostMachine_raster
-    except KeyError:
-        LOGGER.warning("Skipping machine cost because 'cost_machine_per_ha' "
-                       "not provided in economics table.")
-    try:
-        cost_seed_per_cell = economics_table_crop[
-            'cost_seed_per_ha'] * ha_per_cell
-        CostSeed_raster = masked_lulc_raster_float * cost_seed_per_cell
-        CostPerHectareInputTotal_raster += CostSeed_raster
-    except KeyError:
-        LOGGER.warning("Skipping seed cost because 'cost_seed_per_ha' not "
-                       "provided in economics table.")
-    try:
-        cost_irrigation_per_cell = economics_table_crop[
-            'cost_irrigation_per_ha'] * ha_per_cell
-        CostIrrigation_raster = masked_lulc_raster_float * cost_irrigation_per_cell
-        CostPerHectareInputTotal_raster += CostIrrigation_raster
-    except KeyError:
-        LOGGER.warning("Skipping irrigation cost because "
-                       "'cost_irrigation_per_ha' not provided in economics "
-                       "table.")
+    # The scalar cost is identical for all crop pixels of the current class,
+    # and is based on the presence of absence of columns in the user-provided
+    # economics table.  We only need to calculate this once.
+    cost_scalar = 0.0
+    for key in ['cost_labor_per_ha', 'cost_machine_per_ha', 'cost_seed_per_ha', 'cost_irrigation_per_ha']:
+        try:
+            cost_scalar += (economics_table_crop[key] * cell_area_ha)
+        except KeyError:
+            LOGGER.warning('Key missing from economics table: %s', key)
 
-    CostPerHectareInputTotal_masked_raster = CostPerHectareInputTotal_raster * masked_lulc_raster_float
+    def _calculate_cost(lulc_matrix):
+        """
+        Calculate the total cost on a single pixel.
 
-    return CostPerHectareInputTotal_masked_raster
+        <pseudocode>
+            If lulc_pixel is nodata:
+                return nodata
+            else:
+                if lulc_pixel is of our crop type:
+                    return the cost of this crop (in cost_scalar, above)
+                else:
+                    return 0.0
+        </pseudocode>
+        """
+        return np.where(lulc_matrix == lulc_nodata, nodata_out,
+                        np.where(lulc_matrix == crop_lucode, cost_scalar, 0.0))
+
+    new_raster_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    pygeoprocessing.vectorize_datasets(
+        [lulc_raster.uri],
+        _calculate_cost,
+        new_raster_uri,
+        datatype_out,
+        nodata_out,
+        pixel_size_out,
+        bounding_box_mode='intersection',
+        vectorize_op=False,
+        datasets_are_pre_aligned=True
+    )
+
+    return Raster.from_file(new_raster_uri, 'GTiff')
 
 
 def calc_percentile_yield(vars_dict):

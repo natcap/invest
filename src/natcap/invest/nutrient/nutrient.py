@@ -493,12 +493,12 @@ def _execute_nutrient(args):
             threshold_retention_tot[ws_id] = (
                 retention_tot[ws_id] - threshold_lookup[nutrient][ws_id])
 
-        field_summaries['%s_avl_tot' % nutrient] = alv_tot
+        field_summaries['%s_alv_tot' % nutrient] = alv_tot
         field_summaries['%s_ret_tot' % nutrient] = retention_tot
         field_summaries['%s_ret_adj' % nutrient] = threshold_retention_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_header_order = (
-            map(lambda(x): x % nutrient, ['%s_avl_tot', '%s_ret_tot', '%s_ret_adj', '%s_exp_tot']) + field_header_order)
+            map(lambda(x): x % nutrient, ['%s_alv_tot', '%s_ret_tot', '%s_ret_adj', '%s_exp_tot']) + field_header_order)
         #Do valuation if necessary
         if valuation_lookup is not None:
             field_summaries['value_%s' % nutrient] = {}

@@ -40,14 +40,6 @@ def execute(args):
                 biophyscial table must have p fields in them.
             'calc_n' - True if nitrogen is meant to be modeled, if True then
                 biophyscial table must have n fields in them.
-            'subsurface_critical_length_n' - the subsurface flow critical length
-                for nitrogen
-            'subsurface_critical_length_p' - the subsurface flow critical length
-                for phosphorous
-            'subsurface_eff_n' - the maximum retention efficiency that soil can
-                reach for nitrogen
-            'subsurface_eff_p' - the maximum retention efficiency that soil can
-                reach for phosphorous
             'results_suffix' - (optional) a text field to append to all output files.
             'threshold_flow_accumulation' - a number representing the flow accumulation.
             '_prepare' - (optional) The preprocessed set of data created by the
@@ -298,35 +290,6 @@ def execute(args):
     export_uri = {}
     field_summaries = {}
 
-    #Calculate the W factor
-    LOGGER.info('calculate per pixel W')
-    original_w_factor_uri = os.path.join(
-        intermediate_dir, 'w_factor%s.tif' % file_suffix)
-    thresholded_w_factor_uri = os.path.join(
-        intermediate_dir, 'thresholded_w_factor%s.tif' % file_suffix)
-
-    #map lulc to biophysical table
-    lulc_to_c = dict([
-        (lulc_code, float(table['usle_c'])) for
-        (lulc_code, table) in lucode_to_parameters.items()])
-    w_nodata = -1.0
-
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        lulc_uri, lulc_to_c, original_w_factor_uri, gdal.GDT_Float32,
-        w_nodata, exception_flag='values_required')
-    def threshold_w(w_val):
-        '''Threshold w to 0.001'''
-        w_val_copy = w_val.copy()
-        nodata_mask = w_val == w_nodata
-        w_val_copy[w_val < 0.001] = 0.001
-        w_val_copy[nodata_mask] = w_nodata
-        return w_val_copy
-    pygeoprocessing.geoprocessing.vectorize_datasets(
-        [original_w_factor_uri], threshold_w, thresholded_w_factor_uri,
-        gdal.GDT_Float32, w_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
-
-    #calculate W_bar
     zero_absorption_source_uri = (
         pygeoprocessing.geoprocessing.temporary_filename())
     loss_uri = pygeoprocessing.geoprocessing.temporary_filename()

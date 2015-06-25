@@ -10,12 +10,15 @@ import warnings
 import zipfile
 import glob
 import textwrap
-import yaml
+import imp
+import subprocess
+import inspect
 
 import paver.svn
 import paver.path
 from paver.easy import *
 import virtualenv
+import yaml
 
 LOGGER = logging.getLogger('invest-bin')
 _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
@@ -124,10 +127,10 @@ class GitRepository(Repository):
         return sh('git rev-parse --verify HEAD', cwd=self.local_path, capture=True)
 
 REPOS_DICT = {
-    'users-guide': HgRepository('doc/users-guide', 'http://code.google.com/p/invest-natcap.users-guide'),
+    'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
     'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
-    'invest-data': SVNRepository('data/invest-data', 'http://ncp-yamato.stanford.edu/svn/sample_repo'),
-    'invest-2': HgRepository('src/invest-natcap.default', 'http://code.google.com/p/invest-natcap'),
+    'invest-data': SVNRepository('data/invest-data', 'http://ncp-yamato.stanford.edu/svn/invest-sample-data'),
+    'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
 }
 REPOS = REPOS_DICT.values()
 
@@ -141,6 +144,12 @@ def _repo_is_valid(repo, options):
     except AttributeError:
         # options.force_dev not specified as a cmd opt, defaulting to False.
         options.force_dev = False
+
+    if not os.path.exists(repo.local_path):
+        print "WARNING: Repository %s has not been cloned." % repo.local_path
+        print "To clone, run this command:"
+        print "    paver fetch %s" % repo.local_path
+    return False
 
     if not repo.at_known_rev() and options.force_dev is False:
         current_rev = repo.current_rev()
@@ -261,8 +270,7 @@ def env(options):
     requirements = [
         "numpy",
         "scipy",
-        "pygeoprocessing==0.2.2",
-        "psycopg2",
+        "pygeoprocessing==0.3.0a3",
     ]
 
     install_string = """
@@ -285,11 +293,12 @@ def after_install(options, home_dir):
     # Calling via the shell so that virtualenv has access to environment
     # vars as needed.
     env_dirname = options.virtualenv.dest_dir
-    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(env_name)s"
+    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(env_name)s"
     bootstrap_opts = {
         "python": sys.executable,
         "bootstrap_file": options.virtualenv.script_name,
         "env_name": env_dirname,
+        "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
     }
     err_code = sh(bootstrap_cmd % bootstrap_opts)
     if err_code != 0:
@@ -397,7 +406,7 @@ def fetch(args):
             try:
                 target_rev = repo.tracked_version()
             except KeyError:
-                print 'ERROR: repo not tracked in versions.json: %s' % repo.local_path
+                print 'WARNING: repo not tracked in versions.json: %s' % repo.local_path
                 return 1
 
         repo.pull()
@@ -504,7 +513,7 @@ def clean(options):
     """
 
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
-                     options.virtualenv.env_name,
+                     options.virtualenv.dest_dir,
                      'installer/darwin/temp',
                      ]
     files_to_rm = [
@@ -526,7 +535,7 @@ def clean(options):
             if os.path.exists(os.path.join(repodir, 'setup.py')):
                 # use setup.py for package directories.
                 sh(sys.executable + ' setup.py clean', cwd=repodir)
-        elif repodir.startswith('doc'):
+        elif repodir.startswith('doc') and os.path.exists(repodir):
             sh('make clean', cwd=repodir)
 
 
@@ -842,9 +851,13 @@ def _get_local_version():
     elif os.path.exists('.hg'):
         # we're in an hg repo, so we can just get the information.
         repo = HgRepository('.', '')
+        latesttagdistance = repo._format_log('{latesttagdistance}')
+        if latesttagdistance is None:
+            # When there's never been a tag.
+            latesttagdistance = repo._format_log('{rev}')
         repo_data = {
             'latesttag': repo._format_log('{latesttag}'),
-            'latesttagdistance': int(repo._format_log('{latesttagdistance}')),
+            'latesttagdistance': latesttagdistance,
             'branch': repo._format_log('{branch}'),
             'short_node': repo._format_log('{shortest(node, 6)}'),
         }
@@ -861,3 +874,16 @@ def _get_local_version():
     else:
         version = "%(latesttag)s.dev%(latesttagdistance)s-%(short_node)s" % repo_data
     return version
+
+@task
+def selftest():
+    """
+    Do a dry-run on all tasks found in this pavement file.
+    """
+    module = imp.load_source('pavement', __file__)
+    def istask(reference):
+        return isinstance(reference, paver.tasks.Task)
+    for taskname, _ in inspect.getmembers(module, istask):
+        if taskname != 'selftest':
+            subprocess.call(['paver', '--dry-run', taskname])
+
