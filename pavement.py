@@ -406,7 +406,7 @@ def fetch(args):
             try:
                 target_rev = repo.tracked_version()
             except KeyError:
-                print 'ERROR: repo not tracked in versions.json: %s' % repo.local_path
+                print 'WARNING: repo not tracked in versions.json: %s' % repo.local_path
                 return 1
 
         repo.pull()
