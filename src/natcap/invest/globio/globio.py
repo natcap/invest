@@ -19,6 +19,9 @@ LOGGER = logging.getLogger('invest_natcap.globio.globio')
 def execute(args):
     """main execute entry point"""
 
+    msa_parameter_table = load_msa_parameter_table(args['msa_parameters_uri'])
+    LOGGER.debug(msa_parameter_table)
+
     #append a _ to the suffix if it's not empty and doens't already have one
     try:
         file_suffix = args['results_suffix']
@@ -201,7 +204,8 @@ def execute(args):
             if filename.lower().endswith(".shp"):
                 LOGGER.debug("shape added %s", filename)
                 infrastructure_tmp_raster = (
-                   os.path.join(args['workspace_dir'], os.path.basename(filename.lower() + ".tif")))
+                    os.path.join(args['workspace_dir'], os.path.basename(
+                        filename.lower() + ".tif")))
                 pygeoprocessing.geoprocessing.new_raster_from_base_uri(
                     globio_lulc_uri, infrastructure_tmp_raster,
                     'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
@@ -278,7 +282,8 @@ def execute(args):
     smoothed_primary_veg_mask_uri = os.path.join(
         tmp_dir, 'smoothed_primary_veg_mask%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.convolve_2d_uri(
-        primary_veg_mask_uri, gaussian_kernel_uri, smoothed_primary_veg_mask_uri)
+        primary_veg_mask_uri, gaussian_kernel_uri,
+        smoothed_primary_veg_mask_uri)
 
     primary_veg_smooth_uri = os.path.join(
         intermediate_dir, 'ffqi%s.tif' % file_suffix)
@@ -300,19 +305,37 @@ def execute(args):
         vectorize_op=False)
 
     msa_nodata = -1
+
+    msa_f_table = msa_parameter_table['msa_f']
+    msa_f_values = sorted(msa_f_table)
+
     def msa_f_op(primary_veg_smooth):
         """calcualte msa fragmentation"""
         nodata_mask = primary_veg_mask_nodata == primary_veg_smooth
 
         msa_f = numpy.empty(primary_veg_smooth.shape)
-        msa_f[:] = 1.0
+
+        for value in reversed(msa_f_values):
+            if value == '>':
+                msa_f[primary_veg_smooth > msa_f_table['>'][0]] = (
+                    msa_f_table['>'][1])
+            elif value == '<':
+                continue
+            else:
+                msa_f[primary_veg_smooth <= value] = msa_f_table[value]
+
+        if '<' in msa_f_table:
+            msa_f[primary_veg_smooth < msa_f_table['<'][0]] = (
+                msa_f_table['<'][1])
+
+#        msa_f[:] = 1.0
         #These thresholds come from FFQI from Justin's code; I don't
         #know where they otherwise came from.
-        msa_f[(primary_veg_smooth > .9825) & (primary_veg_smooth <= .9984)] = 0.95
-        msa_f[(primary_veg_smooth > .89771) & (primary_veg_smooth <= .9825)] = 0.90
-        msa_f[(primary_veg_smooth > .578512) & (primary_veg_smooth <= .89771)] = 0.7
-        msa_f[(primary_veg_smooth > .42877) & (primary_veg_smooth <= .578512)] = 0.6
-        msa_f[(primary_veg_smooth <= .42877)] = 0.3
+#        msa_f[(primary_veg_smooth > .9825) & (primary_veg_smooth <= .9984)] = 0.95
+#        msa_f[(primary_veg_smooth > .89771) & (primary_veg_smooth <= .9825)] = 0.90
+#        msa_f[(primary_veg_smooth > .578512) & (primary_veg_smooth <= .89771)] = 0.7
+#        msa_f[(primary_veg_smooth > .42877) & (primary_veg_smooth <= .578512)] = 0.6
+#        msa_f[(primary_veg_smooth <= .42877)] = 0.3
         msa_f[nodata_mask] = msa_nodata
 
         return msa_f
@@ -488,7 +511,11 @@ def load_msa_parameter_table(msa_parameter_table_filename):
         msa_dict = collections.defaultdict(dict)
         for line in reader:
             if line['Value'][0] in ['<', '>']:
+                #put the limit and the MSA value in a tub
                 value = line['Value'][0]
+                msa_dict[line['MSA calculation']][value] = (
+                    float(line['Value'][1:]), float(line['MSA_x']))
+                continue
             elif '-' in line['Value']:
                 value = float(line['Value'].split('-')[1])
             else:
