@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.carbon_edge_effect.carbon_edge_effect",
   "modelName": "carbon_edge_effect",
   "localDocURI": "../documentation/carbon_edge_effect.html",
-  "height": 300,
+  "height": 350,
   "width": 700,
   "elements": [
     {
