@@ -145,6 +145,12 @@ def _repo_is_valid(repo, options):
         # options.force_dev not specified as a cmd opt, defaulting to False.
         options.force_dev = False
 
+    if not os.path.exists(repo.local_path):
+        print "WARNING: Repository %s has not been cloned." % repo.local_path
+        print "To clone, run this command:"
+        print "    paver fetch %s" % repo.local_path
+    return False
+
     if not repo.at_known_rev() and options.force_dev is False:
         current_rev = repo.current_rev()
         print 'ERROR: Revision mismatch in repo %s' % repo.local_path
