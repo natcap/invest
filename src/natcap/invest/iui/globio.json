@@ -4,8 +4,8 @@
   "targetScript": "natcap.invest.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 750,
-  "width": 900,
+  "height": 900,
+  "width": 800,
   "elements": [
     {
       "id": "workspace_list",
@@ -34,28 +34,6 @@
           "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
         },
         {
-          "id": "aoi_uri",
-          "args_id": "aoi_uri",
-          "type": "file",
-          "label": "AOI (Shapefile) (optional)",
-          "defaultValue": "",
-          "required": false,
-          "validateAs": {
-            "type": "OGR",
-            "layers": [
-              {
-                "name": {
-                  "inheritFrom": "file"
-                },
-                "type": "polygons",
-                "projection": {
-                  "exists": true
-                }
-              }
-            ]
-          }
-        },
-        {
           "id": "lulc_to_globio_table_uri",
           "args_id": "lulc_to_globio_table_uri",
           "type": "file",
@@ -67,19 +45,6 @@
             "fieldsExist": ["lucode", "globio_lucode"]
           },
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields.",
-          "disabledBy": "predefined_globio"
-        },
-        {
-          "id": "msa_lookup_table_uri",
-          "args_id": "msa_lookup_table_uri",
-          "type": "file",
-          "label": "MSA Threshold Values (CSV)",
-          "defaultValue": "../globio/input/msa_lookup_table.csv",
-          "required": true,
-          "validateAs": {
-            "type": "CSV"
-          },
-          "helpText": "A CSV table containing lookup threshold values for MSA classifications. Default is provided but could be changed by user.",
           "disabledBy": "predefined_globio"
         },
         {
@@ -143,16 +108,6 @@
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "high_intensity_agriculture_threshold",
-          "args_id": "high_intensity_agriculture_threshold",
-          "type": "text",
-          "label": "High Intensity Agriculture Threshold",
-          "defaultValue": "1.0",
-          "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$",
-          "disabledBy": "predefined_globio"
-        },
-        {
           "id": "pasture_threshold",
           "args_id": "pasture_threshold",
           "type": "text",
@@ -163,11 +118,11 @@
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "yieldgap_threshold",
-          "args_id": "yieldgap_threshold",
+          "id": "intensification_threshold",
+          "args_id": "intensification_threshold",
           "type": "text",
-          "label": "Yieldgap Threshold",
-          "defaultValue": "0.456804906897",
+          "label": "Intensification Threshold",
+          "defaultValue": "0.46",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
           "disabledBy": "predefined_globio"
@@ -181,6 +136,63 @@
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
           "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "msa_parameters_uri",
+          "args_id": "msa_parameters_uri",
+          "type": "file",
+          "label": "MSA Parameter Table (CSV)",
+          "defaultValue": "../globio/input/msa_parameters.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": ["MSA calculation", "Value", "MSA_x"]
+          },
+          "helpText": "A CSV table containing MSA threshold values as defined in the user's guide.  Provided for advanced users that may wish to change those values."
+        }
+      ]
+    },
+    {
+      "id": "aoi_summary",
+      "args_id": "aoi_summary",
+      "label": "Summarize MSA by AOI",
+      "type": "container",
+      "defaultValue": true,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "aoi_summary_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "aoi_uri",
+              "args_id": "aoi_uri",
+              "type": "file",
+              "label": "AOI (Vector)",
+              "defaultValue": "../globio/input/sub_aoi.shp",
+              "required": true,
+              "validateAs": {
+                "type": "OGR",
+                "layers": [
+                  {
+                    "name": {
+                      "inheritFrom": "file"
+                    },
+                    "type": "polygons"
+                  }
+                ]
+              },
+              "helpText": "This is a set of polygons that can be used to aggregate MSA by a given field"
+            },
+            {
+              "id": "aoi_summary_key",
+              "args_id": "aoi_summary_key",
+              "type": "text",
+              "label": "Unique feature key in AOI",
+              "required": true,
+              "defaultValue": "OBJECTID"
+            }
+          ]
         }
       ]
     },
