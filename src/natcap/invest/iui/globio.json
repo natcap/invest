@@ -108,16 +108,6 @@
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "high_intensity_agriculture_threshold",
-          "args_id": "high_intensity_agriculture_threshold",
-          "type": "text",
-          "label": "High Intensity Agriculture Threshold",
-          "defaultValue": "1.0",
-          "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$",
-          "disabledBy": "predefined_globio"
-        },
-        {
           "id": "pasture_threshold",
           "args_id": "pasture_threshold",
           "type": "text",
@@ -128,10 +118,10 @@
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "yieldgap_threshold",
-          "args_id": "yieldgap_threshold",
+          "id": "intensification_threshold",
+          "args_id": "intensification_threshold",
           "type": "text",
-          "label": "Yieldgap Threshold",
+          "label": "Intensification Threshold",
           "defaultValue": "0.46",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",

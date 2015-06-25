@@ -55,7 +55,7 @@ def execute(args):
         args['sum_yieldgap_uri'] - (string) used in "mode (a)" a path to
             sum yieldgap raster
         args['pasture_threshold'] - (float) used in "mode (a)"
-        args['yieldgap_threshold'] - (float) used in "mode (a)"
+        args['intensification_threshold'] - (float) used in "mode (a)"
         args['primary_threshold'] - (float) used in "mode (a)"
         args['msa_parameters_uri'] - (string) path to MSA classification
             parameters
@@ -517,7 +517,7 @@ def _calculate_globio_lulc_map(
     #these came from the 'expansion_scenarios.py' script as numbers Justin
     #provided way back on the unilever project.
     pasture_threshold = float(args['pasture_threshold'])
-    yieldgap_threshold = float(args['yieldgap_threshold'])
+    intensification_threshold = float(args['intensification_threshold'])
     primary_threshold = float(args['primary_threshold'])
 
     def _create_globio_lulc(
@@ -529,7 +529,7 @@ def _calculate_globio_lulc_map(
         #Step 1.2b: Assign high/low according to threshold based on yieldgap.
         nodata_mask = lulc_array == globio_nodata
         high_low_intensity_agriculture = numpy.where(
-            sum_yieldgap < yieldgap_threshold, 9.0, 8.0)
+            sum_yieldgap < intensification_threshold, 9.0, 8.0)
 
         #Step 1.2c: Stamp ag_split classes onto input LULC
         lulc_ag_split = numpy.where(
