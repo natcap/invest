@@ -149,7 +149,7 @@ def _repo_is_valid(repo, options):
         print "WARNING: Repository %s has not been cloned." % repo.local_path
         print "To clone, run this command:"
         print "    paver fetch %s" % repo.local_path
-    return False
+        return False
 
     if not repo.at_known_rev() and options.force_dev is False:
         current_rev = repo.current_rev()
@@ -633,6 +633,7 @@ def build_docs(options):
     """
 
     if not _repo_is_valid(REPOS_DICT['users-guide'], options):
+
         return
 
     guide_dir = os.path.join('doc', 'users-guide')
@@ -755,29 +756,40 @@ def build_installer(options):
     }
 
     arcgis_repo = REPOS_DICT['invest-2']
-    if not os.path.exists(arcgis_repo.local_path):
-        arcgis_repo.clone()
-
+    ug_repo = REPOS_DICT['users-guide']
     try:
         options.force_dev
     except AttributeError:
         # options.force_dev not specified as a command opt, defaulting to False
         options.force_dev = False
 
-    if options.force_dev is False:
-        if not os.path.exists(arcgis_repo.local_path):
-            call_task('fetch', args=[arcgis_repo.local_path])
+    for repo in [arcgis_repo, ug_repo]:
+        if options.force_dev is False:
+            if not os.path.exists(repo.local_path):
+                call_task('fetch', args=[repo.local_path])
 
-        if not arcgis_repo.at_known_rev():
-            current_rev = arcgis_repo.current_rev()
-            tracked_rev = arcgis_repo.tracked_version()
-            print 'ERROR: %s not at the known rev %s' % (
-                arcgis_repo.local_path, tracked_rev)
-            print 'Current version: %s' % current_rev
-            return
-    else:
-        if not arcgis_repo.at_known_rev():
-            print 'WARNING: %s revision differs, but --force-dev provided' % arcgis_repo.local_path
+            if not repo.at_known_rev():
+                current_rev = repo.current_rev()
+                tracked_rev = repo.tracked_version()
+                print 'ERROR: %s not at the known rev %s' % (
+                    repo.local_path, tracked_rev)
+                print 'Current version: %s' % current_rev
+                return
+        else:
+            if not repo.at_known_rev():
+                print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
+
+    call_task('build_docs')
+
+    try:
+        options.bindir
+    except AttributeError:
+        options.bindir = os.path.join('dist', 'invest-bin')
+
+    if not os.path.exists(options.bindir):
+        print 'WARNING: Binary dir %s not found' % options.bindir
+        print 'WARNING: Regenerating binaries'
+        call_task('build_bin')
 
     # set default options if they have not been set by the user.
     # options don't exist in the options object unless the user defines it.
@@ -859,10 +871,10 @@ def _build_nsis(version, bindir, arch):
         '/DINVEST_3_FOLDER=%s' % bindir,
         '/DSHORT_VERSION=%s' % version,  # some other value?
         '/DARCHITECTURE=%s' % arch,
-        'installer/windows/invest_installer.nsi'
+        'invest_installer.nsi'
     ]
     makensis += ' ' + ' '.join(nsis_params)
-    sh(makensis)
+    sh(makensis, cwd=os.path.join('installer', 'windows'))
 
 
 def _build_dmg(version, bindir):

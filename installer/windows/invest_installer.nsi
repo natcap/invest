@@ -301,7 +301,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\python\*
 
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
-  File /r /x *.hg* /x *.svn* ..\${INVEST_3_FOLDER}\*
+  File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
 
 ;  SetOutPath "$INSTDIR\${INVEST_3_FOLDER_x64}\"
 ;  File /r /x *.hg* /x *.svn* ..\${INVEST_3_FOLDER_x64}\*
