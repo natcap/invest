@@ -34,28 +34,6 @@
           "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
         },
         {
-          "id": "aoi_uri",
-          "args_id": "aoi_uri",
-          "type": "file",
-          "label": "AOI (Shapefile) (optional)",
-          "defaultValue": "",
-          "required": false,
-          "validateAs": {
-            "type": "OGR",
-            "layers": [
-              {
-                "name": {
-                  "inheritFrom": "file"
-                },
-                "type": "polygons",
-                "projection": {
-                  "exists": true
-                }
-              }
-            ]
-          }
-        },
-        {
           "id": "lulc_to_globio_table_uri",
           "args_id": "lulc_to_globio_table_uri",
           "type": "file",
