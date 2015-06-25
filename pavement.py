@@ -619,7 +619,8 @@ def zip_source(options):
 
 @task
 @cmdopts([
-    ('force-dev', '', 'Force development')
+    ('force-dev', '', 'Force development'),
+    ('version', '-v', 'The version of the documentation to build')
 ])
 def build_docs(options):
     """
@@ -629,15 +630,31 @@ def build_docs(options):
     Compilation of the guides uses sphinx and requires that all needed
     libraries are installed for compiling html, latex and pdf.
 
-    Requires make.
+    Requires make and sed.
     """
 
     if not _repo_is_valid(REPOS_DICT['users-guide'], options):
-
         return
+
+    try:
+        options.version
+    except AttributeError:
+        import imp
+        invest = imp.load_source('_invest', 'src/natcap/invest/__init__.py')
+        options.version = invest.__version__
+    version = options.version
 
     guide_dir = os.path.join('doc', 'users-guide')
     latex_dir = os.path.join(guide_dir, 'build', 'latex')
+    source_dir = os.path.join(guide_dir, 'source')
+    #Revert all files that use the +VERSION+ tag in them to their
+    #original state in case they were modified in a previous run
+    for file in ['conf.py', 'index.rst', 'carbonstorage.rst',
+                    'managed_timber_production_model.rst']:
+        sh("hg revert ./%s --no-backup" % file, cwd=source_dir)
+        #nobody likes 'tip' as the version name
+        sh("sed -i -e 's/+VERSION+/" + version + "/g' ./%s" % file, cwd=source_dir)
+
     sh('make html', cwd=guide_dir)
     sh('make latex', cwd=guide_dir)
     sh('make all-pdf', cwd=latex_dir)
