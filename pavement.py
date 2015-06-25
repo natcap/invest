@@ -845,9 +845,13 @@ def _get_local_version():
     elif os.path.exists('.hg'):
         # we're in an hg repo, so we can just get the information.
         repo = HgRepository('.', '')
+        latesttagdistance = repo._format_log('{latesttagdistance}')
+        if latesttagdistance is None:
+            # When there's never been a tag.
+            latesttagdistance = repo._format_log('{rev}')
         repo_data = {
             'latesttag': repo._format_log('{latesttag}'),
-            'latesttagdistance': int(repo._format_log('{latesttagdistance}')),
+            'latesttagdistance': latesttagdistance,
             'branch': repo._format_log('{branch}'),
             'short_node': repo._format_log('{shortest(node, 6)}'),
         }
