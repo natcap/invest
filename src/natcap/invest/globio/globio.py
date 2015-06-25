@@ -405,24 +405,7 @@ def execute(args):
         dataset_to_align_index=0, assert_datasets_projected=False,
         vectorize_op=False)
 
-
     #calc_msa_lu
-    """lu_msa_lookup = {}
-    for lucode, msa_val in msa_f_table['msa_lu'].iteritems():
-        lu_msa_lookup
-    lu_msa_lookup = {
-        0.0: 0.0, #map 0 to 0
-        1.0: 1.0, #primary veg
-        2.0: 0.7, #lightly used natural forest
-        3.0: 0.5, #secondary forest
-        4.0: 0.2, #forest plantation
-        5.0: 0.7, #livestock grazing
-        6.0: 0.1, #man-made pastures
-        7.0: 0.5, #agroforesty
-        8.0: 0.3, #low-input agriculture
-        9.0: 0.1, #intenstive agriculture
-        10.0: 0.05, #built-up areas
-    }"""
     msa_lu_uri = os.path.join(
         output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
@@ -445,11 +428,13 @@ def execute(args):
     if 'aoi_uri' in args:
         #copy the aoi to an output shapefile
         original_datasource = ogr.Open(args['aoi_uri'])
-        summary_aoi_uri = os.path.join(output_dir, 'aoi_summary%s.shp' % file_suffix)
-        #If there is already an existing shapefile with the same name and path, delete it
-        #Copy the input shapefile into the designated output folder
+        summary_aoi_uri = os.path.join(
+            output_dir, 'aoi_summary%s.shp' % file_suffix)
+        #If there is already an existing shapefile with the same name and path,
+        # delete it
         if os.path.isfile(summary_aoi_uri):
             os.remove(summary_aoi_uri)
+        #Copy the input shapefile into the designated output folder
         esri_driver = ogr.GetDriverByName('ESRI Shapefile')
         datasource_copy = esri_driver.CopyDataSource(original_datasource, summary_aoi_uri)
         layer = datasource_copy.GetLayer()
