@@ -504,7 +504,7 @@ def clean(options):
     """
 
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
-                     options.virtualenv.env_name,
+                     options.virtualenv.dest_dir,
                      'installer/darwin/temp',
                      ]
     files_to_rm = [
@@ -526,7 +526,7 @@ def clean(options):
             if os.path.exists(os.path.join(repodir, 'setup.py')):
                 # use setup.py for package directories.
                 sh(sys.executable + ' setup.py clean', cwd=repodir)
-        elif repodir.startswith('doc'):
+        elif repodir.startswith('doc') and os.path.exists(repodir):
             sh('make clean', cwd=repodir)
 
 
