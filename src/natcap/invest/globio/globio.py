@@ -426,14 +426,14 @@ def load_msa_parameter_table(msa_parameter_table_filename):
             if line['Value'][0] in ['<', '>']:
                 #put the limit and the MSA value in a tub
                 value = line['Value'][0]
-                msa_dict[line['MSA calculation']][value] = (
+                msa_dict[line['MSA_type']][value] = (
                     float(line['Value'][1:]), float(line['MSA_x']))
                 continue
             elif '-' in line['Value']:
                 value = float(line['Value'].split('-')[1])
             else:
                 value = float(line['Value'])
-            msa_dict[line['MSA calculation']][value] = float(line['MSA_x'])
+            msa_dict[line['MSA_type']][value] = float(line['MSA_x'])
     return msa_dict
 
 
