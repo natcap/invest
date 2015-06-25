@@ -316,6 +316,7 @@ def execute(args):
         msa_f = numpy.empty(primary_veg_smooth.shape)
 
         for value in reversed(msa_f_values):
+            #special case if it's a > or < value
             if value == '>':
                 msa_f[primary_veg_smooth > msa_f_table['>'][0]] = (
                     msa_f_table['>'][1])
@@ -328,14 +329,6 @@ def execute(args):
             msa_f[primary_veg_smooth < msa_f_table['<'][0]] = (
                 msa_f_table['<'][1])
 
-#        msa_f[:] = 1.0
-        #These thresholds come from FFQI from Justin's code; I don't
-        #know where they otherwise came from.
-#        msa_f[(primary_veg_smooth > .9825) & (primary_veg_smooth <= .9984)] = 0.95
-#        msa_f[(primary_veg_smooth > .89771) & (primary_veg_smooth <= .9825)] = 0.90
-#        msa_f[(primary_veg_smooth > .578512) & (primary_veg_smooth <= .89771)] = 0.7
-#        msa_f[(primary_veg_smooth > .42877) & (primary_veg_smooth <= .578512)] = 0.6
-#        msa_f[(primary_veg_smooth <= .42877)] = 0.3
         msa_f[nodata_mask] = msa_nodata
 
         return msa_f
