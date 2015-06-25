@@ -341,19 +341,11 @@ def execute(args):
         assert_datasets_projected=False, vectorize_op=False)
 
     #calc_msa_i
-    """infrastructure_impact_zones = {
-        'no impact': 1.0,
-        'low impact': 0.9,
-        'medium impact': 0.8,
-        'high impact': 0.4
-    }"""
-
     msa_f_values = sorted(msa_f_table)
     msa_i_other_table = msa_parameter_table['msa_i_other_table']
     msa_i_primary_table = msa_parameter_table['msa_i_primary']
     msa_i_other_values = sorted(msa_i_other_table)
     msa_i_primary_values = sorted(msa_i_primary_table)
-
 
     def msa_i_op(lulc_array, distance_to_infrastructure):
         """calculate msa infrastructure"""
@@ -415,6 +407,9 @@ def execute(args):
 
 
     #calc_msa_lu
+    """lu_msa_lookup = {}
+    for lucode, msa_val in msa_f_table['msa_lu'].iteritems():
+        lu_msa_lookup
     lu_msa_lookup = {
         0.0: 0.0, #map 0 to 0
         1.0: 1.0, #primary veg
@@ -427,12 +422,12 @@ def execute(args):
         8.0: 0.3, #low-input agriculture
         9.0: 0.1, #intenstive agriculture
         10.0: 0.05, #built-up areas
-    }
+    }"""
     msa_lu_uri = os.path.join(
         output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        globio_lulc_uri, lu_msa_lookup, msa_lu_uri,
+        globio_lulc_uri, msa_parameter_table['msa_lu'], msa_lu_uri,
         gdal.GDT_Float32, globio_nodata, exception_flag='values_required')
 
     LOGGER.info('calculate msa')
