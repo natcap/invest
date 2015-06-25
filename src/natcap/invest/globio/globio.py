@@ -51,7 +51,6 @@ def execute(args):
 
     globio_nodata = pygeoprocessing.get_nodata_from_uri(globio_lulc_uri)
 
-
     #load the infrastructure layers from disk
     infrastructure_filenames = []
     infrastructure_nodata_list = []
@@ -67,7 +66,7 @@ def execute(args):
                         infrastructure_filenames[-1]))
             if filename.lower().endswith(".shp"):
                 infrastructure_tmp_raster = (
-                    os.path.join(args['workspace_dir'], os.path.basename(
+                    os.path.join(tmp_dir, os.path.basename(
                         filename.lower() + ".tif")))
                 pygeoprocessing.geoprocessing.new_raster_from_base_uri(
                     globio_lulc_uri, infrastructure_tmp_raster,
@@ -90,7 +89,7 @@ def execute(args):
     infrastructure_uri = os.path.join(
         intermediate_dir, 'combined_infrastructure%s.tif' % file_suffix)
 
-    def collapse_infrastructure_op(*infrastructure_array_list):
+    def _collapse_infrastructure_op(*infrastructure_array_list):
         """Combines all input infrastructure into a single map where if any
             pixel on the stack is 1 gets passed through, any nodata pixel
             masks out all of them"""
@@ -114,7 +113,7 @@ def execute(args):
 
     LOGGER.info('collapse infrastructure into one raster')
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        infrastructure_filenames, collapse_infrastructure_op,
+        infrastructure_filenames, _collapse_infrastructure_op,
         infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
@@ -124,7 +123,7 @@ def execute(args):
         tmp_dir, 'primary_veg_mask%s.tif' % file_suffix)
     primary_veg_mask_nodata = -1
 
-    def primary_veg_mask_op(lulc_array):
+    def _primary_veg_mask_op(lulc_array):
         """masking out natural areas"""
         nodata_mask = lulc_array == globio_nodata
         result = (lulc_array == 1)
@@ -132,7 +131,7 @@ def execute(args):
 
     LOGGER.info("create mask of primary veg areas")
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [globio_lulc_uri], primary_veg_mask_op,
+        [globio_lulc_uri], _primary_veg_mask_op,
         primary_veg_mask_uri, gdal.GDT_Int32, primary_veg_mask_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
@@ -151,7 +150,7 @@ def execute(args):
     primary_veg_smooth_uri = os.path.join(
         intermediate_dir, 'ffqi%s.tif' % file_suffix)
 
-    def primary_veg_smooth_op(
+    def _primary_veg_smooth_op(
             primary_veg_mask_array, smoothed_primary_veg_mask):
         """mask out ffqi only where there's an ffqi"""
         return numpy.where(
@@ -162,7 +161,7 @@ def execute(args):
     LOGGER.info('calculate primary_veg_smooth')
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [primary_veg_mask_uri, smoothed_primary_veg_mask_uri],
-        primary_veg_smooth_op, primary_veg_smooth_uri, gdal.GDT_Float32,
+        _primary_veg_smooth_op, primary_veg_smooth_uri, gdal.GDT_Float32,
         primary_veg_mask_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, assert_datasets_projected=False,
         vectorize_op=False)
@@ -172,7 +171,7 @@ def execute(args):
     msa_f_table = msa_parameter_table['msa_f']
     msa_f_values = sorted(msa_f_table)
 
-    def msa_f_op(primary_veg_smooth):
+    def _msa_f_op(primary_veg_smooth):
         """calcualte msa fragmentation"""
         nodata_mask = primary_veg_mask_nodata == primary_veg_smooth
 
@@ -199,7 +198,7 @@ def execute(args):
     LOGGER.info('calculate msa_f')
     msa_f_uri = os.path.join(output_dir, 'msa_f%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [primary_veg_smooth_uri], msa_f_op, msa_f_uri, gdal.GDT_Float32,
+        [primary_veg_smooth_uri], _msa_f_op, msa_f_uri, gdal.GDT_Float32,
         msa_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
 
@@ -210,7 +209,7 @@ def execute(args):
     msa_i_other_values = sorted(msa_i_other_table)
     msa_i_primary_values = sorted(msa_i_primary_table)
 
-    def msa_i_op(lulc_array, distance_to_infrastructure):
+    def _msa_i_op(lulc_array, distance_to_infrastructure):
         """calculate msa infrastructure"""
         distance_to_infrastructure *= out_pixel_size #convert to meters
         msa_i_primary = numpy.empty(lulc_array.shape)
@@ -263,7 +262,7 @@ def execute(args):
         infrastructure_uri, distance_to_infrastructure_uri)
     msa_i_uri = os.path.join(output_dir, 'msa_i%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [globio_lulc_uri, distance_to_infrastructure_uri], msa_i_op, msa_i_uri,
+        [globio_lulc_uri, distance_to_infrastructure_uri], _msa_i_op, msa_i_uri,
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, assert_datasets_projected=False,
         vectorize_op=False)
@@ -279,12 +278,12 @@ def execute(args):
     LOGGER.info('calculate msa')
     msa_uri = os.path.join(
         output_dir, 'msa%s.tif' % file_suffix)
-    def msa_op(msa_f, msa_lu, msa_i):
+    def _msa_op(msa_f, msa_lu, msa_i):
         """Calculate the MSA which is the product of the sub msas"""
         return numpy.where(
             msa_f != globio_nodata, msa_f* msa_lu * msa_i, globio_nodata)
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [msa_f_uri, msa_lu_uri, msa_i_uri], msa_op, msa_uri,
+        [msa_f_uri, msa_lu_uri, msa_i_uri], _msa_op, msa_uri,
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, assert_datasets_projected=False,
         vectorize_op=False)
@@ -425,7 +424,7 @@ def _calculate_globio_lulc_map(
         tmp_dir, 'forest_areas%s.tif' % file_suffix)
     forest_areas_nodata = -1
 
-    def forest_area_mask_op(lulc_array):
+    def _forest_area_mask_op(lulc_array):
         """masking out forest areas"""
         nodata_mask = lulc_array == globio_nodata
         result = (lulc_array == 130)
@@ -433,7 +432,7 @@ def _calculate_globio_lulc_map(
 
     LOGGER.info("create mask of natural areas")
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [intermediate_globio_lulc_uri], forest_area_mask_op,
+        [intermediate_globio_lulc_uri], _forest_area_mask_op,
         forest_areas_uri, gdal.GDT_Int32, forest_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
@@ -451,7 +450,7 @@ def _calculate_globio_lulc_map(
     ffqi_uri = os.path.join(
         intermediate_dir, 'ffqi%s.tif' % file_suffix)
 
-    def ffqi_op(forest_areas_array, smoothed_forest_areas):
+    def _ffqi_op(forest_areas_array, smoothed_forest_areas):
         """mask out ffqi only where there's an ffqi"""
         return numpy.where(
             forest_areas_array != forest_areas_nodata,
@@ -460,7 +459,7 @@ def _calculate_globio_lulc_map(
 
     LOGGER.info('calculate ffqi')
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [forest_areas_uri, smoothed_forest_areas_uri], ffqi_op,
+        [forest_areas_uri, smoothed_forest_areas_uri], _ffqi_op,
         ffqi_uri, gdal.GDT_Float32, forest_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
