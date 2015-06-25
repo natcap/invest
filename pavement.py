@@ -10,12 +10,15 @@ import warnings
 import zipfile
 import glob
 import textwrap
-import yaml
+import imp
+import subprocess
+import inspect
 
 import paver.svn
 import paver.path
 from paver.easy import *
 import virtualenv
+import yaml
 
 LOGGER = logging.getLogger('invest-bin')
 _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
@@ -861,3 +864,16 @@ def _get_local_version():
     else:
         version = "%(latesttag)s.dev%(latesttagdistance)s-%(short_node)s" % repo_data
     return version
+
+@task
+def selftest():
+    """
+    Do a dry-run on all tasks found in this pavement file.
+    """
+    module = imp.load_source('pavement', __file__)
+    def istask(reference):
+        return isinstance(reference, paver.tasks.Task)
+    for taskname, _ in inspect.getmembers(module, istask):
+        if taskname != 'selftest':
+            subprocess.call(['paver', '--dry-run', taskname])
+
