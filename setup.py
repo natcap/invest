@@ -187,21 +187,11 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
-<<<<<<< local
-    package_data={
-        'natcap.invest.iui': ['*.json', '*.png', 'iui_resources/resources.json', 'iui_resources/images/*.png'],
-    },
-=======
     version=load_version(),
->>>>>>> other
     include_package_data=True,
     install_requires=REQUIREMENTS,
     include_dirs=[numpy.get_include()],
     setup_requires=['nose>=1.0'],
-<<<<<<< local
-    version='3.3.0dev',
-=======
->>>>>>> other
     cmdclass=CMDCLASS,
     license=LICENSE,
     zip_safe=False,
@@ -218,9 +208,6 @@ setup(
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,
-<<<<<<< local
-
-=======
     package_data={
         'natcap.invest.iui': [
             '*.png',
@@ -245,5 +232,4 @@ setup(
             'wave_energy_scripts/*.txt'
         ],
     }
->>>>>>> other
 )
