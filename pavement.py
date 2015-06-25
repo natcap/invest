@@ -745,6 +745,7 @@ def build_bin():
                         'Defaults depend on the current system: '
                         'Windows=nsis, Mac=dmg, Linux=deb')),
     ('arch=', 'a', 'The architecture of the binaries'),
+    ('force-dev', '', 'Allow a build when a repo version differs from tracked versions'),
 ])
 def build_installer(options):
     default_installer = {
@@ -752,6 +753,31 @@ def build_installer(options):
         'Windows': 'nsis',
         'Linux': 'deb'
     }
+
+    arcgis_repo = REPOS_DICT['invest-2']
+    if not os.path.exists(arcgis_repo.local_path):
+        arcgis_repo.clone()
+
+    try:
+        options.force_dev
+    except AttributeError:
+        # options.force_dev not specified as a command opt, defaulting to False
+        options.force_dev = False
+
+    if options.force_dev is False:
+        if not os.path.exists(arcgis_repo.local_path):
+            call_task('fetch', args=[arcgis_repo.local_path])
+
+        if not arcgis_repo.at_known_rev():
+            current_rev = arcgis_repo.current_rev()
+            tracked_rev = arcgis_repo.tracked_version()
+            print 'ERROR: %s not at the known rev %s' % (
+                arcgis_repo.local_path, tracked_rev)
+            print 'Current version: %s' % current_rev
+            return
+    else:
+        if not arcgis_repo.at_known_rev():
+            print 'WARNING: %s revision differs, but --force-dev provided' % arcgis_repo.local_path
 
     # set default options if they have not been set by the user.
     # options don't exist in the options object unless the user defines it.
@@ -821,9 +847,11 @@ def _build_fpm(version, bindir, pkg_type):
 
 def _build_nsis(version, bindir, arch):
     # determine makensis path
-    makensis = '"C:\Program Files\NSIS\makensis.exe"'
+    makensis = 'C:\Program Files\NSIS\makensis.exe'
     if platform.system() != 'Windows':
         makensis = 'wine "%s"' % makensis
+
+    bindir = bindir.replace('/', r'\\')
 
     nsis_params = [
         '/DVERSION=%s' % version,
