@@ -10,6 +10,7 @@ For other commands, try `python setup.py --help-commands`
 
 import os
 import sys
+import imp
 
 from setuptools.command.sdist import sdist as _sdist
 from setuptools.command.build_py import build_py as _build_py
@@ -113,6 +114,19 @@ EXTENSION_LIST = ([
 if not USE_CYTHON:
     EXTENSION_LIST = no_cythonize(EXTENSION_LIST)
 
+def load_version():
+    """
+    Load the version string.
+
+    If we're in a source tree, load the version from the invest __init__ file.
+    If we're in an installed version of invest use the __version__ attribute.
+    """
+    try:
+        import natcap.invest as invest
+    except ImportError:
+        invest = imp.load_source('natcap.invest', 'src/natcap/invest/__init__.py')
+    return invest.__version__
+
 REQUIREMENTS = [
     'numpy',
     'scipy',
@@ -121,11 +135,9 @@ REQUIREMENTS = [
     'shapely',
     'poster',
     'h5py',
-    'psycopg2',
     'pyamg',
-    'pygeoprocessing',
-    'setuptools',
-    'setuptools_scm',
+    'pyyaml',
+    'pygeoprocessing==0.3.0a3',
     ]
 
 setup(
@@ -134,7 +146,7 @@ setup(
     long_description=readme + '\n\n' + history,
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
-    url='http://bitbucket.org/jdouglass/invest-py',
+    url='http://bitbucket.org/natcap/invest',
     namespace_packages=['natcap'],
     packages=[
         'natcap',
@@ -175,13 +187,11 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
+    version=load_version(),
     include_package_data=True,
     install_requires=REQUIREMENTS,
     include_dirs=[numpy.get_include()],
     setup_requires=['nose>=1.0'],
-    use_scm_version={
-        'write_to': 'src/natcap/invest/version.py',
-    },
     cmdclass=CMDCLASS,
     license=LICENSE,
     zip_safe=False,
@@ -198,4 +208,28 @@ setup(
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,
+    package_data={
+        'natcap.invest.iui': [
+            '*.png',
+            '*.json',
+            'iui_resources/resources.json',
+            'iui_resources/images/*.png',
+        ],
+        'natcap.invest.reporting': [
+            'reporting_data/*.js',
+            'reporting_data/*.css',
+        ],
+        'natcap.invest.scenario_generator': [
+            '*.js',
+        ],
+        'natcap.invest.recreation': [
+            '*.php',
+            '*.r',
+            '*.json',
+        ],
+        'natcap.invest.wave_energy': [
+            'wave_energy_scripts/*.sh',
+            'wave_energy_scripts/*.txt'
+        ],
+    }
 )

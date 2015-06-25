@@ -261,8 +261,7 @@ def env(options):
     requirements = [
         "numpy",
         "scipy",
-        "pygeoprocessing==0.2.2",
-        "psycopg2",
+        "pygeoprocessing==0.3.0a3",
     ]
 
     install_string = """
@@ -285,11 +284,12 @@ def after_install(options, home_dir):
     # Calling via the shell so that virtualenv has access to environment
     # vars as needed.
     env_dirname = options.virtualenv.dest_dir
-    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(env_name)s"
+    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(env_name)s"
     bootstrap_opts = {
         "python": sys.executable,
         "bootstrap_file": options.virtualenv.script_name,
         "env_name": env_dirname,
+        "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
     }
     err_code = sh(bootstrap_cmd % bootstrap_opts)
     if err_code != 0:
