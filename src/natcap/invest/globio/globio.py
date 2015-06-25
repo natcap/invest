@@ -65,21 +65,20 @@ def execute(args):
         pasture_uri = args['pasture_uri']
 
         #smoothed natural areas are natural areas run through a gaussian filter
-        natural_areas_uri = os.path.join(
-            tmp_dir, 'natural_areas%s.tif' % file_suffix)
-        natural_areas_nodata = -1
+        forest_areas_uri = os.path.join(
+            tmp_dir, 'forest_areas%s.tif' % file_suffix)
+        forest_areas_nodata = -1
 
-        def natural_area_mask_op(lulc_array):
-            """masking out natural areas"""
+        def forest_area_mask_op(lulc_array):
+            """masking out forest areas"""
             nodata_mask = lulc_array == globio_nodata
-            result = (
-                (lulc_array == 130) | (lulc_array == 1))
-            return numpy.where(nodata_mask, natural_areas_nodata, result)
+            result = (lulc_array == 130)
+            return numpy.where(nodata_mask, forest_areas_nodata, result)
 
         LOGGER.info("create mask of natural areas")
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [intermediate_globio_lulc_uri], natural_area_mask_op,
-            natural_areas_uri, gdal.GDT_Int32, natural_areas_nodata,
+            [intermediate_globio_lulc_uri], forest_area_mask_op,
+            forest_areas_uri, gdal.GDT_Int32, forest_areas_nodata,
             out_pixel_size, "intersection", dataset_to_align_index=0,
             assert_datasets_projected=False, vectorize_op=False)
 
@@ -88,25 +87,25 @@ def execute(args):
         gaussian_kernel_uri = os.path.join(
             tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
         make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
-        smoothed_natural_areas_uri = os.path.join(
-            tmp_dir, 'smoothed_natural_areas%s.tif' % file_suffix)
+        smoothed_forest_areas_uri = os.path.join(
+            tmp_dir, 'smoothed_forest_areas%s.tif' % file_suffix)
         pygeoprocessing.geoprocessing.convolve_2d_uri(
-            natural_areas_uri, gaussian_kernel_uri, smoothed_natural_areas_uri)
+            forest_areas_uri, gaussian_kernel_uri, smoothed_forest_areas_uri)
 
         ffqi_uri = os.path.join(
             intermediate_dir, 'ffqi%s.tif' % file_suffix)
 
-        def ffqi_op(natural_areas_array, smoothed_natural_areas):
+        def ffqi_op(forest_areas_array, smoothed_forest_areas):
             """mask out ffqi only where there's an ffqi"""
             return numpy.where(
-                natural_areas_array != natural_areas_nodata,
-                natural_areas_array * smoothed_natural_areas,
-                natural_areas_nodata)
+                forest_areas_array != forest_areas_nodata,
+                forest_areas_array * smoothed_forest_areas,
+                forest_areas_nodata)
 
         LOGGER.info('calculate ffqi')
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [natural_areas_uri, smoothed_natural_areas_uri], ffqi_op,
-            ffqi_uri, gdal.GDT_Float32, natural_areas_nodata,
+            [forest_areas_uri, smoothed_forest_areas_uri], ffqi_op,
+            ffqi_uri, gdal.GDT_Float32, forest_areas_nodata,
             out_pixel_size, "intersection", dataset_to_align_index=0,
             assert_datasets_projected=False, vectorize_op=False)
 
