@@ -167,7 +167,7 @@
       "args_id": "aoi_summary",
       "label": "Summarize MSA by AOI",
       "type": "container",
-      "defaultValue": false,
+      "defaultValue": true,
       "collapsible": true,
       "elements": [
         {
@@ -199,7 +199,8 @@
               "args_id": "aoi_summary_key",
               "type": "text",
               "label": "Unique feature key in AOI",
-              "required": true
+              "required": true,
+              "defaultValue": "OBJECTID"
             }
           ]
         }
