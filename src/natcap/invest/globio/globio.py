@@ -17,7 +17,55 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('invest_natcap.globio.globio')
 
 def execute(args):
-    """main execute entry point"""
+    """Main entry point for GLOBIO model.
+
+        The model operates in two modes.  Mode (a) generates a landcover map
+            based on a base landcover map and information about crop yields,
+            infrastructure, and more.  Mode (b) assumes the globio landcover
+            map is generated.  These modes are used below to describe input
+            parameters.
+
+        args['workspace_dir'] - (string) output directory for intermediate,
+            temporary, and final files
+        args['predefined_globio'] - (boolean) if True then "mode (b)" else
+            "mode (a)"
+        args['results_suffix'] - (optional) (string) string to append to any
+            output files
+        args['lulc_uri'] - (string) used in "mode (a)" path to a base landcover
+            map with integer codes
+        args['lulc_to_globio_table_uri'] - (string) used in "mode (a)" path to
+            table that translates the land-cover args['lulc_uri'] to
+            intermediate GLOBIO classes, from which they will be further
+            differentiated using the additional data in the model.
+
+                'lucode': Land use and land cover class code of the dataset
+                    used. LULC codes match the 'values' column in the LULC
+                    raster of mode (b) and must be numeric and unique.
+                'globio_lucode': The LULC code corresponding to the GLOBIO class
+                    to which it should be converted, using intermediate codes
+                    described in the example below.
+
+        args['infrastructure_dir'] - (string) used in "mode (a)" a path to a
+            folder containing maps of any forms of infrastructure to
+            consider in the calculation of MSAI. These data may be in either
+            raster or vector format.
+        args['pasture_uri'] - (string) used in "mode (a)" path to pasture raster
+        args['potential_vegetation_uri'] - (string) used in "mode (a)" path to
+            potential vegetation raster
+        args['sum_yieldgap_uri'] - (string) used in "mode (a)" a path to
+            sum yieldgap raster
+        args['pasture_threshold'] - (float) used in "mode (a)"
+        args['yieldgap_threshold'] - (float) used in "mode (a)"
+        args['primary_threshold'] - (float) used in "mode (a)"
+        args['msa_parameters_uri'] - (string) path to MSA classification
+            parameters
+        args['aoi_uri'] - (string) (optional) if it exists then final MSA raster
+            is summarized by AOI
+        args['aoi_summary_key'] - (string) (required if args['aoi_uri'])
+            field name of the aoi polygons that uniquely identify them
+        args['globio_lulc_uri'] - (string) used in "mode (b)" path to predefined
+            globio raster.
+    """
 
     msa_parameter_table = load_msa_parameter_table(args['msa_parameters_uri'])
 
@@ -468,8 +516,6 @@ def _calculate_globio_lulc_map(
     #remap globio lulc to an internal lulc based on ag and yield gaps
     #these came from the 'expansion_scenarios.py' script as numbers Justin
     #provided way back on the unilever project.
-    high_intensity_agriculture_threshold = float(
-        args['high_intensity_agriculture_threshold'])
     pasture_threshold = float(args['pasture_threshold'])
     yieldgap_threshold = float(args['yieldgap_threshold'])
     primary_threshold = float(args['primary_threshold'])
@@ -483,8 +529,7 @@ def _calculate_globio_lulc_map(
         #Step 1.2b: Assign high/low according to threshold based on yieldgap.
         nodata_mask = lulc_array == globio_nodata
         high_low_intensity_agriculture = numpy.where(
-            sum_yieldgap < yieldgap_threshold *
-            high_intensity_agriculture_threshold, 9.0, 8.0)
+            sum_yieldgap < yieldgap_threshold, 9.0, 8.0)
 
         #Step 1.2c: Stamp ag_split classes onto input LULC
         lulc_ag_split = numpy.where(
