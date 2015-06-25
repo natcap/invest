@@ -341,37 +341,64 @@ def execute(args):
         assert_datasets_projected=False, vectorize_op=False)
 
     #calc_msa_i
-    infrastructure_impact_zones = {
+    """infrastructure_impact_zones = {
         'no impact': 1.0,
         'low impact': 0.9,
         'medium impact': 0.8,
         'high impact': 0.4
-    }
+    }"""
+
+    msa_f_values = sorted(msa_f_table)
+    msa_i_other_table = msa_parameter_table['msa_i_other_table']
+    msa_i_primary_table = msa_parameter_table['msa_i_primary']
+    msa_i_other_values = sorted(msa_i_other_table)
+    msa_i_primary_values = sorted(msa_i_primary_table)
+
 
     def msa_i_op(lulc_array, distance_to_infrastructure):
         """calculate msa infrastructure"""
-        msa_i_tropical_forest = numpy.empty(lulc_array.shape)
         distance_to_infrastructure *= out_pixel_size #convert to meters
-        msa_i_tropical_forest[:] = infrastructure_impact_zones['no impact']
-        msa_i_tropical_forest[(distance_to_infrastructure > 4000.0) & (distance_to_infrastructure <= 14000.0)] = infrastructure_impact_zones['low impact']
-        msa_i_tropical_forest[(distance_to_infrastructure > 1000.0) & (distance_to_infrastructure <= 4000.0)] = infrastructure_impact_zones['medium impact']
-        msa_i_tropical_forest[(distance_to_infrastructure <= 1000.0)] = infrastructure_impact_zones['high impact']
+        msa_i_primary = numpy.empty(lulc_array.shape)
+        msa_i_other = numpy.empty(lulc_array.shape)
 
-        msa_i_temperate_and_boreal_forest = numpy.empty(lulc_array.shape)
-        msa_i_temperate_and_boreal_forest[:] = infrastructure_impact_zones['no impact']
-        msa_i_temperate_and_boreal_forest[(distance_to_infrastructure > 1200.0) & (distance_to_infrastructure <= 4200.0)] = infrastructure_impact_zones['low impact']
-        msa_i_temperate_and_boreal_forest[(distance_to_infrastructure > 300.0) & (distance_to_infrastructure <= 1200.0)] = infrastructure_impact_zones['medium impact']
-        msa_i_temperate_and_boreal_forest[(distance_to_infrastructure <= 300.0)] = infrastructure_impact_zones['high impact']
+        for value in reversed(msa_i_primary_values):
+            #special case if it's a > or < value
+            if value == '>':
+                msa_i_primary[distance_to_infrastructure >
+                              msa_i_primary_table['>'][0]] = (
+                    msa_i_primary_table['>'][1])
+            elif value == '<':
+                continue
+            else:
+                msa_i_primary[distance_to_infrastructure <= value] = (
+                    msa_i_primary_table[value])
 
-        msa_i_cropland_and_grassland = numpy.empty(lulc_array.shape)
-        msa_i_cropland_and_grassland[:] = infrastructure_impact_zones['no impact']
-        msa_i_cropland_and_grassland[(distance_to_infrastructure > 2000.0) & (distance_to_infrastructure <= 7000.0)] = infrastructure_impact_zones['low impact']
-        msa_i_cropland_and_grassland[(distance_to_infrastructure > 500.0) & (distance_to_infrastructure <= 2000.0)] = infrastructure_impact_zones['medium impact']
-        msa_i_cropland_and_grassland[(distance_to_infrastructure <= 500.0)] = infrastructure_impact_zones['high impact']
+        if '<' in msa_i_primary_table:
+            msa_i_primary[distance_to_infrastructure <
+                          msa_i_primary_table['<'][0]] = (
+                msa_i_primary_table['<'][1])
 
-        msa_i = numpy.where((lulc_array >= 1) & (lulc_array <= 5), msa_i_temperate_and_boreal_forest, infrastructure_impact_zones['no impact'])
-        msa_i = numpy.where((lulc_array >= 6) & (lulc_array <= 12), msa_i_cropland_and_grassland, msa_i)
+        for value in reversed(msa_i_other_values):
+            #special case if it's a > or < value
+            if value == '>':
+                msa_i_other[distance_to_infrastructure >
+                            msa_i_other_table['>'][0]] = (
+                    msa_i_other_table['>'][1])
+            elif value == '<':
+                continue
+            else:
+                msa_i_other[distance_to_infrastructure <= value] = (
+                    msa_i_other_table[value])
 
+        if '<' in msa_i_other_table:
+            msa_i_other[distance_to_infrastructure <
+                        msa_i_other_table['<'][0]] = (
+                msa_i_other_table['<'][1])
+
+        msa_i = numpy.where(
+            (lulc_array >= 1) & (lulc_array <= 5), msa_i_primary, 1.0)
+        msa_i = numpy.where(
+            (lulc_array >= 6) & (lulc_array <= 12), msa_i_other, msa_i)
         return msa_i
 
     LOGGER.info('calculate msa_i')
