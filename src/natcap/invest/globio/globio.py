@@ -52,8 +52,8 @@ def execute(args):
         args['pasture_uri'] - (string) used in "mode (a)" path to pasture raster
         args['potential_vegetation_uri'] - (string) used in "mode (a)" path to
             potential vegetation raster
-        args['sum_yieldgap_uri'] - (string) used in "mode (a)" a path to
-            sum yieldgap raster
+        args['intensification_uri'] - (string) used in "mode (a)" a path to
+            intensification raster
         args['pasture_threshold'] - (float) used in "mode (a)"
         args['intensification_threshold'] - (float) used in "mode (a)"
         args['primary_threshold'] - (float) used in "mode (a)"
@@ -487,7 +487,7 @@ def _calculate_globio_lulc_map(
     globio_lulc_uri = os.path.join(
         intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
 
-    sum_yieldgap_uri = args['sum_yieldgap_uri']
+    intensification_uri = args['intensification_uri']
     potential_vegetation_uri = args['potential_vegetation_uri']
     pasture_uri = args['pasture_uri']
 
@@ -537,15 +537,14 @@ def _calculate_globio_lulc_map(
         assert_datasets_projected=False, vectorize_op=False)
 
 
-    #remap globio lulc to an internal lulc based on ag and yield gaps
-    #these came from the 'expansion_scenarios.py' script as numbers Justin
-    #provided way back on the unilever project.
+    #remap globio lulc to an internal lulc based on ag and intensification
+    #proportion these came from the 'expansion_scenarios.py'
     pasture_threshold = float(args['pasture_threshold'])
     intensification_threshold = float(args['intensification_threshold'])
     primary_threshold = float(args['primary_threshold'])
 
     def _create_globio_lulc(
-            lulc_array, sum_yieldgap, potential_vegetation_array, pasture_array,
+            lulc_array, intensification, potential_vegetation_array, pasture_array,
             ffqi):
         """vectorize_dataset op to construct the globio lulc given relevant
             biophysical parameters."""
@@ -553,7 +552,7 @@ def _calculate_globio_lulc_map(
         #Step 1.2b: Assign high/low according to threshold based on yieldgap.
         nodata_mask = lulc_array == globio_nodata
         high_low_intensity_agriculture = numpy.where(
-            sum_yieldgap < intensification_threshold, 9.0, 8.0)
+            intensification < intensification_threshold, 9.0, 8.0)
 
         #Step 1.2c: Stamp ag_split classes onto input LULC
         lulc_ag_split = numpy.where(
@@ -591,7 +590,7 @@ def _calculate_globio_lulc_map(
 
     LOGGER.info('create the globio lulc')
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [intermediate_globio_lulc_uri, sum_yieldgap_uri,
+        [intermediate_globio_lulc_uri, intensification_uri,
          potential_vegetation_uri, pasture_uri, ffqi_uri],
         _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32, globio_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
