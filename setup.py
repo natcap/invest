@@ -155,6 +155,7 @@ setup(
         'natcap.invest.blue_carbon',
         'natcap.invest.carbon',
         'natcap.invest.coastal_vulnerability',
+        'natcap.invest.cropland_expansion',
         'natcap.invest.dbfpy',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',

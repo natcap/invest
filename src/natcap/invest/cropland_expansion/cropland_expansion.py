@@ -2,7 +2,9 @@
 
 import os
 import logging
+import numpy
 
+import gdal
 import pygeoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -38,7 +40,7 @@ def execute(args):
         [output_dir, intermediate_dir, tmp_dir])
 
     if args['expand_from_ag']:
-        _expand_from_ag(args)
+        _expand_from_ag(args, intermediate_dir, file_suffix)
 
     if args['expand_from_forest_edge']:
         _expand_from_forest_edge(args)
@@ -46,9 +48,31 @@ def execute(args):
     if args['fragment_forest']:
         _fragment_forest(args)
 
-def _expand_from_ag(args):
+def _expand_from_ag(args, intermediate_dir, file_suffix):
     """ """
-    pass
+    #mask agriculture types from LULC
+    ag_mask_uri = os.path.join(intermediate_dir, 'ag_mask%s.tif' % file_suffix)
+
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(
+        args['base_lulc_uri'])
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(
+        args['base_lulc_uri'])
+    ag_mask_nodata = 2
+    ag_lucode = int(args['agriculture_type'])
+    def _mask_ag_op(lulc):
+        """create a mask of ag pixels only"""
+        ag_mask = (lulc == ag_lucode)
+        return numpy.where(lulc == lulc_nodata, ag_mask_nodata, ag_mask)
+
+    pygeoprocessing.vectorize_datasets(
+        [args['base_lulc_uri']], _mask_ag_op, ag_mask_uri, gdal.GDT_Byte,
+        ag_mask_nodata, pixel_size_out, "intersection", vectorize_op=False)
+
+    #distance transform mask
+
+    #mak out distance transform for everything that can be converted
+
+    #disk sort to select the top N pixels to convert
 
 def _expand_from_forest_edge(args):
     """ """
