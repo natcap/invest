@@ -414,10 +414,27 @@ def load_msa_parameter_table(msa_parameter_table_filename):
 
         returns a dictionary of the form
             {
-
-            }
-
-    """
+                'msa_f': {
+                    valuea: msa_f_value, ...
+                    valueb: ...
+                    '<': (bound, msa_f_value),
+                    '>': (bound, msa_f_value)}
+                'msa_i_other_table': {
+                    valuea: msa_i_value, ...
+                    valueb: ...
+                    '<': (bound, msa_i_other_value),
+                    '>': (bound, msa_i_other_value)}
+                'msa_i_primary': {
+                    valuea: msa_i_primary_value, ...
+                    valueb: ...
+                    '<': (bound, msa_i_primary_value),
+                    '>': (bound, msa_i_primary_value)}
+                'msa_lu': {
+                    valuea: msa_lu_value, ...
+                    valueb: ...
+                    '<': (bound, msa_lu_value),
+                    '>': (bound, msa_lu_value)}
+            }"""
 
     with open(msa_parameter_table_filename, 'rb') as msa_parameter_table_file:
         reader = csv.DictReader(msa_parameter_table_file)
@@ -443,7 +460,14 @@ def _calculate_globio_lulc_map(
         to simplify globio function since it's possible to skip this calculation
         if a predefined globio map has been created.
 
-        returns a filename to the globio map"""
+        args - (dict) the argument dictionary passed in by the 'execute' entry
+            point
+        file_suffix - (string) to append on output file
+        intermediate_dir - (string) path to location for temporary files
+        tmp_dir - (string) path to location for temporary files
+        out_pixel_size - (float) pixel size of output globio map
+
+        returns a (string) filename to the generated globio map"""
 
      #reclassify the landcover map
     lulc_to_globio_table = pygeoprocessing.get_lookup_from_table(
