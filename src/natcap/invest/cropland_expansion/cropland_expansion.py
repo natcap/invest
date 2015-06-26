@@ -69,8 +69,30 @@ def _expand_from_ag(args, intermediate_dir, file_suffix):
         ag_mask_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
     #distance transform mask
+    distance_from_ag_uri = os.path.join(
+        intermediate_dir, 'distance_from_ag%s.tif' % file_suffix)
+    pygeoprocessing.distance_transform_edt(ag_mask_uri, distance_from_ag_uri)
 
-    #mak out distance transform for everything that can be converted
+    #mask out distance transform for everything that can be converted
+    convertable_type_list = numpy.array([
+        int(x) for x in args['convertable_landcover_types'].split()])
+
+    convertable_type_nodata = -1
+    convertable_distances_uri = os.path.join(
+        intermediate_dir, 'convertable_distances%s.tif' % file_suffix)
+    def _mask_to_convertable_types(distance_from_ag, lulc):
+        """masks out the distance transform to a set of given landcover codes"""
+        convertable_mask = numpy.in1d(
+            lulc.flatten(), convertable_type_list).reshape(lulc.shape)
+        return numpy.where(
+            convertable_mask, distance_from_ag, convertable_type_nodata)
+
+    pygeoprocessing.vectorize_datasets(
+        [distance_from_ag_uri, args['base_lulc_uri']],
+        _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
+        convertable_type_nodata, pixel_size_out, "intersection",
+        vectorize_op=False)
+
 
     #disk sort to select the top N pixels to convert
 
