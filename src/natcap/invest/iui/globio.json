@@ -96,7 +96,7 @@
           "args_id": "intensification_uri",
           "type": "file",
           "label": "Intensification (Raster)",
-          "defaultValue": "../globio/input/intensification.tif",
+          "defaultValue": "../globio/input/intensification_soy.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
