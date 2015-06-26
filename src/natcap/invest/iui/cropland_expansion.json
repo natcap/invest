@@ -1,0 +1,110 @@
+{
+  "id": "window",
+  "label": "Cropland Expansion Tool",
+  "targetScript": "natcap.invest.cropland_expansion.cropland_expansion",
+  "modelName": "cropland_expansion",
+  "localDocURI": "../documentation/cropland_expansion.html",
+  "height": 600,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "~/Documents/cropland_expansion_workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "base_lulc_uri",
+          "args_id": "base_lulc_uri",
+          "type": "file",
+          "label": "Base Land Use/Cover (Raster)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "defaultValue": "../globio/input/lulc_2008.tif"
+        },
+        {
+          "id": "total_expansion_area",
+          "args_id": "total_expansion_area",
+          "type": "text",
+          "label": "Total Expansion Area (ha)",
+          "defaultValue": "1000",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$"
+        },
+        {
+          "id": "n_simulation_steps",
+          "args_id": "n_simulation_steps",
+          "type": "text",
+          "label": "Number of Simulation Steps",
+          "defaultValue": "5",
+          "required": true,
+          "validText": "^[0-9]+*$"
+        },
+        {
+          "id": "convertable_landcover_types",
+          "args_id": "convertable_landcover_types",
+          "type": "text",
+          "label": "Convertable Landcover Types (list)",
+          "defaultValue": "1 2 3 4 5",
+          "required": true
+        },
+        {
+          "id": "agriculture_type",
+          "args_id": "agriculture_type",
+          "type": "text",
+          "label": "Agriculture Landcover Code (int)",
+          "defaultValue": "12",
+          "required": true,
+          "validText": "^[0-9]+$"
+        },
+        {
+          "id": "expand_from_ag",
+          "args_id": "expand_from_ag",
+          "type": "checkbox",
+          "label": "Expand From Ag",
+          "defaultValue": false,
+          "required": false
+        },
+        {
+          "id": "expand_from_forest_edge",
+          "args_id": "expand_from_forest_edge",
+          "type": "checkbox",
+          "label": "Expand From Forest Edge",
+          "defaultValue": false,
+          "required": false
+        },
+        {
+          "id": "fragment_forest",
+          "args_id": "fragment_forest",
+          "type": "checkbox",
+          "label": "Fragment Forest",
+          "defaultValue": false,
+          "required": false
+        }
+      ]
+    }
+  ]
+}
