@@ -52,7 +52,6 @@
           "args_id": "lulc_uri",
           "type": "file",
           "label": "Land Use/Cover (Raster)",
-          "defaultValue": "",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -78,7 +77,6 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/pasture.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -91,20 +89,18 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/potential_vegetation.tif",
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "sum_yieldgap_uri",
-          "args_id": "sum_yieldgap_uri",
+          "id": "intensification_uri",
+          "args_id": "intensification_uri",
           "type": "file",
-          "label": "Sum Yieldgap (Raster)",
-          "defaultValue": "../globio/input/sum_yieldgap.tif",
+          "label": "Intensification (Raster)",
+          "defaultValue": "../globio/input/intensification_soy.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/sum_yieldgap.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -146,7 +142,7 @@
           "required": true,
           "validateAs": {
             "type": "CSV",
-            "fieldsExist": ["MSA calculation", "Value", "MSA_x"]
+            "fieldsExist": ["MSA_type", "Value", "MSA_x"]
           },
           "helpText": "A CSV table containing MSA threshold values as defined in the user's guide.  Provided for advanced users that may wish to change those values."
         }
