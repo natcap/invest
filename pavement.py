@@ -779,6 +779,11 @@ def build_installer(options):
     bindir = 'dist/invest-bin'
     command = options.insttype.lower()
 
+    if not os.path.exists(bindir):
+        print "ERROR: Binary directory %s not found" % bindir
+        print "ERROR: Run `paver build_bin` to make new binaries"
+        return
+
     if command == 'nsis':
         _build_nsis(version, bindir, 'x86')
     elif command == 'dmg':
