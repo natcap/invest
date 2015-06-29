@@ -746,7 +746,7 @@ def build_data(options):
 
         dry('zip -r %s %s' % (out_zipfile, data_dirname),
             shutil.make_archive, **{
-                'base_name': data_dirname,
+                'base_name': os.path.splitext(out_zipfile)[0],
                 'format': 'zip',
                 'root_dir': os.path.join(data_repo.local_path, data_dirname),
                 'base_dir': '.'})
