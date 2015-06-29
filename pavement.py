@@ -81,6 +81,10 @@ class HgRepository(Repository):
     def current_rev(self):
         return self._format_log('{node}')
 
+    def tracked_version(self):
+        json_version = Repository.tracked_version(self)
+        return self._format_log(template='{node}', rev=json_version)
+
 
 class SVNRepository(Repository):
     tip = 'HEAD'
@@ -744,7 +748,7 @@ def build_data(options):
             shutil.make_archive, **{
                 'base_name': data_dirname,
                 'format': 'zip',
-                'root_dir': data_repo.local_path,
+                'root_dir': os.path.join(data_repo.local_path, data_dirname),
                 'base_dir': '.'})
 
 
@@ -943,4 +947,67 @@ def selftest():
     for taskname, _ in inspect.getmembers(module, istask):
         if taskname != 'selftest':
             subprocess.call(['paver', '--dry-run', taskname])
+
+@task
+@cmdopts([
+    ('force-dev', '', 'Allow development versions of repositories to be used.'),
+    ('insttype=', 'i', ('The type of installer to build.  Defaults depend on '
+                        'the current system: Windows=nsis, Mac=dmg, Linux=deb. '
+                        'rpm is also available.')),
+    ('arch=', 'a', 'The architecture of the binaries.  Defaults to the sustem arch.'),
+    ('nodata', '', "Don't build the data zipfiles"),
+    ('nodocs', '', "Don't build the documentation"),
+    ('nobin', '', "Don't build the binaries"),
+])
+def build(options):
+    """
+    Build the installer, start-to-finish.  Includes binaires, docs, data, installer.
+    """
+
+    for repo in REPOS_DICT.values():
+        if not os.path.exists(repo.local_path):
+            repo.clone()
+            repo.update(repo.tracked_version())
+
+        # if we ARE NOT allowing dev builds
+        if getattr(options, 'force-dev', False) is False:
+            current_rev = repo.current_rev()
+            tracked_rev = repo.tracked_version()
+            if not repo.at_known_rev():
+                print 'ERROR: %s not at the known rev' % repo.local_path
+                print 'ERROR: Expected rev: %s' % tracked_rev
+                print 'ERROR: Current rev: %s' % current_rev
+                return
+        print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
+
+    defaults = [
+        ('nodata', False),
+        ('nobin', False),
+        ('nodocs', False),
+    ]
+    for attr, default_value in defaults:
+        task_base = attr[2:]
+        try:
+            getattr(options, attr)
+        except AttributeError:
+            # when the user doesn't provide a --no(data|bin|docs) option,
+            # AttributeError is raised.
+            task_name = 'build_%s' % task_base
+            call_task(task_name)
+        else:
+            print 'Skipping task %s' % task_base
+
+    # The installer task has its own parameter defaults.  Let the
+    # build_installer task handle most of them.  We can pass in some of the
+    # parameters, though.
+    installer_options = {
+        'bindir': 'pyinstaller/dist/invest-dist',
+    }
+    for arg in ['insttype', 'arch']:
+        try:
+            installer_options[arg] = getattr(options, arg)
+        except AttributeError:
+            # let the build_installer task handle this default.
+            pass
+    call_task('build_installer', options=installer_options)
 
