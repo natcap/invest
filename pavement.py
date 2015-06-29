@@ -772,9 +772,14 @@ def build_bin():
     """
     Build frozen binaries of InVEST.
     """
-    # make some call here to pyinstaller.
-    sh('pip freeze > package_versions.txt')
-    pass
+    sh('pyinstaller --noconfirm invest.spec', cwd='exe')
+
+    bindir = os.path.join('exe', 'dist', 'invest_dist')
+    sh('pip freeze > package_versions.txt', cwd=bindir)
+
+    if not os.path.exists('dist'):
+        shutil.mkdirs('dist')
+    shutil.copytree(bindir, 'dist/invest_dist')
 
 
 @task
@@ -992,7 +997,7 @@ def build(options):
     # build_installer task handle most of them.  We can pass in some of the
     # parameters, though.
     installer_options = {
-        'bindir': 'pyinstaller/dist/invest-dist',
+        'bindir': 'pyinstaller/dist/invest_dist',
     }
     for arg in ['insttype', 'arch']:
         try:
