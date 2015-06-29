@@ -791,20 +791,10 @@ def build_installer(options):
         'Linux': 'deb'
     }
 
-    try:
-        options.bindir
-    except AttributeError:
-        options.bindir = os.path.join('dist', 'invest-bin')
-
-    if not os.path.exists(options.bindir):
-        print 'WARNING: Binary dir %s not found' % options.bindir
-        print 'WARNING: Regenerating binaries'
-        call_task('build_bin')
-
     # set default options if they have not been set by the user.
     # options don't exist in the options object unless the user defines it.
     defaults = [
-        ('bindir', options.bindir),
+        ('bindir', os.path.join('dist', 'invest-bin')),
         ('insttype', default_installer[platform.system()]),
         ('arch', platform.machine())
     ]
@@ -814,19 +804,23 @@ def build_installer(options):
         except AttributeError:
             setattr(options, option_name, default_val)
 
+    if not os.path.exists(options.bindir):
+        print 'WARNING: Binary dir %s not found' % options.bindir
+        print 'WARNING: Regenerating binaries'
+        call_task('build_bin')
+
     # version comes from the installed version of natcap.invest
     version = _invest_version()
-    bindir = options.bindir
     command = options.insttype.lower()
 
     if command == 'nsis':
-        _build_nsis(version, bindir, 'x86')
+        _build_nsis(version, options.bindir, 'x86')
     elif command == 'dmg':
-        _build_dmg(version, bindir)
+        _build_dmg(version, options.bindir)
     elif command == 'deb':
-        _build_fpm(version, bindir, 'deb')
+        _build_fpm(version, options.bindir, 'deb')
     elif command == 'rpm':
-        _build_fpm(version, bindir, 'rpm')
+        _build_fpm(version, options.bindir, 'rpm')
     else:
         print 'ERROR: command not recognized: %s' % command
         return 1
