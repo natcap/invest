@@ -769,6 +769,9 @@ def build_data(options):
 
 @task
 def build_bin():
+    """
+    Build frozen binaries of InVEST.
+    """
     # make some call here to pyinstaller.
     sh('pip freeze > package_versions.txt')
     pass
@@ -785,6 +788,9 @@ def build_bin():
     ('force-dev', '', 'Allow a build when a repo version differs from tracked versions'),
 ])
 def build_installer(options):
+    """
+    Build an installer for the target OS/platform.
+    """
     default_installer = {
         'Darwin': 'dmg',
         'Windows': 'nsis',
