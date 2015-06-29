@@ -789,7 +789,7 @@ def build_installer(options):
     # set default options if they have not been set by the user.
     # options don't exist in the options object unless the user defines it.
     defaults = [
-        ('bindir', 'dist/invest-bin'),
+        ('bindir', options.bindir),
         ('insttype', default_installer[platform.system()]),
         ('arch', platform.machine())
     ]
@@ -800,8 +800,12 @@ def build_installer(options):
             setattr(options, option_name, default_val)
 
     # version comes from the installed version of natcap.invest
-    version = "1.2.3"  # get this from natcap.invest
-    bindir = os.path.join('dist', 'invest-bin')
+    try:
+        import natcap.invest as invest
+    except ImportError:
+        invest = imp.load_source('invest', 'src/natcap/invest/__init__.py')
+    version = invest.__version__
+    bindir = options.bindir
     command = options.insttype.lower()
 
     if command == 'nsis':
