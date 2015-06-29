@@ -787,7 +787,7 @@ def build_bin():
             shutil.rmtree, invest_dist)
 
     dry('cp -r %s %s' % (bindir, invest_dist),
-        shutil.copytree, invest_dist)
+        shutil.copytree, bindir, invest_dist)
 
 
 @task
@@ -1005,7 +1005,7 @@ def build(options):
     # build_installer task handle most of them.  We can pass in some of the
     # parameters, though.
     installer_options = {
-        'bindir': 'pyinstaller/dist/invest_dist',
+        'bindir': os.path.join('exe', 'dist', 'invest_dist'),
     }
     for arg in ['insttype', 'arch']:
         try:
