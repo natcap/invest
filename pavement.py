@@ -778,8 +778,16 @@ def build_bin():
     sh('pip freeze > package_versions.txt', cwd=bindir)
 
     if not os.path.exists('dist'):
-        shutil.mkdirs('dist')
-    shutil.copytree(bindir, 'dist/invest_dist')
+        dry('mkdir dist',
+            shutil.mkdirs, 'dist')
+
+    invest_dist = os.path.join('dist', 'invest_dist')
+    if os.path.exists(invest_dist):
+        dry('rm -r %s' % invest_dist,
+            shutil.rmtree, invest_dist)
+
+    dry('cp -r %s %s' % (bindir, invest_dist),
+        shutil.copytree, invest_dist)
 
 
 @task
