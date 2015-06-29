@@ -733,7 +733,14 @@ def build_data(options):
 
 @task
 def build_bin():
-    # make some call here to pyinstaller.
+    # if the InVEST built binary directory exists, it should always
+    # be deleted.  This is because we've had some weird issues with builds
+    # not working properly when we don't just do a clean rebuild.
+    invest_dist_dir = os.path.join('pyinstaller', 'dist', 'invest_dist')
+    if os.path.exists(invest_dist_dir):
+        dry('rm -r %s' % invest_dist_dir,
+            shutil.rmtree, invest_dist_dir)
+
     sh('pip freeze > package_versions.txt')
     pass
 
