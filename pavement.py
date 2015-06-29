@@ -827,7 +827,7 @@ def build_installer(options):
 
     # version comes from the installed version of natcap.invest
     version = "1.2.3"  # get this from natcap.invest
-    bindir = 'dist/invest-bin'
+    bindir = os.path.join('dist', 'invest-bin')
     command = options.insttype.lower()
 
     if command == 'nsis':
