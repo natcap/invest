@@ -139,6 +139,23 @@ REPOS_DICT = {
 REPOS = REPOS_DICT.values()
 
 
+def _invest_version():
+    """
+    Load the InVEST version string and return it.
+
+    Fetches the string from natcap.invest if the package is installed and
+    is able to be imported.  Otherwise, fetches the version string from
+    the natcap.invest source.
+
+    Returns:
+        The version string.
+    """
+    try:
+        import natcap.invest as invest
+    except ImportError:
+        invest = imp.load_source('_invest', 'src/natcap/invest/__init__.py')
+    return invest.__version__
+
 def _repo_is_valid(repo, options):
     # repo is a repository object
     # options is the Options object passed in when using the @cmdopts
@@ -643,9 +660,7 @@ def build_docs(options):
     try:
         options.version
     except AttributeError:
-        import imp
-        invest = imp.load_source('_invest', 'src/natcap/invest/__init__.py')
-        options.version = invest.__version__
+        options.version = _invest_version()
     version = options.version
 
     guide_dir = os.path.join('doc', 'users-guide')
@@ -800,11 +815,7 @@ def build_installer(options):
             setattr(options, option_name, default_val)
 
     # version comes from the installed version of natcap.invest
-    try:
-        import natcap.invest as invest
-    except ImportError:
-        invest = imp.load_source('invest', 'src/natcap/invest/__init__.py')
-    version = invest.__version__
+    version = _invest_version()
     bindir = options.bindir
     command = options.insttype.lower()
 
