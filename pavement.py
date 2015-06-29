@@ -776,32 +776,6 @@ def build_installer(options):
         'Linux': 'deb'
     }
 
-    arcgis_repo = REPOS_DICT['invest-2']
-    ug_repo = REPOS_DICT['users-guide']
-    try:
-        options.force_dev
-    except AttributeError:
-        # options.force_dev not specified as a command opt, defaulting to False
-        options.force_dev = False
-
-    for repo in [arcgis_repo, ug_repo]:
-        if options.force_dev is False:
-            if not os.path.exists(repo.local_path):
-                call_task('fetch', args=[repo.local_path])
-
-            if not repo.at_known_rev():
-                current_rev = repo.current_rev()
-                tracked_rev = repo.tracked_version()
-                print 'ERROR: %s not at the known rev %s' % (
-                    repo.local_path, tracked_rev)
-                print 'Current version: %s' % current_rev
-                return
-        else:
-            if not repo.at_known_rev():
-                print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
-
-    call_task('build_docs')
-
     try:
         options.bindir
     except AttributeError:
@@ -978,6 +952,8 @@ def build(options):
                 print 'ERROR: Expected rev: %s' % tracked_rev
                 print 'ERROR: Current rev: %s' % current_rev
                 return
+        else:
+            print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
         print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
     defaults = [
