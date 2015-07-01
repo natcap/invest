@@ -81,6 +81,10 @@ class HgRepository(Repository):
     def current_rev(self):
         return self._format_log('{node}')
 
+    def tracked_version(self):
+        json_version = Repository.tracked_version(self)
+        return self._format_log(template='{node}', rev=json_version)
+
 
 class SVNRepository(Repository):
     tip = 'HEAD'
@@ -135,6 +139,23 @@ REPOS_DICT = {
 REPOS = REPOS_DICT.values()
 
 
+def _invest_version():
+    """
+    Load the InVEST version string and return it.
+
+    Fetches the string from natcap.invest if the package is installed and
+    is able to be imported.  Otherwise, fetches the version string from
+    the natcap.invest source.
+
+    Returns:
+        The version string.
+    """
+    try:
+        import natcap.invest as invest
+    except ImportError:
+        invest = imp.load_source('_invest', 'src/natcap/invest/__init__.py')
+    return invest.__version__
+
 def _repo_is_valid(repo, options):
     # repo is a repository object
     # options is the Options object passed in when using the @cmdopts
@@ -149,7 +170,7 @@ def _repo_is_valid(repo, options):
         print "WARNING: Repository %s has not been cloned." % repo.local_path
         print "To clone, run this command:"
         print "    paver fetch %s" % repo.local_path
-    return False
+        return False
 
     if not repo.at_known_rev() and options.force_dev is False:
         current_rev = repo.current_rev()
@@ -619,7 +640,8 @@ def zip_source(options):
 
 @task
 @cmdopts([
-    ('force-dev', '', 'Force development')
+    ('force-dev', '', 'Force development'),
+    ('version', '-v', 'The version of the documentation to build')
 ])
 def build_docs(options):
     """
@@ -629,14 +651,29 @@ def build_docs(options):
     Compilation of the guides uses sphinx and requires that all needed
     libraries are installed for compiling html, latex and pdf.
 
-    Requires make.
+    Requires make and sed.
     """
 
     if not _repo_is_valid(REPOS_DICT['users-guide'], options):
         return
 
+    try:
+        options.version
+    except AttributeError:
+        options.version = _invest_version()
+    version = options.version
+
     guide_dir = os.path.join('doc', 'users-guide')
     latex_dir = os.path.join(guide_dir, 'build', 'latex')
+    source_dir = os.path.join(guide_dir, 'source')
+    #Revert all files that use the +VERSION+ tag in them to their
+    #original state in case they were modified in a previous run
+    for file in ['conf.py', 'index.rst', 'carbonstorage.rst',
+                    'managed_timber_production_model.rst']:
+        sh("hg revert ./%s --no-backup" % file, cwd=source_dir)
+        #nobody likes 'tip' as the version name
+        sh("sed -i -e 's/+VERSION+/" + version + "/g' ./%s" % file, cwd=source_dir)
+
     sh('make html', cwd=guide_dir)
     sh('make latex', cwd=guide_dir)
     sh('make all-pdf', cwd=latex_dir)
@@ -724,17 +761,33 @@ def build_data(options):
 
         dry('zip -r %s %s' % (out_zipfile, data_dirname),
             shutil.make_archive, **{
-                'base_name': data_dirname,
+                'base_name': os.path.splitext(out_zipfile)[0],
                 'format': 'zip',
-                'root_dir': data_repo.local_path,
+                'root_dir': os.path.join(data_repo.local_path, data_dirname),
                 'base_dir': '.'})
 
 
 @task
 def build_bin():
-    # make some call here to pyinstaller.
-    sh('pip freeze > package_versions.txt')
-    pass
+    """
+    Build frozen binaries of InVEST.
+    """
+    sh('pyinstaller --noconfirm invest.spec', cwd='exe')
+
+    bindir = os.path.join('exe', 'dist', 'invest_dist')
+    sh('pip freeze > package_versions.txt', cwd=bindir)
+
+    if not os.path.exists('dist'):
+        dry('mkdir dist',
+            shutil.mkdirs, 'dist')
+
+    invest_dist = os.path.join('dist', 'invest_dist')
+    if os.path.exists(invest_dist):
+        dry('rm -r %s' % invest_dist,
+            shutil.rmtree, invest_dist)
+
+    dry('cp -r %s %s' % (bindir, invest_dist),
+        shutil.copytree, bindir, invest_dist)
 
 
 @task
@@ -745,8 +798,12 @@ def build_bin():
                         'Defaults depend on the current system: '
                         'Windows=nsis, Mac=dmg, Linux=deb')),
     ('arch=', 'a', 'The architecture of the binaries'),
+    ('force-dev', '', 'Allow a build when a repo version differs from tracked versions'),
 ])
 def build_installer(options):
+    """
+    Build an installer for the target OS/platform.
+    """
     default_installer = {
         'Darwin': 'dmg',
         'Windows': 'nsis',
@@ -756,7 +813,7 @@ def build_installer(options):
     # set default options if they have not been set by the user.
     # options don't exist in the options object unless the user defines it.
     defaults = [
-        ('bindir', 'dist/invest-bin'),
+        ('bindir', os.path.join('dist', 'invest-bin')),
         ('insttype', default_installer[platform.system()]),
         ('arch', platform.machine())
     ]
@@ -766,19 +823,23 @@ def build_installer(options):
         except AttributeError:
             setattr(options, option_name, default_val)
 
+    if not os.path.exists(options.bindir):
+        print 'WARNING: Binary dir %s not found' % options.bindir
+        print 'WARNING: Regenerating binaries'
+        call_task('build_bin')
+
     # version comes from the installed version of natcap.invest
-    version = "1.2.3"  # get this from natcap.invest
-    bindir = 'dist/invest-bin'
+    version = _invest_version()
     command = options.insttype.lower()
 
     if command == 'nsis':
-        _build_nsis(version, bindir, 'x86')
+        _build_nsis(version, options.bindir, 'x86')
     elif command == 'dmg':
-        _build_dmg(version, bindir)
+        _build_dmg(version, options.bindir)
     elif command == 'deb':
-        _build_fpm(version, bindir, 'deb')
+        _build_fpm(version, options.bindir, 'deb')
     elif command == 'rpm':
-        _build_fpm(version, bindir, 'rpm')
+        _build_fpm(version, options.bindir, 'rpm')
     else:
         print 'ERROR: command not recognized: %s' % command
         return 1
@@ -825,16 +886,18 @@ def _build_nsis(version, bindir, arch):
     if platform.system() != 'Windows':
         makensis = 'wine "%s"' % makensis
 
+    bindir = bindir.replace('/', r'\\')
+
     nsis_params = [
         '/DVERSION=%s' % version,
         '/DVERSION_DISK=%s' % version,
         '/DINVEST_3_FOLDER=%s' % bindir,
         '/DSHORT_VERSION=%s' % version,  # some other value?
         '/DARCHITECTURE=%s' % arch,
-        'installer/windows/invest_installer.nsi'
+        'invest_installer.nsi'
     ]
     makensis += ' ' + ' '.join(nsis_params)
-    sh(makensis)
+    sh(makensis, cwd=os.path.join('installer', 'windows'))
 
 
 def _build_dmg(version, bindir):
@@ -886,4 +949,69 @@ def selftest():
     for taskname, _ in inspect.getmembers(module, istask):
         if taskname != 'selftest':
             subprocess.call(['paver', '--dry-run', taskname])
+
+@task
+@cmdopts([
+    ('force-dev', '', 'Allow development versions of repositories to be used.'),
+    ('insttype=', 'i', ('The type of installer to build.  Defaults depend on '
+                        'the current system: Windows=nsis, Mac=dmg, Linux=deb. '
+                        'rpm is also available.')),
+    ('arch=', 'a', 'The architecture of the binaries.  Defaults to the sustem arch.'),
+    ('nodata', '', "Don't build the data zipfiles"),
+    ('nodocs', '', "Don't build the documentation"),
+    ('nobin', '', "Don't build the binaries"),
+])
+def build(options):
+    """
+    Build the installer, start-to-finish.  Includes binaires, docs, data, installer.
+    """
+
+    for repo in REPOS_DICT.values():
+        if not os.path.exists(repo.local_path):
+            repo.clone()
+            repo.update(repo.tracked_version())
+
+        # if we ARE NOT allowing dev builds
+        if getattr(options, 'force-dev', False) is False:
+            current_rev = repo.current_rev()
+            tracked_rev = repo.tracked_version()
+            if not repo.at_known_rev():
+                print 'ERROR: %s not at the known rev' % repo.local_path
+                print 'ERROR: Expected rev: %s' % tracked_rev
+                print 'ERROR: Current rev: %s' % current_rev
+                return
+        else:
+            print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
+        print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
+
+    defaults = [
+        ('nodata', False),
+        ('nobin', False),
+        ('nodocs', False),
+    ]
+    for attr, default_value in defaults:
+        task_base = attr[2:]
+        try:
+            getattr(options, attr)
+        except AttributeError:
+            # when the user doesn't provide a --no(data|bin|docs) option,
+            # AttributeError is raised.
+            task_name = 'build_%s' % task_base
+            call_task(task_name)
+        else:
+            print 'Skipping task %s' % task_base
+
+    # The installer task has its own parameter defaults.  Let the
+    # build_installer task handle most of them.  We can pass in some of the
+    # parameters, though.
+    installer_options = {
+        'bindir': os.path.join('exe', 'dist', 'invest_dist'),
+    }
+    for arg in ['insttype', 'arch']:
+        try:
+            installer_options[arg] = getattr(options, arg)
+        except AttributeError:
+            # let the build_installer task handle this default.
+            pass
+    call_task('build_installer', options=installer_options)
 
