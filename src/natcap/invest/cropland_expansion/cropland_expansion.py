@@ -3,6 +3,9 @@
 import os
 import logging
 import numpy
+import tempfile
+import struct
+import heapq
 
 import gdal
 import pygeoprocessing
@@ -93,8 +96,13 @@ def _expand_from_ag(args, intermediate_dir, file_suffix):
         convertable_type_nodata, pixel_size_out, "intersection",
         vectorize_op=False)
 
-
     #disk sort to select the top N pixels to convert
+    count = 0
+    for value, flatindex in _sort_to_disk(convertable_distances_uri):
+        count += 1
+        if count == 100:
+            break
+        LOGGER.debug("%f, %d", value, flatindex)
 
 def _expand_from_forest_edge(args):
     """ """
@@ -104,3 +112,75 @@ def _expand_from_forest_edge(args):
 def _fragment_forest(args):
     """ """
     pass
+
+
+def _sort_to_disk(dataset_uri):
+    """Sorts the non-nodata pixels in the dataset on disk and returns
+        an iterable in sorted order.
+
+        dataset_uri - a uri to a GDAL dataset
+
+        returns an iterable that returns (value, flat_index)
+           in decreasing sorted order by value"""
+
+    def _read_score_index_from_disk(f):
+        while True:
+            #TODO: better buffering here
+            packed_score = f.read(8)
+            if not packed_score:
+                break
+            yield struct.unpack('fi', packed_score)
+
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    n_rows = band.YSize
+    n_cols = band.XSize
+
+    #This will be a list of file iterators we'll pass to heap.merge
+    iters = []
+
+    #Set the row strides to be something reasonable, like 1MB blocks
+    row_strides = max(int(10 * 2**20 / (4 * n_cols)), 1)
+
+    for row_index in xrange(0, n_rows, row_strides):
+
+        #It's possible we're on the last set of rows and the stride is too big
+        #update if so
+        if row_index + row_strides >= n_rows:
+            row_strides = n_rows - row_index
+
+        #Extract scores make them negative, calculate flat indexes, and sort
+        scores = band.ReadAsArray(0, row_index, n_cols, row_strides).flatten()
+
+        col_indexes = numpy.tile(numpy.arange(n_cols), (row_strides, 1))
+        row_offsets = numpy.arange(row_index, row_index+row_strides) * n_cols
+        row_offsets.resize((row_strides, 1))
+
+        flat_indexes = (col_indexes + row_offsets).flatten()
+
+        sort_index = scores.argsort()
+        sorted_scores = scores[sort_index]
+        sorted_indexes = flat_indexes[sort_index]
+
+        #Determine where the nodata values are so we can splice them out
+        left_index = numpy.searchsorted(sorted_scores, nodata, side='left')
+        right_index = numpy.searchsorted(sorted_scores, nodata, side='right')
+
+        #Splice out the nodata values and order the array in descreasing order
+        sorted_scores = numpy.concatenate(
+            (sorted_scores[0:left_index], sorted_scores[right_index::]))
+        sorted_indexes = numpy.concatenate(
+            (sorted_indexes[0:left_index], sorted_indexes[right_index::]))
+
+        #Dump all the scores and indexes to disk
+        f = tempfile.TemporaryFile()
+        for score, index in zip(sorted_scores, sorted_indexes):
+            f.write(struct.pack('fi', score, index))
+
+        #Reset the file pointer and add an iterator for it to the list
+        f.seek(0)
+        iters.append(_read_score_index_from_disk(f))
+
+    return heapq.merge(*iters)
