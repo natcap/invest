@@ -249,6 +249,7 @@ options(
 @cmdopts([
     ('system-site-packages', '', ('Give the virtual environment access '
                                   'to the global site-packages')),
+    ('envname=', 'e', ('The name of the environment to use')),
 ])
 def env(options):
     """
@@ -263,6 +264,12 @@ def env(options):
     except AttributeError:
         use_site_pkgs = False
     options.virtualenv.system_site_packages = use_site_pkgs
+
+    try:
+        options.virtualenv.dest_dir = options.envname
+        print "Using user-defined env name: %s" % options.envname
+    except AttributeError:
+        print "Using the default envname: %s" % options.virtualenv.dest_dir
 
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
@@ -886,4 +893,3 @@ def selftest():
     for taskname, _ in inspect.getmembers(module, istask):
         if taskname != 'selftest':
             subprocess.call(['paver', '--dry-run', taskname])
-
