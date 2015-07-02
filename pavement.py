@@ -822,7 +822,7 @@ def build_installer(options):
     # set default options if they have not been set by the user.
     # options don't exist in the options object unless the user defines it.
     defaults = [
-        ('bindir', os.path.join('dist', 'invest-bin')),
+        ('bindir', os.path.join('dist', 'invest_dist')),
         ('insttype', default_installer[platform.system()]),
         ('arch', platform.machine())
     ]
