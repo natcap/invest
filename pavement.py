@@ -1092,7 +1092,7 @@ def build(options):
     call_task('build_installer', options=installer_options)
 
 @task
-def build_jenkins():
+def jenkins_installer():
     """
     Run a jenkins build via paver.
     """
