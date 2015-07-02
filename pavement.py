@@ -788,7 +788,7 @@ def build_bin():
 
     if not os.path.exists('dist'):
         dry('mkdir dist',
-            os.mkdirs, 'dist')
+            os.makedirs, 'dist')
 
     invest_dist = os.path.join('dist', 'invest_dist')
     if os.path.exists(invest_dist):
