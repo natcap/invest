@@ -925,12 +925,22 @@ def _build_nsis(version, bindir, arch):
     if platform.system() != 'Windows':
         makensis = 'wine "%s"' % makensis
 
-    bindir = bindir.replace('/', r'\\')
+    # copying the dist dir into the cwd, since that's where NSIS expects it
+    # also, NSIS (and our shortcuts) care very much about the dirname.
+    nsis_bindir = 'invest-3-x86'
+    if os.path.exists(nsis_bindir):
+        print "ERROR: %s exists in CWD.  Remove it and re-run"
+        return
+
+    dry('cp %s %s' % (bindir, nsis_bindir),
+        shutil.copytree, bindir, nsis_bindir)
+
+    nsis_bindir = nsis_bindir.replace('/', r'\\')
 
     nsis_params = [
         '/DVERSION=%s' % version,
         '/DVERSION_DISK=%s' % version,
-        '/DINVEST_3_FOLDER=%s' % bindir,
+        '/DINVEST_3_FOLDER=%s' % nsis_bindir,
         '/DSHORT_VERSION=%s' % version,  # some other value?
         '/DARCHITECTURE=%s' % arch,
         'invest_installer.nsi'
@@ -941,6 +951,10 @@ def _build_nsis(version, bindir, arch):
     # copy the completd NSIS installer file into dist/
     dry('cp installer/windows/*.exe dist',
         shutil.copyfile, glob.glob('installer/windows/*.exe')[0], 'dist')
+
+    # clean up the bindir we copied into cwd.
+    dry('rm -r %s' % nsis_bindir,
+        shutil.rmtree, nsis_bindir)
 
 
 def _build_dmg(version, bindir):
