@@ -345,7 +345,7 @@ def after_install(options, home_dir):
 
 @task
 @consume_args  # when consuuming args, it's a list of str arguments.
-def fetch(args=[]):
+def fetch(args=None):
     """
     Clone repositories the correct locations.
     """
@@ -355,6 +355,8 @@ def fetch(args=[]):
     # rev.
     user_repo_revs = {}  # repo -> version
     repo_paths = map(lambda x: x.local_path, REPOS)
+    if args is None:
+        args = []
     args_queue = collections.deque(args[:])
 
     while len(args_queue) > 0:
