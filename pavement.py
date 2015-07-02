@@ -1100,7 +1100,8 @@ def collect_release_files():
     """
     # make a distribution folder for this build version.
     # rstrip to take off the newline
-    invest_version = sh('python setup.py --version', capture=True).rstrip()
+    _invest = imp.load_source('versioning', 'src/natcap/invest/__init__.py')
+    invest_version = _invest.__version__
     dist_dir = os.path.join('dist', 'invest_%s' % invest_version)
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
