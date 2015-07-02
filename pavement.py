@@ -1090,6 +1090,64 @@ def build(options):
             # let the build_installer task handle this default.
             pass
     call_task('build_installer', options=installer_options)
+    call_task('collect_release_files')
+
+
+@task
+def collect_release_files():
+    """
+    Collect release-specific files into a single distributable folder.
+    """
+    # make a distribution folder for this build version.
+    # rstrip to take off the newline
+    invest_version = sh('python setup.py --version', capture=True).rstrip()
+    dist_dir = os.path.join('dist', 'invest_%s' % invest_version)
+    if not os.path.exists(dist_dir):
+        dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
+
+    # put the data zipfiles into a new folder.
+    data_dir = os.path.join(dist_dir, 'data')
+    if not os.path.exists(data_dir):
+        dry('mkdir %s' % data_dir, os.makedirs, data_dir)
+
+    for data_zip in glob.glob(os.path.join('dist', '*.zip')):
+        out_filename = os.path.join(data_dir, os.path.basename(data_zip))
+        dry('cp %s %s' % (data_zip, out_filename),
+            shutil.copyfile, data_zip, out_filename)
+        dry('rm %s' % out_filename,
+            os.remove, data_zip)
+
+    # copy the installer(s) into the new folder
+    installer_files = []
+    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm']:
+        glob_pattern = os.path.join('dist', pattern)
+        installer_files += glob.glob(glob_pattern)
+
+    for installer in installer_files:
+        new_file = os.path.join(dist_dir, os.path.basename(installer))
+        dry('cp %s %s' % (installer, new_file),
+            shutil.copyfile, installer, new_file)
+        dry('rm %s' % installer,
+            os.remove, installer)
+
+    # copy HTML documentation into the new folder.
+    html_docs = os.path.join('doc', 'users-guide', 'build', 'html')
+    pdf = glob.glob(os.path.join('doc', 'users-guide', 'build',
+                                 'latex', '*.pdf'))[0]
+    out_dir = os.path.join(dist_dir, 'documentation')
+    if os.path.exists(html_docs):
+        if os.path.exists(out_dir):
+            dry('rm -r %s' % out_dir,
+                shutil.rmtree, out_dir)
+        dry('cp -r %s %s' % (html_docs, out_dir),
+            shutil.copytree, html_docs, out_dir)
+
+        out_pdf = os.path.join(dist_dir, os.path.basename(pdf))
+        dry('cp %s %s' % (pdf, out_pdf),
+            shutil.copyfile, pdf, out_pdf)
+    else:
+        print "Skipping docs, since html docs were not built"
+
 
 @task
 def jenkins_installer():
