@@ -1,5 +1,6 @@
 import sys
 import os
+from PyInstaller.compat import is_win
 
 # Global Variables
 current_dir = os.path.join(os.getcwd(), os.path.dirname(sys.argv[1]))
@@ -30,6 +31,9 @@ for t in analysis_object_tuples:
 exe_objects = []
 for i in range(len(scripts)):
     fname, _ = os.path.splitext(scripts[i])
+    if is_win:
+        fname += '.exe'
+
     exe = EXE(
         pyz_objects[i],
         analysis_object_tuples[i][0].scripts,
