@@ -270,6 +270,7 @@ options(
 @cmdopts([
     ('system-site-packages', '', ('Give the virtual environment access '
                                   'to the global site-packages')),
+    ('clear', '', 'Clear out the non-root install and start from scratch.'),
 ])
 def env(options):
     """
@@ -284,6 +285,13 @@ def env(options):
     except AttributeError:
         use_site_pkgs = False
     options.virtualenv.system_site_packages = use_site_pkgs
+
+    # check whether the user wants to use a clean environment.
+    # Assume False if not provided.
+    try:
+        options.env.clear
+    except AttributeError:
+        options.env.clear = False
 
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
@@ -314,12 +322,13 @@ def after_install(options, home_dir):
     # Calling via the shell so that virtualenv has access to environment
     # vars as needed.
     env_dirname = options.virtualenv.dest_dir
-    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(env_name)s"
+    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(clear)s %(env_name)s"
     bootstrap_opts = {
         "python": sys.executable,
         "bootstrap_file": options.virtualenv.script_name,
         "env_name": env_dirname,
         "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
+        "clear": '--clear' if options.env.clear else '',
     }
     err_code = sh(bootstrap_cmd % bootstrap_opts)
     if err_code != 0:
