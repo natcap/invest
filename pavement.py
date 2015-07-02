@@ -798,8 +798,6 @@ def build_bin():
     dry('cp -r %s %s' % (bindir, invest_dist),
         shutil.copytree, bindir, invest_dist)
 
-    sh('pip freeze > package_versions.txt')
-
 
 @task
 @cmdopts([
