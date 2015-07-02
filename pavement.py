@@ -898,7 +898,7 @@ def _build_nsis(version, bindir, arch):
 
     invest_repo = REPOS_DICT['invest-2']
     if not os.path.exists(invest_repo.local_path):
-        run_task('fetch', args=[invest_repo.local_path])
+        call_task('fetch', args=[invest_repo.local_path])
 
     # determine makensis path
     possible_paths = [
