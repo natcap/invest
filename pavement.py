@@ -537,10 +537,12 @@ def clean(options):
                      options.virtualenv.dest_dir,
                      'installer/darwin/temp',
                      'pyinstaller/dist/invest_dist',
+                     'invest-3-x86',
                      ]
     files_to_rm = [
         options.virtualenv.script_name,
-        'installer/darwin/*.dmg'
+        'installer/darwin/*.dmg',
+        'installer/windows/*.exe',
     ]
 
     for folder in folders_to_rm:
