@@ -536,6 +536,7 @@ def clean(options):
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
                      options.virtualenv.dest_dir,
                      'installer/darwin/temp',
+                     'pyinstaller/dist/invest_dist',
                      ]
     files_to_rm = [
         options.virtualenv.script_name,
@@ -772,6 +773,14 @@ def build_bin():
     """
     Build frozen binaries of InVEST.
     """
+    # if the InVEST built binary directory exists, it should always
+    # be deleted.  This is because we've had some weird issues with builds
+    # not working properly when we don't just do a clean rebuild.
+    invest_dist_dir = os.path.join('pyinstaller', 'dist', 'invest_dist')
+    if os.path.exists(invest_dist_dir):
+        dry('rm -r %s' % invest_dist_dir,
+            shutil.rmtree, invest_dist_dir)
+
     sh('pyinstaller --noconfirm invest.spec', cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
@@ -788,6 +797,8 @@ def build_bin():
 
     dry('cp -r %s %s' % (bindir, invest_dist),
         shutil.copytree, bindir, invest_dist)
+
+    sh('pip freeze > package_versions.txt')
 
 
 @task
@@ -831,6 +842,11 @@ def build_installer(options):
     # version comes from the installed version of natcap.invest
     version = _invest_version()
     command = options.insttype.lower()
+
+    if not os.path.exists(bindir):
+        print "ERROR: Binary directory %s not found" % bindir
+        print "ERROR: Run `paver build_bin` to make new binaries"
+        return
 
     if command == 'nsis':
         _build_nsis(version, options.bindir, 'x86')
