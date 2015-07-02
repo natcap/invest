@@ -897,13 +897,13 @@ def _build_fpm(version, bindir, pkg_type):
 def _build_nsis(version, bindir, arch):
     # determine makensis path
     possible_paths = [
-        '"C:\Program Files\NSIS\makensis.exe"',
-        '"C:\Program Files (x86)\NSIS\makensis.exe"',
+        'C:\\Program Files\\NSIS\\makensis.exe',
+        'C:\\Program Files (x86)\\NSIS\\makensis.exe',
     ]
     makensis = None
     for makensis_path in possible_paths:
         if os.path.exists(makensis_path):
-            makensis = makensis_path
+            makensis = '"%s"' % makensis_path
 
     if makensis is None:
         print "Can't find nsis in %s" % possible_paths
