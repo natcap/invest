@@ -920,7 +920,7 @@ def _build_nsis(version, bindir, arch):
             makensis = '"%s"' % makensis_path
 
     if makensis is None:
-        print "Can't find nsis in %s" % possible_paths
+        raise BuildFailure("Can't find nsis in %s" % possible_paths)
 
     if platform.system() != 'Windows':
         makensis = 'wine "%s"' % makensis
@@ -929,8 +929,7 @@ def _build_nsis(version, bindir, arch):
     # also, NSIS (and our shortcuts) care very much about the dirname.
     nsis_bindir = 'invest-3-x86'
     if os.path.exists(nsis_bindir):
-        print "ERROR: %s exists in CWD.  Remove it and re-run"
-        return
+        raise BuildFailure("ERROR: %s exists in CWD.  Remove it and re-run")
 
     dry('cp %s %s' % (bindir, nsis_bindir),
         shutil.copytree, bindir, nsis_bindir)
