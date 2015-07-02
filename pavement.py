@@ -1020,7 +1020,10 @@ def selftest():
 ])
 def build(options):
     """
-    Build the installer, start-to-finish.  Includes binaires, docs, data, installer.
+    Build the installer, start-to-finish.  Includes binaries, docs, data, installer.
+
+    If no extra options are specified, docs, data and binaries will all be generated.
+    Any missing and needed repositories will be cloned.
     """
 
     for repo in REPOS_DICT.values():
@@ -1042,6 +1045,8 @@ def build(options):
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
         print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
+
+    # Call these tasks unless the user requested not to.
     defaults = [
         ('nodata', False),
         ('nobin', False),
