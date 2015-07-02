@@ -345,7 +345,7 @@ def after_install(options, home_dir):
 
 @task
 @consume_args  # when consuuming args, it's a list of str arguments.
-def fetch(args):
+def fetch(args=[]):
     """
     Clone repositories the correct locations.
     """
@@ -547,6 +547,7 @@ def clean(options):
                      'installer/darwin/temp',
                      'pyinstaller/dist/invest_dist',
                      'invest-3-x86',
+                     'exe/build',
                      ]
     files_to_rm = [
         options.virtualenv.script_name,
@@ -1089,4 +1090,23 @@ def build(options):
             # let the build_installer task handle this default.
             pass
     call_task('build_installer', options=installer_options)
+
+@task
+def build_jenkins():
+    """
+    Run a jenkins build via paver.
+    """
+
+    call_task('clean')
+    call_task('fetch')
+    call_task('env', options={
+        'system_site_packages': True,
+        'clear': True})
+
+    if platform.system() == 'Windows':
+        sh(r'test_env\Scripts\activate')
+    else:
+        sh(r'source test_env/bin/activate')
+    call_task('build')
+
 
