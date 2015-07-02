@@ -42,10 +42,39 @@ try:
 except ImportError:
     USE_CYTHON = False
 
+versioning = imp.load_source('versioning', 'src/natcap/invest/versioning.py')
+
+class CustomSdist(_sdist):
+    """Custom source distribution builder.  Builds a source distribution via the
+    distutils sdist command, but then writes the version information to
+    the temp source tree before everything is archived for distribution."""
+    def make_release_tree(self, base_dir, files):
+        _sdist.make_release_tree(self, base_dir, files)
+
+        # Write version information (which is derived from the adept mercurial
+        # source tree) to the build folder's copy of adept.__init__.
+        filename = os.path.join(base_dir, 'src', 'natcap', 'invest', '__init__.py')
+        print 'Writing version data to %s' % filename
+        versioning.write_build_info(filename)
+
+class CustomPythonBuilder(_build_py):
+    """Custom python build step for distutils.  Builds a python distribution in
+    the specified folder ('build' by default) and writes the version
+    information to the temporary source tree therein."""
+    def run(self):
+        _build_py.run(self)
+
+        # Write version information (which is derived from the adept mercurial
+        # source tree) to the build folder's copy of adept.__init__.
+        filename = os.path.join(self.build_lib, 'natcap', 'invest', '__init__.py')
+        print 'Writing version data to %s' % filename
+        versioning.write_build_info(filename)
+
+
 # Defining the command classes for sdist and build_py here so we can access
 # the commandclasses in the setup function.
-CMDCLASS['sdist'] = _sdist
-CMDCLASS['build_py'] = _build_py
+CMDCLASS['sdist'] = CustomSdist
+CMDCLASS['build_py'] = CustomPythonBuilder
 
 readme = open('README.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
