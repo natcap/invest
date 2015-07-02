@@ -250,6 +250,7 @@ options(
     ('system-site-packages', '', ('Give the virtual environment access '
                                   'to the global site-packages')),
     ('envname=', 'e', ('The name of the environment to use')),
+    ('with-invest', '', 'Install the current version of InVEST into the env'),
 ])
 def env(options):
     """
@@ -303,6 +304,12 @@ def after_install(options, home_dir):
         "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
     }
     sh(bootstrap_cmd % bootstrap_opts)
+
+    try:
+        if options.with_invest is True:
+            sh('python setup.py install')
+    except AttributeError:
+        print "Skipping installation of natcap.invest"
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
