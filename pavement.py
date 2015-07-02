@@ -133,7 +133,7 @@ class GitRepository(Repository):
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
     'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
-    'invest-data': SVNRepository('data/invest-data', 'http://ncp-yamato.stanford.edu/svn/invest-sample-data'),
+    'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
     'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
 }
 REPOS = REPOS_DICT.values()
