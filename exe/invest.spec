@@ -42,7 +42,7 @@ for i in range(len(scripts)):
         debug=False,
         strip=None,
         upx=False,
-        console=False)
+        console=True)
     exe_objects.append(exe)
 
 # Collect Files into Distributable Folder/File
