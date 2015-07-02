@@ -127,19 +127,6 @@ def load_version():
         invest = imp.load_source('natcap.invest', 'src/natcap/invest/__init__.py')
     return invest.__version__
 
-REQUIREMENTS = [
-    'numpy',
-    'scipy',
-    'gdal',
-    'matplotlib',
-    'shapely',
-    'poster',
-    'h5py',
-    'pyamg',
-    'pyyaml',
-    'pygeoprocessing==0.3.0a3',
-    ]
-
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
@@ -189,7 +176,7 @@ setup(
     },
     version=load_version(),
     include_package_data=True,
-    install_requires=REQUIREMENTS,
+    install_requires=open('requirements.txt').read().split('\n'),
     include_dirs=[numpy.get_include()],
     setup_requires=['nose>=1.0'],
     cmdclass=CMDCLASS,

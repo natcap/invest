@@ -274,11 +274,6 @@ def env(options):
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
     # We therefore make our own bootstrapping function calls here.
-    requirements = [
-        "numpy",
-        "scipy",
-        "pygeoprocessing==0.3.0a3",
-    ]
 
     install_string = """
 import os, subprocess
@@ -290,7 +285,7 @@ def after_install(options, home_dir):
     """
 
     pip_template = "    subprocess.call([join(home_dir, 'bin', 'pip'), 'install', '%s'])\n"
-    for pkgname in requirements:
+    for pkgname in open('requirements.txt').read().rstrip().split('\n'):
         install_string += pip_template % pkgname
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
@@ -307,10 +302,7 @@ def after_install(options, home_dir):
         "env_name": env_dirname,
         "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
     }
-    err_code = sh(bootstrap_cmd % bootstrap_opts)
-    if err_code != 0:
-        print "ERROR: Environment setup failed.  See the log for details"
-        return
+    sh(bootstrap_cmd % bootstrap_opts)
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
