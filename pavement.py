@@ -841,8 +841,8 @@ def build_installer(options):
     version = _invest_version()
     command = options.insttype.lower()
 
-    if not os.path.exists(bindir):
-        print "ERROR: Binary directory %s not found" % bindir
+    if not os.path.exists(options.bindir):
+        print "ERROR: Binary directory %s not found" % options.bindir
         print "ERROR: Run `paver build_bin` to make new binaries"
         return
 
