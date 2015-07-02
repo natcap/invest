@@ -1033,10 +1033,11 @@ def build(options):
             current_rev = repo.current_rev()
             tracked_rev = repo.tracked_version()
             if not repo.at_known_rev():
-                print 'ERROR: %s not at the known rev' % repo.local_path
-                print 'ERROR: Expected rev: %s' % tracked_rev
-                print 'ERROR: Current rev: %s' % current_rev
-                return
+                raise BuildFailure(('ERROR: %(local_path)s at rev %(cur_rev)s, '
+                                    'but expected to be at rev %(exp_rev)s') % {
+                                        'local_path': repo.local_path,
+                                        'cur_rev': current_rev,
+                                        'exp_rev': tracked_rev})
         else:
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
         print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
