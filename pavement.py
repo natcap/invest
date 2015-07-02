@@ -959,8 +959,10 @@ def _build_nsis(version, bindir, arch):
     sh(makensis, cwd=os.path.join('installer', 'windows'))
 
     # copy the completd NSIS installer file into dist/
-    dry('cp installer/windows/*.exe dist',
-        shutil.copyfile, glob.glob('installer/windows/*.exe')[0], 'dist')
+    for exe_file in glob.glob('installer/windows/*.exe'):
+        dest_file = os.path.join('dist', os.path.basename(exe_file))
+        dry('cp installer/windows/*.exe dist',
+            shutil.copyfile, exe_file, dest_file)
 
     # clean up the bindir we copied into cwd.
     dry('rm -r %s' % nsis_bindir,
