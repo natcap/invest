@@ -545,8 +545,8 @@ def clean(options):
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
                      options.virtualenv.dest_dir,
                      'installer/darwin/temp',
-                     'pyinstaller/dist/invest_dist',
                      'invest-3-x86',
+                     'exe/dist',
                      'exe/build',
                      ]
     files_to_rm = [
