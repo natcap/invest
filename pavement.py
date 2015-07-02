@@ -62,9 +62,12 @@ class HgRepository(Repository):
     statedir = '.hg'
     cmd = 'hg'
 
-    def clone(self):
-        sh('hg clone %(url)s %(dest)s' % {'url': self.remote_url,
-                                          'dest': self.local_path})
+    def clone(self, rev=None):
+        if rev is None:
+            rev = self.tracked_version()
+        sh('hg clone %(url)s %(dest)s -u %(rev)s' % {'url': self.remote_url,
+                                                     'dest': self.local_path,
+                                                     'rev': rev})
 
     def pull(self):
         sh('hg pull -R %(dest)s' % {'dest': self.local_path})
@@ -87,8 +90,10 @@ class SVNRepository(Repository):
     statedir = '.svn'
     cmd = 'svn'
 
-    def clone(self):
-        paver.svn.checkout(self.remote_url, self.local_path)
+    def clone(self, rev=None):
+        if rev is None:
+            rev = self.tracked_version()
+        paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
 
     def pull(self):
         # svn is centralized, so there's no concept of pull without a checkout.
@@ -113,9 +118,12 @@ class GitRepository(Repository):
     statedir = '.git'
     cmd = 'git'
 
-    def clone(self):
+    def clone(self, rev=None):
         sh('git checkout %(url)s %(dest)s' % {'url': self.remote_path,
                                               'dest': self.local_path})
+        if rev is None:
+            rev = self.tracked_version()
+            self.update(rev)
 
     def pull(self):
         sh('git fetch', cwd=self.local_path)
