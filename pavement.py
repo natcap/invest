@@ -894,8 +894,17 @@ def _build_fpm(version, bindir, pkg_type):
         ' %(bindir)s') % options
     sh(fpm_command)
 
-def _build_nsis(version, bindir, arch):
 
+def _build_nsis(version, bindir, arch):
+    """
+    Build an NSIS installer.
+
+    The InVEST NSIS script *requires* the following conditions are met:
+        * The User's guide has been built (paver build_docs)
+        * The invest-2 repo has been cloned to src (paver fetch src/invest-natcap.default)
+
+    If these two conditions have not been met, the installer will fail.
+    """
     invest_repo = REPOS_DICT['invest-2']
     if not os.path.exists(invest_repo.local_path):
         call_task('fetch', args=[invest_repo.local_path])
@@ -928,6 +937,10 @@ def _build_nsis(version, bindir, arch):
     ]
     makensis += ' ' + ' '.join(nsis_params)
     sh(makensis, cwd=os.path.join('installer', 'windows'))
+
+    # copy the completd NSIS installer file into dist/
+    dry('cp installer/windows/*.exe dist',
+        shutil.copyfile, glob.glob('installer/windows/*.exe')[0], 'dist')
 
 
 def _build_dmg(version, bindir):
