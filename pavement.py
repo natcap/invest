@@ -62,9 +62,12 @@ class HgRepository(Repository):
     statedir = '.hg'
     cmd = 'hg'
 
-    def clone(self):
-        sh('hg clone %(url)s %(dest)s' % {'url': self.remote_url,
-                                          'dest': self.local_path})
+    def clone(self, rev=None):
+        if rev is None:
+            rev = self.tracked_version()
+        sh('hg clone %(url)s %(dest)s -u %(rev)s' % {'url': self.remote_url,
+                                                     'dest': self.local_path,
+                                                     'rev': rev})
 
     def pull(self):
         sh('hg pull -R %(dest)s' % {'dest': self.local_path})
@@ -91,8 +94,10 @@ class SVNRepository(Repository):
     statedir = '.svn'
     cmd = 'svn'
 
-    def clone(self):
-        paver.svn.checkout(self.remote_url, self.local_path)
+    def clone(self, rev=None):
+        if rev is None:
+            rev = self.tracked_version()
+        paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
 
     def pull(self):
         # svn is centralized, so there's no concept of pull without a checkout.
@@ -117,9 +122,12 @@ class GitRepository(Repository):
     statedir = '.git'
     cmd = 'git'
 
-    def clone(self):
+    def clone(self, rev=None):
         sh('git checkout %(url)s %(dest)s' % {'url': self.remote_path,
                                               'dest': self.local_path})
+        if rev is None:
+            rev = self.tracked_version()
+            self.update(rev)
 
     def pull(self):
         sh('git fetch', cwd=self.local_path)
@@ -271,6 +279,8 @@ options(
     ('system-site-packages', '', ('Give the virtual environment access '
                                   'to the global site-packages')),
     ('clear', '', 'Clear out the non-root install and start from scratch.'),
+    ('envname=', 'e', ('The name of the environment to use')),
+    ('with-invest', '', 'Install the current version of InVEST into the env'),
 ])
 def env(options):
     """
@@ -293,14 +303,15 @@ def env(options):
     except AttributeError:
         options.env.clear = False
 
+    try:
+        options.virtualenv.dest_dir = options.envname
+        print "Using user-defined env name: %s" % options.envname
+    except AttributeError:
+        print "Using the default envname: %s" % options.virtualenv.dest_dir
+
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
     # We therefore make our own bootstrapping function calls here.
-    requirements = [
-        "numpy",
-        "scipy",
-        "pygeoprocessing==0.3.0a3",
-    ]
 
     install_string = """
 import os, subprocess
@@ -312,7 +323,7 @@ def after_install(options, home_dir):
     """
 
     pip_template = "    subprocess.call([join(home_dir, 'bin', 'pip'), 'install', '%s'])\n"
-    for pkgname in requirements:
+    for pkgname in open('requirements.txt').read().rstrip().split('\n'):
         install_string += pip_template % pkgname
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
@@ -330,10 +341,13 @@ def after_install(options, home_dir):
         "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
         "clear": '--clear' if options.env.clear else '',
     }
-    err_code = sh(bootstrap_cmd % bootstrap_opts)
-    if err_code != 0:
-        print "ERROR: Environment setup failed.  See the log for details"
-        return
+    sh(bootstrap_cmd % bootstrap_opts)
+
+    try:
+        if options.with_invest is True:
+            sh('python setup.py install')
+    except AttributeError:
+        print "Skipping installation of natcap.invest"
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
@@ -1169,5 +1183,4 @@ def jenkins_installer():
     else:
         sh(r'source test_env/bin/activate')
     call_task('build')
-
 

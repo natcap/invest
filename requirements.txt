@@ -1,0 +1,11 @@
+gdal
+h5py
+matplotlib
+numpy
+poster
+pyamg
+pygeoprocessing==0.3.0a3
+pyyaml
+scipy
+setuptools
+shapely
