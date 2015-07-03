@@ -1181,7 +1181,7 @@ def jenkins_installer():
     call_task('env', options={
         'system_site_packages': True,
         'clear': True,
-        'with-invest': True,
+        'with_invest': True,
     })
 
     # call the
