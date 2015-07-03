@@ -633,7 +633,9 @@ def zip_source(options):
 
 @task
 @cmdopts([
-    ('force-dev', '', 'Force development')
+    ('force-dev', '', 'Force development'),
+    ('skip-api', '', 'Skip building the API docs'),
+    ('skip-guide', '', "Skip building the User's Guide"),
 ])
 def build_docs(options):
     """
@@ -646,14 +648,25 @@ def build_docs(options):
     Requires make.
     """
 
-    if not _repo_is_valid(REPOS_DICT['users-guide'], options):
-        return
+    # If the user has not provided the skip-guide flag, build the User's guide.
+    skip_guide = getattr(options, 'skip_guide', False)
+    if skip_guide is False:
+        if not _repo_is_valid(REPOS_DICT['users-guide'], options):
+            raise BuildFailure('User guide version is out of sync and force-dev not provided')
+        guide_dir = os.path.join('doc', 'users-guide')
+        latex_dir = os.path.join(guide_dir, 'build', 'latex')
+        sh('make html', cwd=guide_dir)
+        sh('make latex', cwd=guide_dir)
+        sh('make all-pdf', cwd=latex_dir)
+    else:
+        print "Skipping the User's Guide"
 
-    guide_dir = os.path.join('doc', 'users-guide')
-    latex_dir = os.path.join(guide_dir, 'build', 'latex')
-    sh('make html', cwd=guide_dir)
-    sh('make latex', cwd=guide_dir)
-    sh('make all-pdf', cwd=latex_dir)
+    skip_api = getattr(options, 'skip_api', False)
+    if skip_api is False:
+        sh('pip install -r requirements-docs.txt')
+        sh('python setup.py build_sphinx')
+    else:
+        print "Skipping the API docs"
 
 
 @task
@@ -900,3 +913,4 @@ def selftest():
     for taskname, _ in inspect.getmembers(module, istask):
         if taskname != 'selftest':
             subprocess.call(['paver', '--dry-run', taskname])
+
