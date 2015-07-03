@@ -4,58 +4,38 @@ from PyInstaller.compat import is_win
 
 # Global Variables
 current_dir = os.path.join(os.getcwd(), os.path.dirname(sys.argv[1]))
-app_dir = os.path.join(current_dir, 'apps')
-scripts = os.listdir(app_dir)
 
 # Analyze Scripts for Dependencies
 kwargs = {
     'hookspath': [os.path.join(current_dir, 'hooks')],
     'excludes': None,
     'pathex': [os.getcwd()],
+    'hiddenimports': ['natcap', 'natcap.invest'],
 }
-analysis_object_tuples = []
-for script in scripts:
-    fname, _ = os.path.splitext(script)
-    fpath = os.path.join(app_dir, script)
-    a = Analysis([fpath], **kwargs)
-    analysis_object_tuples.append((a, fname, fname))
-MERGE(*analysis_object_tuples)
+
+cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'iui', 'cli.py')
+a = Analysis([cli_file], **kwargs)
 
 # Compress pyc and pyo Files into ZlibArchive Objects
-pyz_objects = []
-for t in analysis_object_tuples:
-    pyz = PYZ(t[0].pure)
-    pyz_objects.append(pyz)
+pyz = PYZ(a.pure)
 
-# Create Executable Files
-exe_objects = []
-for i in range(len(scripts)):
-    fname, _ = os.path.splitext(scripts[i])
-    if is_win:
-        fname += '.exe'
+# Create the executable file
+exename = 'invest'
+if is_win:
+    exename += '.exe'
 
-    exe = EXE(
-        pyz_objects[i],
-        analysis_object_tuples[i][0].scripts,
-        name=fname,
-        exclude_binaries=1,
-        debug=False,
-        strip=None,
-        upx=False,
-        console=True)
-    exe_objects.append(exe)
+exe = EXE(
+    pyz,
+    a.scripts,
+    name=exename,
+    exclude_binaries=1,
+    debug=False,
+    strip=None,
+    upx=False,
+    console=True)
 
 # Collect Files into Distributable Folder/File
-binaries = []
-zipfiles = []
-datas = []
-
-for i in range(len(scripts)):
-    binaries.append(analysis_object_tuples[i][0].binaries)
-    zipfiles.append(analysis_object_tuples[i][0].zipfiles)
-    datas.append(analysis_object_tuples[i][0].datas)
-
-args = exe_objects + binaries + zipfiles + datas
+args = [exe, a.binaries, a.zipfiles, a.datas]
 
 dist = COLLECT(
         *args,
