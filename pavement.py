@@ -259,6 +259,7 @@ options(
                                   'to the global site-packages')),
     ('envname=', 'e', ('The name of the environment to use')),
     ('with-invest', '', 'Install the current version of InVEST into the env'),
+    ('requirements=', 'r', 'Install requirements from a file'),
 ])
 def env(options):
     """
@@ -293,9 +294,15 @@ def after_install(options, home_dir):
 
     """
 
+    requirements_files = ['requirements.txt']
+    extra_reqs = getattr(options, 'requirements', None)
+    if extra_reqs is not None:
+        requirements_files.append(extra_reqs)
+
     pip_template = "    subprocess.call([join(home_dir, 'bin', 'pip'), 'install', '%s'])\n"
-    for pkgname in open('requirements.txt').read().rstrip().split('\n'):
-        install_string += pip_template % pkgname
+    for reqs_file in requirements_files:
+        for pkgname in open(reqs_file).read().rstrip().split('\n'):
+            install_string += pip_template % pkgname
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
     open(options.virtualenv.script_name, 'w').write(output)
@@ -663,7 +670,6 @@ def build_docs(options):
 
     skip_api = getattr(options, 'skip_api', False)
     if skip_api is False:
-        sh('pip install -r requirements-docs.txt')
         sh('python setup.py build_sphinx')
     else:
         print "Skipping the API docs"

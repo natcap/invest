@@ -81,6 +81,7 @@ On Linux, this might look like: ::
         --system-site-packages \  # Grant the new env access to the system python
         --with-invest \           # Install natcap.invest to the new repo
         --envdir=$ENV             # Create the env at this dir.
+        -r requirements-docs.txt  # Install the docs requirements as well.
     source $ENV/bin/activate
     paver build_docs
 
@@ -91,7 +92,7 @@ On Windows, this might look like: ::
     ::
 
     set ENV=doc_env
-    paver env --clear --system-site-packages --with-invest --envdir=%ENV%
+    paver env --clear --system-site-packages --with-invest --envdir=%ENV% -r requirements-docs.txt
     call %ENV%\Scripts\activate.bat
     paver build_docs
     
