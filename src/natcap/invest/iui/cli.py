@@ -16,7 +16,7 @@ def iui_dir():
     """
     if getattr(sys, 'frozen', False):
         # we are running in a |PyInstaller| bundle
-        basedir = sys._MEIPASS
+        basedir = os.path.dirame(sys.executable)
     else:
         # we are running in a normal Python environment
         basedir = os.path.dirname(__file__)
