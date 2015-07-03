@@ -123,7 +123,7 @@ class GitRepository(Repository):
     cmd = 'git'
 
     def clone(self, rev=None):
-        sh('git checkout %(url)s %(dest)s' % {'url': self.remote_path,
+        sh('git clone %(url)s %(dest)s' % {'url': self.remote_url,
                                               'dest': self.local_path})
         if rev is None:
             rev = self.tracked_version()
@@ -133,7 +133,7 @@ class GitRepository(Repository):
         sh('git fetch', cwd=self.local_path)
 
     def update(self, rev):
-        sh('git checkout %(rev)s .' % {'rev', rev}, cwd=self.local_path)
+        sh('git checkout %(rev)s .' % {'rev': rev}, cwd=self.local_path)
 
     def current_rev(self):
         return sh('git rev-parse --verify HEAD', cwd=self.local_path, capture=True)
@@ -143,6 +143,7 @@ REPOS_DICT = {
     'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
     'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
+    'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
 }
 REPOS = REPOS_DICT.values()
 
@@ -813,7 +814,11 @@ def build_bin():
         dry('rm -r %s' % invest_dist_dir,
             shutil.rmtree, invest_dist_dir)
 
-    sh('pyinstaller --noconfirm invest.spec', cwd='exe')
+    pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
+    sh('%(python)s %(pyinstaller)s --noconfirm invest.spec' % {
+            'python': sys.executable,
+            'pyinstaller': pyinstaller_file,
+        }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
     sh('pip freeze > package_versions.txt', cwd=bindir)
