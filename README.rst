@@ -65,6 +65,65 @@ On linux, gcc/g++ will be sufficient.  On Windows, MinGW and MSVC work.  On Mac,
 you'll likely need the XCode command-line tools to be installed.
 
 
+Building Documentation
+======================
+
+Building documentation is supported in several ways, and is best done through a virtualenv. 
+The primary way to build documentation is through the ``paver build_docs`` command.  If you
+are trying to build the API documentation, you'll need to have the ``natcap.invest`` package
+available to the python instance you're running paver with.  
+
+On Linux, this might look like: ::
+
+    #!/bin/sh
+    ENV=doc_env
+    paver env --clear \           # clear out an existing env if it already exists
+        --system-site-packages \  # Grant the new env access to the system python
+        --with-invest \           # Install natcap.invest to the new repo
+        --envdir=$ENV             # Create the env at this dir.
+    source $ENV/bin/activate
+    paver build_docs
+
+On Windows, this might look like: ::
+    
+    :: build_docs.bat
+    :: Example batch file for building documentation in a virtualenv
+    ::
+
+    set ENV=doc_env
+    paver env --clear --system-site-packages --with-invest --envdir=%ENV%
+    call %ENV%\Scripts\activate.bat
+    paver build_docs
+    
+The ``paver build_docs`` command has these options: ::
+
+    Usage: paver pavement.build_docs [options]
+
+    Options:
+      -h, --help    display this help information
+      --force-dev   Force development
+      --skip-api    Skip building the API docs
+      --skip-guide  Skip building the User's Guide
+      
+      
+      Build the sphinx user's guide for InVEST.
+      
+      Builds the sphinx user's guide in HTML, latex and PDF formats.
+      Compilation of the guides uses sphinx and requires that all needed
+      libraries are installed for compiling html, latex and pdf.
+
+      Requires make for the user's guide
+      The API docs requires sphinx and setuptools only.
+
+
+*Dependencies on Debian Systems*
+
+ * ``sudo apt-get install libhdf5-dev && sudo pip install h5py`` Install HDF5.
+ * ``sudo pip install --upgrade sphinxcontrib-napoleon`` We use the Napoleon theme for the API documentation.
+ * ``sudo apt-get install python-setuptools``  Fixes some path issues with setuptools (see https://bitbucket.org/pypa/setuptools/issue/368/module-object-has-no-attribute-packaging)
+
+
+
 Developing InVEST
 =================
 
