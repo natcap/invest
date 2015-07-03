@@ -314,15 +314,19 @@ def env(options):
     # We therefore make our own bootstrapping function calls here.
 
     install_string = """
-import os, subprocess
+import os, subprocess, platform
 def after_install(options, home_dir):
     etc = join(home_dir, 'etc')
     if not os.path.exists(etc):
         os.makedirs(etc)
+    if platform.system() == 'Windows':
+        bindir = 'Scripts'
+    else:
+        bindir = 'bin'
 
     """
 
-    pip_template = "    subprocess.call([join(home_dir, 'bin', 'pip'), 'install', '%s'])\n"
+    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '%s'])\n"
     for pkgname in open('requirements.txt').read().rstrip().split('\n'):
         install_string += pip_template % pkgname
 
@@ -1176,11 +1180,13 @@ def jenkins_installer():
     call_task('fetch')
     call_task('env', options={
         'system_site_packages': True,
-        'clear': True})
+        'clear': True,
+        'with-invest': True,
+    })
 
+    # call the
     if platform.system() == 'Windows':
-        sh(r'test_env\Scripts\activate')
+        sh(r'jenkins\windows_build.bat')
     else:
-        sh(r'source test_env/bin/activate')
-    call_task('build')
+        sh(r'jenkins/posix_build.sh')
 
