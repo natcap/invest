@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ENV=doc_env
-paver env --clear \           # clear out an existing env if it already exists
+paver env \
     --system-site-packages \  # Grant the new env access to the system python
     --with-invest \           # Install natcap.invest to the new repo
     --envdir=$ENV             # Create the env at this dir.
