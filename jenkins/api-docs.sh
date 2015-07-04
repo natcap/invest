@@ -1,10 +1,14 @@
 #!/bin/bash
+#
+# Script to build the api documentation.
+#
+# Execute this from the repository root:
+#     ./jenkins/api-docs.sh
+
 
 ENV=doc_env
-paver env \
-    --system-site-packages \  # Grant the new env access to the system python
-    --with-invest \           # Install natcap.invest to the new repo
-    --envdir=$ENV             # Create the env at this dir.
-    -r requirements-docs.txt  # Install sphinx into the env.
+paver env --system-site-packages --with-invest --envname=$ENV
 source $ENV/bin/activate
-paver build_docs --skip-guide
+pip install -r requirements-docs.txt --force-reinstall --upgrade
+python setup.py build_sphinx
+
