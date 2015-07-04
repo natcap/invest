@@ -73,7 +73,22 @@ The primary way to build documentation is through the ``paver build_docs`` comma
 are trying to build the API documentation, you'll need to have the ``natcap.invest`` package
 available to the python instance you're running paver with.  
 
-On Linux, this might look like: ::
+
+For building docs, the most concise way to build documentation is: ::
+
+    paver build_docs
+
+To build only the API docs (linux only ... to do this on Windows, you'll need to set up a virtualenv.  
+See below): ::
+
+    paver build_docs --skip-guide
+
+To build only the user's guide (requires make): ::
+
+    paver build_docs --skip-api
+
+
+On Linux, a complete build script might look like: ::
 
     #!/bin/sh
     ENV=doc_env
@@ -85,7 +100,7 @@ On Linux, this might look like: ::
     source $ENV/bin/activate
     paver build_docs
 
-On Windows, this might look like: ::
+On Windows, a complete build script might look like: ::
     
     :: build_docs.bat
     :: Example batch file for building documentation in a virtualenv
