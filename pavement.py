@@ -670,7 +670,7 @@ def build_docs(options):
 
     skip_api = getattr(options, 'skip_api', False)
     if skip_api is False:
-        sh('python setup.py build_sphinx')
+        sh('./jenkins/api-docs.sh')
     else:
         print "Skipping the API docs"
 
