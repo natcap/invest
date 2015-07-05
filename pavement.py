@@ -631,12 +631,7 @@ def zip_source(options):
     # leave off the .zip filename here.  shutil.make_archive adds it based on
     # the format of the archive.
     archive_name = os.path.abspath(os.path.join('dist', 'InVEST-source-%s' % version))
-    dry('zip -r %s %s.zip' % ('invest-bin', archive_name),
-        shutil.make_archive, **{
-            'base_name': archive_name,
-            'format': 'zip',
-            'root_dir': source_dir,
-            'base_dir': '.'})
+    call_task('zip', args=[archive_name, source_dir])
 
 
 @task
@@ -673,6 +668,12 @@ def build_docs(options):
     api_env = os.path.join(os.getcwd(), 'api_env')
     if skip_api is False:
         sh('./jenkins/api-docs.sh -e %s' % api_env)
+
+        invest_version = sh('python setup.py --version', capture=True).rstrip()
+        archive_name = os.path.join(
+            'dist', 'invest-%s-apidocs' % invest_version)
+
+        call_task('zip', args=[archive_name, 'build/sphinx/html'])
     else:
         print "Skipping the API docs"
 
@@ -921,4 +922,31 @@ def selftest():
     for taskname, _ in inspect.getmembers(module, istask):
         if taskname != 'selftest':
             subprocess.call(['paver', '--dry-run', taskname])
+
+@task
+@consume_args
+def zip(args):
+    """
+    Zip a folder and save it to an output zip file.
+
+    Usage: paver zip archivename dirname
+
+    Arguments:
+        archivename - the filename of the output archive
+        dirname - the name of the folder to archive.
+    """
+
+    if len(args) > 2:
+        raise BuildFailure('zip takes 2 arguments only.')
+
+    archive_name = args[0]
+    source_dir = args[1]
+
+    dry('zip -r %s %s.zip' % (source_dir, archive_name),
+        shutil.make_archive, **{
+            'base_name': archive_name,
+            'format': 'zip',
+            'root_dir': source_dir,
+            'base_dir': '.'})
+
 
