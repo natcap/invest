@@ -51,7 +51,11 @@ class Repository(object):
         return json.load(open('versions.json'))[self.local_path]
 
     def at_known_rev(self):
-        return self.current_rev() == self.tracked_version()
+        tracked_version = self.format_rev(self.tracked_version())
+        return self.current_rev() == tracked_version
+
+    def format_rev(self, rev):
+        raise Exception
 
     def current_rev(self):
         raise Exception
@@ -80,6 +84,9 @@ class HgRepository(Repository):
         return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
             'dest': self.local_path, 'rev': rev, 'template': template},
             capture=True)
+
+    def format_rev(self, rev):
+        return self._format_log('{node}', rev=rev)
 
     def current_rev(self):
         return self._format_log('{node}')
@@ -113,6 +120,9 @@ class SVNRepository(Repository):
             warnings.warn('SVN version info does not work when in a dry run')
             return 'Unknown'
 
+    def format_rev(self, rev):
+        return rev
+
 class GitRepository(Repository):
     tip = 'master'
     statedir = '.git'
@@ -133,6 +143,10 @@ class GitRepository(Repository):
 
     def current_rev(self):
         return sh('git rev-parse --verify HEAD', cwd=self.local_path, capture=True)
+
+    def format_rev(self, rev):
+        return sh('git log --format=format:%H -1 %(rev)s' % {'rev': rev},
+                  capture=True, cwd=self.local_path)
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
@@ -157,7 +171,7 @@ def _repo_is_valid(repo, options):
         print "WARNING: Repository %s has not been cloned." % repo.local_path
         print "To clone, run this command:"
         print "    paver fetch %s" % repo.local_path
-    return False
+        return False
 
     if not repo.at_known_rev() and options.force_dev is False:
         current_rev = repo.current_rev()
