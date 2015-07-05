@@ -4,12 +4,12 @@ InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
 About  InVEST
 =============
 
-InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is a family 
-of tools for quantifying the values of natural capital in clear, credible, and 
-practical ways. In promising a return (of societal benefits) on investments in 
-nature, the scientific community needs to deliver knowledge and tools to 
-quantify and forecast this return. InVEST enables decision-makers to quantify 
-the importance of natural capital, to assess the tradeoffs associated with 
+InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is a family
+of tools for quantifying the values of natural capital in clear, credible, and
+practical ways. In promising a return (of societal benefits) on investments in
+nature, the scientific community needs to deliver knowledge and tools to
+quantify and forecast this return. InVEST enables decision-makers to quantify
+the importance of natural capital, to assess the tradeoffs associated with
 alternative choices, and to integrate conservation and human development.
 
 Older versions of InVEST ran as script tools in the ArcGIS ArcToolBox environment,
@@ -19,7 +19,7 @@ but have almost all been ported over to a purely open-source python environment.
     **This repository is for InVEST 3.2.1 and later**
 
     This replaces our Google Code project formerly
-    located at http://code.google.com/p/invest-natcap.  If you are looking to build 
+    located at http://code.google.com/p/invest-natcap.  If you are looking to build
     InVEST <= 3.2.0, use the archived release-framework repository at
     https://bitbucket.org/natcap/invest-natcap.release-framework, and the InVEST repository
     at https://bitbucket.org/natcap/invest-natcap.invest-3.
@@ -44,12 +44,12 @@ InVEST relies on the following python packages:
   * pillow
   * cython
 
-For development, we recommend using a virtual environment (such as provided by 
+For development, we recommend using a virtual environment (such as provided by
 ``virtualenv``).
 
 Binaries are generated with ``pyinstaller``.
 
-To work with this repository, you'll also need these tools to be available 
+To work with this repository, you'll also need these tools to be available
 on the command-line somewhere on your PATH:
 
   * ``hg`` (Mercurial, for cloning repositories)
@@ -68,40 +68,36 @@ you'll likely need the XCode command-line tools to be installed.
 Building Documentation
 ======================
 
-Building documentation is supported in several ways, and is best done through a virtualenv. 
-The primary way to build documentation is through the ``paver build_docs`` command.  If you
-are trying to build the API documentation, you'll need to have the ``natcap.invest`` package
-available to the python instance you're running paver with.  
+All documentation is built through ``paver build_docs`` via sphinx.  Building 
+the User's Guide requires that you have GNU make, sphinx, and LaTex installed.
+Building the API documentation requires only virtualenv and a compiler, as
+sphinx will be installed into a new virtualenv at build time.
+
+The ``paver build_docs`` command has these options: ::
+
+    Usage: paver build_docs [options]
+
+    Options:
+      -h, --help    display this help information
+      --force-dev   Force development
+      --skip-api    Skip building the API docs
+      --skip-guide  Skip building the User's Guide
 
 
-For building docs, the most concise way to build documentation is: ::
+      Build the sphinx user's guide for InVEST.
 
-    paver build_docs
+      Builds the sphinx user's guide in HTML, latex and PDF formats.
+      Compilation of the guides uses sphinx and requires that all needed
+      libraries are installed for compiling html, latex and pdf.
 
-To build only the API docs (linux only ... to do this on Windows, you'll need to set up a virtualenv.  
-See below): ::
+      Requires make for the user's guide
+      The API docs requires sphinx and setuptools only.
 
-    paver build_docs --skip-guide
+Note that building API documentation via ``paver build_docs`` is only currently supported
+on POSIX systems.  Documentation can still be built on Windows, but you'll need to run
+something like this:
 
-To build only the user's guide (requires make): ::
-
-    paver build_docs --skip-api
-
-
-On Linux, a complete build script might look like: ::
-
-    #!/bin/sh
-    ENV=doc_env
-    paver env --clear \           # clear out an existing env if it already exists
-        --system-site-packages \  # Grant the new env access to the system python
-        --with-invest \           # Install natcap.invest to the new repo
-        --envdir=$ENV             # Create the env at this dir.
-        -r requirements-docs.txt  # Install the docs requirements as well.
-    source $ENV/bin/activate
-    paver build_docs
-
-On Windows, a complete build script might look like: ::
-    
+::
     :: build_docs.bat
     :: Example batch file for building documentation in a virtualenv
     ::
@@ -110,26 +106,19 @@ On Windows, a complete build script might look like: ::
     paver env --clear --system-site-packages --with-invest --envdir=%ENV% -r requirements-docs.txt
     call %ENV%\Scripts\activate.bat
     paver build_docs
-    
-The ``paver build_docs`` command has these options: ::
 
-    Usage: paver pavement.build_docs [options]
+On Linux or Mac, setting up a virtual environment to be able to build documentation
+look like this: ::
 
-    Options:
-      -h, --help    display this help information
-      --force-dev   Force development
-      --skip-api    Skip building the API docs
-      --skip-guide  Skip building the User's Guide
-      
-      
-      Build the sphinx user's guide for InVEST.
-      
-      Builds the sphinx user's guide in HTML, latex and PDF formats.
-      Compilation of the guides uses sphinx and requires that all needed
-      libraries are installed for compiling html, latex and pdf.
-
-      Requires make for the user's guide
-      The API docs requires sphinx and setuptools only.
+    #!/bin/sh
+    ENV=doc_env
+    paver env --clear \
+        --system-site-packages \
+        --with-invest \
+        --envdir=$ENV
+        -r requirements-docs.txt
+    source $ENV/bin/activate
+    paver build_docs
 
 
 *Dependencies on Debian Systems*
@@ -149,7 +138,7 @@ Contributing to Development
 
 Issues, including ongoing work, are tracked in our issue tracker on this bitbucket project.  If you encounter a bug, please let us know!
 
-If you have something you'd like to contribute, please fork the repository 
+If you have something you'd like to contribute, please fork the repository
 and submit a pull request.  Since mercurial tracks branch names in the metadata
 of each commit, please be sure to make a feature branch off of ``develop``.  For example: ::
 
