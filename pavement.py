@@ -665,6 +665,10 @@ def build_docs(options):
     Requires make.
     """
 
+
+    invest_version = sh('python setup.py --version', capture=True).rstrip()
+    archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
+
     # If the user has not provided the skip-guide flag, build the User's guide.
     skip_guide = getattr(options, 'skip_guide', False)
     if skip_guide is False:
@@ -675,6 +679,10 @@ def build_docs(options):
         sh('make html', cwd=guide_dir)
         sh('make latex', cwd=guide_dir)
         sh('make all-pdf', cwd=latex_dir)
+
+        archive_name = archive_template % 'userguide'
+        build_dir = os.path.join(guide_dir, 'build', 'html')
+        call_task('zip', args=[archive_name, build_dir])
     else:
         print "Skipping the User's Guide"
 
@@ -682,10 +690,7 @@ def build_docs(options):
     api_env = os.path.join(os.getcwd(), 'api_env')
     if skip_api is False:
         sh('./jenkins/api-docs.sh -e %s' % api_env)
-
-        invest_version = sh('python setup.py --version', capture=True).rstrip()
-        archive_name = os.path.join(
-            'dist', 'invest-%s-apidocs' % invest_version)
+        archive_name = archive_template % 'apidocs'
 
         call_task('zip', args=[archive_name, 'build/sphinx/html'])
     else:
