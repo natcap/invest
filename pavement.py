@@ -536,6 +536,7 @@ def clean(options):
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
                      options.virtualenv.dest_dir,
                      'installer/darwin/temp',
+                     'api_env',
                      ]
     files_to_rm = [
         options.virtualenv.script_name,
@@ -669,8 +670,9 @@ def build_docs(options):
         print "Skipping the User's Guide"
 
     skip_api = getattr(options, 'skip_api', False)
+    api_env = os.path.join(os.getcwd(), 'api_env')
     if skip_api is False:
-        sh('./jenkins/api-docs.sh')
+        sh('./jenkins/api-docs.sh -e %s' % api_env)
     else:
         print "Skipping the API docs"
 
