@@ -51,7 +51,11 @@ class Repository(object):
         return json.load(open('versions.json'))[self.local_path]
 
     def at_known_rev(self):
-        return self.current_rev() == self.tracked_version()
+        tracked_version = self.format_rev(self.tracked_version())
+        return self.current_rev() == tracked_version
+
+    def format_rev(self, rev):
+        raise Exception
 
     def current_rev(self):
         raise Exception
@@ -80,6 +84,9 @@ class HgRepository(Repository):
         return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
             'dest': self.local_path, 'rev': rev, 'template': template},
             capture=True)
+
+    def format_rev(self, rev):
+        return self._format_log('{node}', rev=rev)
 
     def current_rev(self):
         return self._format_log('{node}')
@@ -113,6 +120,9 @@ class SVNRepository(Repository):
             warnings.warn('SVN version info does not work when in a dry run')
             return 'Unknown'
 
+    def format_rev(self, rev):
+        return rev
+
 class GitRepository(Repository):
     tip = 'master'
     statedir = '.git'
@@ -133,6 +143,10 @@ class GitRepository(Repository):
 
     def current_rev(self):
         return sh('git rev-parse --verify HEAD', cwd=self.local_path, capture=True)
+
+    def format_rev(self, rev):
+        return sh('git log --format=format:%H -1 %(rev)s' % {'rev': rev},
+                  capture=True, cwd=self.local_path)
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
@@ -157,7 +171,7 @@ def _repo_is_valid(repo, options):
         print "WARNING: Repository %s has not been cloned." % repo.local_path
         print "To clone, run this command:"
         print "    paver fetch %s" % repo.local_path
-    return False
+        return False
 
     if not repo.at_known_rev() and options.force_dev is False:
         current_rev = repo.current_rev()
@@ -259,6 +273,7 @@ options(
                                   'to the global site-packages')),
     ('envname=', 'e', ('The name of the environment to use')),
     ('with-invest', '', 'Install the current version of InVEST into the env'),
+    ('requirements=', 'r', 'Install requirements from a file'),
 ])
 def env(options):
     """
@@ -293,9 +308,15 @@ def after_install(options, home_dir):
 
     """
 
+    requirements_files = ['requirements.txt']
+    extra_reqs = getattr(options, 'requirements', None)
+    if extra_reqs is not None:
+        requirements_files.append(extra_reqs)
+
     pip_template = "    subprocess.call([join(home_dir, 'bin', 'pip'), 'install', '%s'])\n"
-    for pkgname in open('requirements.txt').read().rstrip().split('\n'):
-        install_string += pip_template % pkgname
+    for reqs_file in requirements_files:
+        for pkgname in open(reqs_file).read().rstrip().split('\n'):
+            install_string += pip_template % pkgname
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
     open(options.virtualenv.script_name, 'w').write(output)
@@ -529,6 +550,7 @@ def clean(options):
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
                      options.virtualenv.dest_dir,
                      'installer/darwin/temp',
+                     'api_env',
                      ]
     files_to_rm = [
         options.virtualenv.script_name,
@@ -623,17 +645,14 @@ def zip_source(options):
     # leave off the .zip filename here.  shutil.make_archive adds it based on
     # the format of the archive.
     archive_name = os.path.abspath(os.path.join('dist', 'InVEST-source-%s' % version))
-    dry('zip -r %s %s.zip' % ('invest-bin', archive_name),
-        shutil.make_archive, **{
-            'base_name': archive_name,
-            'format': 'zip',
-            'root_dir': source_dir,
-            'base_dir': '.'})
+    call_task('zip', args=[archive_name, source_dir])
 
 
 @task
 @cmdopts([
-    ('force-dev', '', 'Force development')
+    ('force-dev', '', 'Force development'),
+    ('skip-api', '', 'Skip building the API docs'),
+    ('skip-guide', '', "Skip building the User's Guide"),
 ])
 def build_docs(options):
     """
@@ -646,14 +665,36 @@ def build_docs(options):
     Requires make.
     """
 
-    if not _repo_is_valid(REPOS_DICT['users-guide'], options):
-        return
 
-    guide_dir = os.path.join('doc', 'users-guide')
-    latex_dir = os.path.join(guide_dir, 'build', 'latex')
-    sh('make html', cwd=guide_dir)
-    sh('make latex', cwd=guide_dir)
-    sh('make all-pdf', cwd=latex_dir)
+    invest_version = sh('python setup.py --version', capture=True).rstrip()
+    archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
+
+    # If the user has not provided the skip-guide flag, build the User's guide.
+    skip_guide = getattr(options, 'skip_guide', False)
+    if skip_guide is False:
+        if not _repo_is_valid(REPOS_DICT['users-guide'], options):
+            raise BuildFailure('User guide version is out of sync and force-dev not provided')
+        guide_dir = os.path.join('doc', 'users-guide')
+        latex_dir = os.path.join(guide_dir, 'build', 'latex')
+        sh('make html', cwd=guide_dir)
+        sh('make latex', cwd=guide_dir)
+        sh('make all-pdf', cwd=latex_dir)
+
+        archive_name = archive_template % 'userguide'
+        build_dir = os.path.join(guide_dir, 'build', 'html')
+        call_task('zip', args=[archive_name, build_dir])
+    else:
+        print "Skipping the User's Guide"
+
+    skip_api = getattr(options, 'skip_api', False)
+    api_env = os.path.join(os.getcwd(), 'api_env')
+    if skip_api is False:
+        sh('./jenkins/api-docs.sh -e %s' % api_env)
+        archive_name = archive_template % 'apidocs'
+
+        call_task('zip', args=[archive_name, 'build/sphinx/html'])
+    else:
+        print "Skipping the API docs"
 
 
 @task
@@ -900,3 +941,31 @@ def selftest():
     for taskname, _ in inspect.getmembers(module, istask):
         if taskname != 'selftest':
             subprocess.call(['paver', '--dry-run', taskname])
+
+@task
+@consume_args
+def zip(args):
+    """
+    Zip a folder and save it to an output zip file.
+
+    Usage: paver zip archivename dirname
+
+    Arguments:
+        archivename - the filename of the output archive
+        dirname - the name of the folder to archive.
+    """
+
+    if len(args) > 2:
+        raise BuildFailure('zip takes 2 arguments only.')
+
+    archive_name = args[0]
+    source_dir = args[1]
+
+    dry('zip -r %s %s.zip' % (source_dir, archive_name),
+        shutil.make_archive, **{
+            'base_name': archive_name,
+            'format': 'zip',
+            'root_dir': source_dir,
+            'base_dir': '.'})
+
+
