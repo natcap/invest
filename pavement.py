@@ -10,12 +10,15 @@ import warnings
 import zipfile
 import glob
 import textwrap
-import yaml
+import imp
+import subprocess
+import inspect
 
 import paver.svn
 import paver.path
 from paver.easy import *
 import virtualenv
+import yaml
 
 LOGGER = logging.getLogger('invest-bin')
 _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
@@ -48,7 +51,11 @@ class Repository(object):
         return json.load(open('versions.json'))[self.local_path]
 
     def at_known_rev(self):
-        return self.current_rev() == self.tracked_version()
+        tracked_version = self.format_rev(self.tracked_version())
+        return self.current_rev() == tracked_version
+
+    def format_rev(self, rev):
+        raise Exception
 
     def current_rev(self):
         raise Exception
@@ -59,9 +66,12 @@ class HgRepository(Repository):
     statedir = '.hg'
     cmd = 'hg'
 
-    def clone(self):
-        sh('hg clone %(url)s %(dest)s' % {'url': self.remote_url,
-                                          'dest': self.local_path})
+    def clone(self, rev=None):
+        if rev is None:
+            rev = self.tracked_version()
+        sh('hg clone %(url)s %(dest)s -u %(rev)s' % {'url': self.remote_url,
+                                                     'dest': self.local_path,
+                                                     'rev': rev})
 
     def pull(self):
         sh('hg pull -R %(dest)s' % {'dest': self.local_path})
@@ -75,6 +85,9 @@ class HgRepository(Repository):
             'dest': self.local_path, 'rev': rev, 'template': template},
             capture=True)
 
+    def format_rev(self, rev):
+        return self._format_log('{node}', rev=rev)
+
     def current_rev(self):
         return self._format_log('{node}')
 
@@ -84,8 +97,10 @@ class SVNRepository(Repository):
     statedir = '.svn'
     cmd = 'svn'
 
-    def clone(self):
-        paver.svn.checkout(self.remote_url, self.local_path)
+    def clone(self, rev=None):
+        if rev is None:
+            rev = self.tracked_version()
+        paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
 
     def pull(self):
         # svn is centralized, so there's no concept of pull without a checkout.
@@ -105,14 +120,20 @@ class SVNRepository(Repository):
             warnings.warn('SVN version info does not work when in a dry run')
             return 'Unknown'
 
+    def format_rev(self, rev):
+        return rev
+
 class GitRepository(Repository):
     tip = 'master'
     statedir = '.git'
     cmd = 'git'
 
-    def clone(self):
+    def clone(self, rev=None):
         sh('git checkout %(url)s %(dest)s' % {'url': self.remote_path,
                                               'dest': self.local_path})
+        if rev is None:
+            rev = self.tracked_version()
+            self.update(rev)
 
     def pull(self):
         sh('git fetch', cwd=self.local_path)
@@ -123,11 +144,15 @@ class GitRepository(Repository):
     def current_rev(self):
         return sh('git rev-parse --verify HEAD', cwd=self.local_path, capture=True)
 
+    def format_rev(self, rev):
+        return sh('git log --format=format:%H -1 %(rev)s' % {'rev': rev},
+                  capture=True, cwd=self.local_path)
+
 REPOS_DICT = {
-    'users-guide': HgRepository('doc/users-guide', 'http://code.google.com/p/invest-natcap.users-guide'),
+    'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
     'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
-    'invest-data': SVNRepository('data/invest-data', 'http://ncp-yamato.stanford.edu/svn/sample_repo'),
-    'invest-2': HgRepository('src/invest-natcap.default', 'http://code.google.com/p/invest-natcap'),
+    'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
+    'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
 }
 REPOS = REPOS_DICT.values()
 
@@ -141,6 +166,12 @@ def _repo_is_valid(repo, options):
     except AttributeError:
         # options.force_dev not specified as a cmd opt, defaulting to False.
         options.force_dev = False
+
+    if not os.path.exists(repo.local_path):
+        print "WARNING: Repository %s has not been cloned." % repo.local_path
+        print "To clone, run this command:"
+        print "    paver fetch %s" % repo.local_path
+        return False
 
     if not repo.at_known_rev() and options.force_dev is False:
         current_rev = repo.current_rev()
@@ -240,6 +271,9 @@ options(
 @cmdopts([
     ('system-site-packages', '', ('Give the virtual environment access '
                                   'to the global site-packages')),
+    ('envname=', 'e', ('The name of the environment to use')),
+    ('with-invest', '', 'Install the current version of InVEST into the env'),
+    ('requirements=', 'r', 'Install requirements from a file'),
 ])
 def env(options):
     """
@@ -255,15 +289,15 @@ def env(options):
         use_site_pkgs = False
     options.virtualenv.system_site_packages = use_site_pkgs
 
+    try:
+        options.virtualenv.dest_dir = options.envname
+        print "Using user-defined env name: %s" % options.envname
+    except AttributeError:
+        print "Using the default envname: %s" % options.virtualenv.dest_dir
+
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
     # We therefore make our own bootstrapping function calls here.
-    requirements = [
-        "numpy",
-        "scipy",
-        "pygeoprocessing==0.2.2",
-        "psycopg2",
-    ]
 
     install_string = """
 import os, subprocess
@@ -274,9 +308,15 @@ def after_install(options, home_dir):
 
     """
 
+    requirements_files = ['requirements.txt']
+    extra_reqs = getattr(options, 'requirements', None)
+    if extra_reqs is not None:
+        requirements_files.append(extra_reqs)
+
     pip_template = "    subprocess.call([join(home_dir, 'bin', 'pip'), 'install', '%s'])\n"
-    for pkgname in requirements:
-        install_string += pip_template % pkgname
+    for reqs_file in requirements_files:
+        for pkgname in open(reqs_file).read().rstrip().split('\n'):
+            install_string += pip_template % pkgname
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
     open(options.virtualenv.script_name, 'w').write(output)
@@ -285,16 +325,20 @@ def after_install(options, home_dir):
     # Calling via the shell so that virtualenv has access to environment
     # vars as needed.
     env_dirname = options.virtualenv.dest_dir
-    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(env_name)s"
+    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(env_name)s"
     bootstrap_opts = {
         "python": sys.executable,
         "bootstrap_file": options.virtualenv.script_name,
         "env_name": env_dirname,
+        "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
     }
-    err_code = sh(bootstrap_cmd % bootstrap_opts)
-    if err_code != 0:
-        print "ERROR: Environment setup failed.  See the log for details"
-        return
+    sh(bootstrap_cmd % bootstrap_opts)
+
+    try:
+        if options.with_invest is True:
+            sh('python setup.py install')
+    except AttributeError:
+        print "Skipping installation of natcap.invest"
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
@@ -397,7 +441,7 @@ def fetch(args):
             try:
                 target_rev = repo.tracked_version()
             except KeyError:
-                print 'ERROR: repo not tracked in versions.json: %s' % repo.local_path
+                print 'WARNING: repo not tracked in versions.json: %s' % repo.local_path
                 return 1
 
         repo.pull()
@@ -504,8 +548,9 @@ def clean(options):
     """
 
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
-                     options.virtualenv.env_name,
+                     options.virtualenv.dest_dir,
                      'installer/darwin/temp',
+                     'api_env',
                      ]
     files_to_rm = [
         options.virtualenv.script_name,
@@ -526,7 +571,7 @@ def clean(options):
             if os.path.exists(os.path.join(repodir, 'setup.py')):
                 # use setup.py for package directories.
                 sh(sys.executable + ' setup.py clean', cwd=repodir)
-        elif repodir.startswith('doc'):
+        elif repodir.startswith('doc') and os.path.exists(repodir):
             sh('make clean', cwd=repodir)
 
 
@@ -600,17 +645,14 @@ def zip_source(options):
     # leave off the .zip filename here.  shutil.make_archive adds it based on
     # the format of the archive.
     archive_name = os.path.abspath(os.path.join('dist', 'InVEST-source-%s' % version))
-    dry('zip -r %s %s.zip' % ('invest-bin', archive_name),
-        shutil.make_archive, **{
-            'base_name': archive_name,
-            'format': 'zip',
-            'root_dir': source_dir,
-            'base_dir': '.'})
+    call_task('zip', args=[archive_name, source_dir])
 
 
 @task
 @cmdopts([
-    ('force-dev', '', 'Force development')
+    ('force-dev', '', 'Force development'),
+    ('skip-api', '', 'Skip building the API docs'),
+    ('skip-guide', '', "Skip building the User's Guide"),
 ])
 def build_docs(options):
     """
@@ -623,14 +665,36 @@ def build_docs(options):
     Requires make.
     """
 
-    if not _repo_is_valid(REPOS_DICT['users-guide'], options):
-        return
 
-    guide_dir = os.path.join('doc', 'users-guide')
-    latex_dir = os.path.join(guide_dir, 'build', 'latex')
-    sh('make html', cwd=guide_dir)
-    sh('make latex', cwd=guide_dir)
-    sh('make all-pdf', cwd=latex_dir)
+    invest_version = sh('python setup.py --version', capture=True).rstrip()
+    archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
+
+    # If the user has not provided the skip-guide flag, build the User's guide.
+    skip_guide = getattr(options, 'skip_guide', False)
+    if skip_guide is False:
+        if not _repo_is_valid(REPOS_DICT['users-guide'], options):
+            raise BuildFailure('User guide version is out of sync and force-dev not provided')
+        guide_dir = os.path.join('doc', 'users-guide')
+        latex_dir = os.path.join(guide_dir, 'build', 'latex')
+        sh('make html', cwd=guide_dir)
+        sh('make latex', cwd=guide_dir)
+        sh('make all-pdf', cwd=latex_dir)
+
+        archive_name = archive_template % 'userguide'
+        build_dir = os.path.join(guide_dir, 'build', 'html')
+        call_task('zip', args=[archive_name, build_dir])
+    else:
+        print "Skipping the User's Guide"
+
+    skip_api = getattr(options, 'skip_api', False)
+    api_env = os.path.join(os.getcwd(), 'api_env')
+    if skip_api is False:
+        sh('./jenkins/api-docs.sh -e %s' % api_env)
+        archive_name = archive_template % 'apidocs'
+
+        call_task('zip', args=[archive_name, 'build/sphinx/html'])
+    else:
+        print "Skipping the API docs"
 
 
 @task
@@ -842,9 +906,13 @@ def _get_local_version():
     elif os.path.exists('.hg'):
         # we're in an hg repo, so we can just get the information.
         repo = HgRepository('.', '')
+        latesttagdistance = repo._format_log('{latesttagdistance}')
+        if latesttagdistance is None:
+            # When there's never been a tag.
+            latesttagdistance = repo._format_log('{rev}')
         repo_data = {
             'latesttag': repo._format_log('{latesttag}'),
-            'latesttagdistance': int(repo._format_log('{latesttagdistance}')),
+            'latesttagdistance': latesttagdistance,
             'branch': repo._format_log('{branch}'),
             'short_node': repo._format_log('{shortest(node, 6)}'),
         }
@@ -861,3 +929,43 @@ def _get_local_version():
     else:
         version = "%(latesttag)s.dev%(latesttagdistance)s-%(short_node)s" % repo_data
     return version
+
+@task
+def selftest():
+    """
+    Do a dry-run on all tasks found in this pavement file.
+    """
+    module = imp.load_source('pavement', __file__)
+    def istask(reference):
+        return isinstance(reference, paver.tasks.Task)
+    for taskname, _ in inspect.getmembers(module, istask):
+        if taskname != 'selftest':
+            subprocess.call(['paver', '--dry-run', taskname])
+
+@task
+@consume_args
+def zip(args):
+    """
+    Zip a folder and save it to an output zip file.
+
+    Usage: paver zip archivename dirname
+
+    Arguments:
+        archivename - the filename of the output archive
+        dirname - the name of the folder to archive.
+    """
+
+    if len(args) > 2:
+        raise BuildFailure('zip takes 2 arguments only.')
+
+    archive_name = args[0]
+    source_dir = args[1]
+
+    dry('zip -r %s %s.zip' % (source_dir, archive_name),
+        shutil.make_archive, **{
+            'base_name': archive_name,
+            'format': 'zip',
+            'root_dir': source_dir,
+            'base_dir': '.'})
+
+

@@ -4,6 +4,7 @@ import logging
 import os
 import collections
 import sys
+import gc
 
 import numpy
 cimport numpy
@@ -40,7 +41,7 @@ cdef double INF = numpy.inf
 cdef int N_BLOCK_ROWS = 6
 cdef int N_BLOCK_COLS = 6
 
-cdef class BlockCache:
+cdef class BlockCache_SWY:
     cdef numpy.int32_t[:,:] row_tag_cache
     cdef numpy.int32_t[:,:] col_tag_cache
     cdef numpy.int8_t[:,:] cache_dirty
@@ -92,6 +93,10 @@ cdef class BlockCache:
                     'make the runtime slow for other algorithms. %s',
                     band.GetDescription())
 
+    def __dealloc__(self):
+        self.band_list[:] = []
+        self.block_list[:] = []
+        self.update_list[:] = []
 
 
     #@cython.boundscheck(False)
@@ -328,7 +333,7 @@ cdef route_recharge(
 
     cache_dirty[:] = 0
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
         block_row_size, block_col_size,
         band_list, block_list, update_list, cache_dirty)
@@ -567,7 +572,7 @@ def calculate_flow_weights(
     block_list = [flow_direction_block, outflow_direction_block, outflow_weights_block]
     update_list = [False, True, True]
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
 
@@ -823,13 +828,13 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     cdef numpy.ndarray[numpy.npy_float64, ndim=4] dem_block = numpy.zeros(
       (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float64)
 
-    #the BlockCache object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
+    #the BlockCache_SWY object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
     band_list = [dem_band, flow_band]
     block_list = [dem_block, flow_block]
     update_list = [False, True]
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte)
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
     cdef int row_offset, col_offset
@@ -1062,7 +1067,7 @@ def distance_to_stream(
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = (
         numpy.zeros((N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte))
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size,
         block_col_size, band_list, block_list, update_list, cache_dirty)
 
@@ -1406,13 +1411,13 @@ def percent_to_sink(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] effect_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    #the BlockCache object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
+    #the BlockCache_SWY object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
     block_list = [sink_pixels_block, export_rate_block, outflow_direction_block, outflow_weights_block, effect_block]
     band_list = [sink_pixels_band, export_rate_band, outflow_direction_band, outflow_weights_band, effect_band]
     update_list = [False, False, False, False, True]
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte)
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
     cdef float outflow_weight, neighbor_outflow_weight
@@ -1565,7 +1570,7 @@ cdef flat_edges(
 
     block_col_size, block_row_size = dem_band.GetBlockSize()
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size,
         block_col_size, band_list, block_list, update_list, cache_dirty)
 
@@ -1716,7 +1721,7 @@ cdef label_flats(dem_uri, deque[int] &low_edges, labels_uri):
 
     block_col_size, block_row_size = dem_band.GetBlockSize()
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size,
         block_col_size, band_list, block_list, update_list, cache_dirty)
 
@@ -1857,7 +1862,7 @@ cdef clean_high_edges(labels_uri, deque[int] &high_edges):
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte)
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size,
         block_col_size, band_list, block_list, update_list, cache_dirty)
 
@@ -2011,7 +2016,7 @@ cdef away_from_higher(
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte)
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size,
         block_col_size, band_list, block_list, update_list, cache_dirty)
 
@@ -2183,7 +2188,7 @@ cdef towards_lower(
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte)
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size,
         block_col_size, band_list, block_list, update_list, cache_dirty)
 
@@ -2408,13 +2413,13 @@ def flow_direction_inf_masked_flow_dirs(
     cdef numpy.ndarray[numpy.npy_int32, ndim=4] label_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int32)
 
-    #the BlockCache object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
+    #the BlockCache_SWY object needs parallel lists of bands, blocks, and boolean tags to indicate which ones are updated
     band_list = [flat_mask_band, flow_band, label_band]
     block_list = [flat_mask_block, flow_block, label_block]
     update_list = [False, True, False]
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros((N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte)
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size, block_col_size, band_list, block_list, update_list, cache_dirty)
 
     cdef int row_offset, col_offset
@@ -2598,7 +2603,7 @@ cdef find_outlets(dem_uri, flow_direction_uri, deque[int] &outlet_deque):
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] cache_dirty = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.byte)
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols, block_row_size,
         block_col_size, band_list, block_list, update_list, cache_dirty)
 
@@ -2693,9 +2698,10 @@ def resolve_flats(
 
 
 def calculate_recharge(
-    precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
-    alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri, recharge_avail_uri,
-    r_sum_avail_uri, aet_uri, vri_uri):
+    precip_uri_list, et0_uri_list, qfi_uri_list, flow_dir_uri, outflow_weights_uri,
+    outflow_direction_uri, dem_uri, lulc_uri, kc_lookup, alpha_m, beta_i, gamma,
+    stream_uri, recharge_uri, recharge_avail_uri, r_sum_avail_uri,
+    aet_uri, kc_uri):
 
     cdef deque[int] outlet_cell_deque
 
@@ -2724,7 +2730,9 @@ def calculate_recharge(
         outlet_cell_deque)
 
 
-def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_pour_uri):
+def calculate_r_sum_avail_pour(
+        r_sum_avail_uri, outflow_weights_uri, outflow_direction_uri,
+        r_sum_avail_pour_uri):
     """Calculate how r_sum_avail r_sum_avail_pours directly into its neighbors"""
 
     out_dir = os.path.dirname(r_sum_avail_uri)
@@ -2785,7 +2793,7 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_
     update_list = [False, False, False, True]
     cache_dirty[:] = 0
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
         block_row_size, block_col_size,
         band_list, block_list, update_list, cache_dirty)
@@ -2861,6 +2869,7 @@ def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_
                     cache_dirty[row_index, col_index] = 1
     block_cache.flush_cache()
 
+
 @cython.wraparound(False)
 @cython.cdivision(True)
 def route_sf(
@@ -2874,7 +2883,7 @@ def route_sf(
 
     cdef deque[int] cells_to_process
     find_outlets(
-        dem_uri, outflow_direction_uri, cells_to_process)
+    find_outlets(dem_uri, outflow_direction_uri, cells_to_process)
 
     cdef c_set[int] cells_in_queue
     for cell in cells_to_process:
@@ -2970,7 +2979,7 @@ def route_sf(
     update_list = [False] * 6 + [True] * 2
     cache_dirty[:] = 0
 
-    cdef BlockCache block_cache = BlockCache(
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
         block_row_size, block_col_size,
         band_list, block_list, update_list, cache_dirty)
@@ -3002,6 +3011,9 @@ def route_sf(
 
     cdef time_t last_time, current_time
     time(&last_time)
+    LOGGER.info(
+                'START cells_to_process on SF route size: %d',
+                cells_to_process.size())
     while cells_to_process.size() > 0:
         flat_index = cells_to_process.front()
         cells_to_process.pop_front()
@@ -3142,6 +3154,9 @@ def route_sf(
                             neighbor_sf = sf_block[
                                 neighbor_row_index, neighbor_col_index,
                                 neighbor_row_block_offset, neighbor_col_block_offset]
+                            block_cache.update_cache(
+                                global_row, global_col, &row_index, &col_index,
+                                &row_block_offset, &col_block_offset)
                             r_sum_avail = r_sum_avail_block[
                                 row_index, col_index, row_block_offset, col_block_offset]
                             if neighbor_sf > neighbor_sf_down:
@@ -3150,9 +3165,9 @@ def route_sf(
                                     outflow_weight)
                                 sys.exit(-1)
                             sf_down_frac = outflow_weight * r_sum_avail / neighbor_r_sum_avail_pour
-                            if sf_down_frac > 1.0:
+                            if sf_down_frac > 1.0: #can happen because of roundoff error
                                 sf_down_frac = 1.0
-                            sf_down_sum +=  (neighbor_sf_down - neighbor_sf) * sf_down_frac
+                            sf_down_sum +=  outflow_weight * (neighbor_sf_down - neighbor_sf) * sf_down_frac
                             if sf_down_sum < 0:
                                 pass#LOGGER.error(sf_down_sum)
 

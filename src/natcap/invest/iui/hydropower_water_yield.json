@@ -201,7 +201,7 @@
           "id": "seasonality_constant",
           "args_id": "seasonality_constant",
           "type": "text",
-          "label": "Seasonality Factor",
+          "label": "Z parameter",
           "defaultValue": "5",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]+$",

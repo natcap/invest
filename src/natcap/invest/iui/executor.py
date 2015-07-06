@@ -14,6 +14,8 @@ import codecs
 import errno
 import tempfile
 from types import StringType
+import locale
+from importlib import import_module
 
 import natcap.invest
 import natcap.invest.iui
@@ -319,6 +321,7 @@ class Executor(threading.Thread):
             ('OS', platform.platform()),
             ('Processor architecture', platform.machine()),
             ('FS encoding', sys.getfilesystemencoding()),
+            ('Preferred encoding', locale.getpreferredencoding()),
         ]
 
         python_details = [
@@ -473,6 +476,10 @@ class Executor(threading.Thread):
                # Model name is name of module file, minus the extension
                 model_name = os.path.splitext(os.path.basename(module))[0]
                 LOGGER.debug('Loading %s from %s', model_name, model)
+            elif getattr(sys, 'frozen', False) and getattr(sys, '_MEIPASS', False):
+                model = import_module(module)
+                model_name = os.path.splitext(os.path.basename(module))[0]
+                LOGGER.debug('Loading %s in frozen environment', model)
             else:
                 LOGGER.debug('PATH: %s', sys.path)
                 module_list = module.split('.')

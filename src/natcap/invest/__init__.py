@@ -10,11 +10,11 @@ import sys
 import hashlib
 import json
 import distutils.version
-import build_utils
+import imp
 
 try:
     import pygeoprocessing
-    REQUIRED_PYGEOPROCESSING_VERSION = '0.2.1'
+    REQUIRED_PYGEOPROCESSING_VERSION = '0.3.0a3'
     if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
             distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
         raise Exception(
@@ -24,10 +24,24 @@ try:
 except ImportError:
     pass
 
-try:
-    __version__ = build_utils.invest_version()
-except:
-    __version__ = 'dev'
+# The __version__ attribute MUST be set to 'dev'.  It is changed automatically
+# when the package is built.  The build_attrs attribute is set at the same time,
+# but it instead contains a list of attributes of __init__.py that are related
+# to the build.
+__version__ = 'dev'
+build_data = None
+
+if __version__ == 'dev' and build_data == None:
+    versioning = imp.load_source(
+        'versioning',
+        os.path.join(os.path.dirname(__file__), 'versioning.py'))
+    __version__ = versioning.get_pep440(branch=False)
+    build_data = versioning.build_data()
+    for key, value in sorted(build_data.iteritems()):
+        setattr(sys.modules[__name__], key, value)
+
+    del sys.modules[__name__].key
+    del sys.modules[__name__].value
 
 def is_release():
     """Returns a boolean indicating whether this invest release is actually a
@@ -97,6 +111,7 @@ def log_model(model_name, model_version=None):
             'release': platform.release(),
             'full_platform_string': platform.platform(),
             'fs_encoding': sys.getfilesystemencoding(),
+            'preferred_encoding': locale.getdefaultlocale()[1],
             'default_language': locale.getdefaultlocale()[0],
             'python': {
                 'version': platform.python_version(),
