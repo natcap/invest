@@ -142,21 +142,6 @@
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', and 'Kc'."
         },
         {
-          "id": "cn_table_uri",
-          "args_id": "cn_table_uri",
-          "type": "file",
-          "label": "Curve Number Table (CSV)",
-          "defaultValue": "../SeasonalWaterYield/input/cn.csv",
-          "required": true,
-          "validateAs": {
-            "type": "CSV",
-            "fieldsExist": [
-              "lucode",
-              "cn"
-            ]
-          }
-        },
-        {
           "id": "rain_events_table_uri",
           "args_id": "rain_events_table_uri",
           "type": "file",

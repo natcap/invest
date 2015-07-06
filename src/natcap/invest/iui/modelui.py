@@ -1,5 +1,4 @@
 import sys
-import imp
 import os
 import platform
 import time
@@ -12,7 +11,6 @@ from PyQt4 import QtGui, QtCore
 
 import base_widgets
 import executor
-import iui_validator
 
 CMD_FOLDER = '.'
 
@@ -73,8 +71,6 @@ class ModelUI(base_widgets.ExecRoot):
     def addLinks(self):
         links = []
         try:
-            import natcap.invest
-            from natcap.invest import build_utils
             architecture = platform.architecture()[0]
             links.append('InVEST Version %s (%s)' % (natcap.invest.__version__,
                 architecture))
