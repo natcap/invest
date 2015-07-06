@@ -5,6 +5,7 @@ from itertools import product
 
 import pygeoprocessing
 
+import natcap.invest as invest
 from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \

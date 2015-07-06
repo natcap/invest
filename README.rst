@@ -132,6 +132,8 @@ look like this: ::
 Developing InVEST
 =================
 
+To use `python setup.py develop` during development, you must symbolically link the src/natcap directory to the top-level directory of the repository with `ln -s src/natcap natcap` (from the top-level directory).
+
 
 Contributing to Development
 ===========================

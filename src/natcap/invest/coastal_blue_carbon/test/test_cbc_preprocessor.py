@@ -1,3 +1,7 @@
+'''
+python -m unittest test_cbc_preprocessor.TestCBCPreprocessor
+'''
+
 import unittest
 import os
 import pprint
@@ -5,6 +9,8 @@ import tempfile
 
 import gdal
 
+import natcap.invest as invest
+from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
 from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
 from natcap.invest.coastal_blue_carbon.utilities.raster_factory import RasterFactory
 from natcap.invest.coastal_blue_carbon.cbc_preprocessor import *
