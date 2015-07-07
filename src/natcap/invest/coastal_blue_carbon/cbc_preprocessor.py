@@ -194,14 +194,14 @@ def _create_transition_table(vars_dict):
         transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = top_dict
 
     if vars_dict['results_suffix'] != '':
-        fname = 'transition_' + vars_dict['results_suffix'] + '.csv'
+        fname = 'transitions_' + vars_dict['results_suffix'] + '.csv'
     else:
-        fname = 'transition.csv'
+        fname = 'transitions.csv'
     fpath = os.path.join(vars_dict['workspace_dir'], 'outputs', fname)
     with open(fpath, 'wb') as csv_file:
-        fieldnames = ['lulc-classes'] + lulc_class_list
+        fieldnames = ['lulc-class'] + lulc_class_list
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         for lulc_class in transition_by_lulc_class_dict.keys():
-            row = dict([('lulc-classes', lulc_class)] + transition_by_lulc_class_dict[lulc_class].items())
+            row = dict([('lulc-class', lulc_class)] + transition_by_lulc_class_dict[lulc_class].items())
             writer.writerow(row)

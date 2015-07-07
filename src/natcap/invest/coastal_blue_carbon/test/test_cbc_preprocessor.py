@@ -71,7 +71,7 @@ class TestCBCPreprocessor(unittest.TestCase):
     def test_cbc_preprocessor(self):
         cbc_preprocessor.execute(self.args)
         transition_dict = get_lookup_from_csv(
-            os.path.join(self.workspace_dir, 'outputs', 'transition.csv'), 'lulc-classes')
+            os.path.join(self.workspace_dir, 'outputs', 'transitions.csv'), 'lulc-class')
         assert(transition_dict['seagrass']['seagrass'] == 'accumulation')
 
     def tearDown(self):
@@ -81,7 +81,7 @@ class TestCBCPreprocessor(unittest.TestCase):
 
         # remove transition.csv
         transition_table_uri = os.path.join(
-            self.workspace_dir, 'outputs', 'transition.csv')
+            self.workspace_dir, 'outputs', 'transitions.csv')
         if os.path.isfile(transition_table_uri):
             os.remove(transition_table_uri)
 
