@@ -11,15 +11,11 @@ env/
 build/
 develop-eggs/
 dist/
-downloads/
 eggs/
 lib/
 lib64/
-parts/
 sdist/
-var/
 natcap.invest.egg-info/
-.installed.cfg
 .egg
 
 # Unit test / coverage reports
