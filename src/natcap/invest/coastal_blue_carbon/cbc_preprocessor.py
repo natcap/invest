@@ -5,7 +5,6 @@ from itertools import product
 
 import pygeoprocessing
 
-import natcap.invest as invest
 from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -19,7 +18,7 @@ def execute(args):
     Args:
         workspace_dir (string): desc
         results_suffix (string): desc
-        lulc_lookup_table (string): desc
+        lulc_lookup_uri (string): desc
         lulc_snapshot_list (list): desc
 
     Example Args::
@@ -27,17 +26,20 @@ def execute(args):
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
             'results_suffix': '',
-            'lulc_lookup_table': 'path/to/lookup.csv',
+            'lulc_lookup_uri': 'path/to/lookup.csv',
             'lulc_snapshot_list': ['path/to/raster1', 'path/to/raster2', ...]
         }
     '''
+    LOGGER.info('Beginning execution of Coastal Blue Carbon model...')
     vars_dict = _get_inputs(args)
     vars_dict = _preprocess_data(vars_dict)
     _create_transition_table(vars_dict)
+    LOGGER.info('Coastal Blue Carbon model execution complete.')
 
 
 def _get_inputs(args):
-    vars_dict = {}
+    LOGGER.info('Getting inputs...')
+    vars_dict = dict(args.items())
     # ...
     vars_dict = _get_derivative_inputs(vars_dict)
     _validate_inputs(vars_dict)
@@ -62,11 +64,13 @@ def _get_derivative_inputs(vars_dict):
     vars_dict['lulc_lookup_dict'] = lulc_lookup_dict
     vars_dict['code_to_lulc_dict'] = code_to_lulc_dict
     vars_dict['lulc_to_code_dict'] = lulc_to_code_dict
+    vars_dict['lulc_class_list'] = lulc_to_code_dict.keys()
 
     return vars_dict
 
 
 def _validate_inputs(vars_dict):
+    LOGGER.info('Validating inputs...')
     lulc_snapshot_list = vars_dict['lulc_snapshot_list']
     lulc_lookup_dict = vars_dict['lulc_lookup_dict']
 
@@ -102,9 +106,10 @@ def _validate_inputs(vars_dict):
             "At least one raster value is not in the lookup table")
 
     # assert workspace exists, if not, make directory
-    if not os.path.isdir(vars_dict['workspace_dir']):
+    output_dir = os.path.join(vars_dict['workspace_dir'], 'outputs')
+    if not os.path.isdir(output_dir):
         try:
-            os.makedirs(vars_dict['workspace_dir'])
+            os.makedirs(output_dir)
         except:
             LOGGER.error("Cannot create Workspace Directory")
             raise OSError
@@ -123,7 +128,6 @@ def _preprocess_data(vars_dict):
         transition_set = set(transition_list)
 
         return transition_set
-
 
     def _mark_transition_type(lookup_dict, transition_matrix_dict, lulc_from, lulc_to):
         if (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
@@ -147,6 +151,7 @@ def _preprocess_data(vars_dict):
 
         return transition_matrix_dict
 
+    LOGGER.info('Processing data...')
     # Transition Matrix
     lulc_lookup_dict = vars_dict['lulc_lookup_dict']
     p = product(lulc_lookup_dict.keys(), repeat=2)
@@ -175,6 +180,8 @@ def _preprocess_data(vars_dict):
 def _create_transition_table(vars_dict):
     '''creates a transition table representing the lulc transition effect on
     carbon emissions or sequestration.'''
+
+    LOGGER.info('Creating transition table as output...')
     lulc_class_list = vars_dict['lulc_class_list']
     transition_matrix_dict = vars_dict['transition_matrix_dict']
     code_to_lulc_dict = vars_dict['code_to_lulc_dict']
