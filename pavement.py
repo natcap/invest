@@ -51,7 +51,7 @@ class Repository(object):
         return json.load(open('versions.json'))[self.local_path]
 
     def at_known_rev(self):
-        return self.current_rev() == self.tracked_version()
+        return self.current_rev() == self.tracked_rev()
 
     def current_rev(self):
         raise Exception
@@ -79,7 +79,7 @@ class HgRepository(Repository):
     def _format_log(self, template='', rev='.'):
         return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
             'dest': self.local_path, 'rev': rev, 'template': template},
-            capture=True)
+            capture=True).rstrip()
 
     def current_rev(self):
         return self._format_log('{node}')
@@ -136,7 +136,8 @@ class GitRepository(Repository):
         sh('git checkout %(rev)s' % {'rev': rev}, cwd=self.local_path)
 
     def current_rev(self):
-        return sh('git rev-parse --verify HEAD', cwd=self.local_path, capture=True)
+        return sh('git rev-parse --verify HEAD', cwd=self.local_path,
+                  capture=True).rstrip()
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
@@ -1193,6 +1194,7 @@ def jenkins_installer():
         'system_site_packages': True,
         'clear': True,
         'with_invest': True,
+        'envname': 'release_env',
     })
 
     # call the
