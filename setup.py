@@ -10,7 +10,6 @@ For other commands, try `python setup.py --help-commands`
 
 import os
 import sys
-import imp
 
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
@@ -40,8 +39,6 @@ try:
     USE_CYTHON = True
 except ImportError:
     USE_CYTHON = False
-
-versioning = imp.load_source('versioning', 'src/natcap/invest/versioning.py')
 
 readme = open('README.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
