@@ -332,13 +332,13 @@ def after_install(options, home_dir):
     if extra_reqs is not None:
         requirements_files.append(extra_reqs)
 
-    pip_template = "    subprocess.call([join(home_dir, 'bin', 'pip'), 'install', '%s'])\n"
+    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '%s'])\n"
     for reqs_file in requirements_files:
         for pkgname in open(reqs_file).read().rstrip().split('\n'):
             install_string += pip_template % pkgname
     try:
         if options.with_invest is True:
-            install_string += "    subprocess.call([join(home_dir, 'bin', 'python'), 'setup.py', 'install'])\n"
+            install_string += "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'install'])\n"
     except AttributeError:
         print "Skipping installation of natcap.invest"
 
