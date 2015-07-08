@@ -135,8 +135,8 @@ class GitRepository(Repository):
     cmd = 'git'
 
     def clone(self, rev=None):
-        sh('git clone %(url)s %(dest)s' % {'url': self.remote_url,
-                                              'dest': self.local_path})
+        sh('git clone {url} {dest}'.format(**{'url': self.remote_url,
+                                              'dest': self.local_path}))
         if rev is None:
             rev = self.tracked_version()
             self.update(rev)
@@ -152,7 +152,7 @@ class GitRepository(Repository):
                   capture=True).rstrip()
 
     def format_rev(self, rev):
-        return sh('git log --format=format:%H -1 %(rev)s' % {'rev': rev},
+        return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
                   capture=True, cwd=self.local_path)
 
 REPOS_DICT = {
@@ -695,7 +695,7 @@ def zip_source(options):
 @task
 @cmdopts([
     ('force-dev', '', 'Force development'),
-    ('version', '-v', 'The version of the documentation to build')
+    ('version', '-v', 'The version of the documentation to build'),
     ('skip-api', '', 'Skip building the API docs'),
     ('skip-guide', '', "Skip building the User's Guide"),
 ])
