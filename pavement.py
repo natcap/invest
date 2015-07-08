@@ -53,7 +53,7 @@ class Repository(object):
     def at_known_rev(self):
         return self.current_rev() == self.tracked_version()
 
-    def current_rev(self):
+    def current_rev(self, convert=True):
         raise Exception
 
 
@@ -64,7 +64,7 @@ class HgRepository(Repository):
 
     def clone(self, rev=None):
         if rev is None:
-            rev = self.tracked_version()
+            rev = self.tracked_version(convert=False)
         sh('hg clone %(url)s %(dest)s -u %(rev)s' % {'url': self.remote_url,
                                                      'dest': self.local_path,
                                                      'rev': rev})
@@ -84,8 +84,10 @@ class HgRepository(Repository):
     def current_rev(self):
         return self._format_log('{node}')
 
-    def tracked_version(self):
+    def tracked_version(self, convert=True):
         json_version = Repository.tracked_version(self)
+        if convert is False:
+            return json.version
         return self._format_log(template='{node}', rev=json_version)
 
 
