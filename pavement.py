@@ -147,7 +147,6 @@ class GitRepository(Repository):
 
     def current_rev(self):
         return sh('git rev-parse --verify HEAD', cwd=self.local_path,
-                  capture=True).rstrip()
 
     def format_rev(self, rev):
         return sh('git log --format=format:%H -1 %(rev)s' % {'rev': rev},
@@ -686,8 +685,6 @@ def zip_source(options):
     # leave off the .zip filename here.  shutil.make_archive adds it based on
     # the format of the archive.
     archive_name = os.path.abspath(os.path.join('dist', 'InVEST-source-%s' % version))
-    dry('zip -r %s %s.zip' % ('invest-bin', archive_name),
-        shutil.make_archive, **{
     call_task('zip', args=[archive_name, source_dir])
 
 
@@ -708,14 +705,9 @@ def build_docs(options):
     Requires make and sed.
     """
 
-    if not _repo_is_valid(REPOS_DICT['users-guide'], options):
-        return
 
     invest_version = sh('python setup.py --version', capture=True).rstrip()
-        options.version
-    except AttributeError:
     archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
-    version = options.version
 
     # If the user has not provided the skip-guide flag, build the User's guide.
     skip_guide = getattr(options, 'skip_guide', False)
@@ -966,6 +958,7 @@ def _build_fpm(version, bindir, pkg_type):
         ' %(bindir)s') % options
     sh(fpm_command)
 
+
 def _build_nsis(version, bindir, arch):
     """
     Build an NSIS installer.
@@ -1184,19 +1177,19 @@ def collect_release_files():
 
     for installer in installer_files:
         new_file = os.path.join(dist_dir, os.path.basename(installer))
-        dry('cp %s %s' % (installer, new_file),
-            shutil.copyfile, installer, new_file)
-            'root_dir': source_dir,
-            'base_dir': '.'})
+    dry('zip -r %s %s.zip' % (source_dir, archive_name),
+        shutil.make_archive, **{
+            'base_name': archive_name,
+            os.remove, installer)
 
     # copy HTML documentation into the new folder.
     html_docs = os.path.join('doc', 'users-guide', 'build', 'html')
-    pdf = glob.glob(os.path.join('doc', 'users-guide', 'build',
-                                 'latex', '*.pdf'))[0]
+            'format': 'zip',
+            'root_dir': source_dir,
     out_dir = os.path.join(dist_dir, 'documentation')
     if os.path.exists(html_docs):
         if os.path.exists(out_dir):
-            dry('rm -r %s' % out_dir,
+            'base_dir': '.'})
                 shutil.rmtree, out_dir)
         dry('cp -r %s %s' % (html_docs, out_dir),
             shutil.copytree, html_docs, out_dir)
