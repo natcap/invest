@@ -1083,6 +1083,7 @@ def selftest():
     ('arch=', 'a', 'The architecture of the binaries.  Defaults to the sustem arch.'),
     ('nodata', '', "Don't build the data zipfiles"),
     ('nodocs', '', "Don't build the documentation"),
+    ('noinstaller', '', "Don't build the installer"),
     ('nobin', '', "Don't build the binaries"),
 ])
 def build(options):
@@ -1131,19 +1132,24 @@ def build(options):
         else:
             print 'Skipping task %s' % task_base
 
-    # The installer task has its own parameter defaults.  Let the
-    # build_installer task handle most of them.  We can pass in some of the
-    # parameters, though.
-    installer_options = {
-        'bindir': os.path.join('exe', 'dist', 'invest_dist'),
-    }
-    for arg in ['insttype', 'arch']:
-        try:
-            installer_options[arg] = getattr(options, arg)
-        except AttributeError:
-            # let the build_installer task handle this default.
-            pass
-    call_task('build_installer', options=installer_options)
+
+    if getattr(options, 'noinstaller', False) is True:
+        # The installer task has its own parameter defaults.  Let the
+        # build_installer task handle most of them.  We can pass in some of the
+        # parameters, though.
+        installer_options = {
+            'bindir': os.path.join('exe', 'dist', 'invest_dist'),
+        }
+        for arg in ['insttype', 'arch']:
+            try:
+                installer_options[arg] = getattr(options, arg)
+            except AttributeError:
+                # let the build_installer task handle this default.
+                pass
+        call_task('build_installer', options=installer_options)
+    else:
+        print 'Skipping installer'
+
     call_task('collect_release_files')
 
 
