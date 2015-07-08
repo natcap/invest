@@ -16,7 +16,8 @@ def iui_dir():
     """
     if getattr(sys, 'frozen', False):
         # we are running in a |PyInstaller| bundle
-        basedir = os.path.dirame(sys.executable)
+        basedir = os.path.join(
+            os.path.dirname(sys.executable), 'natcap', 'invest', 'iui')
     else:
         # we are running in a normal Python environment
         basedir = os.path.dirname(__file__)
