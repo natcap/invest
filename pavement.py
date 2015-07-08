@@ -317,6 +317,11 @@ def after_install(options, home_dir):
     for reqs_file in requirements_files:
         for pkgname in open(reqs_file).read().rstrip().split('\n'):
             install_string += pip_template % pkgname
+    try:
+        if options.with_invest is True:
+            install_string += "    subprocess.call([join(home_dir, 'bin', 'python'), 'setup.py', 'install'])\n"
+    except AttributeError:
+        print "Skipping installation of natcap.invest"
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
     open(options.virtualenv.script_name, 'w').write(output)
@@ -334,11 +339,6 @@ def after_install(options, home_dir):
     }
     sh(bootstrap_cmd % bootstrap_opts)
 
-    try:
-        if options.with_invest is True:
-            sh('python setup.py install')
-    except AttributeError:
-        print "Skipping installation of natcap.invest"
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
