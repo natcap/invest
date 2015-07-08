@@ -224,6 +224,7 @@ setup(
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,
+    cmdclass=CMDCLASS,
     package_data={
         'natcap.invest.iui': [
             '*.png',
