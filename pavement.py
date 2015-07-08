@@ -51,7 +51,11 @@ class Repository(object):
         return json.load(open('versions.json'))[self.local_path]
 
     def at_known_rev(self):
-        return self.current_rev() == self.tracked_version()
+        tracked_version = self.format_rev(self.tracked_version())
+        return self.current_rev() == tracked_version
+
+    def format_rev(self, rev):
+        raise Exception
 
     def current_rev(self):
         raise Exception
@@ -80,6 +84,9 @@ class HgRepository(Repository):
         return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
             'dest': self.local_path, 'rev': rev, 'template': template},
             capture=True).rstrip()
+
+    def format_rev(self, rev):
+        return self._format_log('{node}', rev=rev)
 
     def current_rev(self):
         return self._format_log('{node}')
@@ -117,6 +124,9 @@ class SVNRepository(Repository):
             warnings.warn('SVN version info does not work when in a dry run')
             return 'Unknown'
 
+    def format_rev(self, rev):
+        return rev
+
 class GitRepository(Repository):
     tip = 'master'
     statedir = '.git'
@@ -137,7 +147,10 @@ class GitRepository(Repository):
 
     def current_rev(self):
         return sh('git rev-parse --verify HEAD', cwd=self.local_path,
-                  capture=True).rstrip()
+
+    def format_rev(self, rev):
+        return sh('git log --format=format:%H -1 %(rev)s' % {'rev': rev},
+                  capture=True, cwd=self.local_path)
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
@@ -283,6 +296,7 @@ options(
     ('clear', '', 'Clear out the non-root install and start from scratch.'),
     ('envname=', 'e', ('The name of the environment to use')),
     ('with-invest', '', 'Install the current version of InVEST into the env'),
+    ('requirements=', 'r', 'Install requirements from a file'),
 ])
 def env(options):
     """
@@ -573,7 +587,7 @@ def clean(options):
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
                      options.virtualenv.dest_dir,
                      'installer/darwin/temp',
-                     'invest-3-x86',
+                     'api_env',
                      'exe/dist',
                      'exe/build',
                      ]
@@ -671,18 +685,14 @@ def zip_source(options):
     # leave off the .zip filename here.  shutil.make_archive adds it based on
     # the format of the archive.
     archive_name = os.path.abspath(os.path.join('dist', 'InVEST-source-%s' % version))
-    dry('zip -r %s %s.zip' % ('invest-bin', archive_name),
-        shutil.make_archive, **{
-            'base_name': archive_name,
-            'format': 'zip',
-            'root_dir': source_dir,
-            'base_dir': '.'})
+    call_task('zip', args=[archive_name, source_dir])
 
 
 @task
 @cmdopts([
     ('force-dev', '', 'Force development'),
-    ('version', '-v', 'The version of the documentation to build')
+    ('skip-api', '', 'Skip building the API docs'),
+    ('skip-guide', '', "Skip building the User's Guide"),
 ])
 def build_docs(options):
     """
@@ -695,29 +705,40 @@ def build_docs(options):
     Requires make and sed.
     """
 
-    if not _repo_is_valid(REPOS_DICT['users-guide'], options):
-        return
 
-    try:
-        options.version
-    except AttributeError:
-        options.version = _invest_version()
-    version = options.version
+    invest_version = sh('python setup.py --version', capture=True).rstrip()
+    archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
 
-    guide_dir = os.path.join('doc', 'users-guide')
-    latex_dir = os.path.join(guide_dir, 'build', 'latex')
-    source_dir = os.path.join(guide_dir, 'source')
-    #Revert all files that use the +VERSION+ tag in them to their
+    # If the user has not provided the skip-guide flag, build the User's guide.
+    skip_guide = getattr(options, 'skip_guide', False)
+    if skip_guide is False:
+        if not _repo_is_valid(REPOS_DICT['users-guide'], options):
+            raise BuildFailure('User guide version is out of sync and force-dev not provided')
+        guide_dir = os.path.join('doc', 'users-guide')
+        latex_dir = os.path.join(guide_dir, 'build', 'latex')
+        sh('make html', cwd=guide_dir)
+        sh('make latex', cwd=guide_dir)
+        sh('make all-pdf', cwd=latex_dir)
+
+        archive_name = archive_template % 'userguide'
+        build_dir = os.path.join(guide_dir, 'build', 'html')
+        call_task('zip', args=[archive_name, build_dir])
+    else:
+        print "Skipping the User's Guide"
+
+    skip_api = getattr(options, 'skip_api', False)
+    api_env = os.path.join(os.getcwd(), 'api_env')
+    if skip_api is False:
     #original state in case they were modified in a previous run
     for file in ['conf.py', 'index.rst', 'carbonstorage.rst',
                     'managed_timber_production_model.rst']:
-        sh("hg revert ./%s --no-backup" % file, cwd=source_dir)
-        #nobody likes 'tip' as the version name
+        sh('./jenkins/api-docs.sh -e %s' % api_env)
+        archive_name = archive_template % 'apidocs'
         sh("sed -i -e 's/+VERSION+/" + version + "/g' ./%s" % file, cwd=source_dir)
 
-    sh('make html', cwd=guide_dir)
-    sh('make latex', cwd=guide_dir)
-    sh('make all-pdf', cwd=latex_dir)
+        call_task('zip', args=[archive_name, 'build/sphinx/html'])
+    else:
+        print "Skipping the API docs"
 
 
 @task
@@ -841,7 +862,6 @@ def build_bin():
 
     dry('cp -r %s %s' % (bindir, invest_dist),
         shutil.copytree, bindir, invest_dist)
-
 
 @task
 @cmdopts([
@@ -1001,7 +1021,6 @@ def _build_nsis(version, bindir, arch):
     dry('rm -r %s' % nsis_bindir,
         shutil.rmtree, nsis_bindir)
 
-
 def _build_dmg(version, bindir):
     bindir = os.path.abspath(bindir)
     sh('./build_dmg.sh %s %s' % (version, bindir), cwd='installer/darwin')
@@ -1053,7 +1072,7 @@ def selftest():
             subprocess.call(['paver', '--dry-run', taskname])
 
 @task
-@cmdopts([
+@consume_args
     ('force-dev', '', 'Allow development versions of repositories to be used.'),
     ('insttype=', 'i', ('The type of installer to build.  Defaults depend on '
                         'the current system: Windows=nsis, Mac=dmg, Linux=deb. '
@@ -1063,16 +1082,16 @@ def selftest():
     ('nodocs', '', "Don't build the documentation"),
     ('nobin', '', "Don't build the binaries"),
 ])
-def build(options):
+def zip(args):
     """
-    Build the installer, start-to-finish.  Includes binaries, docs, data, installer.
+    Zip a folder and save it to an output zip file.
 
-    If no extra options are specified, docs, data and binaries will all be generated.
+    Usage: paver zip archivename dirname
     Any missing and needed repositories will be cloned.
     """
 
-    for repo in REPOS_DICT.values():
-        if not os.path.exists(repo.local_path):
+    Arguments:
+        archivename - the filename of the output archive
             repo.clone()
             repo.update(repo.tracked_version())
 
@@ -1092,7 +1111,7 @@ def build(options):
 
 
     # Call these tasks unless the user requested not to.
-    defaults = [
+        dirname - the name of the folder to archive.
         ('nodata', False),
         ('nobin', False),
         ('nodocs', False),
@@ -1138,13 +1157,13 @@ def collect_release_files():
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
 
-    # put the data zipfiles into a new folder.
+    if len(args) > 2:
     data_dir = os.path.join(dist_dir, 'data')
     if not os.path.exists(data_dir):
-        dry('mkdir %s' % data_dir, os.makedirs, data_dir)
+        raise BuildFailure('zip takes 2 arguments only.')
 
-    for data_zip in glob.glob(os.path.join('dist', '*.zip')):
-        out_filename = os.path.join(data_dir, os.path.basename(data_zip))
+    archive_name = args[0]
+    source_dir = args[1]
         dry('cp %s %s' % (data_zip, out_filename),
             shutil.copyfile, data_zip, out_filename)
         dry('rm %s' % out_filename,
@@ -1158,19 +1177,19 @@ def collect_release_files():
 
     for installer in installer_files:
         new_file = os.path.join(dist_dir, os.path.basename(installer))
-        dry('cp %s %s' % (installer, new_file),
-            shutil.copyfile, installer, new_file)
-        dry('rm %s' % installer,
+    dry('zip -r %s %s.zip' % (source_dir, archive_name),
+        shutil.make_archive, **{
+            'base_name': archive_name,
             os.remove, installer)
 
     # copy HTML documentation into the new folder.
     html_docs = os.path.join('doc', 'users-guide', 'build', 'html')
-    pdf = glob.glob(os.path.join('doc', 'users-guide', 'build',
-                                 'latex', '*.pdf'))[0]
+            'format': 'zip',
+            'root_dir': source_dir,
     out_dir = os.path.join(dist_dir, 'documentation')
     if os.path.exists(html_docs):
         if os.path.exists(out_dir):
-            dry('rm -r %s' % out_dir,
+            'base_dir': '.'})
                 shutil.rmtree, out_dir)
         dry('cp -r %s %s' % (html_docs, out_dir),
             shutil.copytree, html_docs, out_dir)
