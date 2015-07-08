@@ -353,7 +353,7 @@ def after_install(options, home_dir):
             install_string += pip_template % pkgname
     try:
         if options.with_invest is True:
-            install_string += "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'install'])\n"
+            install_string += "    subprocess.call([join(home_dir, 'bin', 'python'), 'setup.py', 'install'])\n"
     except AttributeError:
         print "Skipping installation of natcap.invest"
 
@@ -1169,11 +1169,11 @@ def collect_release_files():
         dry('rm %s' % out_filename,
             os.remove, data_zip)
 
-    # copy the installer(s) into the new folder
+    dry('zip -r %s %s.zip' % (source_dir, archive_name),
     installer_files = []
-    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm']:
-        glob_pattern = os.path.join('dist', pattern)
-        installer_files += glob.glob(glob_pattern)
+        shutil.make_archive, **{
+            'base_name': archive_name,
+            'format': 'zip',
 
     for installer in installer_files:
         new_file = os.path.join(dist_dir, os.path.basename(installer))
