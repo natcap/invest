@@ -12,13 +12,12 @@ import os
 import sys
 import imp
 
-from setuptools.command.sdist import sdist as _sdist
-from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
 from setuptools import setup
 
 import numpy
+import natcap.versioner
 
 # Monkeypatch os.link to prevent hard lnks from being formed.  Useful when
 # running tests across filesystems, like in our test docker containers.
@@ -43,38 +42,6 @@ except ImportError:
     USE_CYTHON = False
 
 versioning = imp.load_source('versioning', 'src/natcap/invest/versioning.py')
-
-class CustomSdist(_sdist):
-    """Custom source distribution builder.  Builds a source distribution via the
-    distutils sdist command, but then writes the version information to
-    the temp source tree before everything is archived for distribution."""
-    def make_release_tree(self, base_dir, files):
-        _sdist.make_release_tree(self, base_dir, files)
-
-        # Write version information (which is derived from the adept mercurial
-        # source tree) to the build folder's copy of adept.__init__.
-        filename = os.path.join(base_dir, 'src', 'natcap', 'invest', '__init__.py')
-        print 'Writing version data to %s' % filename
-        versioning.write_build_info(filename)
-
-class CustomPythonBuilder(_build_py):
-    """Custom python build step for distutils.  Builds a python distribution in
-    the specified folder ('build' by default) and writes the version
-    information to the temporary source tree therein."""
-    def run(self):
-        _build_py.run(self)
-
-        # Write version information (which is derived from the adept mercurial
-        # source tree) to the build folder's copy of adept.__init__.
-        filename = os.path.join(self.build_lib, 'natcap', 'invest', '__init__.py')
-        print 'Writing version data to %s' % filename
-        versioning.write_build_info(filename)
-
-
-# Defining the command classes for sdist and build_py here so we can access
-# the commandclasses in the setup function.
-CMDCLASS['sdist'] = CustomSdist
-CMDCLASS['build_py'] = CustomPythonBuilder
 
 readme = open('README.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
@@ -143,19 +110,6 @@ EXTENSION_LIST = ([
 if not USE_CYTHON:
     EXTENSION_LIST = no_cythonize(EXTENSION_LIST)
 
-def load_version():
-    """
-    Load the version string.
-
-    If we're in a source tree, load the version from the invest __init__ file.
-    If we're in an installed version of invest use the __version__ attribute.
-    """
-    try:
-        import natcap.invest as invest
-    except ImportError:
-        invest = imp.load_source('natcap.invest', 'src/natcap/invest/__init__.py')
-    return invest.__version__
-
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
@@ -203,12 +157,11 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
-    version=load_version(),
+    version=natcap.versioner.vcs_version(),
     include_package_data=True,
     install_requires=open('requirements.txt').read().split('\n'),
     include_dirs=[numpy.get_include()],
     setup_requires=['nose>=1.0'],
-    cmdclass=CMDCLASS,
     license=LICENSE,
     zip_safe=False,
     keywords='invest',
