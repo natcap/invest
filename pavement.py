@@ -51,7 +51,7 @@ class Repository(object):
         return json.load(open('versions.json'))[self.local_path]
 
     def at_known_rev(self):
-        return self.current_rev() == self.tracked_rev()
+        return self.current_rev() == self.tracked_version()
 
     def current_rev(self):
         raise Exception
