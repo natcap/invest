@@ -79,7 +79,7 @@ class HgRepository(Repository):
     def _format_log(self, template='', rev='.'):
         return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
             'dest': self.local_path, 'rev': rev, 'template': template},
-            capture=True)
+            capture=True).rstrip()
 
     def current_rev(self):
         return self._format_log('{node}')
@@ -123,7 +123,7 @@ class GitRepository(Repository):
     cmd = 'git'
 
     def clone(self, rev=None):
-        sh('git checkout %(url)s %(dest)s' % {'url': self.remote_path,
+        sh('git clone %(url)s %(dest)s' % {'url': self.remote_url,
                                               'dest': self.local_path})
         if rev is None:
             rev = self.tracked_version()
@@ -133,16 +133,18 @@ class GitRepository(Repository):
         sh('git fetch', cwd=self.local_path)
 
     def update(self, rev):
-        sh('git checkout %(rev)s .' % {'rev', rev}, cwd=self.local_path)
+        sh('git checkout %(rev)s' % {'rev': rev}, cwd=self.local_path)
 
     def current_rev(self):
-        return sh('git rev-parse --verify HEAD', cwd=self.local_path, capture=True)
+        return sh('git rev-parse --verify HEAD', cwd=self.local_path,
+                  capture=True).rstrip()
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
     'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
     'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
+    'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
 }
 REPOS = REPOS_DICT.values()
 
@@ -326,9 +328,20 @@ def after_install(options, home_dir):
 
     """
 
+    requirements_files = ['requirements.txt']
+    extra_reqs = getattr(options, 'requirements', None)
+    if extra_reqs is not None:
+        requirements_files.append(extra_reqs)
+
     pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '%s'])\n"
-    for pkgname in open('requirements.txt').read().rstrip().split('\n'):
-        install_string += pip_template % pkgname
+    for reqs_file in requirements_files:
+        for pkgname in open(reqs_file).read().rstrip().split('\n'):
+            install_string += pip_template % pkgname
+    try:
+        if options.with_invest is True:
+            install_string += "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'install'])\n"
+    except AttributeError:
+        print "Skipping installation of natcap.invest"
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
     open(options.virtualenv.script_name, 'w').write(output)
@@ -347,11 +360,6 @@ def after_install(options, home_dir):
     }
     sh(bootstrap_cmd % bootstrap_opts)
 
-    try:
-        if options.with_invest is True:
-            sh('python setup.py install')
-    except AttributeError:
-        print "Skipping installation of natcap.invest"
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
@@ -813,7 +821,11 @@ def build_bin():
         dry('rm -r %s' % invest_dist_dir,
             shutil.rmtree, invest_dist_dir)
 
-    sh('pyinstaller --noconfirm invest.spec', cwd='exe')
+    pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
+    sh('%(python)s %(pyinstaller)s --noconfirm invest.spec' % {
+            'python': sys.executable,
+            'pyinstaller': pyinstaller_file,
+        }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
     sh('pip freeze > package_versions.txt', cwd=bindir)
@@ -1182,6 +1194,7 @@ def jenkins_installer():
         'system_site_packages': True,
         'clear': True,
         'with_invest': True,
+        'envname': 'release_env',
     })
 
     # call the
