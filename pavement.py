@@ -133,7 +133,7 @@ class GitRepository(Repository):
         sh('git fetch', cwd=self.local_path)
 
     def update(self, rev):
-        sh('git checkout %(rev)s .' % {'rev': rev}, cwd=self.local_path)
+        sh('git checkout %(rev)s' % {'rev': rev}, cwd=self.local_path)
 
     def current_rev(self):
         return sh('git rev-parse --verify HEAD', cwd=self.local_path, capture=True)
