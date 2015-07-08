@@ -10,7 +10,8 @@ import sys
 import hashlib
 import json
 import distutils.version
-import imp
+
+import natcap.versioner
 
 try:
     import pygeoprocessing
@@ -24,29 +25,12 @@ try:
 except ImportError:
     pass
 
-# The __version__ attribute MUST be set to 'dev'.  It is changed automatically
-# when the package is built.  The build_attrs attribute is set at the same time,
-# but it instead contains a list of attributes of __init__.py that are related
-# to the build.
-__version__ = 'dev'
-build_data = None
-
-if __version__ == 'dev' and build_data == None:
-    versioning = imp.load_source(
-        'versioning',
-        os.path.join(os.path.dirname(__file__), 'versioning.py'))
-    __version__ = versioning.get_pep440(branch=False)
-    build_data = versioning.build_data()
-    for key, value in sorted(build_data.iteritems()):
-        setattr(sys.modules[__name__], key, value)
-
-    del sys.modules[__name__].key
-    del sys.modules[__name__].value
+__version__ = natcap.versioner.get_version('natcap.invest')
 
 def is_release():
     """Returns a boolean indicating whether this invest release is actually a
     release or if it's a development release."""
-    if __version__[0:3] == 'dev':
+    if 'post' in __version__:
         return False
     return True
 

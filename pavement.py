@@ -354,7 +354,7 @@ def after_install(options, home_dir):
             install_string += pip_template % pkgname
     try:
         if options.with_invest is True:
-            install_string += "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'install'])\n"
+            install_string += "    subprocess.call([join(home_dir, 'bin', 'python'), 'setup.py', 'install'])\n"
     except AttributeError:
         print "Skipping installation of natcap.invest"
 
@@ -871,7 +871,6 @@ def build_bin():
     dry('cp -r %s %s' % (bindir, invest_dist),
         shutil.copytree, bindir, invest_dist)
 
-
 @task
 @cmdopts([
     ('bindir=', 'b', ('Folder of binaries to include in the installer. '
@@ -966,7 +965,6 @@ def _build_fpm(version, bindir, pkg_type):
         '--after-install ./installer/linux/postinstall.sh'
         ' %(bindir)s') % options
     sh(fpm_command)
-
 
 def _build_nsis(version, bindir, arch):
     """
