@@ -13,6 +13,7 @@ import textwrap
 import imp
 import subprocess
 import inspect
+import urllib2
 
 import paver.svn
 import paver.path
@@ -863,6 +864,20 @@ def build_bin():
 
     dry('cp -r %s %s' % (bindir, invest_dist),
         shutil.copytree, bindir, invest_dist)
+
+    # For some reason, pyinstaller doesn't locate the natcap.versioner package
+    # when it's installed and available on the system.  Placing
+    # natcap.versioner's .egg in the pyinstaller eggs/ directory allows
+    # natcap.versioner to be located.  Hacky but it works.
+    url = ('https://pypi.python.org/packages/2.7/n/natcap.versioner/'
+           'natcap.versioner-0.1.3-py2.7.egg#md5='
+           'dc01ec2ebc06e2cba8769ebc9d3c13a9')
+    egg_filename = os.path.basename(url).split('#')[0]
+    egg_file = open(os.path.join(invest_dist, 'eggs', egg_filename), 'wb')
+    request = urllib2.urlopen(url)
+    for line in request:
+        egg_file.write(line)
+    egg_file.close()
 
 
 @task
