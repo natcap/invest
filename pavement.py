@@ -844,7 +844,7 @@ def build_bin():
             shutil.rmtree, invest_dist_dir)
 
     pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
-    sh('%(python)s %(pyinstaller)s --noconfirm invest.spec' % {
+    sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
             'python': sys.executable,
             'pyinstaller': pyinstaller_file,
         }, cwd='exe')
