@@ -1133,7 +1133,7 @@ def build(options):
             print 'Skipping task %s' % task_base
 
 
-    if getattr(options, 'noinstaller', False) is True:
+    if getattr(options, 'noinstaller', False) is False:
         # The installer task has its own parameter defaults.  Let the
         # build_installer task handle most of them.  We can pass in some of the
         # parameters, though.
