@@ -19,6 +19,7 @@ lib64/
 sdist/
 natcap.invest.egg-info/
 .egg
+src/natcap/invest/version.py
 
 # Unit test / coverage reports
 htmlcov/
