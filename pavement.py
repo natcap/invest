@@ -75,7 +75,8 @@ class HgRepository(Repository):
                                                      'rev': rev})
 
     def pull(self):
-        sh('hg pull -R %(dest)s' % {'dest': self.local_path})
+        sh('hg pull -R %(dest)s %(url)s' % {'dest': self.local_path,
+                                            'url': self.remote_url})
 
     def update(self, rev):
         sh('hg update -R %(dest)s -r %(rev)s' % {'dest': self.local_path,
@@ -114,6 +115,14 @@ class SVNRepository(Repository):
         return
 
     def update(self, rev):
+        # check that the repository URL hasn't changed.  If it has, update to
+        # the new URL
+        local_copy_info = paver.svn.info(self.local_path)
+        if local_copy_info.repository_root != self.remote_url:
+            sh('svn switch --relocate {orig_url} {new_url}'.format(
+                orig_url=local_copy_info.repository_root,
+                new_url=self.remote_url))
+
         paver.svn.update(self.local_path, rev)
 
     def current_rev(self):
@@ -143,7 +152,7 @@ class GitRepository(Repository):
             self.update(rev)
 
     def pull(self):
-        sh('git fetch', cwd=self.local_path)
+        sh('git fetch %(url)s' % {'url': self.remote_url}, cwd=self.local_path)
 
     def update(self, rev):
         sh('git checkout %(rev)s' % {'rev': rev}, cwd=self.local_path)
