@@ -841,7 +841,10 @@ def build_data(options):
 
 
 @task
-def build_bin():
+@cmdopts([
+    ('python=', '', 'The python interpreter to use'),
+])
+def build_bin(options):
     """
     Build frozen binaries of InVEST.
     """
@@ -855,7 +858,7 @@ def build_bin():
 
     pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
     sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
-            'python': sys.executable,
+            'python': getattr(options, 'python', sys.executable),
             'pyinstaller': pyinstaller_file,
         }, cwd='exe')
 
@@ -1109,6 +1112,7 @@ def selftest():
     ('nodocs', '', "Don't build the documentation"),
     ('noinstaller', '', "Don't build the installer"),
     ('nobin', '', "Don't build the binaries"),
+    ('python=', '', 'Use this python interpreter'),
 ])
 def build(options):
     """
@@ -1140,11 +1144,11 @@ def build(options):
 
     # Call these tasks unless the user requested not to.
     defaults = [
-        ('nodata', False),
-        ('nobin', False),
-        ('nodocs', False),
+        ('nodata', False, None),
+        ('nobin', False, {'python': getattr(options, 'python', sys.executable)}),
+        ('nodocs', False, None),
     ]
-    for attr, default_value in defaults:
+    for attr, default_value, extra_opts in defaults:
         task_base = attr[2:]
         try:
             getattr(options, attr)
@@ -1152,7 +1156,10 @@ def build(options):
             # when the user doesn't provide a --no(data|bin|docs) option,
             # AttributeError is raised.
             task_name = 'build_%s' % task_base
-            call_task(task_name)
+            if extra_opts is not None:
+                call_task(task_name, options=extra_opts)
+            else:
+                call_task(task_name)
         else:
             print 'Skipping task %s' % task_base
 
