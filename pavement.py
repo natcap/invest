@@ -1140,9 +1140,9 @@ def build(options):
 
     # Call these tasks unless the user requested not to.
     defaults = [
-        ('nodata', False),
         ('nobin', False),
         ('nodocs', False),
+        ('nodata', False),
     ]
     for attr, default_value in defaults:
         task_base = attr[2:]
