@@ -121,7 +121,7 @@ class SVNRepository(Repository):
         if local_copy_info.repository_root != self.remote_url:
             sh('svn switch --relocate {orig_url} {new_url}'.format(
                 orig_url=local_copy_info.repository_root,
-                new_url=self.remote_url))
+                new_url=self.remote_url), cwd=self.local_path)
 
         paver.svn.update(self.local_path, rev)
 
