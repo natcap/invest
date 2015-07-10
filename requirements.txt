@@ -1,7 +1,7 @@
 gdal
 h5py
 matplotlib
-natcap.versioner>=0.1.3
+natcap.versioner>=0.2.0
 numpy
 poster
 pyamg

@@ -154,7 +154,7 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
-    version=natcap.versioner.vcs_version(),
+    version=natcap.versioner.parse_version(),
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
     install_requires=open('requirements.txt').read().split('\n'),
