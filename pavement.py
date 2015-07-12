@@ -937,6 +937,10 @@ def build_bin(options):
     sitepkgs_egg_glob = os.path.join(sitepkgs, 'natcap.versioner-*.egg')
     try:
         latest_egg = sorted(glob.glob(sitepkgs_egg_glob), reverse=True)[0]
+        egg_dir = os.path.join(invest_dist, 'eggs')
+        if not os.path.exists(egg_dir):
+            dry('mkdir %s' % egg_dir , os.makedirs, egg_dir)
+
         dest_egg = os.path.join(invest_dist, 'eggs', os.path.basename(latest_egg))
         dry('cp {src_egg} {dest_egg}'.format(
             src_egg=latest_egg, dest_egg=dest_egg), shutil.copyfile,
