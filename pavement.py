@@ -877,7 +877,10 @@ def build_data(options):
 
 
 @task
-def build_bin():
+@cmdopts([
+    ('python=', '', 'The python interpreter to use'),
+])
+def build_bin(options):
     """
     Build frozen binaries of InVEST.
     """
@@ -890,8 +893,9 @@ def build_bin():
             shutil.rmtree, invest_dist_dir)
 
     pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
+    python_exe = os.path.abspath(getattr(options, 'python', sys.executable))
     sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
-            'python': sys.executable,
+            'python': python_exe,
             'pyinstaller': pyinstaller_file,
         }, cwd='exe')
 
@@ -914,16 +918,44 @@ def build_bin():
     # when it's installed and available on the system.  Placing
     # natcap.versioner's .egg in the pyinstaller eggs/ directory allows
     # natcap.versioner to be located.  Hacky but it works.
-    url = ('https://pypi.python.org/packages/2.7/n/natcap.versioner/'
-           'natcap.versioner-0.1.3-py2.7.egg#md5='
-           'dc01ec2ebc06e2cba8769ebc9d3c13a9')
-    egg_filename = os.path.basename(url).split('#')[0]
-    egg_file = open(os.path.join(invest_dist, 'eggs', egg_filename), 'wb')
-    request = urllib2.urlopen(url)
-    for line in request:
-        egg_file.write(line)
-    egg_file.close()
+    # Assume we're working within the built virtualenv.
+    sitepkgs = sh('{python} -c "import distutils.sysconfig; '
+                  'print distutils.sysconfig.get_python_lib()"'.format(
+                      python=python_exe), capture=True).rstrip()
+    sitepkgs_egg_glob = os.path.join(sitepkgs, 'natcap.versioner-*.egg')
+    try:
+        latest_egg = sorted(glob.glob(sitepkgs_egg_glob), reverse=True)[0]
+        dest_egg = os.path.join(invest_dist, 'eggs', os.path.basename(latest_egg))
+        dry('cp {src_egg} {dest_egg}'.format(
+            src_egg=latest_egg, dest_egg=dest_egg), shutil.copyfile,
+            latest_egg, dest_egg)
+    except IndexError:
+        # Couldn't find any eggs in the local site-packages, try to install
+        # from pip instead.
 
+        # get version spec from requirements.txt
+        with open('requirements.txt') as requirements_file:
+            for requirement in pkg_resources.parse_requirements(requirements_file.read()):
+                if requirement.project_name == 'natcap.versioner':
+                    versioner_spec = str(requirement)
+                    break
+
+        # install package as egg in the {bindir}/eggs folder
+        # Assume pip is in the local virtualenv (same dir as python)
+        pip_entrypoint = os.path.join(os.path.dirname(python_exe), 'pip')
+        try:
+            pythonpath = os.environ['PYTHONPATH']
+        except KeyError:
+            pythonpath = []
+        pythonpath = [os.path.join(invest_dist, 'eggs')] + pythonpath
+        print 'PYTHONPATH', pythonpath
+        sh('{pip_ep} install --no-deps --root {bindir} --egg \'{versioner}\''.format(
+            python=python_exe,
+            pip_ep=pip_entrypoint,
+            versioner=versioner_spec,
+            bindir=os.path.join(invest_dist, 'eggs'),
+            env={'PYTHONPATH': pythonpath})
+        )
 
 @task
 @cmdopts([
@@ -1145,6 +1177,7 @@ def selftest():
     ('nodocs', '', "Don't build the documentation"),
     ('noinstaller', '', "Don't build the installer"),
     ('nobin', '', "Don't build the binaries"),
+    ('python=', '', "The python interpreter to use"),
 ])
 def build(options):
     """
@@ -1175,12 +1208,15 @@ def build(options):
 
 
     # Call these tasks unless the user requested not to.
+    python_exe = os.path.abspath(getattr(options, 'python', sys.executable))
     defaults = [
-        ('nobin', False),
-        ('nodocs', False),
-        ('nodata', False),
+        ('nobin', False, {
+            'options': {
+                'python': python_exe}}),
+        ('nodocs', False, {}),
+        ('nodata', False, {}),
     ]
-    for attr, default_value in defaults:
+    for attr, default_value, extra_args in defaults:
         task_base = attr[2:]
         try:
             getattr(options, attr)
@@ -1188,7 +1224,7 @@ def build(options):
             # when the user doesn't provide a --no(data|bin|docs) option,
             # AttributeError is raised.
             task_name = 'build_%s' % task_base
-            call_task(task_name)
+            call_task(task_name, **extra_args)
         else:
             print 'Skipping task %s' % task_base
 
@@ -1210,18 +1246,24 @@ def build(options):
     else:
         print 'Skipping installer'
 
-    call_task('collect_release_files')
+    call_task('collect_release_files', options={'python': python_exe})
 
 
 @task
-def collect_release_files():
+@cmdopts([
+    ('python=', '', 'The python interpreter to use'),
+])
+def collect_release_files(options):
     """
     Collect release-specific files into a single distributable folder.
     """
     # make a distribution folder for this build version.
     # rstrip to take off the newline
-    _invest = imp.load_source('versioning', 'src/natcap/invest/__init__.py')
-    invest_version = _invest.__version__
+    python_exe = getattr(options, 'python', sys.executable)
+    invest_version = sh(
+        '{python} -c "import natcap.invest; print natcap.invest.__version__"'.format(
+            python=python_exe),
+        capture=True).rstrip()
     dist_dir = os.path.join('dist', 'invest_%s' % invest_version)
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
