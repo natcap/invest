@@ -6,5 +6,5 @@
 
 SET ENV=release_env
 call %ENV%\Scripts\activate.bat
-paver build
+paver build --python=%ENV%\Scripts\python
 

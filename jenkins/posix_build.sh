@@ -6,5 +6,5 @@
 
 ENV=release_env
 source $ENV/bin/activate
-#paver build
+paver build --python=`which python`
 

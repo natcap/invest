@@ -907,7 +907,7 @@ def build_bin(options):
     pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
     python_exe = os.path.abspath(getattr(options, 'python', sys.executable))
     sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
-            'python': python_exe,
+            'python': getattr(options, 'python', sys.executable),
             'pyinstaller': pyinstaller_file,
         }, cwd='exe')
 
