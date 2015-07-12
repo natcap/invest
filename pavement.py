@@ -1,4 +1,5 @@
 import os
+import distutils
 import logging
 import sys
 import json
@@ -13,10 +14,11 @@ import textwrap
 import imp
 import subprocess
 import inspect
-import urllib2
 
+import pkg_resources
 import paver.svn
 import paver.path
+import paver.virtual
 from paver.easy import *
 import virtualenv
 import yaml
@@ -360,13 +362,47 @@ def after_install(options, home_dir):
     if extra_reqs is not None:
         requirements_files.append(extra_reqs)
 
-    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '%s'])\n"
+    # extra parameter strings needed for installing certain packages
+    pkg_pip_params = {
+        'natcap.versioner': ['--egg'],
+    }
+    def _format_params(param_list):
+        """
+        Convert a list of string parameters to a string suitable for adding to
+        the environment bootstrap file.
+
+        Returns:
+            A string
+        """
+        params_as_strings = ["'{param}'".format(param=x) for x in param_list]
+        extra_params = ", %s" % ', '.join(params_as_strings)
+        return extra_params
+
+    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
     for reqs_file in requirements_files:
-        for pkgname in open(reqs_file).read().rstrip().split('\n'):
-            install_string += pip_template % pkgname
+        for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
+            projectname = requirement.project_name  # project name w/o version req
+            try:
+                install_params = pkg_pip_params[projectname]
+                extra_params = _format_params(install_params)
+            except KeyError:
+                # No extra parameters needed for this package.
+                extra_params = ''
+
+            install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
     try:
         if options.with_invest is True:
-            install_string += "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'install'])\n"
+            # Build an sdist and install it as an egg.  Works better with
+            # pyinstaller, it would seem.  Also, namespace packages complicate
+            # imports, so installing all natcap pkgs as eggs seems to work as
+            # expected.
+            install_string += (
+                "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'egg_info', 'sdist', '--formats=gztar'])\n"
+                "    version = subprocess.check_output([join(home_dir, bindir, 'python'), 'setup.py', '--version'])\n"
+                "    version = version.rstrip()  # clean trailing whitespace\n"
+                "    invest_sdist = join('dist', 'natcap.invest-{version}.tar.gz'.format(version=version))\n"
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', invest_sdist])\n"
+            )
     except AttributeError:
         print "Skipping installation of natcap.invest"
 
