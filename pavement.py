@@ -177,7 +177,7 @@ REPOS_DICT = {
 REPOS = REPOS_DICT.values()
 
 
-def _invest_version():
+def _invest_version(python_exe=None):
     """
     Load the InVEST version string and return it.
 
@@ -185,14 +185,27 @@ def _invest_version():
     is able to be imported.  Otherwise, fetches the version string from
     the natcap.invest source.
 
+    Parameters:
+        python_exe=None (string): The path to the python interpreter to use.
+            If None, the PATH python will be used.
+
     Returns:
         The version string.
     """
     try:
         import natcap.invest as invest
+        return invest.__version__
     except ImportError:
-        invest = imp.load_source('_invest', 'src/natcap/invest/__init__.py')
-    return invest.__version__
+        if python_exe is None:
+            python_exe = 'python'
+        else:
+            python_exe = os.path.abspath(python_exe)
+
+        invest_version = sh(
+            '{python} -c "import natcap.invest; print natcap.invest.__version__"'.format(
+                python=python_exe),
+            capture=True).rstrip()
+        return invest_version
 
 def _repo_is_valid(repo, options):
     # repo is a repository object
@@ -744,6 +757,7 @@ def zip_source(options):
     ('version', '-v', 'The version of the documentation to build'),
     ('skip-api', '', 'Skip building the API docs'),
     ('skip-guide', '', "Skip building the User's Guide"),
+    ('python=', '', 'The python interpreter to use'),
 ])
 def build_docs(options):
     """
@@ -756,8 +770,8 @@ def build_docs(options):
     Requires make and sed.
     """
 
-
-    invest_version = sh('python setup.py --version', capture=True).rstrip()
+    python_exe = getattr(options, 'python', sys.executable)
+    invest_version = _invest_version(python_exe)
     archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
 
     # If the user has not provided the skip-guide flag, build the User's guide.
@@ -778,11 +792,9 @@ def build_docs(options):
         print "Skipping the User's Guide"
 
     skip_api = getattr(options, 'skip_api', False)
-    api_env = os.path.join(os.getcwd(), 'api_env')
     if skip_api is False:
-        sh('./jenkins/api-docs.sh -e %s' % api_env)
+        sh('{python} setup.py build_sphinx'.format(python=python_exe))
         archive_name = archive_template % 'apidocs'
-
         call_task('zip', args=[archive_name, 'build/sphinx/html'])
     else:
         print "Skipping the API docs"
@@ -996,9 +1008,13 @@ def build_installer(options):
         call_task('build_bin')
 
     # version comes from the installed version of natcap.invest
-    version = _invest_version()
-    command = options.insttype.lower()
+    invest_bin = os.path.join(options.bindir, 'invest')
+    version_string = sh('{invest_bin} --version'.format(invest_bin=invest_bin), capture=True)
+    for possible_version in version_string.split('\n'):
+        if possible_version != '':
+            version = possible_version
 
+    command = options.insttype.lower()
     if not os.path.exists(options.bindir):
         print "ERROR: Binary directory %s not found" % options.bindir
         print "ERROR: Run `paver build_bin` to make new binaries"
@@ -1211,9 +1227,9 @@ def build(options):
     python_exe = os.path.abspath(getattr(options, 'python', sys.executable))
     defaults = [
         ('nobin', False, {
-            'options': {
-                'python': python_exe}}),
-        ('nodocs', False, {}),
+            'options': {'python': python_exe}}),
+        ('nodocs', False, {
+            'options': {'python': python_exe}}),
         ('nodata', False, {}),
     ]
     for attr, default_value, extra_args in defaults:
@@ -1234,7 +1250,7 @@ def build(options):
         # build_installer task handle most of them.  We can pass in some of the
         # parameters, though.
         installer_options = {
-            'bindir': os.path.join('exe', 'dist', 'invest_dist'),
+            'bindir': os.path.join('dist', 'invest_dist'),
         }
         for arg in ['insttype', 'arch']:
             try:
@@ -1260,10 +1276,7 @@ def collect_release_files(options):
     # make a distribution folder for this build version.
     # rstrip to take off the newline
     python_exe = getattr(options, 'python', sys.executable)
-    invest_version = sh(
-        '{python} -c "import natcap.invest; print natcap.invest.__version__"'.format(
-            python=python_exe),
-        capture=True).rstrip()
+    invest_version = _invest_version(python_exe)
     dist_dir = os.path.join('dist', 'invest_%s' % invest_version)
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
@@ -1320,18 +1333,20 @@ def jenkins_installer():
 
     call_task('clean')
     call_task('fetch')
+    release_env = 'release_env'
     call_task('env', options={
         'system_site_packages': True,
         'clear': True,
         'with_invest': True,
-        'envname': 'release_env',
+        'envname': release_env
     })
 
-    # call the
-    if platform.system() == 'Windows':
-        sh(r'jenkins\windows_build.bat')
-    else:
-        sh(r'jenkins/posix_build.sh')
+    call_task('build', options={
+        'python': os.path.join(
+            release_env,
+            'Scripts' if platform.system() == 'Windows' else 'bin',
+            'python')
+    })
 
 
 @task
