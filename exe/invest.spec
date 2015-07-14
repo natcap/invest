@@ -52,4 +52,4 @@ dist = COLLECT(
         *args,
         name="invest_dist",
         strip=None,
-        upx=True)
+        upx=False)
