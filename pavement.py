@@ -1208,14 +1208,14 @@ def build(options):
     """
 
     for repo in REPOS_DICT.values():
+        tracked_rev = repo.tracked_version()
         if not os.path.exists(repo.local_path):
             repo.clone()
             repo.update(repo.tracked_version())
 
         # if we ARE NOT allowing dev builds
-        if getattr(options, 'force-dev', False) is False:
+        if getattr(options, 'force_dev', False) is False:
             current_rev = repo.current_rev()
-            tracked_rev = repo.tracked_version()
             if not repo.at_known_rev():
                 raise BuildFailure(('ERROR: %(local_path)s at rev %(cur_rev)s, '
                                     'but expected to be at rev %(exp_rev)s') % {
