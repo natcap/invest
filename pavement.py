@@ -412,8 +412,8 @@ def after_install(options, home_dir):
             install_string += (
                 "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'egg_info', 'sdist', '--formats=gztar'])\n"
                 "    version = subprocess.check_output([join(home_dir, bindir, 'python'), 'setup.py', '--version'])\n"
-                "    version = version.rstrip()  # clean trailing whitespace\n",
-                "    version = version.replace('+', '-')  # correcting for local version strings\n",
+                "    version = version.rstrip()  # clean trailing whitespace\n"
+                "    version = version.replace('+', '-')  # correcting for local version strings\n"
                 "    invest_sdist = join('dist', 'natcap.invest-{version}.tar.gz'.format(version=version))\n"
                 "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', invest_sdist])\n"
             )
