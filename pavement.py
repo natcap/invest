@@ -1345,11 +1345,16 @@ def jenkins_installer():
         'envname': release_env
     })
 
+
+    # temporarily only build binaries while I figure out windows build issues
     call_task('build', options={
         'python': os.path.join(
             release_env,
             'Scripts' if platform.system() == 'Windows' else 'bin',
-            'python')
+            'python'),
+        'nodocs': True,
+        'nodata': True,
+        'noinstaller': True,
     })
 
 
