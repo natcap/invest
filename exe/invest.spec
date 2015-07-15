@@ -26,8 +26,14 @@ kwargs = {
     'excludes': None,
     'pathex': path_extension,
     'hiddenimports': [
-        'natcap', 'natcap.invest', 'natcap.versioner', 
-        'yaml', 'distutils', 'distutils.dist'],
+        'natcap',
+        'natcap.invest',
+        'natcap.versioner',
+        'natcap.invest.version', 
+        'yaml',
+        'distutils',
+        'distutils.dist',
+    ],
 }
 
 cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'iui', 'cli.py')
