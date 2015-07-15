@@ -19,7 +19,7 @@
 !define MUI_COMPONENTSPAGE_NODESC
 !define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 
-SetCompressor /FINAL /SOLID lzma
+SetCompressor /FINAL /SOLID zip
 SetCompressorDictSize 64
 
 ; MUI has some graphical files that I want to define, which must be defined
