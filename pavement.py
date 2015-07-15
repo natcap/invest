@@ -1246,6 +1246,52 @@ def _get_local_version():
         version = "%(latesttag)s.dev%(latesttagdistance)s-%(short_node)s" % repo_data
     return version
 
+def _write_console_files(binary, mode):
+    """
+    Write simple console files, one for each model presented by IUI.
+
+    Parameters:
+        binary (string): The path to the invest binary.
+        mode (string): one of ["bat", "sh"]
+
+    Returns:
+        Nothing.
+        Writes console files in the same directory as the binary.  Consoles
+        are named according to "invest_<modelname>.<extension>"
+    """
+
+    windows_template = """
+start /d "." {binary} {modelname}
+"""
+    posix_template = """
+./{binary} {modelname}
+"""
+
+    templates = {
+        'bat': windows_template,
+        'sh': posix_template,
+    }
+    filename_template = "invest_{modelname}.{extension}"
+
+    bindir = os.path.dirname(binary)
+    for line in sh('{bin} --list'.format(bin=binary), capture=True).split('\n'):
+        if line.startswith('    '):
+            model_name = line.lstrip().rstrip()
+
+            console_filename = os.path.join(bindir, filename_template).format(
+                modelname=model_name, extension=mode)
+            print 'Writing console %s' % console_filename
+
+            with open(console_filename, 'w') as console_file:
+                formatted_template = templates[mode].format(
+                    binary=binary, modelname=model_name)
+                console_file.write(formatted_template)
+
+            # Add executable bit if we're on linux or mac.
+            if mode == 'sh':
+                os.chmod(console_filename, 0744)
+
+
 @task
 def selftest():
     """
