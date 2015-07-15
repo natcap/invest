@@ -500,7 +500,7 @@ def after_install(options, home_dir):
 
 @task
 @consume_args  # when consuuming args, it's a list of str arguments.
-def fetch(args=None):
+def fetch(args):
     """
     Clone repositories the correct locations.
     """
@@ -510,8 +510,6 @@ def fetch(args=None):
     # rev.
     user_repo_revs = {}  # repo -> version
     repo_paths = map(lambda x: x.local_path, REPOS)
-    if args is None:
-        args = []
     args_queue = collections.deque(args[:])
 
     while len(args_queue) > 0:
@@ -1390,7 +1388,7 @@ def jenkins_installer():
     """
 
     call_task('clean')
-    call_task('fetch')
+    call_task('fetch', args = [''])
     release_env = 'release_env'
     call_task('env', options={
         'system_site_packages': True,
