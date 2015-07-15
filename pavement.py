@@ -350,8 +350,10 @@ def env(options):
     try:
         options.virtualenv.dest_dir = options.envname
         print "Using user-defined env name: %s" % options.envname
+        envname = options.envname
     except AttributeError:
         print "Using the default envname: %s" % options.virtualenv.dest_dir
+        envname = options.virtualenv.dest_dir
 
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
@@ -368,17 +370,18 @@ def after_install(options, home_dir):
     else:
         bindir = 'bin'
 
-    """
+"""
 
     requirements_files = ['requirements.txt']
     extra_reqs = getattr(options, 'requirements', None)
-    if extra_reqs is not None:
+    if extra_reqs not in [None, '']:
         requirements_files.append(extra_reqs)
 
     # extra parameter strings needed for installing certain packages
-    pkg_pip_params = {
-        'natcap.versioner': ['--egg'],
-    }
+    # Initially set up for special installation of natcap.versioner.
+    # Leaving in place in case future pkgs need special params.
+    pkg_pip_params = {}
+
     def _format_params(param_list):
         """
         Convert a list of string parameters to a string suitable for adding to
@@ -413,10 +416,12 @@ def after_install(options, home_dir):
                 "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'egg_info', 'sdist', '--formats=gztar'])\n"
                 "    version = subprocess.check_output([join(home_dir, bindir, 'python'), 'setup.py', '--version'])\n"
                 "    version = version.rstrip()  # clean trailing whitespace\n"
-                "    if platform.system() == 'Windows':\n"
-                "        version = version.replace('+', '-')  # correcting for local version strings\n"
                 "    invest_sdist = join('dist', 'natcap.invest-{version}.tar.gz'.format(version=version))\n"
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', invest_sdist])\n"
+                
+                # Recent versions of pip build wheels by default before installing, but wheel
+                # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest',"
+                " invest_sdist])\n"
             )
     except AttributeError:
         print "Skipping installation of natcap.invest"
@@ -427,17 +432,33 @@ def after_install(options, home_dir):
     # Built the bootstrap env via a subprocess call.
     # Calling via the shell so that virtualenv has access to environment
     # vars as needed.
-    env_dirname = options.virtualenv.dest_dir
-    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(clear)s %(env_name)s"
+    env_dirname = envname
+    bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(clear)s %(no-wheel)s %(env_name)s"
     bootstrap_opts = {
         "python": sys.executable,
         "bootstrap_file": options.virtualenv.script_name,
         "env_name": env_dirname,
         "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
         "clear": '--clear' if options.env.clear else '',
+        "no-wheel": '--no-wheel',  # exclude wheel.  It has a bug preventing namespace pkgs from compiling
     }
     sh(bootstrap_cmd % bootstrap_opts)
 
+    # Virtualenv appears to partially copy over distutills into the new env.
+    # Remove what was copied over so we din't confuse pyinstaller.
+    # Also, copy over the natcap namespace pkg's __init__ file
+    if platform.system() == 'Windows':
+        distutils_dir = os.path.join(env_dirname, 'Lib', 'distutils')
+        init_file = os.path.join(env_dirname, 'Lib', 'site-packages', 'natcap', '__init__.py')
+    else:
+        distutils_dir = os.path.join(env_dirname, 'lib', 'python2.7', 'distutils')
+        init_file = os.path.join(env_dirname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
+    if os.path.exists(distutils_dir):
+        dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
+        
+    init_string = "import pkg_resources\npkg_resources.declare_namespace(__name__)\n"
+    with open(init_file, 'w') as namespace_init:
+        namespace_init.write(init_string)
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
@@ -907,10 +928,27 @@ def build_bin(options):
             shutil.rmtree, invest_dist_dir)
 
     pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
+    print options
     python_exe = os.path.abspath(getattr(options, 'python', sys.executable))
-    sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
-            'python': getattr(options, 'python', sys.executable),
+    
+    # For some reason, pyinstaller doesn't locate the natcap.versioner package
+    # when it's installed and available on the system.  Placing
+    # natcap.versioner's .egg in the pyinstaller eggs/ directory allows
+    # natcap.versioner to be located.  Hacky but it works.
+    # Assume we're working within the built virtualenv.
+    sitepkgs = sh('{python} -c "import distutils.sysconfig; '
+                  'print distutils.sysconfig.get_python_lib()"'.format(
+                      python=python_exe), capture=True).rstrip()
+    pathsep = ';' if platform.system() == 'Windows' else ':'
+    env_site_pkgs = os.path.abspath(os.path.normpath('../release_env/lib/'))
+    try:
+        print "PYTHONPATH: %s" % os.environ['PYTHONPATH']
+    except KeyError:
+        print "Nothing in 'PYTHONPATH'"
+    sh('%(python)s %(pyinstaller)s --clean --noconfirm -p %(paths)s invest.spec' % {
+            'python': python_exe,
             'pyinstaller': pyinstaller_file,
+            'paths': pathsep.join([env_site_pkgs, os.path.join(env_site_pkgs, 'site-packages')]), # -p input
         }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
@@ -928,14 +966,7 @@ def build_bin(options):
     dry('cp -r %s %s' % (bindir, invest_dist),
         shutil.copytree, bindir, invest_dist)
 
-    # For some reason, pyinstaller doesn't locate the natcap.versioner package
-    # when it's installed and available on the system.  Placing
-    # natcap.versioner's .egg in the pyinstaller eggs/ directory allows
-    # natcap.versioner to be located.  Hacky but it works.
-    # Assume we're working within the built virtualenv.
-    sitepkgs = sh('{python} -c "import distutils.sysconfig; '
-                  'print distutils.sysconfig.get_python_lib()"'.format(
-                      python=python_exe), capture=True).rstrip()
+
     sitepkgs_egg_glob = os.path.join(sitepkgs, 'natcap.versioner-*.egg')
     try:
         latest_egg = sorted(glob.glob(sitepkgs_egg_glob), reverse=True)[0]
