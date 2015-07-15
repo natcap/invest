@@ -1302,7 +1302,8 @@ start /d "." {binary} {modelname}
 
             with open(console_filename, 'w') as console_file:
                 formatted_template = templates[mode].format(
-                    binary=binary, modelname=model_name)
+                    binary=os.path.basename(binary),
+                    modelname=model_name)
                 console_file.write(formatted_template)
 
             # Add executable bit if we're on linux or mac.
