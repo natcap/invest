@@ -38,6 +38,31 @@ class Repository(object):
         self.local_path = local_path
         self.remote_url = remote_url
 
+    def get(self, rev):
+        """
+        Given whatever state the repo might be in right now, update to the
+        target revision.
+        """
+        if not self.ischeckedout():
+            self.clone()
+        else:
+            LOGGER.debug('Repository %s exists', self.local_path)
+
+
+        # If we're already updated to the correct rev, return.
+        if self.at_known_rev():
+            return
+
+        # Try to update to the correct revision.  If we can't pull, then
+        # update.
+        try:
+            self.update(rev)
+        except BuildFailure:
+            # When the current repo can't be updated because it doesn't know
+            # the change we want to update to
+            self.pull()
+            self.update(rev)
+
     def ischeckedout(self):
         return os.path.exists(os.path.join(self.local_path, self.statedir))
 
@@ -417,7 +442,7 @@ def after_install(options, home_dir):
                 "    version = subprocess.check_output([join(home_dir, bindir, 'python'), 'setup.py', '--version'])\n"
                 "    version = version.rstrip()  # clean trailing whitespace\n"
                 "    invest_sdist = join('dist', 'natcap.invest-{version}.tar.gz'.format(version=version))\n"
-                
+
                 # Recent versions of pip build wheels by default before installing, but wheel
                 # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
                 "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest',"
@@ -455,7 +480,7 @@ def after_install(options, home_dir):
         init_file = os.path.join(env_dirname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
     if os.path.exists(distutils_dir):
         dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
-        
+
     init_string = "import pkg_resources\npkg_resources.declare_namespace(__name__)\n"
     with open(init_file, 'w') as namespace_init:
         namespace_init.write(init_string)
@@ -547,12 +572,6 @@ def fetch(args=None):
         if not _user_requested_repo(repo.local_path) and len(repos) > 0:
             continue
 
-        # does repo exist?  If not, clone it.
-        if not repo.ischeckedout():
-            repo.clone()
-        else:
-            LOGGER.debug('Repository %s exists', repo.local_path)
-
         # is repo up-to-date?  If not, update it.
         # If the user specified a target revision, use that instead.
         try:
@@ -564,10 +583,9 @@ def fetch(args=None):
                 target_rev = repo.tracked_version()
             except KeyError:
                 print 'WARNING: repo not tracked in versions.json: %s' % repo.local_path
-                return 1
+                raise BuildFailure
 
-        repo.pull()
-        repo.update(target_rev)
+        repo.get(target_rev)
 
 
 @task
@@ -930,7 +948,7 @@ def build_bin(options):
     pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
     print options
     python_exe = os.path.abspath(getattr(options, 'python', sys.executable))
-    
+
     # For some reason, pyinstaller doesn't locate the natcap.versioner package
     # when it's installed and available on the system.  Placing
     # natcap.versioner's .egg in the pyinstaller eggs/ directory allows
@@ -1242,9 +1260,7 @@ def build(options):
 
     for repo in REPOS_DICT.values():
         tracked_rev = repo.tracked_version()
-        if not os.path.exists(repo.local_path):
-            repo.clone()
-            repo.update(repo.tracked_version())
+        repo.get(tracked_rev)
 
         # if we ARE NOT allowing dev builds
         if getattr(options, 'force_dev', False) is False:
