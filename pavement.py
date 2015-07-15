@@ -1044,6 +1044,13 @@ def build_bin(options):
             dry('cp %s %s' % (versioner_egg, versioner_egg_dest),
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
+    if platform.system() == 'Windows':
+        binary = os.path.join(invest_dist, 'invest.exe')
+        _write_console_files(binary, 'bat')
+    else:
+        binary = os.path.join(invest_dist, 'invest')
+        _write_console_files(binary, 'sh')
+
 
 @task
 @cmdopts([
@@ -1094,9 +1101,10 @@ def build_installer(options):
     if not os.path.exists(options.bindir):
         print "ERROR: Binary directory %s not found" % options.bindir
         print "ERROR: Run `paver build_bin` to make new binaries"
-        return
+        raise BuildFailure
 
-    if command == 'nsis':
+    binary = os.path.join(options.bindir, 'invest')
+    if command == 'nsis:
         _build_nsis(version, options.bindir, 'x86')
     elif command == 'dmg':
         _build_dmg(version, options.bindir)
