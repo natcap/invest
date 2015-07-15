@@ -6,6 +6,7 @@ numpy
 poster
 pyamg
 pygeoprocessing==0.3.0a3
+pip>=7.0.0
 pyyaml
 scipy
 setuptools
