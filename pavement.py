@@ -1364,8 +1364,6 @@ def collect_release_files(options):
 
     # copy HTML documentation into the new folder.
     html_docs = os.path.join('doc', 'users-guide', 'build', 'html')
-    pdf = glob.glob(os.path.join('doc', 'users-guide', 'build',
-                                 'latex', '*.pdf'))[0]
     out_dir = os.path.join(dist_dir, 'documentation')
     if os.path.exists(html_docs):
         if os.path.exists(out_dir):
@@ -1374,11 +1372,19 @@ def collect_release_files(options):
         dry('cp -r %s %s' % (html_docs, out_dir),
             shutil.copytree, html_docs, out_dir)
 
+    else:
+        print "Skipping docs, since html docs were not built"
+
+    # Copy PDF docs into the new folder
+    try:
+        pdf = glob.glob(os.path.join('doc', 'users-guide', 'build',
+                                    'latex', '*.pdf'))[0]
+    except IndexError:
+        print "Skipping pdf, since pdf was not built."
+    else:
         out_pdf = os.path.join(dist_dir, os.path.basename(pdf))
         dry('cp %s %s' % (pdf, out_pdf),
             shutil.copyfile, pdf, out_pdf)
-    else:
-        print "Skipping docs, since html docs were not built"
 
 
 @task
