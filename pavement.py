@@ -14,6 +14,7 @@ import textwrap
 import imp
 import subprocess
 import inspect
+import tarfile
 from types import DictType
 
 import pkg_resources
@@ -988,44 +989,61 @@ def build_bin(options):
         shutil.copytree, bindir, invest_dist)
 
 
-    sitepkgs_egg_glob = os.path.join(sitepkgs, 'natcap.versioner-*.egg')
-    try:
-        latest_egg = sorted(glob.glob(sitepkgs_egg_glob), reverse=True)[0]
-        egg_dir = os.path.join(invest_dist, 'eggs')
-        if not os.path.exists(egg_dir):
-            dry('mkdir %s' % egg_dir , os.makedirs, egg_dir)
-
-        dest_egg = os.path.join(invest_dist, 'eggs', os.path.basename(latest_egg))
-        dry('cp {src_egg} {dest_egg}'.format(
-            src_egg=latest_egg, dest_egg=dest_egg), shutil.copyfile,
-            latest_egg, dest_egg)
-    except IndexError:
-        # Couldn't find any eggs in the local site-packages, try to install
-        # from pip instead.
-
-        # get version spec from requirements.txt
-        with open('requirements.txt') as requirements_file:
-            for requirement in pkg_resources.parse_requirements(requirements_file.read()):
-                if requirement.project_name == 'natcap.versioner':
-                    versioner_spec = str(requirement)
-                    break
-
-        # install package as egg in the {bindir}/eggs folder
-        # Assume pip is in the local virtualenv (same dir as python)
-        pip_entrypoint = os.path.join(os.path.dirname(python_exe), 'pip')
+    # Mac builds seem to need an egg placed in just the right place.
+    if platform.system() == 'Darwin':
+        sitepkgs_egg_glob = os.path.join(sitepkgs, 'natcap.versioner-*.egg')
         try:
-            pythonpath = os.environ['PYTHONPATH']
-        except KeyError:
-            pythonpath = []
-        pythonpath = [os.path.join(invest_dist, 'eggs')] + pythonpath
-        print 'PYTHONPATH', pythonpath
-        sh('{pip_ep} install --no-deps --root {bindir} --egg \'{versioner}\''.format(
-            python=python_exe,
-            pip_ep=pip_entrypoint,
-            versioner=versioner_spec,
-            bindir=os.path.join(invest_dist, 'eggs'),
-            env={'PYTHONPATH': pythonpath})
-        )
+            # If natcap.versioner was installed as an egg, just take that and
+            # put it into the eggs/ dir.
+            latest_egg = sorted(glob.glob(sitepkgs_egg_glob), reverse=True)[0]
+            egg_dir = os.path.join(invest_dist, 'eggs')
+            if not os.path.exists(egg_dir):
+                dry('mkdir %s' % egg_dir , os.makedirs, egg_dir)
+
+            dest_egg = os.path.join(invest_dist, 'eggs', os.path.basename(latest_egg))
+            dry('cp {src_egg} {dest_egg}'.format(
+                src_egg=latest_egg, dest_egg=dest_egg), shutil.copyfile,
+                latest_egg, dest_egg)
+        except IndexError:
+            # Couldn't find any eggs in the local site-packages, use pip to
+            # download the source archive, then build and copy the egg from the
+            # archive.
+
+            # Get version spec from requirements.txt
+            with open('requirements.txt') as requirements_file:
+                for requirement in pkg_resources.parse_requirements(requirements_file.read()):
+                    if requirement.project_name == 'natcap.versioner':
+                        versioner_spec = str(requirement)
+                        break
+
+            # Download a valid source tarball to the dist dir.
+
+            sh('{pip_ep} install --no-deps --no-use-wheel --download {distdir} \'{versioner}\''.format(
+                pip_ep=os.path.join(os.path.dirname(python_exe), 'pip'),
+                distdir='dist',
+                versioner=versioner_spec
+                )
+            )
+
+            cwd = os.getcwd()
+            # Unzip the tar.gz and run bdist_egg on it.
+            versioner_tgz = os.path.abspath(glob.glob('dist/natcap.versioner-*.tar.gz')[0])
+            os.chdir('dist')
+            dry('unzip %s' % versioner_tgz,
+                lambda tgz: tarfile.open(tgz, 'r:gz').extractall('.'),
+                versioner_tgz)
+            os.chdir(cwd)
+
+            versioner_dir = versioner_tgz.replace('.tar.gz', '')
+            sh('python setup.py bdist_egg', cwd=versioner_dir)
+
+            # Copy the new egg to the built distribution with the eggs in it.
+            # Both these folders should already be absolute paths.
+            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist', 'natcap.versioner-*'))[0]
+            versioner_egg_dest = os.path.join(invest_dist, 'eggs', os.path.basename(versioner_egg))
+            dry('cp %s %s' % (versioner_egg, versioner_egg_dest),
+                shutil.copyfile, versioner_egg, versioner_egg_dest)
+
 
 @task
 @cmdopts([
