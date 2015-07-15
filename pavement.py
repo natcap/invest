@@ -1103,8 +1103,7 @@ def build_installer(options):
         print "ERROR: Run `paver build_bin` to make new binaries"
         raise BuildFailure
 
-    binary = os.path.join(options.bindir, 'invest')
-    if command == 'nsis:
+    if command == 'nsis':
         _build_nsis(version, options.bindir, 'x86')
     elif command == 'dmg':
         _build_dmg(version, options.bindir)
