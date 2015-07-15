@@ -1428,9 +1428,6 @@ def jenkins_installer():
             release_env,
             'Scripts' if platform.system() == 'Windows' else 'bin',
             'python'),
-        'nodocs': True,
-        'nodata': True,
-        'noinstaller': True,
     })
 
 
