@@ -885,8 +885,19 @@ def check():
                 print "ERROR: executable %s not found on the PATH" % fname
                 errors_found = True
 
+    requirements = [
+        'virtualenv>=13.0.0',
+        'pip>=7.1.0',
+    ]
+    for requirement in requirements:
+        try:
+            pkg_resources.require(requirements)
+        except pkg_resources.VersionConflict as conflict:
+            print 'ERROR: %s' % conflict.report()
+            errors_found = True
+
     if errors_found:
-        return 1
+        raise BuildFailure
     else:
         print "All's well."
 
