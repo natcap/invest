@@ -14,6 +14,7 @@ import textwrap
 import imp
 import subprocess
 import inspect
+from types import DictType
 
 import pkg_resources
 import paver.svn
@@ -76,7 +77,11 @@ class Repository(object):
         raise Exception
 
     def tracked_version(self):
-        return json.load(open('versions.json'))[self.local_path]
+        tracked_rev = json.load(open('versions.json'))[self.local_path]
+        if type(tracked_rev) is DictType:
+            user_os = platform.system()
+            return tracked_rev[user_os]
+        return tracked_rev
 
     def at_known_rev(self):
         tracked_version = self.format_rev(self.tracked_version())
