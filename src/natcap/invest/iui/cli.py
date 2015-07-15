@@ -7,6 +7,7 @@ import glob
 import os
 import sys
 
+import natcap.versioner
 import natcap.invest
 import natcap.invest.iui.modelui
 
@@ -21,6 +22,7 @@ def iui_dir():
     else:
         # we are running in a normal Python environment
         basedir = os.path.dirname(__file__)
+    print 'BASEDIR: %s' % basedir
     return basedir
 
 
