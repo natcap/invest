@@ -19,8 +19,7 @@
 !define MUI_COMPONENTSPAGE_NODESC
 !define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 
-SetCompressor /FINAL /SOLID zlib
-SetCompressorDictSize 64
+SetCompressor zlib
 
 ; MUI has some graphical files that I want to define, which must be defined
 ; here before the macros are declared.
