@@ -91,10 +91,22 @@ def main():
 
     args = parser.parse_args()
 
+    tools_in_development = set([
+        'seasonal_water_yield',
+        'ndr',
+        'globio',
+        'seasonal_water_yield',
+        'scenic_quality',
+    ])
+
     if args.list is True:
         print 'Available models:'
         for model_name in list_models():
-            print '    ' + model_name
+            if model_name in tools_in_development:
+                unstable = '    UNSTABLE'
+            else:
+                unstable = ''
+            print '    %-30s %s' % (model_name, unstable)
         return
 
     if args.model not in list_models():

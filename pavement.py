@@ -1294,7 +1294,7 @@ start /d "." {binary} {modelname}
     bindir = os.path.dirname(binary)
     for line in sh('{bin} --list'.format(bin=binary), capture=True).split('\n'):
         if line.startswith('    '):
-            model_name = line.lstrip().rstrip()
+            model_name = line.replace('UNSTABLE', '').lstrip().rstrip()
 
             console_filename = os.path.join(bindir, filename_template).format(
                 modelname=model_name, extension=mode)
