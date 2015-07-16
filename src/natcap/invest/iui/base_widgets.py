@@ -26,7 +26,6 @@ CMD_FOLDER = '.'
 INVEST_ROOT = './'
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
 ENCODING = sys.getfilesystemencoding()
-print('IUI_DIR: %s' % IUI_DIR)
 
 # This data object is intended to be a thread-safe way to interact with data
 # values that may be altered while our multi-threaded UI is running.
