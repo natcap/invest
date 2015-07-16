@@ -940,8 +940,8 @@ def build_data(options):
             shutil.make_archive, **{
                 'base_name': os.path.splitext(out_zipfile)[0],
                 'format': 'zip',
-                'root_dir': os.path.join(data_repo.local_path, data_dirname),
-                'base_dir': '.'})
+                'root_dir': data_repo.local_path,
+                'base_dir': data_dirname})
 
 
 @task
@@ -1513,7 +1513,7 @@ def zip(args):
         raise BuildFailure('zip takes 2 arguments only.')
 
     archive_name = args[0]
-    source_dir = args[1]
+    source_dir = os.path.abspath(args[1])
 
     dry('zip -r %s %s.zip' % (source_dir, archive_name),
         shutil.make_archive, **{
