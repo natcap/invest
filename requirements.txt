@@ -11,3 +11,4 @@ pyyaml
 scipy
 setuptools
 shapely
+six>=1.3
