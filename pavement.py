@@ -1547,6 +1547,7 @@ def jenkins_installer(options):
             if user_option.lower() == 'true':
                 options[opt_name] = True
         except AttributeError:
+            print 'Skipping option %s' % opt_name
             pass
 
     call_task('build', options=options)
