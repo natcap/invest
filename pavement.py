@@ -700,6 +700,8 @@ def clean(options):
                      'exe/dist',
                      'exe/build',
                      'api_env',
+                     'natcap.invest.egg-info',
+                     'release_env',
                      ]
     files_to_rm = [
         options.virtualenv.script_name,
