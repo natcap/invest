@@ -1446,6 +1446,10 @@ def collect_release_files(options):
         dry('mkdir %s' % data_dir, os.makedirs, data_dir)
 
     for data_zip in glob.glob(os.path.join('dist', '*.zip')):
+        if data_zip.startswith('invest'):
+            # Skip the api and userguide zipfiles
+            continue
+
         out_filename = os.path.join(data_dir, os.path.basename(data_zip))
         dry('cp %s %s' % (data_zip, out_filename),
             shutil.copyfile, data_zip, out_filename)
