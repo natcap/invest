@@ -1207,7 +1207,7 @@ def _build_nsis(version, bindir, arch):
     invest_icon_src = os.path.join('installer', 'windows', 'InVEST-2.ico')
     invest_icon_dst = os.path.join(nsis_bindir, 'InVEST-2.ico')
     dry('cp %s %s' % (invest_icon_src, invest_icon_dst),
-        shutil.copyfile, invest_icon, src, invest_icon_dst)
+        shutil.copyfile, invest_icon_src, invest_icon_dst)
 
     nsis_bindir = nsis_bindir.replace('/', r'\\')
 
