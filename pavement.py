@@ -987,7 +987,10 @@ def build_bin(options):
         }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
-    sh('pip freeze > package_versions.txt', cwd=bindir)
+
+    # Assume we're in a virtualenv
+    pip_bin = os.path.join(os.path.dirname(python_exe), 'pip')
+    sh('{pip} freeze > package_versions.txt'.format(pip=pip_bin), cwd=bindir)
 
     if not os.path.exists('dist'):
         dry('mkdir dist',
