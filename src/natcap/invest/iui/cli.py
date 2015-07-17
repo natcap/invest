@@ -22,7 +22,7 @@ def iui_dir():
     else:
         # we are running in a normal Python environment
         basedir = os.path.dirname(__file__)
-    print 'BASEDIR: %s' % basedir
+    #print 'BASEDIR: %s' % basedir
     return basedir
 
 
