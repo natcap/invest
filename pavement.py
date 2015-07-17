@@ -1535,6 +1535,9 @@ def jenkins_installer(options):
 
     Allows for the user to build only the pieces needed.  Especially handy for
     dev builds on a fork.
+
+    All parameters passed in must be strings, either 'true' or 'false'.  An
+    exception will be raised if any other value is provided.
     """
 
     call_task('clean')
@@ -1547,7 +1550,7 @@ def jenkins_installer(options):
         'envname': release_env
     })
 
-    options = {
+    build_options = {
         'python': os.path.join(
             release_env,
             'Scripts' if platform.system() == 'Windows' else 'bin',
@@ -1556,14 +1559,19 @@ def jenkins_installer(options):
     for opt_name in ['nodata', 'nodocs', 'noinstaller', 'nobin']:
         # set these options based on whether they were provided.
         try:
-            user_option = getattr(options, opt_name)
+            user_option = getattr(options.jenkins_installer, opt_name)
             if user_option.lower() == 'true':
-                options[opt_name] = True
+                user_option = True
+            elif user_option.lower() == 'false':
+                user_option = False
+            else:
+                raise Exception('Invalid option: %s' % user_option)
+            build_options[opt_name] = user_option
         except AttributeError:
             print 'Skipping option %s' % opt_name
             pass
 
-    call_task('build', options=options)
+    call_task('build', options=build_options)
 
 
 @task
