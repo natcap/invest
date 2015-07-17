@@ -1407,7 +1407,7 @@ def build(options):
     for attr, default_value, extra_args in defaults:
         task_base = attr[2:]
         try:
-            getattr(options, attr)
+            getattr(options.build, attr)
         except AttributeError:
             # when the user doesn't provide a --no(data|bin|docs) option,
             # AttributeError is raised.
