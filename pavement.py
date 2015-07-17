@@ -1511,10 +1511,10 @@ def collect_release_files(options):
 
 @task
 @cmdopts([
-    ('nodata', '', "Don't build the data zipfiles"),
-    ('nobin', '', "Don't build the binaries"),
-    ('nodocs', '', "Don't build the documentation"),
-    ('noinstaller', '', "Don't build the installer"),
+    ('nodata=', '', "Don't build the data zipfiles"),
+    ('nobin=', '', "Don't build the binaries"),
+    ('nodocs=', '', "Don't build the documentation"),
+    ('noinstaller=', '', "Don't build the installer"),
 ])
 def jenkins_installer(options):
     """
@@ -1534,16 +1534,22 @@ def jenkins_installer(options):
         'envname': release_env
     })
 
-    call_task('build', options={
+    options = {
         'python': os.path.join(
             release_env,
             'Scripts' if platform.system() == 'Windows' else 'bin',
             'python'),
-        'nodata': getattr(options, 'nodata', False),
-        'nodocs': getattr(options, 'nodocs', False),
-        'noinstaller': getattr(options, 'noinstaller', False),
-        'nobin': getattr(options, 'nobin', False),
-    })
+    }
+    for opt_name in ['nodata', 'nodocs', 'noinstaller', 'nobin']:
+        # set these options based on whether they were provided.
+        try:
+            user_option = getattr(options, opt_name)
+            if user_option.lower() == 'true':
+                options[opt_name] = True
+        except AttributeError:
+            pass
+
+    call_task('build', options=options)
 
 
 @task
