@@ -97,6 +97,8 @@ def main():
         'globio',
         'seasonal_water_yield',
         'scenic_quality',
+        'crop_production',
+        'scenic_quality',
     ])
 
     if args.list is True:
