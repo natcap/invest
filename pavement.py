@@ -448,7 +448,9 @@ def after_install(options, home_dir):
                 "    version = subprocess.check_output([join(home_dir, bindir, 'python'), 'setup.py', '--version'])\n"
                 "    version = version.rstrip()  # clean trailing whitespace\n"
                 "    invest_sdist = join('dist', 'natcap.invest-{version}.tar.gz'.format(version=version))\n"
-
+                "    # Sometimes, don't know why, sdist ends up with - instead of + as local ver. separator.\n"
+                "    if not os.path.exists(invest_sdist):\n"
+                "        invest_sdist = invest_sdist.replace('+', '-')\n"
                 # Recent versions of pip build wheels by default before installing, but wheel
                 # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
                 "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest',"
