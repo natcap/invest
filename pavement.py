@@ -1536,20 +1536,14 @@ def jenkins_installer(options):
     Allows for the user to build only the pieces needed.  Especially handy for
     dev builds on a fork.
 
-    All parameters passed in must be strings, either 'true' or 'false'.  An
-    exception will be raised if any other value is provided.
+    All parameters passed in must be strings, either 'true' or 'false'.
+    Empty values, '', "", 0, and various capitalizations of false will evaluate to False.
+    Only 1 and various capitalizations of true will evaluate to True.
+    An exception will be raised if any other value is provided.
     """
 
-    call_task('clean')
-    call_task('fetch', args = [''])
+    # Process build options up front so that we can fail earlier.
     release_env = 'release_env'
-    call_task('env', options={
-        'system_site_packages': True,
-        'clear': True,
-        'with_invest': True,
-        'envname': release_env
-    })
-
     build_options = {
         'python': os.path.join(
             release_env,
@@ -1560,9 +1554,9 @@ def jenkins_installer(options):
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
-            if user_option.lower() == 'true':
+            if user_option.lower() in ['true', '1']:
                 user_option = True
-            elif user_option.lower() == 'false':
+            elif user_option.lower() in ['', "''", '""', 'false', '0']:
                 user_option = False
             else:
                 raise Exception('Invalid option: %s' % user_option)
@@ -1570,6 +1564,15 @@ def jenkins_installer(options):
         except AttributeError:
             print 'Skipping option %s' % opt_name
             pass
+
+    call_task('clean')
+    call_task('fetch', args = [''])
+    call_task('env', options={
+        'system_site_packages': True,
+        'clear': True,
+        'with_invest': True,
+        'envname': release_env
+    })
 
     call_task('build', options=build_options)
 
