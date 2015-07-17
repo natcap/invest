@@ -1417,7 +1417,7 @@ def build(options):
             print 'Skipping task %s' % task_base
 
 
-    if getattr(options, 'noinstaller', False) is False:
+    if getattr(options.build, 'noinstaller', False) is False:
         # The installer task has its own parameter defaults.  Let the
         # build_installer task handle most of them.  We can pass in some of the
         # parameters, though.
@@ -1459,7 +1459,7 @@ def collect_release_files(options):
         dry('mkdir %s' % data_dir, os.makedirs, data_dir)
 
     for data_zip in glob.glob(os.path.join('dist', '*.zip')):
-        if data_zip.startswith('invest'):
+        if os.path.basename(data_zip).startswith('invest'):
             # Skip the api and userguide zipfiles
             continue
 
