@@ -1491,9 +1491,18 @@ def collect_release_files(options):
 
 
 @task
-def jenkins_installer():
+@cmdopts([
+    ('nodata', '', "Don't build the data zipfiles"),
+    ('nobin', '', "Don't build the binaries"),
+    ('nodocs', '', "Don't build the documentation"),
+    ('noinstaller', '', "Don't build the installer"),
+])
+def jenkins_installer(options):
     """
     Run a jenkins build via paver.
+
+    Allows for the user to build only the pieces needed.  Especially handy for
+    dev builds on a fork.
     """
 
     call_task('clean')
@@ -1506,13 +1515,15 @@ def jenkins_installer():
         'envname': release_env
     })
 
-
-    # temporarily only build binaries while I figure out windows build issues
     call_task('build', options={
         'python': os.path.join(
             release_env,
             'Scripts' if platform.system() == 'Windows' else 'bin',
             'python'),
+        'nodata': getattr(options, 'nodata', False),
+        'nodocs': getattr(options, 'nodocs', False),
+        'noinstaller': getattr(options, 'noinstaller', False),
+        'nobin': getattr(options, 'nobin', False),
     })
 
 
