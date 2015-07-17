@@ -37,7 +37,7 @@ def list_models():
         json_name = os.path.basename(json_name)
 
         model_names.append(json_name)
-    return model_names
+    return sorted(model_names)
 
 def write_console_files(out_dir, extension):
     """
