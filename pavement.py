@@ -988,9 +988,22 @@ def build_bin(options):
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
 
+    # Write the package versions to a text file for the record.
     # Assume we're in a virtualenv
     pip_bin = os.path.join(os.path.dirname(python_exe), 'pip')
     sh('{pip} freeze > package_versions.txt'.format(pip=pip_bin), cwd=bindir)
+
+    # Record the hg path, branch, sha1 of this repo to a text file. This will help us down
+    # the road to differentiate between built binaries from different forks.
+    with open(os.path.join(bindir, 'buildinfo.txt'), 'w') as buildinfo_textfile:
+        hg_path = sh('hg paths', capture=True)
+        buildinfo_textfile.write(hg_path)
+
+        branchname = sh('hg branch', capture=True)
+        buildinfo_textfile.write('branch = %s' % branchname)
+
+        commit_sha1 = sh('hg log -r . --template="{node}\n"', capture=True)
+        buildinfo_textfile.write(commit_sha1)
 
     if not os.path.exists('dist'):
         dry('mkdir dist',
@@ -1598,5 +1611,6 @@ def forked_by(options):
             username_file.write(username)
     except AttributeError:
         pass
+
 
 
