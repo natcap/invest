@@ -1289,15 +1289,25 @@ start /d "." {binary} {modelname}
         'bat': windows_template,
         'sh': posix_template,
     }
-    filename_template = "invest_{modelname}.{extension}"
+    filename_template = "{prefix}{modelname}.{extension}"
+
+    exclude_prefix = set([
+        'delineateit',
+        'routedem',
+    ])
 
     bindir = os.path.dirname(binary)
     for line in sh('{bin} --list'.format(bin=binary), capture=True).split('\n'):
         if line.startswith('    '):
             model_name = line.replace('UNSTABLE', '').lstrip().rstrip()
 
+            if model_name not in exclude_prefix:
+                prefix = 'invest_'
+            else:
+                prefix = ''
+
             console_filename = os.path.join(bindir, filename_template).format(
-                modelname=model_name, extension=mode)
+                modelname=model_name, extension=mode, prefix=prefix)
             print 'Writing console %s' % console_filename
 
             with open(console_filename, 'w') as console_file:
