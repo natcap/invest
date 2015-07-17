@@ -1542,3 +1542,24 @@ def zip(args):
             'root_dir': source_dir,
             'base_dir': '.'})
 
+@task
+@cmdopts([
+    ('attr-file=', 'u', 'Save path attributes to a file'),
+])
+def forked_by(options):
+    """
+    Print the name of the user who forked this repo.
+    """
+
+    hg_path = sh('hg paths', capture=True).rstrip()
+
+    username, reponame = hg_path.split('/')[-2:]
+    print 'username=%s' % username
+
+    try:
+        with open(options.uname_file, 'w') as username_file:
+            username_file.write(username)
+    except AttributeError:
+        pass
+
+
