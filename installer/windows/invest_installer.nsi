@@ -199,7 +199,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   SectionIn RO ;require this section
 
   !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
-  !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\installer\InVEST-2.ico"
+  !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
   !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
   !define RECREATION "${SMPATH}\Recreation"
   !define OVERLAP "${SMPATH}\Overlap Analysis"
