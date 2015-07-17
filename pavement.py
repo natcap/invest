@@ -1557,7 +1557,10 @@ def jenkins_installer(options):
             if user_option.lower() in ['true', '1']:
                 user_option = True
             elif user_option.lower() in ['', "''", '""', 'false', '0']:
-                user_option = False
+                # Skip this option entirely.  build() expects this option to be
+                # absent from the build_options dict if we want to not provide
+                # the build option.
+                raise AttributeError
             else:
                 raise Exception('Invalid option: %s' % user_option)
             build_options[opt_name] = user_option
