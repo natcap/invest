@@ -1458,7 +1458,7 @@ def collect_release_files(options):
 
     # copy the installer(s) into the new folder
     installer_files = []
-    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm']:
+    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm', '*.zip']:
         glob_pattern = os.path.join('dist', pattern)
         installer_files += glob.glob(glob_pattern)
 
@@ -1492,6 +1492,21 @@ def collect_release_files(options):
         out_pdf = os.path.join(dist_dir, os.path.basename(pdf))
         dry('cp %s %s' % (pdf, out_pdf),
             shutil.copyfile, pdf, out_pdf)
+
+    # Archive the binaries dir.
+    os_name = platform.system().lower()
+    architecture = 'x%s' % platform.architecture()[0][:2]
+    zipfile_name = 'invest-{ver}-{plat}-{arch}'.format(
+        ver=invest_version,
+        plat=os_name,
+        arch=architecture
+    )
+    call_task('zip', args=[
+        os.path.join(dist_dir, zipfile_name),
+        os.path.join('dist', 'invest_dist')
+    ])
+    dry('rm -r %s' % 'dist/invest_dist',
+        shutil.rmtree, os.path.join('dist', 'invest_dist'))
 
 
 @task
