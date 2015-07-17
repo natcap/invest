@@ -959,12 +959,11 @@ def build_bin(options):
     # with the version that matplotlib requires.  Pyinstaller provides
     # six==1.0.0, matplotlib requires six>=1.3.0.
     pyi_repo = REPOS_DICT['pyinstaller']
+    print 'Checking and removing deprecated six.py in pyinstaller if needed'
     if pyi_repo.current_rev() == pyi_repo.format_rev('v2.1'):
-        print 'Checking and removing deprecated six.py in pyinstaller if needed'
-        six_file = os.path.join(pyi_repo.local_path, 'PyInstaller', 'lib', 'six.py')
-        if os.path.exists(six_file):
-            dry('rm %s' % six_file,
-                os.remove, six_file)
+        six_glob = os.path.join(pyi_repo.local_path, 'PyInstaller', 'lib', 'six.*')
+        for six_file in glob.glob(six_glob):
+            dry('rm %s' % six_file, os.remove, six_file)
 
     # if the InVEST built binary directory exists, it should always
     # be deleted.  This is because we've had some weird issues with builds
