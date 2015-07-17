@@ -48,7 +48,7 @@ class Repository(object):
         if not self.ischeckedout():
             self.clone()
         else:
-            LOGGER.debug('Repository %s exists', self.local_path)
+            print 'Repository %s exists' % self.local_path
 
 
         # If we're already updated to the correct rev, return.
@@ -200,7 +200,6 @@ class GitRepository(Repository):
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
-    'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
     'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
     'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
@@ -546,7 +545,7 @@ def fetch(args):
     # determine which groupings the user wants to operate on.
     # example: `src` would represent all repos under src/
     # example: `data` would represent all repos under data/
-    # example: `src/pygeoprocessing` would represent the pygeoprocessing repo
+    # example: `src/pyinstaller` would represent the pyinstaller repo
     repos = set([])
     for argument in args:
         if not argument.startswith('-'):
@@ -559,7 +558,7 @@ def fetch(args):
 
         Arguments:
             local_repo_path (string): the path to the local repository
-                relative to the CWD. (example: src/pygeoprocessing)
+                relative to the CWD. (example: src/pyinstaller)
 
         Returns:
             Boolean: Whether the user did request this repo.
@@ -571,7 +570,7 @@ def fetch(args):
         return False
 
     for repo in REPOS:
-        LOGGER.debug('Checking %s', repo.local_path)
+        print 'Checking %s' % repo.local_path
 
         # If the user did not request this repo AND the user didn't want to
         # update everything (by specifying no positional args), skip this repo.
