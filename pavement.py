@@ -1449,7 +1449,7 @@ def collect_release_files(options):
     # rstrip to take off the newline
     python_exe = getattr(options, 'python', sys.executable)
     invest_version = _invest_version(python_exe)
-    dist_dir = os.path.join('dist', 'invest_%s' % invest_version)
+    dist_dir = os.path.join('dist', 'release_%s' % invest_version)
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
 
