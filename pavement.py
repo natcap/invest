@@ -128,7 +128,7 @@ class HgRepository(Repository):
 
     def tracked_version(self, convert=True):
         json_version = Repository.tracked_version(self)
-        if convert is False:
+        if convert is False or not os.path.exists(self.local_path):
             return json_version
         return self._format_log(template='{node}', rev=json_version)
 
