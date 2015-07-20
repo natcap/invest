@@ -719,7 +719,8 @@ def push(args):
         else:
             target_filename = file_basename
 
-        print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, _fix_path(target_filename))
+        target_filename = _fix_path(target_filename)  # convert windows to linux paths
+        print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
         scp.put(transfer_file, target_filename)
 
     ssh.close()
