@@ -3,6 +3,7 @@ h5py
 matplotlib
 natcap.versioner>=0.2.2
 numpy
+paramiko
 poster
 pyamg
 pygeoprocessing==0.3.0a3
