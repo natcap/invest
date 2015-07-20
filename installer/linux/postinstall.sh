@@ -1,6 +1,3 @@
-# make soft links for each of the invest exe's into /usr/bin.
+# Make a softlink
 
-for exe in `find /usr/lib/invest-bin -executable -type f`
-do
-    ln -s /usr/bin/`basename $exe` $exe
-done
+ln -s /usr/lib/natcap/invest/invest-bin/invest /usr/local/bin/invest
