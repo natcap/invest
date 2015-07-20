@@ -698,6 +698,10 @@ def push(args):
         else:
             target_filename = file_basename
 
+        # destination OS is linux, so adjust windows filepaths to match
+        if platform.system() == 'Windows':
+            target_filename = target_filename.replace(os.sep, '/')
+
         print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
         scp.put(transfer_file, target_filename)
 
