@@ -1637,7 +1637,7 @@ def jenkins_installer(options):
         call_task('jenkins_push_artifacts', options={
             'python': build_options['python'],
             'username': 'dataportal',
-            'host': '10.240.218.61',  # google VM internal IP
+            'host': 'data.naturalcapitalproject.org',
             'dataportal': 'public_html',
         })
 
