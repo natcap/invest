@@ -95,9 +95,8 @@ The ``paver build_docs`` command has these options: ::
 
 Note that building API documentation via ``paver build_docs`` is only currently supported
 on POSIX systems.  Documentation can still be built on Windows, but you'll need to run
-something like this:
+something like this: ::
 
-::
     :: build_docs.bat
     :: Example batch file for building documentation in a virtualenv
     ::
