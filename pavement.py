@@ -1540,6 +1540,7 @@ def collect_release_files(options):
     ('nobin=', '', "Don't build the binaries"),
     ('nodocs=', '', "Don't build the documentation"),
     ('noinstaller=', '', "Don't build the installer"),
+    ('nopush=', '', "Don't Push the build artifacts to dataportal"),
 ])
 def jenkins_installer(options):
     """
@@ -1591,6 +1592,24 @@ def jenkins_installer(options):
 
     call_task('build', options=build_options)
 
+    try:
+        nopush_str = getattr(options.jenkins_installer, 'nopush')
+        if nopush_str in ['false', 'False', '0', '', '""',]:
+            push = True
+        else:
+            push = False
+    except AttributeError:
+        push = True
+
+    if push:
+        call_task('jenkins_push_artifacts', options={
+            'python': build_options['python'],
+            'username': 'dataportal',
+            'host': 'data.naturalcapitalproject.org',
+            'dataportal': 'public_html',
+        })
+
+
 
 @task
 @consume_args
@@ -1637,6 +1656,77 @@ def forked_by(options):
             username_file.write(username)
     except AttributeError:
         pass
+
+@task
+@cmdopts([
+    ('python=', '', 'Python exe'),
+    ('username=', '', 'Remote username'),
+    ('host=', '', 'URL of the remote server'),
+    ('dataportal=', '', 'Path to the dataportal'),
+    ('upstream=', '', 'The URL to the upstream REPO.  Use this when this repo is moved'),
+    ('password', '', 'Prompt for a password'),
+])
+def jenkins_push_artifacts(options):
+    """
+    Push artifacts to a remote server.
+    """
+
+    # get fork name
+    try:
+        hg_path = getattr(options.jenkins_push_artifacts, 'upstream')
+    except AttributeError:
+        hg_path = sh('hg paths', capture=True).rstrip()
+
+    username, reponame = hg_path.split('/')[-2:]
+
+    version_string = _invest_version(getattr(options.jenkins_push_artifacts, 'python', sys.executable))
+    if 'post' in version_string:
+        develop = True
+    else:
+        develop = False
+
+    def _get_release_files():
+        release_files = []
+        for filename in glob.glob('dist/release_*/*'):
+            if not os.path.isdir(filename):
+                release_files.append(filename)
+        return release_files
+
+    release_files = _get_release_files()
+    if develop is True:
+        data_dirname = 'develop'
+    else:
+        data_dirname = version_string
+    data_dir = os.path.join('invest-data', data_dirname)
+    data_files = glob.glob('dist/release_*/data/*')
+    if username == 'natcap' and reponame == 'invest':
+        # We're not on a fork!  Binaries are pushed to invest-releases
+        # dirnames are relative to the dataportal root
+        release_dir = os.path.join('invest-releases', version_string)
+
+    else:
+        # We're on a fork!
+        # Push the binaries, documentation to nightly-build
+        release_dir = os.path.join('nightly-build', 'invest-forks', username)
+
+    def _push(target_dir):
+        push_args = {
+            'user': getattr(options.jenkins_push_artifacts, 'username'),
+            'host': getattr(options.jenkins_push_artifacts, 'host'),
+            'dir': os.path.join(
+                getattr(options.jenkins_push_artifacts, 'dataportal'),
+                target_dir),
+        }
+
+        push_config = []
+        if getattr(options.jenkins_push_artifacts, 'password', False):
+            push_config.append('--password')
+
+        push_config.append('{user}@{host}:{dir}'.format(**push_args))
+        return push_config
+
+    call_task('push', args=_push(release_dir) + release_files)
+    call_task('push', args=_push(data_dir) + data_files)
 
 
 
