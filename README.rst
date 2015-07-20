@@ -131,6 +131,88 @@ look like this: ::
 Developing InVEST
 =================
 
+*Setting up an InVEST virtual environment*
+
+Most likely, the easiest way to run InVEST from your source tree is to build a
+virtual environment using the popular ``virtualenv``
+(https://virtualenv.pypa.io/en/latest/).  This can be done manually, but there
+is a paver task (``paver env``) to build up a virtual environment for you.  Here are a few
+examples:  ::
+
+    # Build an env with all dependencies installed only to this environment.
+    # This does not install InVEST, just the dependencies.
+    # The environment is created at test_env/
+    $ paver env -e test_env
+
+    # Build an env with access to system site-packages and also install InVEST
+    $ paver env --system-site-packages --clear --with-invest -e test_env
+
+    # You can also specify additional requirement to be installed with the -r
+    # flag.
+    $ paver env --sytem-site-packages -r requirements-docs.txt
+
+*natcap.versioner ImportError*
+
+Since June, 2015, we have been moving our python projects to the ``natcap``
+package namespace and gradually publishing our projects on the Python Package
+Index.  Unfortunately, using a namespace package does not appear to work quite
+as seamlessly across multiple virtual python installations as one might hope.
+
+A common example of this breakdown comes when trying to run ``python setup.py
+install`` on the ``invest`` repository (this repository).  Example: ::
+
+    $ python setup.py install
+    Traceback (most recent call last):
+      File "setup.py", line 19, in <module>
+          import natcap.versioner
+    ImportError: No module named natcap.versioner
+
+To fix this, install ``natcap.versioner`` to the python environment that you're
+trying to install ``natcap.invest`` to before calling natcap.invest's setup.py.
+So if you're trying to install natcap.invest to your global site-packages,
+install natcap.versioner there.  If you're trying to install natcap.invest to
+your virtual environment, activate your virtual environment, ``pip install
+natcap.versioner`` and then ``python setup.py install`` for natcap.invest.
+
+**Using python setup.py develop for natcap.invest**
+
+``python setup.py develop`` appears to have some odd behavior when trying to
+import natcap.invest.  If you find that you need to import natcap.versioner
+before you can import natcap.invest, do this: ::
+
+    $ pip uninstall natcap.versioner
+    $ pip install --egg natcap.versioner
+
+`The relevant issue`_ on the python packaging authority's issue tracked has some
+more information if you're interested.
+
+.. _The relevant issue: https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version#comment-19426088
+
+
+*GDAL*
+
+InVEST relies on GDAL/OGR for its raster and vector handling.  This library is
+usually available in your system's package index.
+
+Debian: ``sudo apt-get install python-gdal``
+
+Mac:  ``brew install gdal``
+
+Installing GDAL on a windows computer is a little more complicated.  Christoph
+Gohlke has prebuilt binaries for the Python GDAL package
+(http://www.lfd.uci.edu/~gohlke/pythonlibs/#gdal), though these have often
+given side-by-side configuration errors.  Use at your own risk.
+
+An alternative is to install the GDAL binaries from here:
+http://www.gisinternals.com/, and then install the GDAL python package
+separately.  To install in this way:
+
+  * Download and install the correct version of the GDAL binaries.
+  * Add a ``GDAL_DATA`` environment variable pointing to the folder containing
+    these installed binaries.
+
+Then, download and install the gdal python package.
+
 
 Contributing to Development
 ===========================
