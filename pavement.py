@@ -1573,6 +1573,7 @@ def collect_release_files(options):
         print "Skipping pdf, since pdf was not built."
     else:
         out_pdf = os.path.join(dist_dir, os.path.basename(pdf))
+        out_pdf = out_pdf.replace('+VERSION+', invest_version)
         dry('cp %s %s' % (pdf, out_pdf),
             shutil.copyfile, pdf, out_pdf)
 
