@@ -676,8 +676,9 @@ def push(args):
         username = getpass.getuser().strip()
 
     if ':' in destination_config:
-        target_dir = _fix_path(destination_config.split(':')[-1])
+        target_dir = destination_config.split(':')[-1]
         destination_config = destination_config.replace(':' + target_dir, '')
+        target_dir = _fix_path(target_dir)
     else:
         # just use the SCP default
         target_dir = None
@@ -1796,8 +1797,11 @@ def jenkins_push_artifacts(options):
         push_config.append('{user}@{host}:{dir}'.format(**push_args))
         return push_config
 
-    call_task('push', args=_push(release_dir) + release_files)
-    call_task('push', args=_push(data_dir) + data_files)
+    if len(release_files) > 0:
+        call_task('push', args=_push(release_dir) + release_files)
+
+    if len(data_files) > 0:
+        call_task('push', args=_push(data_dir) + data_files)
 
 
 
