@@ -599,7 +599,7 @@ def push(args):
     """Push a file or files to a remote server.
 
     Usage:
-        paver push [--private-key=KEYFILE] [--password] [user@]hostname[:target_dir] file1, file2, ...
+        paver push [--private-key=KEYFILE] [--password] [--makedirs] [user@]hostname[:target_dir] file1, file2, ...
 
     Uses pythonic paramiko-based SCP to copy files to the remote server.
 
@@ -609,6 +609,8 @@ def push(args):
     If --password is provided at the command line, the user will be prompted
     for a password.  This is sometimes required when the remote's private key
     requires a password to decrypt.
+
+    If --makedirs is provided, intermediate directories will be created as needed.
 
     If a target username is not provided ([user@]...), the current user's username
     used for the transfer.
@@ -689,6 +691,13 @@ def push(args):
     except paramiko.PasswordRequiredException:
         print 'ERROR: password required to decrypt private key on remote.  Use --password flag'
         return
+
+    # Make folders on remote if needed.
+    if target_dir is not None and '--makedirs' in config_opts:
+        ssh.exec_command('if [ ! -d "{dir}" ]\nthen\nmkdir -p {dir}\nfi'.format(
+            dir=target_dir))
+    else:
+        print 'Skipping creation of folders on remote'
 
     scp = SCPClient(ssh.get_transport())
     for transfer_file in files_to_push:
