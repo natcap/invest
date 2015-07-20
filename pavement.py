@@ -667,7 +667,7 @@ def push(args):
         username = destination_config.split('@')[0]
         destination_config = destination_config.replace(username + '@', '')
     else:
-        username = getpass.getuser()
+        username = getpass.getuser().strip()
 
     if ':' in destination_config:
         target_dir = destination_config.split(':')[-1]
@@ -677,7 +677,7 @@ def push(args):
         target_dir = None
 
     # hostname is whatever remains of the dest config.
-    hostname = destination_config
+    hostname = destination_config.strip()
 
     # start up the SSH connection
     if use_password:
@@ -716,6 +716,7 @@ def push(args):
         print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
         scp.put(transfer_file, target_filename)
 
+    ssh.close()
 
 @task
 def clean(options):
