@@ -626,7 +626,7 @@ def push(args):
     ssh.load_system_host_keys()
 
     # Automatically add host key if needed
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    #ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     # Clean out all of the user-configurable options flags.
     config_opts = []
