@@ -738,6 +738,7 @@ def clean(options):
                      'api_env',
                      'natcap.invest.egg-info',
                      'release_env',
+                     'invest-bin',
                      ]
     files_to_rm = [
         options.virtualenv.script_name,
@@ -1199,10 +1200,20 @@ def _build_fpm(version, bindir, pkg_type):
     print "WARNING:  The package will build but won't yet install properly"
     print
 
+    # debian packages dont like it when versions don't start with digits
+    if version.startswith('null'):
+        version = version.replace('null', '0.0.0')
+
+    # copy the bindir into a properly named folder here.
+    new_bindir = 'invest-bin'
+    if os.path.exists(new_bindir):
+        sh('rm -r %s' % new_bindir)
+    sh('cp -r %s %s' % (bindir, new_bindir))
+
     options = {
         'pkg_type': pkg_type,
         'version': version,
-        'bindir': bindir
+        'bindir': new_bindir,
     }
 
     fpm_command = (
@@ -1210,13 +1221,15 @@ def _build_fpm(version, bindir, pkg_type):
         ' -n invest'    # deb packages don't do well with uppercase
         ' -v %(version)s'
         ' -p dist/'
-        ' --prefix /usr/lib/'
-        ' -m James Douglass <jdouglass@stanford.edu>'
+        ' --prefix /usr/lib/natcap/invest'  # assume that other tools will go in natcap as well
+        ' -m "James Douglass <jdouglass@stanford.edu>"'
         ' --url http://naturalcapitalproject.org'
         ' --vendor "Natural Capital Project"'
         ' --license "Modified BSD"'
         ' --provides "invest"'
-        ' --description "InVEST (Integrated Valuation of Ecosystem Services '
+        ' --description "InVEST family of ecosystem service analysis tools'
+            '\n\n'
+            'InVEST (Integrated Valuation of Ecosystem Services '
             'and Tradeoffs) is a family of tools for quantifying the values '
             'of natural capital in clear, credible, and practical ways. In '
             'promising a return (of societal benefits) on investments in '
@@ -1224,8 +1237,14 @@ def _build_fpm(version, bindir, pkg_type):
             'tools to quantify and forecast this return. InVEST enables '
             'decision-makers to quantify the importance of natural capital, '
             'to assess the tradeoffs associated with alternative choices, and '
-            'to integrate conservation and human development."'
-        '--after-install ./installer/linux/postinstall.sh'
+            'to integrate conservation and human development.'
+            '\n\n'
+            'The Natural Capital Project is a collaboration between Stanford '
+            'University Woods Institute for the Environment, the World Wildlife'
+            ' Fund, The Nature Conservancy and the University of Minnesota '
+            'Institute on the Environment."'
+        ' --after-install ./installer/linux/postinstall.sh'
+        ' --after-remove ./installer/linux/postremove.sh'
         ' %(bindir)s') % options
     sh(fpm_command)
 
