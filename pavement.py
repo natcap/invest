@@ -1297,11 +1297,16 @@ def _build_nsis(version, bindir, arch):
 
     nsis_bindir = nsis_bindir.replace('/', r'\\')
 
+    if 'post' in version:
+        short_version = 'develop'
+    else:
+        short_version = version
+
     nsis_params = [
         '/DVERSION=%s' % version,
         '/DVERSION_DISK=%s' % version,
         '/DINVEST_3_FOLDER=%s' % nsis_bindir,
-        '/DSHORT_VERSION=%s' % version,  # some other value?
+        '/DSHORT_VERSION=%s' % short_version,
         '/DARCHITECTURE=%s' % arch,
         'invest_installer.nsi'
     ]
