@@ -599,9 +599,12 @@ def push(args):
     """Push a file or files to a remote server.
 
     Usage:
-        paver push [--password] [user@]hostname[:target_dir] file1, file2, ...
+        paver push [--private-key=KEYFILE] [--password] [user@]hostname[:target_dir] file1, file2, ...
 
     Uses pythonic paramiko-based SCP to copy files to the remote server.
+
+    if --private-key=KEYFILE is provided, KEYFILE must be the path to the private
+    key file to use.  If this file cannot be found, BuildFailure will be raised.
 
     If --password is provided at the command line, the user will be prompted
     for a password.  This is sometimes required when the remote's private key
@@ -628,6 +631,16 @@ def push(args):
 
     use_password = '--password' in config_opts
 
+    # check if the user specified a private key to use
+    private_key = None
+    for argument in config_opts:
+        if argument.startswith('--private-key'):
+            private_key_file = argument.split('=')[1]
+            if not os.path.exists(private_key_file):
+                raise BuildFailure(
+                    'Cannot fild private key file %s' % private_key_file)
+            private_key = paramiko.RSAKey.from_private_key_file(private_key_file)
+            break
     try:
         destination_config = args[0]
     except IndexError:
@@ -666,7 +679,7 @@ def push(args):
         password = None
 
     try:
-        ssh.connect(hostname, username=username, password=password)
+        ssh.connect(hostname, username=username, password=password, pkey=private_key)
     except paramiko.BadAuthenticationType:
         print 'ERROR: incorrect password or bad SSH key.'
         return
@@ -1665,6 +1678,7 @@ def forked_by(options):
     ('dataportal=', '', 'Path to the dataportal'),
     ('upstream=', '', 'The URL to the upstream REPO.  Use this when this repo is moved'),
     ('password', '', 'Prompt for a password'),
+    ('private-key=', '', 'Use this private key to push'),
 ])
 def jenkins_push_artifacts(options):
     """
@@ -1703,7 +1717,6 @@ def jenkins_push_artifacts(options):
         # We're not on a fork!  Binaries are pushed to invest-releases
         # dirnames are relative to the dataportal root
         release_dir = os.path.join('invest-releases', version_string)
-
     else:
         # We're on a fork!
         # Push the binaries, documentation to nightly-build
@@ -1721,6 +1734,20 @@ def jenkins_push_artifacts(options):
         push_config = []
         if getattr(options.jenkins_push_artifacts, 'password', False):
             push_config.append('--password')
+
+        pkey = None
+        if getattr(options.jenkins_push_artifacts, 'private_key', False):
+            pkey = options.jenkins_push_artifacts.private_key
+        elif platform.system() == 'Windows':
+            # Assume a default private key location for jenkins builds on
+            # Windows
+            pkey = os.path.join(os.path.expanduser('~'),
+                                'ssh', 'ncp-jenkins-master-id_rsa')
+        else:
+            print ('No private key provided, and not on Windows, so not '
+                   'assuming a default private key file')
+
+        push_config.append('--private-key=%s' % pkey)
 
         push_config.append('{user}@{host}:{dir}'.format(**push_args))
         return push_config
