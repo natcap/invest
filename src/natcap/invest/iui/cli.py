@@ -11,6 +11,16 @@ import natcap.versioner
 import natcap.invest
 import natcap.invest.iui.modelui
 
+TOOLS_IN_DEVELOPMENT = set([
+    'seasonal_water_yield',
+    'ndr',
+    'globio',
+    'seasonal_water_yield',
+    'scenic_quality',
+    'crop_production',
+    'scenic_quality',
+])
+
 def iui_dir():
     """
     Return the path to the IUI folder.
@@ -38,6 +48,18 @@ def list_models():
 
         model_names.append(json_name)
     return sorted(model_names)
+
+def print_models():
+    """
+    Pretty-print available models.
+    """
+    print 'Available models:'
+    for model_name in list_models():
+        if model_name in TOOLS_IN_DEVELOPMENT:
+            unstable = '    UNSTABLE'
+        else:
+            unstable = ''
+        print '    %-30s %s' % (model_name, unstable)
 
 def write_console_files(out_dir, extension):
     """
@@ -91,29 +113,15 @@ def main():
 
     args = parser.parse_args()
 
-    tools_in_development = set([
-        'seasonal_water_yield',
-        'ndr',
-        'globio',
-        'seasonal_water_yield',
-        'scenic_quality',
-        'crop_production',
-        'scenic_quality',
-    ])
-
     if args.list is True:
-        print 'Available models:'
-        for model_name in list_models():
-            if model_name in tools_in_development:
-                unstable = '    UNSTABLE'
-            else:
-                unstable = ''
-            print '    %-30s %s' % (model_name, unstable)
-        return
+        print_models()
 
     if args.model not in list_models():
-        print 'Error: "%s" not a known model' % args.model
-        return 1
+        print_models()
+        args.model = raw_input("Choose a model: ")
+        if args.model not in list_models():
+            print "Error: %s not a known model" % args.model
+            return 1
 
     natcap.invest.iui.modelui.main(args.model + '.json')
 
