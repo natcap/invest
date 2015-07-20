@@ -1637,7 +1637,7 @@ def jenkins_installer(options):
         call_task('jenkins_push_artifacts', options={
             'python': build_options['python'],
             'username': 'dataportal',
-            'host': 'data.naturalcapitalproject.org',
+            'host': '130.211.163.122',
             'dataportal': 'public_html',
         })
 
