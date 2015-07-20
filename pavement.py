@@ -694,7 +694,7 @@ def push(args):
 
     # Make folders on remote if needed.
     if target_dir is not None and '--makedirs' in config_opts:
-        ssh.exec_command('if [ ! -d "{dir}" ]\nthen\nmkdir -p {dir}\nfi'.format(
+        ssh.exec_command('if [ ! -d "{dir}" ]\nthen\nmkdir -p -v {dir}\nfi'.format(
             dir=target_dir))
     else:
         print 'Skipping creation of folders on remote'
@@ -1764,6 +1764,7 @@ def jenkins_push_artifacts(options):
                    'assuming a default private key file')
 
         push_config.append('--private-key=%s' % pkey)
+        push_config.append('--makedirs')
 
         push_config.append('{user}@{host}:{dir}'.format(**push_args))
         return push_config
