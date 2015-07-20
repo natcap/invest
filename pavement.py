@@ -631,7 +631,7 @@ def push(args):
 
     # Clean out all of the user-configurable options flags.
     config_opts = []
-    for argument in args:
+    for argument in args[:]:  # operate on a copy of args
         if argument.startswith('--'):
             config_opts.append(argument)
             args.remove(argument)
