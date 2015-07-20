@@ -676,8 +676,9 @@ def push(args):
         username = getpass.getuser().strip()
 
     if ':' in destination_config:
-        target_dir = _fix_path(destination_config.split(':')[-1])
+        target_dir = destination_config.split(':')[-1]
         destination_config = destination_config.replace(':' + target_dir, '')
+        target_dir = _fix_path(target_dir)
     else:
         # just use the SCP default
         target_dir = None
