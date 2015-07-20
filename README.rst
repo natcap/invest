@@ -1,5 +1,10 @@
-InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
+InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs 
 ================================================================
+
+|build_image|
+
+.. |build_image| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=invest-nightly-develop
+  :target: http://builds.naturalcapitalproject.org/job/invest-nightly-develop
 
 About  InVEST
 =============
