@@ -1742,7 +1742,7 @@ def jenkins_push_artifacts(options):
             # Assume a default private key location for jenkins builds on
             # Windows
             pkey = os.path.join(os.path.expanduser('~'),
-                                'ssh', 'ncp-jenkins-master-id_rsa')
+                                '.ssh', 'dataportal-id_rsa')
         else:
             print ('No private key provided, and not on Windows, so not '
                    'assuming a default private key file')
