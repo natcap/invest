@@ -1302,12 +1302,23 @@ def _build_nsis(version, bindir, arch):
     else:
         short_version = version
 
+    hg_path = sh('hg paths', capture=True).rstrip()
+    forkuser, forkreponame = hg_path.split('/')[-2:]
+    if forkuser == 'natcap':
+        data_location = 'invest-data'
+        forkname = ''
+    else:
+        data_location = 'nightly-build/invest-forks/%s/data' % forkuser
+        forkname = forkuser
+
     nsis_params = [
         '/DVERSION=%s' % version,
         '/DVERSION_DISK=%s' % version,
         '/DINVEST_3_FOLDER=%s' % nsis_bindir,
         '/DSHORT_VERSION=%s' % short_version,
         '/DARCHITECTURE=%s' % arch,
+        '/DFORKNAME=%s' % forkname,
+        '/DDATA_LOCATION=%s' % data_location,
         'invest_installer.nsi'
     ]
     makensis += ' ' + ' '.join(nsis_params)
@@ -1762,16 +1773,17 @@ def jenkins_push_artifacts(options):
         data_dirname = 'develop'
     else:
         data_dirname = version_string
-    data_dir = os.path.join('invest-data', data_dirname)
     data_files = glob.glob('dist/release_*/data/*')
     if username == 'natcap' and reponame == 'invest':
         # We're not on a fork!  Binaries are pushed to invest-releases
         # dirnames are relative to the dataportal root
+        data_dir = os.path.join('invest-data', data_dirname)
         release_dir = os.path.join('invest-releases', version_string)
     else:
         # We're on a fork!
         # Push the binaries, documentation to nightly-build
         release_dir = os.path.join('nightly-build', 'invest-forks', username)
+        data_dir = os.path.join(release_dir, 'data')
 
     def _push(target_dir):
         push_args = {

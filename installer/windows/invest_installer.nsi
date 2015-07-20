@@ -7,6 +7,9 @@
 ; SHORT_VERSION   - The short version name.  Usually a tagname such as 'tip',
 ;                   'default', or 3.4.5.
 ; ARCHITECTURE    - The architecture we're building for.  Generally this is x86.
+; FORKNAME        - The username of the InVEST fork we're building off of.
+; DATA_LOCATION   - Where (relative to datportal) the data should be downloaded
+;                   from.
 
 !include nsProcess.nsh
 !include LogicLib.nsh
@@ -66,7 +69,7 @@ SetCompressor zlib
 ; MUI end ------
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "InVEST_${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
+OutFile "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
 InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
 ShowInstDetails show
 
@@ -346,7 +349,7 @@ Var INSTALLER_DIR
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/invest-data/${SHORT_VERSION}"
+        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${SHORT_VERSION}"
         SetOutPath "$INSTDIR"
         NSISdl::download "$SERVER_PATH/${Filename}" ${Filename}
         Pop $R0 ;Get the status of the file downloaded
