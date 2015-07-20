@@ -1756,10 +1756,6 @@ def jenkins_push_artifacts(options):
     username, reponame = hg_path.split('/')[-2:]
 
     version_string = _invest_version(getattr(options.jenkins_push_artifacts, 'python', sys.executable))
-    if 'post' in version_string:
-        develop = True
-    else:
-        develop = False
 
     def _get_release_files():
         release_files = []
@@ -1769,7 +1765,7 @@ def jenkins_push_artifacts(options):
         return release_files
 
     release_files = _get_release_files()
-    if develop is True:
+    if 'post' in version_string:
         data_dirname = 'develop'
     else:
         data_dirname = version_string
@@ -1783,7 +1779,7 @@ def jenkins_push_artifacts(options):
         # We're on a fork!
         # Push the binaries, documentation to nightly-build
         release_dir = os.path.join('nightly-build', 'invest-forks', username)
-        data_dir = os.path.join(release_dir, 'data')
+        data_dir = os.path.join(release_dir, 'data', data_dirname)
 
     def _push(target_dir):
         push_args = {
