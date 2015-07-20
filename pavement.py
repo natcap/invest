@@ -15,6 +15,7 @@ import imp
 import subprocess
 import inspect
 import tarfile
+import socket
 from types import DictType
 
 import pkg_resources
@@ -644,6 +645,7 @@ def push(args):
             if not os.path.exists(private_key_file):
                 raise BuildFailure(
                     'Cannot fild private key file %s' % private_key_file)
+            print 'Using private key %s' % private_key_file
             private_key = paramiko.RSAKey.from_private_key_file(private_key_file)
             break
     try:
@@ -684,13 +686,13 @@ def push(args):
         password = None
 
     try:
-        ssh.connect(hostname, username=username, password=password, pkey=private_key)
+        ssh.connect(hostname, 22, username=username, password=password, pkey=private_key)
     except paramiko.BadAuthenticationType:
-        print 'ERROR: incorrect password or bad SSH key.'
-        return
+        raise BuildFailure('ERROR: incorrect password or bad SSH key')
     except paramiko.PasswordRequiredException:
-        print 'ERROR: password required to decrypt private key on remote.  Use --password flag'
-        return
+        raise BuildFailure('ERROR: password required to decrypt private key on remote.  Use --password flag')
+    except socket.error as other_error:
+        raise BuildFailure(other_error)
 
     # Make folders on remote if needed.
     if target_dir is not None and '--makedirs' in config_opts:
