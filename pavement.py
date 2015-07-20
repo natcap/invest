@@ -658,6 +658,13 @@ def push(args):
     if len(files_to_push) == 0:
         raise BuildFailure("ERROR: At least one file must be given")
 
+    def _fix_path(path):
+        """Fix up a windows path to work on linux"""
+        # destination OS is linux, so adjust windows filepaths to match
+        if platform.system() == 'Windows':
+            return path.replace(os.sep, '/')
+        return path
+
     # ASSUME WE'RE ONLY DOING ONE HOST PER PUSH
     # split apart the configuration string.
     # format:
@@ -669,7 +676,7 @@ def push(args):
         username = getpass.getuser().strip()
 
     if ':' in destination_config:
-        target_dir = destination_config.split(':')[-1]
+        target_dir = _fix_path(destination_config.split(':')[-1])
         destination_config = destination_config.replace(':' + target_dir, '')
     else:
         # just use the SCP default
@@ -711,11 +718,7 @@ def push(args):
         else:
             target_filename = file_basename
 
-        # destination OS is linux, so adjust windows filepaths to match
-        if platform.system() == 'Windows':
-            target_filename = target_filename.replace(os.sep, '/')
-
-        print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
+        print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, _fix_path(target_filename))
         scp.put(transfer_file, target_filename)
 
     ssh.close()
