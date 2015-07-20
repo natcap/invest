@@ -652,13 +652,11 @@ def push(args):
     try:
         destination_config = args[0]
     except IndexError:
-        print "ERROR: destination config must be provided"
-        return
+        raise BuildFailure("ERROR: destination config must be provided")
 
     files_to_push = args[1:]
     if len(files_to_push) == 0:
-        print "ERROR: At least one file must be given"
-        return
+        raise BuildFailure("ERROR: At least one file must be given")
 
     # ASSUME WE'RE ONLY DOING ONE HOST PER PUSH
     # split apart the configuration string.
@@ -676,9 +674,12 @@ def push(args):
     else:
         # just use the SCP default
         target_dir = None
+    print 'Target dir: %s' % target_dir
+    print 'Dest config: %s' % destination_config
 
     # hostname is whatever remains of the dest config.
     hostname = destination_config.strip()
+    print 'Hostname: %s' % hostname
 
     # start up the SSH connection
     if use_password:
