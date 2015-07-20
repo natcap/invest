@@ -619,6 +619,7 @@ def push(args):
     If a target directory is not provided (hostname[:target_dir]), the current
     directory of the target user is used.
     """
+    print args
     import paramiko
     from paramiko import SSHClient
     from scp import SCPClient
