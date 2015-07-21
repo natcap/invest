@@ -139,6 +139,7 @@ def main():
 
     if args.list is True:
         print_models()
+        return 0
 
     if args.model not in list_models():
         parser.print_help()
