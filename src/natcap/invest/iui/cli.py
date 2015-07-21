@@ -117,6 +117,7 @@ def main():
         print_models()
 
     if args.model not in list_models():
+        parser.print_help()
         print_models()
         args.model = raw_input("Choose a model: ")
         if args.model not in list_models():
