@@ -1815,14 +1815,14 @@ def jenkins_push_artifacts(options):
         data_dir = os.path.join(release_dir, 'data', data_dirname)
 
     pkey = None
+    push_args = {
+        'user': getattr(options.jenkins_push_artifacts, 'username'),
+        'host': getattr(options.jenkins_push_artifacts, 'host'),
+    }
     def _push(target_dir):
-        push_args = {
-            'user': getattr(options.jenkins_push_artifacts, 'username'),
-            'host': getattr(options.jenkins_push_artifacts, 'host'),
-            'dir': os.path.join(
-                getattr(options.jenkins_push_artifacts, 'dataportal'),
-                target_dir),
-        }
+        push_args['dir'] = os.path.join(
+            getattr(options.jenkins_push_artifacts, 'dataportal'),
+            target_dir),
 
         push_config = []
         if getattr(options.jenkins_push_artifacts, 'password', False):
