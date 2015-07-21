@@ -1814,6 +1814,7 @@ def jenkins_push_artifacts(options):
         release_dir = os.path.join('nightly-build', 'invest-forks', username)
         data_dir = os.path.join(release_dir, 'data', data_dirname)
 
+    pkey = None
     def _push(target_dir):
         push_args = {
             'user': getattr(options.jenkins_push_artifacts, 'username'),
@@ -1827,7 +1828,6 @@ def jenkins_push_artifacts(options):
         if getattr(options.jenkins_push_artifacts, 'password', False):
             push_config.append('--password')
 
-        pkey = None
         if getattr(options.jenkins_push_artifacts, 'private_key', False):
             pkey = options.jenkins_push_artifacts.private_key
         elif platform.system() == 'Windows':
