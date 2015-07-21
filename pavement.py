@@ -1815,10 +1815,22 @@ def jenkins_push_artifacts(options):
         data_dir = os.path.join(release_dir, 'data', data_dirname)
 
     pkey = None
+    if getattr(options.jenkins_push_artifacts, 'private_key', False):
+        pkey = options.jenkins_push_artifacts.private_key
+    elif platform.system() == 'Windows':
+        # Assume a default private key location for jenkins builds on
+        # Windows
+        pkey = os.path.join(os.path.expanduser('~'),
+                            '.ssh', 'dataportal-id_rsa')
+    else:
+        print ('No private key provided, and not on Windows, so not '
+                'assuming a default private key file')
+
     push_args = {
         'user': getattr(options.jenkins_push_artifacts, 'username'),
         'host': getattr(options.jenkins_push_artifacts, 'host'),
     }
+
     def _push(target_dir):
         push_args['dir'] = os.path.join(
             getattr(options.jenkins_push_artifacts, 'dataportal'),
@@ -1828,16 +1840,6 @@ def jenkins_push_artifacts(options):
         if getattr(options.jenkins_push_artifacts, 'password', False):
             push_config.append('--password')
 
-        if getattr(options.jenkins_push_artifacts, 'private_key', False):
-            pkey = options.jenkins_push_artifacts.private_key
-        elif platform.system() == 'Windows':
-            # Assume a default private key location for jenkins builds on
-            # Windows
-            pkey = os.path.join(os.path.expanduser('~'),
-                                '.ssh', 'dataportal-id_rsa')
-        else:
-            print ('No private key provided, and not on Windows, so not '
-                   'assuming a default private key file')
 
         push_config.append('--private-key=%s' % pkey)
         push_config.append('--makedirs')
@@ -1860,7 +1862,7 @@ def jenkins_push_artifacts(options):
     ssh = SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    if pkey is None:
+    if pkey is not None:
         pkey = paramiko.RSAKey.from_private_key_file(pkey)
 
     ssh.connect(push_args['host'], 22, username=push_args['user'], password=None, pkey=pkey)
