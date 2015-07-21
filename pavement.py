@@ -1865,6 +1865,6 @@ def jenkins_push_artifacts(options):
     ssh.connect(push_args['host'], 22, username=push_args['user'], pkey=pkey)
     ssh.exec_command('cd {releasedir}; unzip *apidocs.zip; unzip *userguide.zip;'.format(
         releasedir=release_dir
-    )
+    ))
     ssh.close()
 
