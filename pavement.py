@@ -1866,13 +1866,23 @@ def jenkins_push_artifacts(options):
         pkey = paramiko.RSAKey.from_private_key_file(pkey)
 
     ssh.connect(push_args['host'], 22, username=push_args['user'], password=None, pkey=pkey)
+
+    # correct the filepath from Windows to Linux
+    if platform.system() == 'Windows':
+        release_dir = release_dir.replace(os.sep, '/')
+
     stdin, stdout, stderr = ssh.exec_command(
         'cd {releasedir}; unzip *apidocs.zip; unzip *userguide.zip;'.format(
             releasedir=release_dir
         )
     )
 
+    print 'stdout:'
     for line in stdout:
+        print line
+
+    print 'stderr:'
+    for line in stderr:
         print line
 
     ssh.close()
