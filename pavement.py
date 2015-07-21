@@ -1822,7 +1822,7 @@ def jenkins_push_artifacts(options):
     def _push(target_dir):
         push_args['dir'] = os.path.join(
             getattr(options.jenkins_push_artifacts, 'dataportal'),
-            target_dir),
+            target_dir)
 
         push_config = []
         if getattr(options.jenkins_push_artifacts, 'password', False):
