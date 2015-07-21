@@ -1871,19 +1871,21 @@ def jenkins_push_artifacts(options):
     if platform.system() == 'Windows':
         release_dir = release_dir.replace(os.sep, '/')
 
-    stdin, stdout, stderr = ssh.exec_command(
-        'cd public_html/{releasedir}; unzip *apidocs.zip; unzip *userguide.zip;'.format(
-            releasedir=release_dir
+    for filename in ["*apidocs.zip", "*userguide.zip"]:
+        stdin, stdout, stderr = ssh.exec_command(
+            'cd public_html/{releasedir}; unzip `find -cmin -2 -name "{zipfile}" | tail -n 1`'.format(
+                releasedir=release_dir,
+                zipfile = filename
+            )
         )
-    )
 
-    print 'stdout:'
-    for line in stdout:
-        print line
+        print 'stdout:'
+        for line in stdout:
+            print line
 
-    print 'stderr:'
-    for line in stderr:
-        print line
+        print 'stderr:'
+        for line in stderr:
+            print line
 
     ssh.close()
 
