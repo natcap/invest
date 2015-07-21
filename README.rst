@@ -69,6 +69,7 @@ InVEST relies on the following python packages:
   * pyAMG
   * pillow
   * cython
+  * pyyaml
 
 For development, we recommend using a virtual environment (such as provided by
 ``virtualenv``).
