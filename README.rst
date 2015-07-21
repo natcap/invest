@@ -76,12 +76,11 @@ For development, we recommend using a virtual environment (such as provided by
 Binaries are generated with ``pyinstaller``.
 
 To work with this repository, you'll also need these tools to be available
-on the command-line somewhere on your PATH:
+on the command-line somewhere on your PATH, depending on what you'd like to build:
 
   * ``hg`` (Mercurial, for cloning repositories)
   * ``make`` (GNU Make, for building documentation)
   * ``fpm`` (for generating .deb and .rpm packages, can be installed via ``gem``)
-  * ``pyinstaller`` (for generating binaries)
   * ``makensis`` (NSIS, for generating Windows installers)
   * ``hdiutil`` (for generating mac DMGs)
 
@@ -115,9 +114,10 @@ using this new environment: ::
 
 This will build the pyinstaller binaries for whatever platform you're running this on and place them
 into ``dist/invest_dist``.  Console files will also be written to this folder, one for each model in InVEST.
-These console files simply call the ``invest`` binary with the corresponding InVEST modelname.  For example:
+These console files simply call the ``invest`` binary with the corresponding InVEST modelname.  For example,
+the console files for Habitat Risk Assessment would look like:
 
-**Windows** ``dist\invest_dist\invest_hra.bat`` ::
+**Windows:** ``dist\invest_dist\invest_hra.bat`` ::
 
     start /d "." invest.exe hra
 
@@ -126,7 +126,7 @@ These console files simply call the ``invest`` binary with the corresponding InV
     ./invest hra
 
 InVEST currently uses a single CLI entry point, an executable within ``dist/invest-dist``.  This exe is not
-sensitive to your CWD, so if the binary (or a symlink to the binary is available on your system PATH, you
+sensitive to your CWD, so if the binary (or a symlink to the binary) is available on your system PATH, you
 should be able to execute it like so: ::
 
     $ invest --help
@@ -270,7 +270,7 @@ Dependencies
 *Debian Systems*
 
 .. note::
-    **Builds requireGLIBC >= 2.15**
+    **Debian builds require GLIBC >= 2.15**
 
     Pyinstaller builds using a recent enough version of ``libpython2.7`` require that you have
     GLIBC >= 2.15, which is available on Debian Jessie (8), or on Wheezy (7) through the testing
