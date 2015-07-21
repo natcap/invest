@@ -1616,19 +1616,21 @@ def collect_release_files(options):
             shutil.copyfile, pdf, out_pdf)
 
     # Archive the binaries dir.
-    os_name = platform.system().lower()
-    architecture = 'x%s' % platform.architecture()[0][:2]
-    zipfile_name = 'invest-{ver}-{plat}-{arch}'.format(
-        ver=invest_version,
-        plat=os_name,
-        arch=architecture
-    )
-    call_task('zip', args=[
-        os.path.join(dist_dir, zipfile_name),
-        os.path.join('dist', 'invest_dist')
-    ])
-    dry('rm -r %s' % 'dist/invest_dist',
-        shutil.rmtree, os.path.join('dist', 'invest_dist'))
+    invest_dist = os.path.join('dist', 'invest_dist')
+    if os.path.exists(invest_dist):
+        os_name = platform.system().lower()
+        architecture = 'x%s' % platform.architecture()[0][:2]
+        zipfile_name = 'invest-{ver}-{plat}-{arch}'.format(
+            ver=invest_version,
+            plat=os_name,
+            arch=architecture
+        )
+        call_task('zip', args=[
+            os.path.join(dist_dir, zipfile_name),
+            invest_dist
+        ])
+        dry('rm -r %s' % 'dist/invest_dist',
+            shutil.rmtree, os.path.join('dist', 'invest_dist'))
 
 
 @task
