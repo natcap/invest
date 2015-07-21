@@ -1872,7 +1872,7 @@ def jenkins_push_artifacts(options):
         release_dir = release_dir.replace(os.sep, '/')
 
     stdin, stdout, stderr = ssh.exec_command(
-        'cd {releasedir}; unzip *apidocs.zip; unzip *userguide.zip;'.format(
+        'cd public_html/{releasedir}; unzip *apidocs.zip; unzip *userguide.zip;'.format(
             releasedir=release_dir
         )
     )
