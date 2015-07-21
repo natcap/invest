@@ -92,8 +92,8 @@ class Raster(object):
     def create_simple_affine(self, top_left_x, top_left_y, pix_width, pix_height):
         return Affine(pix_width, 0, top_left_x, 0, -(pix_height), top_left_y)
 
-    def __del__(self):
-        self._delete()
+    # def __del__(self):
+    #     self._delete()
 
     def __exit__(self):
         self._delete()

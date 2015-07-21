@@ -56,8 +56,8 @@ def execute(args):
             'results_suffix': '',
             'lulc_lookup_uri': 'path/to/lulc_lookup_uri',
             'lulc_transition_uri': 'path/to/lulc_transition_uri',
-            'lulc_snapshot_list': [year1_raster.uri, year2_raster.uri, year3_raster.uri, year4_raster.uri],
-            'lulc_snapshot_years_list': [2000, 2005, 2020, 2050],
+            'lulc_snapshot_list': [raster1_uri, raster2_uri, ...],
+            'lulc_snapshot_years_list': [2000, 2005, ...],
             'analysis_year': 2100,
             'carbon_pool_initial_uri': 'path/to/carbon_pool_initial_uri',
             'carbon_pool_transient_uri': 'path/to/carbon_pool_transient_uri'
@@ -81,10 +81,6 @@ def _set_initial_stock(vars_dict):
         vars_dict['soil_carbon_stock_raster_list'][0]
         vars_dict['total_carbon_stock_raster_list'][0]
     """
-    ### Will need to output this file
-    # stock_filename = 'stock_at_%i.tif' % first_year
-    ###
-
     carbon_pool_initial_dict = vars_dict['carbon_pool_initial_dict']
     lulc_to_code_dict = vars_dict['lulc_to_code_dict']
 
@@ -97,6 +93,7 @@ def _set_initial_stock(vars_dict):
 
     init_lulc_raster = Raster.from_file(vars_dict['lulc_snapshot_list'][0])
 
+    # Create initial carbon stock rasters for biomass and soil
     init_carbon_stock_biomass_raster = init_lulc_raster.reclass(
         code_to_biomass_reclass_dict,
         out_datatype=gdal.GDT_Float32,
@@ -106,19 +103,26 @@ def _set_initial_stock(vars_dict):
         out_datatype=gdal.GDT_Float32,
         out_nodata=NODATA_FLOAT)
 
+    # Create total initial carbon stock raster and save rasters to lists
+    init_carbon_stock_raster = \
+        init_carbon_stock_biomass_raster + init_carbon_stock_soil_raster
+    vars_dict['total_carbon_stock_raster_list'][0] = init_carbon_stock_raster
     vars_dict['biomass_carbon_stock_raster_list'][0] = \
         init_carbon_stock_biomass_raster
     vars_dict['soil_carbon_stock_raster_list'][0] = \
         init_carbon_stock_soil_raster
-    init_carbon_stock_raster = \
-        init_carbon_stock_biomass_raster + init_carbon_stock_soil_raster
-    vars_dict['total_carbon_stock_raster_list'][0] = init_carbon_stock_raster
+
+    # Save total initial stock as output
+    initial_carbon_stock_filename = 'total_stock_at_%i.tif' % (
+        vars_dict['lulc_snapshot_year_list'][0])
+    init_carbon_stock_raster.save_raster(
+        os.path.join(vars_dict['output_dir'], initial_carbon_stock_filename))
+
     return vars_dict
 
 
 def _run_transient_analysis(vars_dict):
     """Run transient analysis of carbon stock over time."""
-
     for idx in range(len(vars_dict['lulc_snapshot_list'])-1):
         start_year = vars_dict['lulc_snapshot_years_list'][idx]
         end_year = vars_dict['lulc_snapshot_years_list'][idx+1]
@@ -129,7 +133,7 @@ def _run_transient_analysis(vars_dict):
         vars_dict = _update_disturbed_carbon_object_list(vars_dict, idx)
 
         # Sequestration
-        a = vars_dict['accumulated_carbon_stock_object_list'][idx]
+        a = vars_dict['accumulated_carbon_stock_object_list
         sequestered_over_time_raster = a.get_total_sequestered_by_year(
             end_year)
         sequestered_over_time_filename = 'sequestration_from_%i_to_%i.tif' % (
@@ -252,7 +256,7 @@ def _update_transient_carbon_reclass_dicts(vars_dict, snapshot_idx):
             for next_lulc, carbon_mag_and_dir in val.items():
                 if carbon_mag_and_dir not in ['', 'accumulation']:
                     disturbance_val = carbon_pool_transient_dict[
-                        (next_lulc, pool)]['decay-rate']
+                        (next_lulc, pool)]['half-life']
                     d[(lulc_to_code_dict[prev_lulc], lulc_to_code_dict[
                         next_lulc])] = disturbance_val
                 else:
@@ -313,9 +317,6 @@ def _update_accumulated_carbon_object_list(vars_dict, snapshot_idx):
         yearly_sequest_biomass_raster,
         yearly_sequest_soil_raster)
 
-    if 'disturbed_carbon_stock_object_list' not in vars_dict.keys():
-        vars_dict['accumulated_carbon_stock_object_list'] = \
-            range(0, len(vars_dict['lulc_snapshot_years_list']))
     vars_dict['accumulated_carbon_stock_object_list'][
         snapshot_idx] = accumulated_carbon_stock_object
 
@@ -323,10 +324,12 @@ def _update_accumulated_carbon_object_list(vars_dict, snapshot_idx):
 
 
 def _update_disturbed_carbon_object_list(vars_dict, snapshot_idx):
-    '''
-    pct_disturbed_raster * stock_raster --> total_carbon_disturbed_raster
-    '''
+    """pct_disturbed_raster * stock_raster --> total_carbon_disturbed_raster.
 
+    Returns:
+
+        vars_dict['disturbed_carbon_stock_object_list'][snapshot_idx]
+    """
     def _reclass_lulc_to_pct_disturbed(vars_dict, idx, pool):
         if pool == 'biomass':
             d = vars_dict['disturbance_biomass_reclass_dict']
@@ -403,35 +406,40 @@ def _update_disturbed_carbon_object_list(vars_dict, snapshot_idx):
 
         return dataset_out_uri
 
+    # Find percent distrubed from transitions
     pct_biomass_stock_disturbed_raster = Raster.from_file(
         _reclass_lulc_to_pct_disturbed(vars_dict, snapshot_idx, 'biomass'))
     pct_soil_stock_disturbed_raster = Raster.from_file(
         _reclass_lulc_to_pct_disturbed(vars_dict, snapshot_idx, 'soil'))
 
-    init_carbon_stock_biomass_raster = \
-        vars_dict['init_carbon_stock_biomass_raster']
-    init_carbon_stock_soil_raster = \
-        vars_dict['init_carbon_stock_soil_raster']
+    # Get pre-transition carbon stock
+    prev_biomass_carbon_stock_biomass_raster = \
+        vars_dict['biomass_carbon_stock_raster_list'][snapshot_idx]
+    prev_soil_carbon_stock_soil_raster = \
+        vars_dict['soil_carbon_stock_raster_list'][snapshot_idx]
 
+    # Calculate total amount of carbon stock disturbed
     final_biomass_stock_disturbed_raster = \
-        pct_biomass_stock_disturbed_raster * init_carbon_stock_biomass_raster
+        pct_biomass_stock_disturbed_raster * prev_biomass_carbon_stock_biomass_raster
     final_soil_stock_disturbed_raster = \
-        pct_soil_stock_disturbed_raster * init_carbon_stock_soil_raster
+        pct_soil_stock_disturbed_raster * prev_soil_carbon_stock_soil_raster
 
+    # Find half-lives
     biomass_half_life_raster = Raster.from_file(
         _reclass_lulc_to_half_life(vars_dict, snapshot_idx, 'biomass'))
     soil_half_life_raster = Raster.from_file(
         _reclass_lulc_to_half_life(vars_dict, snapshot_idx, 'soil'))
 
+    # Create DisturbedCarbonStock object
     disturbed_carbon_stock_object = DisturbedCarbonStock(
         vars_dict['lulc_snapshot_years_list'][snapshot_idx],
         final_biomass_stock_disturbed_raster,
         final_soil_stock_disturbed_raster,
         biomass_half_life_raster,
         soil_half_life_raster)
-    if 'disturbed_carbon_stock_object_list' not in vars_dict.keys():
-        vars_dict['disturbed_carbon_stock_object_list'] = \
-            range(0, len(vars_dict['lulc_snapshot_years_list']))
+
+    # Add object to list
     vars_dict['disturbed_carbon_stock_object_list'][snapshot_idx] = \
         disturbed_carbon_stock_object
+
     return vars_dict
