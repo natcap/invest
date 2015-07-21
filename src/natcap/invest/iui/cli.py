@@ -6,6 +6,7 @@ import argparse
 import glob
 import os
 import sys
+import json
 
 import natcap.versioner
 import natcap.invest
@@ -35,6 +36,28 @@ def iui_dir():
     #print 'BASEDIR: %s' % basedir
     return basedir
 
+
+def load_config():
+    """
+    Load configuration options from a config file and assume defaults if they aren't there.
+    """
+
+    try:
+        config_file = os.path.join(iui_dir(), 'cli_config.json')
+        user_config = json.load(open(config_file))
+    except IOError:
+        # Raised when the cli config file hasn't been defined or can't be
+        # opened.  Assume that the user has not defined configuration in this
+        # case.  Don't fail loudly because there are cases where we want to
+        # assume this default behavior
+        user_config = {}
+
+    base_config = {
+        'prompt_on_empty_input': False
+    }
+
+    base_config.update(user_config)
+    return base_config
 
 def list_models():
     """
@@ -112,16 +135,23 @@ def main():
     parser.add_argument('model', nargs='?', help='The model/tool to run.  Use --list to show available models/tools.')
 
     args = parser.parse_args()
+    user_config = load_config()
 
     if args.list is True:
         print_models()
 
     if args.model not in list_models():
         parser.print_help()
+        print ''
         print_models()
+
+        if user_config['prompt_on_empty_input'] is False:
+            return 1
+
         args.model = raw_input("Choose a model: ")
         if args.model not in list_models():
-            print "Error: %s not a known model" % args.model
+            error_msg = "Error: '%s' not a known model" % args.model
+            print error_msg
             return 1
 
     natcap.invest.iui.modelui.main(args.model + '.json')
