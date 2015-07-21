@@ -972,11 +972,25 @@ def build_data(options):
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
 
-    for data_dirname in os.listdir(data_repo.local_path):
-        out_zipfile = os.path.abspath(os.path.join(dist_dir, data_dirname + ".zip"))
+    data_folders = os.listdir(data_repo.local_path)
+    for data_dirname in data_folders:
+        out_zipfile = os.path.abspath(os.path.join(
+            dist_dir, os.path.basename(data_dirname) + ".zip"))
+
+        # Only zip up directories in the data repository.
         if not os.path.isdir(os.path.join(data_repo.local_path, data_dirname)):
             continue
+
+        # Don't zip up .svn folders in the data repo.
         if data_dirname == data_repo.statedir:
+            continue
+
+        # We don't want Base_Data to be a big ol' zipfile, so we ignore it
+        # for now and add its subdirectories (Freshwater, Marine,
+        # Terrestrial) as their own zipfiles.
+        if data_dirname == 'Base_Data':
+            for basedata_subdir in os.listdir(os.path.join(data_repo.local_path, data_dirname)):
+                data_folders.append(os.path.join(data_dirname, basedata_subdir))
             continue
 
         dry('zip -r %s %s' % (out_zipfile, data_dirname),
