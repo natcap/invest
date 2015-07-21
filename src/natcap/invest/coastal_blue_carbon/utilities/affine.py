@@ -1,7 +1,4 @@
-'''
-Affine Class
-'''
-
+"""Affine Class."""
 
 class Affine(object):
     # any global variables here

@@ -1,3 +1,5 @@
+"""Coastal Blue Carbon Preprocessor."""
+
 import logging
 import os
 import csv
@@ -140,7 +142,7 @@ def _preprocess_data(vars_dict):
             transition_matrix_dict[(lulc_from, lulc_to)] = 'accumulation'
         elif (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
             not bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
-            # veg --> non-veg        
+            # veg --> non-veg
             transition_matrix_dict[(lulc_from, lulc_to)] = 'disturbance'
         elif (not bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
               not bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):

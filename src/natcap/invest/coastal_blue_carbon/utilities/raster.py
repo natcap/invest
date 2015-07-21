@@ -1,6 +1,4 @@
-'''
-Raster Class
-'''
+"""Raster Class."""
 
 import os
 import shutil

@@ -1,6 +1,7 @@
-'''
+"""Test Cases for CBC Preprocessor.
+
 python -m unittest test_cbc_preprocessor.TestCBCPreprocessor
-'''
+"""
 
 import unittest
 import os
@@ -13,7 +14,7 @@ from pygeoprocessing.geoprocessing import get_lookup_from_csv
 from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
 from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
 from natcap.invest.coastal_blue_carbon.utilities.raster_factory import RasterFactory
-import natcap.invest.coastal_blue_carbon.cbc_preprocessor as cbc_preprocessor
+import natcap.invest.coastal_blue_carbon.preprocessor as cbc_preprocessor
 
 pp = pprint.PrettyPrinter(indent=4)
 

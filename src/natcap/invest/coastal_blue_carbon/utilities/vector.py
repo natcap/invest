@@ -1,6 +1,4 @@
-'''
-Vector Class
-'''
+"""Vector Class."""
 
 import os
 import shutil

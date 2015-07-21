@@ -28,13 +28,23 @@ class DisturbedCarbonStock(object):
         return string
 
     def get_biomass_emissions_between_years(self, year_1, year_2):
-        pass
+        emissions_by_year_1_raster = self.final_biomass_stock_disturbed_raster * (
+            1 - (0.5 ** ((year_1 - self.start_year) / self.biomass_half_life_raster)))
+        emissions_by_year_2_raster = self.final_biomass_stock_disturbed_raster * (
+            1 - (0.5 ** ((year_2 - self.start_year) / self.biomass_half_life_raster)))
+        return emissions_by_year_2_raster - emissions_by_year_1_raster
 
     def get_soil_emissions_between_years(self, year_1, year_2):
-        pass
+        emissions_by_year_1_raster = self.final_soil_stock_disturbed_raster * (
+            1 - (0.5 ** ((year_1 - self.start_year) / self.soil_half_life_raster)))
+        emissions_by_year_2_raster = self.final_soil_stock_disturbed_raster * (
+            1 - (0.5 ** ((year_2 - self.start_year) / self.soil_half_life_raster)))
+        return emissions_by_year_2_raster - emissions_by_year_1_raster
 
     def get_total_emissions_between_years(self, year_1, year_2):
-        pass
+        biomass_raster = self.get_biomass_emissions_between_years(year_1, year_2)
+        soil_raster = self.get_soil_emissions_between_years(year_1, year_2)
+        return biomass_raster + soil_raster
 
 
 class AccumulatedCarbonStock(object):

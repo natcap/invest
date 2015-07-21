@@ -1,6 +1,5 @@
-'''
-RasterFactory Class
-'''
+"""RasterFactory Class."""
+
 import random
 
 import numpy as np

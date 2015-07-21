@@ -1,18 +1,20 @@
-'''
+"""Test Cases for CBC Model Classes.
+
 python -m unittest test_cbc_model_classes.TestDisturbedCarbonStock
-'''
+"""
 
 import unittest
 import os
 import pprint
 
+import numpy
+from numpy import testing
 import gdal
 
-import natcap.invest.coastal_blue_carbon as cbc
-from cbc.utilities.affine import Affine
-from cbc.utilities.raster import Raster
-from cbc.utilities.raster_factory import RasterFactory
-from cbc.utilities.cbc_model_classes import DisturbedCarbonStock, AccumulatedCarbonStock
+from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
+from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
+from natcap.invest.coastal_blue_carbon.utilities.raster_factory import RasterFactory
+from natcap.invest.coastal_blue_carbon.utilities.cbc_model_classes import DisturbedCarbonStock, AccumulatedCarbonStock
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -37,8 +39,8 @@ class TestDisturbedCarbonStock(unittest.TestCase):
         self.start_year = 2000
         self.final_biomass_stock_disturbed_raster = aoi_float_factory.uniform(0.5)
         self.final_soil_stock_disturbed_raster = aoi_float_factory.uniform(0.4)
-        self.biomass_half_life_raster = aoi_float_factory.uniform(1)
-        self.soil_half_life_raster = aoi_float_factory.uniform(1)
+        self.biomass_half_life_raster = aoi_float_factory.alternating(1, 0.5)
+        self.soil_half_life_raster = aoi_float_factory.alternating(1, 0.5)
 
     def test_disturbed_carbon_stock_object(self):
         d = DisturbedCarbonStock(
@@ -48,83 +50,45 @@ class TestDisturbedCarbonStock(unittest.TestCase):
             self.biomass_half_life_raster,
             self.soil_half_life_raster)
 
-        print "BIOMASS EMISSIONS BETWEEN 2000 and 2001"
-        print d.get_biomass_emissions_between_years(2000, 2001)
-        # d.get_soil_emissions_between_years(2000, 2001)
-        # d.get_total_emissions_between_years(2000, 2001)
+        # emissions between 2001 and 2002
+        assert(d.get_biomass_emissions_between_years(2001, 2002).get_band(1)[0, 0] == 0.125)
+        testing.assert_array_almost_equal(
+            d.get_soil_emissions_between_years(
+              2001, 2002).get_band(1)[0, 0], numpy.array(0.1), decimal=5)
+        testing.assert_array_almost_equal(
+            d.get_total_emissions_between_years(
+              2001, 2002).get_band(1)[0, 0], numpy.array(0.225), decimal=5)
 
-    def tearDown(self):
-        pass
 
-
-
-
-class TestCBCPreprocessor(unittest.TestCase):
+class TestAccumulatedCarbonStock(unittest.TestCase):
     def setUp(self):
-        # create lookup.csv
-        cwd = os.path.dirname(os.path.realpath(__file__))
-        table = [
-            ['lulc-class', 'code', 'is_coastal_blue_carbon_habitat'],
-            ['seagrass', '1', 'true'],
-            ['man-made', '2', 'false'],
-            ['marsh', '3', 'true'],
-            ['mangrove', '4', 'true']]
-        self.lookup_table_uri = os.path.join(cwd, 'lookup.csv')
-        write_csv(self.lookup_table_uri, table)
-
+        # AOI Rasters
         # set arguments
         shape = (2, 2)  # (2, 2)  #(1889, 1325)
         affine = Affine(30.0, 0.0, 443723.127328, 0.0, -30.0, 4956546.905980)
         proj = 26910
-        datatype = gdal.GDT_Int32
-        nodata_val = 255
+        datatype = gdal.GDT_Float32
+        nodata_val = NODATA_FLOAT
 
         # initialize factory
-        aoi_int_factory = RasterFactory(
+        aoi_float_factory = RasterFactory(
             proj, datatype, nodata_val, shape[0], shape[1], affine=affine)
 
-        # LULC Map
-        self.year1_raster = aoi_int_factory.alternating(1, 2)
-        self.year2_raster = aoi_int_factory.alternating(2, 1)
-        self.year3_raster = aoi_int_factory.alternating(3, 1)
-        self.year4_raster = aoi_int_factory.alternating(4, 1)
+        self.start_year = 2000
+        self.yearly_sequest_biomass_raster = aoi_float_factory.uniform(2)
+        self.yearly_sequest_soil_raster = aoi_float_factory.uniform(1)
 
-        self.workspace_dir = os.path.join(cwd, 'workspace')
+    def test_disturbed_carbon_stock_object(self):
+        a = AccumulatedCarbonStock(
+            self.start_year,
+            self.yearly_sequest_biomass_raster,
+            self.yearly_sequest_soil_raster)
+        end_year = 2001
 
-        self.args = {
-            'workspace_dir': self.workspace_dir,
-            'results_suffix': '',
-            'lulc_lookup_uri': self.lookup_table_uri,
-            'lulc_snapshot_list': [
-                self.year1_raster.uri,
-                self.year2_raster.uri,
-                self.year3_raster.uri,
-                self.year4_raster.uri]
-        }
-
-    def test_cbc_preprocessor(self):
-        cbc_preprocessor.execute(self.args)
-        transition_dict = get_lookup_from_csv(
-            os.path.join(self.workspace_dir, 'outputs', 'transitions.csv'), 'lulc-class')
-        assert(transition_dict['seagrass']['seagrass'] == 'accumulation')
-
-    def tearDown(self):
-        # remove lookup.csv
-        if os.path.isfile(self.lookup_table_uri):
-            os.remove(self.lookup_table_uri)
-
-        # remove transition.csv
-        transition_table_uri = os.path.join(
-            self.workspace_dir, 'outputs', 'transitions.csv')
-        if os.path.isfile(transition_table_uri):
-            os.remove(transition_table_uri)
-
-        # remove outputs and workspace
-        output_dir = os.path.join(self.workspace_dir, 'outputs')
-        if os.path.isdir(output_dir):
-            os.removedirs(output_dir)
-        if os.path.isdir(self.workspace_dir):
-            os.removedirs(self.workspace_dir)
+        # sequestration between 2001 and 2002
+        assert(a.get_biomass_sequestered_by_year(end_year).get_band(1)[0, 0] == 2)
+        assert(a.get_soil_sequestered_by_year(end_year).get_band(1)[0, 0] == 1)
+        assert(a.get_total_sequestered_by_year(end_year).get_band(1)[0 ,0] == 3)
 
 
 if __name__ == '__main__':
