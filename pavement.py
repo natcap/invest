@@ -875,7 +875,7 @@ def build_docs(options):
 
         archive_name = archive_template % 'userguide'
         build_dir = os.path.join(guide_dir, 'build', 'html')
-        call_task('zip', args=[archive_name, build_dir])
+        call_task('zip', args=[archive_name, build_dir, 'userguide'])
     else:
         print "Skipping the User's Guide"
 
@@ -883,7 +883,7 @@ def build_docs(options):
     if skip_api is False:
         sh('{python} setup.py build_sphinx'.format(python=python_exe))
         archive_name = archive_template % 'apidocs'
-        call_task('zip', args=[archive_name, 'build/sphinx/html'])
+        call_task('zip', args=[archive_name, 'build/sphinx/html', 'apidocs'])
     else:
         print "Skipping the API docs"
 
@@ -1721,20 +1721,29 @@ def zip(args):
     Arguments:
         archivename - the filename of the output archive
         dirname - the name of the folder to archive.
+        prefix - (optional) the directory to store files in.
     """
 
-    if len(args) > 2:
-        raise BuildFailure('zip takes 2 arguments only.')
+    if len(args) > 3:
+        raise BuildFailure('zip takes <=3 arguments.')
 
     archive_name = args[0]
     source_dir = os.path.abspath(args[1])
+
+    try:
+        prefix = args[2]
+        dest_dir= os.path.join(os.path.dirname(source_dir), prefix)
+        dry('cp -r %s %s' % (source_dir, prefix),
+            shutil.copytree, source_dir, dest_dir)
+    except IndexError:
+        prefix = os.path.basename(source_dir)
 
     dry('zip -r %s %s.zip' % (source_dir, archive_name),
         shutil.make_archive, **{
             'base_name': archive_name,
             'format': 'zip',
-            'root_dir': source_dir,
-            'base_dir': '.'})
+            'root_dir': os.path.dirname(source_dir),
+            'base_dir': prefix})
 
 @task
 @cmdopts([
