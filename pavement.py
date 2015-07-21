@@ -1854,17 +1854,24 @@ def jenkins_push_artifacts(options):
 
     # unzip the API docs and HTML documentation.  This will overwrite anything
     # else in the release dir.
+    print 'Unzipping Documentation on the remote'
     import paramiko
     from paramiko import SSHClient
     ssh = SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    if pkey is not None:
+    if pkey is None:
         pkey = paramiko.RSAKey.from_private_key_file(pkey)
 
-    ssh.connect(push_args['host'], 22, username=push_args['user'], pkey=pkey)
-    ssh.exec_command('cd {releasedir}; unzip *apidocs.zip; unzip *userguide.zip;'.format(
-        releasedir=release_dir
-    ))
+    ssh.connect(push_args['host'], 22, username=push_args['user'], password=None, pkey=pkey)
+    stdin, stdout, stderr = ssh.exec_command(
+        'cd {releasedir}; unzip *apidocs.zip; unzip *userguide.zip;'.format(
+            releasedir=release_dir
+        )
+    )
+
+    for line in stdout:
+        print line
+
     ssh.close()
 
