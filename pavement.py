@@ -711,8 +711,20 @@ def push(args):
     else:
         print 'Skipping creation of folders on remote'
 
+    def _sftp_callback(bytes_transferred, total_bytes):
+        try:
+            current_time = time.time()
+            if current_time - _sftp_callback.last_time > 5.0:
+                tx_ratio = bytes_transferred / float(total_bytes)
+
+                print 'SFTP copied %s out of %s (%s %)' % (
+                    bytes_transferred, total_bytes, tx_ratio*100.0)
+                _sftp_callback.last_time = current_time
+        except AttributeError:
+            _sftp_callback.last_time = time.time()
+
     print 'Opening SCP connection'
-    scp = SCPClient(ssh.get_transport())
+    sftp = paramiko.SFTPClient(ssh.get_transport())
     for transfer_file in files_to_push:
         file_basename = os.path.basename(transfer_file)
         if target_dir is not None:
@@ -722,10 +734,10 @@ def push(args):
 
         target_filename = _fix_path(target_filename)  # convert windows to linux paths
         print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
-        scp.put(transfer_file, target_filename)
+        sftp.put(transfer_file, target_filename, callback=_sftp_callback)
 
     print 'Closing down SCP'
-    scp.close()
+    sftp.close()
 
     print 'Closing down SSH'
     ssh.close()
