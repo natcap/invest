@@ -7,6 +7,9 @@
 ; SHORT_VERSION   - The short version name.  Usually a tagname such as 'tip',
 ;                   'default', or 3.4.5.
 ; ARCHITECTURE    - The architecture we're building for.  Generally this is x86.
+; FORKNAME        - The username of the InVEST fork we're building off of.
+; DATA_LOCATION   - Where (relative to datportal) the data should be downloaded
+;                   from.
 
 !include nsProcess.nsh
 !include LogicLib.nsh
@@ -19,8 +22,7 @@
 !define MUI_COMPONENTSPAGE_NODESC
 !define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 
-SetCompressor /FINAL /SOLID lzma
-SetCompressorDictSize 64
+SetCompressor zlib
 
 ; MUI has some graphical files that I want to define, which must be defined
 ; here before the macros are declared.
@@ -67,7 +69,7 @@ SetCompressorDictSize 64
 ; MUI end ------
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "InVEST_${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
+OutFile "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
 InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
 ShowInstDetails show
 
@@ -79,7 +81,7 @@ ShowInstDetails show
     Pop $R0
 
     StrCmp $R0 603 +3
-        MessageBox MB_OK|MB_ICONEXCLAMATION "The model ${process_name} is still running.  Please close all InVEST models and try again."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "InVEST is still running.  Please close all InVEST models and try again."
         Abort
 !macroend
 
@@ -192,19 +194,7 @@ Function .onInit
 FunctionEnd
 
 Function Un.onInit
-
-    !insertmacro CheckProgramRunning "invest_habitat_quality"
-    !insertmacro CheckProgramRunning "invest_carbon"
-    !insertmacro CheckProgramRunning "invest_pollination"
-    !insertmacro CheckProgramRunning "invest_timber"
-    !insertmacro CheckProgramRunning "invest_finfish_aquaculture"
-    !insertmacro CheckProgramRunning "invest_marine_water_quality_biophysical"
-    !insertmacro CheckProgramRunning "invest_overlap_analysis_mz"
-    !insertmacro CheckProgramRunning "invest_overlap_analysis"
-    !insertmacro CheckProgramRunning "invest_wave_energy"
-    !insertmacro CheckProgramRunning "invest_water_scarcity"
-    !insertmacro CheckProgramRunning "invest_water_yield"
-    !insertmacro CheckProgramRunning "invest_hyropower_valuation"
+    !insertmacro CheckProgramRunning "invest"
 FunctionEnd
 
 Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
@@ -212,7 +202,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   SectionIn RO ;require this section
 
   !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
-  !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\installer\InVEST-2.ico"
+  !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
   !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
   !define RECREATION "${SMPATH}\Recreation"
   !define OVERLAP "${SMPATH}\Overlap Analysis"
@@ -232,44 +222,44 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}"
 
   CreateDirectory "${SMPATH}"
-  CreateShortCut "${SMPATH}\Crop Production (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenic Quality (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenic_quality.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Timber (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_timber.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Finfish Aquaculture (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_finfish_aquaculture.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Marine Water Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_marine_water_quality_biophysical.exe" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Crop Production (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenic Quality (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenic_quality.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Timber (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_timber.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Finfish Aquaculture (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_finfish_aquaculture.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Marine Water Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_marine_water_quality_biophysical.bat" "" "${INVEST_ICON}"
   CreateDirectory "${OVERLAP}"
-  CreateShortCut "${OVERLAP}\Overlap Analysis (Management Zones) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis_mz.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${OVERLAP}\Overlap Analysis (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Wave Energy (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_wave_energy.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Wind Energy (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_wind_energy.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Coastal Vulnerability (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_vulnerability.exe" "" "${INVEST_ICON}"
+  CreateShortCut "${OVERLAP}\Overlap Analysis (Management Zones) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis_mz.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${OVERLAP}\Overlap Analysis (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Wave Energy (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_wave_energy.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Wind Energy (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_wind_energy.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Coastal Vulnerability (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_vulnerability.bat" "" "${INVEST_ICON}"
 
   CreateDirectory "${BLUECARBON}"
-  CreateShortCut "${BLUECARBON}\(1) Blue Carbon Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_blue_carbon_preprocessor.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${BLUECARBON}\(2) Blue Carbon Calculator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_blue_carbon.exe" "" "${INVEST_ICON}"
+  CreateShortCut "${BLUECARBON}\(1) Blue Carbon Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_blue_carbon_preprocessor.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${BLUECARBON}\(2) Blue Carbon Calculator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_blue_carbon.bat" "" "${INVEST_ICON}"
 
   CreateDirectory "${FISHERIES}"
-  CreateShortCut "${FISHERIES}\(1) Fisheries (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_fisheries.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${FISHERIES}\(2) Fisheries Habitat Scenario Tool (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_fisheries_hst.exe" "" "${INVEST_ICON}"
+  CreateShortCut "${FISHERIES}\(1) Fisheries (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_fisheries.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${FISHERIES}\(2) Fisheries Habitat Scenario Tool (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_fisheries_hst.bat" "" "${INVEST_ICON}"
 
   CreateDirectory "${HRA}"
-  CreateShortCut "${HRA}\(1) Habitat Risk Assessment Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra_preprocessor.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${HRA}\(2) Habitat Risk Assessment (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Nutrient Retention (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_nutrient.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.exe" "" "${INVEST_ICON}"
+  CreateShortCut "${HRA}\(1) Habitat Risk Assessment Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra_preprocessor.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${HRA}\(2) Habitat Risk Assessment (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Nutrient Retention (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_nutrient.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenario Generator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
 
-  CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.exe" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
 
-  CreateShortCut "${SMPATH}\RouteDEM (${ARCHITECTURE}).lnk" "${INVEST_DATA}\routedem.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\DelineateIt (${ARCHITECTURE}).lnk" "${INVEST_DATA}\delineateit.exe" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\RouteDEM (${ARCHITECTURE}).lnk" "${INVEST_DATA}\routedem.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\DelineateIt (${ARCHITECTURE}).lnk" "${INVEST_DATA}\delineateit.bat" "" "${INVEST_ICON}"
 
   CreateDirectory "${RECREATION}"
-  CreateShortCut "${RECREATION}\(1) Recreation Initialization (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_init.exe" "" "${INVEST_ICON}"
-  CreateShortCut "${RECREATION}\(2) Recreation Scenario (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_scenario.exe" "" "${INVEST_ICON}"
+  CreateShortCut "${RECREATION}\(1) Recreation Initialization (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_init.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${RECREATION}\(2) Recreation Scenario (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_scenario.bat" "" "${INVEST_ICON}"
 
   ; Write registry keys for convenient uninstallation via add/remove programs.
   ; Inspired by the example at
@@ -301,7 +291,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\python\*
 
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
-  File /r /x *.hg* /x *.svn* ..\${INVEST_3_FOLDER}\*
+  File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
 
 ;  SetOutPath "$INSTDIR\${INVEST_3_FOLDER_x64}\"
 ;  File /r /x *.hg* /x *.svn* ..\${INVEST_3_FOLDER_x64}\*
@@ -359,7 +349,7 @@ Var INSTALLER_DIR
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/invest-data/${SHORT_VERSION}"
+        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${SHORT_VERSION}"
         SetOutPath "$INSTDIR"
         NSISdl::download "$SERVER_PATH/${Filename}" ${Filename}
         Pop $R0 ;Get the status of the file downloaded
