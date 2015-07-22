@@ -718,11 +718,11 @@ def push(args):
     def _sftp_callback(bytes_transferred, total_bytes):
         try:
             current_time = time.time()
-            if current_time - _sftp_callback.last_time > 5.0:
+            if current_time - _sftp_callback.last_time > 2:
                 tx_ratio = bytes_transferred / float(total_bytes)
 
-                print 'SFTP copied %s out of %s (%s %)' % (
-                    bytes_transferred, total_bytes, tx_ratio*100.0)
+                print 'SFTP copied {transf} out of {total} ({ratio} %)'.format(
+                    transf=bytes_transferred, total=total_bytes, ratio=tx_ratio*100.0)
                 _sftp_callback.last_time = current_time
         except AttributeError:
             _sftp_callback.last_time = time.time()
