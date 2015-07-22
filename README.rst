@@ -71,6 +71,7 @@ InVEST relies on the following python packages:
   * cython
   * pyyaml
   * setuptools
+  * virtualenv >= 13.0.0
 
 For development, we recommend using a virtual environment (such as provided by
 ``virtualenv``).
@@ -85,6 +86,7 @@ on the command-line somewhere on your PATH, depending on what you'd like to buil
   * ``fpm`` (for generating .deb and .rpm packages, can be installed via ``gem``)
   * ``makensis`` (NSIS, for generating Windows installers)
   * ``hdiutil`` (for generating mac DMGs)
+  * ``pdflatex`` (for generating PDF versions of the User's Guide)
 
 
 For building InVEST binaries, you will also need to have a compiler configured.
