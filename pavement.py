@@ -17,6 +17,7 @@ import inspect
 import tarfile
 import socket
 from types import DictType
+import time
 
 import pkg_resources
 import paver.svn
