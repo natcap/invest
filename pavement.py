@@ -907,7 +907,7 @@ def check():
 
     # verify required programs exist
     errors_found = False
-    for program in ['hg', 'git', 'make']:
+    for program in ['hg', 'git', 'make', 'pdflatex']:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
 
         fpath, fname = os.path.split(program)
@@ -923,6 +923,7 @@ def check():
                     if is_exe(exe_file):
                         raise FoundEXE
             except FoundEXE:
+                print "Found %-11s: %s" % (program, exe_file)
                 continue
             else:
                 print "ERROR: executable %s not found on the PATH" % fname
@@ -934,7 +935,13 @@ def check():
     ]
     for requirement in requirements:
         try:
-            pkg_resources.require(requirements)
+            pkg_resources.require(requirement)
+            pkg_req = pkg_resources.Requirement.parse(requirement)
+            pkg = __import__(pkg_req.project_name)
+            print "Python package OK: {pkg} {ver} (meets {req})".format(
+                pkg=pkg_req.project_name,
+                ver=pkg.__version__,
+                req=requirement)
         except pkg_resources.VersionConflict as conflict:
             print 'ERROR: %s' % conflict.report()
             errors_found = True
