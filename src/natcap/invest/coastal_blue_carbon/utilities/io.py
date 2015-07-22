@@ -2,6 +2,7 @@
 import csv
 import os
 import pygeoprocessing as pygeo
+import pprint as pp
 
 
 def get_inputs(args):
@@ -60,18 +61,7 @@ def get_inputs(args):
     vars_dict['code_to_lulc_dict'] = code_to_lulc_dict
 
     vars_dict['carbon_pool_transient_dict'] = _create_transient_dict(args)
-    vars_dict['disturbed_carbon_stock_object_list'] = range(
-        0, len(vars_dict['lulc_snapshot_list'])-1)
-    vars_dict['accumulated_carbon_stock_object_list'] = range(
-        0, len(vars_dict['lulc_snapshot_list'])-1)
-    vars_dict['net_sequestration_raster_list'] = range(
-        0, len(vars_dict['lulc_snapshot_list'])-1)
-    vars_dict['total_carbon_stock_raster_list'] = range(
-        0, len(vars_dict['lulc_snapshot_list']))
-    vars_dict['biomass_carbon_stock_raster_list'] = range(
-        0, len(vars_dict['lulc_snapshot_list']))
-    vars_dict['soil_carbon_stock_raster_list'] = range(
-        0, len(vars_dict['lulc_snapshot_list']))
+    pp.pprint(vars_dict['carbon_pool_transient_dict'])
 
     return vars_dict
 

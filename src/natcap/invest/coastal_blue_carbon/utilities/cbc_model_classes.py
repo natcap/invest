@@ -3,6 +3,7 @@
 import logging
 import os
 import collections
+import time
 
 import gdal
 import pygeoprocessing as pygeo
@@ -246,6 +247,7 @@ class CBCModelRun(object):
         d_list = self.disturbed_carbon_stock_object_list
         emitted_over_time_raster = d_list[0].final_biomass_stock_disturbed_raster.zeros()
         for i in range(0, idx+1):
+            # print d_list[i]
             emitted_over_time_raster += d_list[i].get_total_emissions_between_years(start_year, end_year)
         self.emissions_raster_list[idx] = emitted_over_time_raster
 
@@ -493,9 +495,9 @@ class CBCModelRun(object):
 
         # Get pre-transition carbon stock
         prev_biomass_carbon_stock_biomass_raster = \
-            self.vars_dict['biomass_carbon_stock_raster_list'][idx]
+            self.biomass_carbon_stock_raster_list[idx]
         prev_soil_carbon_stock_soil_raster = \
-            self.vars_dict['soil_carbon_stock_raster_list'][idx]
+            self.soil_carbon_stock_raster_list[idx]
 
         # Calculate total amount of carbon stock disturbed
         final_biomass_stock_disturbed_raster = \
