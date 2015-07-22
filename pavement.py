@@ -711,6 +711,7 @@ def push(args):
     else:
         print 'Skipping creation of folders on remote'
 
+    print 'Opening SCP connection'
     scp = SCPClient(ssh.get_transport())
     for transfer_file in files_to_push:
         file_basename = os.path.basename(transfer_file)
@@ -723,6 +724,10 @@ def push(args):
         print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
         scp.put(transfer_file, target_filename)
 
+    print 'Closing down SCP'
+    scp.close()
+
+    print 'Closing down SSH'
     ssh.close()
 
 @task
