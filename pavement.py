@@ -1410,7 +1410,7 @@ def _write_console_files(binary, mode):
     """
 
     windows_template = """
-start /d "." {binary} {modelname}
+.\{binary} {modelname}
 """
     posix_template = """
 ./{binary} {modelname}
