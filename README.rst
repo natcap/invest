@@ -123,7 +123,7 @@ the console files for Habitat Risk Assessment would look like:
 
 **Windows:** ``dist\invest_dist\invest_hra.bat`` ::
 
-    start /d "." invest.exe hra
+    .\invest.exe hra
 
 **Linux/Mac:** ``dist/invest_dist/invest_hra.sh`` ::
 
