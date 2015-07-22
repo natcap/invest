@@ -621,6 +621,9 @@ def push(args):
     """
     print args
     import paramiko
+
+    paramiko.util.log_to_file('paramiko-log.txt')
+
     from paramiko import SSHClient
     from scp import SCPClient
     ssh = SSHClient()
@@ -724,7 +727,7 @@ def push(args):
             _sftp_callback.last_time = time.time()
 
     print 'Opening SCP connection'
-    sftp = paramiko.SFTPClient(ssh.get_transport())
+    sftp = paramiko.SFTPClient.from_transport(ssh.get_transport())
     for transfer_file in files_to_push:
         file_basename = os.path.basename(transfer_file)
         if target_dir is not None:
