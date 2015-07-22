@@ -18,6 +18,7 @@ import natcap.invest.coastal_blue_carbon.coastal_blue_carbon as cbc
 from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
 from natcap.invest.coastal_blue_carbon.utilities.raster_factory import RasterFactory
 from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
+from natcap.invest.coastal_blue_carbon.utilities.cbc_model_classes import CBCModelRun
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -94,8 +95,8 @@ class TestCBCModel(unittest.TestCase):
             ['lulc-class', 'pool', 'half-life', 'yearly_sequestration_per_ha', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
             ['seagrass', 'biomass', '1', '10', '0.1', '0.3', '0.7'],
             ['seagrass', 'soil', '2', '10', '0.1', '0.3', '0.7'],
-            ['man-made', 'biomass', '0', '0', '0', '0', '0'],
-            ['man-made', 'soil', '0', '0', '0', '0', '0'],
+            ['man-made', 'biomass', '1', '0', '0', '0', '0'],
+            ['man-made', 'soil', '1', '0', '0', '0', '0'],
             ['marsh', 'biomass', '1', '20', '0.2', '0.4', '0.8'],
             ['marsh', 'soil', '2', '20', '0.2', '0.4', '0.8'],
             ['mangrove', 'biomass', '1', '30', '0.3', '0.5', '0.7'],
@@ -117,17 +118,26 @@ class TestCBCModel(unittest.TestCase):
 
     def test_set_initial_stock(self):
         vars_dict = io.get_inputs(self.args)
-        vars_dict = cbc._set_initial_stock(vars_dict)
-        assert(vars_dict['total_carbon_stock_raster_list'][
-            0].get_band(1)[0, 0] == 2.0)
+
+        r = CBCModelRun(vars_dict)
+        r.initialize_stock()
+        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
+
+    def test_run_transient_step_0(self):
+        vars_dict = io.get_inputs(self.args)
+        r = CBCModelRun(vars_dict)
+        r.initialize_stock()
+        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
+        r._compute_transient_step(0)
+        print r.disturbed_carbon_stock_object_list[0] #.get_total_emissions_between_years(2000, 2005)
 
     def test_run_transient_analysis(self):
         vars_dict = io.get_inputs(self.args)
-        vars_dict = cbc._set_initial_stock(vars_dict)
-        assert(vars_dict['total_carbon_stock_raster_list'][
-            0].get_band(1)[0, 0] == 2.0)
-        cbc._run_transient_analysis(vars_dict)
-        print os.listdir(os.path.join(self.workspace, 'outputs'))
+        r = CBCModelRun(vars_dict)
+        r.initialize_stock()
+        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
+        r.run_transient_analysis()
+        print r
 
     def tearDown(self):
         shutil.rmtree(self.workspace)
