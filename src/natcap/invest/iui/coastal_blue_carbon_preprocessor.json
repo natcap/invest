@@ -35,7 +35,7 @@
           "args_id": "lulc_lookup_uri",
           "type": "file",
           "label": "LULC Lookup Table (CSV)",
-          "defaultValue": "../BlueCarbon/input/lulc_lookup.csv",
+          "defaultValue": "../CoastalBlueCarbon/inputs/lulc_lookup.csv",
           "helpText": "(help text)",
           "required": true
         }
@@ -55,9 +55,9 @@
         }
       },
       "defaultValue": [
-        "../CoastalBlueCarbon/input/GBJC_2004_mean_Resample.tif",
-        "../CoastalBlueCarbon/input/GBJC_2050_mean_Resample.tif",
-        "../CoastalBlueCarbon/input/GBJC_2100_mean_Resample.tif"
+        "../CoastalBlueCarbon/lulc_rasters/GBJC_2004_mean_Resample.tif",
+        "../CoastalBlueCarbon/lulc_rasters/GBJC_2050_mean_Resample.tif",
+        "../CoastalBlueCarbon/lulc_rasters/GBJC_2100_mean_Resample.tif"
       ],
       "linkText": "Add Another",
       "helpText": "(help text)"

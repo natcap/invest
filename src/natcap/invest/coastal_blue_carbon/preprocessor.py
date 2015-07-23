@@ -42,6 +42,10 @@ def execute(args):
 def _get_inputs(args):
     LOGGER.info('Getting inputs...')
     vars_dict = dict(args.items())
+    try:
+        vars_dict['results_suffix']
+    except:
+        vars_dict['results_suffix'] = ''
     # ...
     vars_dict = _get_derivative_inputs(vars_dict)
     _validate_inputs(vars_dict)
@@ -147,7 +151,7 @@ def _preprocess_data(vars_dict):
         elif (not bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
               not bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
             # non-veg --> non-veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'unchanged'
+            transition_matrix_dict[(lulc_from, lulc_to)] = 'no-carbon-change'
         else:
             raise Exception
 

@@ -53,8 +53,9 @@ class TestCBCPreprocessor(unittest.TestCase):
         # LULC Map
         self.year1_raster = aoi_int_factory.alternating(1, 2)
         self.year2_raster = aoi_int_factory.alternating(2, 1)
-        self.year3_raster = aoi_int_factory.alternating(3, 1)
-        self.year4_raster = aoi_int_factory.alternating(4, 1)
+        self.year3_raster = aoi_int_factory.alternating(2, 1)
+        self.year4_raster = aoi_int_factory.alternating(3, 1)
+        self.year5_raster = aoi_int_factory.alternating(4, 1)
 
         self.workspace_dir = os.path.join(cwd, 'workspace')
 
@@ -66,7 +67,8 @@ class TestCBCPreprocessor(unittest.TestCase):
                 self.year1_raster.uri,
                 self.year2_raster.uri,
                 self.year3_raster.uri,
-                self.year4_raster.uri]
+                self.year4_raster.uri,
+                self.year5_raster.uri]
         }
 
     def test_cbc_preprocessor(self):

@@ -9,9 +9,8 @@ import pygeoprocessing as pygeo
 import numpy as np
 
 from natcap.invest.coastal_blue_carbon.utilities import io
-from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
 from natcap.invest.coastal_blue_carbon.utilities.cbc_model_classes import \
-    DisturbedCarbonStock, AccumulatedCarbonStock, CBCModelRun
+    CBCModelRun
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
