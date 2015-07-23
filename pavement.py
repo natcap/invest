@@ -17,6 +17,7 @@ import inspect
 import tarfile
 import socket
 from types import DictType
+import time
 
 import pkg_resources
 import paver.svn
@@ -621,6 +622,9 @@ def push(args):
     """
     print args
     import paramiko
+
+    paramiko.util.log_to_file('paramiko-log.txt')
+
     from paramiko import SSHClient
     from scp import SCPClient
     ssh = SSHClient()
@@ -711,7 +715,21 @@ def push(args):
     else:
         print 'Skipping creation of folders on remote'
 
-    scp = SCPClient(ssh.get_transport())
+    def _sftp_callback(bytes_transferred, total_bytes):
+        try:
+            current_time = time.time()
+            if current_time - _sftp_callback.last_time > 2:
+                tx_ratio = bytes_transferred / float(total_bytes)
+                tx_ratio = round(tx_ratio*100, 2)
+
+                print 'SFTP copied {transf} out of {total} ({ratio} %)'.format(
+                    transf=bytes_transferred, total=total_bytes, ratio=tx_ratio)
+                _sftp_callback.last_time = current_time
+        except AttributeError:
+            _sftp_callback.last_time = time.time()
+
+    print 'Opening SCP connection'
+    sftp = paramiko.SFTPClient.from_transport(ssh.get_transport())
     for transfer_file in files_to_push:
         file_basename = os.path.basename(transfer_file)
         if target_dir is not None:
@@ -720,9 +738,13 @@ def push(args):
             target_filename = file_basename
 
         target_filename = _fix_path(target_filename)  # convert windows to linux paths
-        print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
-        scp.put(transfer_file, target_filename)
+        print 'Transferring %s -> %s ' % (os.path.basename(transfer_file), target_filename)
+        sftp.put(transfer_file, target_filename, callback=_sftp_callback)
 
+    print 'Closing down SCP'
+    sftp.close()
+
+    print 'Closing down SSH'
     ssh.close()
 
 @task
@@ -871,7 +893,7 @@ def build_docs(options):
         latex_dir = os.path.join(guide_dir, 'build', 'latex')
         sh('make html', cwd=guide_dir)
         sh('make latex', cwd=guide_dir)
-        sh('make all-pdf', cwd=latex_dir)
+        sh('make all-pdf > latex-warnings.log', cwd=latex_dir)
 
         archive_name = archive_template % 'userguide'
         build_dir = os.path.join(guide_dir, 'build', 'html')
