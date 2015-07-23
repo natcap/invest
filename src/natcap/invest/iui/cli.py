@@ -76,6 +76,7 @@ def print_models():
     """
     Pretty-print available models.
     """
+    print "Checking what's available in %s" % iui_dir()
     print 'Available models:'
     for model_name in list_models():
         if model_name in TOOLS_IN_DEVELOPMENT:
