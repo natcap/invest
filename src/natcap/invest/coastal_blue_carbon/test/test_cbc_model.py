@@ -68,7 +68,8 @@ class TestCBCModelSimple(unittest.TestCase):
         proj = 26910
         datatype = gdal.GDT_Int32
         nodata_val = 255
-        aoi_int_factory = RasterFactory(proj, datatype, nodata_val, shape[0], shape[1], affine=affine)
+        aoi_int_factory = RasterFactory(
+            proj, datatype, nodata_val, shape[0], shape[1], affine=affine)
         year1_raster = aoi_int_factory.uniform(1)
         year2_raster = aoi_int_factory.uniform(2)
         year3_raster = aoi_int_factory.uniform(3)
@@ -79,8 +80,8 @@ class TestCBCModelSimple(unittest.TestCase):
             year3_raster.uri,
             year4_raster.uri]
 
-        self.lulc_snapshot_years_list = [2000, 2005, 2020, 2050]
-        self.analysis_year = 2100
+        self.lulc_snapshot_years_list = ['2000', '2005', '2010', '2050']
+        self.analysis_year = '2100'
 
         table = [
             ['lulc-class', 'biomass', 'soil', 'litter'],
@@ -123,35 +124,50 @@ class TestCBCModelSimple(unittest.TestCase):
     #     r.initialize_stock()
     #     assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
 
-    def test_run_transient_step_0(self):
+    # def test_run_transient_step_0(self):
+    #     vars_dict = io.get_inputs(self.args)
+    #     r = CBCModelRun(vars_dict)
+    #     r.initialize_stock()
+    #     assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
+    #     r._compute_transient_step(0)
+    #     testing.assert_array_almost_equal(
+    #         r.total_carbon_stock_raster_list[1].get_band(1)[0, 0], 1.03125)
+
+    def test_run_transient_analysis(self):
         vars_dict = io.get_inputs(self.args)
         r = CBCModelRun(vars_dict)
         r.initialize_stock()
+        print r.total_carbon_stock_raster_list[0]
+        r.run_transient_analysis()
+
+        print "Total Carbon Stock"
+        for i in r.total_carbon_stock_raster_list:
+            print i.get_band(1)[0,0]
+        print "Total Emissions"
+        for i in r.emissions_raster_list:
+            print i.get_band(1)[0,0]
+        print "Total Sequestration"
+        for i in r.sequestration_raster_list:
+            print i.get_band(1)[0,0]
+        print "Net Sequestration"
+        for i in r.net_sequestration_raster_list:
+            print i.get_band(1)[0,0]
+
         assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
-        r._compute_transient_step(0)
-        # print r.emissions_raster_list[0]
         testing.assert_array_almost_equal(
             r.total_carbon_stock_raster_list[1].get_band(1)[0, 0], 1.03125)
-    #
-    # def test_run_transient_analysis(self):
-    #     vars_dict = io.get_inputs(self.args)
-    #     r = CBCModelRun(vars_dict)
-    #     r.run_transient_analysis()
-    #     assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
-    #     testing.assert_array_almost_equal(
-    #         r.total_carbon_stock_raster_list[1].get_band(1)[0, 0], 1.03125)
-    #     testing.assert_array_almost_equal(
-    #         r.total_carbon_stock_raster_list[2].get_band(1)[0, 0],
-    #         6.00097656,
-    #         decimal=4)
-    #     testing.assert_array_almost_equal(
-    #         r.total_carbon_stock_raster_list[3].get_band(1)[0, 0],
-    #         46.0,
-    #         decimal=4)
-    #     testing.assert_array_almost_equal(
-    #         r.total_carbon_stock_raster_list[4].get_band(1)[0, 0],
-    #         96.0,
-    #         decimal=4)
+        testing.assert_array_almost_equal(
+            r.total_carbon_stock_raster_list[2].get_band(1)[0, 0],
+            11.00097656,
+            decimal=4)
+        testing.assert_array_almost_equal(
+            r.total_carbon_stock_raster_list[3].get_band(1)[0, 0],
+            91.0,
+            decimal=4)
+        testing.assert_array_almost_equal(
+            r.total_carbon_stock_raster_list[4].get_band(1)[0, 0],
+            191.0,
+            decimal=4)
 
     def tearDown(self):
         shutil.rmtree(self.workspace)
@@ -167,7 +183,7 @@ class TestCBCModel(unittest.TestCase):
         if not os.path.exists(workspace):
             os.mkdir(workspace)
         self.workspace = workspace
-        self.results_suffix = ""
+        self.results_suffix = ''
 
         table = [
             ['lulc-class', 'code', 'is_coastal_blue_carbon_habitat'],
@@ -192,7 +208,8 @@ class TestCBCModel(unittest.TestCase):
         proj = 26910
         datatype = gdal.GDT_Int32
         nodata_val = 255
-        aoi_int_factory = RasterFactory(proj, datatype, nodata_val, shape[0], shape[1], affine=affine)
+        aoi_int_factory = RasterFactory(
+            proj, datatype, nodata_val, shape[0], shape[1], affine=affine)
         year1_raster = aoi_int_factory.alternating(1, 2)
         year2_raster = aoi_int_factory.alternating(2, 1)
         year3_raster = aoi_int_factory.alternating(3, 1)
@@ -203,8 +220,8 @@ class TestCBCModel(unittest.TestCase):
             year3_raster.uri,
             year4_raster.uri]
 
-        self.lulc_snapshot_years_list = [2000, 2005, 2020, 2050]
-        self.analysis_year = 2100
+        self.lulc_snapshot_years_list = ['2000', '2005', '2020', '2050']
+        self.analysis_year = '2100'
 
         table = [
             ['lulc-class', 'biomass', 'soil', 'litter'],
@@ -240,20 +257,20 @@ class TestCBCModel(unittest.TestCase):
             'carbon_pool_transient_uri': self.carbon_pool_transient_uri,
         }
 
-    def test_set_initial_stock(self):
-        vars_dict = io.get_inputs(self.args)
-
-        r = CBCModelRun(vars_dict)
-        r.initialize_stock()
-        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
-
-    def test_run_transient_step_0(self):
-        vars_dict = io.get_inputs(self.args)
-        r = CBCModelRun(vars_dict)
-        r.initialize_stock()
-        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
-        r._compute_transient_step(0)
-        print r.disturbed_carbon_stock_object_list[0] #.get_total_emissions_between_years(2000, 2005)
+    # def test_set_initial_stock(self):
+    #     vars_dict = io.get_inputs(self.args)
+    #
+    #     r = CBCModelRun(vars_dict)
+    #     r.initialize_stock()
+    #     assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
+    #
+    # def test_run_transient_step_0(self):
+    #     vars_dict = io.get_inputs(self.args)
+    #     r = CBCModelRun(vars_dict)
+    #     r.initialize_stock()
+    #     assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
+    #     r._compute_transient_step(0)
+    #     print r.disturbed_carbon_stock_object_list[0] #.get_total_emissions_between_years(2000, 2005)
 
     def test_run_transient_analysis(self):
         vars_dict = io.get_inputs(self.args)
@@ -261,7 +278,19 @@ class TestCBCModel(unittest.TestCase):
         r.initialize_stock()
         assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
         r.run_transient_analysis()
-        print r
+
+        print "Total Carbon Stock"
+        for i in r.total_carbon_stock_raster_list:
+            print i.get_band(1)[0:2,0:2]
+        print "Total Emissions"
+        for i in r.emissions_raster_list:
+            print i.get_band(1)[0:2,0:2]
+        print "Total Sequestration"
+        for i in r.sequestration_raster_list:
+            print i.get_band(1)[0:2,0:2]
+        print "Net Sequestration"
+        for i in r.net_sequestration_raster_list:
+            print i.get_band(1)[0:2,0:2]
 
     def tearDown(self):
         shutil.rmtree(self.workspace)

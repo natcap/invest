@@ -4,6 +4,7 @@ import logging
 import os
 import collections
 import time
+import pprint as pp
 
 import gdal
 import pygeoprocessing as pygeo
@@ -131,10 +132,13 @@ class CBCModelRun(object):
     def __init__(self, vars_dict):
         self.vars_dict = vars_dict
 
-        self.num_snapshots = len(vars_dict['lulc_snapshot_list'])
+        self.num_lulc_maps = len(vars_dict['lulc_snapshot_list'])
+        self.num_snapshots = self.num_lulc_maps
         if (vars_dict['analysis_year'] != '' and vars_dict['analysis_year']
                 > vars_dict['lulc_snapshot_years_list'][-1]):
             self.num_snapshots += 1
+            last_lulc_snapshot_url = vars_dict['lulc_snapshot_list'][-1]
+            vars_dict['lulc_snapshot_list'].append(last_lulc_snapshot_url)
         self.num_transitions = self.num_snapshots - 1
 
         self.lulc_snapshot_list = vars_dict['lulc_snapshot_list']
@@ -232,7 +236,10 @@ class CBCModelRun(object):
     def _compute_transient_step(self, idx):
         LOGGER.info("Computing transient step %i..." % idx)
         start_year = self.lulc_snapshot_years_list[idx]
-        end_year = self.lulc_snapshot_years_list[idx+1]
+        if idx != self.num_lulc_maps-1:
+            end_year = self.lulc_snapshot_years_list[idx+1]
+        else:
+            end_year = self.vars_dict['analysis_year']
 
         self._update_transient_carbon_reclass_dicts(idx)
         self._update_accumulated_carbon_object_list(idx)
@@ -247,7 +254,6 @@ class CBCModelRun(object):
         d_list = self.disturbed_carbon_stock_object_list
         emitted_over_time_raster = d_list[0].final_biomass_stock_disturbed_raster.zeros()
         for i in range(0, idx+1):
-            # print d_list[i]
             emitted_over_time_raster += d_list[i].get_total_emissions_between_years(start_year, end_year)
         self.emissions_raster_list[idx] = emitted_over_time_raster
 
@@ -294,18 +300,23 @@ class CBCModelRun(object):
             """
             code_to_lulc_dict = vars_dict['code_to_lulc_dict']
             carbon_pool_transient_dict = vars_dict['carbon_pool_transient_dict']
-            lulc_vals = set(next_lulc_raster.get_band(1).flatten())
+            lulc_vals = set(next_lulc_raster.get_band(1).data.flatten())
             d = {}
             for i in lulc_vals:
-                if (code_to_lulc_dict[i], pool) in carbon_pool_transient_dict:
-                    d[i] = carbon_pool_transient_dict[
-                        (code_to_lulc_dict[i], pool)]['yearly_sequestration_per_ha']
-                else:
+                try:
+                    if (code_to_lulc_dict[i], pool) in carbon_pool_transient_dict:
+                        d[i] = carbon_pool_transient_dict[
+                            (code_to_lulc_dict[i], pool)]['yearly_sequestration_per_ha']
+                    else:
+                        d[i] = 0
+                except:
                     d[i] = 0
             return d
 
         def _create_disturbance_reclass_dicts(vars_dict, pool):
             """Create disturbance reclass dicts.
+
+            Note: pull this out into a one-time call at some point
 
             disturbance_biomass_reclass_dict = {}
             disturbance_soil_reclass_dict = {
@@ -320,7 +331,7 @@ class CBCModelRun(object):
                 for next_lulc, carbon_mag_and_dir in val.items():
                     if carbon_mag_and_dir not in ['', 'accumulation']:
                         disturbance_val = carbon_pool_transient_dict[
-                            (next_lulc, pool)][carbon_mag_and_dir]
+                            (prev_lulc, pool)][carbon_mag_and_dir]
                         d[(lulc_to_code_dict[prev_lulc], lulc_to_code_dict[
                             next_lulc])] = disturbance_val
                     else:
@@ -339,18 +350,20 @@ class CBCModelRun(object):
             lulc_to_code_dict = vars_dict['lulc_to_code_dict']
             lulc_transition_dict = vars_dict['lulc_transition_dict']
             carbon_pool_transient_dict = vars_dict['carbon_pool_transient_dict']
-            d = {}
+            h = {}
             for prev_lulc, val in lulc_transition_dict.items():
                 for next_lulc, carbon_mag_and_dir in val.items():
                     if carbon_mag_and_dir not in ['', 'accumulation']:
-                        disturbance_val = carbon_pool_transient_dict[
+                        half_life_val = carbon_pool_transient_dict[
                             (next_lulc, pool)]['half-life']
-                        d[(lulc_to_code_dict[prev_lulc], lulc_to_code_dict[
-                            next_lulc])] = disturbance_val
+                        # add automatic handling of incorrect inputs?
+                        # half_life_val = 1 if half_life_val == 0 else half_life_val
+                        h[(lulc_to_code_dict[prev_lulc], lulc_to_code_dict[
+                            next_lulc])] = half_life_val
                     else:
-                        d[(lulc_to_code_dict[prev_lulc], lulc_to_code_dict[
-                            next_lulc])] = 0
-            return d
+                        h[(lulc_to_code_dict[prev_lulc], lulc_to_code_dict[
+                            next_lulc])] = 1
+            return h
 
         LOGGER.info("Updaing carbon reclass dictionaries...")
         next_raster = Raster.from_file(
@@ -428,8 +441,8 @@ class CBCModelRun(object):
             prev_raster = Raster.from_file(vars_dict['lulc_snapshot_list'][idx])
             next_raster = Raster.from_file(vars_dict['lulc_snapshot_list'][idx+1])
 
-            prev_lulc = prev_raster.get_band(1)
-            next_lulc = next_raster.get_band(1)
+            prev_lulc = prev_raster.get_band(1).data
+            next_lulc = next_raster.get_band(1).data
 
             lookup = dict([((i, j), reclass_dict[
                             (i, j)]) for i, j in set(
