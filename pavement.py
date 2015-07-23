@@ -893,7 +893,7 @@ def build_docs(options):
         latex_dir = os.path.join(guide_dir, 'build', 'latex')
         sh('make html', cwd=guide_dir)
         sh('make latex', cwd=guide_dir)
-        sh('make all-pdf', cwd=latex_dir)
+        sh('make all-pdf > latex-warnings.log', cwd=latex_dir)
 
         archive_name = archive_template % 'userguide'
         build_dir = os.path.join(guide_dir, 'build', 'html')
