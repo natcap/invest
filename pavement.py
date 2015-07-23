@@ -1860,6 +1860,32 @@ def jenkins_push_artifacts(options):
     if len(data_files) > 0:
         call_task('push', args=_push(data_dir) + data_files)
 
+    def _archive_present(substring):
+        """
+        Is there a file in release_files that ends in `substring`?
+        Returns a boolean.
+        """
+        archive_present = reduce(
+            lambda x, y: x or y,
+            map(lambda x: x.endswith(substring),
+                release_files))
+        return archive_present
+
+
+    zips_to_unzip = []
+    if not _archive_present('apidocs.zip'):
+        print 'API documentation was not built.'
+    else:
+        zips_to_unzip.append('*apidocs.zip')
+
+    if not _archive_present('userguide.zip'):
+        print 'User guide was not built'
+    else:
+        zips_to_unzip.append('*userguide.zip')
+
+    if len(zips_to_unzip) == 0:
+        print 'Nothing to unzip on the remote.  Skipping.'
+        return
 
     # unzip the API docs and HTML documentation.  This will overwrite anything
     # else in the release dir.
@@ -1878,7 +1904,7 @@ def jenkins_push_artifacts(options):
     if platform.system() == 'Windows':
         release_dir = release_dir.replace(os.sep, '/')
 
-    for filename in ["*apidocs.zip", "*userguide.zip"]:
+    for filename in zips_to_unzip:
         stdin, stdout, stderr = ssh.exec_command(
             'cd public_html/{releasedir}; unzip `find -cmin -2 -name "{zipfile}" | tail -n 1`'.format(
                 releasedir=release_dir,
