@@ -738,7 +738,7 @@ def push(args):
             target_filename = file_basename
 
         target_filename = _fix_path(target_filename)  # convert windows to linux paths
-        print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
+        print 'Transferring %s -> %s ' % (os.path.basename(transfer_file), target_filename)
         sftp.put(transfer_file, target_filename, callback=_sftp_callback)
 
     print 'Closing down SCP'
