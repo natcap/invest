@@ -626,7 +626,6 @@ def push(args):
     paramiko.util.log_to_file('paramiko-log.txt')
 
     from paramiko import SSHClient
-    from scp import SCPClient
     ssh = SSHClient()
     ssh.load_system_host_keys()
 
