@@ -1920,27 +1920,24 @@ def jenkins_push_artifacts(options):
     if pkey is not None:
         pkey = paramiko.RSAKey.from_private_key_file(pkey)
 
+    print 'Connecting to host'
     ssh.connect(push_args['host'], 22, username=push_args['user'], password=None, pkey=pkey)
 
     # correct the filepath from Windows to Linux
     if platform.system() == 'Windows':
         release_dir = release_dir.replace(os.sep, '/')
 
+    if release_dir.startswith('public_html/'):
+        release_dir = release_dir.replace('public_html/', '')
+
     for filename in zips_to_unzip:
-        stdin, stdout, stderr = ssh.exec_command(
+        print 'Unzipping %s on remote'
+        ssh.exec_command(
             'cd public_html/{releasedir}; unzip `ls -tr {zipfile} | tail -n 1`'.format(
                 releasedir=release_dir,
                 zipfile = filename
             )
         )
-
-        print 'stdout:'
-        for line in stdout:
-            print line
-
-        print 'stderr:'
-        for line in stderr:
-            print line
 
     ssh.close()
 
