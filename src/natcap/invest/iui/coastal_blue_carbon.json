@@ -78,7 +78,7 @@
          "dataType": "int",
          "defaultValue": "2150",
          "helpText": "",
-         "required": true
+         "required": false
        }
       ]
     },
