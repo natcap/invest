@@ -3,6 +3,7 @@
 import logging
 import os
 import collections
+import pprint as pp
 
 import gdal
 import pygeoprocessing as pygeo

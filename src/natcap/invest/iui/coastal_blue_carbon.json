@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.coastal_blue_carbon.coastal_blue_carbon",
   "modelName": "coastal_blue_carbon",
   "localDocURI": "../documentation/coastal_blue_carbon.html",
-  "height": 600,
+  "height": 800,
   "width": 700,
   "elements": [
     {
@@ -31,11 +31,20 @@
           "helpText": "(help text)"
         },
         {
+          "id": "lulc_lookup_uri",
+          "args_id": "lulc_lookup_uri",
+          "type": "file",
+          "label": "LULC Lookup Table (CSV)",
+          "defaultValue": "../CoastalBlueCarbon/inputs/lulc_lookup.csv",
+          "helpText": "see 'Data Needs' section in the model's documentation",
+          "required": true
+        },
+        {
           "id": "lulc_transition_uri",
           "args_id": "lulc_transition_uri",
           "type": "file",
           "label": "LULC Transition Effect of Carbon Table (CSV)",
-          "defaultValue": "../CoastalBlueCarbon/inputs/transition.csv",
+          "defaultValue": "../CoastalBlueCarbon/inputs/transitions.csv",
           "helpText": "see 'Data Needs' section in the model's documentation",
           "required": true
         },
@@ -43,8 +52,8 @@
           "id": "carbon_pool_initial_uri",
           "args_id": "carbon_pool_initial_uri",
           "type": "file",
-          "label": "Carbon Pools Initial Variables Table (CSV)",
-          "defaultValue": "../CoastalBlueCarbon/inputs/carbon_pools_initial.csv",
+          "label": "Carbon Pool Initial Variables Table (CSV)",
+          "defaultValue": "../CoastalBlueCarbon/inputs/carbon_pool_initial.csv",
           "helpText": "see 'Data Needs' section in the model's documentation",
           "required": true
         },
@@ -52,11 +61,25 @@
           "id": "carbon_pool_transient_uri",
           "args_id": "carbon_pool_transient_uri",
           "type": "file",
-          "label": "Carbon Pools Transient Variables File (CSV)",
-          "defaultValue": "../CoastalBlueCarbon/inputs/carbon_pools_transient.csv",
+          "label": "Carbon Pool Transient Variables File (CSV)",
+          "defaultValue": "../CoastalBlueCarbon/inputs/carbon_pool_transient.csv",
           "helpText": "",
           "required": true
-        }
+       },
+       {
+         "id": "analysis_year",
+         "args_id": "analysis_year",
+         "type": "text",
+         "label": "Analysis End Year",
+         "validateAs": {
+           "type": "number"
+         },
+         "validText": "[1-9][0-9]*",
+         "dataType": "int",
+         "defaultValue": "2150",
+         "helpText": "",
+         "required": true
+       }
       ]
     },
     {
@@ -87,7 +110,7 @@
       "label": "Land Use/Land Cover Years",
       "sampleElement": {
         "id": "sample_id",
-        "type": "file",
+        "type": "text",
         "label": "Input",
         "validateAs": {
           "type": "number",
@@ -97,12 +120,12 @@
         }
       },
       "defaultValue": [
-        2004,
-        2050,
-        2100
+        "2004",
+        "2050",
+        "2100"
       ],
       "linkText": "Add Another",
       "helpText": "(help text)"
-    }*/
+    }
   ]
 }
