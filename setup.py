@@ -154,13 +154,14 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
-    version=natcap.versioner.vcs_version(),
+    version=natcap.versioner.parse_version(),
+    natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
     install_requires=open('requirements.txt').read().split('\n'),
     include_dirs=[numpy.get_include()],
     setup_requires=['nose>=1.0'],
     license=LICENSE,
-    zip_safe=False,
+    zip_safe=True,
     keywords='invest',
     classifiers=[
         'Intended Audience :: Developers',
@@ -174,6 +175,11 @@ setup(
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,
+    entry_points={
+        'console_scripts': [
+            'invest = natcap.invest.iui.cli:main'
+        ],
+    },
     cmdclass=CMDCLASS,
     package_data={
         'natcap.invest.iui': [

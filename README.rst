@@ -68,7 +68,7 @@ you'll likely need the XCode command-line tools to be installed.
 Building Documentation
 ======================
 
-All documentation is built through ``paver build_docs`` via sphinx.  Building 
+All documentation is built through ``paver build_docs`` via sphinx.  Building
 the User's Guide requires that you have GNU make, sphinx, and LaTex installed.
 Building the API documentation requires only virtualenv and a compiler, as
 sphinx will be installed into a new virtualenv at build time.
@@ -165,5 +165,3 @@ Run ``paver help`` for a list of commands provided by this repository's pavement
 Note that while paver can in some cases replace a classic setup.py, this repository
 has its own setup.py file already created.  We therefore do not use this part of the
 paver functionality.
-
-

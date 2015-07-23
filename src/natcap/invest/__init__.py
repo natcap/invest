@@ -46,13 +46,13 @@ def local_dir(source_file):
         # sys._MEIPASS exists, we're in a Pyinstaller build.
         if getattr(sys, '_MEIPASS', False) != False:
             # only one os.path.dirname() results in the path being relative to
-            # the natcap.invest package, when I actually want natcap.invest to
+            # the natcap.invest package, when I actually want natcap/invest to
             # be in the filepath.
-            # with 1 dirname, path is 'reporting/reporting_data'
-            # with 2 dirnames, path is 'natcap.invest/reporting/reporting_data'
-            package_dirname = os.path.dirname(os.path.dirname(__file__))
-            relpath = os.path.relpath(source_dirname, package_dirname)
-            return os.path.join(os.path.dirname(sys.executable), relpath)
+
+            # relpath would be something like <modelname>/<data_file>
+            relpath = os.path.relpath(source_file, os.path.dirname(__file__))
+            pkg_path = os.path.join('natcap', 'invest', relpath)
+            return os.path.join(os.path.dirname(sys.executable), os.path.dirname(pkg_path))
         else:
             # assume that if we're in a frozen build, we're in py2exe.  When in
             # py2exe, the directory structure is maintained, so we just return
