@@ -1931,7 +1931,7 @@ def jenkins_push_artifacts(options):
         release_dir = release_dir.replace('public_html/', '')
 
     for filename in zips_to_unzip:
-        print 'Unzipping %s on remote'
+        print 'Unzipping %s on remote' % filename
         ssh.exec_command(
             'cd public_html/{releasedir}; unzip `ls -tr {zipfile} | tail -n 1`'.format(
                 releasedir=release_dir,
