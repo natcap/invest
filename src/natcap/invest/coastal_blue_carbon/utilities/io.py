@@ -34,7 +34,10 @@ def get_inputs(args):
     except:
         vars_dict['results_suffix'] = ''
 
-    outputs_dir = os.path.join(vars_dict['workspace_dir'], 'outputs')
+    output_dir_name = 'outputs'
+    if vars_dict['results_suffix'] != '':
+        output_dir_name = output_dir_name + '_' + vars_dict['results_suffix']
+    outputs_dir = os.path.join(vars_dict['workspace_dir'], output_dir_name)
     if not os.path.exists(vars_dict['workspace_dir']):
         os.makedirs(vars_dict['workspace_dir'])
     if not os.path.exists(outputs_dir):

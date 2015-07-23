@@ -72,6 +72,19 @@ def _get_derivative_inputs(vars_dict):
     vars_dict['lulc_to_code_dict'] = lulc_to_code_dict
     vars_dict['lulc_class_list'] = lulc_to_code_dict.keys()
 
+    # make workspace and output dir if necessary
+    output_dir_name = 'preprocessor_outputs'
+    if vars_dict['results_suffix'] != '':
+        output_dir_name = output_dir_name + '_' + vars_dict['results_suffix']
+    output_dir = os.path.join(vars_dict['workspace_dir'], output_dir_name)
+    if not os.path.isdir(output_dir):
+        try:
+            os.makedirs(output_dir)
+        except:
+            LOGGER.error("Cannot create Workspace Directory")
+            raise OSError
+    vars_dict['output_dir'] = output_dir
+
     return vars_dict
 
 
@@ -110,15 +123,6 @@ def _validate_inputs(vars_dict):
                 self.message = message
         raise NotAllClassesInLookupTable(
             "At least one raster value is not in the lookup table")
-
-    # assert workspace exists, if not, make directory
-    output_dir = os.path.join(vars_dict['workspace_dir'], 'outputs')
-    if not os.path.isdir(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except:
-            LOGGER.error("Cannot create Workspace Directory")
-            raise OSError
 
 
 def _preprocess_data(vars_dict):
@@ -199,11 +203,7 @@ def _create_transition_table(vars_dict):
         top_dict[code_to_lulc_dict[transition[1]]] = transition_matrix_dict[transition]
         transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = top_dict
 
-    if vars_dict['results_suffix'] != '':
-        fname = 'transitions_' + vars_dict['results_suffix'] + '.csv'
-    else:
-        fname = 'transitions.csv'
-    fpath = os.path.join(vars_dict['workspace_dir'], 'outputs', fname)
+    fpath = os.path.join(vars_dict['output_dir'], 'transitions.csv')
     with open(fpath, 'wb') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
