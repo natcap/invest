@@ -356,7 +356,6 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_raster.uri)
     economics_table_crop = vars_dict['economics_table_dict'][crop]
     datatype_out = gdal.GDT_Float32
-    masked_lulc_raster_float = masked_lulc_raster.set_datatype_and_nodata(
     nodata_out = NODATA_FLOAT
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(lulc_raster.uri)
     ha_per_m2 = 0.0001
@@ -377,38 +376,17 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
         Calculate the total cost on a single pixel.
 
         <pseudocode>
-        cost_labor_per_cell = economics_table_crop[
             If lulc_pixel is nodata:
-        CostLabor_raster = masked_lulc_raster_float * cost_labor_per_cell
                 return nodata
-    except KeyError:
-        LOGGER.warning("Skipping labor cost because 'cost_labor_per_ha' not "
             else:
-    try:
                 if lulc_pixel is of our crop type:
-            'cost_machine_per_ha'] * ha_per_cell
                     return the cost of this crop (in cost_scalar, above)
-        CostPerHectareInputTotal_raster += CostMachine_raster
-    except KeyError:
-        LOGGER.warning("Skipping machine cost because 'cost_machine_per_ha' "
                 else:
-    try:
-        cost_seed_per_cell = economics_table_crop[
                     return 0.0
         </pseudocode>
         """
-    except KeyError:
-        LOGGER.warning("Skipping seed cost because 'cost_seed_per_ha' not "
-                       "provided in economics table.")
         return np.where(lulc_matrix == lulc_nodata, nodata_out,
-        cost_irrigation_per_cell = economics_table_crop[
-            'cost_irrigation_per_ha'] * ha_per_cell
                         np.where(lulc_matrix == crop_lucode, cost_scalar, 0.0))
-        CostPerHectareInputTotal_raster += CostIrrigation_raster
-    except KeyError:
-        LOGGER.warning("Skipping irrigation cost because "
-                       "'cost_irrigation_per_ha' not provided in economics "
-                       "table.")
 
     new_raster_uri = pygeoprocessing.geoprocessing.temporary_filename()
     pygeoprocessing.vectorize_datasets(
