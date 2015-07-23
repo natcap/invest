@@ -1928,7 +1928,7 @@ def jenkins_push_artifacts(options):
 
     for filename in zips_to_unzip:
         stdin, stdout, stderr = ssh.exec_command(
-            'cd public_html/{releasedir}; unzip `find . -cmin -2 -name "{zipfile}" | tail -n 1`'.format(
+            'cd public_html/{releasedir}; unzip `ls -tr {zipfile} | tail -n 1`'.format(
                 releasedir=release_dir,
                 zipfile = filename
             )
