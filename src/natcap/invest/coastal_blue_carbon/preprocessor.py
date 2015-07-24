@@ -35,7 +35,10 @@ def execute(args):
     LOGGER.info('Beginning execution of Coastal Blue Carbon model...')
     vars_dict = _get_inputs(args)
     vars_dict = _preprocess_data(vars_dict)
+    print vars_dict
     _create_transition_table(vars_dict)
+    _create_carbon_pool_initial_table_template(vars_dict)
+    _create_carbon_pool_transient_table_template(vars_dict)
     LOGGER.info('Coastal Blue Carbon model execution complete.')
 
 
@@ -53,6 +56,15 @@ def _get_inputs(args):
 
 
 def _get_derivative_inputs(vars_dict):
+    """
+    Returns:
+
+        lulc_lookup_dict
+        code_to_lulc_dict
+        lulc_to_code_dict
+        lulc_class_list
+        output_dir
+    """
     # ...
     lulc_lookup_dict = pygeoprocessing.geoprocessing.get_lookup_from_csv(
         vars_dict['lulc_lookup_uri'], 'code')
@@ -210,4 +222,28 @@ def _create_transition_table(vars_dict):
         writer.writeheader()
         for lulc_class in transition_by_lulc_class_dict.keys():
             row = dict([('lulc-class', lulc_class)] + transition_by_lulc_class_dict[lulc_class].items())
+            writer.writerow(row)
+
+
+def _create_carbon_pool_initial_table_template(vars_dict):
+    lulc_class_list = vars_dict['lulc_class_list']
+
+    fpath = os.path.join(vars_dict['output_dir'], 'carbon_pool_initial_template.csv')
+    with open(fpath, 'wb') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(['lulc-class', 'biomass', 'soil', 'litter'])
+        for lulc_class in lulc_class_list:
+            row = [lulc_class] + ['', '', '']
+            writer.writerow(row)
+
+
+def _create_carbon_pool_transient_table_template(vars_dict):
+    lulc_class_list = vars_dict['lulc_class_list']
+
+    fpath = os.path.join(vars_dict['output_dir'], 'carbon_pool_transient_template.csv')
+    with open(fpath, 'wb') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturbance', 'med-impact-disturbance','high-impact-disturbance'])
+        for lulc_class in lulc_class_list:
+            row = [lulc_class] + ['', '', '', '', '', '']
             writer.writerow(row)
