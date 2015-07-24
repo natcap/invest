@@ -127,7 +127,7 @@ class AccumulatedCarbonStock(object):
 
 class CBCModelRun(object):
 
-    """Accumulated Carbon Stock class."""
+    """Coastal Blue Carbon Model Run class."""
 
     def __init__(self, vars_dict):
         self.vars_dict = vars_dict
