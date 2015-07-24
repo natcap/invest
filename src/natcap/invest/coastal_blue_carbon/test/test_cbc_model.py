@@ -93,7 +93,7 @@ class TestCBCModelSimple(unittest.TestCase):
         write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
-            ['lulc-class', 'pool', 'half-life', 'yearly_sequestration_per_ha', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
+            ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
             ['seagrass', 'biomass', '1', '1.0', '0.1', '0.5', '0.7'],
             ['seagrass', 'soil', '1', '1.0', '0.1', '0.5', '0.7'],
             ['man-made', 'biomass', '1', '0', '0', '0', '0'],
@@ -233,7 +233,7 @@ class TestCBCModel(unittest.TestCase):
         write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
-            ['lulc-class', 'pool', 'half-life', 'yearly_sequestration_per_ha', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
+            ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
             ['seagrass', 'biomass', '1', '10', '0.1', '0.3', '0.7'],
             ['seagrass', 'soil', '2', '10', '0.1', '0.3', '0.7'],
             ['man-made', 'biomass', '1', '0', '0', '0', '0'],

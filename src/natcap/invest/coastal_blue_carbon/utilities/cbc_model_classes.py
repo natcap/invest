@@ -306,7 +306,7 @@ class CBCModelRun(object):
                 try:
                     if (code_to_lulc_dict[i], pool) in carbon_pool_transient_dict:
                         d[i] = carbon_pool_transient_dict[
-                            (code_to_lulc_dict[i], pool)]['yearly_sequestration_per_ha']
+                            (code_to_lulc_dict[i], pool)]['yearly_accumulation']
                     else:
                         d[i] = 0
                 except:

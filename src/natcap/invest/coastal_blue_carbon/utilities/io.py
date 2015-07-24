@@ -90,7 +90,7 @@ def get_inputs(args):
         u'med-impact-disturbance': NODATA_FLOAT,
         u'lulc-class': u'undefined',
         u'pool': u'biomass',
-        u'yearly_sequestration_per_ha': NODATA_FLOAT,
+        u'yearly_accumulation': NODATA_FLOAT,
         u'undefined': NODATA_FLOAT
     }
     vars_dict['carbon_pool_transient_dict'][(u'undefined', u'biomass')] = nan_dict
