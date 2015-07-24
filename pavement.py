@@ -1910,7 +1910,6 @@ def jenkins_push_artifacts(options):
 
     # unzip the API docs and HTML documentation.  This will overwrite anything
     # else in the release dir.
-    print 'Unzipping Documentation on the remote'
     import paramiko
     from paramiko import SSHClient
     ssh = SSHClient()
@@ -1931,12 +1930,20 @@ def jenkins_push_artifacts(options):
 
     for filename in zips_to_unzip:
         print 'Unzipping %s on remote' % filename
-        ssh.exec_command(
-            'cd public_html/{releasedir}; unzip `ls -tr {zipfile} | tail -n 1`'.format(
+        stdin, stdout, stderr = ssh.exec_command(
+            'cd public_html/{releasedir}; unzip -o `ls -tr {zipfile} | tail -n 1`'.format(
                 releasedir=release_dir,
                 zipfile = filename
             )
         )
+
+        print "STDOUT:"
+        for line in stdout:
+            print line
+
+        print "STDERR:"
+        for line in stderr:
+            print line
 
     ssh.close()
 
