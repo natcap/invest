@@ -71,11 +71,13 @@ InVEST relies on the following python packages:
   * cython
   * pyyaml
   * setuptools
+  * virtualenv >= 13.0.0
 
 For development, we recommend using a virtual environment (such as provided by
-``virtualenv``).
+``virtualenv``).  We provide a paver command (``paver env``) to help with this process.
+See `Building Binaries`_ for an example.
 
-Binaries are generated with ``pyinstaller``.
+Binaries are generated with ``pyinstaller`` via ``paver build_bin``.  See `Building Binaries`_.
 
 To work with this repository, you'll also need these tools to be available
 on the command-line somewhere on your PATH, depending on what you'd like to build:
@@ -85,12 +87,15 @@ on the command-line somewhere on your PATH, depending on what you'd like to buil
   * ``fpm`` (for generating .deb and .rpm packages, can be installed via ``gem``)
   * ``makensis`` (NSIS, for generating Windows installers)
   * ``hdiutil`` (for generating mac DMGs)
+  * ``pdflatex`` (for generating PDF versions of the User's Guide)
 
 
 For building InVEST binaries, you will also need to have a compiler configured.
 On linux, gcc/g++ will be sufficient.  On Windows, MinGW and MSVC work.  On Mac,
 you'll likely need the XCode command-line tools to be installed.
 
+
+.. _paver-build_bin:
 
 Building Binaries
 =================
@@ -100,7 +105,9 @@ installed to your global python distribution.  More commonly, you'll want to ins
 a virtual environment before running build_bin.
 
 For example, if you want to build a new virtualenv via the paver command and then build the binaries
-using this new environment: ::
+using this new environment: 
+
+::
 
     #!/bin/sh
     # Example for linux or mac
@@ -121,7 +128,7 @@ the console files for Habitat Risk Assessment would look like:
 
 **Windows:** ``dist\invest_dist\invest_hra.bat`` ::
 
-    start /d "." invest.exe hra
+    .\invest.exe hra
 
 **Linux/Mac:** ``dist/invest_dist/invest_hra.sh`` ::
 
