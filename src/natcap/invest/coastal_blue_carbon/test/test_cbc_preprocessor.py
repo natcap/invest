@@ -7,6 +7,7 @@ import unittest
 import os
 import pprint
 import csv
+import shutil
 
 import gdal
 from pygeoprocessing.geoprocessing import get_lookup_from_csv
@@ -74,7 +75,7 @@ class TestCBCPreprocessor(unittest.TestCase):
     def test_cbc_preprocessor(self):
         cbc_preprocessor.execute(self.args)
         transition_dict = get_lookup_from_csv(
-            os.path.join(self.workspace_dir, 'outputs', 'transitions.csv'), 'lulc-class')
+            os.path.join(self.workspace_dir, 'preprocessor_outputs', 'transitions.csv'), 'lulc-class')
         pp.pprint(transition_dict)
         assert(transition_dict['seagrass']['seagrass'] == 'accumulation')
 
@@ -83,18 +84,8 @@ class TestCBCPreprocessor(unittest.TestCase):
         if os.path.isfile(self.lookup_table_uri):
             os.remove(self.lookup_table_uri)
 
-        # remove transition.csv
-        transition_table_uri = os.path.join(
-            self.workspace_dir, 'outputs', 'transitions.csv')
-        if os.path.isfile(transition_table_uri):
-            os.remove(transition_table_uri)
-
-        # remove outputs and workspace
-        output_dir = os.path.join(self.workspace_dir, 'outputs')
-        if os.path.isdir(output_dir):
-            os.removedirs(output_dir)
-        if os.path.isdir(self.workspace_dir):
-            os.removedirs(self.workspace_dir)
+        # remove workspace
+        shutil.rmtree(self.workspace_dir)
 
 
 if __name__ == '__main__':

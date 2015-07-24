@@ -28,7 +28,7 @@ HA_PER_M2 = 0.0001
 def execute(args):
     """Entry point for Coastal Blue Carbon model.
 
-    :param str args['workspace']: location into which all intermediate
+    :param str args['workspace_dir']: location into which all intermediate
         and output files should be placed.
 
     :param str args['results_suffix']: a string to append to output filenames.
@@ -52,7 +52,7 @@ def execute(args):
     Example Args::
 
         args = {
-            'workspace': 'path/to/workspace',
+            'workspace_dir': 'path/to/workspace/',
             'results_suffix': '',
             'lulc_lookup_uri': 'path/to/lulc_lookup_uri',
             'lulc_transition_uri': 'path/to/lulc_transition_uri',

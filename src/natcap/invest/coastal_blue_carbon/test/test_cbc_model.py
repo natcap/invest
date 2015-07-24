@@ -39,10 +39,10 @@ class TestCBCModelSimple(unittest.TestCase):
 
     def setUp(self):
         cwd = os.path.dirname(os.path.realpath(__file__))
-        workspace = os.path.join(cwd, 'workspace')
-        if not os.path.exists(workspace):
-            os.mkdir(workspace)
-        self.workspace = workspace
+        workspace_dir = os.path.join(cwd, 'workspace')
+        if not os.path.exists(workspace_dir):
+            os.mkdir(workspace_dir)
+        self.workspace_dir = workspace_dir
         self.results_suffix = ""
 
         table = [
@@ -51,7 +51,7 @@ class TestCBCModelSimple(unittest.TestCase):
             ['man-made', '2', 'false'],
             ['marsh', '3', 'true'],
             ['mangrove', '4', 'true']]
-        self.lulc_lookup_uri = os.path.join(self.workspace, 'lookup.csv')
+        self.lulc_lookup_uri = os.path.join(self.workspace_dir, 'lookup.csv')
         write_csv(self.lulc_lookup_uri, table)
 
         table = [
@@ -60,7 +60,7 @@ class TestCBCModelSimple(unittest.TestCase):
             ['man-made', 'accumulation', '', 'accumulation', ''],
             ['marsh', '', '', '', 'accumulation'],
             ['mangrove', '', '', '', '']]
-        self.lulc_transition_uri = os.path.join(self.workspace, 'transition.csv')
+        self.lulc_transition_uri = os.path.join(self.workspace_dir, 'transition.csv')
         write_csv(self.lulc_transition_uri, table)
 
         shape = (1, 1)
@@ -89,7 +89,7 @@ class TestCBCModelSimple(unittest.TestCase):
             ['man-made', '0.0', '0.0', '0'],
             ['marsh', '1.0', '1.0', '0.5'],
             ['mangrove', '1.0', '1.0', '0.5']]
-        self.carbon_pool_initial_uri = os.path.join(self.workspace, 'initial.csv')
+        self.carbon_pool_initial_uri = os.path.join(self.workspace_dir, 'initial.csv')
         write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
@@ -103,11 +103,11 @@ class TestCBCModelSimple(unittest.TestCase):
             ['mangrove', 'biomass', '1', '1.0', '0.1', '0.5', '0.7'],
             ['mangrove', 'soil', '1', '1.0', '0.1', '0.5', '0.7']]
         self.carbon_pool_transient_uri = os.path.join(
-            self.workspace, 'transient.csv')
+            self.workspace_dir, 'transient.csv')
         write_csv(self.carbon_pool_transient_uri, table)
 
         self.args = {
-            'workspace': self.workspace,
+            'workspace_dir': self.workspace_dir,
             'results_suffix': self.results_suffix,
             'lulc_lookup_uri': self.lulc_lookup_uri,
             'lulc_transition_uri': self.lulc_transition_uri,
@@ -137,7 +137,7 @@ class TestCBCModelSimple(unittest.TestCase):
         vars_dict = io.get_inputs(self.args)
         r = CBCModelRun(vars_dict)
         r.initialize_stock()
-        print r.total_carbon_stock_raster_list[0]
+        # print r.total_carbon_stock_raster_list[0]
         r.run_transient_analysis()
 
         print "Total Carbon Stock"
@@ -170,7 +170,7 @@ class TestCBCModelSimple(unittest.TestCase):
             decimal=4)
 
     def tearDown(self):
-        shutil.rmtree(self.workspace)
+        shutil.rmtree(self.workspace_dir)
 
 
 class TestCBCModel(unittest.TestCase):
@@ -179,10 +179,10 @@ class TestCBCModel(unittest.TestCase):
 
     def setUp(self):
         cwd = os.path.dirname(os.path.realpath(__file__))
-        workspace = os.path.join(cwd, 'workspace')
-        if not os.path.exists(workspace):
-            os.mkdir(workspace)
-        self.workspace = workspace
+        workspace_dir = os.path.join(cwd, 'workspace')
+        if not os.path.exists(workspace_dir):
+            os.mkdir(workspace_dir)
+        self.workspace_dir = workspace_dir
         self.results_suffix = ''
 
         table = [
@@ -191,7 +191,7 @@ class TestCBCModel(unittest.TestCase):
             ['man-made', '2', 'false'],
             ['marsh', '3', 'true'],
             ['mangrove', '4', 'true']]
-        self.lulc_lookup_uri = os.path.join(self.workspace, 'lookup.csv')
+        self.lulc_lookup_uri = os.path.join(self.workspace_dir, 'lookup.csv')
         write_csv(self.lulc_lookup_uri, table)
 
         table = [
@@ -200,7 +200,7 @@ class TestCBCModel(unittest.TestCase):
             ['man-made', 'accumulation', '', 'accumulation', ''],
             ['marsh', '', '', '', 'accumulation'],
             ['mangrove', '', '', '', '']]
-        self.lulc_transition_uri = os.path.join(self.workspace, 'transition.csv')
+        self.lulc_transition_uri = os.path.join(self.workspace_dir, 'transition.csv')
         write_csv(self.lulc_transition_uri, table)
 
         shape = (2, 2)  # (2, 2)  #(1889, 1325)
@@ -229,7 +229,7 @@ class TestCBCModel(unittest.TestCase):
             ['man-made', '0.0', '0.0', '0'],
             ['marsh', '2.0', '2.0', '1.0'],
             ['mangrove', '3.0', '3.0', '1.5']]
-        self.carbon_pool_initial_uri = os.path.join(self.workspace, 'initial.csv')
+        self.carbon_pool_initial_uri = os.path.join(self.workspace_dir, 'initial.csv')
         write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
@@ -242,11 +242,11 @@ class TestCBCModel(unittest.TestCase):
             ['marsh', 'soil', '2', '20', '0.2', '0.4', '0.8'],
             ['mangrove', 'biomass', '1', '30', '0.3', '0.5', '0.7'],
             ['mangrove', 'soil', '2', '30', '0.3', '0.5', '0.7']]
-        self.carbon_pool_transient_uri = os.path.join(self.workspace, 'transient.csv')
+        self.carbon_pool_transient_uri = os.path.join(self.workspace_dir, 'transient.csv')
         write_csv(self.carbon_pool_transient_uri, table)
 
         self.args = {
-            'workspace': self.workspace,
+            'workspace_dir': self.workspace_dir,
             'results_suffix': self.results_suffix,
             'lulc_lookup_uri': self.lulc_lookup_uri,
             'lulc_transition_uri': self.lulc_transition_uri,
@@ -293,7 +293,7 @@ class TestCBCModel(unittest.TestCase):
             print i.get_band(1)[0:2,0:2]
 
     def tearDown(self):
-        shutil.rmtree(self.workspace)
+        shutil.rmtree(self.workspace_dir)
 
 
 if __name__ == '__main__':
