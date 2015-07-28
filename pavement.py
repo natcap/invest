@@ -91,6 +91,10 @@ options(
     ),
     build_data=Bunch(
         force_dev=False
+    ),
+    build_bin=Bunch(
+        force_dev=False,
+        python=sys.executable
     )
 )
 
@@ -481,7 +485,7 @@ def after_install(options, home_dir):
                 "        invest_sdist = invest_sdist.replace('+', '-')\n"
                 # Recent versions of pip build wheels by default before installing, but wheel
                 # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', '--no-use-wheel',"
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest', "
                 " invest_sdist])\n"
             )
     except AttributeError:
@@ -930,6 +934,49 @@ def build_docs(options):
 
 
 @task
+@no_help  # users should use `paver version` to see the repo states.
+@might_call(['fetch'])
+@cmdopts([
+    ('force-dev', '', 'Allow a development version of the repo'),
+    ('repo', '', 'The repo to check'),
+    ('fetch', '', 'Fetch the repo if needed'),
+])
+def check_repo(options):
+
+    # determine the current repo_object
+    repo_path = options.check_repo.repo
+    repo = None
+    for possible_repo in REPOS:
+        if possible_repo.local_path == repo_path:
+            repo = possible_repo
+
+    if repo is None:
+        raise BuildFailure('Repo %s is invalid' % repo_path)
+
+
+    if not repo.ischeckedout() and options.check_repo.fetch is False:
+        raise BuildFailure(('Repo %s is not checked out. '
+                            'Use `paver fetch %s`.' % (
+                                repo.local_path, repo.local_path)))
+
+    if options.check_repo.fetch is True:
+        call_task('fetch', args=[repo_path])
+
+    tracked_rev = repo.tracked_version()
+    current_rev = repo.current_rev()
+    if tracked_rev != current_rev:
+        if options.check_repo.force_dev is False:
+            raise BuildFailure(('ERROR: %(local_path)s at rev %(cur_rev)s, '
+                                'but expected to be at rev %(exp_rev)s') % {
+                                    'local_path': repo.local_path,
+                                    'cur_rev': current_rev,
+                                    'exp_rev': tracked_rev})
+        else:
+            print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
+    print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
+
+
+@task
 def check():
     """
     Perform reasonable checks to verify the build environment.
@@ -1050,18 +1097,26 @@ def build_data(options):
 
 
 @task
+@might_call(['fetch', 'check_repo'])
 @cmdopts([
+    ('force-dev', '', 'Whether to allow development versions of repos to be built'),
     ('python=', '', 'The python interpreter to use'),
-])
+], share_with=['check_repo'])
 def build_bin(options):
     """
     Build frozen binaries of InVEST.
     """
 
+    pyi_repo = REPOS_DICT['pyinstaller']
+    call_task('check_repo', options={
+        'force-dev': options.build_bin.force_dev,
+        'repo': pyi_repo.local_path,
+        'fetch': True,
+    })
+
     # if pyinstaller repo is at version 2.1, remove six.py because it conflicts
     # with the version that matplotlib requires.  Pyinstaller provides
     # six==1.0.0, matplotlib requires six>=1.3.0.
-    pyi_repo = REPOS_DICT['pyinstaller']
     print 'Checking and removing deprecated six.py in pyinstaller if needed'
     if pyi_repo.current_rev() == pyi_repo.format_rev('v2.1'):
         six_glob = os.path.join(pyi_repo.local_path, 'PyInstaller', 'lib', 'six.*')
@@ -1077,8 +1132,8 @@ def build_bin(options):
             shutil.rmtree, invest_dist_dir)
 
     pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
-    print options
-    python_exe = os.path.abspath(getattr(options, 'python', sys.executable))
+
+    python_exe = os.path.abspath(options.build_bin.python)
 
     # For some reason, pyinstaller doesn't locate the natcap.versioner package
     # when it's installed and available on the system.  Placing
@@ -1521,7 +1576,7 @@ def selftest():
     ('skip-installer', '', "Don't build the installer"),
     ('skip-bin', '', "Don't build the binaries"),
     ('python=', '', "The python interpreter to use"),
-], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files'])
+], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files', 'check_repo'])
 @might_call('build_data')
 @might_call('build_docs')
 @might_call('build_installer')
@@ -1568,7 +1623,6 @@ def build(options):
         call_task('build_docs', options=options.build_docs)
     else:
         print 'Skipping documentation per user request'
-
 
     if options.build.skip_installer is False:
         call_task('build_installer', options=options.build_installer)
