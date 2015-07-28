@@ -39,7 +39,7 @@ def user_os():
     if platform.system() == 'Linux':
         # check if we're running an RPM system approach taken from
         # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
-        exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm', '2>&1'])
+        exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm'])
         if exit_code == 0:
             return 'rpm'
         return 'deb'
@@ -56,10 +56,6 @@ def user_os():
 # default values for all tasks, which makes our handling of parameters much
 # easier.
 options(
-    virtualenv=Bunch(
-        dest_dir='test_env',
-        script_name="bootstrap.py"
-    ),
     build=Bunch(
         force_dev=False,
         skip_data=False,
@@ -79,6 +75,14 @@ options(
     version=Bunch(
         json=False,
         save=False
+    ),
+    env=Bunch(
+        system_site_packages=False,
+        clear=False,
+        envname='release_env',
+        with_invest=False,
+        requirements='',
+        bootstrap_file='bootstrap.py'
     )
 )
 
@@ -402,34 +406,9 @@ def env(options):
     Set up a virtualenv for the project.
     """
 
-    # Detect whether the user called `paver env` with the system-site-packages
-    # flag.  If so, modify the paver options object so that bootstrapping will
-    # use the virtualenv WITH the system-site-packages linked in.
-    try:
-        use_site_pkgs = options.env.system_site_packages
-    except AttributeError:
-        use_site_pkgs = False
-    options.virtualenv.system_site_packages = use_site_pkgs
-
-    # check whether the user wants to use a clean environment.
-    # Assume False if not provided.
-    try:
-        options.env.clear
-    except AttributeError:
-        options.env.clear = False
-
-    try:
-        options.virtualenv.dest_dir = options.envname
-        print "Using user-defined env name: %s" % options.envname
-        envname = options.envname
-    except AttributeError:
-        print "Using the default envname: %s" % options.virtualenv.dest_dir
-        envname = options.virtualenv.dest_dir
-
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
     # We therefore make our own bootstrapping function calls here.
-
     install_string = """
 import os, subprocess, platform
 def after_install(options, home_dir):
@@ -444,14 +423,15 @@ def after_install(options, home_dir):
 """
 
     requirements_files = ['requirements.txt']
-    extra_reqs = getattr(options, 'requirements', None)
-    if extra_reqs not in [None, '']:
+    if options.env.requirements not in [None, '']:
         requirements_files.append(extra_reqs)
 
     # extra parameter strings needed for installing certain packages
     # Initially set up for special installation of natcap.versioner.
     # Leaving in place in case future pkgs need special params.
-    pkg_pip_params = {}
+    pkg_pip_params = {
+        'natcap.versioner': ['--egg', '--no-use-wheel'],
+    }
 
     def _format_params(param_list):
         """
@@ -493,25 +473,24 @@ def after_install(options, home_dir):
                 "        invest_sdist = invest_sdist.replace('+', '-')\n"
                 # Recent versions of pip build wheels by default before installing, but wheel
                 # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest',"
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', '--no-use-wheel',"
                 " invest_sdist])\n"
             )
     except AttributeError:
         print "Skipping installation of natcap.invest"
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
-    open(options.virtualenv.script_name, 'w').write(output)
+    open(options.env.bootstrap_file, 'w').write(output)
 
     # Built the bootstrap env via a subprocess call.
     # Calling via the shell so that virtualenv has access to environment
     # vars as needed.
-    env_dirname = envname
     bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(clear)s %(no-wheel)s %(env_name)s"
     bootstrap_opts = {
         "python": sys.executable,
-        "bootstrap_file": options.virtualenv.script_name,
-        "env_name": env_dirname,
-        "site-pkgs": '--system-site-packages' if use_site_pkgs else '',
+        "bootstrap_file": options.env.bootstrap_file,
+        "env_name": options.env.envname,
+        "site-pkgs": '--system-site-packages' if options.env.system_site_packages else '',
         "clear": '--clear' if options.env.clear else '',
         "no-wheel": '--no-wheel',  # exclude wheel.  It has a bug preventing namespace pkgs from compiling
     }
@@ -519,26 +498,19 @@ def after_install(options, home_dir):
 
     # Virtualenv appears to partially copy over distutills into the new env.
     # Remove what was copied over so we din't confuse pyinstaller.
-    # Also, copy over the natcap namespace pkg's __init__ file
     if platform.system() == 'Windows':
-        distutils_dir = os.path.join(env_dirname, 'Lib', 'distutils')
-        init_file = os.path.join(env_dirname, 'Lib', 'site-packages', 'natcap', '__init__.py')
+        distutils_dir = os.path.join(options.env.envname, 'Lib', 'distutils')
     else:
-        distutils_dir = os.path.join(env_dirname, 'lib', 'python2.7', 'distutils')
-        init_file = os.path.join(env_dirname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
+        distutils_dir = os.path.join(options.env.envname, 'lib', 'python2.7', 'distutils')
     if os.path.exists(distutils_dir):
         dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
-
-    init_string = "import pkg_resources\npkg_resources.declare_namespace(__name__)\n"
-    with open(init_file, 'w') as namespace_init:
-        namespace_init.write(init_string)
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
     if platform.system() == 'Windows':
-        print r'    call .\%s\Scripts\activate' % env_dirname
+        print r'    call .\%s\Scripts\activate' % options.env.envname
     else:  # assume all POSIX systems behave the same way
-        print '    source %s/bin/activate' % env_dirname
+        print '    source %s/bin/activate' % options.env.envname
 
 
 @task
