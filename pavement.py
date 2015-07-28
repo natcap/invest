@@ -32,6 +32,57 @@ _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
 _SDTOUT_HANDLER.setLevel(logging.INFO)
 LOGGER.addHandler(_SDTOUT_HANDLER)
 
+def user_os():
+    """
+    Determine the operating system.
+    """
+    if platform.system() == 'Linux':
+        # check if we're running an RPM system approach taken from
+        # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
+        exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm', '2>&1'])
+        if exit_code == 0:
+            return 'rpm'
+        return 'deb'
+
+    if platform.system() == 'Darwin':
+        return 'dmg'
+
+    if platform.system() == 'Windows':
+        return 'nsis'
+
+    return 'UNKNOWN'
+
+# the options object is used for global paver configuration.  It contains
+# default values for all tasks, which makes our handling of parameters much
+# easier.
+options(
+    virtualenv=Bunch(
+        dest_dir='test_env',
+        script_name="bootstrap.py"
+    ),
+    build=Bunch(
+        force_dev=False,
+        skip_data=False,
+        skip_installer=False,
+        skip_bin=False,
+        python=sys.executable
+    ),
+    build_installer=Bunch(
+        force_dev=False,
+        insttype=user_os(),
+        arch=platform.machine(),
+        bindir=os.path.join('dist', 'invest_dist')
+    ),
+    collect_release_files=Bunch(
+        python=sys.executable
+    ),
+    version=Bunch(
+        json=False,
+        save=False
+    )
+)
+
+
 
 class Repository(object):
     tip = ''
@@ -276,13 +327,10 @@ def version(options):
     """
     # If --json and --save are both specified, raise an error.
     # These options should be mutually exclusive.
-    try:
-        if options.json and options.save:
-            print "ERROR: --json and --save are mutually exclusive"
-            return
-    except AttributeError:
-        pass
+    if options.json and options.save:
+        raise BuildFailure("ERROR: --json and --save are mutually exclusive")
 
+    # print the version information.
     data = dict((repo.local_path, repo.current_rev() if os.path.exists(
         repo.local_path) else None) for repo in REPOS)
     json_string = json.dumps(data, sort_keys=True, indent=4)
@@ -339,15 +387,6 @@ def version(options):
     print fmt_string % headers
     for repo_data in data:
         print fmt_string % repo_data
-
-# options are accessed by virtualenv bootstrap command somehow.
-options(
-    virtualenv=Bunch(
-        dest_dir='test_env',
-        script_name="bootstrap.py"
-    )
-)
-
 
 @task
 @cmdopts([
@@ -788,6 +827,7 @@ def clean(options):
 
 
 @task
+@might_call('zip')
 @cmdopts([
     ('force-dev', '', 'Zip subrepos even if their version does not match the known state'),
 ])
@@ -861,9 +901,9 @@ def zip_source(options):
 
 
 @task
+@might_call('zip')
 @cmdopts([
-    ('force-dev', '', 'Force development'),
-    ('version', '-v', 'The version of the documentation to build'),
+    ('doc-version', '-d', 'The version of the documentation to build'),
     ('skip-api', '', 'Skip building the API docs'),
     ('skip-guide', '', "Skip building the User's Guide"),
     ('python=', '', 'The python interpreter to use'),
@@ -1184,6 +1224,8 @@ def build_bin(options):
 
 
 @task
+@might_call('build_bin')
+@might_call('fetch')
 @cmdopts([
     ('bindir=', 'b', ('Folder of binaries to include in the installer. '
                       'Defaults to dist/invest-bin')),
@@ -1235,6 +1277,10 @@ def build_installer(options):
         raise BuildFailure
 
     if command == 'nsis':
+        invest_repo = REPOS_DICT['invest-2']
+        if not os.path.exists(invest_repo.local_path):
+            call_task('fetch', args=[invest_repo.local_path])
+
         _build_nsis(version, options.bindir, 'x86')
     elif command == 'dmg':
         _build_dmg(version, options.bindir)
@@ -1311,10 +1357,6 @@ def _build_nsis(version, bindir, arch):
 
     If these two conditions have not been met, the installer will fail.
     """
-    invest_repo = REPOS_DICT['invest-2']
-    if not os.path.exists(invest_repo.local_path):
-        call_task('fetch', args=[invest_repo.local_path])
-
     # determine makensis path
     possible_paths = [
         'C:\\Program Files\\NSIS\\makensis.exe',
@@ -1495,16 +1537,16 @@ def selftest():
 @task
 @cmdopts([
     ('force-dev', '', 'Allow development versions of repositories to be used.'),
-    ('insttype=', 'i', ('The type of installer to build.  Defaults depend on '
-                        'the current system: Windows=nsis, Mac=dmg, Linux=deb. '
-                        'rpm is also available.')),
-    ('arch=', 'a', 'The architecture of the binaries.  Defaults to the sustem arch.'),
-    ('nodata', '', "Don't build the data zipfiles"),
-    ('nodocs', '', "Don't build the documentation"),
-    ('noinstaller', '', "Don't build the installer"),
-    ('nobin', '', "Don't build the binaries"),
+    ('skip-data', '', "Don't build the data zipfiles"),
+    ('skip-installer', '', "Don't build the installer"),
+    ('skip-bin', '', "Don't build the binaries"),
     ('python=', '', "The python interpreter to use"),
-])
+], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files'])
+@might_call('build_data')
+@might_call('build_docs')
+@might_call('build_installer')
+@might_call('build_bin')
+@might_call('collect_release_files')
 def build(options):
     """
     Build the installer, start-to-finish.  Includes binaries, docs, data, installer.
@@ -1531,46 +1573,30 @@ def build(options):
         print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
 
-    # Call these tasks unless the user requested not to.
-    python_exe = os.path.abspath(getattr(options, 'python', sys.executable))
-    defaults = [
-        ('nobin', False, {
-            'options': {'python': python_exe}}),
-        ('nodocs', False, {
-            'options': {'python': python_exe}}),
-        ('nodata', False, {}),
-    ]
-    for attr, default_value, extra_args in defaults:
-        task_base = attr[2:]
-        try:
-            getattr(options.build, attr)
-        except AttributeError:
-            # when the user doesn't provide a --no(data|bin|docs) option,
-            # AttributeError is raised.
-            task_name = 'build_%s' % task_base
-            call_task(task_name, **extra_args)
-        else:
-            print 'Skipping task %s' % task_base
-
-
-    if getattr(options.build, 'noinstaller', False) is False:
-        # The installer task has its own parameter defaults.  Let the
-        # build_installer task handle most of them.  We can pass in some of the
-        # parameters, though.
-        installer_options = {
-            'bindir': os.path.join('dist', 'invest_dist'),
-        }
-        for arg in ['insttype', 'arch']:
-            try:
-                installer_options[arg] = getattr(options, arg)
-            except AttributeError:
-                # let the build_installer task handle this default.
-                pass
-        call_task('build_installer', options=installer_options)
+    if options.build.skip_bin is False:
+        call_task('build_bin', options=options.build_bin)
     else:
-        print 'Skipping installer'
+        print 'Skipping binaries per user request'
 
-    call_task('collect_release_files', options={'python': python_exe})
+    if options.build.skip_data is False:
+        call_task('build_data', options=options.build_data)
+    else:
+        print 'Skipping data per user request'
+
+    if (options.build_docs.skip_api is False or
+        options.build_docs.skip_guide is False):
+        call_task('build_docs', options=options.build_docs)
+    else:
+        print 'Skipping documentation per user request'
+
+
+    if options.build.skip_installer is False:
+        call_task('build_installer', options=options.build_installer)
+    else:
+        print 'Skipping installer per user request'
+
+
+    call_task('collect_release_files', options=options.collect_release_files)
 
 
 @task
