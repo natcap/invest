@@ -1269,63 +1269,40 @@ def build_bin(options):
                         'Windows=nsis, Mac=dmg, Linux=deb')),
     ('arch=', 'a', 'The architecture of the binaries'),
     ('force-dev', '', 'Allow a build when a repo version differs from tracked versions'),
-])
+], share_with=['check_repo'])
 def build_installer(options):
     """
     Build an installer for the target OS/platform.
     """
-    default_installer = {
-        'Darwin': 'dmg',
-        'Windows': 'nsis',
-        'Linux': 'deb'
-    }
 
-    # set default options if they have not been set by the user.
-    # options don't exist in the options object unless the user defines it.
-    defaults = [
-        ('bindir', os.path.join('dist', 'invest_dist')),
-        ('insttype', default_installer[platform.system()]),
-        ('arch', platform.machine())
-    ]
-    for option_name, default_val in defaults:
-        try:
-            getattr(options, option_name)
-        except AttributeError:
-            setattr(options, option_name, default_val)
+    if not os.path.exists(options.build_installer.bindir):
+        raise BuildFailure(('WARNING: Binary dir %s not found.'
+                           'Run `paver build_bin`' % options.bindir))
 
-    if not os.path.exists(options.bindir):
-        print 'WARNING: Binary dir %s not found' % options.bindir
-        print 'WARNING: Regenerating binaries'
-        call_task('build_bin')
 
     # version comes from the installed version of natcap.invest
-    invest_bin = os.path.join(options.bindir, 'invest')
+    invest_bin = os.path.join(options.build_installer.bindir, 'invest')
     version_string = sh('{invest_bin} --version'.format(invest_bin=invest_bin), capture=True)
     for possible_version in version_string.split('\n'):
         if possible_version != '':
             version = possible_version
 
     command = options.insttype.lower()
-    if not os.path.exists(options.bindir):
-        print "ERROR: Binary directory %s not found" % options.bindir
-        print "ERROR: Run `paver build_bin` to make new binaries"
-        raise BuildFailure
-
     if command == 'nsis':
-        invest_repo = REPOS_DICT['invest-2']
-        if not os.path.exists(invest_repo.local_path):
-            call_task('fetch', args=[invest_repo.local_path])
-
-        _build_nsis(version, options.bindir, 'x86')
+        call_task('check_repo', options={
+            'force-dev': options.build_installer.force_dev,
+            'repo': REPOS_DICT['invest-2'].local_path,
+            'fetch': True,
+        })
+        _build_nsis(version, options.build_installer.bindir, 'x86')
     elif command == 'dmg':
-        _build_dmg(version, options.bindir)
+        _build_dmg(version, options.build_installer.bindir)
     elif command == 'deb':
-        _build_fpm(version, options.bindir, 'deb')
+        _build_fpm(version, options.build_installer.bindir, 'deb')
     elif command == 'rpm':
-        _build_fpm(version, options.bindir, 'rpm')
+        _build_fpm(version, options.build_installer.bindir, 'rpm')
     else:
-        print 'ERROR: command not recognized: %s' % command
-        return 1
+        raise BuildFailure('ERROR: build type not recognized: %s' % command)
 
 
 def _build_fpm(version, bindir, pkg_type):
