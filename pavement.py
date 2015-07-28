@@ -83,6 +83,14 @@ options(
         with_invest=False,
         requirements='',
         bootstrap_file='bootstrap.py'
+    ),
+    build_docs=Bunch(
+        skip_api=False,
+        skip_guide=False,
+        python=sys.executable
+    ),
+    build_data=Bunch(
+        force_dev=False
     )
 )
 
@@ -764,7 +772,7 @@ def clean(options):
     """
 
     folders_to_rm = ['build', 'dist', 'tmp', 'bin', 'test',
-                     options.virtualenv.dest_dir,
+                     options.env.envname,
                      'installer/darwin/temp',
                      'invest-3-x86',
                      'exe/dist',
@@ -875,7 +883,8 @@ def zip_source(options):
 @task
 @might_call('zip')
 @cmdopts([
-    ('doc-version', '-d', 'The version of the documentation to build'),
+    ('force-dev', '', ('Allow docs to build even if repo version does not '
+                       'match the known state')),
     ('skip-api', '', 'Skip building the API docs'),
     ('skip-guide', '', "Skip building the User's Guide"),
     ('python=', '', 'The python interpreter to use'),
@@ -891,8 +900,7 @@ def build_docs(options):
     Requires make and sed.
     """
 
-    python_exe = getattr(options, 'python', sys.executable)
-    invest_version = _invest_version(python_exe)
+    invest_version = _invest_version(options.build_docs.python)
     archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
 
     # If the user has not provided the skip-guide flag, build the User's guide.
@@ -914,7 +922,7 @@ def build_docs(options):
 
     skip_api = getattr(options, 'skip_api', False)
     if skip_api is False:
-        sh('{python} setup.py build_sphinx'.format(python=python_exe))
+        sh('{python} setup.py build_sphinx'.format(python=options.build_docs.python))
         archive_name = archive_template % 'apidocs'
         call_task('zip', args=[archive_name, 'build/sphinx/html', 'apidocs'])
     else:
