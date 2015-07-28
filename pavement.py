@@ -55,13 +55,16 @@ def user_os():
 # the options object is used for global paver configuration.  It contains
 # default values for all tasks, which makes our handling of parameters much
 # easier.
+_ENVNAME = 'release_env'
+_PYTHON = sys.executable
 options(
     build=Bunch(
         force_dev=False,
         skip_data=False,
         skip_installer=False,
         skip_bin=False,
-        python=sys.executable
+        python=_PYTHON,
+        envname=_ENVNAME
     ),
     build_installer=Bunch(
         force_dev=False,
@@ -70,7 +73,7 @@ options(
         bindir=os.path.join('dist', 'invest_dist')
     ),
     collect_release_files=Bunch(
-        python=sys.executable
+        python=_PYTHON
     ),
     version=Bunch(
         json=False,
@@ -79,7 +82,7 @@ options(
     env=Bunch(
         system_site_packages=False,
         clear=False,
-        envname='release_env',
+        envname=_ENVNAME,
         with_invest=False,
         requirements='',
         bootstrap_file='bootstrap.py'
@@ -87,14 +90,21 @@ options(
     build_docs=Bunch(
         skip_api=False,
         skip_guide=False,
-        python=sys.executable
+        python=_PYTHON
     ),
     build_data=Bunch(
         force_dev=False
     ),
     build_bin=Bunch(
         force_dev=False,
-        python=sys.executable
+        python=_PYTHON
+    ),
+    jenkins_installer=Bunch(
+        nodata='false',
+        nobin='false',
+        nodocs='false',
+        noinstaller='false',
+        nopush='false'
     )
 )
 
@@ -485,6 +495,9 @@ def after_install(options, home_dir):
                 "        invest_sdist = invest_sdist.replace('+', '-')\n"
                 # Recent versions of pip build wheels by default before installing, but wheel
                 # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
+                # Pyinstaller also doesn't handle namespace packages all that
+                # well, so --egg --no-use-wheel doesn't really work in a
+                # release environment either.
                 "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest', "
                 " invest_sdist])\n"
             )
@@ -512,10 +525,18 @@ def after_install(options, home_dir):
     # Remove what was copied over so we din't confuse pyinstaller.
     if platform.system() == 'Windows':
         distutils_dir = os.path.join(options.env.envname, 'Lib', 'distutils')
+        init_file = os.path.join(options.env.envname, 'Lib', 'site-packages', 'natcap', '__init__.py')
     else:
         distutils_dir = os.path.join(options.env.envname, 'lib', 'python2.7', 'distutils')
+        init_file = os.path.join(options.env.envname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
     if os.path.exists(distutils_dir):
         dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
+
+    # writing this import appears to help pyinstaller find the __path__
+    # attribute from a package.
+    init_string = "import pkg_resources\npkg_resources.declare_namespace(__name__)\n"
+    with open(init_file, 'w') as namespace_init:
+        namespace_init.write(init_string)
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
@@ -1552,8 +1573,10 @@ def selftest():
     ('skip-data', '', "Don't build the data zipfiles"),
     ('skip-installer', '', "Don't build the installer"),
     ('skip-bin', '', "Don't build the binaries"),
-    ('python=', '', "The python interpreter to use"),
+    ('envname=', 'e', ('The name of the environment to use')),
+    ('python=', '', "The python interpreter to use.  If not provided, an env will be built for you."),
 ], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files', 'check_repo'])
+@might_call('env')
 @might_call('build_data')
 @might_call('build_docs')
 @might_call('build_installer')
@@ -1567,13 +1590,20 @@ def build(options):
     Any missing and needed repositories will be cloned.
     """
 
+    # Check repositories up front so we can fail early if needed.
+    # Here, we're only checking that if a repo exists, not cloning it.
+    # The appropriate tasks will clone the repos they need.
     for repo in REPOS_DICT.values():
+        call_task('check_repo', options={
+            'force-dev': options.build.force_dev,
+            'repo': repo.local_path,
+            'fetch': False,
+        })
         tracked_rev = repo.tracked_version()
-        repo.get(tracked_rev)
+        current_rev = repo.current_rev()
 
         # if we ARE NOT allowing dev builds
-        if getattr(options, 'force_dev', False) is False:
-            current_rev = repo.current_rev()
+        if options.build.force_dev is False:
             if not repo.at_known_rev():
                 raise BuildFailure(('ERROR: %(local_path)s at rev %(cur_rev)s, '
                                     'but expected to be at rev %(exp_rev)s') % {
@@ -1584,9 +1614,32 @@ def build(options):
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
         print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
+    call_task('clean', options=options)
+
+    # build the env with our custom args for this context, but only if the user
+    # has not already specified a python interpreter to use.
+    if options.build.python == _PYTHON:
+        call_task('env', options={
+            'system_site_packages': True,
+            'clear': True,
+            'envname': options.build.envname,
+            'with_invest': True,
+            'requirements': '',
+        })
+
+    def _python():
+        """
+        Return the path to the environment's python exe.
+        """
+        if platform.system() == 'Windows':
+            return os.path.join(options.build.envname, 'Scripts', 'python.exe')
+        return os.path.join(options.build.envname, 'bin', 'python')
 
     if options.build.skip_bin is False:
-        call_task('build_bin', options=options.build_bin)
+        call_task('build_bin', options={
+            'python': _python(),
+            'force_dev': options.build.force_dev,
+        })
     else:
         print 'Skipping binaries per user request'
 
@@ -1597,7 +1650,11 @@ def build(options):
 
     if (options.build_docs.skip_api is False or
         options.build_docs.skip_guide is False):
-        call_task('build_docs', options=options.build_docs)
+        call_task('build_docs', options={
+            'skip_api': options.build_docs.skip_api,
+            'skip_guide': options.build_docs.skip_guide,
+            'python': _python(),
+        })
     else:
         print 'Skipping documentation per user request'
 
@@ -1611,6 +1668,7 @@ def build(options):
 
 
 @task
+@might_call('zip')
 @cmdopts([
     ('python=', '', 'The python interpreter to use'),
 ])
@@ -1720,14 +1778,18 @@ def jenkins_installer(options):
     """
 
     # Process build options up front so that we can fail earlier.
-    release_env = 'release_env'
+    # Assume we're in a virtualenv.
     build_options = {
         'python': os.path.join(
-            release_env,
+            options.env.envname,
             'Scripts' if platform.system() == 'Windows' else 'bin',
             'python'),
     }
-    for opt_name in ['nodata', 'nodocs', 'noinstaller', 'nobin']:
+    for opt_name, build_opt in [
+        ('nodata', 'skip-data'),
+        ('nodocs', 'skip-data'),
+        ('noinstaller', 'skip-installer'),
+        ('nobin', 'skip-bin')]:
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
@@ -1740,19 +1802,10 @@ def jenkins_installer(options):
                 raise AttributeError
             else:
                 raise Exception('Invalid option: %s' % user_option)
-            build_options[opt_name] = user_option
+            build_options[build_opt] = user_option
         except AttributeError:
             print 'Skipping option %s' % opt_name
             pass
-
-    call_task('clean')
-    call_task('fetch', args = [''])
-    call_task('env', options={
-        'system_site_packages': True,
-        'clear': True,
-        'with_invest': True,
-        'envname': release_env
-    })
 
     call_task('build', options=build_options)
 
@@ -1798,6 +1851,9 @@ def zip(args):
     try:
         prefix = args[2]
         dest_dir= os.path.join(os.path.dirname(source_dir), prefix)
+        if os.path.exists(dest_dir):
+            dry('rm -r %s' % dest_dir,
+                shutil.rmtree, dest_dir)
         dry('cp -r %s %s' % (source_dir, prefix),
             shutil.copytree, source_dir, dest_dir)
     except IndexError:
@@ -1831,6 +1887,7 @@ def forked_by(options):
         pass
 
 @task
+@might_call('push')
 @cmdopts([
     ('python=', '', 'Python exe'),
     ('username=', '', 'Remote username'),
