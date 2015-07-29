@@ -135,6 +135,7 @@ class Repository(object):
 
         # If we're already updated to the correct rev, return.
         if self.at_known_rev():
+            print 'Repo %s is in a known state' % self.local_path
             return
 
         # Try to update to the correct revision.  If we can't pull, then
@@ -142,6 +143,7 @@ class Repository(object):
         try:
             self.update(rev)
         except BuildFailure:
+            print 'Repo %s not found, falling back to fresh clone and update' % self.local_path
             # When the current repo can't be updated because it doesn't know
             # the change we want to update to
             self.pull()
