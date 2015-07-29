@@ -1,5 +1,4 @@
 import os
-import distutils
 import logging
 import sys
 import json
@@ -23,9 +22,11 @@ import pkg_resources
 import paver.svn
 import paver.path
 import paver.virtual
-from paver.easy import *
+from paver.easy import task, cmdopts, consume_args, might_call,\
+    dry, sh, call_task, BuildFailure, no_help, Bunch
 import virtualenv
 import yaml
+
 
 LOGGER = logging.getLogger('invest-bin')
 _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
@@ -57,7 +58,7 @@ def user_os():
 # easier.
 _ENVNAME = 'release_env'
 _PYTHON = sys.executable
-options(
+paver.easy.options(
     build=Bunch(
         force_dev=False,
         skip_data=False,
@@ -152,13 +153,13 @@ class Repository(object):
     def ischeckedout(self):
         return os.path.exists(os.path.join(self.local_path, self.statedir))
 
-    def clone(self):
+    def clone(self, rev=None):
         raise Exception
 
     def pull(self):
         raise Exception
 
-    def update(self):
+    def update(self, rev=None):
         raise Exception
 
     def tracked_version(self):
@@ -210,7 +211,7 @@ class HgRepository(Repository):
     def format_rev(self, rev):
         return self._format_log('{node}', rev=rev)
 
-    def current_rev(self):
+    def current_rev(self, convert=True):
         return self._format_log('{node}')
 
     def tracked_version(self, convert=True):
