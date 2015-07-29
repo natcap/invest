@@ -88,6 +88,7 @@ options(
         bootstrap_file='bootstrap.py'
     ),
     build_docs=Bunch(
+        force_dev=False,
         skip_api=False,
         skip_guide=False,
         python=_PYTHON
@@ -105,7 +106,9 @@ options(
         nodocs='false',
         noinstaller='false',
         nopush='false'
-    )
+    ),
+    clean=Bunch(),
+    virtualenv=Bunch()
 )
 
 
@@ -164,6 +167,9 @@ class Repository(object):
         return tracked_rev
 
     def at_known_rev(self):
+        if self.ischeckedout() is False:
+            return False
+
         tracked_version = self.format_rev(self.tracked_version())
         return self.current_rev() == tracked_version
 
@@ -808,7 +814,7 @@ def clean(options):
                      'invest-bin',
                      ]
     files_to_rm = [
-        options.virtualenv.script_name,
+        options.env.bootstrap_file,
         'installer/darwin/*.dmg',
         'installer/windows/*.exe',
     ]
@@ -931,8 +937,12 @@ def build_docs(options):
     # If the user has not provided the skip-guide flag, build the User's guide.
     skip_guide = getattr(options, 'skip_guide', False)
     if skip_guide is False:
-        if not _repo_is_valid(REPOS_DICT['users-guide'], options):
-            raise BuildFailure('User guide version is out of sync and force-dev not provided')
+        call_task('check_repo', options={
+            'force_dev': options.build_docs.force_dev,
+            'repo': REPOS_DICT['users-guide'].local_path,
+            'fetch': True,
+        })
+
         guide_dir = os.path.join('doc', 'users-guide')
         latex_dir = os.path.join(guide_dir, 'build', 'latex')
         sh('make html', cwd=guide_dir)
@@ -976,12 +986,16 @@ def check_repo(options):
 
 
     if not repo.ischeckedout() and options.check_repo.fetch is False:
-        raise BuildFailure(('Repo %s is not checked out. '
-                            'Use `paver fetch %s`.' % (
-                                repo.local_path, repo.local_path)))
+        print ('Repo %s is not checked out. '
+                'Use `paver fetch %s`.' % (
+                    repo.local_path, repo.local_path))
+        return
 
     if options.check_repo.fetch is True:
         call_task('fetch', args=[repo_path])
+
+    if not repo.ischeckedout():
+        return
 
     tracked_rev = repo.tracked_version()
     current_rev = repo.current_rev()
@@ -1080,9 +1094,13 @@ def build_data(options):
                       versions do not match and the flag is not provided, the task
                       will print an error and quit.
     """
+
     data_repo = REPOS_DICT['invest-data']
-    if not _repo_is_valid(data_repo, options):
-        return
+    call_task('check_repo', options={
+        'force_dev': options.build_data.force_dev,
+        'repo': data_repo.local_path,
+        'fetch': True,
+    })
 
     dist_dir = 'dist'
     if not os.path.exists(dist_dir):
@@ -1600,11 +1618,13 @@ def build(options):
             'fetch': False,
         })
         tracked_rev = repo.tracked_version()
-        current_rev = repo.current_rev()
 
-        # if we ARE NOT allowing dev builds
-        if options.build.force_dev is False:
+        # if we ARE NOT allowing dev builds and the version differs, fail the
+        # build.  HOWEVER, if the repo has not been checked out, we'll just
+        # clone it later.
+        if options.build.force_dev is False and repo.ischeckedout():
             if not repo.at_known_rev():
+                current_rev = repo.current_rev()
                 raise BuildFailure(('ERROR: %(local_path)s at rev %(cur_rev)s, '
                                     'but expected to be at rev %(exp_rev)s') % {
                                         'local_path': repo.local_path,
@@ -1612,7 +1632,7 @@ def build(options):
                                         'exp_rev': tracked_rev})
         else:
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
-        print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
+        print 'Repo %s is expacted to be at rev %s' % (repo.local_path, tracked_rev)
 
     call_task('clean', options=options)
 
@@ -1664,7 +1684,9 @@ def build(options):
         print 'Skipping installer per user request'
 
 
-    call_task('collect_release_files', options=options.collect_release_files)
+    call_task('collect_release_files', options={
+        'python': _python(),
+    })
 
 
 @task
@@ -1678,8 +1700,7 @@ def collect_release_files(options):
     """
     # make a distribution folder for this build version.
     # rstrip to take off the newline
-    python_exe = getattr(options, 'python', sys.executable)
-    invest_version = _invest_version(python_exe)
+    invest_version = _invest_version(options.collect_release_files.python)
     dist_dir = os.path.join('dist', 'release_%s' % invest_version)
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
@@ -1779,12 +1800,7 @@ def jenkins_installer(options):
 
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
-    build_options = {
-        'python': os.path.join(
-            options.env.envname,
-            'Scripts' if platform.system() == 'Windows' else 'bin',
-            'python'),
-    }
+    build_options = {}
     for opt_name, build_opt in [
         ('nodata', 'skip-data'),
         ('nodocs', 'skip-data'),
@@ -1819,8 +1835,13 @@ def jenkins_installer(options):
         push = True
 
     if push:
+        python = os.path.join(
+            options.env.envname,
+            'Scripts' if platform.system() == 'Windows' else 'bin',
+            'python'),
+
         call_task('jenkins_push_artifacts', options={
-            'python': build_options['python'],
+            'python': python,
             'username': 'dataportal',
             'host': 'data.naturalcapitalproject.org',
             'dataportal': 'public_html',
