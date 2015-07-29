@@ -1883,7 +1883,7 @@ def jenkins_installer(options):
         python = os.path.join(
             options.env.envname,
             'Scripts' if platform.system() == 'Windows' else 'bin',
-            'python'),
+            'python')
 
         call_task('jenkins_push_artifacts', options={
             'python': python,
