@@ -1794,7 +1794,7 @@ def collect_release_files(options):
     ('nodocs=', '', "Don't build the documentation"),
     ('noinstaller=', '', "Don't build the installer"),
     ('nopush=', '', "Don't Push the build artifacts to dataportal"),
-])
+], share_with=['clean', 'build', 'jenkins_push_artifacts'])
 def jenkins_installer(options):
     """
     Run a jenkins build via paver.
