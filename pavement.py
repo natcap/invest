@@ -999,7 +999,7 @@ def check_repo(options):
     if not repo.ischeckedout():
         return
 
-    tracked_rev = repo.tracked_version()
+    tracked_rev = repo.format_rev(repo.tracked_version())
     current_rev = repo.current_rev()
     if tracked_rev != current_rev:
         if options.check_repo.force_dev is False:
