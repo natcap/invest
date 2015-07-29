@@ -33,6 +33,7 @@ _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
 _SDTOUT_HANDLER.setLevel(logging.INFO)
 LOGGER.addHandler(_SDTOUT_HANDLER)
 
+
 def user_os():
     """
     Determine the operating system.
@@ -113,7 +114,6 @@ paver.easy.options(
 )
 
 
-
 class Repository(object):
     tip = ''
     statedir = ''
@@ -132,7 +132,6 @@ class Repository(object):
             self.clone()
         else:
             print 'Repository %s exists' % self.local_path
-
 
         # If we're already updated to the correct rev, return.
         if self.at_known_rev():
@@ -260,6 +259,7 @@ class SVNRepository(Repository):
     def format_rev(self, rev):
         return rev
 
+
 class GitRepository(Repository):
     tip = 'master'
     statedir = '.git'
@@ -325,7 +325,6 @@ def _invest_version(python_exe=None):
     except ImportError:
         print 'natcap.invest not available'
 
-
     if python_exe is None:
         python_exe = 'python'
     else:
@@ -356,6 +355,7 @@ def _invest_version(python_exe=None):
         capture=True).rstrip()
     print 'Retrieved version from site-packages'
     return invest_version
+
 
 def _repo_is_valid(repo, options):
     # repo is a repository object
@@ -454,6 +454,7 @@ def version(options):
     print fmt_string % headers
     for repo_data in data:
         print fmt_string % repo_data
+
 
 @task
 @cmdopts([
@@ -836,6 +837,7 @@ def push(args):
     print 'Closing down SSH'
     ssh.close()
 
+
 @task
 def clean(options):
     """
@@ -1026,11 +1028,11 @@ def check_repo(options):
     if repo is None:
         raise BuildFailure('Repo %s is invalid' % repo_path)
 
-
     if not repo.ischeckedout() and options.check_repo.fetch is False:
-        print ('Repo %s is not checked out. '
-                'Use `paver fetch %s`.' % (
-                    repo.local_path, repo.local_path))
+        print (
+            'Repo %s is not checked out. '
+            'Use `paver fetch %s`.' % (
+                repo.local_path, repo.local_path))
         return
 
     if options.check_repo.fetch is True:
@@ -1043,11 +1045,13 @@ def check_repo(options):
     current_rev = repo.current_rev()
     if tracked_rev != current_rev:
         if options.check_repo.force_dev is False:
-            raise BuildFailure(('ERROR: %(local_path)s at rev %(cur_rev)s, '
-                                'but expected to be at rev %(exp_rev)s') % {
-                                    'local_path': repo.local_path,
-                                    'cur_rev': current_rev,
-                                    'exp_rev': tracked_rev})
+            raise BuildFailure(
+                ('ERROR: %(local_path)s at rev %(cur_rev)s, '
+                    'but expected to be at rev %(exp_rev)s') % {
+                    'local_path': repo.local_path,
+                    'cur_rev': current_rev,
+                    'exp_rev': tracked_rev
+                })
         else:
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
     print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
@@ -1236,9 +1240,9 @@ def build_bin(options):
     except KeyError:
         print "Nothing in 'PYTHONPATH'"
     sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
-            'python': python_exe,
-            'pyinstaller': pyinstaller_file,
-        }, cwd='exe')
+        'python': python_exe,
+        'pyinstaller': pyinstaller_file,
+    }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
 
@@ -1279,7 +1283,6 @@ def build_bin(options):
     dry('cp -r %s %s' % (bindir, invest_dist),
         shutil.copytree, bindir, invest_dist)
 
-
     # Mac builds seem to need an egg placed in just the right place.
     if platform.system() in ['Darwin', 'Linux']:
         sitepkgs_egg_glob = os.path.join(sitepkgs, 'natcap.versioner-*.egg')
@@ -1289,7 +1292,7 @@ def build_bin(options):
             latest_egg = sorted(glob.glob(sitepkgs_egg_glob), reverse=True)[0]
             egg_dir = os.path.join(invest_dist, 'eggs')
             if not os.path.exists(egg_dir):
-                dry('mkdir %s' % egg_dir , os.makedirs, egg_dir)
+                dry('mkdir %s' % egg_dir, os.makedirs, egg_dir)
 
             dest_egg = os.path.join(invest_dist, 'eggs', os.path.basename(latest_egg))
             dry('cp {src_egg} {dest_egg}'.format(
@@ -1313,8 +1316,7 @@ def build_bin(options):
                 pip_ep=os.path.join(os.path.dirname(python_exe), 'pip'),
                 distdir='dist',
                 versioner=versioner_spec
-                )
-            )
+            ))
 
             cwd = os.getcwd()
             # Unzip the tar.gz and run bdist_egg on it.
@@ -1363,7 +1365,6 @@ def build_installer(options):
     if not os.path.exists(options.build_installer.bindir):
         raise BuildFailure(('WARNING: Binary dir %s not found.'
                            'Run `paver build_bin`' % options.bindir))
-
 
     # version comes from the installed version of natcap.invest
     invest_bin = os.path.join(options.build_installer.bindir, 'invest')
@@ -1423,21 +1424,21 @@ def _build_fpm(version, bindir, pkg_type):
         ' --license "Modified BSD"'
         ' --provides "invest"'
         ' --description "InVEST family of ecosystem service analysis tools'
-            '\n\n'
-            'InVEST (Integrated Valuation of Ecosystem Services '
-            'and Tradeoffs) is a family of tools for quantifying the values '
-            'of natural capital in clear, credible, and practical ways. In '
-            'promising a return (of societal benefits) on investments in '
-            'nature, the scientific community needs to deliver knowledge and '
-            'tools to quantify and forecast this return. InVEST enables '
-            'decision-makers to quantify the importance of natural capital, '
-            'to assess the tradeoffs associated with alternative choices, and '
-            'to integrate conservation and human development.'
-            '\n\n'
-            'The Natural Capital Project is a collaboration between Stanford '
-            'University Woods Institute for the Environment, the World Wildlife'
-            ' Fund, The Nature Conservancy and the University of Minnesota '
-            'Institute on the Environment."'
+        '\n\n'
+        'InVEST (Integrated Valuation of Ecosystem Services '
+        'and Tradeoffs) is a family of tools for quantifying the values '
+        'of natural capital in clear, credible, and practical ways. In '
+        'promising a return (of societal benefits) on investments in '
+        'nature, the scientific community needs to deliver knowledge and '
+        'tools to quantify and forecast this return. InVEST enables '
+        'decision-makers to quantify the importance of natural capital, '
+        'to assess the tradeoffs associated with alternative choices, and '
+        'to integrate conservation and human development.'
+        '\n\n'
+        'The Natural Capital Project is a collaboration between Stanford '
+        'University Woods Institute for the Environment, the World Wildlife'
+        ' Fund, The Nature Conservancy and the University of Minnesota '
+        'Institute on the Environment."'
         ' --after-install ./installer/linux/postinstall.sh'
         ' --after-remove ./installer/linux/postremove.sh'
         ' %(bindir)s') % options
@@ -1562,6 +1563,7 @@ def _get_local_version():
         version = "%(latesttag)s.dev%(latesttagdistance)s-%(short_node)s" % repo_data
     return version
 
+
 def _write_console_files(binary, mode):
     """
     Write simple console files, one for each model presented by IUI.
@@ -1625,11 +1627,14 @@ def selftest():
     Do a dry-run on all tasks found in this pavement file.
     """
     module = imp.load_source('pavement', __file__)
+
     def istask(reference):
         return isinstance(reference, paver.tasks.Task)
+
     for taskname, _ in inspect.getmembers(module, istask):
         if taskname != 'selftest':
             subprocess.call(['paver', '--dry-run', taskname])
+
 
 @task
 @cmdopts([
@@ -1671,11 +1676,13 @@ def build(options):
         if options.build.force_dev is False and repo.ischeckedout():
             if not repo.at_known_rev():
                 current_rev = repo.current_rev()
-                raise BuildFailure(('ERROR: %(local_path)s at rev %(cur_rev)s, '
-                                    'but expected to be at rev %(exp_rev)s') % {
-                                        'local_path': repo.local_path,
-                                        'cur_rev': current_rev,
-                                        'exp_rev': tracked_rev})
+                raise BuildFailure(
+                    ('ERROR: %(local_path)s at rev %(cur_rev)s, '
+                     'but expected to be at rev %(exp_rev)s') % {
+                        'local_path': repo.local_path,
+                        'cur_rev': current_rev,
+                        'exp_rev': tracked_rev
+                    })
         else:
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
         print 'Repo %s is expacted to be at rev %s' % (repo.local_path, tracked_rev)
@@ -1715,7 +1722,7 @@ def build(options):
         print 'Skipping data per user request'
 
     if (options.build_docs.skip_api is False or
-        options.build_docs.skip_guide is False):
+            options.build_docs.skip_guide is False):
         call_task('build_docs', options={
             'skip_api': options.build_docs.skip_api,
             'skip_guide': options.build_docs.skip_guide,
@@ -1728,7 +1735,6 @@ def build(options):
         call_task('build_installer', options=options.build_installer)
     else:
         print 'Skipping installer per user request'
-
 
     call_task('collect_release_files', options={
         'python': _python(),
@@ -1796,7 +1802,7 @@ def collect_release_files(options):
     # Copy PDF docs into the new folder
     try:
         pdf = glob.glob(os.path.join('doc', 'users-guide', 'build',
-                                    'latex', '*.pdf'))[0]
+                                     'latex', '*.pdf'))[0]
     except IndexError:
         print "Skipping pdf, since pdf was not built."
     else:
@@ -1851,10 +1857,10 @@ def jenkins_installer(options):
     # Assume we're in a virtualenv.
     build_options = {}
     for opt_name, build_opt in [
-        ('nodata', 'skip-data'),
-        ('nodocs', 'skip-data'),
-        ('noinstaller', 'skip-installer'),
-        ('nobin', 'skip-bin')]:
+            ('nodata', 'skip-data'),
+            ('nodocs', 'skip-data'),
+            ('noinstaller', 'skip-installer'),
+            ('nobin', 'skip-bin')]:
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
@@ -1877,7 +1883,7 @@ def jenkins_installer(options):
 
     try:
         nopush_str = getattr(options.jenkins_installer, 'nopush')
-        if nopush_str in ['false', 'False', '0', '', '""',]:
+        if nopush_str in ['false', 'False', '0', '', '""']:
             push = True
         else:
             push = False
@@ -1896,7 +1902,6 @@ def jenkins_installer(options):
             'host': 'data.naturalcapitalproject.org',
             'dataportal': 'public_html',
         })
-
 
 
 @task
@@ -1921,7 +1926,7 @@ def zip(args):
 
     try:
         prefix = args[2]
-        dest_dir= os.path.join(os.path.dirname(source_dir), prefix)
+        dest_dir = os.path.join(os.path.dirname(source_dir), prefix)
         if os.path.exists(dest_dir):
             dry('rm -r %s' % dest_dir,
                 shutil.rmtree, dest_dir)
@@ -1936,6 +1941,7 @@ def zip(args):
             'format': 'zip',
             'root_dir': os.path.dirname(source_dir),
             'base_dir': prefix})
+
 
 @task
 @cmdopts([
@@ -1956,6 +1962,7 @@ def forked_by(options):
             username_file.write(username)
     except AttributeError:
         pass
+
 
 @task
 @might_call('push')
@@ -2017,7 +2024,7 @@ def jenkins_push_artifacts(options):
                             '.ssh', 'dataportal-id_rsa')
     else:
         print ('No private key provided, and not on Windows, so not '
-                'assuming a default private key file')
+               'assuming a default private key file')
 
     push_args = {
         'user': getattr(options.jenkins_push_artifacts, 'username'),
@@ -2025,6 +2032,9 @@ def jenkins_push_artifacts(options):
     }
 
     def _push(target_dir):
+        """
+        Format the push configuration string based on the given target_dir.
+        """
         push_args['dir'] = os.path.join(
             getattr(options.jenkins_push_artifacts, 'dataportal'),
             target_dir)
@@ -2032,7 +2042,6 @@ def jenkins_push_artifacts(options):
         push_config = []
         if getattr(options.jenkins_push_artifacts, 'password', False):
             push_config.append('--password')
-
 
         push_config.append('--private-key=%s' % pkey)
         push_config.append('--makedirs')
@@ -2053,10 +2062,8 @@ def jenkins_push_artifacts(options):
         """
         archive_present = reduce(
             lambda x, y: x or y,
-            map(lambda x: x.endswith(substring),
-                release_files))
+            [x.endswith(substring) for x in release_files])
         return archive_present
-
 
     zips_to_unzip = []
     if not _archive_present('apidocs.zip'):
@@ -2095,10 +2102,10 @@ def jenkins_push_artifacts(options):
 
     for filename in zips_to_unzip:
         print 'Unzipping %s on remote' % filename
-        stdin, stdout, stderr = ssh.exec_command(
+        _, stdout, stderr = ssh.exec_command(
             'cd public_html/{releasedir}; unzip -o `ls -tr {zipfile} | tail -n 1`'.format(
                 releasedir=release_dir,
-                zipfile = filename
+                zipfile=filename
             )
         )
 
@@ -2111,4 +2118,3 @@ def jenkins_push_artifacts(options):
             print line
 
     ssh.close()
-
