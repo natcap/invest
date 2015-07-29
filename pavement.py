@@ -1185,7 +1185,12 @@ def build_bin(options):
                   'print distutils.sysconfig.get_python_lib()"'.format(
                       python=python_exe), capture=True).rstrip()
     pathsep = ';' if platform.system() == 'Windows' else ':'
-    env_site_pkgs = os.path.abspath(os.path.normpath('../release_env/lib/'))
+
+    # env_site_pkgs should be relative to the repo root
+    env_site_pkgs = os.path.abspath(
+        os.path.normpath(os.path.join(options.env.envname, 'lib')))
+    if platform.system() != 'Windows':
+        env_site_pkgs = os.path.join(env_site_pkgs, 'python2.7')
     try:
         print "PYTHONPATH: %s" % os.environ['PYTHONPATH']
     except KeyError:
