@@ -964,6 +964,8 @@ def build_docs(options):
     invest_version = _invest_version(options.build_docs.python)
     archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
 
+    print 'Using this template for the archive name: %s' % archive_template
+
     # If the user has not provided the skip-guide flag, build the User's guide.
     skip_guide = getattr(options, 'skip_guide', False)
     if skip_guide is False:
