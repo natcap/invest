@@ -1785,6 +1785,9 @@ def collect_release_files(options):
 
 
 @task
+@might_call('clean')
+@might_call('build')
+@might_call('jenkins_push_artifacts')
 @cmdopts([
     ('nodata=', '', "Don't build the data zipfiles"),
     ('nobin=', '', "Don't build the binaries"),
