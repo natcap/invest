@@ -1830,6 +1830,7 @@ def jenkins_installer(options):
             print 'Skipping option %s' % opt_name
             pass
 
+    call_task('clean', options=options)
     call_task('build', options=build_options)
 
     try:
