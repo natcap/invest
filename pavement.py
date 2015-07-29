@@ -312,12 +312,14 @@ def _invest_version(python_exe=None):
 
     try:
         import natcap.versioner
+        print 'Retrieved version from natcap.versioner'
         return natcap.versioner.parse_version()
     except ImportError:
         print 'natcap.versioner not available'
 
     try:
         import natcap.invest as invest
+        print 'Retrieved version from natcap.invest'
         return invest.__version__
     except ImportError:
         print 'natcap.invest not available'
@@ -335,6 +337,7 @@ def _invest_version(python_exe=None):
     invest_version_strings = invest_version.split(os.linesep)
     if len(invest_version_strings) > 1:
 
+        print 'Retrieved version from setup.py --version'
         # leave out the PEP440 warning strings if present.
         if platform.system() == 'Windows':
             return invest_version_strings[0]
@@ -350,6 +353,7 @@ def _invest_version(python_exe=None):
         '{python} -c "import natcap.invest; print natcap.invest.__version__"'.format(
             python=python_exe),
         capture=True).rstrip()
+    print 'Retrieved version from site-packages'
     return invest_version
 
 def _repo_is_valid(repo, options):
