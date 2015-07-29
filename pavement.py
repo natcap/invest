@@ -332,9 +332,14 @@ def _invest_version(python_exe=None):
     invest_version = sh('{python} setup.py --version'.format(
         python=python_exe), capture=True).rstrip()
 
-    if len(invest_version.split('\n')) > 1:
-        # When there's a PEP440 warning along with the version
-        invest_version = invest_version.split('\n')[-1].strip()
+    invest_version_strings = invest_version.split(os.linesep)
+    if len(invest_version_strings) > 1:
+
+        # leave out the PEP440 warning strings if present.
+        if platform.system() == 'Windows':
+            return invest_version_strings[0]
+        else:
+            return invest_version_strings[-1]
 
     if invest_version != '':
         # In case the version wasn't imported for some reason.
