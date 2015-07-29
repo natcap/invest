@@ -311,25 +311,41 @@ def _invest_version(python_exe=None):
     """
 
     try:
+        import natcap.versioner
+        return natcap.versioner.parse_version()
+    except ImportError:
+        print 'natcap.versioner not available'
+
+    try:
         import natcap.invest as invest
         return invest.__version__
     except ImportError:
-        if python_exe is None:
-            python_exe = 'python'
-        else:
-            python_exe = os.path.abspath(python_exe)
+        print 'natcap.invest not available'
 
-        invest_version = sh('{python} setup.py --version'.format(
-            python=python_exe), capture=True).rstrip()
 
-        if invest_version != '':
-            return invest_version
+    if python_exe is None:
+        python_exe = 'python'
+    else:
+        python_exe = os.path.abspath(python_exe)
 
-        invest_version = sh(
-            '{python} -c "import natcap.invest; print natcap.invest.__version__"'.format(
-                python=python_exe),
-            capture=True).rstrip()
+    # try to get the version from setup.py
+    invest_version = sh('{python} setup.py --version'.format(
+        python=python_exe), capture=True).rstrip()
+
+    if len(version.split('\n')) > 1:
+        # When there's a PEP440 warning along with the version
+        invest_version = version.split('\n')[-1].strip()
+
+    if invest_version != '':
+        # In case the version wasn't imported for some reason.
         return invest_version
+
+    # try to get it from the designated python
+    invest_version = sh(
+        '{python} -c "import natcap.invest; print natcap.invest.__version__"'.format(
+            python=python_exe),
+        capture=True).rstrip()
+    return invest_version
 
 def _repo_is_valid(repo, options):
     # repo is a repository object
