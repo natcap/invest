@@ -1148,7 +1148,7 @@ def build_bin(options):
 
     pyi_repo = REPOS_DICT['pyinstaller']
     call_task('check_repo', options={
-        'force-dev': options.build_bin.force_dev,
+        'force_dev': options.build_bin.force_dev,
         'repo': pyi_repo.local_path,
         'fetch': True,
     })
@@ -1329,7 +1329,7 @@ def build_installer(options):
     command = options.insttype.lower()
     if command == 'nsis':
         call_task('check_repo', options={
-            'force-dev': options.build_installer.force_dev,
+            'force_dev': options.build_installer.force_dev,
             'repo': REPOS_DICT['invest-2'].local_path,
             'fetch': True,
         })
@@ -1613,7 +1613,7 @@ def build(options):
     # The appropriate tasks will clone the repos they need.
     for repo in REPOS_DICT.values():
         call_task('check_repo', options={
-            'force-dev': options.build.force_dev,
+            'force_dev': options.build.force_dev,
             'repo': repo.local_path,
             'fetch': False,
         })
