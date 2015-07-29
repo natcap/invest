@@ -309,6 +309,7 @@ def _invest_version(python_exe=None):
     Returns:
         The version string.
     """
+
     try:
         import natcap.invest as invest
         return invest.__version__
@@ -317,6 +318,12 @@ def _invest_version(python_exe=None):
             python_exe = 'python'
         else:
             python_exe = os.path.abspath(python_exe)
+
+        invest_version = sh('{python} setup.py --version'.format(
+            python=python_exe), capture=True).rstrip()
+
+        if invest_version != '':
+            return invest_version
 
         invest_version = sh(
             '{python} -c "import natcap.invest; print natcap.invest.__version__"'.format(
