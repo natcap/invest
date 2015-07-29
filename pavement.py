@@ -460,7 +460,12 @@ def after_install(options, home_dir):
     # Initially set up for special installation of natcap.versioner.
     # Leaving in place in case future pkgs need special params.
     pkg_pip_params = {
-        'natcap.versioner': ['--egg', '--no-use-wheel'],
+        # Uncomment natcap.versioner if it becomes more useful to have flat
+        # eggs instead of a source directory structure.  I'm leaving this
+        # commented out for now so that we have record of it and so that
+        # pyinstaller binaries will generate.  Pyinstaller seems to work best
+        # with namespace packages that are all in a single source tree.
+        # 'natcap.versioner': ['--egg', '--no-use-wheel'],
     }
 
     def _format_params(param_list):
@@ -1195,10 +1200,9 @@ def build_bin(options):
         print "PYTHONPATH: %s" % os.environ['PYTHONPATH']
     except KeyError:
         print "Nothing in 'PYTHONPATH'"
-    sh('%(python)s %(pyinstaller)s --clean --noconfirm -p %(paths)s invest.spec' % {
+    sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
             'python': python_exe,
             'pyinstaller': pyinstaller_file,
-            'paths': pathsep.join([env_site_pkgs, os.path.join(env_site_pkgs, 'site-packages')]), # -p input
         }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
