@@ -67,19 +67,17 @@ InVEST relies on the following python packages:
   * shapely
   * numpy
   * scipy
-  * poster
-  * pyqt4  *if running a model user interface*
+  * pyqt4  *(if running a model user interface)*
   * matplotlib
   * bs4
-  * python-dateutil
-  * pyparsing
-  * six
   * pyAMG
-  * pillow
   * cython
-  * pyyaml
   * setuptools
-  * virtualenv >= 13.0.0
+  * h5py
+  * dbfpy
+  * poster
+  * pygeoprocessing
+  * natcap.versioner
 
 For development, we recommend using a virtual environment (such as provided by
 ``virtualenv``).  We provide a paver command (``paver env``) to help with this process.
@@ -102,8 +100,6 @@ For building InVEST binaries, you will also need to have a compiler configured.
 On linux, gcc/g++ will be sufficient.  On Windows, MinGW and MSVC work.  On Mac,
 you'll likely need the XCode command-line tools to be installed.
 
-
-.. _paver-build_bin:
 
 Building Binaries
 =================
@@ -324,10 +320,12 @@ If the ``--insttype`` flag is not provided, the system default will be used.  Sy
  * Mac: ``dmg``
  * Windows: ``nsis``
 
-Dependencies 
-============
 
-*Debian Systems*
+Developing InVEST
+=================
+
+Debian Systems
+--------------
 
 .. note::
     **Debian builds require GLIBC >= 2.15**
@@ -348,16 +346,14 @@ Specific package dependencies include:
  * ``sudo apt-get install python-setuptools``  Fixes some path issues with setuptools (see https://bitbucket.org/pypa/setuptools/issue/368/module-object-has-no-attribute-packaging)
 
 
-*Mac Systems*
+Mac Systems
+-----------
 
 The easiest way to set up your system is to install all binary dependencies through the Homebrew
 package manager (http://brew.sh).
 
-
-Developing InVEST
-=================
-
-*Setting up an InVEST virtual environment*
+Setting up an InVEST virtual environment
+----------------------------------------
 
 Most likely, the easiest way to run InVEST from your source tree is to build a
 virtual environment using the popular ``virtualenv``
@@ -377,7 +373,8 @@ examples:  ::
     # flag.
     $ paver env --sytem-site-packages -r requirements-docs.txt
 
-*natcap.versioner ImportError*
+natcap.versioner ImportError
+----------------------------
 
 Since June, 2015, we have been moving our python projects to the ``natcap``
 package namespace and gradually publishing our projects on the Python Package
@@ -415,7 +412,8 @@ more information if you're interested.
 .. _The relevant issue: https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version#comment-19426088
 
 
-*GDAL*
+GDAL
+----
 
 InVEST relies on GDAL/OGR for its raster and vector handling.  This library is
 usually available in your system's package index.
