@@ -1098,25 +1098,59 @@ def check():
                 print "ERROR: executable %s not found on the PATH" % fname
                 errors_found = True
 
+    required = 'required'
+    suggested = 'suggested'
+    lib_needed = 'lib_needed'
+
+    # TODO check that lib source is available
+    # (requirement, level, version_getter)
+
     requirements = [
-        'virtualenv>=13.0.0',
-        'pip>=7.1.0',
+        ('virtualenv>=13.0.0', required, None),
+        ('pip>=7.1.0', required, None),
+        ('numpy', lib_needed, None),
+        ('scipy', lib_needed, None),
+        ('pycrypto', suggested, 'Crypto'),
+        ('h5py', lib_needed, None),
+        ('gdal', lib_needed, 'osgeo.gdal'),
+        ('shapely', lib_needed, None),
     ]
-    for requirement in requirements:
+    warnings_found = False
+    for requirement, severity, import_name in requirements:
         try:
             pkg_resources.require(requirement)
             pkg_req = pkg_resources.Requirement.parse(requirement)
-            pkg = __import__(pkg_req.project_name)
+
+            if import_name is None:
+                import_name = pkg_req.project_name
+
+            pkg = __import__(import_name)
             print "Python package OK: {pkg} {ver} (meets {req})".format(
                 pkg=pkg_req.project_name,
                 ver=pkg.__version__,
                 req=requirement)
-        except pkg_resources.VersionConflict as conflict:
-            print 'ERROR: %s' % conflict.report()
-            errors_found = True
+        except (pkg_resources.VersionConflict, pkg_resources.DistributionNotFound) as conflict:
+            if severity == required:
+                print 'ERROR: %s' % conflict.report()
+                errors_found = True
+            elif severity == lib_needed:
+                if isinstance(conflict, pkg_resources.DistributionNotFound):
+                    print ('WARNING: %s.  This library requires appropriate '
+                           'headers to compile the python package.') % conflict.report()
+                else:
+                    print ('WARNING: %s.  You may need to upgrade your '
+                           'development headers along with the python '
+                           'package.') % conflict.report()
+                warnings_found = True
+            else:  # severity is 'suggested'
+                print 'WARNING: %s' % conflict.report()
+                warnings_found = True
+
 
     if errors_found:
-        raise BuildFailure
+        raise BuildFailure('Programs missing and/or package requirements not met')
+    elif warnings_found:
+        print "Warnings found; Builds may not work as expected"
     else:
         print "All's well."
 
