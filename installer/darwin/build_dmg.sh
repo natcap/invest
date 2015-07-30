@@ -13,12 +13,12 @@ finalDMGName="InVEST ${1}"
 rm *.dmg
 
 # prepare a local temp dir for a filesystem
-mkdir temp
-invest_bindir=temp/`basename $2`
+mkdir temp/InVEST
+invest_bindir=temp/InVEST/`basename $2`
 cp -r $2 $invest_bindir
 
 # copy out all the shell files and fixup the paths.
-mv $invest_bindir/*.sh temp
+mv $invest_bindir/*.sh temp/InVEST
 sed -i '' 's/.\/invest/BASEDIR=$(dirname $0)\\n$BASEDIR\/invest_dist\/invest/g' temp/*.sh
 chmod u+x temp/*.sh
 
