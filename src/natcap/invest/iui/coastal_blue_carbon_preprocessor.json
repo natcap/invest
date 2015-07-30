@@ -55,9 +55,9 @@
         }
       },
       "defaultValue": [
-        "../CoastalBlueCarbon/lulc_rasters/GBJC_2004_mean_Resample.tif",
-        "../CoastalBlueCarbon/lulc_rasters/GBJC_2050_mean_Resample.tif",
-        "../CoastalBlueCarbon/lulc_rasters/GBJC_2100_mean_Resample.tif"
+        "../CoastalBlueCarbon/inputs/GBJC_2004_mean_Resample.tif",
+        "../CoastalBlueCarbon/inputs/GBJC_2050_mean_Resample.tif",
+        "../CoastalBlueCarbon/inputs/GBJC_2100_mean_Resample.tif"
       ],
       "linkText": "Add Another",
       "helpText": "(help text)"

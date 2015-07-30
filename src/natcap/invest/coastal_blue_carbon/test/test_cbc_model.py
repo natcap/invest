@@ -169,6 +169,8 @@ class TestCBCModelSimple(unittest.TestCase):
             191.0,
             decimal=4)
 
+        r.save_rasters()
+
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
 

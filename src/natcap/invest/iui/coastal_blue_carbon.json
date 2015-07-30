@@ -44,7 +44,7 @@
           "args_id": "lulc_transition_uri",
           "type": "file",
           "label": "LULC Transition Effect of Carbon Table (CSV)",
-          "defaultValue": "../CoastalBlueCarbon/inputs/transitions.csv",
+          "defaultValue": "../CoastalBlueCarbon/outputs_preprocessor/transitions_sample.csv",
           "helpText": "see 'Data Needs' section in the model's documentation",
           "required": true
         },
@@ -53,7 +53,7 @@
           "args_id": "carbon_pool_initial_uri",
           "type": "file",
           "label": "Carbon Pool Initial Variables Table (CSV)",
-          "defaultValue": "../CoastalBlueCarbon/inputs/carbon_pool_initial.csv",
+          "defaultValue": "../CoastalBlueCarbon/outputs_preprocessor/carbon_pool_initial_sample.csv",
           "helpText": "see 'Data Needs' section in the model's documentation",
           "required": true
         },
@@ -62,7 +62,7 @@
           "args_id": "carbon_pool_transient_uri",
           "type": "file",
           "label": "Carbon Pool Transient Variables File (CSV)",
-          "defaultValue": "../CoastalBlueCarbon/inputs/carbon_pool_transient.csv",
+          "defaultValue": "../CoastalBlueCarbon/outputs_preprocessor/carbon_pool_transient_sample.csv",
           "helpText": "",
           "required": true
        },
@@ -96,9 +96,9 @@
         }
       },
       "defaultValue": [
-        "../CoastalBlueCarbon/lulc_rasters/GBJC_2004_mean_Resample.tif",
-        "../CoastalBlueCarbon/lulc_rasters/GBJC_2050_mean_Resample.tif",
-        "../CoastalBlueCarbon/lulc_rasters/GBJC_2100_mean_Resample.tif"
+        "../CoastalBlueCarbon/inputs/GBJC_2004_mean_Resample.tif",
+        "../CoastalBlueCarbon/inputs/GBJC_2050_mean_Resample.tif",
+        "../CoastalBlueCarbon/inputs/GBJC_2100_mean_Resample.tif"
       ],
       "linkText": "Add Another",
       "helpText": "(help text)"

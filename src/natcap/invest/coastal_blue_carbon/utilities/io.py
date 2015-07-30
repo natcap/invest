@@ -34,7 +34,7 @@ def get_inputs(args):
     except:
         vars_dict['results_suffix'] = ''
 
-    output_dir_name = 'outputs'
+    output_dir_name = 'outputs_core'
     if vars_dict['results_suffix'] != '':
         output_dir_name = output_dir_name + '_' + vars_dict['results_suffix']
     outputs_dir = os.path.join(vars_dict['workspace_dir'], output_dir_name)
