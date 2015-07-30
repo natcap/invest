@@ -51,9 +51,17 @@ submitting your PR.
 
 *Thanks for contributing!*
 
-
 InVEST Dependencies
 ===================
+.. note::
+    Do this:
+
+    ``$ paver check``
+    
+    This will verify required applications are available and that
+    you have some of the python packages that are more difficult to install
+    (especially those that depend on low-level C libraries).
+
 InVEST relies on the following python packages:
   * GDAL
   * shapely
@@ -99,6 +107,49 @@ you'll likely need the XCode command-line tools to be installed.
 
 Building Binaries
 =================
+
+One-Step Binary Builds
+----------------------
+The easiest way to build binaries is to call ``paver build``.  If your system
+is properly configured, this will do all of the heavy lifting to:
+
+    + Clone any hg, git, and svn repositories needed for the given steps
+    + Set up a virtual environment with needed package dependencies (skip with
+      ``--python=<your python interpreter here>``
+    + Build binaries out of the virtual environment (skip with ``--skip-bin``)
+    + Build User's Guide documentation (HTML, PDF) (skip with ``--skip-guide``)
+    + Build InVEST API documentation (HTML) (skip with ``--skip-api``)
+    + Build archives of sample data (skip with ``--skip-data``)
+    + Build a system-appropriate installer (skip with ``--skip-installer``)
+
+Assembled binaries are placed in ``dist/release_invest-<version>`` with the
+following directory structure: ::
+
+    dist/
+        natcap.invest-<version>.tar.gz          # Python source distribution
+        release_invest-<version>/
+            data/
+                # All data zipfiles available for this version
+            documentation/
+                # HTML documentation for InVEST
+            invest-<version>-apidics.zip        # Archived HTML API documentation
+            invest-<version>-userguide.zip      # Archived HTML User's Guide
+            InVEST_<version>_Documentation.pdf  # PDF User's Guide
+            invest-<version>.deb                # Debian dpkg
+            invest-<version>.rpm                # RPM package
+            InVEST_<version>_Setup.exe          # Windows installer
+            InVEST <version>.dmg                # Mac disk image
+
+.. note::
+    ``paver build`` will only build binaries and and installer for the system
+    you are running.
+
+
+
+Just building binaries
+----------------------
+The easiest way to build pyinstaller binaries on your platform is to use our
+one-step binary build.  This paver task will 
 Binaries are built through ``paver build_bin``.  The simplest way to call this is 
 ``paver build_bin``, but this assumes that you have all dependencies (including natcap.invest)
 installed to your global python distribution.  More commonly, you'll want to install InVEST to
