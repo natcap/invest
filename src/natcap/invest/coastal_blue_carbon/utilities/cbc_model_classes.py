@@ -35,25 +35,29 @@ class DisturbedCarbonStock(object):
                  biomass_half_life_raster,
                  soil_half_life_raster):
         self.start_year = start_year
-        self.final_biomass_stock_disturbed_raster = final_biomass_stock_disturbed_raster
-        self.final_soil_stock_disturbed_raster = final_soil_stock_disturbed_raster
-        self.biomass_half_life_raster = biomass_half_life_raster
-        self.soil_half_life_raster = soil_half_life_raster
+        self.final_biomass_stock_disturbed_raster = \
+            self._clean_stock_raster(final_biomass_stock_disturbed_raster)
+        self.final_soil_stock_disturbed_raster = \
+            self._clean_stock_raster(final_soil_stock_disturbed_raster)
+        self.biomass_half_life_raster = self._clean_half_life_raster(
+            biomass_half_life_raster)
+        self.soil_half_life_raster = self._clean_half_life_raster(
+            soil_half_life_raster)
 
     def _clean_stock_raster(self, raster):
         """Reclass nans to 0s."""
-        # d = {
-        #   np.nan: 0
-        # }
-        return raster  #.reclass(d)
+        d = raster[:]
+        d[np.isnan(d)] = 0
+        raster[:] = d
+        return raster
 
     def _clean_half_life_raster(self, raster):
         """Reclass nans and 0s to 1s."""
-        d = {
-        #   np.nan: 1,
-          0: 1
-        }
-        return raster.reclass(d)
+        d = raster[:]
+        d[d == 0] = 1
+        d[np.isnan(d)] = 1
+        raster[:] = d
+        return raster
 
     def __str__(self):
         string =  '\n--- DisturbedCarbonStock Object ---'
@@ -91,7 +95,6 @@ class AccumulatedCarbonStock(object):
 
     def __init__(self, start_year, yearly_sequest_biomass_raster, yearly_sequest_soil_raster):
         self.start_year = start_year
-
         # 0's where no sequestration, else yearly_sequstration_per_ha
         self.yearly_sequest_biomass_raster = yearly_sequest_biomass_raster
         self.yearly_sequest_soil_raster = yearly_sequest_soil_raster

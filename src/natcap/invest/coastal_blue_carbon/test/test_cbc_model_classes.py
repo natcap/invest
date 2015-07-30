@@ -42,34 +42,11 @@ class TestDisturbedCarbonStock(unittest.TestCase):
         self.biomass_half_life_raster = self.aoi_float_factory.alternating(1, 0.5)
         self.soil_half_life_raster = self.aoi_float_factory.alternating(1, 0.5)
 
-    def test_disturbed_carbon_stock_object(self):
-        final_biomass_stock_disturbed_raster = self.aoi_float_factory.uniform(0.5)
-        final_soil_stock_disturbed_raster = self.aoi_float_factory.uniform(0.4)
-        biomass_half_life_raster = self.aoi_float_factory.alternating(1, 0.5)
-        soil_half_life_raster = self.aoi_float_factory.alternating(1, 0.5)
-
-        d = DisturbedCarbonStock(
-            self.start_year,
-            final_biomass_stock_disturbed_raster,
-            final_soil_stock_disturbed_raster,
-            biomass_half_life_raster,
-            soil_half_life_raster)
-
-        # emissions between 2001 and 2002
-        assert(d.get_biomass_emissions_between_years(
-            2001, 2002).get_band(1)[0, 0] == 0.125)
-        testing.assert_array_almost_equal(
-            d.get_soil_emissions_between_years(
-              2001, 2002).get_band(1)[0, 0], numpy.array(0.1), decimal=5)
-        testing.assert_array_almost_equal(
-            d.get_total_emissions_between_years(
-              2001, 2002).get_band(1)[0, 0], numpy.array(0.225), decimal=5)
-
-    # def test_disturbed_carbon_stock_object_2(self):
+    # def test_disturbed_carbon_stock_object(self):
     #     final_biomass_stock_disturbed_raster = self.aoi_float_factory.uniform(0.5)
     #     final_soil_stock_disturbed_raster = self.aoi_float_factory.uniform(0.4)
-    #     biomass_half_life_raster = self.aoi_float_factory.alternating(0, 0.5)
-    #     soil_half_life_raster = self.aoi_float_factory.alternating(0, 0.3)
+    #     biomass_half_life_raster = self.aoi_float_factory.alternating(1, 0.5)
+    #     soil_half_life_raster = self.aoi_float_factory.alternating(1, 0.5)
     #
     #     d = DisturbedCarbonStock(
     #         self.start_year,
@@ -77,8 +54,33 @@ class TestDisturbedCarbonStock(unittest.TestCase):
     #         final_soil_stock_disturbed_raster,
     #         biomass_half_life_raster,
     #         soil_half_life_raster)
-    #     print d
-        # print d.get_total_emissions_between_years(2000, 2005)
+    #
+    #     # emissions between 2001 and 2002
+    #     assert(d.get_biomass_emissions_between_years(
+    #         2001, 2002).get_band(1)[0, 0] == 0.125)
+    #     testing.assert_array_almost_equal(
+    #         d.get_soil_emissions_between_years(
+    #           2001, 2002).get_band(1)[0, 0], numpy.array(0.1), decimal=5)
+    #     testing.assert_array_almost_equal(
+    #         d.get_total_emissions_between_years(
+    #           2001, 2002).get_band(1)[0, 0], numpy.array(0.225), decimal=5)
+
+    def test_disturbed_carbon_stock_object_2(self):
+        final_biomass_stock_disturbed_raster = self.aoi_float_factory.alternating(float('nan'), 0.5)
+        final_soil_stock_disturbed_raster = self.aoi_float_factory.alternating(float('nan'), 0.4)
+        biomass_half_life_raster = self.aoi_float_factory.alternating(0, 0.5)
+        soil_half_life_raster = self.aoi_float_factory.alternating(0, 0.3)
+
+        d = DisturbedCarbonStock(
+            self.start_year,
+            final_biomass_stock_disturbed_raster,
+            final_soil_stock_disturbed_raster,
+            biomass_half_life_raster,
+            soil_half_life_raster)
+        print "DisturbedCarbonStock"
+        print d
+        print "EMISSIONS"
+        print d.get_total_emissions_between_years(2000, 2005)
 
 
 class TestAccumulatedCarbonStock(unittest.TestCase):
