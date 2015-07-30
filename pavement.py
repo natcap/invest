@@ -1859,8 +1859,6 @@ def collect_release_files(options):
             os.path.join(dist_dir, zipfile_name),
             invest_dist
         ])
-        dry('rm -r %s' % 'dist/invest_dist',
-            shutil.rmtree, os.path.join('dist', 'invest_dist'))
 
 
 @task
