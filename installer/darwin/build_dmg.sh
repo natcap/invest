@@ -14,7 +14,13 @@ rm *.dmg
 
 # prepare a local temp dir for a filesystem
 mkdir temp
-cp -r $2 temp
+invest_bindir=temp/`basename $2`
+cp -r $2 $invest_bindir
+
+# copy out all the shell files and fixup the paths.
+mv $invest_bindir/*.sh temp
+sed -i '' 's/.\/invest/BASEDIR=$(dirname $0)\n$BASEDIR\/invest_dist\/invest/g' temp/*.sh
+
 source=temp
 
 dir_size_k=`du -k -d 0 $source | awk -F ' ' '{print $1}'`
