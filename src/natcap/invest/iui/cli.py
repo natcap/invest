@@ -8,6 +8,7 @@ import os
 import sys
 import json
 
+import pkg_resources
 import natcap.versioner
 import natcap.invest
 import natcap.invest.iui.modelui
@@ -32,7 +33,12 @@ def iui_dir():
             os.path.dirname(sys.executable), 'natcap', 'invest', 'iui')
     else:
         # we are running in a normal Python environment
-        basedir = os.path.dirname(__file__)
+        if os.path.exists(__file__):
+            basedir = os.path.dirname(__file__)
+        else:
+            # Assume we're in an egg or other binary installation format that
+            # doesn't use the plain directory structure.
+            basedir = pkg_resources.resource_filename('natcap.invest', 'iui')
     #print 'BASEDIR: %s' % basedir
     return basedir
 
@@ -76,6 +82,7 @@ def print_models():
     """
     Pretty-print available models.
     """
+    print "Checking what's available in %s" % iui_dir()
     print 'Available models:'
     for model_name in list_models():
         if model_name in TOOLS_IN_DEVELOPMENT:

@@ -17,6 +17,7 @@ import inspect
 import tarfile
 import socket
 from types import DictType
+import time
 
 import pkg_resources
 import paver.svn
@@ -621,8 +622,10 @@ def push(args):
     """
     print args
     import paramiko
+
+    paramiko.util.log_to_file('paramiko-log.txt')
+
     from paramiko import SSHClient
-    from scp import SCPClient
     ssh = SSHClient()
     ssh.load_system_host_keys()
 
@@ -711,7 +714,21 @@ def push(args):
     else:
         print 'Skipping creation of folders on remote'
 
-    scp = SCPClient(ssh.get_transport())
+    def _sftp_callback(bytes_transferred, total_bytes):
+        try:
+            current_time = time.time()
+            if current_time - _sftp_callback.last_time > 2:
+                tx_ratio = bytes_transferred / float(total_bytes)
+                tx_ratio = round(tx_ratio*100, 2)
+
+                print 'SFTP copied {transf} out of {total} ({ratio} %)'.format(
+                    transf=bytes_transferred, total=total_bytes, ratio=tx_ratio)
+                _sftp_callback.last_time = current_time
+        except AttributeError:
+            _sftp_callback.last_time = time.time()
+
+    print 'Opening SCP connection'
+    sftp = paramiko.SFTPClient.from_transport(ssh.get_transport())
     for transfer_file in files_to_push:
         file_basename = os.path.basename(transfer_file)
         if target_dir is not None:
@@ -720,9 +737,13 @@ def push(args):
             target_filename = file_basename
 
         target_filename = _fix_path(target_filename)  # convert windows to linux paths
-        print 'Transferring %s -> %s:%s ' % (transfer_file, hostname, target_filename)
-        scp.put(transfer_file, target_filename)
+        print 'Transferring %s -> %s ' % (os.path.basename(transfer_file), target_filename)
+        sftp.put(transfer_file, target_filename, callback=_sftp_callback)
 
+    print 'Closing down SCP'
+    sftp.close()
+
+    print 'Closing down SSH'
     ssh.close()
 
 @task
@@ -871,7 +892,7 @@ def build_docs(options):
         latex_dir = os.path.join(guide_dir, 'build', 'latex')
         sh('make html', cwd=guide_dir)
         sh('make latex', cwd=guide_dir)
-        sh('make all-pdf', cwd=latex_dir)
+        sh('make all-pdf > latex-warnings.log', cwd=latex_dir)
 
         archive_name = archive_template % 'userguide'
         build_dir = os.path.join(guide_dir, 'build', 'html')
@@ -907,7 +928,7 @@ def check():
 
     # verify required programs exist
     errors_found = False
-    for program in ['hg', 'git', 'make']:
+    for program in ['hg', 'git', 'make', 'pdflatex']:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
 
         fpath, fname = os.path.split(program)
@@ -923,6 +944,7 @@ def check():
                     if is_exe(exe_file):
                         raise FoundEXE
             except FoundEXE:
+                print "Found %-11s: %s" % (program, exe_file)
                 continue
             else:
                 print "ERROR: executable %s not found on the PATH" % fname
@@ -934,7 +956,13 @@ def check():
     ]
     for requirement in requirements:
         try:
-            pkg_resources.require(requirements)
+            pkg_resources.require(requirement)
+            pkg_req = pkg_resources.Requirement.parse(requirement)
+            pkg = __import__(pkg_req.project_name)
+            print "Python package OK: {pkg} {ver} (meets {req})".format(
+                pkg=pkg_req.project_name,
+                ver=pkg.__version__,
+                req=requirement)
         except pkg_resources.VersionConflict as conflict:
             print 'ERROR: %s' % conflict.report()
             errors_found = True
@@ -1853,10 +1881,35 @@ def jenkins_push_artifacts(options):
     if len(data_files) > 0:
         call_task('push', args=_push(data_dir) + data_files)
 
+    def _archive_present(substring):
+        """
+        Is there a file in release_files that ends in `substring`?
+        Returns a boolean.
+        """
+        archive_present = reduce(
+            lambda x, y: x or y,
+            map(lambda x: x.endswith(substring),
+                release_files))
+        return archive_present
+
+
+    zips_to_unzip = []
+    if not _archive_present('apidocs.zip'):
+        print 'API documentation was not built.'
+    else:
+        zips_to_unzip.append('*apidocs.zip')
+
+    if not _archive_present('userguide.zip'):
+        print 'User guide was not built'
+    else:
+        zips_to_unzip.append('*userguide.zip')
+
+    if len(zips_to_unzip) == 0:
+        print 'Nothing to unzip on the remote.  Skipping.'
+        return
 
     # unzip the API docs and HTML documentation.  This will overwrite anything
     # else in the release dir.
-    print 'Unzipping Documentation on the remote'
     import paramiko
     from paramiko import SSHClient
     ssh = SSHClient()
@@ -1865,25 +1918,30 @@ def jenkins_push_artifacts(options):
     if pkey is not None:
         pkey = paramiko.RSAKey.from_private_key_file(pkey)
 
+    print 'Connecting to host'
     ssh.connect(push_args['host'], 22, username=push_args['user'], password=None, pkey=pkey)
 
     # correct the filepath from Windows to Linux
     if platform.system() == 'Windows':
         release_dir = release_dir.replace(os.sep, '/')
 
-    for filename in ["*apidocs.zip", "*userguide.zip"]:
+    if release_dir.startswith('public_html/'):
+        release_dir = release_dir.replace('public_html/', '')
+
+    for filename in zips_to_unzip:
+        print 'Unzipping %s on remote' % filename
         stdin, stdout, stderr = ssh.exec_command(
-            'cd public_html/{releasedir}; unzip `find -cmin -2 -name "{zipfile}" | tail -n 1`'.format(
+            'cd public_html/{releasedir}; unzip -o `ls -tr {zipfile} | tail -n 1`'.format(
                 releasedir=release_dir,
                 zipfile = filename
             )
         )
 
-        print 'stdout:'
+        print "STDOUT:"
         for line in stdout:
             print line
 
-        print 'stderr:'
+        print "STDERR:"
         for line in stderr:
             print line
 
