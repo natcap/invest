@@ -1138,6 +1138,7 @@ def check():
         ('pip>=7.1.0', required, None),
         ('numpy', lib_needed, None),
         ('scipy', lib_needed, None),
+        ('paramiko', suggested, None),
         ('pycrypto', suggested, 'Crypto'),
         ('h5py', lib_needed, None),
         ('gdal', lib_needed, 'osgeo.gdal'),
