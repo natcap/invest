@@ -1097,6 +1097,9 @@ def check():
     for program in ['hg', 'git', 'make', 'pdflatex']:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
 
+        if platform.system() == 'Windows':
+            program += '.exe'
+
         fpath, fname = os.path.split(program)
         if fpath:
             if not is_exe(program):
