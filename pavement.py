@@ -1,5 +1,7 @@
 import os
 import logging
+import distutils
+import ConfigParser
 import sys
 import json
 import platform
@@ -489,15 +491,27 @@ def after_install(options, home_dir):
 
 """
 
-
     # Only specify the compiler in distutils if the user says so.
-    # User should also be able to override this by writing the options to
-    # ./setup.cfg like this:
-    #
-    # [build]
-    # compiler = mingw32
     if options.env.compiler is not None:
         compiler = options.env.compiler
+    else:
+        # If the user has set a system distutils build option, use that.
+        # System default (None) is the fallback.
+        compiler = 'mingw32'
+        global_config_file = os.path.join(distutils.__path__[0], 'distutils.cfg')
+        local_config_file = 'distutils.cfg'
+        print 'Checking distutils config in %s, %s' % (global_config_file,
+                                                      local_config_file)
+        config = ConfigParser.RawConfigParser()
+        config.read([global_config_file, local_config_file])
+        try:
+            compiler = config.get('build', 'compiler')
+        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError) as error:
+            print 'Compiler not preconfigured.  Using system default'
+            compiler = None
+
+    if compiler is not None:
+        print 'Using compiler %s' % compiler
         install_string += ("    print 'Configuring distutils to compile "
                         "with {c}'\n").format(c=compiler)
         install_string += ("    subprocess.call([join(home_dir, bindir, 'python'),"
