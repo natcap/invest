@@ -119,6 +119,7 @@ setup(
         'natcap',
         'natcap.invest',
         'natcap.invest.crop_production',
+        'natcap.invest.crop_production.utilities',
         'natcap.invest.coastal_blue_carbon',
         'natcap.invest.coastal_blue_carbon.utilities',
         'natcap.invest.carbon',

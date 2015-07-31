@@ -484,9 +484,11 @@ def after_install(options, home_dir):
     if platform.system() == 'Windows':
         distutils_dir = os.path.join(env_dirname, 'Lib', 'distutils')
         init_file = os.path.join(env_dirname, 'Lib', 'site-packages', 'natcap', '__init__.py')
+        pygeoprocessing_version = os.path.join(env_dirname, 'Lib', 'site-packages', 'pygeoprocessing', 'version.py')
     else:
         distutils_dir = os.path.join(env_dirname, 'lib', 'python2.7', 'distutils')
         init_file = os.path.join(env_dirname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
+        pygeoprocessing_version = os.path.join(env_dirname, 'lib', 'python2.7', 'site-packages', 'pygeoprocessing', 'version.py')
     if os.path.exists(distutils_dir):
         dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
 
