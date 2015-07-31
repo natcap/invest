@@ -499,7 +499,7 @@ def after_install(options, home_dir):
     if options.env.compiler is not None:
         compiler = options.env.compiler
         install_string += ("    print 'Configuring distutils to compile "
-                        "with {c}").format(c=compiler)
+                        "with {c}'\n").format(c=compiler)
         install_string += ("    subprocess.call([join(home_dir, bindir, 'python'),"
                         "'setup.py', 'build', '-c{compiler}', "
                         "'saveopts', '-g'])\n").format(compiler=compiler)
