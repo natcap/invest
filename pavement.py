@@ -87,7 +87,8 @@ paver.easy.options(
         envname=_ENVNAME,
         with_invest=False,
         requirements='',
-        bootstrap_file='bootstrap.py'
+        bootstrap_file='bootstrap.py',
+        compiler=None,
     ),
     build_docs=Bunch(
         force_dev=False,
@@ -464,6 +465,8 @@ def version(options):
     ('envname=', 'e', ('The name of the environment to use')),
     ('with-invest', '', 'Install the current version of InVEST into the env'),
     ('requirements=', 'r', 'Install requirements from a file'),
+    ('compiler=', 'c', ('Use this compiler.  Will use system default if not '
+                        'specified.')),
 ])
 def env(options):
     """
@@ -486,9 +489,24 @@ def after_install(options, home_dir):
 
 """
 
+
+    # Only specify the compiler in distutils if the user says so.
+    # User should also be able to override this by writing the options to
+    # ./setup.cfg like this:
+    #
+    # [build]
+    # compiler = mingw32
+    if options.env.compiler is not None:
+        compiler = options.env.compiler
+        install_string += ("    print 'Configuring distutils to compile "
+                        "with {c}").format(c=compiler)
+        install_string += ("    subprocess.call([join(home_dir, bindir, 'python'),"
+                        "'setup.py', 'build', '-c{compiler}', "
+                        "'saveopts', '-g'])\n").format(compiler=compiler)
+
     requirements_files = ['requirements.txt']
     if options.env.requirements not in [None, '']:
-        requirements_files.append(extra_reqs)
+        requirements_files.append(options.env.requirements)
 
     # extra parameter strings needed for installing certain packages
     # Initially set up for special installation of natcap.versioner.
