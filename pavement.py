@@ -1094,7 +1094,13 @@ def check():
 
     # verify required programs exist
     errors_found = False
-    for program in ['hg', 'git', 'make', 'pdflatex']:
+    programs = [
+        ('hg', 'everything'),
+        ('git', 'binaries'),
+        ('make', 'documentation'),
+        ('pdflatex', 'documentation'),
+    ]
+    for program, build_steps in programs:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
 
         if platform.system() == 'Windows':
@@ -1116,7 +1122,8 @@ def check():
                 print "Found %-11s: %s" % (program, exe_file)
                 continue
             else:
-                print "ERROR: executable %s not found on the PATH" % fname
+                print "ERROR: {exe} not found. Required for {step}".format(
+                    exe=program, step=build_steps)
                 errors_found = True
 
     required = 'required'
