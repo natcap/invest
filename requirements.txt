@@ -6,7 +6,7 @@ numpy
 paramiko
 poster
 pyamg
-pygeoprocessing==0.3.0a5
+pygeoprocessing==0.3.0a6
 pip>=7.0.0
 pyyaml
 scipy
