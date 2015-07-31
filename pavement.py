@@ -496,18 +496,24 @@ def after_install(options, home_dir):
         compiler = options.env.compiler
     else:
         # If the user has set a system distutils build option, use that.
-        # System default (None) is the fallback.
-        compiler = 'mingw32'
-        global_config_file = os.path.join(distutils.__path__[0], 'distutils.cfg')
-        local_config_file = 'distutils.cfg'
-        print 'Checking distutils config in %s, %s' % (global_config_file,
-                                                      local_config_file)
+        config_files = ['distutils.cfg']
+
+        # only check the global distutils.cfg if the user provided
+        # --system-site-packages
+        if options.env.system_site_packages is True:
+            global_distutils_config = os.path.join(distutils.__path__[0],
+                                                   'distutils.cfg')
+            config_files.append(global_distutils_config)
+
+        print 'Checking distutils config in %s' % config_files
+
         config = ConfigParser.RawConfigParser()
-        config.read([global_config_file, local_config_file])
+        config.read(config_files)
         try:
             compiler = config.get('build', 'compiler')
         except (ConfigParser.NoOptionError, ConfigParser.NoSectionError) as error:
-            print 'Compiler not preconfigured.  Using system default'
+            # System default (None) is the fallback.
+            print 'Compiler not preconfigured and not user-defined.  Using system default'
             compiler = None
 
     if compiler is not None:
