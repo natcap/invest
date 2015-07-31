@@ -461,6 +461,27 @@ def version(options):
 
 @task
 @cmdopts([
+    ('envname=', 'e', 'The name of the environment to use'),
+    ('noinvest', '', 'Skip installing InVEST'),
+])
+def dev_env(options):
+    """
+    Setup a development environment with:
+        * access to system-site-packages
+        * InVEST installed
+
+    Saved to test_env, or the envname of choice.  If an env of the same name
+    exists, clear out the existing env.
+    """
+    call_task('env', options={
+        'system_site_packages': True,
+        'clear': True,
+        'with_invest': not getattr(options.dev_env, 'noinvest', False),
+        'envname': getattr(options.dev_env, 'envname', 'test_env'),
+    })
+
+@task
+@cmdopts([
     ('system-site-packages', '', ('Give the virtual environment access '
                                   'to the global site-packages')),
     ('clear', '', 'Clear out the non-root install and start from scratch.'),
