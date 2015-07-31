@@ -585,30 +585,30 @@ def after_install(options, home_dir):
                 extra_params = ''
 
             install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
-    try:
-        if options.with_invest is True:
-            # Build an sdist and install it as an egg.  Works better with
-            # pyinstaller, it would seem.  Also, namespace packages complicate
-            # imports, so installing all natcap pkgs as eggs seems to work as
-            # expected.
-            install_string += (
-                "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'egg_info', 'sdist', '--formats=gztar'])\n"
-                "    version = subprocess.check_output([join(home_dir, bindir, 'python'), 'setup.py', '--version'])\n"
-                "    version = version.rstrip()  # clean trailing whitespace\n"
-                "    invest_sdist = join('dist', 'natcap.invest-{version}.tar.gz'.format(version=version))\n"
-                "    # Sometimes, don't know why, sdist ends up with - instead of + as local ver. separator.\n"
-                "    if not os.path.exists(invest_sdist):\n"
-                "        invest_sdist = invest_sdist.replace('+', '-')\n"
-                # Recent versions of pip build wheels by default before installing, but wheel
-                # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
-                # Pyinstaller also doesn't handle namespace packages all that
-                # well, so --egg --no-use-wheel doesn't really work in a
-                # release environment either.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest', "
-                " invest_sdist])\n"
-            )
-    except AttributeError:
-        print "Skipping installation of natcap.invest"
+
+    if options.with_invest is True:
+        # Build an sdist and install it as an egg.  Works better with
+        # pyinstaller, it would seem.  Also, namespace packages complicate
+        # imports, so installing all natcap pkgs as eggs seems to work as
+        # expected.
+        install_string += (
+            "    subprocess.call([join(home_dir, bindir, 'python'), 'setup.py', 'egg_info', 'sdist', '--formats=gztar'])\n"
+            "    version = subprocess.check_output([join(home_dir, bindir, 'python'), 'setup.py', '--version'])\n"
+            "    version = version.rstrip()  # clean trailing whitespace\n"
+            "    invest_sdist = join('dist', 'natcap.invest-{version}.tar.gz'.format(version=version))\n"
+            "    # Sometimes, don't know why, sdist ends up with - instead of + as local ver. separator.\n"
+            "    if not os.path.exists(invest_sdist):\n"
+            "        invest_sdist = invest_sdist.replace('+', '-')\n"
+            # Recent versions of pip build wheels by default before installing, but wheel
+            # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
+            # Pyinstaller also doesn't handle namespace packages all that
+            # well, so --egg --no-use-wheel doesn't really work in a
+            # release environment either.
+            "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest', "
+            " invest_sdist])\n"
+        )
+    else:
+        print 'Skipping the installation of natcap.invest per user input'
 
     output = virtualenv.create_bootstrap_script(textwrap.dedent(install_string))
     open(options.env.bootstrap_file, 'w').write(output)
@@ -635,14 +635,16 @@ def after_install(options, home_dir):
     else:
         distutils_dir = os.path.join(options.env.envname, 'lib', 'python2.7', 'distutils')
         init_file = os.path.join(options.env.envname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
+
     if os.path.exists(distutils_dir):
         dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
 
-    # writing this import appears to help pyinstaller find the __path__
-    # attribute from a package.
-    init_string = "import pkg_resources\npkg_resources.declare_namespace(__name__)\n"
-    with open(init_file, 'w') as namespace_init:
-        namespace_init.write(init_string)
+    if options.with_invest is True:
+        # writing this import appears to help pyinstaller find the __path__
+        # attribute from a package.
+        init_string = "import pkg_resources\npkg_resources.declare_namespace(__name__)\n"
+        with open(init_file, 'w') as namespace_init:
+            namespace_init.write(init_string)
 
     print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
