@@ -91,6 +91,7 @@ paver.easy.options(
         requirements='',
         bootstrap_file='bootstrap.py',
         compiler=None,
+        dev=False
     ),
     build_docs=Bunch(
         force_dev=False,
@@ -113,7 +114,12 @@ paver.easy.options(
         nopush='false'
     ),
     clean=Bunch(),
-    virtualenv=Bunch()
+    virtualenv=Bunch(),
+    dev_env=Bunch(
+        envname='test_env',
+        noinvest=False,
+        dev=True
+    )
 )
 
 
@@ -463,6 +469,9 @@ def version(options):
 @cmdopts([
     ('envname=', 'e', 'The name of the environment to use'),
     ('noinvest', '', 'Skip installing InVEST'),
+    ('dev', 'd', ('Install InVEST namespace packages as flat eggs instead of '
+                  'in a single folder hierarchy.  Better for development, '
+                  'not so great for pyinstaller build'))
 ])
 def dev_env(options):
     """
@@ -476,8 +485,9 @@ def dev_env(options):
     call_task('env', options={
         'system_site_packages': True,
         'clear': True,
-        'with_invest': not getattr(options.dev_env, 'noinvest', False),
-        'envname': getattr(options.dev_env, 'envname', 'test_env'),
+        'with_invest': not options.dev_env.noinvest,
+        'envname': options.dev_env.envname,
+        'dev': options.dev_env.dev,
     })
 
 @task
@@ -490,6 +500,9 @@ def dev_env(options):
     ('requirements=', 'r', 'Install requirements from a file'),
     ('compiler=', 'c', ('Use this compiler.  Will use system default if not '
                         'specified.')),
+    ('dev', 'd', ('Install InVEST namespace packages as flat eggs instead of '
+                  'in a single folder hierarchy.  Better for development, '
+                  'not so great for pyinstaller build'))
 ])
 def env(options):
     """
@@ -553,13 +566,14 @@ def after_install(options, home_dir):
     # Initially set up for special installation of natcap.versioner.
     # Leaving in place in case future pkgs need special params.
     pkg_pip_params = {
-        # Uncomment natcap.versioner if it becomes more useful to have flat
-        # eggs instead of a source directory structure.  I'm leaving this
-        # commented out for now so that we have record of it and so that
-        # pyinstaller binaries will generate.  Pyinstaller seems to work best
-        # with namespace packages that are all in a single source tree.
-        # 'natcap.versioner': ['--egg', '--no-use-wheel'],
     }
+    if options.env.dev is True:
+        # I only want to install natcap namespace packages as flat wheels if
+        # we're in a development environment (not a build environment).
+        # Pyinstaller seems to work best with namespace packages that are all
+        # in a single source tree, though python will happily import multiple
+        # eggs from different places.
+        pkg_pip_params['natcap.versioner'] = ['--egg', '--no-use-wheel']
 
     def _format_params(param_list):
         """
@@ -599,14 +613,26 @@ def after_install(options, home_dir):
             "    # Sometimes, don't know why, sdist ends up with - instead of + as local ver. separator.\n"
             "    if not os.path.exists(invest_sdist):\n"
             "        invest_sdist = invest_sdist.replace('+', '-')\n"
-            # Recent versions of pip build wheels by default before installing, but wheel
-            # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
-            # Pyinstaller also doesn't handle namespace packages all that
-            # well, so --egg --no-use-wheel doesn't really work in a
-            # release environment either.
-            "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest', "
-            " invest_sdist])\n"
         )
+
+        if options.env.dev is False:
+            install_string += (
+                # Recent versions of pip build wheels by default before installing, but wheel
+                # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
+                # Pyinstaller also doesn't handle namespace packages all that
+                # well, so --egg --no-use-wheel doesn't really work in a
+                # release environment either.
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest', "
+                " invest_sdist])\n"
+            )
+        else:
+            install_string += (
+                # If we're in a development environment, it's ok (even
+                # preferable) to install natcap namespace packages as flat
+                # eggs.
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', '--no-use-wheel', "
+                " invest_sdist])\n"
+            )
     else:
         print 'Skipping the installation of natcap.invest per user input'
 
@@ -639,9 +665,10 @@ def after_install(options, home_dir):
     if os.path.exists(distutils_dir):
         dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
 
-    if options.with_invest is True:
+    if options.with_invest is True and options.env.dev is False:
         # writing this import appears to help pyinstaller find the __path__
-        # attribute from a package.
+        # attribute from a package.  Only write it if InVEST is installed and
+        # is installed as a package (not a dev environment)
         init_string = "import pkg_resources\npkg_resources.declare_namespace(__name__)\n"
         with open(init_file, 'w') as namespace_init:
             namespace_init.write(init_string)
