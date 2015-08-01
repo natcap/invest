@@ -1,24 +1,26 @@
-import os
-import logging
-import distutils
 import ConfigParser
-import sys
-import json
-import platform
 import collections
+import distutils
 import getpass
+import glob
+import imp
+import importlib
+import inspect
+import json
+import logging
+import os
+import pkgutil
+import platform
 import shutil
+import socket
+import subprocess
+import sys
+import tarfile
+import textwrap
+import time
 import warnings
 import zipfile
-import glob
-import textwrap
-import imp
-import subprocess
-import inspect
-import tarfile
-import socket
 from types import DictType
-import time
 
 import pkg_resources
 import paver.svn
@@ -1170,6 +1172,7 @@ def check():
         ('make', 'documentation'),
         ('pdflatex', 'documentation'),
     ]
+    print "Checking binaries"
     for program, build_steps in programs:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
 
@@ -1203,6 +1206,7 @@ def check():
     # TODO check that lib source is available
     # (requirement, level, version_getter)
 
+    print "\nChecking python packages"
     requirements = [
         ('virtualenv>=13.0.0', required, None),
         ('pip>=7.1.0', required, None),
@@ -1245,6 +1249,62 @@ def check():
                 print 'WARNING: %s' % conflict.report()
                 warnings_found = True
 
+    # Build in a check for the package setup the natcap namespace, in case the
+    # user has globally installed natcap namespace packages.
+    # Known problems:
+    #   * User has some packages installed to site-packages/natcap,
+    #     others installed to site-packages/natcap.pkgname.egg
+    #     Will cause errors when importing eggs, as natcap dir is
+    #     found first, eggs are skipped.
+    #   * User has packages installed as eggs.  Pyinstaller doesn't like this,
+    #     for some reason, so warn the user about builds.  Development
+    #     should be fine, though.
+    #   * User has any packages installed to site-packages/natcap/.  This will
+    #     cause problems with importing packages installed to virtualenv.
+    #
+    # SO:
+    #  * If a package is installed to the global site-packages, it better be an
+    #    egg.
+    try:
+        print "\nChecking natcap namespace"
+        import natcap
+        noneggs = []
+
+        for importer, modname, ispkg in pkgutil.iter_modules(natcap.__path__):
+            module = importlib.import_module('natcap.%s' % modname)
+            try:
+                version = module.__version__
+            except AttributeError:
+                version = pkg_resources.require('natcap.%s' % modname)[0].version
+
+            is_egg = reduce(
+                lambda x, y: x or y,
+                [p.endswith('.egg') for p in module.__file__.split(os.sep)])
+
+            if not is_egg:
+                noneggs.append(modname)
+                print 'WARNING: natcap.{mod}=={ver} not an egg.'.format(
+                    mod=modname, ver=version)
+            else:
+                print "natcap.{mod}=={ver} installed as egg".format(
+                    mod=modname, ver=version)
+
+        if len(noneggs) > 0:
+            pip_install_template = "    pip install --egg --no-binary :all: natcap.%s"
+            namespace_msg = (
+                "\n"
+                "Natcap namespace issues:\n"
+                "You appear to have natcap packages installed to your global \n"
+                "site-packages that have not been installed as eggs.\n"
+                "This will cause import issues when trying to build binaries\n"
+                "with pyinstaller, but should work well for development.\n"
+                "By contrast, eggs should work well for development.\n"
+                "For best results, install these packages as eggs like so:\n")
+            namespace_msg += "\n".join([pip_install_template % n for n in noneggs])
+            print namespace_msg
+            warnings_found = True
+    except ImportError:
+        print 'No natcap installations found!  Excellent :)'
 
     if errors_found:
         raise BuildFailure('Programs missing and/or package requirements not met')
