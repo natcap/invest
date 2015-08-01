@@ -152,21 +152,24 @@ class TestCBCModelSimple(unittest.TestCase):
         print "Net Sequestration"
         for i in r.net_sequestration_raster_list:
             print i.get_band(1)[0,0]
+        print "Litter Stock"
+        for i in r.litter_carbon_stock_raster_list:
+            print i.get_band(1)[0,0]
 
-        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
+        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
         testing.assert_array_almost_equal(
             r.total_carbon_stock_raster_list[1].get_band(1)[0, 0], 1.03125)
         testing.assert_array_almost_equal(
             r.total_carbon_stock_raster_list[2].get_band(1)[0, 0],
-            11.00097656,
+            11.50097656,
             decimal=4)
         testing.assert_array_almost_equal(
             r.total_carbon_stock_raster_list[3].get_band(1)[0, 0],
-            91.0,
+            91.5,
             decimal=4)
         testing.assert_array_almost_equal(
             r.total_carbon_stock_raster_list[4].get_band(1)[0, 0],
-            191.0,
+            191.5,
             decimal=4)
 
         r.save_rasters()
@@ -278,7 +281,7 @@ class TestCBCModel(unittest.TestCase):
         vars_dict = io.get_inputs(self.args)
         r = CBCModelRun(vars_dict)
         r.initialize_stock()
-        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.0)
+        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
         r.run_transient_analysis()
 
         print "Total Carbon Stock"

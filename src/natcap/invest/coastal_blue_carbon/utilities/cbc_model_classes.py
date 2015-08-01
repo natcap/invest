@@ -151,6 +151,7 @@ class CBCModelRun(object):
         self.total_carbon_stock_raster_list = range(0, self.num_snapshots)
         self.biomass_carbon_stock_raster_list = range(0, self.num_snapshots)
         self.soil_carbon_stock_raster_list = range(0, self.num_snapshots)
+        self.litter_carbon_stock_raster_list = range(0, self.num_snapshots)
 
         # AccumulatedCarbonStock and DisturbedCarbonStock Objects
         self.accumulated_carbon_stock_object_list = range(
@@ -211,6 +212,10 @@ class CBCModelRun(object):
 
         init_lulc_raster = Raster.from_file(self.lulc_snapshot_list[0])
 
+        # process litter rasters
+        for i in range(0, self.num_snapshots):
+            self._compute_litter_raster(i)
+
         # Create initial carbon stock rasters
         init_carbon_stock_biomass_raster = init_lulc_raster.reclass(
             code_to_biomass_reclass_dict,
@@ -221,7 +226,8 @@ class CBCModelRun(object):
             out_datatype=gdal.GDT_Float32,
             out_nodata=NODATA_FLOAT)
         init_carbon_stock_total_raster = \
-            init_carbon_stock_biomass_raster + init_carbon_stock_soil_raster
+            init_carbon_stock_biomass_raster + init_carbon_stock_soil_raster \
+            + self.litter_carbon_stock_raster_list[0]
 
         # Add rasters to lists
         self.total_carbon_stock_raster_list[0] = init_carbon_stock_total_raster
@@ -229,6 +235,18 @@ class CBCModelRun(object):
             init_carbon_stock_biomass_raster
         self.soil_carbon_stock_raster_list[0] = init_carbon_stock_soil_raster
         LOGGER.info("...stock initialized.")
+
+    def _compute_litter_raster(self, idx):
+        LOGGER.info("Computing litter pool stock...")
+        lulc_to_code_dict = self.vars_dict['lulc_to_code_dict']
+        carbon_pool_initial_dict = self.vars_dict['carbon_pool_initial_dict']
+        reclass_dict = dict([(lulc_to_code_dict[k], v['litter'])
+                            for k, v in carbon_pool_initial_dict.items()])
+        lulc_float_raster = Raster.from_file(
+            self.lulc_snapshot_list[idx]).set_datatype_and_nodata(
+                gdal.GDT_Float32, NODATA_FLOAT)
+        self.litter_carbon_stock_raster_list[idx] = lulc_float_raster.reclass(
+            reclass_dict)
 
     def run_transient_analysis(self):
         LOGGER.info("Running transient analysis...")
@@ -267,8 +285,10 @@ class CBCModelRun(object):
 
         # Stock at End_Year
         prev_carbon_stock_raster = self.total_carbon_stock_raster_list[idx]
+        litter_change_raster = self.litter_carbon_stock_raster_list[idx+1] \
+            - self.litter_carbon_stock_raster_list[idx]
         next_carbon_stock_raster = prev_carbon_stock_raster + \
-            net_sequestered_over_time_raster
+            net_sequestered_over_time_raster + litter_change_raster
         self.total_carbon_stock_raster_list[idx+1] = next_carbon_stock_raster
         LOGGER.info("...transient step %i complete." % idx)
 
