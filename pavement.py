@@ -119,8 +119,7 @@ paver.easy.options(
     virtualenv=Bunch(),
     dev_env=Bunch(
         envname='test_env',
-        noinvest=False,
-        dev=True
+        noinvest=False
     )
 )
 
@@ -471,12 +470,12 @@ def version(options):
 @cmdopts([
     ('envname=', 'e', 'The name of the environment to use'),
     ('noinvest', '', 'Skip installing InVEST'),
-    ('dev', 'd', ('Install InVEST namespace packages as flat eggs instead of '
-                  'in a single folder hierarchy.  Better for development, '
-                  'not so great for pyinstaller build'))
 ])
 def dev_env(options):
     """
+    Set up a development environment with common parameters.
+
+
     Setup a development environment with:
         * access to system-site-packages
         * InVEST installed
@@ -489,7 +488,7 @@ def dev_env(options):
         'clear': True,
         'with_invest': not options.dev_env.noinvest,
         'envname': options.dev_env.envname,
-        'dev': options.dev_env.dev,
+        'dev': True,
     })
 
 @task
@@ -1153,10 +1152,8 @@ def check():
     Perform reasonable checks to verify the build environment.
 
 
-    This paver task checks that the following is true:
-        Executables are available: hg, git
-
-
+    This task checks for the presence of required binaries, python packages
+    and for known issues with the natcap python namespace.
     """
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
@@ -1218,6 +1215,11 @@ def check():
         ('gdal', lib_needed, 'osgeo.gdal'),
         ('shapely', lib_needed, None),
     ]
+
+    # pywin32 is required for pyinstaller builds
+    if platform.system() == 'Windows':
+        requirements.append(('pywin32', required, None))
+
     warnings_found = False
     for requirement, severity, import_name in requirements:
         try:
