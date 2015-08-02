@@ -631,7 +631,7 @@ def after_install(options, home_dir):
                 # If we're in a development environment, it's ok (even
                 # preferable) to install natcap namespace packages as flat
                 # eggs.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', '--no-use-wheel', "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', '--no-binary', 'natcap.invest', "
                 " invest_sdist])\n"
             )
     else:
