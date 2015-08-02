@@ -650,11 +650,8 @@ def after_install(options, home_dir):
         "env_name": options.env.envname,
         "site-pkgs": '--system-site-packages' if options.env.system_site_packages else '',
         "clear": '--clear' if options.env.clear else '',
-        "no-wheel": '',  # leave this out unless we're in a build environment.
+        "no-wheel": '--no-wheel',  # exclude wheel.  It has a bug preventing namespace pkgs from compiling
     }
-    if options.env.dev is False:
-        bootstrap_opts["no-wheel"] = '--no-wheel',  # exclude wheel.  It has a bug preventing namespace pkgs from compiling
-
     sh(bootstrap_cmd % bootstrap_opts)
 
     # Virtualenv appears to partially copy over distutills into the new env.
