@@ -1217,7 +1217,7 @@ def check():
 
     # pywin32 is required for pyinstaller builds
     if platform.system() == 'Windows':
-        requirements.append(('pywin32', required, None))
+        requirements.append(('pywin32', required, 'pywin'))
 
     warnings_found = False
     for requirement, severity, import_name in requirements:
