@@ -1296,11 +1296,11 @@ def check():
 
             if not is_egg:
                 noneggs.append(modname)
-                print 'WARNING: natcap.{mod}=={ver} not an egg.'.format(
-                    mod=modname, ver=version)
+                print 'WARNING: natcap.{mod}=={ver} ({dir}) not an egg.'.format(
+                    mod=modname, ver=version, dir=module.__path__)
             else:
-                print "natcap.{mod}=={ver} installed as egg".format(
-                    mod=modname, ver=version)
+                print "natcap.{mod}=={ver} installed as egg ({dir})".format(
+                    mod=modname, ver=version, dir=module.__path__)
 
         if len(noneggs) > 0:
             pip_install_template = "    pip install --egg --no-binary :all: natcap.%s"
