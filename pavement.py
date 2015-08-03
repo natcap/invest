@@ -1217,7 +1217,18 @@ def check():
 
     # pywin32 is required for pyinstaller builds
     if platform.system() == 'Windows':
-        requirements.append(('pywin32', required, 'pywin'))
+        try:
+            requirements.append(('pywin32', required, 'pywin'))
+
+            # Get the pywin32 version here, as demonstrated by
+            # http://stackoverflow.com/a/5071777.  If we can't import pywin,
+            # the __version__ attribute (below) will never be reached.
+            import pywin
+            import win32api
+            fixed_file_info = win32api.GetFileVersionInfo(win32api.__file__, '\\')
+            pywin.__version__ = fixed_file_info['FileVersionLS'] >> 16
+        except ImportError:
+            pass
 
     warnings_found = False
     for requirement, severity, import_name in requirements:
