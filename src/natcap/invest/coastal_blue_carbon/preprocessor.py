@@ -4,6 +4,7 @@ import logging
 import os
 import csv
 from itertools import product
+import pprint as pp
 
 import pygeoprocessing
 
@@ -35,7 +36,6 @@ def execute(args):
     LOGGER.info('Beginning execution of Coastal Blue Carbon model...')
     vars_dict = _get_inputs(args)
     vars_dict = _preprocess_data(vars_dict)
-    print vars_dict
     _create_transition_table(vars_dict)
     _create_carbon_pool_initial_table_template(vars_dict)
     _create_carbon_pool_transient_table_template(vars_dict)
@@ -207,6 +207,9 @@ def _create_transition_table(vars_dict):
     lulc_class_list = vars_dict['lulc_class_list']
     transition_matrix_dict = vars_dict['transition_matrix_dict']
     code_to_lulc_dict = vars_dict['code_to_lulc_dict']
+    code_list = code_to_lulc_dict.keys()
+    code_list.sort()
+    lulc_class_list_sorted = [code_to_lulc_dict[code] for code in code_list]
 
     transition_by_lulc_class_dict = dict([(lulc_class, {}) for lulc_class in lulc_class_list])
 
@@ -217,13 +220,13 @@ def _create_transition_table(vars_dict):
 
     fpath = os.path.join(vars_dict['output_dir'], 'transitions.csv')
     with open(fpath, 'wb') as csv_file:
-        fieldnames = ['lulc-class'] + lulc_class_list
+        fieldnames = ['lulc-class'] + lulc_class_list_sorted
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
-        for lulc_class in transition_by_lulc_class_dict.keys():
+        for code in code_list:
+            lulc_class = code_to_lulc_dict[code]
             row = dict([('lulc-class', lulc_class)] + transition_by_lulc_class_dict[lulc_class].items())
             writer.writerow(row)
-
 
 def _create_carbon_pool_initial_table_template(vars_dict):
     lulc_class_list = vars_dict['lulc_class_list']

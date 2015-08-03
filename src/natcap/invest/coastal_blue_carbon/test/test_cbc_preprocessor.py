@@ -31,13 +31,17 @@ class TestCBCPreprocessor(unittest.TestCase):
     def setUp(self):
         # create lookup.csv
         cwd = os.path.dirname(os.path.realpath(__file__))
+        self.workspace_dir = os.path.join(cwd, 'workspace')
+        self.output_dir = os.path.join(
+            self.workspace_dir, 'outputs_preprocessor')
+        os.makedirs(self.output_dir)
         table = [
             ['lulc-class', 'code', 'is_coastal_blue_carbon_habitat'],
             ['seagrass', '1', 'true'],
             ['man-made', '2', 'false'],
             ['marsh', '3', 'true'],
             ['mangrove', '4', 'true']]
-        self.lookup_table_uri = os.path.join(cwd, 'lookup.csv')
+        self.lookup_table_uri = os.path.join(self.workspace_dir, 'lookup.csv')
         write_csv(self.lookup_table_uri, table)
 
         # set arguments
@@ -58,8 +62,6 @@ class TestCBCPreprocessor(unittest.TestCase):
         self.year4_raster = aoi_int_factory.alternating(3, 1)
         self.year5_raster = aoi_int_factory.alternating(4, 1)
 
-        self.workspace_dir = os.path.join(cwd, 'workspace')
-
         self.args = {
             'workspace_dir': self.workspace_dir,
             'results_suffix': '',
@@ -75,8 +77,9 @@ class TestCBCPreprocessor(unittest.TestCase):
     def test_cbc_preprocessor(self):
         cbc_preprocessor.execute(self.args)
         transition_dict = get_lookup_from_csv(
-            os.path.join(self.workspace_dir, 'preprocessor_outputs', 'transitions.csv'), 'lulc-class')
-        pp.pprint(transition_dict)
+            os.path.join(
+                self.workspace_dir,
+                'outputs_preprocessor', 'transitions.csv'), 'lulc-class')
         assert(transition_dict['seagrass']['seagrass'] == 'accumulation')
 
     def tearDown(self):
