@@ -1233,7 +1233,8 @@ def check():
                 pkg=pkg_req.project_name,
                 ver=pkg.__version__,
                 req=requirement)
-        except (pkg_resources.VersionConflict, pkg_resources.DistributionNotFound) as conflict:
+        except (pkg_resources.VersionConflict,
+                pkg_resources.DistributionNotFound, ImportError) as conflict:
             if severity == required:
                 print 'ERROR: %s' % conflict.report()
                 errors_found = True
