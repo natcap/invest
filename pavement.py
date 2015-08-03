@@ -554,7 +554,7 @@ def after_install(options, home_dir):
         config.read(config_files)
         try:
             compiler = config.get('build', 'compiler')
-        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError) as error:
+        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
             # System default (None) is the fallback.
             print 'Compiler not preconfigured and not user-defined.  Using system default'
             compiler = None
