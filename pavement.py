@@ -1903,7 +1903,7 @@ def build(options):
                     })
         else:
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
-        print 'Repo %s is expacted to be at rev %s' % (repo.local_path, tracked_rev)
+        print 'Repo %s is expected to be at rev %s' % (repo.local_path, tracked_rev)
 
     call_task('clean', options=options)
 
