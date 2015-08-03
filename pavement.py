@@ -674,7 +674,6 @@ def after_install(options, home_dir):
         with open(init_file, 'w') as namespace_init:
             namespace_init.write(init_string)
 
-    print '*** Virtual environment created successfully.'
     print '*** To activate the env, run:'
     if platform.system() == 'Windows':
         print r'    call .\%s\Scripts\activate' % options.env.envname
