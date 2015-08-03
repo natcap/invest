@@ -1207,9 +1207,7 @@ def check():
     suggested = 'suggested'
     lib_needed = 'lib_needed'
 
-    # TODO check that lib source is available
     # (requirement, level, version_getter)
-
     print "\nChecking python packages"
     requirements = [
         ('virtualenv>=13.0.0', required, None),
