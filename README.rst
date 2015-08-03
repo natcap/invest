@@ -51,27 +51,33 @@ submitting your PR.
 
 *Thanks for contributing!*
 
-
 InVEST Dependencies
 ===================
+.. note::
+    Do this:
+
+    ``$ paver check``
+    
+    This will verify required applications are available and that
+    you have some of the python packages that are more difficult to install
+    (especially those that depend on low-level C libraries).
+
 InVEST relies on the following python packages:
   * GDAL
   * shapely
   * numpy
   * scipy
-  * poster
-  * pyqt4  *if running a model user interface*
+  * pyqt4  *(if running a model user interface)*
   * matplotlib
   * bs4
-  * python-dateutil
-  * pyparsing
-  * six
   * pyAMG
-  * pillow
   * cython
-  * pyyaml
   * setuptools
-  * virtualenv >= 13.0.0
+  * h5py
+  * dbfpy
+  * poster
+  * pygeoprocessing
+  * natcap.versioner
 
 For development, we recommend using a virtual environment (such as provided by
 ``virtualenv``).  We provide a paver command (``paver env``) to help with this process.
@@ -95,10 +101,51 @@ On linux, gcc/g++ will be sufficient.  On Windows, MinGW and MSVC work.  On Mac,
 you'll likely need the XCode command-line tools to be installed.
 
 
-.. _paver-build_bin:
-
 Building Binaries
 =================
+
+One-Step Binary Builds
+----------------------
+The easiest way to build binaries is to call ``paver build``.  If your system
+is properly configured, this will do all of the heavy lifting to:
+
+    + Clone any hg, git, and svn repositories needed for the given steps
+    + Set up a virtual environment with needed package dependencies (skip with
+      ``--python=<your python interpreter here>``
+    + Build binaries out of the virtual environment (skip with ``--skip-bin``)
+    + Build User's Guide documentation (HTML, PDF) (skip with ``--skip-guide``)
+    + Build InVEST API documentation (HTML) (skip with ``--skip-api``)
+    + Build archives of sample data (skip with ``--skip-data``)
+    + Build a system-appropriate installer (skip with ``--skip-installer``)
+
+Assembled binaries are placed in ``dist/release_invest-<version>`` with the
+following directory structure: ::
+
+    dist/
+        natcap.invest-<version>.tar.gz          # Python source distribution
+        release_invest-<version>/
+            data/
+                # All data zipfiles available for this version
+            documentation/
+                # HTML documentation for InVEST
+            invest-<version>-apidics.zip        # Archived HTML API documentation
+            invest-<version>-userguide.zip      # Archived HTML User's Guide
+            InVEST_<version>_Documentation.pdf  # PDF User's Guide
+            invest-<version>.deb                # Debian dpkg
+            invest-<version>.rpm                # RPM package
+            InVEST_<version>_Setup.exe          # Windows installer
+            InVEST <version>.dmg                # Mac disk image
+
+.. note::
+    ``paver build`` will only build binaries and and installer for the system
+    you are running.
+
+
+
+Just building binaries
+----------------------
+The easiest way to build pyinstaller binaries on your platform is to use our
+one-step binary build.  This paver task will 
 Binaries are built through ``paver build_bin``.  The simplest way to call this is 
 ``paver build_bin``, but this assumes that you have all dependencies (including natcap.invest)
 installed to your global python distribution.  More commonly, you'll want to install InVEST to
@@ -273,10 +320,12 @@ If the ``--insttype`` flag is not provided, the system default will be used.  Sy
  * Mac: ``dmg``
  * Windows: ``nsis``
 
-Dependencies 
-============
 
-*Debian Systems*
+Developing InVEST
+=================
+
+Debian Systems
+--------------
 
 .. note::
     **Debian builds require GLIBC >= 2.15**
@@ -297,16 +346,14 @@ Specific package dependencies include:
  * ``sudo apt-get install python-setuptools``  Fixes some path issues with setuptools (see https://bitbucket.org/pypa/setuptools/issue/368/module-object-has-no-attribute-packaging)
 
 
-*Mac Systems*
+Mac Systems
+-----------
 
 The easiest way to set up your system is to install all binary dependencies through the Homebrew
 package manager (http://brew.sh).
 
-
-Developing InVEST
-=================
-
-*Setting up an InVEST virtual environment*
+Setting up an InVEST virtual environment
+----------------------------------------
 
 Most likely, the easiest way to run InVEST from your source tree is to build a
 virtual environment using the popular ``virtualenv``
@@ -326,7 +373,8 @@ examples:  ::
     # flag.
     $ paver env --sytem-site-packages -r requirements-docs.txt
 
-*natcap.versioner ImportError*
+natcap.versioner ImportError
+----------------------------
 
 Since June, 2015, we have been moving our python projects to the ``natcap``
 package namespace and gradually publishing our projects on the Python Package
@@ -364,7 +412,8 @@ more information if you're interested.
 .. _The relevant issue: https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version#comment-19426088
 
 
-*GDAL*
+GDAL
+----
 
 InVEST relies on GDAL/OGR for its raster and vector handling.  This library is
 usually available in your system's package index.

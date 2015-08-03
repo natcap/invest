@@ -1,13 +1,11 @@
 gdal
 h5py
 matplotlib
-natcap.versioner>=0.2.2
+natcap.versioner>=0.2.4
 numpy
-paramiko
 poster
 pyamg
 pygeoprocessing==0.3.0a6
-pip>=7.0.0
 pyyaml
 scipy
 setuptools
