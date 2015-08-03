@@ -1294,13 +1294,18 @@ def check():
                 lambda x, y: x or y,
                 [p.endswith('.egg') for p in module.__file__.split(os.sep)])
 
+            if len(module.__path__) > 1:
+                module_path = module.__path__
+            else:
+                module_path = module.__path__[0]
+
             if not is_egg:
                 noneggs.append(modname)
                 print 'WARNING: natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-                    mod=modname, ver=version, dir=module.__path__)
+                    mod=modname, ver=version, dir=module_path)
             else:
                 print "natcap.{mod}=={ver} installed as egg ({dir})".format(
-                    mod=modname, ver=version, dir=module.__path__)
+                    mod=modname, ver=version, dir=module_path)
 
         if len(noneggs) > 0:
             pip_install_template = "    pip install --egg --no-binary :all: natcap.%s"
