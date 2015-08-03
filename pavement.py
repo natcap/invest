@@ -38,9 +38,17 @@ _SDTOUT_HANDLER.setLevel(logging.INFO)
 LOGGER.addHandler(_SDTOUT_HANDLER)
 
 
-def user_os():
+def user_os_installer():
     """
-    Determine the operating system.
+    Determine the operating system installer.
+
+    On Linux, this will be either "deb" or "rpm" depending on the presence
+    of /usr/bin/rpm.
+
+    Returns:
+        One of "rpm", "deb", "dmg", "nsis".  Returns 'UNKNOWN' if the installer
+        type could not be determined.
+
     """
     if platform.system() == 'Linux':
         # check if we're running an RPM system approach taken from
@@ -74,7 +82,7 @@ paver.easy.options(
     ),
     build_installer=Bunch(
         force_dev=False,
-        insttype=user_os(),
+        insttype=user_os_installer(),
         arch=platform.machine(),
         bindir=os.path.join('dist', 'invest_dist')
     ),
@@ -682,7 +690,7 @@ def after_install(options, home_dir):
 
 
 @task
-@consume_args  # when consuuming args, it's a list of str arguments.
+@consume_args  # when consuming args, it's a list of str arguments.
 def fetch(args):
     """
     Clone repositories the correct locations.
