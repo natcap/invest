@@ -220,11 +220,11 @@ class CBCModelRun(object):
         init_carbon_stock_biomass_raster = init_lulc_raster.reclass(
             code_to_biomass_reclass_dict,
             out_datatype=gdal.GDT_Float32,
-            out_nodata=NODATA_FLOAT)
+            out_nodata=NODATA_FLOAT) * init_lulc_raster.get_cell_area() * HA_PER_M2
         init_carbon_stock_soil_raster = init_lulc_raster.reclass(
             code_to_soil_reclass_dict,
             out_datatype=gdal.GDT_Float32,
-            out_nodata=NODATA_FLOAT)
+            out_nodata=NODATA_FLOAT) * init_lulc_raster.get_cell_area() * HA_PER_M2
         init_carbon_stock_total_raster = \
             init_carbon_stock_biomass_raster + init_carbon_stock_soil_raster \
             + self.litter_carbon_stock_raster_list[0]
@@ -245,8 +245,9 @@ class CBCModelRun(object):
         lulc_float_raster = Raster.from_file(
             self.lulc_snapshot_list[idx]).set_datatype_and_nodata(
                 gdal.GDT_Float32, NODATA_FLOAT)
-        self.litter_carbon_stock_raster_list[idx] = lulc_float_raster.reclass(
-            reclass_dict)
+        init_litter_raster = lulc_float_raster.reclass(
+            reclass_dict) * lulc_float_raster.get_cell_area() * HA_PER_M2
+        self.litter_carbon_stock_raster_list[idx] = init_litter_raster
 
     def run_transient_analysis(self):
         LOGGER.info("Running transient analysis...")

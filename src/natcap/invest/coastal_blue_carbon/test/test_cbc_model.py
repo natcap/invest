@@ -209,7 +209,7 @@ class TestCBCModel(unittest.TestCase):
         write_csv(self.lulc_transition_uri, table)
 
         shape = (2, 2)  # (2, 2)  #(1889, 1325)
-        affine = Affine(30.0, 0.0, 443723.127328, 0.0, -30.0, 4956546.905980)
+        affine = Affine(100.0, 0.0, 443723.127328, 0.0, -100.0, 4956546.905980)
         proj = 26910
         datatype = gdal.GDT_Int32
         nodata_val = 255
