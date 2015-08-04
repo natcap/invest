@@ -162,7 +162,7 @@ setup(
     include_dirs=[numpy.get_include()],
     setup_requires=['nose>=1.0'],
     license=LICENSE,
-    zip_safe=True,
+    zip_safe=False,
     keywords='invest',
     classifiers=[
         'Intended Audience :: Developers',
