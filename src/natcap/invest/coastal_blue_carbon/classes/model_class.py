@@ -28,6 +28,7 @@ class CBCModel(object):
     def __init__(self, vars_dict):
         self.vars_dict = vars_dict
 
+        # useful variables
         self.num_lulc_maps = len(vars_dict['lulc_snapshot_list'])
         self.num_snapshots = self.num_lulc_maps
         if (vars_dict['analysis_year'] != '' and vars_dict['analysis_year']
@@ -40,25 +41,19 @@ class CBCModel(object):
         self.lulc_snapshot_list = vars_dict['lulc_snapshot_list']
         self.lulc_snapshot_years_list = vars_dict['lulc_snapshot_years_list']
 
-        # Stock
-        self.total_carbon_stock_raster_list = range(0, self.num_snapshots)
-        self.biomass_carbon_stock_raster_list = range(0, self.num_snapshots)
-        self.soil_carbon_stock_raster_list = range(0, self.num_snapshots)
-        self.litter_carbon_stock_raster_list = range(0, self.num_snapshots)
-
-        # AccumulatedCarbonStock and DisturbedCarbonStock Objects
+        # Intermediate Maps
         self.accumulated_carbon_stock_object_list = range(
             0, self.num_transitions)
         self.disturbed_carbon_stock_object_list = range(
             0, self.num_transitions)
+        self.biomass_carbon_stock_raster_list = range(0, self.num_snapshots)
+        self.soil_carbon_stock_raster_list = range(0, self.num_snapshots)
+        self.litter_carbon_stock_raster_list = range(0, self.num_snapshots)
 
-        # Sequestration
+        # Key Maps
+        self.total_carbon_stock_raster_list = range(0, self.num_snapshots)
         self.sequestration_raster_list = range(0, self.num_transitions)
-
-        # Emissions
         self.emissions_raster_list = range(0, self.num_transitions)
-
-        # Net Sequstration
         self.net_sequestration_raster_list = range(0, self.num_transitions)
 
     def __str__(self):
