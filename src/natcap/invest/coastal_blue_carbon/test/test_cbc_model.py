@@ -16,7 +16,7 @@ from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
 from natcap.invest.coastal_blue_carbon.classes.raster_factory import \
     RasterFactory
 from natcap.invest.coastal_blue_carbon.classes.affine import Affine
-from natcap.invest.coastal_blue_carbon.classes.model import CBCModel
+from natcap.invest.coastal_blue_carbon.classes.model_class import CBCModel
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -125,7 +125,6 @@ class TestCBCModelSimple(unittest.TestCase):
         vars_dict = io.get_inputs(self.args)
         r = CBCModel(vars_dict)
         r.initialize_stock()
-        # print r.total_carbon_stock_raster_list[0]
         r.run_transient_analysis()
 
         print "Total Carbon Stock"

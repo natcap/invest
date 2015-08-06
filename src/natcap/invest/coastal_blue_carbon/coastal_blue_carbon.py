@@ -4,7 +4,7 @@ import logging
 import pprint as pp
 
 from natcap.invest.coastal_blue_carbon.utilities import io
-from natcap.invest.coastal_blue_carbon.classes.cbc_model_classes import \
+from natcap.invest.coastal_blue_carbon.classes.model_class import \
     CBCModel
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
