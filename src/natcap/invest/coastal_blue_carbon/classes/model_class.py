@@ -242,7 +242,7 @@ class CBCModel(object):
             for prev_lulc, val in lulc_transition_dict.items():
                 for next_lulc, carbon_mag_and_dir in val.items():
                     if carbon_mag_and_dir not in [
-                            '', 'accumulation', 'no-carbon-change']:
+                            '', 'accumulation', 'no change']:
                         disturbance_val = carbon_pool_transient_dict[
                             (prev_lulc, pool)][carbon_mag_and_dir]
                         d[(lulc_to_code_dict[prev_lulc], lulc_to_code_dict[
@@ -267,7 +267,7 @@ class CBCModel(object):
             for prev_lulc, val in lulc_transition_dict.items():
                 for next_lulc, carbon_mag_and_dir in val.items():
                     if carbon_mag_and_dir not in [
-                            '', 'accumulation', 'no-carbon-change']:
+                            '', 'accumulation', 'no change']:
                         half_life_val = carbon_pool_transient_dict[
                             (next_lulc, pool)]['half-life']
                         # add automatic handling of incorrect inputs?

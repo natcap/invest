@@ -168,7 +168,7 @@ def _preprocess_data(vars_dict):
         elif (not bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
               not bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
             # non-veg --> non-veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'no-carbon-change'
+            transition_matrix_dict[(lulc_from, lulc_to)] = 'no change'
         else:
             raise Exception
 
