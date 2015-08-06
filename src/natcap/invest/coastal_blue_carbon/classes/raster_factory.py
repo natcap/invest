@@ -4,8 +4,8 @@ import random
 
 import numpy as np
 
-from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
-from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
+from natcap.invest.coastal_blue_carbon.classes.affine import Affine
+from natcap.invest.coastal_blue_carbon.classes.raster import Raster
 
 
 class RasterFactory(object):

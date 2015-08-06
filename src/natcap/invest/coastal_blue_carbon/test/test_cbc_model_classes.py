@@ -11,15 +11,14 @@ import numpy
 from numpy import testing
 import gdal
 
-from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
-from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
-from natcap.invest.coastal_blue_carbon.utilities.raster_factory import RasterFactory
-from natcap.invest.coastal_blue_carbon.utilities.cbc_model_classes import DisturbedCarbonStock, AccumulatedCarbonStock
+from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.classes.affine import Affine
+from natcap.invest.coastal_blue_carbon.classes.raster import Raster
+from natcap.invest.coastal_blue_carbon.classes.raster_factory import RasterFactory
+from natcap.invest.coastal_blue_carbon.classes.model_carbon_classes import \
+    DisturbedCarbonStock, AccumulatedCarbonStock
 
 pp = pprint.PrettyPrinter(indent=4)
-
-NODATA_FLOAT = -16777216
-NODATA_INT = -9999
 
 
 class TestDisturbedCarbonStock(unittest.TestCase):

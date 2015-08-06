@@ -18,8 +18,8 @@ from shapely.geometry import Polygon
 import shapely
 import pygeoprocessing as pygeo
 
-from natcap.invest.coastal_blue_carbon.utilities.vector import Vector
-from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
+from natcap.invest.coastal_blue_carbon.classes.vector import Vector
+from natcap.invest.coastal_blue_carbon.classes.affine import Affine
 
 LOGGER = logging.getLogger('Raster Class')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \

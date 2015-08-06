@@ -8,7 +8,8 @@ import pprint as pp
 
 import pygeoprocessing
 
-from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
+from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.classes.raster import Raster
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')

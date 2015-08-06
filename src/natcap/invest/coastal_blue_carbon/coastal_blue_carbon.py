@@ -1,28 +1,17 @@
 """Coastal Blue Carbon Model."""
 
 import logging
-import os
-import collections
 import pprint as pp
 
-import gdal
-import pygeoprocessing as pygeo
-import numpy as np
-
 from natcap.invest.coastal_blue_carbon.utilities import io
-from natcap.invest.coastal_blue_carbon.utilities.cbc_model_classes import \
-    CBCModelRun
+from natcap.invest.coastal_blue_carbon.classes.cbc_model_classes import \
+    CBCModel
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger(
     'natcap.invest.coastal_blue_carbon.coastal_blue_carbon')
-
-# Global Variables
-NODATA_FLOAT = -16777216
-NODATA_INT = -9999
-HA_PER_M2 = 0.0001
 
 
 def execute(args):
@@ -67,5 +56,5 @@ def execute(args):
     vars_dict = io.get_inputs(args)
 
     # Run Model
-    r = CBCModelRun(vars_dict)
+    r = CBCModel(vars_dict)
     r.run()

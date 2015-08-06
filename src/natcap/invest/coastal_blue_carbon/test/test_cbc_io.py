@@ -6,29 +6,17 @@ python -m unittest test_cbc_io
 import unittest
 import os
 import pprint
-import csv
 import shutil
 
-import numpy
-from numpy import testing
 import gdal
 
 import natcap.invest.coastal_blue_carbon.utilities.io as io
-from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
-from natcap.invest.coastal_blue_carbon.utilities.raster_factory import RasterFactory
-from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
+from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.classes.raster_factory import \
+    RasterFactory
+from natcap.invest.coastal_blue_carbon.classes.affine import Affine
 
 pp = pprint.PrettyPrinter(indent=4)
-
-NODATA_FLOAT = -16777216
-NODATA_INT = -9999
-
-
-def write_csv(filepath, l):
-    f = open(filepath, 'wb')
-    writer = csv.writer(f)
-    for i in l:
-        writer.writerow(i)
 
 
 class TestGetInputs(unittest.TestCase):
@@ -50,7 +38,7 @@ class TestGetInputs(unittest.TestCase):
             ['marsh', '3', 'true'],
             ['mangrove', '4', 'true']]
         self.lulc_lookup_uri = os.path.join(self.workspace, 'lookup.csv')
-        write_csv(self.lulc_lookup_uri, table)
+        io.write_csv(self.lulc_lookup_uri, table)
 
         table = [
             ['lulc-class', 'seagrass', 'man-made', 'marsh', 'mangrove'],
@@ -59,7 +47,7 @@ class TestGetInputs(unittest.TestCase):
             ['marsh', '', '', '', 'accumulation'],
             ['mangrove', '', '', '', '']]
         self.lulc_transition_uri = os.path.join(self.workspace, 'transition.csv')
-        write_csv(self.lulc_transition_uri, table)
+        io.write_csv(self.lulc_transition_uri, table)
 
         shape = (2, 2)  # (2, 2)  #(1889, 1325)
         affine = Affine(30.0, 0.0, 443723.127328, 0.0, -30.0, 4956546.905980)
@@ -87,7 +75,7 @@ class TestGetInputs(unittest.TestCase):
             ['marsh', '2.0', '2.0', '1.0'],
             ['mangrove', '3.0', '3.0', '1.5']]
         self.carbon_pool_initial_uri = os.path.join(self.workspace, 'initial.csv')
-        write_csv(self.carbon_pool_initial_uri, table)
+        io.write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
             ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
@@ -100,7 +88,7 @@ class TestGetInputs(unittest.TestCase):
             ['mangrove', 'biomass', '1', '30', '0.3', '0.5', '0.7'],
             ['mangrove', 'soil', '2', '30', '0.3', '0.5', '0.7']]
         self.carbon_pool_transient_uri = os.path.join(self.workspace, 'transient.csv')
-        write_csv(self.carbon_pool_transient_uri, table)
+        io.write_csv(self.carbon_pool_transient_uri, table)
 
         self.args = {
             'workspace_dir': self.workspace,

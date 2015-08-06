@@ -12,19 +12,14 @@ import shutil
 import gdal
 from pygeoprocessing.geoprocessing import get_lookup_from_csv
 
-from natcap.invest.coastal_blue_carbon.utilities.affine import Affine
-from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
-from natcap.invest.coastal_blue_carbon.utilities.raster_factory import RasterFactory
+import natcap.invest.coastal_blue_carbon.utilities.io as io
+from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.classes.affine import Affine
+from natcap.invest.coastal_blue_carbon.classes.raster import Raster
+from natcap.invest.coastal_blue_carbon.classes.raster_factory import RasterFactory
 import natcap.invest.coastal_blue_carbon.preprocessor as cbc_preprocessor
 
 pp = pprint.PrettyPrinter(indent=4)
-
-
-def write_csv(filepath, l):
-    f = open(filepath, 'wb')
-    writer = csv.writer(f)
-    for i in l:
-        writer.writerow(i)
 
 
 class TestCBCPreprocessor(unittest.TestCase):
@@ -42,7 +37,7 @@ class TestCBCPreprocessor(unittest.TestCase):
             ['marsh', '3', 'true'],
             ['mangrove', '4', 'true']]
         self.lookup_table_uri = os.path.join(self.workspace_dir, 'lookup.csv')
-        write_csv(self.lookup_table_uri, table)
+        io.write_csv(self.lookup_table_uri, table)
 
         # set arguments
         shape = (2, 2)  # (2, 2)  #(1889, 1325)

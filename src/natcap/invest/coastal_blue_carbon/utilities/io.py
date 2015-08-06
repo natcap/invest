@@ -1,13 +1,12 @@
 """CBC Model IO Utilities."""
+
 import csv
 import os
 import pygeoprocessing as pygeo
 import pprint as pp
 
-from natcap.invest.coastal_blue_carbon.utilities.raster import Raster
-
-NODATA_FLOAT = -16777216
-NODATA_INT = -9999
+from natcap.invest.coastal_blue_carbon.classes.raster import Raster
+from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
 
 
 def get_inputs(args):
@@ -146,3 +145,11 @@ def _create_transient_dict(args):
         carbon_pool_transient_dict[(lulc, pool)] = dict(zip(header, line))
 
     return carbon_pool_transient_dict
+
+
+def write_csv(filepath, l):
+    """write two-dimensional list to csv file."""
+    f = open(filepath, 'wb')
+    writer = csv.writer(f)
+    for i in l:
+        writer.writerow(i)
