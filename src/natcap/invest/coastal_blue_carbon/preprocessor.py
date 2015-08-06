@@ -156,15 +156,15 @@ def _preprocess_data(vars_dict):
         if (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
             bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
             # veg --> veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'accumulation'
+            transition_matrix_dict[(lulc_from, lulc_to)] = 'accum'
         elif (not bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
             bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
             # non-veg --> veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'accumulation'
+            transition_matrix_dict[(lulc_from, lulc_to)] = 'accum'
         elif (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
             not bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
             # veg --> non-veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'disturbance'
+            transition_matrix_dict[(lulc_from, lulc_to)] = 'disturb'
         elif (not bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
               not bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
             # non-veg --> non-veg
@@ -250,7 +250,7 @@ def _create_carbon_pool_transient_table_template(vars_dict):
         vars_dict['output_dir'], 'carbon_pool_transient_template.csv')
     with open(fpath, 'wb') as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(['code', 'lulc-class', 'pool', 'half-life', 'low-impact-disturbance', 'med-impact-disturbance','high-impact-disturbance', 'yearly_accumulation'])
+        writer.writerow(['code', 'lulc-class', 'pool', 'half-life', 'low-impact-disturb', 'med-impact-disturb','high-impact-disturb', 'yearly_accumulation'])
         for code in vars_dict['code_to_lulc_dict'].keys():
             for pool in ['biomass', 'soil']:
                 row = [code, vars_dict['code_to_lulc_dict'][code]] + \

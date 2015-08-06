@@ -44,9 +44,9 @@ class TestCBCModelSimple(unittest.TestCase):
 
         table = [
             ['lulc-class', 'seagrass', 'man-made', 'marsh', 'mangrove'],
-            ['seagrass', 'accumulation', 'med-impact-disturbance', '', ''],
-            ['man-made', 'accumulation', '', 'accumulation', ''],
-            ['marsh', '', '', '', 'accumulation'],
+            ['seagrass', 'accum', 'med-impact-disturb', '', ''],
+            ['man-made', 'accum', '', 'accum', ''],
+            ['marsh', '', '', '', 'accum'],
             ['mangrove', '', '', '', '']]
         self.lulc_transition_uri = os.path.join(self.workspace_dir, 'transition.csv')
         io.write_csv(self.lulc_transition_uri, table)
@@ -81,7 +81,7 @@ class TestCBCModelSimple(unittest.TestCase):
         io.write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
-            ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
+            ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturb', 'med-impact-disturb', 'high-impact-disturb'],
             ['seagrass', 'biomass', '1', '1.0', '0.1', '0.5', '0.7'],
             ['seagrass', 'soil', '1', '1.0', '0.1', '0.5', '0.7'],
             ['man-made', 'biomass', '1', '0', '0', '0', '0'],
@@ -188,9 +188,9 @@ class TestCBCModel(unittest.TestCase):
 
         table = [
             ['lulc-class', 'seagrass', 'man-made', 'marsh', 'mangrove'],
-            ['seagrass', 'accumulation', 'high-impact-disturbance', '', ''],
-            ['man-made', 'accumulation', '', 'accumulation', ''],
-            ['marsh', '', '', '', 'accumulation'],
+            ['seagrass', 'accum', 'high-impact-disturb', '', ''],
+            ['man-made', 'accum', '', 'accum', ''],
+            ['marsh', '', '', '', 'accum'],
             ['mangrove', '', '', '', '']]
         self.lulc_transition_uri = os.path.join(self.workspace_dir, 'transition.csv')
         io.write_csv(self.lulc_transition_uri, table)
@@ -225,7 +225,7 @@ class TestCBCModel(unittest.TestCase):
         io.write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
-            ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
+            ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturb', 'med-impact-disturb', 'high-impact-disturb'],
             ['seagrass', 'biomass', '1', '10', '0.1', '0.3', '0.7'],
             ['seagrass', 'soil', '2', '10', '0.1', '0.3', '0.7'],
             ['man-made', 'biomass', '1', '0', '0', '0', '0'],

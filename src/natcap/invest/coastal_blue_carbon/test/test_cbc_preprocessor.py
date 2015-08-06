@@ -75,7 +75,7 @@ class TestCBCPreprocessor(unittest.TestCase):
             os.path.join(
                 self.workspace_dir,
                 'outputs_preprocessor', 'transitions.csv'), 'lulc-class')
-        assert(transition_dict['seagrass']['seagrass'] == 'accumulation')
+        assert(transition_dict['seagrass']['seagrass'] == 'accum')
 
     def tearDown(self):
         # remove lookup.csv

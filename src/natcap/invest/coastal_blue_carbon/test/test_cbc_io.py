@@ -42,9 +42,9 @@ class TestGetInputs(unittest.TestCase):
 
         table = [
             ['lulc-class', 'seagrass', 'man-made', 'marsh', 'mangrove'],
-            ['seagrass', 'accumulation', 'disturbance', '', ''],
-            ['man-made', 'accumulation', '', 'accumulation', ''],
-            ['marsh', '', '', '', 'accumulation'],
+            ['seagrass', 'accum', 'disturb', '', ''],
+            ['man-made', 'accum', '', 'accum', ''],
+            ['marsh', '', '', '', 'accum'],
             ['mangrove', '', '', '', '']]
         self.lulc_transition_uri = os.path.join(self.workspace, 'transition.csv')
         io.write_csv(self.lulc_transition_uri, table)
@@ -78,7 +78,7 @@ class TestGetInputs(unittest.TestCase):
         io.write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
-            ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturbance', 'med-impact-disturbance', 'high-impact-disturbance'],
+            ['lulc-class', 'pool', 'half-life', 'yearly_accumulation', 'low-impact-disturb', 'med-impact-disturb', 'high-impact-disturb'],
             ['seagrass', 'biomass', '1', '10', '0.1', '0.3', '0.7'],
             ['seagrass', 'soil', '2', '10', '0.1', '0.3', '0.7'],
             ['man-made', 'biomass', '0', '0', '0', '0', '0'],

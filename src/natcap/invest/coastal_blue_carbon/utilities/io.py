@@ -84,9 +84,9 @@ def get_inputs(args):
     vars_dict['carbon_pool_transient_dict'] = _create_transient_dict(args)
     nan_dict = {
         u'half-life': NODATA_FLOAT,
-        u'high-impact-disturbance': NODATA_FLOAT,
-        u'low-impact-disturbance': NODATA_FLOAT,
-        u'med-impact-disturbance': NODATA_FLOAT,
+        u'high-impact-disturb': NODATA_FLOAT,
+        u'low-impact-disturb': NODATA_FLOAT,
+        u'med-impact-disturb': NODATA_FLOAT,
         u'lulc-class': u'undefined',
         u'pool': u'biomass',
         u'yearly_accumulation': NODATA_FLOAT,
