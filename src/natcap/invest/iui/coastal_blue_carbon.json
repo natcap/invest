@@ -101,7 +101,7 @@
         "../CoastalBlueCarbon/inputs/GBJC_2100_mean_Resample.tif"
       ],
       "linkText": "Add Another",
-      "helpText": "(help text)"
+      "helpText": "LULC snapshot maps must be entered in chronological order."
     },
     {
       "id": "lulc_snapshot_years_list",
@@ -125,7 +125,7 @@
         "2100"
       ],
       "linkText": "Add Another",
-      "helpText": "(help text)"
+      "helpText": "LULC snapshot years must be entered in chronological order."
     }
   ]
 }
