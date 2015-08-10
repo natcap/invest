@@ -47,7 +47,9 @@ class TestCBCModelSimple(unittest.TestCase):
             ['seagrass', 'accum', 'med-impact-disturb', '', ''],
             ['man-made', 'accum', '', 'accum', ''],
             ['marsh', '', '', '', 'accum'],
-            ['mangrove', '', '', '', '']]
+            ['mangrove', '', '', '', ''],
+            ['', ''],
+            ['', 'legend']]
         self.lulc_transition_uri = os.path.join(self.workspace_dir, 'transition.csv')
         io.write_csv(self.lulc_transition_uri, table)
 
@@ -267,22 +269,23 @@ class TestCBCModel(unittest.TestCase):
     def test_run_transient_analysis(self):
         vars_dict = io.get_inputs(self.args)
         r = CBCModel(vars_dict)
-        r.initialize_stock()
-        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
-        r.run_transient_analysis()
-
-        print "Total Carbon Stock"
-        for i in r.total_carbon_stock_raster_list:
-            print i.get_band(1)[0:2,0:2]
-        print "Total Emissions"
-        for i in r.emissions_raster_list:
-            print i.get_band(1)[0:2,0:2]
-        print "Total Sequestration"
-        for i in r.sequestration_raster_list:
-            print i.get_band(1)[0:2,0:2]
-        print "Net Sequestration"
-        for i in r.net_sequestration_raster_list:
-            print i.get_band(1)[0:2,0:2]
+        pp.pprint(r.vars_dict['lulc_transition_dict'])
+        # r.initialize_stock()
+        # assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
+        # r.run_transient_analysis()
+        #
+        # print "Total Carbon Stock"
+        # for i in r.total_carbon_stock_raster_list:
+        #     print i.get_band(1)[0:2,0:2]
+        # print "Total Emissions"
+        # for i in r.emissions_raster_list:
+        #     print i.get_band(1)[0:2,0:2]
+        # print "Total Sequestration"
+        # for i in r.sequestration_raster_list:
+        #     print i.get_band(1)[0:2,0:2]
+        # print "Net Sequestration"
+        # for i in r.net_sequestration_raster_list:
+        #     print i.get_band(1)[0:2,0:2]
 
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)

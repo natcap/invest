@@ -53,6 +53,8 @@ def get_inputs(args):
         u'lulc-class': u'undefined', u'undefined': u'undefined'}
     l = []
     for item in lulc_transition_dict.items():
+        if item[0] is u'':
+            continue
         del item[1]['lulc-class']
         l.append(item)
     vars_dict['lulc_transition_dict'] = dict(l)
