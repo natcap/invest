@@ -30,8 +30,8 @@ ENCODING = sys.getfilesystemencoding()
 # WindowsError is.  Using shutil to import an empty WindowsError
 current_os = platform.system()
 if current_os != 'Windows':
-    LOGGER.debug('Not on Windows (on %s), importing shutil\'s WindowsError',
-                 current_os)
+    #LOGGER.debug('Not on Windows (on %s), importing shutil\'s WindowsError',
+    #             current_os)
     from shutil import WindowsError
 
 # This class is to be used if certain WindowsErrors or IOErrors are encountered.

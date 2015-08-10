@@ -8,6 +8,11 @@
   "width": 700,
   "elements": [
     {
+      "id": "beta_only",
+      "label": "This tool is considered UNSTABLE.  Users may experience performance issues and unexpected errors.",
+      "type": "label"
+    },
+    {
       "id": "scenic_quality_tab_group",
       "type": "tabbedGroup",
       "elements": [
