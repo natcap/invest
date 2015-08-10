@@ -5,7 +5,6 @@ natcap.versioner>=0.2.4
 numpy
 poster
 pyamg
-pygeoprocessing==0.3.0a7
 pyyaml
 scipy
 setuptools

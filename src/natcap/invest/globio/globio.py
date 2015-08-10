@@ -259,6 +259,7 @@ def execute(args):
 
     def _msa_i_op(lulc_array, distance_to_infrastructure):
         """calculate msa infrastructure"""
+
         distance_to_infrastructure *= out_pixel_size #convert to meters
         msa_i_primary = numpy.empty(lulc_array.shape)
         msa_i_other = numpy.empty(lulc_array.shape)
@@ -268,7 +269,7 @@ def execute(args):
             if value == '>':
                 msa_i_primary[distance_to_infrastructure >
                               msa_i_primary_table['>'][0]] = (
-                    msa_i_primary_table['>'][1])
+                                  msa_i_primary_table['>'][1])
             elif value == '<':
                 continue
             else:
@@ -278,14 +279,14 @@ def execute(args):
         if '<' in msa_i_primary_table:
             msa_i_primary[distance_to_infrastructure <
                           msa_i_primary_table['<'][0]] = (
-                msa_i_primary_table['<'][1])
+                              msa_i_primary_table['<'][1])
 
         for value in reversed(msa_i_other_values):
             #special case if it's a > or < value
             if value == '>':
                 msa_i_other[distance_to_infrastructure >
                             msa_i_other_table['>'][0]] = (
-                    msa_i_other_table['>'][1])
+                                msa_i_other_table['>'][1])
             elif value == '<':
                 continue
             else:
@@ -294,14 +295,14 @@ def execute(args):
 
         if '<' in msa_i_other_table:
             msa_i_other[distance_to_infrastructure <
-                        msa_i_other_table['<'][0]] = (
-                msa_i_other_table['<'][1])
+                        msa_i_other_table['<'][0]] = (msa_i_other_table['<'][1])
 
         msa_i = numpy.where(
             (lulc_array >= 1) & (lulc_array <= 5), msa_i_primary, 1.0)
         msa_i = numpy.where(
             (lulc_array >= 6) & (lulc_array <= 12), msa_i_other, msa_i)
         return msa_i
+
 
     LOGGER.info('calculate msa_i')
     distance_to_infrastructure_uri = os.path.join(
