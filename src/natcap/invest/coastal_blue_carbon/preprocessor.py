@@ -18,7 +18,8 @@ LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
 
 
 def execute(args):
-    '''
+    """Execute preprocessor.
+
     Args:
         workspace_dir (string): desc
         results_suffix (string): desc
@@ -33,7 +34,7 @@ def execute(args):
             'lulc_lookup_uri': 'path/to/lookup.csv',
             'lulc_snapshot_list': ['path/to/raster1', 'path/to/raster2', ...]
         }
-    '''
+    """
     LOGGER.info('Beginning execution of Coastal Blue Carbon model...')
     vars_dict = _get_inputs(args)
     vars_dict = _preprocess_data(vars_dict)
@@ -44,6 +45,7 @@ def execute(args):
 
 
 def _get_inputs(args):
+    """Get Inputs."""
     LOGGER.info('Getting inputs...')
     vars_dict = dict(args.items())
     try:
@@ -57,7 +59,8 @@ def _get_inputs(args):
 
 
 def _get_derivative_inputs(vars_dict):
-    """
+    """Create variables to help with preprocessing.
+
     Returns:
 
         lulc_lookup_dict
@@ -102,6 +105,8 @@ def _get_derivative_inputs(vars_dict):
 
 
 def _validate_inputs(vars_dict):
+    """Validate inputs.
+    """
     LOGGER.info('Validating inputs...')
     lulc_snapshot_list = vars_dict['lulc_snapshot_list']
     lulc_lookup_dict = vars_dict['lulc_lookup_dict']
@@ -139,6 +144,8 @@ def _validate_inputs(vars_dict):
 
 
 def _preprocess_data(vars_dict):
+    """Preprocess data.
+    """
 
     def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
         raster_t1 = Raster.from_file(raster_t1_uri)
@@ -201,7 +208,7 @@ def _preprocess_data(vars_dict):
 
 
 def _create_transition_table(vars_dict):
-    '''creates a transition table representing the lulc transition effect on
+    '''Create transition table representing the lulc transition effect on
     carbon emissions or sequestration.'''
 
     LOGGER.info('Creating transition table as output...')
@@ -228,6 +235,19 @@ def _create_transition_table(vars_dict):
             lulc_class = code_to_lulc_dict[code]
             row = dict([('lulc-class', lulc_class)] + transition_by_lulc_class_dict[lulc_class].items())
             writer.writerow(row)
+
+    _append_legend(fpath)
+
+
+def _append_legend(fpath):
+    """Append legend to transition csv file."""
+    with open(fpath, 'ab') as csv_file:
+        csv_file.write(",\n,legend")
+        csv_file.write("\n,empty cells indicate that no transitions occur of that type")
+        csv_file.write("\n,disturb (disturbance): change to low- med- or high-impact-disturb")
+        csv_file.write("\n,accum (accumulation)")
+        csv_file.write("\n,NCC (no-carbon-change)")
+
 
 def _create_carbon_pool_initial_table_template(vars_dict):
     lulc_class_list = vars_dict['lulc_class_list']
