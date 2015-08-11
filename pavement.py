@@ -1210,6 +1210,7 @@ def check():
     # (requirement, level, version_getter)
     print "\nChecking python packages"
     requirements = [
+        ('setuptools>=6.1', required, None),
         ('virtualenv>=13.0.0', required, None),
         ('pip>=7.1.0', required, None),
         ('numpy', lib_needed, None),
