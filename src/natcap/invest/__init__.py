@@ -10,11 +10,12 @@ import sys
 import hashlib
 import json
 import distutils.version
-import imp
+
+import natcap.versioner
 
 try:
     import pygeoprocessing
-    REQUIRED_PYGEOPROCESSING_VERSION = '0.3.0a3'
+    REQUIRED_PYGEOPROCESSING_VERSION = '0.3.0a7'
     if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
             distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
         raise Exception(
@@ -24,29 +25,12 @@ try:
 except ImportError:
     pass
 
-# The __version__ attribute MUST be set to 'dev'.  It is changed automatically
-# when the package is built.  The build_attrs attribute is set at the same time,
-# but it instead contains a list of attributes of __init__.py that are related
-# to the build.
-__version__ = 'dev'
-build_data = None
-
-if __version__ == 'dev' and build_data == None:
-    versioning = imp.load_source(
-        'versioning',
-        os.path.join(os.path.dirname(__file__), 'versioning.py'))
-    __version__ = versioning.get_pep440(branch=False)
-    build_data = versioning.build_data()
-    for key, value in sorted(build_data.iteritems()):
-        setattr(sys.modules[__name__], key, value)
-
-    del sys.modules[__name__].key
-    del sys.modules[__name__].value
+__version__ = natcap.versioner.get_version('natcap.invest')
 
 def is_release():
     """Returns a boolean indicating whether this invest release is actually a
     release or if it's a development release."""
-    if __version__[0:3] == 'dev':
+    if 'post' in __version__:
         return False
     return True
 
@@ -62,13 +46,13 @@ def local_dir(source_file):
         # sys._MEIPASS exists, we're in a Pyinstaller build.
         if getattr(sys, '_MEIPASS', False) != False:
             # only one os.path.dirname() results in the path being relative to
-            # the natcap.invest package, when I actually want natcap.invest to
+            # the natcap.invest package, when I actually want natcap/invest to
             # be in the filepath.
-            # with 1 dirname, path is 'reporting/reporting_data'
-            # with 2 dirnames, path is 'natcap.invest/reporting/reporting_data'
-            package_dirname = os.path.dirname(os.path.dirname(__file__))
-            relpath = os.path.relpath(source_dirname, package_dirname)
-            return os.path.join(os.path.dirname(sys.executable), relpath)
+
+            # relpath would be something like <modelname>/<data_file>
+            relpath = os.path.relpath(source_file, os.path.dirname(__file__))
+            pkg_path = os.path.join('natcap', 'invest', relpath)
+            return os.path.join(os.path.dirname(sys.executable), os.path.dirname(pkg_path))
         else:
             # assume that if we're in a frozen build, we're in py2exe.  When in
             # py2exe, the directory structure is maintained, so we just return
