@@ -452,7 +452,8 @@ def load_msa_parameter_table(msa_parameter_table_filename):
             else:
                 value = float(line['Value'])
             msa_dict[line['MSA_type']][value] = float(line['MSA_x'])
-    return msa_dict
+    # cast back to a regular dict so we get keyerrors on non-existant keys
+    return dict(msa_dict)
 
 
 def _calculate_globio_lulc_map(
