@@ -196,7 +196,7 @@ def execute(args):
         smoothed_primary_veg_mask_uri)
 
     primary_veg_smooth_uri = os.path.join(
-        intermediate_dir, 'ffqi%s.tif' % file_suffix)
+        intermediate_dir, 'primary_veg_smooth%s.tif' % file_suffix)
 
     def _primary_veg_smooth_op(
             primary_veg_mask_array, smoothed_primary_veg_mask):
@@ -252,7 +252,7 @@ def execute(args):
 
     #calc_msa_i
     msa_f_values = sorted(msa_f_table)
-    msa_i_other_table = msa_parameter_table['msa_i_other_table']
+    msa_i_other_table = msa_parameter_table['msa_i_other']
     msa_i_primary_table = msa_parameter_table['msa_i_primary']
     msa_i_other_values = sorted(msa_i_other_table)
     msa_i_primary_values = sorted(msa_i_primary_table)
@@ -536,7 +536,6 @@ def _calculate_globio_lulc_map(
         ffqi_uri, gdal.GDT_Float32, forest_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
-
 
     #remap globio lulc to an internal lulc based on ag and intensification
     #proportion these came from the 'expansion_scenarios.py'
