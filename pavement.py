@@ -1210,6 +1210,7 @@ def check():
     # (requirement, level, version_getter)
     print "\nChecking python packages"
     requirements = [
+        ('setuptools>=6.1', required, None),
         ('virtualenv>=13.0.0', required, None),
         ('pip>=7.1.0', required, None),
         ('numpy', lib_needed, None),
@@ -1231,7 +1232,8 @@ def check():
             # the __version__ attribute (below) will never be reached.
             import pywin
             import win32api
-            fixed_file_info = win32api.GetFileVersionInfo(win32api.__file__, '\\')
+            fixed_file_info = win32api.GetFileVersionInfo(
+                win32api.__file__, '\\')
             pywin.__version__ = fixed_file_info['FileVersionLS'] >> 16
         except ImportError:
             pass
@@ -1251,14 +1253,22 @@ def check():
                 ver=pkg.__version__,
                 req=requirement)
         except (pkg_resources.VersionConflict,
-                pkg_resources.DistributionNotFound, ImportError) as conflict:
+                pkg_resources.DistributionNotFound) as conflict:
+            if hasattr(conflict, 'report') is False:
+                # Setuptools introduced report() in v6.1
+                print ('ERROR: Setuptools is very out of date. '
+                       'Upgrade and try again')
+                raise BuildFailure('Setuptools is very out of date. '
+                                   'Upgrade and try again')
+
             if severity == required:
                 print 'ERROR: %s' % conflict.report()
                 errors_found = True
             elif severity == lib_needed:
                 if isinstance(conflict, pkg_resources.DistributionNotFound):
                     print ('WARNING: %s.  This library requires appropriate '
-                           'headers to compile the python package.') % conflict.report()
+                           'headers to compile the python '
+                           'package.') % conflict.report()
                 else:
                     print ('WARNING: %s.  You may need to upgrade your '
                            'development headers along with the python '
@@ -1267,6 +1277,8 @@ def check():
             else:  # severity is 'suggested'
                 print 'WARNING: %s' % conflict.report()
                 warnings_found = True
+        except ImportError:
+            print 'ERROR: Package not found: %s' % requirement
 
     # Build in a check for the package setup the natcap namespace, in case the
     # user has globally installed natcap namespace packages.
