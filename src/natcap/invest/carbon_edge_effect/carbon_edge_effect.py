@@ -81,11 +81,13 @@ def execute(args):
 
     #map aboveground carbon from table to lulc that is not forest
     carbon_map_nodata = -1
-    non_edge_carbon_map_uri = os.path.join(
-        args['workspace_dir'], 'non_edge_carbon_map%s.tif' % file_suffix)
+    reclassified_lulc_carbon_map_uri = os.path.join(
+        args['workspace_dir'],
+        'reclassified_lulc_carbon_map%s.tif' % file_suffix)
+
     pygeoprocessing.reclassify_dataset_uri(
-        args['lulc_uri'], lucode_to_per_pixel_carbon, non_edge_carbon_map_uri,
-        gdal.GDT_Float32, carbon_map_nodata)
+        args['lulc_uri'], lucode_to_per_pixel_carbon,
+        reclassified_lulc_carbon_map_uri, gdal.GDT_Float32, carbon_map_nodata)
 
     #map distance to edge
     forest_mask_uri = os.path.join(
@@ -106,6 +108,18 @@ def execute(args):
     edge_distance_uri = os.path.join(
         args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
     pygeoprocessing.distance_transform_edt(forest_mask_uri, edge_distance_uri)
+
+    surface_carbon_map_uri = os.path.join(
+        args['workspace_dir'],
+        'surface_carbon_map%s.tif' % file_suffix)
+    #calculate easy to read surface carbon map
+    def mask_carbon_reclass_by_forest(carbon_reclass, forest_mask):
+        return numpy.where(forest_mask == 1, carbon_reclass, carbon_map_nodata)
+
+    pygeoprocessing.vectorize_datasets(
+        [reclassified_lulc_carbon_map_uri, forest_mask_uri],
+        mask_carbon_reclass_by_forest, surface_carbon_map_uri, gdal.GDT_Float32,
+        carbon_map_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
     #rasterize: method, theta 1-3 into rasters that can be vectorized
     carbon_model_reproject_uri = os.path.join(
@@ -163,7 +177,8 @@ def execute(args):
         result = numpy.where(method == 2, biomass_2, result)
         result = numpy.where(method == 3, biomass_3, result)
 
-        return numpy.where(nodata_mask, carbon_edge_nodata, result)
+        return numpy.where(nodata_mask, carbon_edge_nodata,
+            result * cell_area_ha) # convert density to mass
 
     edge_carbon_map_uri = os.path.join(
         args['workspace_dir'], 'edge_carbon_map%s.tif' % file_suffix)
@@ -174,7 +189,6 @@ def execute(args):
         edge_carbon_map_uri, gdal.GDT_Float32, carbon_edge_nodata,
         cell_size_in_meters, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
-
 
     #TASK: combine maps into output
     carbon_map_uri = os.path.join(
