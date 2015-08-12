@@ -7,14 +7,26 @@ import gdal
 import pygeoprocessing
 
 def execute(args):
-    """InVEST Carbon Edge Model calculates the carbon due to
+    """InVEST Carbon Edge Model calculates the carbon due to edge effects in
+    forest pixels.
 
-        args['workspace_dir'] -
-        args['results_suffix'] -
-        args['biophysical_table_uri'] -
-        args['lulc_uri'] -
-        args['regression_coefficient_table'] -
-        args['servicesheds_uri'] -
+    Args:
+        args['workspace_dir'] (string): a uri to the directory that will write
+            output and other temporary files during calculation. (required)
+        args['results_suffix'] (string): a string to append to any output file
+            name (optional)
+        args['biophysical_table_uri'] (string): a path to a CSV table that has
+            at least a header for an 'lucode', 'is_forest', and 'c_above'.
+                'lucode': an integer that corresponds to landcover codes in
+                    the raster args['lulc_uri']
+
+                'is_forest': either 0 or 1 indicating whether the landcover type
+                    is forest (1) or not (0)
+
+                'c_above': floating point number indicating the carbon density
+                    per unit area for that landcover type
+        args['lulc_uri'] (string): path to a integer landcover code raster
+
     """
 
     pygeoprocessing.create_directories([args['workspace_dir']])
