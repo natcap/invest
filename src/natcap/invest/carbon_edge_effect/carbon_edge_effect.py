@@ -40,7 +40,12 @@ def execute(args):
                     2,1,n/a
                     16,0,28.1
 
-        args['lulc_uri'] (string): path to a integer landcover code raster"""
+        args['lulc_uri'] (string): path to a integer landcover code raster
+        args['carbon_model_shape_uri'] (string): path to a shapefile that has
+            areas defining carbon edge models.  Has at least the fields
+            'method', 'theta1', 'theta2', 'theta3'
+
+    returns None"""
 
     pygeoprocessing.create_directories([args['workspace_dir']])
     try:
@@ -60,7 +65,7 @@ def execute(args):
     forest_codes = []
     cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         args['lulc_uri']) ** 2 / 10000.0
-    LOGGER.debug("cell area in ha %f" % cell_area_ha)
+    LOGGER.debug("cell area in ha %f", cell_area_ha)
 
     for lucode in biophysical_table:
         try:
@@ -103,6 +108,30 @@ def execute(args):
     pygeoprocessing.distance_transform_edt(forest_mask_uri, edge_distance_uri)
 
     #TASK rasterize points into a raster!
+    carbon_model_reproject_uri = os.path.join(
+        args['workspace_dir'], 'local_carbon_shape.shp')
+
+    lulc_dataset = gdal.Open(args['lulc_uri'])
+    lulc_projection_wkt = lulc_dataset.GetProjection()
+
+    pygeoprocessing.reproject_datasource_uri(
+        args['carbon_model_shape_uri'], lulc_projection_wkt,
+        carbon_model_reproject_uri)
+
+    field_raster_nodata = -1
+    for field_id, datatype in [
+            ('method', gdal.GDT_Byte),
+            ('theta1', gdal.GDT_Float32),
+            ('theta2', gdal.GDT_Float32),
+            ('theta3', gdal.GDT_Float32)]:
+        raster_uri = os.path.join(args['workspace_dir'], field_id + '.tif')
+        pygeoprocessing.new_raster_from_base_uri(
+            args['lulc_uri'], raster_uri, 'GTiff', field_raster_nodata,
+            datatype)
+        pygeoprocessing.rasterize_layer_uri(
+            raster_uri, carbon_model_reproject_uri,
+            option_list=['ATTRIBUTE=%s' % field_id])
+    #rasterize: method, theta 1-3
 
     #TASK: combine maps into output
     carbon_map_uri = os.path.join(

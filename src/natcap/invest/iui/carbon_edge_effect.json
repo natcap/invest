@@ -34,6 +34,18 @@
           "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
         },
         {
+          "id": "carbon_model_shape_uri",
+          "args_id": "carbon_model_shape_uri",
+          "type": "file",
+          "label": "Carbon model shapefile",
+          "defaultValue": "../carbon_edge_effect/core_data/carbon_model.shp",
+          "required": true,
+          "validateAs": {
+            "type": "OGR"
+          },
+          "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' desribing the global carbon edge models"
+        },
+        {
           "id": "lulc_uri",
           "args_id": "lulc_uri",
           "type": "file",
