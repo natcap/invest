@@ -118,16 +118,15 @@ def execute(args):
         args['carbon_model_shape_uri'], lulc_projection_wkt,
         carbon_model_reproject_uri)
 
-    field_raster_nodata = -1
-    for field_id, datatype in [
-            ('method', gdal.GDT_Byte),
-            ('theta1', gdal.GDT_Float32),
-            ('theta2', gdal.GDT_Float32),
-            ('theta3', gdal.GDT_Float32)]:
+    for field_id, datatype, field_raster_nodata in [
+            ('method', gdal.GDT_Byte, 255),
+            ('theta1', gdal.GDT_Float32, -9999),
+            ('theta2', gdal.GDT_Float32, -9999),
+            ('theta3', gdal.GDT_Float32, -9999)]:
         raster_uri = os.path.join(args['workspace_dir'], field_id + '.tif')
         pygeoprocessing.new_raster_from_base_uri(
             args['lulc_uri'], raster_uri, 'GTiff', field_raster_nodata,
-            datatype)
+            datatype, fill_value=field_raster_nodata)
         pygeoprocessing.rasterize_layer_uri(
             raster_uri, carbon_model_reproject_uri,
             option_list=['ATTRIBUTE=%s' % field_id])
