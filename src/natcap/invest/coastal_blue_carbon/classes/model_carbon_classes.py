@@ -116,3 +116,10 @@ class AccumulatedCarbonStock(object):
             return (self.yearly_sequest_biomass_raster + self.yearly_sequest_soil_raster) * years
         else:
             raise ValueError
+
+    def get_total_sequestered_between_years(self, year1, year2):
+        years = year2 - year1
+        if years >= 0:
+            return (self.yearly_sequest_biomass_raster + self.yearly_sequest_soil_raster) * years
+        else:
+            raise ValueError

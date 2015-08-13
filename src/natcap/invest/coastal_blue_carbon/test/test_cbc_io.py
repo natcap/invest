@@ -100,12 +100,22 @@ class TestGetInputs(unittest.TestCase):
             'analysis_year': self.analysis_year,
             'carbon_pool_initial_uri': self.carbon_pool_initial_uri,
             'carbon_pool_transient_uri': self.carbon_pool_transient_uri,
+            'do_economic_analysis': True,
+            'do_price_table': False,
+            'price': '10.0',
+            'interest_rate': '5.0',
+            # 'price_table_uri': 'path/to/price_table',
+            'discount_rate': '5.0'
         }
 
     def test_get_inputs(self):
         vars_dict = io.get_inputs(self.args)
         # pp.pprint(vars_dict)
         # add validation here
+
+    def test_get_discounted_price_dictionary(self):
+        vars_dict = io._get_discounted_price_dict(self.args)
+        pp.pprint(vars_dict['discounted_price_dict'])
 
     def tearDown(self):
         shutil.rmtree(self.workspace)

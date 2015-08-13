@@ -38,6 +38,18 @@ def execute(args):
 
     :param str args['carbon_pool_transient_uri']:
 
+    :param str args['do_economic_analysis']:
+
+    :param bool args['do_price_table']:
+
+    :param bool args['price']:
+
+    :param bool args['interest_rate']:
+
+    :param bool args['price_table_uri']:
+
+    :param bool args['discount_rate']:
+
     Example Args::
 
         args = {
@@ -49,7 +61,13 @@ def execute(args):
             'lulc_snapshot_years_list': [2000, 2005, ...],
             'analysis_year': 2100,
             'carbon_pool_initial_uri': 'path/to/carbon_pool_initial_uri',
-            'carbon_pool_transient_uri': 'path/to/carbon_pool_transient_uri'
+            'carbon_pool_transient_uri': 'path/to/carbon_pool_transient_uri',
+            'do_economic_analysis': '<boolean>',
+            'do_price_table': '<boolean>',
+            'price': '<float>',
+            'interest_rate': '<float>',
+            'price_table_uri': 'path/to/price_table',
+            'discount_rate': '<float>'
         }
     """
     # Get Inputs

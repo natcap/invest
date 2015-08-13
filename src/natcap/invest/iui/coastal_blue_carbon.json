@@ -126,6 +126,84 @@
       ],
       "linkText": "Add Another",
       "helpText": "LULC snapshot years must be entered in chronological order."
+    },
+    {
+      "id": "do_economic_analysis",
+      "label": "Calculate Net Present Value of Sequestered Carbon",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "economics_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "do_price_table",
+              "args_id": "do_price_table",
+              "type": "checkbox",
+              "label": "Use Price Table",
+              "required": true,
+              "defaultValue": false,
+              "helpText": ""
+            },
+            {
+              "id": "price",
+              "args_id": "price",
+              "disabledBy": "do_price_table",
+              "type": "text",
+              "label": "Price",
+              "defaultValue": "10.0",
+              "required": true,
+              "validateAs": {
+                "type": "number"
+              },
+              "dataType": "float",
+              "helpText": ""
+            },
+            {
+              "id": "interest_rate",
+              "args_id": "interest_rate",
+              "disabledBy": "do_price_table",
+              "type": "text",
+              "label": "Interest Rate (%)",
+              "defaultValue": "5.0",
+              "required": true,
+              "validateAs": {
+                "type": "number"
+              },
+              "dataType": "float",
+              "helpText": ""
+            },
+            {
+              "id": "price_table_uri",
+              "args_id": "price_table_uri",
+              "enabledBy": "do_price_table",
+              "type": "file",
+              "label": "Price Table (CSV)",
+              "defaultValue": "../CoastalBlueCarbon/input/price_table.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV"
+              },
+              "helpText": "A CSV table containing information related to the earnings a producer receives for selling a given crop and the expenses involved with producing that crop.<br><br>Please consult the User Guide to learn more about how the table should be formatted."
+            },
+            {
+              "id": "discount_rate",
+              "args_id": "discount_rate",
+              "type": "text",
+              "label": "Discount Rate (%)",
+              "defaultValue": "5.0",
+              "required": true,
+              "validateAs": {
+                "type": "number"
+              },
+              "dataType": "float",
+              "helpText": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }

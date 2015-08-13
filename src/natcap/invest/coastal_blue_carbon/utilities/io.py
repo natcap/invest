@@ -110,6 +110,9 @@ def get_inputs(args):
         l.append(Raster.from_file(i).set_nodata(NODATA_INT).uri)
     vars_dict['lulc_snapshot_list'] = l
 
+    # Fetch discounted_price_dict
+    vars_dict['discounted_price_dict'] = _get_discounted_price_dict(vars_dict)
+
     return vars_dict
 
 
@@ -147,6 +150,30 @@ def _create_transient_dict(args):
         carbon_pool_transient_dict[(lulc, pool)] = dict(zip(header, line))
 
     return carbon_pool_transient_dict
+
+
+def _get_discounted_price_dict(vars_dict):
+    """Return dictionary of discounted prices for each year."""
+    discounted_price_dict = {}
+    discount_rate = vars_dict['discount_rate']
+    if vars_dict['do_price_table']:
+        price_dict = pygeo.geoprocessing.get_lookup_from_table(
+            vars_dict['price_table_uri'])
+        # check all years in dict
+
+        for (year, price) in price_dict.items():
+            discounted_price_dict[year] = price
+    else:
+        price = None
+        interest_rate = None
+        first_year = vars_dict['lulc_snapshot_years_list'][0]
+        final_year = vars_dict['lulc_snapshot_years_list'][-1]
+        if vars_dict['analysis_year'] != None:
+            final_year = vars_dict['analysis_year']
+        for year in range(first_year, final_year):
+            pass
+
+    return discounted_price_dict
 
 
 def write_csv(filepath, l):

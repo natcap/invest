@@ -1,5 +1,6 @@
 """Affine Class."""
 
+
 class Affine(object):
 
     """Affine class."""

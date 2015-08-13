@@ -287,6 +287,13 @@ class TestCBCModel(unittest.TestCase):
         # for i in r.net_sequestration_raster_list:
         #     print i.get_band(1)[0:2,0:2]
 
+    def test_economic_analysis(self):
+        vars_dict = io.get_inputs(self.args)
+        r = CBCModel(vars_dict)
+        r.initialize_stock()
+        r.run_transient_analysis()
+        pass
+
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
 

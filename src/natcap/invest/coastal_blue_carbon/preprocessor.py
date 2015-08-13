@@ -219,12 +219,16 @@ def _create_transition_table(vars_dict):
     code_list.sort()
     lulc_class_list_sorted = [code_to_lulc_dict[code] for code in code_list]
 
-    transition_by_lulc_class_dict = dict([(lulc_class, {}) for lulc_class in lulc_class_list])
+    transition_by_lulc_class_dict = dict(
+        [(lulc_class, {}) for lulc_class in lulc_class_list])
 
     for transition in transition_matrix_dict.keys():
-        top_dict = transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]]
-        top_dict[code_to_lulc_dict[transition[1]]] = transition_matrix_dict[transition]
-        transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = top_dict
+        top_dict = transition_by_lulc_class_dict[
+            code_to_lulc_dict[transition[0]]]
+        top_dict[code_to_lulc_dict[transition[1]]] = transition_matrix_dict[
+            transition]
+        transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = \
+            top_dict
 
     fpath = os.path.join(vars_dict['output_dir'], 'transitions.csv')
     with open(fpath, 'wb') as csv_file:
