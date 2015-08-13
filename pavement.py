@@ -1311,7 +1311,7 @@ def check():
                 warnings_found = True
             else:  # severity is 'suggested'
                 print '{warning} {report}'.format(warning=WARNING,
-                                            report=conflict.report())
+                                                  report=conflict.report())
                 warnings_found = True
         except ImportError:
             print '{error} Package not found: {req}'.format(error=ERROR,
@@ -1344,7 +1344,8 @@ def check():
             try:
                 version = module.__version__
             except AttributeError:
-                version = pkg_resources.require('natcap.%s' % modname)[0].version
+                packagename = 'natcap.%s' % modname
+                version = pkg_resources.require(packagename)[0].version
 
             is_egg = reduce(
                 lambda x, y: x or y,
@@ -1357,14 +1358,15 @@ def check():
 
             if not is_egg:
                 noneggs.append(modname)
-                print '{warning} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-                    warning=WARNING, mod=modname, ver=version, dir=module_path)
+                print '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
+                    warn=WARNING, mod=modname, ver=version, dir=module_path)
             else:
                 print "natcap.{mod}=={ver} installed as egg ({dir})".format(
                     mod=modname, ver=version, dir=module_path)
 
         if len(noneggs) > 0:
-            pip_install_template = "    pip install --egg --no-binary :all: natcap.%s"
+            pip_inst_template = \
+                "    pip install --egg --no-binary :all: natcap.%s"
             namespace_msg = (
                 "\n"
                 "Natcap namespace issues:\n"
@@ -1374,7 +1376,7 @@ def check():
                 "with pyinstaller, but should work well for development.\n"
                 "By contrast, eggs should work well for development.\n"
                 "For best results, install these packages as eggs like so:\n")
-            namespace_msg += "\n".join([pip_install_template % n for n in noneggs])
+            namespace_msg += "\n".join([pip_inst_template % n for n in noneggs])
             print namespace_msg
             warnings_found = True
     except ImportError:
@@ -1395,7 +1397,8 @@ def check():
             print 'No natcap installations found!  Excellent :)'
 
     if errors_found:
-        raise BuildFailure('Programs missing and/or package requirements not met')
+        raise BuildFailure((ERROR + ' Programs missing and/or package '
+                            'requirements not met'))
     elif warnings_found:
         print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
