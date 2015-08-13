@@ -572,9 +572,9 @@ def after_install(options, home_dir):
         requirements_files.append(options.env.requirements)
 
     # extra parameter strings needed for installing certain packages
-    # Initially set up for special installation of natcap.versioner.
-    # Leaving in place in case future pkgs need special params.
+    # Always install natcap.versioner to the env over whatever else is there.
     pkg_pip_params = {
+        'natcap.versioner': ['-I']
     }
     if options.env.dev is True:
         # I only want to install natcap namespace packages as flat wheels if
@@ -582,7 +582,7 @@ def after_install(options, home_dir):
         # Pyinstaller seems to work best with namespace packages that are all
         # in a single source tree, though python will happily import multiple
         # eggs from different places.
-        pkg_pip_params['natcap.versioner'] = ['--egg', '--no-use-wheel']
+        pkg_pip_params['natcap.versioner'] += ['--egg', '--no-use-wheel']
 
     def _format_params(param_list):
         """
