@@ -1362,12 +1362,26 @@ def check():
             print namespace_msg
             warnings_found = True
     except ImportError:
-        print 'No natcap installations found!  Excellent :)'
+        setup_file = os.path.join(os.path.dirname(__file__), 'setup.py')
+        setup_uses_versioner = False
+        with open(setup_file) as setup:
+            for line in setup:
+                if 'import natcap.versioner' in line:
+                    setup_uses_versioner = True
+                    break
+
+        if setup_uses_versioner is True:
+            warnings_found = True
+            print ('WARNING: natcap.versioner required by setup.py but not '
+                   'installed.  To fix:')
+            print '    pip install --egg --no-binary :all: natcap.versioner'
+        else:
+            print 'No natcap installations found!  Excellent :)'
 
     if errors_found:
         raise BuildFailure('Programs missing and/or package requirements not met')
     elif warnings_found:
-        print "Warnings found; Builds may not work as expected"
+        print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
         print "All's well."
 
