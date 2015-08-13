@@ -1190,6 +1190,13 @@ def check():
     class FoundEXE(Exception):
         pass
 
+    ERROR = '\033[91mERROR:\033[0m'
+    WARNING = '\033[93mWARNING:\033[0m'
+    OK = '\033[92mOK\033[0m'
+
+    def bold(message):
+        return "\033[1m%s\033[0m" % message
+
     # verify required programs exist
     errors_found = False
     programs = [
@@ -1198,7 +1205,7 @@ def check():
         ('make', 'documentation'),
         ('pdflatex', 'documentation'),
     ]
-    print "Checking binaries"
+    print bold("Checking binaries")
     for program, build_steps in programs:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
 
@@ -1208,7 +1215,8 @@ def check():
         fpath, fname = os.path.split(program)
         if fpath:
             if not is_exe(program):
-                print "ERROR: executable not found: %s" % program
+                print "{error} executable not found: {program}".format(
+                    error=ERROR, program=program)
                 errors_found = True
         else:
             try:
@@ -1221,8 +1229,8 @@ def check():
                 print "Found %-11s: %s" % (program, exe_file)
                 continue
             else:
-                print "ERROR: {exe} not found. Required for {step}".format(
-                    exe=program, step=build_steps)
+                print "{error} {exe} not found. Required for {step}".format(
+                    error=ERROR, exe=program, step=build_steps)
                 errors_found = True
 
     required = 'required'
@@ -1230,7 +1238,7 @@ def check():
     lib_needed = 'lib_needed'
 
     # (requirement, level, version_getter)
-    print "\nChecking python packages"
+    print bold("\nChecking python packages")
     requirements = [
         ('setuptools>=6.1', required, None),
         ('virtualenv>=13.0.0', required, None),
@@ -1270,7 +1278,8 @@ def check():
                 import_name = pkg_req.project_name
 
             pkg = __import__(import_name)
-            print "Python package OK: {pkg} {ver} (meets {req})".format(
+            print "Python package {ok}: {pkg} {ver} (meets {req})".format(
+                ok=OK,
                 pkg=pkg_req.project_name,
                 ver=pkg.__version__,
                 req=requirement)
@@ -1278,29 +1287,35 @@ def check():
                 pkg_resources.DistributionNotFound) as conflict:
             if hasattr(conflict, 'report') is False:
                 # Setuptools introduced report() in v6.1
-                print ('ERROR: Setuptools is very out of date. '
-                       'Upgrade and try again')
+                print ('{error} Setuptools is very out of date. '
+                       'Upgrade and try again'.format(error=ERROR))
                 raise BuildFailure('Setuptools is very out of date. '
                                    'Upgrade and try again')
 
             if severity == required:
-                print 'ERROR: %s' % conflict.report()
+                print '{error} {report}'.format(error=ERROR,
+                                                report=conflict.report())
                 errors_found = True
             elif severity == lib_needed:
                 if isinstance(conflict, pkg_resources.DistributionNotFound):
-                    print ('WARNING: %s.  This library requires appropriate '
-                           'headers to compile the python '
-                           'package.') % conflict.report()
+                    print (
+                        '{warning} {report}  This library requires appropriate '
+                        'headers to compile the python '
+                        'package.').format(warning=WARNING,
+                                           report=conflict.report())
                 else:
-                    print ('WARNING: %s.  You may need to upgrade your '
+                    print ('{warning} {report}.  You may need to upgrade your '
                            'development headers along with the python '
-                           'package.') % conflict.report()
+                           'package.').format(warning=WARNING,
+                                              report=conflict.report())
                 warnings_found = True
             else:  # severity is 'suggested'
-                print 'WARNING: %s' % conflict.report()
+                print '{warning} {report}'.format(warning=WARNING,
+                                            report=conflict.report())
                 warnings_found = True
         except ImportError:
-            print 'ERROR: Package not found: %s' % requirement
+            print '{error} Package not found: {req}'.format(error=ERROR,
+                                                            req=requirement)
 
     # Build in a check for the package setup the natcap namespace, in case the
     # user has globally installed natcap namespace packages.
@@ -1319,7 +1334,8 @@ def check():
     #  * If a package is installed to the global site-packages, it better be an
     #    egg.
     try:
-        print "\nChecking natcap namespace"
+        print ""
+        print bold("Checking natcap namespace")
         import natcap
         noneggs = []
 
@@ -1341,8 +1357,8 @@ def check():
 
             if not is_egg:
                 noneggs.append(modname)
-                print 'WARNING: natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-                    mod=modname, ver=version, dir=module_path)
+                print '{warning} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
+                    warning=WARNING, mod=modname, ver=version, dir=module_path)
             else:
                 print "natcap.{mod}=={ver} installed as egg ({dir})".format(
                     mod=modname, ver=version, dir=module_path)
@@ -1372,8 +1388,8 @@ def check():
 
         if setup_uses_versioner is True:
             warnings_found = True
-            print ('WARNING: natcap.versioner required by setup.py but not '
-                   'installed.  To fix:')
+            print ('{warning} natcap.versioner required by setup.py but not '
+                   'installed.  To fix:').format(warning=WARNING)
             print '    pip install --egg --no-binary :all: natcap.versioner'
         else:
             print 'No natcap installations found!  Excellent :)'
