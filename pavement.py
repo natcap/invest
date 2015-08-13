@@ -696,18 +696,32 @@ def fetch(args):
     Clone repositories the correct locations.
     """
 
+    help_string = """
+Usage: paver fetch [--help] REPO_1 [-r REV] REPO_2 [-r REV] ... REPO_N [-r REV]
+
+Positional arguments:
+    REPO_N          The path (or a part of the path) to a repository tracked by
+                    this infrastructure.
+    -r --rev REV    The revision to update this repo to.
+
+Options:
+    -h --help       Display this help and exit.
+
+    """
+
     # figure out which repos/revs we're hoping to update.
     # None is our internal, temp keyword representing the LATEST possible
     # rev.
     user_repo_revs = {}  # repo -> version
-    repo_paths = map(lambda x: x.local_path, REPOS)
+    repo_paths = sorted(map(lambda x: x.local_path, REPOS))
     args_queue = collections.deque(args[:])
 
+    rev_flags = ['-r', '--rev']
     while len(args_queue) > 0:
         current_arg = args_queue.popleft()
 
         # If the user provides repo revisions, it MUST be a specific repo.
-        if current_arg in repo_paths:
+        if current_arg in repo_paths or current_arg in rev_flags:
             # the user might provide a revision.
             # It's a rev if it's not a repo.
             try:
@@ -724,12 +738,20 @@ def fetch(args):
                 user_repo_revs[current_arg] = None
                 args_queue.appendleft(possible_rev)
                 continue
-            elif possible_rev in ['-r', '--rev']:
+            elif possible_rev in rev_flags:
                 requested_rev = args_queue.popleft()
                 user_repo_revs[current_arg] = requested_rev
-            else:
-                print "ERROR: unclear arg %s" % possible_rev
-                return
+        elif current_arg.startswith('-'):
+            if current_arg not in ['--help', '-h']:
+                print 'ERROR: Unknown argument %s' % current_arg
+            print help_string
+            return
+        else:
+            print "ERROR: unknown repo %s" % current_arg
+            print "Allowed repos: \n    %s" % ',\n    '.join(repo_paths)
+            print "Shared substrings are also allowed for grouping together"
+            print "several repositories"
+            return
 
     # determine which groupings the user wants to operate on.
     # example: `src` would represent all repos under src/
