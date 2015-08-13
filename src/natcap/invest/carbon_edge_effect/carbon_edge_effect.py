@@ -90,7 +90,7 @@ def execute(args):
         reclassified_lulc_carbon_map_uri, gdal.GDT_Float32, carbon_map_nodata)
 
     #map distance to edge
-    forest_mask_uri = os.path.join(
+    non_forest_mask_uri = os.path.join(
         args['workspace_dir'], 'non_forest_mask%s.tif' % file_suffix)
     forest_mask_nodata = 255
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(args['lulc_uri'])
@@ -102,23 +102,27 @@ def execute(args):
         nodata_mask = lulc_array == lulc_nodata
         return numpy.where(nodata_mask, forest_mask_nodata, forest_mask)
     pygeoprocessing.vectorize_datasets(
-        [args['lulc_uri']], mask_non_forest_op, forest_mask_uri, gdal.GDT_Byte,
-        forest_mask_nodata, out_pixel_size, "intersection", vectorize_op=False)
+        [args['lulc_uri']], mask_non_forest_op, non_forest_mask_uri,
+        gdal.GDT_Byte, forest_mask_nodata, out_pixel_size, "intersection",
+        vectorize_op=False)
 
     edge_distance_uri = os.path.join(
         args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
-    pygeoprocessing.distance_transform_edt(forest_mask_uri, edge_distance_uri)
+    pygeoprocessing.distance_transform_edt(
+        non_forest_mask_uri, edge_distance_uri)
 
-    surface_carbon_map_uri = os.path.join(
+    non_forest_carbon_stocks_uri = os.path.join(
         args['workspace_dir'],
-        'surface_carbon_map%s.tif' % file_suffix)
+        'non_forest_carbon_stocks%s.tif' % file_suffix)
     #calculate easy to read surface carbon map
-    def mask_carbon_reclass_by_forest(carbon_reclass, forest_mask):
-        return numpy.where(forest_mask == 1, carbon_reclass, carbon_map_nodata)
+    def non_forest_carbon_op(carbon_reclass, non_forest_mask):
+        """Adds carbon values everywhere that's not forest"""
+        return numpy.where(
+            non_forest_mask == 1, carbon_reclass, carbon_map_nodata)
 
     pygeoprocessing.vectorize_datasets(
-        [reclassified_lulc_carbon_map_uri, forest_mask_uri],
-        mask_carbon_reclass_by_forest, surface_carbon_map_uri, gdal.GDT_Float32,
+        [reclassified_lulc_carbon_map_uri, non_forest_mask_uri],
+        non_forest_carbon_op, non_forest_carbon_stocks_uri, gdal.GDT_Float32,
         carbon_map_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
     #rasterize: method, theta 1-3 into rasters that can be vectorized
@@ -151,8 +155,13 @@ def execute(args):
     carbon_edge_nodata = -9999.0
     cell_size_in_meters = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
+    edge_distance_nodata = pygeoprocessing.get_nodata_from_uri(
+        edge_distance_uri)
+    method_nodata = pygeoprocessing.get_nodata_from_uri(
+        model_raster_uris['method'])
+
     def carbon_edge_op(
-            edge_distance, method, theta_1, theta_2, theta_3, forest_mask):
+            edge_distance, method, theta_1, theta_2, theta_3, non_forest_mask):
         """calculate carbon model
         Args:
 
@@ -161,10 +170,12 @@ def execute(args):
                 model regression types
             theta_{1,2,3} (numpy.array): parameters to regression that have
                 different meaning depending on which method
-            forest_mask (numpy.array): used to determine where this model is
-                valid so we can mask out the rest as nodata
+            non_forest_mask (numpy.array): 1 everywhere that is not forest, 0
+                for forest.
             """
-        nodata_mask = (forest_mask) | (edge_distance == 0)
+        nodata_mask = (
+            (non_forest_mask == 1) | (edge_distance == 0) |
+            (edge_distance == edge_distance_nodata) | (method == method_nodata))
         edge_distance_km = edge_distance * (cell_size_in_meters / 1000.0)
         #asymtotic model
         biomass_1 = theta_1 - theta_2 * numpy.exp(-theta_3 * edge_distance_km)
@@ -185,7 +196,7 @@ def execute(args):
     pygeoprocessing.vectorize_datasets(
         [edge_distance_uri, model_raster_uris['method'],
          model_raster_uris['theta1'], model_raster_uris['theta2'],
-         model_raster_uris['theta3'], forest_mask_uri], carbon_edge_op,
+         model_raster_uris['theta3'], non_forest_mask_uri], carbon_edge_op,
         edge_carbon_map_uri, gdal.GDT_Float32, carbon_edge_nodata,
         cell_size_in_meters, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
@@ -194,5 +205,15 @@ def execute(args):
     carbon_map_uri = os.path.join(
         args['workspace_dir'], 'carbon_map%s.tif' % file_suffix)
 
+    def combine_carbon_maps(non_forest_carbon, forest_carbon):
+        return numpy.where(
+            forest_carbon == carbon_edge_nodata, non_forest_carbon,
+            forest_carbon)
+
+    pygeoprocessing.vectorize_datasets(
+        [non_forest_carbon_stocks_uri, edge_carbon_map_uri],
+        combine_carbon_maps, carbon_map_uri, gdal.GDT_Float32,
+        carbon_map_nodata, cell_size_in_meters, 'intersection',
+        vectorize_op=False, datasets_are_pre_aligned=True)
 
     #TASK: generate report (optional) by serviceshed if they exist
