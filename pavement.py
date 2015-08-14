@@ -1407,37 +1407,50 @@ def check(options):
                 print namespace_msg
                 warnings_found = True
         elif len(noneggs) == 0 and len(eggs) == 0:
-            print yellow('WARNING: namespace artifacts found.  Attempting to repair')
-            # TODO: list out the files that need to be removed from site-packages.
+            base_warning = 'WARNING: namespace artifacts found.'
             if options.check.fix_namespace is True:
-                namespace_pkgs_cleaned = set([])
-                for site_pkgs in site.getsitepackages():
-                    for namespace_item in glob.glob(os.path.join(
-                            site_pkgs, '*natcap*')):
-                        print yellow('Removing %s' % namespace_item)
+                base_warning += 'Attempting to repair'
+            print yellow(base_warning)
 
-                        # Namespace items are usually formatted like this:
-                        # natcap.subpackage-version.something OR
-                        # natcap.subpackage-version-something
-                        # Track the package so we can print it to the user.
-                        namespace_pkgs_cleaned.add(os.path.basename(namespace_item).split('-')[0])
-                        if os.path.isdir(namespace_item):
-                            shutil.rmtree(namespace_item)
-                        else:
-                            os.remove(namespace_item)
-                for ns_item in sorted(namespace_pkgs_cleaned):
+            # locate the problematic namespace artifacts.
+            namespace_artifacts = []
+            namespace_packages_with_artifacts = set([])
+            for site_pkgs in site.getsitepackages():
+                for namespace_item in glob.glob(os.path.join(
+                        site_pkgs, '*natcap*')):
+                    namespace_artifacts.append(namespace_item)
+
+                    # Namespace items are usually formatted like this:
+                    # natcap.subpackage-version.something OR
+                    # natcap.subpackage-version-something
+                    # Track the package so we can print it to the user.
+                    namespace_packages_with_artifacts.add(
+                        os.path.basename(namespace_item).split('-')[0])
+
+            if options.check.fix_namespace is True:
+                for namespace_artifact in namespace_artifacts:
+                    print yellow('Removing %s' % namespace_artifact)
+
+                    if os.path.isdir(namespace_artifact):
+                        shutil.rmtree(namespace_artifact)
+                    else:
+                        os.remove(namespace_artifact)
+                for ns_item in sorted(namespace_packages_with_artifacts):
                     print yellow('Namespace artifacts from %s cleaned up; you '
                                  'may need to reinstall') % ns_item
             else:
-                print ('{warning} The natcap namespace is importable, but the '
+                warnings_found = True
+                warn = ('{warning} The natcap namespace is importable, but the '
                         'source could not be found.\n'
-                        'This should not happen; pyinstaller builds will break for sure.\n'
-                        'Check your global site-packages for: \n'
-                        '  * .pth files with the name "natcap.<something>.nspkg.pth"\n'
-                        '  * .dist-info directories with the name "natcap.something'
-                        '.dist-info/\n'
-                        '  * All natcap namespace packages are indeed installed '
-                        ' properly').format(warning=WARNING)
+                        'This can happen with incomplete uninstallations. '
+                        'These artifacts were found\n'
+                        'and should be removed:\n').format(warning=WARNING)
+                for artifact in namespace_artifacts:
+                    warn += ' * %s\n' % artifact
+                warn += ("\nUse 'paver check --fix-namespace' to automatically "
+                         "remove these files")
+                print warn
+
     except ImportError:
         setup_file = os.path.join(os.path.dirname(__file__), 'setup.py')
         setup_uses_versioner = False
