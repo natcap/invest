@@ -1202,13 +1202,15 @@ WARNING = yellow('WARNING:')
 OK = green('OK')
 
 
-def _import_namespace_pkg(modname):
+def _import_namespace_pkg(modname, print_msg=True):
     """
     Import a package within the natcap namespace and print helpful
     debug messages as packages are discovered.
 
     Parameters:
         modname (string): The natcap subpackage name.
+        print_msg=True (bool): Whether to print messages about the import
+            state.
 
     Returns:
         Either 'egg' or 'dir' if the package is importable.
@@ -1234,12 +1236,15 @@ def _import_namespace_pkg(modname):
 
     if not is_egg:
         return_type = 'dir'
-        print '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
+        message = '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
             warn=WARNING, mod=modname, ver=version, dir=module_path)
     else:
         return_type = 'egg'
-        print "natcap.{mod}=={ver} installed as egg ({dir})".format(
+        message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
             mod=modname, ver=version, dir=module_path)
+
+    if print_msg is True:
+        print message
 
     return (module, return_type)
 
@@ -1400,6 +1405,8 @@ def check(options):
     # SO:
     #  * If a package is installed to the global site-packages, it better be an
     #    egg.
+    noneggs = []
+    eggs = []
     try:
         print ""
         print bold("Checking natcap namespace")
@@ -1408,8 +1415,6 @@ def check(options):
                          ' encountered')
 
         import natcap
-        noneggs = []
-        eggs = []
 
         for importer, modname, ispkg in pkgutil.iter_modules(natcap.__path__):
             module, pkg_type = _import_namespace_pkg(modname)
@@ -1489,31 +1494,43 @@ def check(options):
                 print warn
 
     except ImportError:
-        setup_file = os.path.join(os.path.dirname(__file__), 'setup.py')
-        setup_uses_versioner = False
-        with open(setup_file) as setup:
-            for line in setup:
-                if 'import natcap.versioner' in line:
-                    setup_uses_versioner = True
-                    break
+        print 'No natcap installations found.'
 
-        if setup_uses_versioner is True:
+
+    # Check if we need to have versioner installed for setup.py
+    setup_file = os.path.join(os.path.dirname(__file__), 'setup.py')
+    setup_uses_versioner = False
+    with open(setup_file) as setup:
+        for line in setup:
+            if 'import natcap.versioner' in line:
+                setup_uses_versioner = True
+                break
+
+    if setup_uses_versioner is True:
+        try:
+            # If 'versioner' is in eggs, we've already proven that we can
+            # import it, so no need to import again.
+            if 'versioner' not in eggs:
+                _, _ = _import_namespace_pkg('versioner')
+        except ImportError:
             if options.check.fix_namespace is True:
                 print yellow('natcap.versioner required by setup.py but '
                                 'not found.  Installing.')
                 sh('pip install --egg --no-binary :all: natcap.versioner > natcap.versioner.log')
                 try:
-                    _, _ = _import_namespace_pkg('versioner')
+                    # have to import natcap.versioner in a separate process to
+                    # check the import.
+                    sh('python -c "import natcap.versioner"')
                     print green('natcap.versioner successfully installed as egg')
                 except ImportError as error:
+                    print error
                     print red('Error when installing natcap.versioner')
             else:
                 warnings_found = True
                 print ('{warning} natcap.versioner required by setup.py but not '
                     'installed.  To fix:').format(warning=WARNING)
                 print '    pip install --egg --no-binary :all: natcap.versioner'
-        else:
-            print green('No natcap installations found!  Excellent :)')
+                print 'Or use paver check --fix-namespace'
 
     if errors_found:
         raise BuildFailure((ERROR + ' Programs missing and/or package '
