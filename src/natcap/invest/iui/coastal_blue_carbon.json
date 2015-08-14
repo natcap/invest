@@ -183,7 +183,7 @@
               "enabledBy": "do_price_table",
               "type": "file",
               "label": "Price Table (CSV)",
-              "defaultValue": "../CoastalBlueCarbon/input/price_table.csv",
+              "defaultValue": "../CoastalBlueCarbon/inputs/price_table.csv",
               "required": true,
               "validateAs": {
                 "type": "CSV"
