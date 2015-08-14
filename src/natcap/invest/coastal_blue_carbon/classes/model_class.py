@@ -38,7 +38,7 @@ class CBCModel(object):
             vars_dict['lulc_snapshot_list'].append(last_lulc_snapshot_url)
         self.num_transitions = self.num_snapshots - 1
         self.do_economic_analysis = vars_dict['do_economic_analysis']
-        self.discounted_price_dict = vars_dict['discounted_price_dict']
+        self.yearly_carbon_price_dict = vars_dict['yearly_carbon_price_dict']
 
         self.lulc_snapshot_list = vars_dict['lulc_snapshot_list']
         self.lulc_snapshot_years_list = vars_dict['lulc_snapshot_years_list']
@@ -58,8 +58,8 @@ class CBCModel(object):
         self.emissions_raster_list = range(0, self.num_transitions)
         self.net_sequestration_raster_list = range(0, self.num_transitions)
 
-        self.npv_raster = self.lulc_snapshot_list[
-            0].zeros().set_datatype_and_nodata(gdal.GDT_Float32, NODATA_FLOAT)
+        self.npv_raster = Raster.from_file(self.lulc_snapshot_list[
+            0]).zeros().set_datatype_and_nodata(gdal.GDT_Float32, NODATA_FLOAT)
 
     def __str__(self):
         string =  '\nCBCModelRun Class -----'
@@ -150,13 +150,22 @@ class CBCModel(object):
                 self._update_npv_raster(idx)
         LOGGER.info("...transient analysis complete.")
 
+    def _get_end_year(self, idx):
+        """Get end year of next transition."""
+        if (idx == self.num_lulc_maps - 1):
+            if self.vars_dict['analysis_year'] != '':
+                end_year = self.vars_dict['analysis_year']
+            else:
+                end_year = self.lulc_snapshot_years_list[idx] + 1
+        else:
+            end_year = self.lulc_snapshot_years_list[idx+1]
+
+        return end_year
+
     def _compute_transient_step(self, idx):
         LOGGER.info("Computing transient step %i..." % idx)
         start_year = self.lulc_snapshot_years_list[idx]
-        if idx != self.num_lulc_maps-1:
-            end_year = self.lulc_snapshot_years_list[idx+1]
-        else:
-            end_year = self.vars_dict['analysis_year']
+        end_year = self._get_end_year(idx)
 
         self._update_transient_carbon_reclass_dicts(idx)
         self._update_accumulated_carbon_object_list(idx)
@@ -286,7 +295,7 @@ class CBCModel(object):
                             next_lulc])] = 1
             return h
 
-        LOGGER.info("Updaing carbon reclass dictionaries...")
+        LOGGER.info("Updating carbon reclass dictionaries...")
         next_raster = Raster.from_file(
             self.vars_dict['lulc_snapshot_list'][idx+1])
 
@@ -459,17 +468,22 @@ class CBCModel(object):
         LOGGER.info("...disturbed carbon stock update complete.")
 
     def _update_npv_raster(self, idx):
-        initial_year = self.lulc_snapshot_years_list[idx]
-        final_year = self.lulc_snapshot_years_list[idx+1]
-        for year in range(initial_year, final_year):
+        LOGGER.info("Updating NPV raster...")
+        start_year = self.lulc_snapshot_years_list[idx]
+        end_year = self._get_end_year(idx)
+
+        for year in range(start_year, end_year):
+            LOGGER.info("Computing net present value for year %s" % year)
             net_sequestered_raster = self._compute_net_sequestration(idx, year)
-            npv_raster = net_sequestered_raster * self.discounted_price_dict[year]
+            npv_raster = net_sequestered_raster * \
+                self.yearly_carbon_price_dict[year]
             self.npv_raster += npv_raster
+        LOGGER.info("...NPV raster updated.")
 
     def _compute_net_sequestration(self, idx, year):
         # Sequestration for a given year
         a = self.accumulated_carbon_stock_object_list[idx]
-        sequestered_over_time_raster = a.get_total_sequestered_between_years(
+        sequestered_raster = a.get_total_sequestered_between_years(
             year, year+1)
 
         # Emissions for a given year
@@ -480,10 +494,9 @@ class CBCModel(object):
                 year, year+1)
 
         # Net Sequestration for a given year
-        net_sequestered_raster = sequestered_over_time_raster - \
-            emitted_over_time_raster
+        net_sequestered_raster = sequestered_raster - emitted_raster
 
-        return net_sequestered_over_time_raster
+        return net_sequestered_raster
 
     def save_rasters(self):
         LOGGER.info("Saving rasters...")
@@ -515,6 +528,12 @@ class CBCModel(object):
             r = self.net_sequestration_raster_list[i]
             filename = 'net_carbon_sequestration_between_%s_and_%s.tif' % (
                 years_list[i], years_list[i+1])
+            r.save_raster(os.path.join(
+                self.vars_dict['outputs_dir'], filename))
+        # Net Present Value
+        if self.do_economic_analysis:
+            r = self.npv_raster
+            filename = 'net_present_value.tif'
             r.save_raster(os.path.join(
                 self.vars_dict['outputs_dir'], filename))
         LOGGER.info("...rasters saved.")

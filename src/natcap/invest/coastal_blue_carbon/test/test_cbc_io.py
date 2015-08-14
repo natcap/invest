@@ -46,7 +46,8 @@ class TestGetInputs(unittest.TestCase):
             ['man-made', 'accum', '', 'accum', ''],
             ['marsh', '', '', '', 'accum'],
             ['mangrove', '', '', '', '']]
-        self.lulc_transition_uri = os.path.join(self.workspace, 'transition.csv')
+        self.lulc_transition_uri = os.path.join(
+            self.workspace, 'transition.csv')
         io.write_csv(self.lulc_transition_uri, table)
 
         shape = (2, 2)  # (2, 2)  #(1889, 1325)
@@ -54,7 +55,8 @@ class TestGetInputs(unittest.TestCase):
         proj = 26910
         datatype = gdal.GDT_Int32
         nodata_val = 255
-        aoi_int_factory = RasterFactory(proj, datatype, nodata_val, shape[0], shape[1], affine=affine)
+        aoi_int_factory = RasterFactory(
+            proj, datatype, nodata_val, shape[0], shape[1], affine=affine)
         year1_raster = aoi_int_factory.alternating(1, 2)
         year2_raster = aoi_int_factory.alternating(2, 1)
         year3_raster = aoi_int_factory.alternating(3, 1)
@@ -74,7 +76,8 @@ class TestGetInputs(unittest.TestCase):
             ['man-made', '0.0', '0.0', '0'],
             ['marsh', '2.0', '2.0', '1.0'],
             ['mangrove', '3.0', '3.0', '1.5']]
-        self.carbon_pool_initial_uri = os.path.join(self.workspace, 'initial.csv')
+        self.carbon_pool_initial_uri = os.path.join(
+            self.workspace, 'initial.csv')
         io.write_csv(self.carbon_pool_initial_uri, table)
 
         table = [
@@ -87,8 +90,15 @@ class TestGetInputs(unittest.TestCase):
             ['marsh', 'soil', '2', '20', '0.2', '0.4', '0.8'],
             ['mangrove', 'biomass', '1', '30', '0.3', '0.5', '0.7'],
             ['mangrove', 'soil', '2', '30', '0.3', '0.5', '0.7']]
-        self.carbon_pool_transient_uri = os.path.join(self.workspace, 'transient.csv')
+        self.carbon_pool_transient_uri = os.path.join(
+            self.workspace, 'transient.csv')
         io.write_csv(self.carbon_pool_transient_uri, table)
+
+        table = [['year', 'price']]
+        for year in range(2000, 2101):
+            table.append([str(year), '10.0'])
+        self.price_table_uri = os.path.join(self.workspace, 'price_table.csv')
+        io.write_csv(self.price_table_uri, table)
 
         self.args = {
             'workspace_dir': self.workspace,
@@ -101,11 +111,11 @@ class TestGetInputs(unittest.TestCase):
             'carbon_pool_initial_uri': self.carbon_pool_initial_uri,
             'carbon_pool_transient_uri': self.carbon_pool_transient_uri,
             'do_economic_analysis': True,
-            'do_price_table': False,
+            'do_price_table': True,
             'price': '10.0',
             'interest_rate': '5.0',
-            # 'price_table_uri': 'path/to/price_table',
-            'discount_rate': '5.0'
+            'price_table_uri': self.price_table_uri,
+            'discount_rate': '6.0'
         }
 
     def test_get_inputs(self):
@@ -113,9 +123,10 @@ class TestGetInputs(unittest.TestCase):
         # pp.pprint(vars_dict)
         # add validation here
 
-    def test_get_discounted_price_dictionary(self):
-        vars_dict = io._get_discounted_price_dict(self.args)
-        pp.pprint(vars_dict['discounted_price_dict'])
+    # def test_get_discounted_price_dictionary(self):
+    #     discounted_price_dict = io._get_discounted_price_dict(self.args)
+    #     pp.pprint(discounted_price_dict)
+    #     assert(discounted_price_dict[2100] == 0.029472262287399215)
 
     def tearDown(self):
         shutil.rmtree(self.workspace)

@@ -106,6 +106,12 @@ class TestCBCModelSimple(unittest.TestCase):
             'analysis_year': self.analysis_year,
             'carbon_pool_initial_uri': self.carbon_pool_initial_uri,
             'carbon_pool_transient_uri': self.carbon_pool_transient_uri,
+            'do_economic_analysis': False,
+            'do_price_table': False,
+            'price': '10.0',
+            'interest_rate': '5.0',
+            # 'price_table_uri': self.price_table_uri,
+            'discount_rate': '6.0'
         }
 
     # def test_set_initial_stock(self):
@@ -144,6 +150,8 @@ class TestCBCModelSimple(unittest.TestCase):
         print "Litter Stock"
         for i in r.litter_carbon_stock_raster_list:
             print i.get_band(1)[0,0]
+        print "Net Present Value"
+        print r.npv_raster.get_band(1)[0,0]
 
         assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
         testing.assert_array_almost_equal(
@@ -162,6 +170,12 @@ class TestCBCModelSimple(unittest.TestCase):
             decimal=4)
 
         r.save_rasters()
+
+    # def test_economic_analysis(self):
+    #     vars_dict = io.get_inputs(self.args)
+    #     r = CBCModel(vars_dict)
+    #     r.initialize_stock()
+    #     r.run_transient_analysis()
 
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
@@ -236,7 +250,8 @@ class TestCBCModel(unittest.TestCase):
             ['marsh', 'soil', '2', '20', '0.2', '0.4', '0.8'],
             ['mangrove', 'biomass', '1', '30', '0.3', '0.5', '0.7'],
             ['mangrove', 'soil', '2', '30', '0.3', '0.5', '0.7']]
-        self.carbon_pool_transient_uri = os.path.join(self.workspace_dir, 'transient.csv')
+        self.carbon_pool_transient_uri = os.path.join(
+            self.workspace_dir, 'transient.csv')
         io.write_csv(self.carbon_pool_transient_uri, table)
 
         self.args = {
@@ -249,6 +264,12 @@ class TestCBCModel(unittest.TestCase):
             'analysis_year': self.analysis_year,
             'carbon_pool_initial_uri': self.carbon_pool_initial_uri,
             'carbon_pool_transient_uri': self.carbon_pool_transient_uri,
+            'do_economic_analysis': True,
+            'do_price_table': False,
+            'price': '10.0',
+            'interest_rate': '3.0',
+            # 'price_table_uri': self.price_table_uri,
+            'discount_rate': '6.0'
         }
 
     # def test_set_initial_stock(self):
@@ -266,33 +287,32 @@ class TestCBCModel(unittest.TestCase):
     #     r._compute_transient_step(0)
     #     print r.disturbed_carbon_stock_object_list[0] #.get_total_emissions_between_years(2000, 2005)
 
-    def test_run_transient_analysis(self):
-        vars_dict = io.get_inputs(self.args)
-        r = CBCModel(vars_dict)
-        pp.pprint(r.vars_dict['lulc_transition_dict'])
-        # r.initialize_stock()
-        # assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
-        # r.run_transient_analysis()
-        #
-        # print "Total Carbon Stock"
-        # for i in r.total_carbon_stock_raster_list:
-        #     print i.get_band(1)[0:2,0:2]
-        # print "Total Emissions"
-        # for i in r.emissions_raster_list:
-        #     print i.get_band(1)[0:2,0:2]
-        # print "Total Sequestration"
-        # for i in r.sequestration_raster_list:
-        #     print i.get_band(1)[0:2,0:2]
-        # print "Net Sequestration"
-        # for i in r.net_sequestration_raster_list:
-        #     print i.get_band(1)[0:2,0:2]
+    # def test_run_transient_analysis(self):
+    #     vars_dict = io.get_inputs(self.args)
+    #     r = CBCModel(vars_dict)
+    #     pp.pprint(r.vars_dict['lulc_transition_dict'])
+    #     r.initialize_stock()
+    #     assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
+    #     r.run_transient_analysis()
+    #
+    #     print "Total Carbon Stock"
+    #     for i in r.total_carbon_stock_raster_list:
+    #         print i.get_band(1)[0:2,0:2]
+    #     print "Total Emissions"
+    #     for i in r.emissions_raster_list:
+    #         print i.get_band(1)[0:2,0:2]
+    #     print "Total Sequestration"
+    #     for i in r.sequestration_raster_list:
+    #         print i.get_band(1)[0:2,0:2]
+    #     print "Net Sequestration"
+    #     for i in r.net_sequestration_raster_list:
+    #         print i.get_band(1)[0:2,0:2]
 
     def test_economic_analysis(self):
         vars_dict = io.get_inputs(self.args)
         r = CBCModel(vars_dict)
         r.initialize_stock()
         r.run_transient_analysis()
-        pass
 
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)

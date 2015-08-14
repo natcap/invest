@@ -129,9 +129,11 @@
     },
     {
       "id": "do_economic_analysis",
+      "args_id": "do_economic_analysis",
       "label": "Calculate Net Present Value of Sequestered Carbon",
       "type": "container",
-      "defaultValue": false,
+      "defaultValue": true,
+      "required": true,
       "collapsible": true,
       "elements": [
         {
@@ -167,7 +169,7 @@
               "disabledBy": "do_price_table",
               "type": "text",
               "label": "Interest Rate (%)",
-              "defaultValue": "5.0",
+              "defaultValue": "3.0",
               "required": true,
               "validateAs": {
                 "type": "number"
@@ -193,7 +195,7 @@
               "args_id": "discount_rate",
               "type": "text",
               "label": "Discount Rate (%)",
-              "defaultValue": "5.0",
+              "defaultValue": "6.0",
               "required": true,
               "validateAs": {
                 "type": "number"

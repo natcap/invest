@@ -110,8 +110,8 @@ def get_inputs(args):
         l.append(Raster.from_file(i).set_nodata(NODATA_INT).uri)
     vars_dict['lulc_snapshot_list'] = l
 
-    # Fetch discounted_price_dict
-    vars_dict['discounted_price_dict'] = _get_discounted_price_dict(vars_dict)
+    # Fetch yearly_carbon_price_dict
+    vars_dict['yearly_carbon_price_dict'] = _get_yearly_carbon_price_dict(vars_dict)
 
     return vars_dict
 
@@ -152,32 +152,44 @@ def _create_transient_dict(args):
     return carbon_pool_transient_dict
 
 
-def _get_discounted_price_dict(vars_dict):
+def _get_yearly_carbon_price_dict(vars_dict):
     """Return dictionary of discounted prices for each year."""
-    discounted_price_dict = {}
-    discount_rate = vars_dict['discount_rate']
+    discount_rate = float(vars_dict['discount_rate'])
+    start_year = int(vars_dict['lulc_snapshot_years_list'][0])
+    end_year = int(vars_dict['lulc_snapshot_years_list'][-1])
+    if vars_dict['analysis_year'] is not '':
+        end_year = int(vars_dict['analysis_year'])
+
+    yearly_carbon_price_dict = {}
     if vars_dict['do_price_table']:
         price_dict = pygeo.geoprocessing.get_lookup_from_table(
-            vars_dict['price_table_uri'])
+            vars_dict['price_table_uri'], 'year')
+
         # check all years in dict
+        for year in range(start_year, end_year):
+            if year not in price_dict:
+                raise KeyError(
+                    "Not all years are provided in carbon price table")
 
-        for (year, price) in price_dict.items():
-            discounted_price_dict[year] = price
+        for (year, d) in price_dict.items():
+            t = year - start_year
+            yearly_carbon_price_dict[int(year)] = d['price']/(
+                (1 + discount_rate/100)**t)
     else:
-        price = None
-        interest_rate = None
-        first_year = vars_dict['lulc_snapshot_years_list'][0]
-        final_year = vars_dict['lulc_snapshot_years_list'][-1]
-        if vars_dict['analysis_year'] != None:
-            final_year = vars_dict['analysis_year']
-        for year in range(first_year, final_year):
-            pass
+        price_0 = float(vars_dict['price'])
+        interest_rate = float(vars_dict['interest_rate'])
 
-    return discounted_price_dict
+        for year in range(start_year, end_year):
+            t = year - start_year
+            price_t = price_0 * (1 + interest_rate/100)**t
+            discounted_price = (price_t/((1 + discount_rate/100)**t))
+            yearly_carbon_price_dict[year] = discounted_price
+
+    return yearly_carbon_price_dict
 
 
 def write_csv(filepath, l):
-    """write two-dimensional list to csv file."""
+    """Write two-dimensional list to csv file."""
     f = open(filepath, 'wb')
     writer = csv.writer(f)
     for i in l:
