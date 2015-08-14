@@ -40,7 +40,7 @@ try:
 except ImportError:
     USE_CYTHON = False
 
-readme = open('README.rst').read()
+readme = open('README_PYTHON.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 LICENSE = open('LICENSE.txt').read()
 
