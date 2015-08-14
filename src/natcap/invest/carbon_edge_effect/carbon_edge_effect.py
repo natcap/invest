@@ -2,6 +2,8 @@
 
 import os
 import logging
+import math
+import time
 
 import uuid
 import numpy
@@ -12,6 +14,7 @@ import shapely
 import shapely.geometry
 import shapely.wkb
 import pygeoprocessing
+import scipy.spatial
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -172,8 +175,86 @@ def execute(args):
     if len(kd_points) == 0:
         raise ValueError("The input raster is outside any carbon edge model")
 
-    LOGGER.debug(kd_points)
-    return
+    kd_tree = scipy.spatial.KDTree(kd_points)
+
+    edge_carbon_map_uri = os.path.join(
+        args['workspace_dir'], 'edge_carbon_map%s.tif' % file_suffix)
+    carbon_edge_nodata = -9999.0
+    pygeoprocessing.new_raster_from_base_uri(
+        args['lulc_uri'], edge_carbon_map_uri, 'GTiff', carbon_edge_nodata,
+        gdal.GDT_Float32)
+
+    edge_carbon_dataset = gdal.Open(edge_carbon_map_uri, gdal.GA_Update)
+    edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
+    edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
+    block_size = edge_carbon_band.GetBlockSize()
+    n_rows = edge_carbon_dataset.RasterYSize
+    n_cols = edge_carbon_dataset.RasterXSize
+
+    cols_per_block, rows_per_block = block_size[0], block_size[1]
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+
+    last_time = time.time()
+
+    last_row_block_width = None
+    last_col_block_width = None
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
+
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
+
+            current_time = time.time()
+            if current_time - last_time > 5.0:
+                LOGGER.info(
+                    'carbon edge calculation approx. %.2f%% complete',
+                    ((row_block_index * n_col_blocks + col_block_index) /
+                     float(n_row_blocks * n_col_blocks) * 100.0))
+                last_time = current_time
+
+            #This is true at least once since last_* initialized with None
+            if (last_row_block_width != row_block_width or
+                    last_col_block_width != col_block_width):
+                edge_carbon_block = numpy.zeros(
+                    (row_block_width, col_block_width), dtype=numpy.float32)
+
+                last_row_block_width = row_block_width
+                last_col_block_width = col_block_width
+
+            edge_carbon_band.ReadAsArray(
+                xoff=col_offset, yoff=row_offset,
+                win_xsize=col_block_width,
+                win_ysize=row_block_width,
+                buf_obj=edge_carbon_block)
+
+            #TODO: calculation here
+            start_x = edge_carbon_geotransform[0]
+            start_y = edge_carbon_geotransform[3]
+
+            coords = numpy.mgrid[0:row_block_width, 0:col_block_width]
+            coords[0] += start_x
+            coords[1] += start_y
+            coords *= out_pixel_size
+
+            distances, indexes = kd_tree.query(coords, k=3)
+
+            LOGGER.debug(distances)
+            LOGGER.debug(indexes)
+
+            return
+
+
+            edge_carbon_band.WriteArray(
+                out_block[0:row_block_width, 0:col_block_width],
+                xoff=col_offset, yoff=row_offset)
+
 
     #TODO: iterate memory over memory blocks of forest edge raster
         #TODO: for each point, find the 3 closest points and run weighted distance average model on them
@@ -196,7 +277,7 @@ def execute(args):
             option_list=['ATTRIBUTE=%s' % field_id])
 
     #TASK: calculate edge effect carbon raster
-    carbon_edge_nodata = -9999.0
+
     cell_size_in_meters = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
     edge_distance_nodata = pygeoprocessing.get_nodata_from_uri(
