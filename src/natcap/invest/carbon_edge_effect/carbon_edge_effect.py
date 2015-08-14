@@ -7,6 +7,10 @@ import uuid
 import numpy
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
+import shapely
+import shapely.geometry
+import shapely.wkb
 import pygeoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -46,9 +50,9 @@ def execute(args):
                     16,0,28.1
 
         args['lulc_uri'] (string): path to a integer landcover code raster
-        args['carbon_model_shape_uri'] (string): path to a shapefile that has
-            areas defining carbon edge models.  Has at least the fields
-            'method', 'theta1', 'theta2', 'theta3'
+        args['carbon_model_shape_uri'] (string): path to a shapefile that
+            has points defining carbon edge models.  Has at least the fields
+            'method', 'theta1', 'theta2', 'theta3'.
 
     returns None"""
 
@@ -130,16 +134,51 @@ def execute(args):
         non_forest_carbon_op, non_forest_carbon_stocks_uri, gdal.GDT_Float32,
         carbon_map_nodata, out_pixel_size, "intersection", vectorize_op=False)
 
-    #rasterize: method, theta 1-3 into rasters that can be vectorized
+    #Build spatial index for model for closest 3 points
+    bounding_box = pygeoprocessing.get_bounding_box(args['lulc_uri'])
+    LOGGER.debug(bounding_box)
+    model_bounding_box = shapely.geometry.box(*bounding_box)
+
+    #TODO: iterate through points and project and test if they are within box
+    lulc_ref = osr.SpatialReference()
+    lulc_projection_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
+        args['lulc_uri'])
+    lulc_ref.ImportFromWkt(lulc_projection_wkt)
+
     carbon_model_reproject_uri = os.path.join(
         args['workspace_dir'], 'local_carbon_shape.shp')
-
-    lulc_dataset = gdal.Open(args['lulc_uri'])
-    lulc_projection_wkt = lulc_dataset.GetProjection()
 
     pygeoprocessing.reproject_datasource_uri(
         args['carbon_model_shape_uri'], lulc_projection_wkt,
         carbon_model_reproject_uri)
+
+    model_shape_ds = ogr.Open(carbon_model_reproject_uri)
+    model_shape_layer = model_shape_ds.GetLayer()
+
+    # coordinate transformation to model points to lulc projection
+    kd_points = []
+    for poly_feature in model_shape_layer:
+        poly_geom = poly_feature.GetGeometryRef()
+
+        #project point_feature to lulc_uri projection
+        shapely_poly = shapely.wkb.loads(poly_geom.ExportToWkb())
+
+        # test if point in bounding box and add to kd-tree if so
+        if model_bounding_box.intersects(shapely_poly):
+            poly_centroid = poly_geom.Centroid()
+            kd_points.append([poly_centroid.GetX(), poly_centroid.GetY()])
+
+    #if kd-tree is empty, raise exception
+    if len(kd_points) == 0:
+        raise ValueError("The input raster is outside any carbon edge model")
+
+    LOGGER.debug(kd_points)
+    return
+
+    #TODO: iterate memory over memory blocks of forest edge raster
+        #TODO: for each point, find the 3 closest points and run weighted distance average model on them
+
+    #rasterize: method, theta 1-3 into rasters that can be vectorized
 
     model_raster_uris = {}
     for field_id, datatype, field_raster_nodata in [
