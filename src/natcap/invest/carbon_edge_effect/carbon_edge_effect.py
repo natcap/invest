@@ -3,8 +3,10 @@
 import os
 import logging
 
+import uuid
 import numpy
-import gdal
+from osgeo import gdal
+from osgeo import ogr
 import pygeoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -22,6 +24,9 @@ def execute(args):
             output and other temporary files during calculation. (required)
         args['results_suffix'] (string): a string to append to any output file
             name (optional)
+        args['serviceshed_uri'] (string): (optional) if present, a path to a
+            shapefile that will be used to aggregate carbon stock results at the
+            end of the run.
         args['biophysical_table_uri'] (string): a path to a CSV table that has
             at least a header for an 'lucode', 'is_forest', and 'c_above'.
                 'lucode': an integer that corresponds to landcover codes in
@@ -201,15 +206,15 @@ def execute(args):
         cell_size_in_meters, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
 
-    #TASK: combine maps into output
+    #combine maps into output
     carbon_map_uri = os.path.join(
         args['workspace_dir'], 'carbon_map%s.tif' % file_suffix)
 
     def combine_carbon_maps(non_forest_carbon, forest_carbon):
+        """This combines the forest and non forest maps into one"""
         return numpy.where(
             forest_carbon == carbon_edge_nodata, non_forest_carbon,
             forest_carbon)
-
     pygeoprocessing.vectorize_datasets(
         [non_forest_carbon_stocks_uri, edge_carbon_map_uri],
         combine_carbon_maps, carbon_map_uri, gdal.GDT_Float32,
@@ -217,3 +222,58 @@ def execute(args):
         vectorize_op=False, datasets_are_pre_aligned=True)
 
     #TASK: generate report (optional) by serviceshed if they exist
+    if 'serviceshed_uri' in args:
+        _aggregate_carbon_map(
+            args['serviceshed_uri'], args['workspace_dir'], carbon_map_uri)
+
+
+def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
+    """Helper function to aggregate carbon values for the given serviceshed."""
+
+    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+    original_serviceshed_datasource = ogr.Open(serviceshed_uri)
+    serviceshed_datasource_filename = os.path.join(
+        workspace_dir, os.path.basename(serviceshed_uri))
+    if os.path.exists(serviceshed_datasource_filename):
+        os.remove(serviceshed_datasource_filename)
+    serviceshed_result = esri_driver.CopyDataSource(
+        original_serviceshed_datasource, serviceshed_datasource_filename)
+    original_serviceshed_datasource = None
+    serviceshed_layer = serviceshed_result.GetLayer()
+
+    #make an identifying id per polygon that can be used for aggregation
+    while True:
+        serviceshed_defn = serviceshed_layer.GetLayerDefn()
+        poly_id_field = str(uuid.uuid4())[-8:]
+        if serviceshed_defn.GetFieldIndex(poly_id_field) == -1:
+            break
+    layer_id_field = ogr.FieldDefn(poly_id_field, ogr.OFTInteger)
+    serviceshed_layer.CreateField(layer_id_field)
+    for poly_index, poly_feat in enumerate(serviceshed_layer):
+        poly_feat.SetField(poly_id_field, poly_index)
+        serviceshed_layer.SetFeature(poly_feat)
+    serviceshed_layer.SyncToDisk()
+
+    #aggregate carbon stocks by the new ID field
+    serviceshed_stats = pygeoprocessing.aggregate_raster_values_uri(
+        carbon_map_uri, serviceshed_datasource_filename,
+        shapefile_field=poly_id_field, ignore_nodata=True,
+        threshold_amount_lookup=None, ignore_value_list=[],
+        process_pool=None, all_touched=False)
+
+    # don't need a random poly id anymore
+    serviceshed_layer.DeleteField(
+        serviceshed_defn.GetFieldIndex(poly_id_field))
+
+    carbon_sum_field = ogr.FieldDefn('c_sum', ogr.OFTReal)
+    carbon_mean_field = ogr.FieldDefn('c_ha_mean', ogr.OFTReal)
+    serviceshed_layer.CreateField(carbon_sum_field)
+    serviceshed_layer.CreateField(carbon_mean_field)
+
+    serviceshed_layer.ResetReading()
+    for poly_index, poly_feat in enumerate(serviceshed_layer):
+        poly_feat.SetField(
+            'c_sum', serviceshed_stats.total[poly_index])
+        poly_feat.SetField(
+            'c_ha_mean', serviceshed_stats.hectare_mean[poly_index])
+        serviceshed_layer.SetFeature(poly_feat)

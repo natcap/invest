@@ -46,6 +46,26 @@
           "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' desribing the global carbon edge models.  Provided as default data for the model."
         },
         {
+          "id": "serviceshed_uri",
+          "args_id": "serviceshed_uri",
+          "type": "file",
+          "label": "Servicesheds (Vector) (optional)",
+          "defaultValue": "../carbon_edge_effect/demo_servicesheds.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that will be used to aggregate carbon values at the end of the run if provided."
+        },
+        {
           "id": "lulc_uri",
           "args_id": "lulc_uri",
           "type": "file",
