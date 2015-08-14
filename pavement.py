@@ -12,6 +12,7 @@ import os
 import pkgutil
 import platform
 import shutil
+import site
 import socket
 import subprocess
 import sys
@@ -128,6 +129,9 @@ paver.easy.options(
     dev_env=Bunch(
         envname='test_env',
         noinvest=False
+    ),
+    check=Bunch(
+        fix_namespace=False
     )
 )
 
@@ -1176,7 +1180,10 @@ def check_repo(options):
 
 
 @task
-def check():
+@cmdopts([
+    ('fix-namespace', '', 'Fix issues with the natcap namespace if found')
+])
+def check(options):
     """
     Perform reasonable checks to verify the build environment.
 
@@ -1190,9 +1197,15 @@ def check():
     class FoundEXE(Exception):
         pass
 
+    def green(msg):
+        return '\033[92m%s\033[0m' % msg
+
+    def yellow(msg):
+        return '\033[93m%s\033[0m' % msg
+
     ERROR = '\033[91mERROR:\033[0m'
-    WARNING = '\033[93mWARNING:\033[0m'
-    OK = '\033[92mOK\033[0m'
+    WARNING = yellow('WARNING:')
+    OK = green('OK')
 
     def bold(message):
         return "\033[1m%s\033[0m" % message
@@ -1288,9 +1301,9 @@ def check():
             if hasattr(conflict, 'report') is False:
                 # Setuptools introduced report() in v6.1
                 print ('{error} Setuptools is very out of date. '
-                       'Upgrade and try again'.format(error=ERROR))
+                    'Upgrade and try again'.format(error=ERROR))
                 raise BuildFailure('Setuptools is very out of date. '
-                                   'Upgrade and try again')
+                                'Upgrade and try again')
 
             if severity == required:
                 print '{error} {report}'.format(error=ERROR,
@@ -1336,8 +1349,13 @@ def check():
     try:
         print ""
         print bold("Checking natcap namespace")
+        if options.check.fix_namespace is True:
+            print yellow('--fix-namespace provided; Fixing issues as they are'
+                         ' encountered')
+
         import natcap
         noneggs = []
+        eggs = []
 
         for importer, modname, ispkg in pkgutil.iter_modules(natcap.__path__):
             module = importlib.import_module('natcap.%s' % modname)
@@ -1361,24 +1379,65 @@ def check():
                 print '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
                     warn=WARNING, mod=modname, ver=version, dir=module_path)
             else:
+                eggs.append(modname)
                 print "natcap.{mod}=={ver} installed as egg ({dir})".format(
                     mod=modname, ver=version, dir=module_path)
 
         if len(noneggs) > 0:
-            pip_inst_template = \
-                "    pip install --egg --no-binary :all: natcap.%s"
-            namespace_msg = (
-                "\n"
-                "Natcap namespace issues:\n"
-                "You appear to have natcap packages installed to your global \n"
-                "site-packages that have not been installed as eggs.\n"
-                "This will cause import issues when trying to build binaries\n"
-                "with pyinstaller, but should work well for development.\n"
-                "By contrast, eggs should work well for development.\n"
-                "For best results, install these packages as eggs like so:\n")
-            namespace_msg += "\n".join([pip_inst_template % n for n in noneggs])
-            print namespace_msg
-            warnings_found = True
+            if options.check.fix_namespace is True:
+                for package in noneggs:
+                    print yellow('Reinstalling natcap.%s as egg' % package)
+                    sh(('pip install --force-reinstall --egg --no-binary :all: '
+                        'natcap.{package} > natcap.{package}.log').format(package=package))
+                    print green('Package natcap.%s reinstalled successfully' % package)
+            else:
+                pip_inst_template = \
+                    yellow("    pip install --egg --no-binary :all: natcap.%s")
+                namespace_msg = (
+                    "\n"
+                    "Natcap namespace issues:\n"
+                    "You appear to have natcap packages installed to your global \n"
+                    "site-packages that have not been installed as eggs.\n"
+                    "This will cause import issues when trying to build binaries\n"
+                    "with pyinstaller, but should work well for development.\n"
+                    "By contrast, eggs should work well for development.\n"
+                    "For best results, install these packages as eggs like so:\n")
+                namespace_msg += "\n".join([pip_inst_template % n for n in noneggs])
+                namespace_msg += "\n\nOr run 'paver check --fix-namespace'\n"
+                print namespace_msg
+                warnings_found = True
+        elif len(noneggs) == 0 and len(eggs) == 0:
+            print yellow('WARNING: namespace artifacts found.  Attempting to repair')
+            # TODO: list out the files that need to be removed from site-packages.
+            if options.check.fix_namespace is True:
+                namespace_pkgs_cleaned = set([])
+                for site_pkgs in site.getsitepackages():
+                    for namespace_item in glob.glob(os.path.join(
+                            site_pkgs, '*natcap*')):
+                        print yellow('Removing %s' % namespace_item)
+
+                        # Namespace items are usually formatted like this:
+                        # natcap.subpackage-version.something OR
+                        # natcap.subpackage-version-something
+                        # Track the package so we can print it to the user.
+                        namespace_pkgs_cleaned.add(os.path.basename(namespace_item).split('-')[0])
+                        if os.path.isdir(namespace_item):
+                            shutil.rmtree(namespace_item)
+                        else:
+                            os.remove(namespace_item)
+                for ns_item in sorted(namespace_pkgs_cleaned):
+                    print yellow('Namespace artifacts from %s cleaned up; you '
+                                 'may need to reinstall') % ns_item
+            else:
+                print ('{warning} The natcap namespace is importable, but the '
+                        'source could not be found.\n'
+                        'This should not happen; pyinstaller builds will break for sure.\n'
+                        'Check your global site-packages for: \n'
+                        '  * .pth files with the name "natcap.<something>.nspkg.pth"\n'
+                        '  * .dist-info directories with the name "natcap.something'
+                        '.dist-info/\n'
+                        '  * All natcap namespace packages are indeed installed '
+                        ' properly').format(warning=WARNING)
     except ImportError:
         setup_file = os.path.join(os.path.dirname(__file__), 'setup.py')
         setup_uses_versioner = False
@@ -1389,12 +1448,18 @@ def check():
                     break
 
         if setup_uses_versioner is True:
-            warnings_found = True
-            print ('{warning} natcap.versioner required by setup.py but not '
-                   'installed.  To fix:').format(warning=WARNING)
-            print '    pip install --egg --no-binary :all: natcap.versioner'
+            if options.check.fix_namespace is True:
+                print yellow('natcap.versioner required by setup.py but '
+                             'not found.  Installing.')
+                sh('pip install --egg --no-binary :all: natcap.versioner > natcap.versioner.log')
+                print green('natcap.versioner successfully installed as egg')
+            else:
+                warnings_found = True
+                print ('{warning} natcap.versioner required by setup.py but not '
+                    'installed.  To fix:').format(warning=WARNING)
+                print '    pip install --egg --no-binary :all: natcap.versioner'
         else:
-            print 'No natcap installations found!  Excellent :)'
+            print green('No natcap installations found!  Excellent :)')
 
     if errors_found:
         raise BuildFailure((ERROR + ' Programs missing and/or package '
@@ -1402,7 +1467,7 @@ def check():
     elif warnings_found:
         print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
-        print "All's well."
+        print green("All's well.")
 
 
 @task
