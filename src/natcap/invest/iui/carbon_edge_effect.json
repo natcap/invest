@@ -43,7 +43,7 @@
           "validateAs": {
             "type": "OGR"
           },
-          "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' desribing the global carbon edge models.  Provided as default data for the model."
+          "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' describing the global carbon edge models.  Provided as default data for the model."
         },
         {
           "id": "serviceshed_uri",
