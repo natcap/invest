@@ -1179,6 +1179,70 @@ def check_repo(options):
     print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
 
+def green(msg):
+    """
+    Return a string that is formatted as ANSI green.
+    """
+    return '\033[92m%s\033[0m' % msg
+
+def yellow(msg):
+    """
+    Return a string that is formatted as ANSI yellow.
+    """
+    return '\033[93m%s\033[0m' % msg
+
+def red(msg):
+    """
+    Return a string that is formatted as ANSI red.
+    """
+    return '\033[91m%s\033[0m' % msg
+
+ERROR = red('ERROR:')
+WARNING = yellow('WARNING:')
+OK = green('OK')
+
+
+def _import_namespace_pkg(modname):
+    """
+    Import a package within the natcap namespace and print helpful
+    debug messages as packages are discovered.
+
+    Parameters:
+        modname (string): The natcap subpackage name.
+
+    Returns:
+        Either 'egg' or 'dir' if the package is importable.
+
+    Raises:
+        ImportError: If the package cannot be imported.
+    """
+    module = importlib.import_module('natcap.%s' % modname)
+    try:
+        version = module.__version__
+    except AttributeError:
+        packagename = 'natcap.%s' % modname
+        version = pkg_resources.require(packagename)[0].version
+
+    is_egg = reduce(
+        lambda x, y: x or y,
+        [p.endswith('.egg') for p in module.__file__.split(os.sep)])
+
+    if len(module.__path__) > 1:
+        module_path = module.__path__
+    else:
+        module_path = module.__path__[0]
+
+    if not is_egg:
+        return_type = 'dir'
+        print '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
+            warn=WARNING, mod=modname, ver=version, dir=module_path)
+    else:
+        return_type = 'egg'
+        print "natcap.{mod}=={ver} installed as egg ({dir})".format(
+            mod=modname, ver=version, dir=module_path)
+
+    return (module, return_type)
+
 @task
 @cmdopts([
     ('fix-namespace', '', 'Fix issues with the natcap namespace if found')
@@ -1196,16 +1260,6 @@ def check(options):
 
     class FoundEXE(Exception):
         pass
-
-    def green(msg):
-        return '\033[92m%s\033[0m' % msg
-
-    def yellow(msg):
-        return '\033[93m%s\033[0m' % msg
-
-    ERROR = '\033[91mERROR:\033[0m'
-    WARNING = yellow('WARNING:')
-    OK = green('OK')
 
     def bold(message):
         return "\033[1m%s\033[0m" % message
@@ -1358,36 +1412,19 @@ def check(options):
         eggs = []
 
         for importer, modname, ispkg in pkgutil.iter_modules(natcap.__path__):
-            module = importlib.import_module('natcap.%s' % modname)
-            try:
-                version = module.__version__
-            except AttributeError:
-                packagename = 'natcap.%s' % modname
-                version = pkg_resources.require(packagename)[0].version
+            module, pkg_type = _import_namespace_pkg(modname)
 
-            is_egg = reduce(
-                lambda x, y: x or y,
-                [p.endswith('.egg') for p in module.__file__.split(os.sep)])
-
-            if len(module.__path__) > 1:
-                module_path = module.__path__
-            else:
-                module_path = module.__path__[0]
-
-            if not is_egg:
-                noneggs.append(modname)
-                print '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-                    warn=WARNING, mod=modname, ver=version, dir=module_path)
-            else:
+            if pkg_type == 'egg':
                 eggs.append(modname)
-                print "natcap.{mod}=={ver} installed as egg ({dir})".format(
-                    mod=modname, ver=version, dir=module_path)
+            else:
+                noneggs.append(modname)
 
         if len(noneggs) > 0:
             if options.check.fix_namespace is True:
                 for package in noneggs:
                     print yellow('Reinstalling natcap.%s as egg' % package)
-                    sh(('pip install --force-reinstall --egg --no-binary :all: '
+                    sh('pip uninstall -y natcap.{package} > natcap.{package}.log'.format(package=package))
+                    sh(('pip install --egg --no-binary :all: '
                         'natcap.{package} > natcap.{package}.log').format(package=package))
                     print green('Package natcap.%s reinstalled successfully' % package)
             else:
@@ -1463,9 +1500,13 @@ def check(options):
         if setup_uses_versioner is True:
             if options.check.fix_namespace is True:
                 print yellow('natcap.versioner required by setup.py but '
-                             'not found.  Installing.')
+                                'not found.  Installing.')
                 sh('pip install --egg --no-binary :all: natcap.versioner > natcap.versioner.log')
-                print green('natcap.versioner successfully installed as egg')
+                try:
+                    _, _ = _import_namespace_pkg('versioner')
+                    print green('natcap.versioner successfully installed as egg')
+                except ImportError as error:
+                    print red('Error when installing natcap.versioner')
             else:
                 warnings_found = True
                 print ('{warning} natcap.versioner required by setup.py but not '
