@@ -1446,7 +1446,7 @@ def check(options):
         elif len(noneggs) == 0 and len(eggs) == 0:
             base_warning = 'WARNING: namespace artifacts found.'
             if options.check.fix_namespace is True:
-                base_warning += 'Attempting to repair'
+                base_warning += ' Attempting to repair'
             print yellow(base_warning)
 
             # locate the problematic namespace artifacts.
