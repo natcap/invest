@@ -4,6 +4,7 @@ import os
 import logging
 import collections
 import csv
+import uuid
 
 import gdal
 import ogr
@@ -354,18 +355,33 @@ def execute(args):
         msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
         layer.CreateField(msa_summary_field_def)
 
+        #make an identifying id per polygon that can be used for aggregation
+        while True:
+            layer_defn = layer.GetLayerDefn()
+            poly_id_field = str(uuid.uuid4())[-8:]
+            if layer_defn.GetFieldIndex(poly_id_field) == -1:
+                break
+        layer_id_field = ogr.FieldDefn(poly_id_field, ogr.OFTInteger)
+        layer.CreateField(layer_id_field)
+        for poly_index, poly_feat in enumerate(layer):
+            poly_feat.SetField(poly_id_field, poly_index)
+            layer.SetFeature(poly_feat)
+        layer.SyncToDisk()
+
         #aggregate by ID
         msa_summary = pygeoprocessing.aggregate_raster_values_uri(
-            msa_uri, args['aoi_uri'],
-            shapefile_field=str(args['aoi_summary_key']))
+            msa_uri, summary_aoi_uri, shapefile_field=poly_id_field)
 
         #add new column to output file
         for feature_id in xrange(layer.GetFeatureCount()):
             feature = layer.GetFeature(feature_id)
-            key_value = feature.GetFieldAsInteger(str(args['aoi_summary_key']))
+            key_value = feature.GetFieldAsInteger(poly_id_field)
             feature.SetField(
                 'msa_mean', float(msa_summary.pixel_mean[key_value]))
             layer.SetFeature(feature)
+
+        # don't need a random poly id anymore
+        layer.DeleteField(layer_defn.GetFieldIndex(poly_id_field))
 
 
 def make_gaussian_kernel_uri(sigma, kernel_uri):
