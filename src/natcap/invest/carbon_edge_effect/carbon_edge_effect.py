@@ -160,6 +160,8 @@ def execute(args):
 
     # coordinate transformation to model points to lulc projection
     kd_points = []
+    carbon_model_parameters = []
+    parameters_of_interest = ['method', 'theta1', 'theta2', 'theta3']
     for poly_feature in model_shape_layer:
         poly_geom = poly_feature.GetGeometryRef()
 
@@ -170,6 +172,11 @@ def execute(args):
         if model_bounding_box.intersects(shapely_poly):
             poly_centroid = poly_geom.Centroid()
             kd_points.append([poly_centroid.GetX(), poly_centroid.GetY()])
+
+            carbon_model_parameters.append([
+                poly_feature.GetFeature(feature_id) for feature_id in
+                parameters_of_interest])
+
 
     #if kd-tree is empty, raise exception
     if len(kd_points) == 0:
@@ -235,18 +242,24 @@ def execute(args):
                 buf_obj=edge_carbon_block)
 
             #TODO: calculation here
-            start_x = edge_carbon_geotransform[0]
-            start_y = edge_carbon_geotransform[3]
+            x_coords, y_coords = (
+                numpy.mgrid[0:row_block_width, 0:col_block_width].astype(
+                    numpy.float64))
 
-            coords = numpy.mgrid[0:row_block_width, 0:col_block_width]
-            coords[0] += start_x
-            coords[1] += start_y
-            coords *= out_pixel_size
+            x_coords *= edge_carbon_geotransform[1] # x width
+            y_coords *= edge_carbon_geotransform[5] # y width
+            x_coords += edge_carbon_geotransform[0] # starting x coord
+            y_coords += edge_carbon_geotransform[3] # starting y coord
 
-            distances, indexes = kd_tree.query(coords, k=3)
+            distances, indexes = kd_tree.query(
+                zip(x_coords.ravel(), y_coords.ravel()), k=3)
 
             LOGGER.debug(distances)
             LOGGER.debug(indexes)
+
+            #TODO: make a raster of each theta per element
+
+            #carbon_model_parameters[index] -> (method, theta1, theta2, theta3)
 
             return
 
