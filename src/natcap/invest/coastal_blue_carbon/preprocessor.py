@@ -128,11 +128,13 @@ def _validate_inputs(vars_dict):
     # assert all raster values in lookup table
     raster_val_set = set()
     for snapshot_idx in range(0, len(lulc_snapshot_list)):
-        raster = Raster.from_file(lulc_snapshot_list[snapshot_idx])
-        raster_val_set = raster_val_set.union(
-            set(raster.get_band(1).flatten()))
+        raster = Raster.from_file(lulc_snapshot_list[snapshot_idx]).set_nodata(
+            NODATA_INT)
+        raster_val_set = raster_val_set.union(set(raster.unique()))
 
     code_set = set(lulc_lookup_dict.keys())
+    code_set.add(NODATA_INT)
+
     try:
         assert(not raster_val_set.difference(code_set))
     except:
@@ -144,8 +146,7 @@ def _validate_inputs(vars_dict):
 
 
 def _preprocess_data(vars_dict):
-    """Preprocess data.
-    """
+    """Preprocess data."""
 
     def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
         raster_t1 = Raster.from_file(raster_t1_uri)
@@ -158,6 +159,7 @@ def _preprocess_data(vars_dict):
         transition_set = set(transition_list)
 
         return transition_set
+
 
     def _mark_transition_type(lookup_dict, transition_matrix_dict, lulc_from, lulc_to):
         if (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
