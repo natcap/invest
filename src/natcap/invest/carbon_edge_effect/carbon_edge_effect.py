@@ -160,8 +160,9 @@ def execute(args):
 
     # coordinate transformation to model points to lulc projection
     kd_points = []
-    carbon_model_parameters = []
-    parameters_of_interest = ['method', 'theta1', 'theta2', 'theta3']
+    theta_model_parameters = []
+    method_model_parameter = []
+    parameters_of_interest = ['theta1', 'theta2', 'theta3']
     for poly_feature in model_shape_layer:
         poly_geom = poly_feature.GetGeometryRef()
 
@@ -173,9 +174,13 @@ def execute(args):
             poly_centroid = poly_geom.Centroid()
             kd_points.append([poly_centroid.GetX(), poly_centroid.GetY()])
 
-            carbon_model_parameters.append([
-                poly_feature.GetFeature(feature_id) for feature_id in
+            theta_model_parameters.append([
+                poly_feature.GetField(feature_id) for feature_id in
                 parameters_of_interest])
+            method_model_parameter.append(poly_feature.GetField('method'))
+
+    method_model_parameter = numpy.array(method_model_parameter, dtype=numpy.int32)
+    theta_model_parameters = numpy.array(theta_model_parameters, dtype=numpy.float32)
 
 
     #if kd-tree is empty, raise exception
@@ -195,6 +200,11 @@ def execute(args):
     edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
     edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
     block_size = edge_carbon_band.GetBlockSize()
+
+    edge_distance_dataset = gdal.Open(edge_distance_uri)
+    edge_distance_band = edge_distance_dataset.GetRasterBand(1)
+
+
     n_rows = edge_carbon_dataset.RasterYSize
     n_cols = edge_carbon_dataset.RasterXSize
 
@@ -229,17 +239,17 @@ def execute(args):
             #This is true at least once since last_* initialized with None
             if (last_row_block_width != row_block_width or
                     last_col_block_width != col_block_width):
-                edge_carbon_block = numpy.zeros(
+                edge_distance_block = numpy.zeros(
                     (row_block_width, col_block_width), dtype=numpy.float32)
 
                 last_row_block_width = row_block_width
                 last_col_block_width = col_block_width
 
-            edge_carbon_band.ReadAsArray(
+            edge_distance_band.ReadAsArray(
                 xoff=col_offset, yoff=row_offset,
                 win_xsize=col_block_width,
                 win_ysize=row_block_width,
-                buf_obj=edge_carbon_block)
+                buf_obj=edge_distance_block)
 
             #TODO: calculation here
             x_coords, y_coords = (
@@ -253,19 +263,58 @@ def execute(args):
 
             distances, indexes = kd_tree.query(
                 zip(x_coords.ravel(), y_coords.ravel()), k=3)
+            distances = distances.reshape(
+                edge_distance_block.shape[0], edge_distance_block.shape[1], 3)
+            indexes = indexes.reshape(
+                edge_distance_block.shape[0], edge_distance_block.shape[1], 3)
+            #LOGGER.debug("distances %s", distances)
+            #LOGGER.debug("indexes %s", indexes)
+            thetas = numpy.empty((
+                edge_distance_block.shape[0], edge_distance_block.shape[1], 3))
+            for point_index in xrange(3):
+                for theta_index in xrange(3):
+                    thetas[:, :, theta_index] = theta_model_parameters[
+                        indexes[:, :, point_index], theta_index]
+                #LOGGER.debug("thetas %s", thetas)
+                biomass = numpy.empty((
+                    edge_distance_block.shape[0],
+                    edge_distance_block.shape[1], 3))
 
-            LOGGER.debug(distances)
-            LOGGER.debug(indexes)
+                #asymtotic model
+                #biomass_1 = theta_1 - theta_2 * numpy.exp(-theta_3 * edge_distance_km)
+                biomass[:, :, 0] = (
+                    thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
+                        thetas[:, :, 2] * edge_distance_block)) * cell_area_ha
+
+                #logarithmic model
+                #biomass_2 = theta_1 + theta_2 * numpy.log(edge_distance_km)
+                biomass[:, :, 1] = (
+                    thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
+                        edge_distance_block)) * cell_area_ha
+
+                #linear regression
+                #biomass_3 = theta_1 + theta_2 * edge_distance_km
+                biomass[:, :, 2] = (thetas[:, :, 0] + thetas[:, :, 1] *
+                                    edge_distance_block) * cell_area_ha
+
+
+                #LOGGER.debug("biomass %s %s", biomass.shape, biomass)
+                #LOGGER.debug("method_model_parameter %s", method_model_parameter)
+                #LOGGER.debug("indexes %s", indexes)
+                final_biomass = biomass[:, :, method_model_parameter[
+                    indexes[:, :, point_index]][0]-1][0]
+                #LOGGER.debug("method_model_parameter[indexes[:, :, point_index]][0]-1 %s", method_model_parameter[
+                #    indexes[:, :, point_index]][0]-1)
+
+                #LOGGER.debug("final_biomass %s %s" , final_biomass.shape, final_biomass)
 
             #TODO: make a raster of each theta per element
 
             #carbon_model_parameters[index] -> (method, theta1, theta2, theta3)
-
-            return
-
-
+            result = numpy.where(
+                edge_distance_block > 0, final_biomass, carbon_edge_nodata)
             edge_carbon_band.WriteArray(
-                out_block[0:row_block_width, 0:col_block_width],
+                result[0:row_block_width, 0:col_block_width],
                 xoff=col_offset, yoff=row_offset)
 
 
