@@ -105,8 +105,7 @@ def _get_derivative_inputs(vars_dict):
 
 
 def _validate_inputs(vars_dict):
-    """Validate inputs.
-    """
+    """Validate inputs."""
     LOGGER.info('Validating inputs...')
     lulc_snapshot_list = vars_dict['lulc_snapshot_list']
     lulc_lookup_dict = vars_dict['lulc_lookup_dict']
@@ -149,8 +148,8 @@ def _preprocess_data(vars_dict):
     """Preprocess data."""
 
     def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
-        raster_t1 = Raster.from_file(raster_t1_uri)
-        raster_t2 = Raster.from_file(raster_t2_uri)
+        raster_t1 = Raster.from_file(raster_t1_uri).set_nodata(NODATA_INT)
+        raster_t2 = Raster.from_file(raster_t2_uri).set_nodata(NODATA_INT)
 
         band_t1 = raster_t1.get_band(1).data.flatten()
         band_t2 = raster_t2.get_band(1).data.flatten()
@@ -162,7 +161,10 @@ def _preprocess_data(vars_dict):
 
 
     def _mark_transition_type(lookup_dict, transition_matrix_dict, lulc_from, lulc_to):
-        if (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
+        """Mark transition type, given lulc_from and lulc_to."""
+        if (lulc_from == NODATA_INT) or (lulc_to == NODATA_INT):
+            pass
+        elif (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
             bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
             # veg --> veg
             transition_matrix_dict[(lulc_from, lulc_to)] = 'accum'
@@ -210,8 +212,8 @@ def _preprocess_data(vars_dict):
 
 
 def _create_transition_table(vars_dict):
-    '''Create transition table representing the lulc transition effect on
-    carbon emissions or sequestration.'''
+    """Create transition table representing the lulc transition effect on
+    carbon emissions or sequestration."""
 
     LOGGER.info('Creating transition table as output...')
     lulc_class_list = vars_dict['lulc_class_list']
@@ -256,6 +258,7 @@ def _append_legend(fpath):
 
 
 def _create_carbon_pool_initial_table_template(vars_dict):
+    """Create carbon pool initial values table."""
     lulc_class_list = vars_dict['lulc_class_list']
 
     fpath = os.path.join(
@@ -270,13 +273,16 @@ def _create_carbon_pool_initial_table_template(vars_dict):
 
 
 def _create_carbon_pool_transient_table_template(vars_dict):
+    """Create carbon pool transient values table."""
     lulc_class_list = vars_dict['lulc_class_list']
 
     fpath = os.path.join(
         vars_dict['output_dir'], 'carbon_pool_transient_template.csv')
     with open(fpath, 'wb') as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(['code', 'lulc-class', 'pool', 'half-life', 'low-impact-disturb', 'med-impact-disturb','high-impact-disturb', 'yearly_accumulation'])
+        writer.writerow(['code', 'lulc-class', 'pool', 'half-life',
+                         'low-impact-disturb', 'med-impact-disturb',
+                         'high-impact-disturb', 'yearly_accumulation'])
         for code in vars_dict['code_to_lulc_dict'].keys():
             for pool in ['biomass', 'soil']:
                 row = [code, vars_dict['code_to_lulc_dict'][code]] + \

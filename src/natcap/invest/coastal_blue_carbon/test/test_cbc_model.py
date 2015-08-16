@@ -208,7 +208,8 @@ class TestCBCModel(unittest.TestCase):
             ['man-made', 'accum', '', 'accum', ''],
             ['marsh', '', '', '', 'accum'],
             ['mangrove', '', '', '', '']]
-        self.lulc_transition_uri = os.path.join(self.workspace_dir, 'transition.csv')
+        self.lulc_transition_uri = os.path.join(
+            self.workspace_dir, 'transition.csv')
         io.write_csv(self.lulc_transition_uri, table)
 
         shape = (2, 2)  # (2, 2)  #(1889, 1325)
