@@ -21,6 +21,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
 
+#grid cells are 100km so 200km this is a good upper bound to search
+DISTANCE_UPPER_BOUND = 200e3
 
 def execute(args):
     """InVEST Carbon Edge Model calculates the carbon due to edge effects in
@@ -187,22 +189,22 @@ def execute(args):
     if len(kd_points) == 0:
         raise ValueError("The input raster is outside any carbon edge model")
 
-    kd_tree = scipy.spatial.KDTree(kd_points)
+    kd_tree = scipy.spatial.cKDTree(kd_points)
 
     edge_carbon_map_uri = os.path.join(
         args['workspace_dir'], 'edge_carbon_map%s.tif' % file_suffix)
     carbon_edge_nodata = -9999.0
     pygeoprocessing.new_raster_from_base_uri(
-        args['lulc_uri'], edge_carbon_map_uri, 'GTiff', carbon_edge_nodata,
+        edge_distance_uri, edge_carbon_map_uri, 'GTiff', carbon_edge_nodata,
         gdal.GDT_Float32)
 
     edge_carbon_dataset = gdal.Open(edge_carbon_map_uri, gdal.GA_Update)
     edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
     edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
-    block_size = edge_carbon_band.GetBlockSize()
 
     edge_distance_dataset = gdal.Open(edge_distance_uri)
     edge_distance_band = edge_distance_dataset.GetRasterBand(1)
+    block_size = edge_distance_band.GetBlockSize()
 
 
     n_rows = edge_carbon_dataset.RasterYSize
@@ -251,7 +253,6 @@ def execute(args):
                 win_ysize=row_block_width,
                 buf_obj=edge_distance_block)
 
-            #TODO: calculation here
             x_coords, y_coords = (
                 numpy.mgrid[0:row_block_width, 0:col_block_width].astype(
                     numpy.float64))
@@ -261,21 +262,24 @@ def execute(args):
             x_coords += edge_carbon_geotransform[0] # starting x coord
             y_coords += edge_carbon_geotransform[3] # starting y coord
 
+            x_indexes, y_indexes = numpy.mgrid[
+                0:row_block_width, 0:col_block_width]
+
+            coord_points = zip(x_coords.ravel(), y_coords.ravel())
             distances, indexes = kd_tree.query(
-                zip(x_coords.ravel(), y_coords.ravel()), k=3)
+                coord_points, k=3, distance_upper_bound=DISTANCE_UPPER_BOUND)
             distances = distances.reshape(
                 edge_distance_block.shape[0], edge_distance_block.shape[1], 3)
             indexes = indexes.reshape(
                 edge_distance_block.shape[0], edge_distance_block.shape[1], 3)
-            #LOGGER.debug("distances %s", distances)
-            #LOGGER.debug("indexes %s", indexes)
+
             thetas = numpy.empty((
                 edge_distance_block.shape[0], edge_distance_block.shape[1], 3))
             for point_index in xrange(3):
                 for theta_index in xrange(3):
                     thetas[:, :, theta_index] = theta_model_parameters[
                         indexes[:, :, point_index], theta_index]
-                #LOGGER.debug("thetas %s", thetas)
+
                 biomass = numpy.empty((
                     edge_distance_block.shape[0],
                     edge_distance_block.shape[1], 3))
@@ -297,26 +301,21 @@ def execute(args):
                 biomass[:, :, 2] = (thetas[:, :, 0] + thetas[:, :, 1] *
                                     edge_distance_block) * cell_area_ha
 
-
-                #LOGGER.debug("biomass %s %s", biomass.shape, biomass)
-                #LOGGER.debug("method_model_parameter %s", method_model_parameter)
-                #LOGGER.debug("indexes %s", indexes)
-                final_biomass = biomass[:, :, method_model_parameter[
-                    indexes[:, :, point_index]][0]-1][0]
-                #LOGGER.debug("method_model_parameter[indexes[:, :, point_index]][0]-1 %s", method_model_parameter[
-                #    indexes[:, :, point_index]][0]-1)
-
-                #LOGGER.debug("final_biomass %s %s" , final_biomass.shape, final_biomass)
-
-            #TODO: make a raster of each theta per element
+                final_biomass = biomass[
+                    x_indexes, y_indexes,
+                    method_model_parameter[indexes[:, :, point_index]-1]]
 
             #carbon_model_parameters[index] -> (method, theta1, theta2, theta3)
+            #LOGGER.debug(
+            #    "edge_distance_block %s, final_biomass.shape %s distances.shape %s, indexes.shape %s, biomass.shape %s",
+            #    edge_distance_block.shape, final_biomass.shape, distances.shape, indexes.shape, biomass.shape)
             result = numpy.where(
                 edge_distance_block > 0, final_biomass, carbon_edge_nodata)
             edge_carbon_band.WriteArray(
                 result[0:row_block_width, 0:col_block_width],
                 xoff=col_offset, yoff=row_offset)
 
+    return
 
     #TODO: iterate memory over memory blocks of forest edge raster
         #TODO: for each point, find the 3 closest points and run weighted distance average model on them
