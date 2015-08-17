@@ -24,9 +24,6 @@ LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
 #grid cells are 100km so 1000km this is a good upper bound to search
 DISTANCE_UPPER_BOUND = 100e4
 
-#The number of nearest global edge carbon points to search for
-N_NEAREST_POINTS = 3
-
 def execute(args):
     """InVEST Carbon Edge Model calculates the carbon due to edge effects in
     forest pixels.
@@ -36,6 +33,8 @@ def execute(args):
             output and other temporary files during calculation. (required)
         args['results_suffix'] (string): a string to append to any output file
             name (optional)
+        args['n_nearest_model_points'] (int): number of nearest neighbor model
+            points to search for
         args['serviceshed_uri'] (string): (optional) if present, a path to a
             shapefile that will be used to aggregate carbon stock results at the
             end of the run.
@@ -72,7 +71,7 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    #TASK: (optional) clip dataset to AOI if it exists
+    N_NEAREST_MODEL_POINTS = int(args['n_nearest_model_points'])
 
     #classify forest pixels from lulc
     biophysical_table = pygeoprocessing.get_lookup_from_table(
@@ -272,24 +271,24 @@ def execute(args):
             coord_points = zip(row_coords.ravel(), col_coords.ravel())
 
             distances, indexes = kd_tree.query(
-                coord_points, k=N_NEAREST_POINTS,
+                coord_points, k=N_NEAREST_MODEL_POINTS,
                 distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
             distances = distances.reshape(
                 edge_distance_block.shape[0], edge_distance_block.shape[1],
-                N_NEAREST_POINTS)
+                N_NEAREST_MODEL_POINTS)
             indexes = indexes.reshape(
                 edge_distance_block.shape[0], edge_distance_block.shape[1],
-                N_NEAREST_POINTS)
+                N_NEAREST_MODEL_POINTS)
 
             thetas = numpy.zeros((
                 edge_distance_block.shape[0], edge_distance_block.shape[1], 3))
 
             biomass = numpy.empty(
                 (edge_distance_block.shape[0],
-                 edge_distance_block.shape[1], N_NEAREST_POINTS),
+                 edge_distance_block.shape[1], N_NEAREST_MODEL_POINTS),
                 dtype=numpy.float32)
 
-            for point_index in xrange(N_NEAREST_POINTS):
+            for point_index in xrange(N_NEAREST_MODEL_POINTS):
                 valid_index_mask = (
                     (indexes[:, :, point_index] != len(kd_points)) &
                     (edge_distance_block > 0))
@@ -335,7 +334,7 @@ def execute(args):
             valid_distances = distances >= 0.0
             weights = numpy.zeros(distances.shape)
             weights[valid_distances] = (
-                N_NEAREST_POINTS / distances[valid_distances])
+                N_NEAREST_MODEL_POINTS / distances[valid_distances])
             denom = numpy.sum(weights, axis=2)
             average_biomass = numpy.sum(weights * biomass, axis=2) / denom
 

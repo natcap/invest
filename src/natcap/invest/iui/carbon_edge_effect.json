@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.carbon_edge_effect.carbon_edge_effect",
   "modelName": "carbon_edge_effect",
   "localDocURI": "../documentation/carbon_edge_effect.html",
-  "height": 350,
+  "height": 375,
   "width": 700,
   "elements": [
     {
@@ -32,6 +32,16 @@
           },
           "required": false,
           "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "n_nearest_model_points",
+          "args_id": "n_nearest_model_points",
+          "type": "text",
+          "label": "Number of nearest model points to average",
+          "defaultValue": "3",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "helpText": "The number of global carbon edge 100km model points to include in the model average calculation."
         },
         {
           "id": "carbon_model_shape_uri",
