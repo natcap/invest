@@ -226,7 +226,7 @@ def execute(args):
 
     last_row_block_width = None
     last_col_block_width = None
-    LOGGER.debug("edge_carbon_geotransform %s", edge_carbon_geotransform)
+
     for row_block_index in xrange(n_row_blocks):
         row_offset = row_block_index * rows_per_block
         row_block_width = n_rows - row_offset
@@ -276,15 +276,10 @@ def execute(args):
                 edge_carbon_geotransform[3] +
                 edge_carbon_geotransform[5] * row_offset) # starting y coord
 
-            #x_indexes, y_indexes = numpy.mgrid[
-            #    0:row_block_width, 0:col_block_width]
-            #LOGGER.debug("col_coords %s", col_coords)
-            #LOGGER.debug("row_coords %s", row_coords)
-
             coord_points = zip(row_coords.ravel(), col_coords.ravel())
             distances, indexes = kd_tree.query(
-                coord_points, k=3)#distance_upper_bound=DISTANCE_UPPER_BOUND,
-                #n_jobs=-1)
+                coord_points, k=3, distance_upper_bound=DISTANCE_UPPER_BOUND,
+                n_jobs=-1)
             distances = distances.reshape(
                 edge_distance_block.shape[0], edge_distance_block.shape[1], 3)
             indexes = indexes.reshape(
@@ -338,19 +333,11 @@ def execute(args):
                 break
 
             #carbon_model_parameters[index] -> (method, theta1, theta2, theta3)
-            #LOGGER.debug(
-            #    "edge_distance_block %s, final_biomass.shape %s distances.shape %s, indexes.shape %s, biomass.shape %s",
-            #    edge_distance_block.shape, final_biomass.shape, distances.shape, indexes.shape, biomass.shape)
             result = numpy.where(
                 edge_distance_block > 0, final_biomass, carbon_edge_nodata)
             edge_carbon_band.WriteArray(
                 result[0:row_block_width, 0:col_block_width],
                 xoff=col_offset, yoff=row_offset)
-            #LOGGER.debug(indexes)
-            #LOGGER.debug(method_model_parameter)
-            #LOGGER.debug(indexes[:, :, 0])
-            #LOGGER.debug(method_model_parameter[indexes[:, :, 2]-1])
-            #LOGGER.debug(kd_tree.data)
             debug_raster_band.WriteArray(
                 distances[:, :, 0],
                 xoff=col_offset, yoff=row_offset)
