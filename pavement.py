@@ -1516,15 +1516,22 @@ def check(options):
             if options.check.fix_namespace is True:
                 print yellow('natcap.versioner required by setup.py but '
                                 'not found.  Installing.')
+                # Install natcap.versioner
                 sh('pip install --egg --no-binary :all: natcap.versioner > natcap.versioner.log')
+
+                # Verify that versioner installed properly.  Must import in new
+                # process to verify. _import_namespace_pkg allows for pretty
+                # printing.
                 try:
-                    # have to import natcap.versioner in a separate process to
-                    # check the import.
-                    sh('python -c "import natcap.versioner"')
+                    sh('python -c "'
+                        'import pavement;'
+                        'pavement._import_namespace_pkg(\'versioner\')'
+                        '"')
                     print green('natcap.versioner successfully installed as egg')
-                except ImportError as error:
-                    print error
-                    print red('Error when installing natcap.versioner')
+                except BuildFailure:
+                    # An exception was raised or some other error encountered.
+                    errors_found = True
+                    print red('Installation failed: natcap.versioner')
             else:
                 warnings_found = True
                 print ('{warning} natcap.versioner required by setup.py but not '
