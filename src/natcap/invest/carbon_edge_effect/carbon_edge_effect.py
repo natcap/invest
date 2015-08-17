@@ -124,6 +124,8 @@ def execute(args):
         args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
     pygeoprocessing.distance_transform_edt(
         non_forest_mask_uri, edge_distance_uri)
+    edge_distance_nodata = pygeoprocessing.get_nodata_from_uri(
+        edge_distance_uri)
 
     non_forest_carbon_stocks_uri = os.path.join(
         args['workspace_dir'],
@@ -203,8 +205,6 @@ def execute(args):
     pygeoprocessing.new_raster_from_base_uri(
         edge_distance_uri, debug_raster_uri, 'GTiff', carbon_edge_nodata,
         gdal.GDT_Float32)
-    debug_raster_dataset = gdal.Open(debug_raster_uri, gdal.GA_Update)
-    debug_raster_band = debug_raster_dataset.GetRasterBand(1)
 
     edge_carbon_dataset = gdal.Open(edge_carbon_map_uri, gdal.GA_Update)
     edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
@@ -213,7 +213,6 @@ def execute(args):
     edge_distance_dataset = gdal.Open(edge_distance_uri)
     edge_distance_band = edge_distance_dataset.GetRasterBand(1)
     block_size = edge_distance_band.GetBlockSize()
-
 
     n_rows = edge_carbon_dataset.RasterYSize
     n_cols = edge_carbon_dataset.RasterXSize
@@ -285,19 +284,19 @@ def execute(args):
             indexes = indexes.reshape(
                 edge_distance_block.shape[0], edge_distance_block.shape[1], 3)
 
-            thetas = numpy.empty((
+            thetas = numpy.zeros((
                 edge_distance_block.shape[0], edge_distance_block.shape[1], 3))
             for point_index in xrange(3):
                 valid_index_mask = (
-                    indexes[:, :, point_index] != len(kd_points))
+                    (indexes[:, :, point_index] != len(kd_points)) &
+                    (edge_distance_block > 0))
                 for theta_index in xrange(3):
                     thetas[valid_index_mask, theta_index] = (
                         theta_model_parameters[
                             indexes[valid_index_mask, point_index],
                             theta_index])
-                    thetas[~valid_index_mask, theta_index] = 0.0
 
-                biomass = numpy.empty((
+                biomass = numpy.zeros((
                     edge_distance_block.shape[0],
                     edge_distance_block.shape[1], 3))
 
@@ -306,8 +305,10 @@ def execute(args):
                 biomass[valid_index_mask, 0] = (
                     thetas[valid_index_mask, 0] -
                     thetas[valid_index_mask, 1] * numpy.exp(
-                        thetas[valid_index_mask, 2] *
+                        -thetas[valid_index_mask, 2] *
                         edge_distance_block[valid_index_mask])) * cell_area_ha
+                #LOGGER.debug("biomass %s", biomass)
+                #LOGGER.debug("thetas %s", thetas)
 
                 #logarithmic model
                 #biomass_2 = theta_1 + theta_2 * numpy.log(edge_distance_km)
@@ -323,8 +324,10 @@ def execute(args):
                     thetas[valid_index_mask, 1] *
                     edge_distance_block[valid_index_mask]) * cell_area_ha
 
-                final_biomass = numpy.empty((
-                    edge_distance_block.shape[0], edge_distance_block.shape[1]))
+                final_biomass = numpy.empty(
+                    (edge_distance_block.shape[0],
+                     edge_distance_block.shape[1]), dtype=numpy.float32)
+
                 final_biomass[valid_index_mask] = biomass[
                     valid_index_mask, method_model_parameter[indexes[
                         valid_index_mask, point_index]]-1]
@@ -336,11 +339,7 @@ def execute(args):
             result = numpy.where(
                 edge_distance_block > 0, final_biomass, carbon_edge_nodata)
             edge_carbon_band.WriteArray(
-                result[0:row_block_width, 0:col_block_width],
-                xoff=col_offset, yoff=row_offset)
-            debug_raster_band.WriteArray(
-                distances[:, :, 0],
-                xoff=col_offset, yoff=row_offset)
+                result, xoff=col_offset, yoff=row_offset)
 
     return
 
