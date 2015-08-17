@@ -262,8 +262,9 @@ def execute(args):
                 win_ysize=row_block_width,
                 buf_obj=edge_distance_block)
 
+            #gdal treats the first axis as the row
             row_coords, col_coords = (
-                numpy.mgrid[0:col_block_width, 0:row_block_width].astype(
+                numpy.mgrid[0:row_block_width, 0:col_block_width].astype(
                     numpy.float64))
 
             col_coords *= edge_carbon_geotransform[1] # x width
