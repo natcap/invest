@@ -1543,12 +1543,12 @@ def check(options):
                 print 'Or use paver check --fix-namespace'
 
     if errors_found:
-        error_string = (ERROR + ' Programs missing and/or package '
+        error_string = (' Programs missing and/or package '
                         'requirements not met')
         if options.check.allow_errors is True:
-            print error_string
+            print red('CRITICAL:') + error_string
         else:
-            raise BuildFailure(error_string)
+            raise BuildFailure(ERROR + error_string)
     elif warnings_found:
         print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
