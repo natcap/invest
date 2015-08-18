@@ -82,26 +82,12 @@ def execute(args):
     N_NEAREST_MODEL_POINTS = int(args['n_nearest_model_points'])
 
     #map distance to edge
-    non_forest_mask_uri = os.path.join(
-        args['workspace_dir'], 'non_forest_mask%s.tif' % file_suffix)
-    forest_mask_nodata = 255
-    lulc_nodata = pygeoprocessing.get_nodata_from_uri(args['lulc_uri'])
-    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(args['lulc_uri'])
-    def mask_non_forest_op(lulc_array):
-        """converts forest lulc codes to 1"""
-        forest_mask = ~numpy.in1d(lulc_array.flatten(), forest_codes).reshape(
-            lulc_array.shape)
-        nodata_mask = lulc_array == lulc_nodata
-        return numpy.where(nodata_mask, forest_mask_nodata, forest_mask)
-    pygeoprocessing.vectorize_datasets(
-        [args['lulc_uri']], mask_non_forest_op, non_forest_mask_uri,
-        gdal.GDT_Byte, forest_mask_nodata, out_pixel_size, "intersection",
-        vectorize_op=False)
 
     edge_distance_uri = os.path.join(
         args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
-    pygeoprocessing.distance_transform_edt(
-        non_forest_mask_uri, edge_distance_uri)
+
+    map_distance_from_forest_edge(
+        args['lulc_uri'], args['biophysical_table_uri'], edge_distance_uri)
 
     non_forest_carbon_stocks_uri = os.path.join(
         args['workspace_dir'],
@@ -168,6 +154,9 @@ def execute(args):
         raise ValueError("The input raster is outside any carbon edge model")
 
     kd_tree = scipy.spatial.cKDTree(kd_points)
+
+    cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        lulc_uri) ** 2 / 10000.0
 
     edge_carbon_map_uri = os.path.join(
         args['workspace_dir'], 'edge_carbon_map%s.tif' % file_suffix)
@@ -444,3 +433,64 @@ def calculate_lulc_carbon_map(
     pygeoprocessing.reclassify_dataset_uri(
         lulc_uri, lucode_to_per_pixel_carbon,
         non_forest_carbon_map_uri, gdal.GDT_Float32, carbon_map_nodata)
+
+def map_distance_from_forest_edge(
+        lulc_uri, biophysical_table_uri, edge_distance_uri):
+    """Generates a raster of forest edge distances where each pixel is the
+    distance to the edge of the forest in meters.
+
+    Args:
+
+    Returns:
+        None"""
+
+    #Build a list of forest lucodes
+    biophysical_table = pygeoprocessing.get_lookup_from_table(
+        biophysical_table_uri, 'lucode')
+    forest_codes = []
+    for lucode in biophysical_table:
+        is_forest = int(biophysical_table[int(lucode)]['is_forest'])
+        if is_forest == 1:
+            forest_codes.append(lucode)
+
+    #Make a raster where 1 is non-forest landcover types and 0 is forest
+    forest_mask_nodata = 255
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_uri)
+    def mask_non_forest_op(lulc_array):
+        """converts forest lulc codes to 1"""
+        non_forest_mask = ~numpy.in1d(
+            lulc_array.flatten(), forest_codes).reshape(lulc_array.shape)
+        nodata_mask = lulc_array == lulc_nodata
+        return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
+    non_forest_mask_uri = pygeoprocessing.temporary_filename()
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(lulc_uri)
+    pygeoprocessing.vectorize_datasets(
+        [lulc_uri], mask_non_forest_op, non_forest_mask_uri,
+        gdal.GDT_Byte, forest_mask_nodata, out_pixel_size, "intersection",
+        vectorize_op=False)
+
+    #Do the distance transform on non-forest pixels
+    pygeoprocessing.distance_transform_edt(
+        non_forest_mask_uri, edge_distance_uri)
+
+    #good practice to delete temporary files when we're done with them
+    os.remove(non_forest_mask_uri)
+
+def calculate_edge_carbon():
+    """Calculates the carbon on the forest pixels accounting for their global
+    position with respect to precalculated edge carbon models.
+
+    Args:
+        lulc_uri (string): a filepath to the landcover map that contains integer
+            landcover codes
+        biophysical_table_uri (string): a filepath to a csv table that indexes
+            landcover codes to surface carbon, contains at least the fields
+            'lucode' (landcover integer code), 'is_forest' (0 or 1 depending
+            on landcover code type)
+        non_forest_carbon_map_uri (string): a filepath to the output raster
+            thta will contain total non-forest carbon per cell.
+
+    Returns:
+        None"""
+
+    pass
