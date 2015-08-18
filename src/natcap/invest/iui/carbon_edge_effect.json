@@ -80,7 +80,7 @@
           "args_id": "lulc_uri",
           "type": "file",
           "label": "Land-Use/Land-Cover (Raster)",
-          "defaultValue": "../carbon_edge_effect/edge_carbon_lu_sample_map.tif",
+          "defaultValue": "../carbon_edge_effect/carbon_edge_lulc_demo.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
