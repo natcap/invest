@@ -85,168 +85,20 @@ def execute(args):
     _map_distance_from_forest_edge(
         args['lulc_uri'], args['biophysical_table_uri'], edge_distance_uri)
 
-
-    N_NEAREST_MODEL_POINTS = int(args['n_nearest_model_points'])
-
     #Build spatial index for gridded global model for closest 3 points
     kd_tree, theta_model_parameters, method_model_parameter = (
         _build_spatial_index(
             args['lulc_uri'], args['workspace_dir'],
             args['carbon_model_shape_uri']))
 
-    cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
-        lulc_uri) ** 2 / 10000.0
+    #calculate the edge carbon effect on forests
+    forest_edge_carbon_map_uri = os.path.join(
+        args['workspace_dir'], 'forest_edge_carbon_map%s.tif' % file_suffix)
 
-    edge_carbon_map_uri = os.path.join(
-        args['workspace_dir'], 'edge_carbon_map%s.tif' % file_suffix)
-    carbon_edge_nodata = -9999.0
-    pygeoprocessing.new_raster_from_base_uri(
-        edge_distance_uri, edge_carbon_map_uri, 'GTiff', carbon_edge_nodata,
-        gdal.GDT_Float32)
-
-    edge_carbon_dataset = gdal.Open(edge_carbon_map_uri, gdal.GA_Update)
-    edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
-    edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
-
-    edge_distance_dataset = gdal.Open(edge_distance_uri)
-    edge_distance_band = edge_distance_dataset.GetRasterBand(1)
-    block_size = edge_distance_band.GetBlockSize()
-
-    n_rows = edge_carbon_dataset.RasterYSize
-    n_cols = edge_carbon_dataset.RasterXSize
-
-    cols_per_block, rows_per_block = block_size[0], block_size[1]
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    last_time = time.time()
-
-    last_row_block_width = None
-    last_col_block_width = None
-
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
-
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
-
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info(
-                    'carbon edge calculation approx. %.2f%% complete',
-                    ((row_block_index * n_col_blocks + col_block_index) /
-                     float(n_row_blocks * n_col_blocks) * 100.0))
-                last_time = current_time
-
-            #This is true at least once since last_* initialized with None
-            if (last_row_block_width != row_block_width or
-                    last_col_block_width != col_block_width):
-                edge_distance_block = numpy.zeros(
-                    (row_block_width, col_block_width), dtype=numpy.float32)
-
-                last_row_block_width = row_block_width
-                last_col_block_width = col_block_width
-
-            edge_distance_band.ReadAsArray(
-                xoff=col_offset, yoff=row_offset,
-                win_xsize=col_block_width,
-                win_ysize=row_block_width,
-                buf_obj=edge_distance_block)
-
-            #gdal treats the first axis as the row
-            row_coords, col_coords = (
-                numpy.mgrid[0:row_block_width, 0:col_block_width].astype(
-                    numpy.float64))
-
-            col_coords *= edge_carbon_geotransform[1] # x width
-            row_coords *= edge_carbon_geotransform[5] # y width
-            col_coords += (
-                edge_carbon_geotransform[0] +
-                edge_carbon_geotransform[1] * col_offset) # starting x coord
-            row_coords += (
-                edge_carbon_geotransform[3] +
-                edge_carbon_geotransform[5] * row_offset) # starting y coord
-
-            coord_points = zip(row_coords.ravel(), col_coords.ravel())
-
-            distances, indexes = kd_tree.query(
-                coord_points, k=N_NEAREST_MODEL_POINTS,
-                distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
-            distances = distances.reshape(
-                edge_distance_block.shape[0], edge_distance_block.shape[1],
-                N_NEAREST_MODEL_POINTS)
-            indexes = indexes.reshape(
-                edge_distance_block.shape[0], edge_distance_block.shape[1],
-                N_NEAREST_MODEL_POINTS)
-
-            thetas = numpy.zeros((
-                edge_distance_block.shape[0], edge_distance_block.shape[1], 3))
-
-            biomass = numpy.empty(
-                (edge_distance_block.shape[0],
-                 edge_distance_block.shape[1], N_NEAREST_MODEL_POINTS),
-                dtype=numpy.float32)
-
-            for point_index in xrange(N_NEAREST_MODEL_POINTS):
-                valid_index_mask = (
-                    (indexes[:, :, point_index] != len(kd_points)) &
-                    (edge_distance_block > 0))
-                for theta_index in xrange(3):
-                    thetas[valid_index_mask, theta_index] = (
-                        theta_model_parameters[
-                            indexes[valid_index_mask, point_index],
-                            theta_index])
-
-                # the 3 is for the 3 models
-                biomass_model = numpy.zeros((
-                    edge_distance_block.shape[0],
-                    edge_distance_block.shape[1], 3))
-
-                #asymtotic model
-                #biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
-                biomass_model[valid_index_mask, 0] = (
-                    thetas[valid_index_mask, 0] -
-                    thetas[valid_index_mask, 1] * numpy.exp(
-                        -thetas[valid_index_mask, 2] *
-                        edge_distance_block[valid_index_mask])) * cell_area_ha
-
-                #logarithmic model
-                #biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
-                biomass_model[valid_index_mask, 1] = (
-                    thetas[valid_index_mask, 0] +
-                    thetas[valid_index_mask, 1] * numpy.log(
-                        edge_distance_block[valid_index_mask])) * cell_area_ha
-
-                #linear regression
-                #biomass_3 = t1 + t2 * edge_dist_km
-                biomass_model[valid_index_mask, 2] = (
-                    thetas[valid_index_mask, 0] +
-                    thetas[valid_index_mask, 1] *
-                    edge_distance_block[valid_index_mask]) * cell_area_ha
-
-                biomass[valid_index_mask, point_index] = biomass_model[
-                    valid_index_mask, method_model_parameter[indexes[
-                        valid_index_mask, point_index]]-1]
-
-                biomass[~valid_index_mask, point_index] = carbon_edge_nodata
-
-            valid_distances = distances >= 0.0
-            weights = numpy.zeros(distances.shape)
-            weights[valid_distances] = (
-                N_NEAREST_MODEL_POINTS / distances[valid_distances])
-            denom = numpy.sum(weights, axis=2)
-            average_biomass = numpy.sum(weights * biomass, axis=2) / denom
-
-            result = numpy.where(
-                edge_distance_block > 0, average_biomass, carbon_edge_nodata)
-            edge_carbon_band.WriteArray(
-                result, xoff=col_offset, yoff=row_offset)
+    _calculate_forest_edge_carbon_map(
+        edge_distance_uri, kd_tree, theta_model_parameters,
+        method_model_parameter, int(args['n_nearest_model_points']),
+        forest_edge_carbon_map_uri)
 
     cell_size_in_meters = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
@@ -255,15 +107,18 @@ def execute(args):
     carbon_map_uri = os.path.join(
         args['workspace_dir'], 'carbon_map%s.tif' % file_suffix)
 
+    carbon_edge_nodata = pygeoprocessing.get_nodata_from_uri(
+        forest_edge_carbon_map_uri)
     def combine_carbon_maps(non_forest_carbon, forest_carbon):
         """This combines the forest and non forest maps into one"""
         return numpy.where(
             forest_carbon == carbon_edge_nodata, non_forest_carbon,
             forest_carbon)
+
     pygeoprocessing.vectorize_datasets(
-        [non_forest_carbon_stocks_uri, edge_carbon_map_uri],
+        [non_forest_carbon_stocks_uri, forest_edge_carbon_map_uri],
         combine_carbon_maps, carbon_map_uri, gdal.GDT_Float32,
-        carbon_map_nodata, cell_size_in_meters, 'intersection',
+        carbon_edge_nodata, cell_size_in_meters, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
 
     #TASK: generate report (optional) by serviceshed if they exist
@@ -353,7 +208,7 @@ def _calculate_lulc_carbon_map(
         lulc_uri) ** 2 / 10000.0
 
     #Build a lookup table
-    carbon_map_nodata = -1
+    carbon_map_nodata = -9999.0
     for lucode in biophysical_table:
         is_forest = int(biophysical_table[int(lucode)]['is_forest'])
         if is_forest == 1:
@@ -492,13 +347,17 @@ def _build_spatial_index(
     kd_tree = scipy.spatial.cKDTree(kd_points)
     return kd_tree, theta_model_parameters, method_model_parameter
 
-def calculate_edge_carbon():
+def _calculate_forest_edge_carbon_map(
+        edge_distance_uri, kd_tree, theta_model_parameters,
+        method_model_parameter, n_nearest_model_points,
+        forest_edge_carbon_map_uri):
     """Calculates the carbon on the forest pixels accounting for their global
     position with respect to precalculated edge carbon models.
 
     Args:
         lulc_uri (string): path to the landcover raster that contains integer
             landcover codes
+        kd_tree (scipy.spatial.cKDTree):
         biophysical_table_uri (string): a filepath to a csv table that indexes
             landcover codes to surface carbon, contains at least the fields
             'lucode' (landcover integer code), 'is_forest' (0 or 1 depending
@@ -509,4 +368,154 @@ def calculate_edge_carbon():
     Returns:
         None"""
 
-    pass
+    cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        edge_distance_uri) ** 2 / 10000.0
+
+    carbon_edge_nodata = -9999.0
+    pygeoprocessing.new_raster_from_base_uri(
+        edge_distance_uri, forest_edge_carbon_map_uri, 'GTiff',
+        carbon_edge_nodata, gdal.GDT_Float32)
+
+    edge_carbon_dataset = gdal.Open(forest_edge_carbon_map_uri, gdal.GA_Update)
+    edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
+    edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
+
+    edge_distance_dataset = gdal.Open(edge_distance_uri)
+    edge_distance_band = edge_distance_dataset.GetRasterBand(1)
+    block_size = edge_distance_band.GetBlockSize()
+
+    n_rows = edge_carbon_dataset.RasterYSize
+    n_cols = edge_carbon_dataset.RasterXSize
+
+    cols_per_block, rows_per_block = block_size[0], block_size[1]
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+
+    last_time = time.time()
+
+    last_row_block_width = None
+    last_col_block_width = None
+
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
+
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
+
+            current_time = time.time()
+            if current_time - last_time > 5.0:
+                LOGGER.info(
+                    'carbon edge calculation approx. %.2f%% complete',
+                    ((row_block_index * n_col_blocks + col_block_index) /
+                     float(n_row_blocks * n_col_blocks) * 100.0))
+                last_time = current_time
+
+            #This is true at least once since last_* initialized with None
+            if (last_row_block_width != row_block_width or
+                    last_col_block_width != col_block_width):
+                edge_distance_block = numpy.zeros(
+                    (row_block_width, col_block_width), dtype=numpy.float32)
+
+                last_row_block_width = row_block_width
+                last_col_block_width = col_block_width
+
+            edge_distance_band.ReadAsArray(
+                xoff=col_offset, yoff=row_offset,
+                win_xsize=col_block_width,
+                win_ysize=row_block_width,
+                buf_obj=edge_distance_block)
+
+            #gdal treats the first axis as the row
+            row_coords, col_coords = (
+                numpy.mgrid[0:row_block_width, 0:col_block_width].astype(
+                    numpy.float64))
+
+            col_coords *= edge_carbon_geotransform[1] # x width
+            row_coords *= edge_carbon_geotransform[5] # y width
+            col_coords += (
+                edge_carbon_geotransform[0] +
+                edge_carbon_geotransform[1] * col_offset) # starting x coord
+            row_coords += (
+                edge_carbon_geotransform[3] +
+                edge_carbon_geotransform[5] * row_offset) # starting y coord
+
+            coord_points = zip(row_coords.ravel(), col_coords.ravel())
+
+            distances, indexes = kd_tree.query(
+                coord_points, k=n_nearest_model_points,
+                distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
+            distances = distances.reshape(
+                edge_distance_block.shape[0], edge_distance_block.shape[1],
+                n_nearest_model_points)
+            indexes = indexes.reshape(
+                edge_distance_block.shape[0], edge_distance_block.shape[1],
+                n_nearest_model_points)
+
+            thetas = numpy.zeros((
+                edge_distance_block.shape[0], edge_distance_block.shape[1], 3))
+
+            biomass = numpy.empty(
+                (edge_distance_block.shape[0],
+                 edge_distance_block.shape[1], n_nearest_model_points),
+                dtype=numpy.float32)
+
+            for point_index in xrange(n_nearest_model_points):
+                valid_index_mask = (
+                    (indexes[:, :, point_index] !=
+                     len(method_model_parameter)) & (edge_distance_block > 0))
+                for theta_index in xrange(3):
+                    thetas[valid_index_mask, theta_index] = (
+                        theta_model_parameters[
+                            indexes[valid_index_mask, point_index],
+                            theta_index])
+
+                # the 3 is for the 3 models
+                biomass_model = numpy.zeros((
+                    edge_distance_block.shape[0],
+                    edge_distance_block.shape[1], 3))
+
+                #asymtotic model
+                #biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
+                biomass_model[valid_index_mask, 0] = (
+                    thetas[valid_index_mask, 0] -
+                    thetas[valid_index_mask, 1] * numpy.exp(
+                        -thetas[valid_index_mask, 2] *
+                        edge_distance_block[valid_index_mask])) * cell_area_ha
+
+                #logarithmic model
+                #biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
+                biomass_model[valid_index_mask, 1] = (
+                    thetas[valid_index_mask, 0] +
+                    thetas[valid_index_mask, 1] * numpy.log(
+                        edge_distance_block[valid_index_mask])) * cell_area_ha
+
+                #linear regression
+                #biomass_3 = t1 + t2 * edge_dist_km
+                biomass_model[valid_index_mask, 2] = (
+                    thetas[valid_index_mask, 0] +
+                    thetas[valid_index_mask, 1] *
+                    edge_distance_block[valid_index_mask]) * cell_area_ha
+
+                biomass[valid_index_mask, point_index] = biomass_model[
+                    valid_index_mask, method_model_parameter[indexes[
+                        valid_index_mask, point_index]]-1]
+
+                biomass[~valid_index_mask, point_index] = carbon_edge_nodata
+
+            valid_distances = distances >= 0.0
+            weights = numpy.zeros(distances.shape)
+            weights[valid_distances] = (
+                n_nearest_model_points / distances[valid_distances])
+            denom = numpy.sum(weights, axis=2)
+            average_biomass = numpy.sum(weights * biomass, axis=2) / denom
+
+            result = numpy.where(
+                edge_distance_block > 0, average_biomass, carbon_edge_nodata)
+            edge_carbon_band.WriteArray(
+                result, xoff=col_offset, yoff=row_offset)
