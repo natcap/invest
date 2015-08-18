@@ -1179,24 +1179,50 @@ def check_repo(options):
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
     print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
+def supports_color():
+    """
+    Returns True if the running system's terminal supports color, and False
+    otherwise.
+
+    Taken from http://stackoverflow.com/a/22254892/299084
+    """
+    plat = sys.platform
+    supported_platform = plat != 'Pocket PC' and (plat != 'win32' or
+                                                  'ANSICON' in os.environ)
+    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+    if not supported_platform or not is_a_tty:
+        return False
+    return True
+
+TERM_IS_COLOR = supports_color()
+
+def _colorize(color_pattern, msg):
+    """
+    Apply the color pattern (likely an ANSI color escape code sequence)
+    to the message if the current terminal supports color.  If the terminal
+    does not support color, return the messge.
+    """
+    if TERM_IS_COLOR:
+        return color_pattern % msg
+    return msg
 
 def green(msg):
     """
     Return a string that is formatted as ANSI green.
     """
-    return '\033[92m%s\033[0m' % msg
+    return _colorize('\033[92m%s\033[0m', msg)
 
 def yellow(msg):
     """
     Return a string that is formatted as ANSI yellow.
     """
-    return '\033[93m%s\033[0m' % msg
+    return _colorize('\033[93m%s\033[0m', msg)
 
 def red(msg):
     """
     Return a string that is formatted as ANSI red.
     """
-    return '\033[91m%s\033[0m' % msg
+    return _colorize('\033[91m%s\033[0m', msg)
 
 ERROR = red('ERROR:')
 WARNING = yellow('WARNING:')
@@ -1252,7 +1278,7 @@ def _import_namespace_pkg(modname, print_msg=True):
 @task
 @cmdopts([
     ('fix-namespace', '', 'Fix issues with the natcap namespace if found'),
-    ('allow-errors', '', 'Errors will be printed, but the task will not fail')
+    ('allow-errors', '', 'Errors will be printed, but the task will not fail'),
 ])
 def check(options):
     """
