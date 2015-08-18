@@ -131,7 +131,8 @@ paver.easy.options(
         noinvest=False
     ),
     check=Bunch(
-        fix_namespace=False
+        fix_namespace=False,
+        allow_errors=False
     )
 )
 
@@ -1250,7 +1251,8 @@ def _import_namespace_pkg(modname, print_msg=True):
 
 @task
 @cmdopts([
-    ('fix-namespace', '', 'Fix issues with the natcap namespace if found')
+    ('fix-namespace', '', 'Fix issues with the natcap namespace if found'),
+    ('allow-errors', '', 'Errors will be printed, but the task will not fail')
 ])
 def check(options):
     """
@@ -1361,8 +1363,9 @@ def check(options):
                 # Setuptools introduced report() in v6.1
                 print ('{error} Setuptools is very out of date. '
                     'Upgrade and try again'.format(error=ERROR))
-                raise BuildFailure('Setuptools is very out of date. '
-                                'Upgrade and try again')
+                if options.check.allow_errors is False:
+                    raise BuildFailure('Setuptools is very out of date. '
+                                    'Upgrade and try again')
 
             if severity == required:
                 print '{error} {report}'.format(error=ERROR,
@@ -1540,8 +1543,12 @@ def check(options):
                 print 'Or use paver check --fix-namespace'
 
     if errors_found:
-        raise BuildFailure((ERROR + ' Programs missing and/or package '
-                            'requirements not met'))
+        error_string = (ERROR + ' Programs missing and/or package '
+                        'requirements not met')
+        if options.check.allow_errors is True:
+            print error_string
+        else:
+            raise BuildFailure(error_string)
     elif warnings_found:
         print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
