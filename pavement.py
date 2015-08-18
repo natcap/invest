@@ -1209,20 +1209,31 @@ def _colorize(color_pattern, msg):
 def green(msg):
     """
     Return a string that is formatted as ANSI green.
+    If the terminal does not support color, the input message is returned.
     """
     return _colorize('\033[92m%s\033[0m', msg)
 
 def yellow(msg):
     """
     Return a string that is formatted as ANSI yellow.
+    If the terminal does not support color, the input message is returned.
     """
     return _colorize('\033[93m%s\033[0m', msg)
 
 def red(msg):
     """
     Return a string that is formatted as ANSI red.
+    If the terminal does not support color, the input message is returned.
     """
     return _colorize('\033[91m%s\033[0m', msg)
+
+def bold(message):
+    """
+    Return a string formatted as ANSI bold.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize("\033[1m%s\033[0m", message)
+
 
 ERROR = red('ERROR:')
 WARNING = yellow('WARNING:')
@@ -1293,9 +1304,6 @@ def check(options):
 
     class FoundEXE(Exception):
         pass
-
-    def bold(message):
-        return "\033[1m%s\033[0m" % message
 
     # verify required programs exist
     errors_found = False
