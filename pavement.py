@@ -2080,6 +2080,7 @@ def selftest():
     ('envname=', 'e', ('The name of the environment to use')),
     ('python=', '', "The python interpreter to use.  If not provided, an env will be built for you."),
 ], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files', 'check_repo'])
+@might_call('check')
 @might_call('env')
 @might_call('build_data')
 @might_call('build_docs')
@@ -2093,6 +2094,13 @@ def build(options):
     If no extra options are specified, docs, data and binaries will all be generated.
     Any missing and needed repositories will be cloned.
     """
+
+    # Allowing errors will still print them, just not fail the build.  It's
+    # possible that the user might not want to build all available components.
+    call_task('check', options={
+        'fix_namespace': False,
+        'allow_errors': True
+    })
 
     # Check repositories up front so we can fail early if needed.
     # Here, we're only checking that if a repo exists, not cloning it.
