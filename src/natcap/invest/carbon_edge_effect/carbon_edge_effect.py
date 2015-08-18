@@ -71,89 +71,28 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    non_forest_carbon_map_uri = os.path.join(
-        args['workspace_dir'],
-        'non_forest_carbon_map%s.tif' % file_suffix)
-
-    calculate_lulc_carbon_map(
-        args['lulc_uri'], args['biophysical_table_uri'],
-        non_forest_carbon_map_uri)
-
-    N_NEAREST_MODEL_POINTS = int(args['n_nearest_model_points'])
-
-    #map distance to edge
-
-    edge_distance_uri = os.path.join(
-        args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
-
-    map_distance_from_forest_edge(
-        args['lulc_uri'], args['biophysical_table_uri'], edge_distance_uri)
-
+    #Map non-forest landcover codes to carbon biomasses
     non_forest_carbon_stocks_uri = os.path.join(
         args['workspace_dir'],
         'non_forest_carbon_stocks%s.tif' % file_suffix)
-    #calculate easy to read surface carbon map
-    def non_forest_carbon_op(carbon_reclass, non_forest_mask):
-        """Adds carbon values everywhere that's not forest"""
-        return numpy.where(
-            non_forest_mask == 1, carbon_reclass, carbon_map_nodata)
+    _calculate_lulc_carbon_map(
+        args['lulc_uri'], args['biophysical_table_uri'],
+        non_forest_carbon_stocks_uri)
 
-    pygeoprocessing.vectorize_datasets(
-        [non_forest_carbon_map_uri, non_forest_mask_uri],
-        non_forest_carbon_op, non_forest_carbon_stocks_uri, gdal.GDT_Float32,
-        carbon_map_nodata, out_pixel_size, "intersection", vectorize_op=False)
+    #generate a map of pixel distance to forest edge from the landcover map
+    edge_distance_uri = os.path.join(
+        args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
+    _map_distance_from_forest_edge(
+        args['lulc_uri'], args['biophysical_table_uri'], edge_distance_uri)
 
-    #Build spatial index for model for closest 3 points
-    bounding_box = pygeoprocessing.get_bounding_box(args['lulc_uri'])
-    model_bounding_box = shapely.geometry.box(*bounding_box)
 
-    lulc_ref = osr.SpatialReference()
-    lulc_projection_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
-        args['lulc_uri'])
-    lulc_ref.ImportFromWkt(lulc_projection_wkt)
+    N_NEAREST_MODEL_POINTS = int(args['n_nearest_model_points'])
 
-    carbon_model_reproject_uri = os.path.join(
-        args['workspace_dir'], 'local_carbon_shape.shp')
-
-    pygeoprocessing.reproject_datasource_uri(
-        args['carbon_model_shape_uri'], lulc_projection_wkt,
-        carbon_model_reproject_uri)
-
-    model_shape_ds = ogr.Open(carbon_model_reproject_uri)
-    model_shape_layer = model_shape_ds.GetLayer()
-
-    # coordinate transformation to model points to lulc projection
-    kd_points = []
-    theta_model_parameters = []
-    method_model_parameter = []
-    parameters_of_interest = ['theta1', 'theta2', 'theta3']
-    for poly_feature in model_shape_layer:
-        poly_geom = poly_feature.GetGeometryRef()
-
-        #project point_feature to lulc_uri projection
-        shapely_poly = shapely.wkb.loads(poly_geom.ExportToWkb())
-
-        # test if point in bounding box and add to kd-tree if so
-        if model_bounding_box.intersects(shapely_poly):
-            poly_centroid = poly_geom.Centroid()
-            #put in row/col order since rasters are row/col indexed
-            kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
-
-            theta_model_parameters.append([
-                poly_feature.GetField(feature_id) for feature_id in
-                parameters_of_interest])
-            method_model_parameter.append(poly_feature.GetField('method'))
-
-    method_model_parameter = numpy.array(
-        method_model_parameter, dtype=numpy.int32)
-    theta_model_parameters = numpy.array(
-        theta_model_parameters, dtype=numpy.float32)
-
-    #if kd-tree is empty, raise exception
-    if len(kd_points) == 0:
-        raise ValueError("The input raster is outside any carbon edge model")
-
-    kd_tree = scipy.spatial.cKDTree(kd_points)
+    #Build spatial index for gridded global model for closest 3 points
+    kd_tree, theta_model_parameters, method_model_parameter = (
+        _build_spatial_index(
+            args['lulc_uri'], args['workspace_dir'],
+            args['carbon_model_shape_uri']))
 
     cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         lulc_uri) ** 2 / 10000.0
@@ -385,7 +324,7 @@ def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
         serviceshed_layer.SetFeature(poly_feat)
 
 
-def calculate_lulc_carbon_map(
+def _calculate_lulc_carbon_map(
     lulc_uri, biophysical_table_uri, non_forest_carbon_map_uri):
 
     """Calculates the carbon on the map based on non-forest landcover types
@@ -405,41 +344,46 @@ def calculate_lulc_carbon_map(
     Returns:
         None"""
 
-
     #classify forest pixels from lulc
     biophysical_table = pygeoprocessing.get_lookup_from_table(
         biophysical_table_uri, 'lucode')
 
     lucode_to_per_pixel_carbon = {}
-    forest_codes = []
     cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         lulc_uri) ** 2 / 10000.0
 
+    #Build a lookup table
+    carbon_map_nodata = -1
     for lucode in biophysical_table:
-        try:
-            is_forest = int(biophysical_table[int(lucode)]['is_forest'])
-            if is_forest == 1:
-                forest_codes.append(lucode)
+        is_forest = int(biophysical_table[int(lucode)]['is_forest'])
+        if is_forest == 1:
+            #if forest, lookup table is nodata
+            lucode_to_per_pixel_carbon[int(lucode)] = carbon_map_nodata
+        else:
             lucode_to_per_pixel_carbon[int(lucode)] = float(
                 biophysical_table[lucode]['c_above']) * cell_area_ha
-        except ValueError:
-            #this might be because the c_above parameter is n/a or undefined
-            #because of forest
-            lucode_to_per_pixel_carbon[int(lucode)] = 0.0
 
     #map aboveground carbon from table to lulc that is not forest
-    carbon_map_nodata = -1
-
     pygeoprocessing.reclassify_dataset_uri(
         lulc_uri, lucode_to_per_pixel_carbon,
         non_forest_carbon_map_uri, gdal.GDT_Float32, carbon_map_nodata)
 
-def map_distance_from_forest_edge(
+
+def _map_distance_from_forest_edge(
         lulc_uri, biophysical_table_uri, edge_distance_uri):
     """Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
 
     Args:
+        lulc_uri (string): path to the landcover raster that contains integer
+            landcover codes
+        biophysical_table_uri (string): a path to a csv table that indexes
+            landcover codes to forest type, contains at least the fields
+            'lucode' (landcover integer code) and 'is_forest' (0 or 1 depending
+            on landcover code type)
+        edge_distance_uri (string): path to output raster where each pixel
+            contains the euclidian pixel distance to nearest forest edges on
+            all non-nodata values of lulc_uri
 
     Returns:
         None"""
@@ -476,19 +420,91 @@ def map_distance_from_forest_edge(
     #good practice to delete temporary files when we're done with them
     os.remove(non_forest_mask_uri)
 
+def _build_spatial_index(
+        base_raster_uri, local_model_dir, global_carbon_model_shapefile_uri):
+    """Builds a kd-tree index of the locally projected globally georeferenced
+    carbon edge model parameters.
+
+    Args:
+        base_raster_uri (string): path to a raster that is used to define the
+            bounding box and projection of the local model.
+        local_model_dir (string): path to a directory where we can write a
+            shapefile of the locally projected global data model grid.
+            Function will create a file called 'local_carbon_shape.shp' in
+            that location and overwrite one if it exists.
+        global_carbon_model_shapefile_uri (string): a path to an OGR shapefile
+            that has the parameters for the global carbon edge model.  Each
+            georeferenced feature should have fields 'theta1', 'theta2',
+            'theta3', and 'method'
+
+    Returns:
+        a tuple of:
+            scipy.spatial.cKDTree (georeferenced locally projected model points)
+            theta_model_parameters (parallel Nx3 array of theta parameters)
+            method_model_parameter (parallel N array of model numbers (1..3))
+
+    """
+
+    #Reproject the global model into local coordinate system
+    carbon_model_reproject_uri = os.path.join(
+        local_model_dir, 'local_carbon_shape.shp')
+    lulc_projection_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
+        base_raster_uri)
+    pygeoprocessing.reproject_datasource_uri(
+        global_carbon_model_shapefile_uri, lulc_projection_wkt,
+        carbon_model_reproject_uri)
+
+    model_shape_ds = ogr.Open(carbon_model_reproject_uri)
+    model_shape_layer = model_shape_ds.GetLayer()
+
+    kd_points = []
+    theta_model_parameters = []
+    method_model_parameter = []
+    model_bounding_box = shapely.geometry.box(
+        *pygeoprocessing.get_bounding_box(base_raster_uri))
+    for poly_feature in model_shape_layer:
+        poly_geom = poly_feature.GetGeometryRef()
+
+        #project point_feature to lulc_uri projection
+        shapely_poly = shapely.wkb.loads(poly_geom.ExportToWkb())
+
+        # test if point in bounding box and add to kd-tree if so
+        #TODO: maybe we can just put all the points in the kd-tree
+        if model_bounding_box.intersects(shapely_poly):
+            poly_centroid = poly_geom.Centroid()
+            #put in row/col order since rasters are row/col indexed
+            kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
+
+            theta_model_parameters.append([
+                poly_feature.GetField(feature_id) for feature_id in
+                ['theta1', 'theta2', 'theta3']])
+            method_model_parameter.append(poly_feature.GetField('method'))
+
+    method_model_parameter = numpy.array(
+        method_model_parameter, dtype=numpy.int32)
+    theta_model_parameters = numpy.array(
+        theta_model_parameters, dtype=numpy.float32)
+
+    #if kd-tree is empty, raise exception
+    if len(kd_points) == 0:
+        raise ValueError("The input raster is outside any carbon edge model")
+
+    kd_tree = scipy.spatial.cKDTree(kd_points)
+    return kd_tree, theta_model_parameters, method_model_parameter
+
 def calculate_edge_carbon():
     """Calculates the carbon on the forest pixels accounting for their global
     position with respect to precalculated edge carbon models.
 
     Args:
-        lulc_uri (string): a filepath to the landcover map that contains integer
+        lulc_uri (string): path to the landcover raster that contains integer
             landcover codes
         biophysical_table_uri (string): a filepath to a csv table that indexes
             landcover codes to surface carbon, contains at least the fields
             'lucode' (landcover integer code), 'is_forest' (0 or 1 depending
             on landcover code type)
         non_forest_carbon_map_uri (string): a filepath to the output raster
-            thta will contain total non-forest carbon per cell.
+            theta will contain total non-forest carbon per cell.
 
     Returns:
         None"""
