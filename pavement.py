@@ -1300,6 +1300,9 @@ def check(options):
     and for known issues with the natcap python namespace.
     """
     def is_exe(fpath):
+        """
+        Check whether a file is executable and that it exists.
+        """
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
     class FoundEXE(Exception):
