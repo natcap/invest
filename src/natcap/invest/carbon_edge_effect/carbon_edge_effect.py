@@ -71,38 +71,15 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    N_NEAREST_MODEL_POINTS = int(args['n_nearest_model_points'])
-
-    #classify forest pixels from lulc
-    biophysical_table = pygeoprocessing.get_lookup_from_table(
-        args['biophysical_table_uri'], 'lucode')
-
-    lucode_to_per_pixel_carbon = {}
-    forest_codes = []
-    cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
-        args['lulc_uri']) ** 2 / 10000.0
-
-    for lucode in biophysical_table:
-        try:
-            is_forest = int(biophysical_table[int(lucode)]['is_forest'])
-            if is_forest == 1:
-                forest_codes.append(lucode)
-            lucode_to_per_pixel_carbon[int(lucode)] = float(
-                biophysical_table[lucode]['c_above']) * cell_area_ha
-        except ValueError:
-            #this might be because the c_above parameter is n/a or undefined
-            #because of forest
-            lucode_to_per_pixel_carbon[int(lucode)] = 0.0
-
-    #map aboveground carbon from table to lulc that is not forest
-    carbon_map_nodata = -1
     non_forest_carbon_map_uri = os.path.join(
         args['workspace_dir'],
         'non_forest_carbon_map%s.tif' % file_suffix)
 
-    pygeoprocessing.reclassify_dataset_uri(
-        args['lulc_uri'], lucode_to_per_pixel_carbon,
-        non_forest_carbon_map_uri, gdal.GDT_Float32, carbon_map_nodata)
+    calculate_lulc_carbon_map(
+        args['lulc_uri'], args['biophysical_table_uri'],
+        non_forest_carbon_map_uri)
+
+    N_NEAREST_MODEL_POINTS = int(args['n_nearest_model_points'])
 
     #map distance to edge
     non_forest_mask_uri = os.path.join(
@@ -417,3 +394,53 @@ def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
         poly_feat.SetField(
             'c_ha_mean', serviceshed_stats.hectare_mean[poly_index])
         serviceshed_layer.SetFeature(poly_feat)
+
+
+def calculate_lulc_carbon_map(
+    lulc_uri, biophysical_table_uri, non_forest_carbon_map_uri):
+
+    """Calculates the carbon on the map based on non-forest landcover types
+    only
+
+    Args:
+        lulc_uri (string): a filepath to the landcover map that contains integer
+            landcover codes
+        biophysical_table_uri (string): a filepath to a csv table that indexes
+            landcover codes to surface carbon, contains at least the fields
+            'lucode' (landcover integer code), 'is_forest' (0 or 1 depending
+            on landcover code type), and 'c_above' (carbon density in terms of
+            Mg/Ha)
+        non_forest_carbon_map_uri (string): a filepath to the output raster
+            thta will contain total non-forest carbon per cell.
+
+    Returns:
+        None"""
+
+
+    #classify forest pixels from lulc
+    biophysical_table = pygeoprocessing.get_lookup_from_table(
+        biophysical_table_uri, 'lucode')
+
+    lucode_to_per_pixel_carbon = {}
+    forest_codes = []
+    cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        lulc_uri) ** 2 / 10000.0
+
+    for lucode in biophysical_table:
+        try:
+            is_forest = int(biophysical_table[int(lucode)]['is_forest'])
+            if is_forest == 1:
+                forest_codes.append(lucode)
+            lucode_to_per_pixel_carbon[int(lucode)] = float(
+                biophysical_table[lucode]['c_above']) * cell_area_ha
+        except ValueError:
+            #this might be because the c_above parameter is n/a or undefined
+            #because of forest
+            lucode_to_per_pixel_carbon[int(lucode)] = 0.0
+
+    #map aboveground carbon from table to lulc that is not forest
+    carbon_map_nodata = -1
+
+    pygeoprocessing.reclassify_dataset_uri(
+        lulc_uri, lucode_to_per_pixel_carbon,
+        non_forest_carbon_map_uri, gdal.GDT_Float32, carbon_map_nodata)
