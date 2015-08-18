@@ -1547,6 +1547,7 @@ def check(options):
                         'requirements not met')
         if options.check.allow_errors is True:
             print red('CRITICAL:') + error_string
+            print red('CRITICAL:') + ' Ignoring errors per user request'
         else:
             raise BuildFailure(ERROR + error_string)
     elif warnings_found:
