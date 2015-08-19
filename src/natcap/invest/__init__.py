@@ -1,8 +1,5 @@
 """init module for natcap.invest"""
 
-from urllib import urlencode
-from urllib2 import Request
-from urllib2 import urlopen
 import locale
 import os
 import platform
@@ -10,7 +7,9 @@ import sys
 import hashlib
 import json
 import distutils.version
+import datetime
 
+import Pyro4
 import natcap.versioner
 
 try:
@@ -60,8 +59,8 @@ def local_dir(source_file):
             pass
     return source_dirname
 
-def _user_hash():
-    """Returns a hash for the user, based on the machine."""
+def _node_hash():
+    """Returns a hash for the current computational node."""
     data = {
         'os': platform.platform(),
         'hostname': platform.node(),
@@ -87,20 +86,23 @@ def log_model(model_name, model_args):
     Returns:
         None."""
 
-    path = 'http://ncp-dev.stanford.edu/~invest-logger/log-modelname.php'
-    data = {
-        'model_name': model_name,
-        'invest_release': __version__,
-        'user': _user_hash(),
-        'system': {
-            'full_platform_string': platform.platform(),
-            'preferred_encoding': locale.getdefaultlocale()[1],
-            'default_language': locale.getdefaultlocale()[0],
-        },
-    }
-
     try:
-        urlopen(Request(path, urlencode(data)))
+        payload = {
+            'model_name': model_name,
+            'invest_release': __version__,
+            'node_hash': _node_hash(),
+            'system_full_platform_string': platform.platform(),
+            'system_preferred_encoding': locale.getdefaultlocale()[1],
+            'system_default_language': locale.getdefaultlocale()[0],
+            # too hard to get reliable timezone
+            'time': datetime.datetime.now().isoformat(' '),
+            'bounding_box_intersection': "[]",
+            'bounding_box_union': "[]"
+        }
+
+        path = "PYRO:natcap.invest.remote_logging@localhost:54321"
+        logging_server = Pyro4.Proxy(path)
+        logging_server.log_invest_run(payload)
     except:
         # An exception was thrown, we don't care.
         print 'an exception encountered when logging'
