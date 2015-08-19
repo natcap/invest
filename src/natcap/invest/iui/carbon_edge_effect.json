@@ -38,7 +38,7 @@
           "args_id": "n_nearest_model_points",
           "type": "text",
           "label": "Number of nearest model points to average",
-          "defaultValue": "3",
+          "defaultValue": "10",
           "required": true,
           "validText": "^[0-9]+$",
           "helpText": "The number of global carbon edge 100km model points to include in the model average calculation."
