@@ -106,13 +106,15 @@ def get_inputs(args):
         vars_dict['analysis_year'] = int(vars_dict['analysis_year'])
 
     # Set LULC_Snapshots' NODATA to Program Standard
-    l = []
+    lulc_snapshot_list = []
     for i in vars_dict['lulc_snapshot_list']:
-        l.append(Raster.from_file(i).set_nodata(NODATA_INT).uri)
-    vars_dict['lulc_snapshot_list'] = l
+        lulc_snapshot_list.append(
+            Raster.from_file(i).set_nodata(NODATA_INT).uri)
+    vars_dict['lulc_snapshot_list'] = lulc_snapshot_list
 
     # Fetch yearly_carbon_price_dict
-    vars_dict['yearly_carbon_price_dict'] = _get_yearly_carbon_price_dict(vars_dict)
+    vars_dict['yearly_carbon_price_dict'] = \
+        _get_yearly_carbon_price_dict(vars_dict)
 
     return vars_dict
 
