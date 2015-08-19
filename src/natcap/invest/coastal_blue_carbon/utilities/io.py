@@ -51,13 +51,13 @@ def get_inputs(args):
         args['lulc_transition_uri'], 'lulc-class')
     lulc_transition_dict['undefined'] = {
         u'lulc-class': u'undefined', u'undefined': u'undefined'}
-    l = []
+    item_list = []
     for item in lulc_transition_dict.items():
         if item[0] is u'':
             continue
         del item[1]['lulc-class']
-        l.append(item)
-    vars_dict['lulc_transition_dict'] = dict(l)
+        item_list.append(item)
+    vars_dict['lulc_transition_dict'] = dict(item_list)
 
     # LULC Lookup
     lulc_lookup_dict = vars_dict['lulc_lookup_dict']
