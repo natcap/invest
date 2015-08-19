@@ -531,10 +531,10 @@ def after_install(options, home_dir):
         os.makedirs(etc)
     if platform.system() == 'Windows':
         bindir = 'Scripts'
-        distutils_dir = os.path.join('Lib', 'distutils')
+        distutils_dir = os.path.join(home_dir, 'Lib', 'distutils')
     else:
         bindir = 'bin'
-        distutils_dir = os.path.join('lib', 'python27', 'distutils')
+        distutils_dir = os.path.join(home_dir, 'lib', 'python27', 'distutils')
     distutils_cfg = os.path.join(distutils_dir, 'distutils.cfg')
 
     if not os.path.exists(distutils_dir):
