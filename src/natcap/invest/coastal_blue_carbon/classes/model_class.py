@@ -280,14 +280,12 @@ class CBCModel(object):
             lulc_transition_dict = vars_dict['lulc_transition_dict']
             carbon_pool_transient_dict = vars_dict['carbon_pool_transient_dict']
             h = {}
+            undisturbed_set = set(['', 'accum', 'NCC'])
             for prev_lulc, val in lulc_transition_dict.items():
                 for next_lulc, carbon_mag_and_dir in val.items():
-                    if carbon_mag_and_dir not in [
-                            '', 'accum', 'NCC']:
+                    if carbon_mag_and_dir not in undisturbed_set:
                         half_life_val = carbon_pool_transient_dict[
                             (next_lulc, pool)]['half-life']
-                        # add automatic handling of incorrect inputs?
-                        # half_life_val = 1 if half_life_val == 0 else half_life_val
                         h[(lulc_to_code_dict[prev_lulc], lulc_to_code_dict[
                             next_lulc])] = half_life_val
                     else:
