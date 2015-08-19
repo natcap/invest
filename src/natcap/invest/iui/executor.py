@@ -509,17 +509,11 @@ class Executor(threading.Thread):
         LOGGER.info('Executing the loaded model')
 
         try:
-            model_version = model.__version__
-            LOGGER.info('Running model version %s', model_version)
-        except AttributeError:
-            model_version = None
-
-        try:
             LOGGER.info('Running InVEST version "%s"', natcap.invest.__version__)
             LOGGER.info('Python architecture: %s', platform.architecture())
             LOGGER.info('Disk space remaining for workspace: %s',
                         fileio.get_free_space(workspace))
-            natcap.invest.log_model(model_name, model_version)  # log model usage to ncp-dev
+            natcap.invest.log_model(model_name)  # log model usage to ncp-dev
 
             LOGGER.info('Pointing temporary directory at the workspace at %s' % args['workspace_dir'])
             temporary_path = os.path.join(args['workspace_dir'], 'tmp')
