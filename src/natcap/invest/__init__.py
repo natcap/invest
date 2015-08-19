@@ -74,7 +74,7 @@ def _user_hash():
     except:
         return None
 
-def log_model(model_name):
+def log_model(model_name, model_args):
     """Submit a POST request to the defined URL with the modelname passed in as
     input.  The InVEST version number is also submitted, retrieved from the
     package's resources.
@@ -82,6 +82,7 @@ def log_model(model_name):
     Args:
 
         model_name (string): a python string of the package version.
+        model_args (dict): the traditional InVEST argument dictionary.
 
     Returns:
         None."""
@@ -92,16 +93,9 @@ def log_model(model_name):
         'invest_release': __version__,
         'user': _user_hash(),
         'system': {
-            'os': platform.system(),
-            'release': platform.release(),
             'full_platform_string': platform.platform(),
-            'fs_encoding': sys.getfilesystemencoding(),
             'preferred_encoding': locale.getdefaultlocale()[1],
             'default_language': locale.getdefaultlocale()[0],
-            'python': {
-                'version': platform.python_version(),
-                'bits': platform.architecture()[0],
-            },
         },
     }
 

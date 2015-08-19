@@ -513,7 +513,7 @@ class Executor(threading.Thread):
             LOGGER.info('Python architecture: %s', platform.architecture())
             LOGGER.info('Disk space remaining for workspace: %s',
                         fileio.get_free_space(workspace))
-            natcap.invest.log_model(model_name)  # log model usage to ncp-dev
+            natcap.invest.log_model(model_name, args)
 
             LOGGER.info('Pointing temporary directory at the workspace at %s' % args['workspace_dir'])
             temporary_path = os.path.join(args['workspace_dir'], 'tmp')
