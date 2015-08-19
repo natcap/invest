@@ -165,7 +165,20 @@ def _create_transient_dict(carbon_pool_transient_uri):
 
 
 def _get_yearly_carbon_price_dict(vars_dict):
-    """Return dictionary of discounted prices for each year."""
+    """Return dictionary of discounted prices for each year.
+
+    Args:
+        discount_rate (float)
+        lulc_snapshot_years_list (list)
+        analysis_year (int)
+        interest_rate (float)
+        price (float)
+        do_price_table (boolean)
+        price_table_uri (string)
+
+    Returns:
+        yearly_carbon_price_dict (dictionary)
+    """
     discount_rate = float(vars_dict['discount_rate'])
     start_year = int(vars_dict['lulc_snapshot_years_list'][0])
     end_year = int(vars_dict['lulc_snapshot_years_list'][-1])
