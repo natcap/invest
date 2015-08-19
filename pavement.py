@@ -544,7 +544,7 @@ def after_install(options, home_dir):
     source_file = os.path.join(distutils.__path__[0],
                                'distutils.cfg')
     install_string += (
-        "    if os.path.exists({src_distutils_cfg}):\n"
+        "    if os.path.exists('{src_distutils_cfg}'):\n"
         "       if not os.path.exists(distutils_dir):\n"
         "           os.makedirs(distutils_dir)\n"
         "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
