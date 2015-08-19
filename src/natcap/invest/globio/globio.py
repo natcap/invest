@@ -62,8 +62,6 @@ def execute(args):
             parameters
         args['aoi_uri'] - (string) (optional) if it exists then final MSA raster
             is summarized by AOI
-        args['aoi_summary_key'] - (string) (required if args['aoi_uri'])
-            field name of the aoi polygons that uniquely identify them
         args['globio_lulc_uri'] - (string) used in "mode (b)" path to predefined
             globio raster.
     """
