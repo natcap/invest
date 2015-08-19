@@ -537,9 +537,6 @@ def after_install(options, home_dir):
         distutils_dir = os.path.join(home_dir, 'lib', 'python27', 'distutils')
     distutils_cfg = os.path.join(distutils_dir, 'distutils.cfg')
 
-    if not os.path.exists(distutils_dir):
-        os.makedirs(distutils_dir)
-
 """
 
     # If the user has a distutils.cfg file defined in their global distutils
@@ -547,7 +544,7 @@ def after_install(options, home_dir):
     source_file = os.path.join(distutils.__path__[0],
                                'distutils.cfg')
     install_string += (
-        "    if os.path.exists(distutils_cfg):\n"
+        "    if os.path.exists({src_distutils_cfg}):\n"
         "       if not os.path.exists(distutils_dir):\n"
         "           os.makedirs(distutils_dir)\n"
         "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
@@ -651,14 +648,9 @@ def after_install(options, home_dir):
     # Virtualenv appears to partially copy over distutills into the new env.
     # Remove what was copied over so we din't confuse pyinstaller.
     if platform.system() == 'Windows':
-        distutils_dir = os.path.join(options.env.envname, 'Lib', 'distutils')
         init_file = os.path.join(options.env.envname, 'Lib', 'site-packages', 'natcap', '__init__.py')
     else:
-        distutils_dir = os.path.join(options.env.envname, 'lib', 'python2.7', 'distutils')
         init_file = os.path.join(options.env.envname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
-
-    if os.path.exists(distutils_dir):
-        dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
 
     if options.with_invest is True and options.env.dev is False:
         # writing this import appears to help pyinstaller find the __path__
