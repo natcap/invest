@@ -356,8 +356,9 @@ def execute(args):
         layer.CreateField(msa_summary_field_def)
 
         #make an identifying id per polygon that can be used for aggregation
+        layer_defn = layer.GetLayerDefn()
         while True:
-            layer_defn = layer.GetLayerDefn()
+            #last 8 characters because shapefile fields are limited to 8 chars
             poly_id_field = str(uuid.uuid4())[-8:]
             if layer_defn.GetFieldIndex(poly_id_field) == -1:
                 break
