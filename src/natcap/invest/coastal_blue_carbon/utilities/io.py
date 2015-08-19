@@ -53,6 +53,7 @@ def get_inputs(args):
         u'lulc-class': u'undefined', u'undefined': u'undefined'}
     item_list = []
     for item in lulc_transition_dict.items():
+        # allows a second-column legend to be appended to input csv
         if item[0] is u'':
             continue
         del item[1]['lulc-class']
