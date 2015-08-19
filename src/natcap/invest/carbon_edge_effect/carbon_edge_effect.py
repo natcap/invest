@@ -1,4 +1,6 @@
-"""InVEST Carbon Edge Effect Model"""
+"""InVEST Carbon Edge Effect Model an implementation of the model described in
+'Degradation in carbon stocks near tropical forest edges', by Chaplin-Kramer
+et. al (in review)"""
 
 import os
 import logging
@@ -9,10 +11,6 @@ import uuid
 import numpy
 from osgeo import gdal
 from osgeo import ogr
-from osgeo import osr
-import shapely
-import shapely.geometry
-import shapely.wkb
 import pygeoprocessing
 import scipy.spatial
 
@@ -75,6 +73,7 @@ def execute(args):
     non_forest_carbon_stocks_uri = os.path.join(
         args['workspace_dir'],
         'non_forest_carbon_stocks%s.tif' % file_suffix)
+    LOGGER.info('calculating non-forest carbon')
     _calculate_lulc_carbon_map(
         args['lulc_uri'], args['biophysical_table_uri'],
         non_forest_carbon_stocks_uri)
@@ -82,6 +81,7 @@ def execute(args):
     #generate a map of pixel distance to forest edge from the landcover map
     edge_distance_uri = os.path.join(
         args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
+    LOGGER.info('calculating distance from forest edge')
     _map_distance_from_forest_edge(
         args['lulc_uri'], args['biophysical_table_uri'], edge_distance_uri)
 
@@ -93,13 +93,15 @@ def execute(args):
 
     #calculate the edge carbon effect on forests
     forest_edge_carbon_map_uri = os.path.join(
-        args['workspace_dir'], 'forest_edge_carbon_map%s.tif' % file_suffix)
+        args['workspace_dir'], 'forest_edge_carbon_stocks%s.tif' % file_suffix)
 
+    LOGGER.info('calculating forest edge carbon')
     _calculate_forest_edge_carbon_map(
         edge_distance_uri, kd_tree, theta_model_parameters,
         method_model_parameter, int(args['n_nearest_model_points']),
         forest_edge_carbon_map_uri)
 
+    LOGGER.info('combining forest and non forest carbon into single raster')
     cell_size_in_meters = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
 
@@ -123,12 +125,26 @@ def execute(args):
 
     #TASK: generate report (optional) by serviceshed if they exist
     if 'serviceshed_uri' in args:
+        LOGGER.info('aggregating carbon map by serviceshed')
         _aggregate_carbon_map(
             args['serviceshed_uri'], args['workspace_dir'], carbon_map_uri)
 
 
 def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
-    """Helper function to aggregate carbon values for the given serviceshed."""
+    """Helper function to aggregate carbon values for the given serviceshed.
+    Will make a new shapefile that's a copy of 'serviceshed_uri' in
+    'workspace_dir' with mean and sum values from the raster at 'carbon_map_uri'
+
+    Args:
+        serviceshed_uri (string): path to shapefile that will be used to
+            aggregate raster at'carbon_map_uri'
+        workspace_dir (string): path to a directory that function can copy
+            the shapefile at serviceshed_uri into.
+        carbon_map_uri (string): path to raster that will be aggregated by
+            the given serviceshed polygons
+
+    Returns:
+        None"""
 
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_serviceshed_datasource = ogr.Open(serviceshed_uri)
@@ -180,10 +196,9 @@ def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
 
 
 def _calculate_lulc_carbon_map(
-    lulc_uri, biophysical_table_uri, non_forest_carbon_map_uri):
-
+        lulc_uri, biophysical_table_uri, non_forest_carbon_map_uri):
     """Calculates the carbon on the map based on non-forest landcover types
-    only
+    only.
 
     Args:
         lulc_uri (string): a filepath to the landcover map that contains integer
@@ -315,25 +330,18 @@ def _build_spatial_index(
     kd_points = []
     theta_model_parameters = []
     method_model_parameter = []
-    model_bounding_box = shapely.geometry.box(
-        *pygeoprocessing.get_bounding_box(base_raster_uri))
+
+    # put all the polygons in the kd_tree because it's fast and simple
     for poly_feature in model_shape_layer:
         poly_geom = poly_feature.GetGeometryRef()
+        poly_centroid = poly_geom.Centroid()
+        #put in row/col order since rasters are row/col indexed
+        kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
 
-        #project point_feature to lulc_uri projection
-        shapely_poly = shapely.wkb.loads(poly_geom.ExportToWkb())
-
-        # test if point in bounding box and add to kd-tree if so
-        #TODO: maybe we can just put all the points in the kd-tree
-        if model_bounding_box.intersects(shapely_poly):
-            poly_centroid = poly_geom.Centroid()
-            #put in row/col order since rasters are row/col indexed
-            kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
-
-            theta_model_parameters.append([
-                poly_feature.GetField(feature_id) for feature_id in
-                ['theta1', 'theta2', 'theta3']])
-            method_model_parameter.append(poly_feature.GetField('method'))
+        theta_model_parameters.append([
+            poly_feature.GetField(feature_id) for feature_id in
+            ['theta1', 'theta2', 'theta3']])
+        method_model_parameter.append(poly_feature.GetField('method'))
 
     method_model_parameter = numpy.array(
         method_model_parameter, dtype=numpy.int32)
@@ -343,8 +351,9 @@ def _build_spatial_index(
     #if kd-tree is empty, raise exception
     if len(kd_points) == 0:
         raise ValueError("The input raster is outside any carbon edge model")
-
+    LOGGER.info('building kd_tree')
     kd_tree = scipy.spatial.cKDTree(kd_points)
+    LOGGER.info('done building kd_tree')
     return kd_tree, theta_model_parameters, method_model_parameter
 
 def _calculate_forest_edge_carbon_map(
@@ -443,8 +452,9 @@ def _calculate_forest_edge_carbon_map(
                 win_ysize=row_block_width,
                 buf_obj=edge_distance_block)
             valid_edge_distance_mask = (edge_distance_block > 0)
+
+            #if no valid forest pixels to calculate, skip to the next block
             if not valid_edge_distance_mask.any():
-                #no valid forest pixels to calculate, skip to the next block
                 continue
 
             #calculate local coordinates for each pixel so we can test for
@@ -461,9 +471,7 @@ def _calculate_forest_edge_carbon_map(
                 edge_carbon_geotransform[3] +
                 edge_carbon_geotransform[5] * (row_offset + row_block_width),
                 num=row_block_width, endpoint=False)
-            #LOGGER.debug('row_range.shape %s', row_range.shape)
-            #LOGGER.debug('col_range.shape %s', col_range.shape)
-            col_coords, row_coords  = numpy.meshgrid(col_range, row_range)
+            col_coords, row_coords = numpy.meshgrid(col_range, row_range)
 
             #query nearest points for every point in the grid
             #n_jobs=-1 means use all available cpus
@@ -474,89 +482,72 @@ def _calculate_forest_edge_carbon_map(
                 coord_points, k=n_nearest_model_points,
                 distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
 
-            #if a point is not found the index will be equal to the number
-            #of points in the kd_tree
-
-            #valid index mask is an (n valid distances) X n_nearest_model_points array
+            #the 3 is for the 3 thetas in the carbon model
+            thetas = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
             valid_index_mask = (indexes != kd_tree.n)
-            thetas = theta_model_parameters[indexes[valid_index_mask]]
-            biomass_model = numpy.empty(thetas.shape)
-            valid_edge_distances = edge_distance_block[valid_edge_distance_mask]
+            thetas[valid_index_mask] = theta_model_parameters[
+                indexes[valid_index_mask]]
+
+            #the 3 is for the 3 models (asym, exp, linear)
+            biomass_model = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
+            #reshape to an N,nearest_points so we can multiply by thetas
+            valid_edge_distances = numpy.repeat(
+                edge_distance_block[valid_edge_distance_mask],
+                n_nearest_model_points).reshape(-1, n_nearest_model_points)
+
             #asymtotic model
             #biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
-            biomass_model[:, 0] = (
-                thetas[:, 0] - thetas[:, 1] * numpy.exp(
-                    -thetas[:, 2] * numpy.repeat(
-                        valid_edge_distances[valid_index_mask[:, 0]],
-                        n_nearest_model_points))) * cell_area_ha
+            biomass_model[:, :, 0] = (
+                thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
+                    -thetas[:, :, 2] * valid_edge_distances)
+                ) * cell_area_ha
 
             #logarithmic model
             #biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
-            biomass_model[:, 1] = (
-                thetas[:, 0] + thetas[:, 1] * numpy.log(numpy.repeat(
-                    valid_edge_distances[valid_index_mask[:, 0]],
-                    n_nearest_model_points))) * cell_area_ha
+            biomass_model[:, :, 1] = (
+                thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
+                    valid_edge_distances)) * cell_area_ha
 
             #linear regression
             #biomass_3 = t1 + t2 * edge_dist_km
-            biomass_model[:, 2] = (
-                thetas[:, 1] + thetas[:, 2] * numpy.repeat(
-                    valid_edge_distances[valid_index_mask[:, 0]],
-                    n_nearest_model_points)) * cell_area_ha
-            #LOGGER.debug(biomass_model)
-
-            #biomass = numpy.empty(biomass_model.shape, dtype=numpy.float32)
-                #(edge_distance_block.shape[0],
-                # edge_distance_block.shape[1], n_nearest_model_points),
-                #dtype=numpy.float32)
-            #biomass[:] = carbon_edge_nodata
+            biomass_model[:, :, 2] = (
+                (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances) *
+                cell_area_ha)
 
             #Collapse the biomass down to the valid models
-            model_index = method_model_parameter[indexes[valid_index_mask]]-1
+            model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
+            model_index[valid_index_mask] = (
+                method_model_parameter[indexes[valid_index_mask]] - 1)
+
             #reduce the axis=1 dimensionality of the model by selecting the
             #appropriate value via the model_index array
+            #Got this trick from http://stackoverflow.com/questions/18702746/reduce-a-dimension-of-numpy-array-by-selecting
+            biomass_y, biomass_x = numpy.meshgrid(
+                numpy.arange(biomass_model.shape[1]),
+                numpy.arange(biomass_model.shape[0]))
+            biomass = biomass_model[biomass_x, biomass_y, model_index]
 
-            #biomass is now a n valid_indexes X n_nearest_points array
-            biomass = biomass_model[
-                numpy.arange(biomass_model.shape[0]), model_index].reshape(
-                    -1, n_nearest_model_points)
-            #LOGGER.debug('biomass_model %s', biomass_model)
-            #LOGGER.debug("biomass_model.shape %s", biomass_model.shape)
-            #LOGGER.debug("indexes.shape %s", indexes.shape)
-            #LOGGER.debug("biomass.shape %s", biomass.shape)
-            #LOGGER.debug("biomass %s", biomass)
-
-            #valid_distances = distances >= 0.0
-            #weights = numpy.zeros(distances.shape)
             #reshape the array so that each set of points is in a separate
-            #dimension
-
-            #weights is
-            tmp_weights = (
-                n_nearest_model_points / distances[valid_index_mask])
-            #LOGGER.debug('tmp_weights.shape %s', tmp_weights.shape)
+            #dimension, here distances are distances to each valid model point,
+            #not distance to edge of forest
             weights = numpy.zeros(distances.shape)
-            #LOGGER.debug('weights.shape %s', weights.shape)
-            weights[valid_index_mask] = tmp_weights
-            #LOGGER.debug('valid_index_mask.shape %s', valid_index_mask.shape)
-            #LOGGER.debug('weights.shape %s', weights.shape)
+            valid_distance_mask = (distances > 0) & (distances < numpy.inf)
+            weights[valid_distance_mask] = (
+                n_nearest_model_points / distances[valid_distance_mask])
+
+            #Denominator is the sum of the weights per nearest point (axis 1)
             denom = numpy.sum(weights, axis=1)
-            average_biomass = numpy.sum(weights * biomass, axis=1) / denom
-            #TODO: guard against nan with a 0 distance?
+            #To avoid a divide by 0
+            valid_denom = denom != 0
+            average_biomass = numpy.zeros(distances.shape[0])
+            average_biomass[valid_denom] = (
+                numpy.sum(weights[valid_denom] * biomass[valid_denom], axis=1) /
+                denom[valid_denom])
 
-            result = numpy.empty(edge_distance_block.shape)
-            #LOGGER.debug('valid_edge_distance_mask.shape %s', valid_edge_distance_mask.shape)
-            #LOGGER.debug('valid_index_mask.shape %s', valid_index_mask.shape)
-            #LOGGER.debug('result.shape %s', result.shape)
-            #LOGGER.debug('average_biomass.shape %s', average_biomass.shape)
-            #LOGGER.debug('result[valid_edge_distance_mask].shape %s', result[valid_edge_distance_mask].shape)
-            #LOGGER.debug('valid_edge_distance_mask %s', valid_edge_distance_mask)
-            #LOGGER.debug('valid_index_mask %s', valid_index_mask)
-
-            #valid_edge_distance_mask -> valid_index_mask
-
+            #Make sure the result has nodata everywhere the distance was invalid
+            result = numpy.empty(edge_distance_block.shape, dtype=numpy.float32)
+            result[:] = carbon_edge_nodata
             result[valid_edge_distance_mask] = average_biomass
-            #result = numpy.where(
-            #    edge_distance_block > 0, average_biomass, carbon_edge_nodata)
             edge_carbon_band.WriteArray(
                 result, xoff=col_offset, yoff=row_offset)
+    LOGGER.info('carbon edge calculation approx. 100.0%% complete')
