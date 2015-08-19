@@ -37,10 +37,10 @@ def get_inputs(args):
     if vars_dict['results_suffix'] != '':
         output_dir_name = output_dir_name + '_' + vars_dict['results_suffix']
     outputs_dir = os.path.join(vars_dict['workspace_dir'], output_dir_name)
-    if not os.path.exists(vars_dict['workspace_dir']):
-        os.makedirs(vars_dict['workspace_dir'])
-    if not os.path.exists(outputs_dir):
-        os.makedirs(outputs_dir)
+
+    pygeo.geoprocessing.create_directories(
+        [vars_dict['workspace_dir'], outputs_dir])
+
     vars_dict['outputs_dir'] = outputs_dir
 
     vars_dict['lulc_lookup_dict'] = pygeo.geoprocessing.get_lookup_from_csv(
