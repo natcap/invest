@@ -84,7 +84,8 @@ def get_inputs(args):
     vars_dict['carbon_pool_initial_dict']['undefined'] = nan_dict
 
     # Carbon Pool Transient
-    vars_dict['carbon_pool_transient_dict'] = _create_transient_dict(args)
+    vars_dict['carbon_pool_transient_dict'] = \
+        _create_transient_dict(args['carbon_pool_transient_uri'])
     nan_dict = {
         u'half-life': NODATA_FLOAT,
         u'high-impact-disturb': NODATA_FLOAT,
@@ -119,15 +120,23 @@ def get_inputs(args):
     return vars_dict
 
 
-def _create_transient_dict(args):
-    """Create transient dict."""
+def _create_transient_dict(carbon_pool_transient_uri):
+    """Create dictionary of transient variables for carbon pools.
+
+    Args:
+        carbon_pool_transient_uri (string): path to carbon pool transient
+            variables csv file.
+
+    Returns:
+        carbon_pool_transient_dict (dict): dictionary of carbon pool transient
+            variables.
+    """
     def to_float(x):
         try:
             return float(x)
         except ValueError:
             return x
 
-    carbon_pool_transient_uri = args['carbon_pool_transient_uri']
     lines = []
     with open(carbon_pool_transient_uri, 'r') as f:
         reader = csv.reader(f)
