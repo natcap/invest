@@ -101,7 +101,6 @@ paver.easy.options(
         with_invest=False,
         requirements='',
         bootstrap_file='bootstrap.py',
-        compiler=None,
         dev=False
     ),
     build_docs=Bunch(
@@ -512,8 +511,6 @@ def dev_env(options):
     ('envname=', 'e', ('The name of the environment to use')),
     ('with-invest', '', 'Install the current version of InVEST into the env'),
     ('requirements=', 'r', 'Install requirements from a file'),
-    ('compiler=', 'c', ('Use this compiler.  Will use system default if not '
-                        'specified.')),
     ('dev', 'd', ('Install InVEST namespace packages as flat eggs instead of '
                   'in a single folder hierarchy.  Better for development, '
                   'not so great for pyinstaller build'))
@@ -534,43 +531,27 @@ def after_install(options, home_dir):
         os.makedirs(etc)
     if platform.system() == 'Windows':
         bindir = 'Scripts'
+        distutils_dir = os.path.join('Lib', 'distutils')
     else:
         bindir = 'bin'
+        distutils_dir = os.path.join('lib', 'python27', 'distutils')
+    distutils_cfg = os.path.join(distutils_dir, 'distutils.cfg')
+
+    if not os.path.exists(distutils_dir):
+        os.makedirs(distutils_dir)
 
 """
 
-    # Only specify the compiler in distutils if the user says so.
-    if options.env.compiler is not None:
-        compiler = options.env.compiler
-    else:
-        # If the user has set a system distutils build option, use that.
-        config_files = ['distutils.cfg']
-
-        # only check the global distutils.cfg if the user provided
-        # --system-site-packages
-        if options.env.system_site_packages is True:
-            global_distutils_config = os.path.join(distutils.__path__[0],
-                                                   'distutils.cfg')
-            config_files.append(global_distutils_config)
-
-        print 'Checking distutils config in %s' % config_files
-
-        config = ConfigParser.RawConfigParser()
-        config.read(config_files)
-        try:
-            compiler = config.get('build', 'compiler')
-        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
-            # System default (None) is the fallback.
-            print 'Compiler not preconfigured and not user-defined.  Using system default'
-            compiler = None
-
-    if compiler is not None:
-        print 'Using compiler %s' % compiler
-        install_string += ("    print 'Configuring distutils to compile "
-                        "with {c}'\n").format(c=compiler)
-        install_string += ("    subprocess.call([join(home_dir, bindir, 'python'),"
-                        "'setup.py', 'build', '-c{compiler}', "
-                        "'saveopts', '-g'])\n").format(compiler=compiler)
+    # If the user has a distutils.cfg file defined in their global distutils
+    # installation, copy that over.
+    source_file = os.path.join(distutils.__path__[0],
+                               'distutils.cfg')
+    install_string += (
+        "    if os.path.exists(distutils_cfg):\n"
+        "       if not os.path.exists(distutils_dir):\n"
+        "           os.makedirs(distutils_dir)\n"
+        "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
+    ).format(src_distutils_cfg=source_file)
 
     requirements_files = ['requirements.txt']
     if options.env.requirements not in [None, '']:
