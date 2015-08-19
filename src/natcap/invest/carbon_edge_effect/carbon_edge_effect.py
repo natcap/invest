@@ -461,9 +461,9 @@ def _calculate_forest_edge_carbon_map(
                 edge_carbon_geotransform[3] +
                 edge_carbon_geotransform[5] * (row_offset + row_block_width),
                 num=row_block_width, endpoint=False)
-            LOGGER.debug('row_range.shape %s', row_range.shape)
-            LOGGER.debug('col_range.shape %s', col_range.shape)
-            row_coords, col_coords = numpy.meshgrid(row_range, col_range)
+            #LOGGER.debug('row_range.shape %s', row_range.shape)
+            #LOGGER.debug('col_range.shape %s', col_range.shape)
+            col_coords, row_coords  = numpy.meshgrid(col_range, row_range)
 
             #query nearest points for every point in the grid
             #n_jobs=-1 means use all available cpus
