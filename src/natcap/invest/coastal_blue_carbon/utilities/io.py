@@ -6,7 +6,7 @@ import pygeoprocessing as pygeo
 import pprint as pp
 
 from natcap.invest.coastal_blue_carbon.classes.raster import Raster
-from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.global_variables import *
 
 
 def get_inputs(args):

@@ -11,7 +11,7 @@ import shutil
 import gdal
 
 import natcap.invest.coastal_blue_carbon.utilities.io as io
-from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.global_variables import *
 from natcap.invest.coastal_blue_carbon.classes.raster_factory import \
     RasterFactory
 from natcap.invest.coastal_blue_carbon.classes.affine import Affine

@@ -13,7 +13,7 @@ import gdal
 from pygeoprocessing.geoprocessing import get_lookup_from_csv
 
 import natcap.invest.coastal_blue_carbon.utilities.io as io
-from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.global_variables import *
 from natcap.invest.coastal_blue_carbon.classes.affine import Affine
 from natcap.invest.coastal_blue_carbon.classes.raster import Raster
 from natcap.invest.coastal_blue_carbon.classes.raster_factory import RasterFactory

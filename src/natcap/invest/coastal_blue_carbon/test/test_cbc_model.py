@@ -12,7 +12,7 @@ from numpy import testing
 import gdal
 
 import natcap.invest.coastal_blue_carbon.utilities.io as io
-from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.global_variables import *
 from natcap.invest.coastal_blue_carbon.classes.raster_factory import \
     RasterFactory
 from natcap.invest.coastal_blue_carbon.classes.affine import Affine
@@ -265,7 +265,7 @@ class TestCBCModel(unittest.TestCase):
             'analysis_year': self.analysis_year,
             'carbon_pool_initial_uri': self.carbon_pool_initial_uri,
             'carbon_pool_transient_uri': self.carbon_pool_transient_uri,
-            'do_economic_analysis': True,
+            'do_economic_analysis': False,
             'do_price_table': False,
             'price': '10.0',
             'interest_rate': '3.0',

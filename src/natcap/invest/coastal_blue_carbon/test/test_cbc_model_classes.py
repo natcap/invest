@@ -11,7 +11,7 @@ import numpy
 from numpy import testing
 import gdal
 
-from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.global_variables import *
 from natcap.invest.coastal_blue_carbon.classes.affine import Affine
 from natcap.invest.coastal_blue_carbon.classes.raster import Raster
 from natcap.invest.coastal_blue_carbon.classes.raster_factory import RasterFactory

@@ -9,7 +9,7 @@ import gdal
 import pygeoprocessing as pygeo
 import numpy as np
 
-from natcap.invest.coastal_blue_carbon.utilities.global_variables import *
+from natcap.invest.coastal_blue_carbon.global_variables import *
 from natcap.invest.coastal_blue_carbon.classes.model_carbon_classes import \
     DisturbedCarbonStock, AccumulatedCarbonStock
 from natcap.invest.coastal_blue_carbon.classes.raster import Raster
