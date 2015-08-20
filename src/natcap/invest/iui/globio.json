@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 900,
+  "height": 650,
   "width": 800,
   "elements": [
     {
@@ -46,6 +46,26 @@
           },
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields.",
           "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "AOI (Vector) (optional)",
+          "defaultValue": "../globio/input/sub_aoi.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that can be used to aggregate MSA sum and mean to a polygon."
         },
         {
           "id": "land_use",
@@ -145,50 +165,6 @@
             "fieldsExist": ["MSA_type", "Value", "MSA_x"]
           },
           "helpText": "A CSV table containing MSA threshold values as defined in the user's guide.  Provided for advanced users that may wish to change those values."
-        }
-      ]
-    },
-    {
-      "id": "aoi_summary",
-      "args_id": "aoi_summary",
-      "label": "Summarize MSA by AOI",
-      "type": "container",
-      "defaultValue": true,
-      "collapsible": true,
-      "elements": [
-        {
-          "id": "aoi_summary_list",
-          "type": "list",
-          "elements": [
-            {
-              "id": "aoi_uri",
-              "args_id": "aoi_uri",
-              "type": "file",
-              "label": "AOI (Vector)",
-              "defaultValue": "../globio/input/sub_aoi.shp",
-              "required": true,
-              "validateAs": {
-                "type": "OGR",
-                "layers": [
-                  {
-                    "name": {
-                      "inheritFrom": "file"
-                    },
-                    "type": "polygons"
-                  }
-                ]
-              },
-              "helpText": "This is a set of polygons that can be used to aggregate MSA by a given field"
-            },
-            {
-              "id": "aoi_summary_key",
-              "args_id": "aoi_summary_key",
-              "type": "text",
-              "label": "Unique feature key in AOI",
-              "required": true,
-              "defaultValue": "OBJECTID"
-            }
-          ]
         }
       ]
     },
