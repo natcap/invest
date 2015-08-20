@@ -219,13 +219,14 @@ class LoggingServer(object):
     _FIELD_NAMES = [
         'model_name',
         'invest_release',
+        'time',
+        'ip_address',
+        'bounding_box_union',
+        'bounding_box_intersection',
         'node_hash',
         'system_full_platform_string',
         'system_preferred_encoding',
         'system_default_language',
-        'time',
-        'bounding_box_intersection',
-        'bounding_box_union',
         ]
     _TABLE_NAME = 'natcap_model_log_table'
     def __init__(self, database_filepath):
@@ -269,9 +270,12 @@ class LoggingServer(object):
         Returns:
             None."""
         try:
-            #TODO: ip address?
+            #Add info about the client's IP
+            data_copy = data.copy()
+            data_copy['ip_address'] = (
+                Pyro4.current_context.client.sock.getpeername()[0])
             #Get data into the same order as the field names
-            ordered_data = [data[field_id] for field_id in self._FIELD_NAMES]
+            ordered_data = [data_copy[field_id] for field_id in self._FIELD_NAMES]
             #get as many '?'s as there are fields for the insert command
             position_format = ','.join(['?'] * len(self._FIELD_NAMES))
 
@@ -290,12 +294,12 @@ class LoggingServer(object):
             #print something locally for our log and raise back to client
             traceback.print_exc()
             raise
-        extra_fields = set(data).difference(self._FIELD_NAMES)
+        extra_fields = set(data_copy).difference(self._FIELD_NAMES)
         if len(extra_fields) > 0:
             LOGGER.warn(
                 "Warning there were extra fields %s passed to logger. "
                 " Expected: %s Received: %s", sorted(extra_fields),
-                sorted(self._FIELD_NAMES), sorted(data))
+                sorted(self._FIELD_NAMES), sorted(data_copy))
 
 
 def launch_logging_server(database_filepath, hostname, port):
