@@ -8,9 +8,16 @@ import hashlib
 import json
 import distutils.version
 import datetime
+import logging
 
 import Pyro4
 import natcap.versioner
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+_LOGGER = logging.getLogger('natcap.invest.remote_logging')
+
 
 try:
     import pygeoprocessing
@@ -105,4 +112,4 @@ def log_model(model_name, model_args):
         logging_server.log_invest_run(payload)
     except:
         # An exception was thrown, we don't care.
-        print 'an exception encountered when logging'
+        _LOGGER.warn('an exception encountered when logging')
