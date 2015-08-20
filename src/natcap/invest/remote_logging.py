@@ -269,7 +269,6 @@ class LoggingServer(object):
         Returns:
             None."""
         try:
-
             #TODO: ip address?
             #Get data into the same order as the field names
             ordered_data = [data[field_id] for field_id in self._FIELD_NAMES]
@@ -283,7 +282,7 @@ class LoggingServer(object):
 
             db_connection = sqlite3.connect(self.database_filepath)
             db_cursor = db_connection.cursor()
-            #pass in ordered_data to the comamnd
+            #pass in ordered_data to the command
             db_cursor.execute(insert_command, ordered_data)
             db_connection.commit()
             db_connection.close()
@@ -291,6 +290,13 @@ class LoggingServer(object):
             #print something locally for our log and raise back to client
             traceback.print_exc()
             raise
+        extra_fields = set(data).difference(self._FIELD_NAMES)
+        if len(extra_fields) > 0:
+            LOGGER.warn(
+                "Warning there were extra fields %s passed to logger. "
+                " Expected: %s Received: %s", sorted(extra_fields),
+                sorted(self._FIELD_NAMES), sorted(data))
+
 
 def launch_logging_server(database_filepath, hostname, port):
     """Function to start a remote procedure call server
