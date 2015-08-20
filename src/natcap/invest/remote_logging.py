@@ -239,6 +239,17 @@ class LoggingServer(object):
             ]
 
         self.database_filepath = database_filepath
+        if not os.path.exists(os.path.dirname(manager_filename)):
+            os.mkdir(os.path.dirname(manager_filename))
+        db_connection = sqlite3.connect(manager_filename)
+        db_cursor = db_connection.cursor()
+        db_cursor.execute('''CREATE TABLE IF NOT EXISTS blob_table
+            (blob_id text PRIMARY KEY, blob_data blob)''')
+        db_connection.commit()
+        db_connection.close()
+
+
+        self.database_filepath = database_filepath
 
     def log_invest_run(self, data):
         """Logs an invest run to the sqlite database found at database_filepath
