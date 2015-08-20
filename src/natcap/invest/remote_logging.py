@@ -216,6 +216,18 @@ def format_exception(exception, session_id):
 
 
 class LoggingServer(object):
+    _FIELD_NAMES = [
+        'model_name',
+        'invest_release',
+        'node_hash',
+        'system_full_platform_string',
+        'system_preferred_encoding',
+        'system_default_language',
+        'time',
+        'bounding_box_intersection',
+        'bounding_box_union',
+        ]
+    _TABLE_NAME = 'natcap_model_log_table'
     def __init__(self, database_filepath):
         """Launches a new logger and initalizes an sqlite database at
         `database_filepath` if not previously defined.
@@ -227,47 +239,58 @@ class LoggingServer(object):
         Returns:
             None."""
 
-        field_names = [
-            'model_name',
-            'invest_release',
-            'node_hash',
-            'system_full_platform_string',
-            'system_preferred_encoding',
-            'system_default_language',
-            'time',
-            'bounding_box_intersection'
-            'bounding_box_union'
-            ]
-
         self.database_filepath = database_filepath
         #make the directory if it doesn't exist and isn't the current directory
-        filepath_directory = os.path.dirname(database_filepath)
+        filepath_directory = os.path.dirname(self.database_filepath)
         if filepath_directory != '' and not os.path.exists(filepath_directory):
-            os.mkdir(os.path.dirname(database_filepath))
-        db_connection = sqlite3.connect(database_filepath)
+            os.mkdir(os.path.dirname(self.database_filepath))
+        db_connection = sqlite3.connect(self.database_filepath)
         db_cursor = db_connection.cursor()
         db_cursor.execute(
-            'CREATE TABLE IF NOT EXISTS natcap_model_log (%s)' %
-            ','.join(['%s text' % field_id for field_id in field_names]))
+            'CREATE TABLE IF NOT EXISTS %s (%s)' % (
+                self._TABLE_NAME,
+                ','.join([
+                    '%s text' % field_id for field_id in self._FIELD_NAMES])))
         db_connection.commit()
         db_connection.close()
 
-        self.database_filepath = database_filepath
 
     def log_invest_run(self, data):
         """Logs an invest run to the sqlite database found at database_filepath
+        Any self._FIELD_NAMES that match data keys will be inserted into the
+        database.
 
         Args:
-            data (dict): a possibly nested dictionary of data about the InVEST
-                run.
+            data (dict): a flat dictionary with data about the InVEST run where
+                the keys of the dictionary are at least self._FIELD_NAMES
 
                 TODO: list keys here
 
         Returns:
             None."""
+        try:
 
-        LOGGER.debug(data)
+            #TODO: ip address?
+            #Get data into the same order as the field names
+            ordered_data = [data[field_id] for field_id in self._FIELD_NAMES]
+            #get as many '?'s as there are fields for the insert command
+            position_format = ','.join(['?'] * len(self._FIELD_NAMES))
 
+            insert_command = (
+                'INSERT OR REPLACE INTO natcap_model_log_table'
+                '(%s) VALUES (%s)' % (
+                    ','.join(self._FIELD_NAMES), position_format))
+
+            db_connection = sqlite3.connect(self.database_filepath)
+            db_cursor = db_connection.cursor()
+            #pass in ordered_data to the comamnd
+            db_cursor.execute(insert_command, ordered_data)
+            db_connection.commit()
+            db_connection.close()
+        except:
+            #print something locally for our log and raise back to client
+            traceback.print_exc()
+            raise
 
 def launch_logging_server(database_filepath, hostname, port):
     """Function to start a remote procedure call server
