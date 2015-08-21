@@ -119,6 +119,23 @@ class LoggingServer(object):
                 " Expected: %s Received: %s", sorted(extra_fields),
                 sorted(self._FIELD_NAMES), sorted(data_copy))
 
+    def get_model_run_summary_as_shapefile(self):
+        """Builds a shapefile that has a unique polygon for each unique bounding
+        box, a field with the number of run counts, and a field with the model
+        name
+
+        Returns:
+            a compressed zipfile of shapefile as a binary string"""
+
+        #ZIP and stream the result back
+        workspace_dir = tempfile.mkdtemp()
+
+        run_summary_path = os.path.join(workspace_uri, 'run_summary.shp')
+        with zipfile.ZipFile(aoi_pud_archive_uri, 'w') as myzip:
+            for filename in glob.glob(
+                    os.path.splitext(base_pud_aoi_uri)[0] + '.*'):
+                myzip.write(filename, os.path.basename(filename))
+
 
 def launch_logging_server(database_filepath, hostname, port):
     """Function to start a remote procedure call server
