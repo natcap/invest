@@ -4,32 +4,29 @@ Functions to assist with remote logging of InVEST usage.
 
 import os
 import datetime
-import platform
 import sys
-import locale
-import time
-from types import DictType
-from types import ListType
+import tempfile
 import traceback
 import logging
 import sqlite3
+import zipfile
+import glob
 
 import Pyro4
-from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import pygeoprocessing
-from pygeoprocessing import geoprocessing
-
-import natcap.invest
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.remote_logging')
 
+Pyro4.config.SERIALIZER = 'marshal' #lets us pass null bytes in strings
 
 class LoggingServer(object):
+    """Pyro4 RPC server for logging invest runs and getting database
+    summaries"""
+
     _FIELD_NAMES = [
         'model_name',
         'invest_release',
@@ -129,12 +126,63 @@ class LoggingServer(object):
 
         #ZIP and stream the result back
         workspace_dir = tempfile.mkdtemp()
+        model_run_summary_shapefile_name = os.path.join(
+            workspace_dir, 'model_run_summary.shp')
+        driver = ogr.GetDriverByName('ESRI Shapefile')
 
-        run_summary_path = os.path.join(workspace_uri, 'run_summary.shp')
-        with zipfile.ZipFile(aoi_pud_archive_uri, 'w') as myzip:
+        if os.path.isfile(model_run_summary_shapefile_name):
+            os.remove(model_run_summary_shapefile_name)
+        datasource = driver.CreateDataSource(model_run_summary_shapefile_name)
+
+        lat_lng_ref = osr.SpatialReference()
+        lat_lng_ref.ImportFromEPSG(4326) #EPSG 4326 is lat/lng
+
+        polygon_layer = datasource.CreateLayer(
+            'model_run_summary', lat_lng_ref, ogr.wkbPolygon)
+
+        polygon_layer.CreateField(ogr.FieldDefn('n_runs', ogr.OFTInteger))
+        polygon_layer.CreateField(ogr.FieldDefn('model', ogr.OFTString))
+
+        db_connection = sqlite3.connect(self.database_filepath)
+        db_cursor = db_connection.cursor()
+        db_cursor.execute(
+            """SELECT model_name, bounding_box_intersection, count(model_name)
+FROM natcap_model_log_table WHERE bounding_box_intersection not LIKE 'None'
+GROUP BY model_name, bounding_box_intersection;""")
+
+        for line in db_cursor:
+            try:
+                model_name, bounding_box_string, n_runs = line
+                n_runs = int(n_runs)
+                bounding_box = list(
+                    [float(x) for x in bounding_box_string[1:-1].split(',')])
+                ring = ogr.Geometry(ogr.wkbLinearRing)
+                ring.AddPoint(bounding_box[0], bounding_box[3])
+                ring.AddPoint(bounding_box[0], bounding_box[1])
+                ring.AddPoint(bounding_box[2], bounding_box[1])
+                ring.AddPoint(bounding_box[2], bounding_box[3])
+                ring.AddPoint(bounding_box[0], bounding_box[3])
+                poly = ogr.Geometry(ogr.wkbPolygon)
+                poly.AddGeometry(ring)
+                feature = ogr.Feature(polygon_layer.GetLayerDefn())
+                feature.SetGeometry(poly)
+                feature.SetField('n_runs', n_runs)
+                feature.SetField('model', str(model_name))
+                polygon_layer.CreateFeature(feature)
+            except:
+                LOGGER.warn('unable to create a bounding box for %s', line)
+
+        datasource.SyncToDisk()
+
+        model_run_summary_zip_name = os.path.join(
+            workspace_dir, 'model_run_summary.zip')
+        with zipfile.ZipFile(model_run_summary_zip_name, 'w') as myzip:
             for filename in glob.glob(
-                    os.path.splitext(base_pud_aoi_uri)[0] + '.*'):
+                    os.path.splitext(
+                        model_run_summary_shapefile_name)[0] + '.*'):
                 myzip.write(filename, os.path.basename(filename))
+        model_run_summary_binary = open(model_run_summary_zip_name, 'rb').read()
+        return model_run_summary_binary
 
 
 def launch_logging_server(database_filepath, hostname, port):
