@@ -33,7 +33,7 @@ import virtualenv
 import yaml
 
 
-LOGGER = logging.getLogger('invest-bin')
+LOGGER = logging.getLogger('InVEST.pavement')
 _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
 _SDTOUT_HANDLER.setLevel(logging.INFO)
 LOGGER.addHandler(_SDTOUT_HANDLER)
