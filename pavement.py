@@ -12,6 +12,7 @@ import os
 import pkgutil
 import platform
 import shutil
+import site
 import socket
 import subprocess
 import sys
@@ -100,7 +101,6 @@ paver.easy.options(
         with_invest=False,
         requirements='',
         bootstrap_file='bootstrap.py',
-        compiler=None,
         dev=False
     ),
     build_docs=Bunch(
@@ -128,6 +128,10 @@ paver.easy.options(
     dev_env=Bunch(
         envname='test_env',
         noinvest=False
+    ),
+    check=Bunch(
+        fix_namespace=False,
+        allow_errors=False
     )
 )
 
@@ -507,8 +511,6 @@ def dev_env(options):
     ('envname=', 'e', ('The name of the environment to use')),
     ('with-invest', '', 'Install the current version of InVEST into the env'),
     ('requirements=', 'r', 'Install requirements from a file'),
-    ('compiler=', 'c', ('Use this compiler.  Will use system default if not '
-                        'specified.')),
     ('dev', 'd', ('Install InVEST namespace packages as flat eggs instead of '
                   'in a single folder hierarchy.  Better for development, '
                   'not so great for pyinstaller build'))
@@ -529,43 +531,24 @@ def after_install(options, home_dir):
         os.makedirs(etc)
     if platform.system() == 'Windows':
         bindir = 'Scripts'
+        distutils_dir = os.path.join(home_dir, 'Lib', 'distutils')
     else:
         bindir = 'bin'
+        distutils_dir = os.path.join(home_dir, 'lib', 'python27', 'distutils')
+    distutils_cfg = os.path.join(distutils_dir, 'distutils.cfg')
 
 """
 
-    # Only specify the compiler in distutils if the user says so.
-    if options.env.compiler is not None:
-        compiler = options.env.compiler
-    else:
-        # If the user has set a system distutils build option, use that.
-        config_files = ['distutils.cfg']
-
-        # only check the global distutils.cfg if the user provided
-        # --system-site-packages
-        if options.env.system_site_packages is True:
-            global_distutils_config = os.path.join(distutils.__path__[0],
-                                                   'distutils.cfg')
-            config_files.append(global_distutils_config)
-
-        print 'Checking distutils config in %s' % config_files
-
-        config = ConfigParser.RawConfigParser()
-        config.read(config_files)
-        try:
-            compiler = config.get('build', 'compiler')
-        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
-            # System default (None) is the fallback.
-            print 'Compiler not preconfigured and not user-defined.  Using system default'
-            compiler = None
-
-    if compiler is not None:
-        print 'Using compiler %s' % compiler
-        install_string += ("    print 'Configuring distutils to compile "
-                        "with {c}'\n").format(c=compiler)
-        install_string += ("    subprocess.call([join(home_dir, bindir, 'python'),"
-                        "'setup.py', 'build', '-c{compiler}', "
-                        "'saveopts', '-g'])\n").format(compiler=compiler)
+    # If the user has a distutils.cfg file defined in their global distutils
+    # installation, copy that over.
+    source_file = os.path.join(distutils.__path__[0],
+                               'distutils.cfg')
+    install_string += (
+        "    if os.path.exists('{src_distutils_cfg}'):\n"
+        "       if not os.path.exists(distutils_dir):\n"
+        "           os.makedirs(distutils_dir)\n"
+        "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
+    ).format(src_distutils_cfg=source_file)
 
     requirements_files = ['requirements.txt']
     if options.env.requirements not in [None, '']:
@@ -665,14 +648,9 @@ def after_install(options, home_dir):
     # Virtualenv appears to partially copy over distutills into the new env.
     # Remove what was copied over so we din't confuse pyinstaller.
     if platform.system() == 'Windows':
-        distutils_dir = os.path.join(options.env.envname, 'Lib', 'distutils')
         init_file = os.path.join(options.env.envname, 'Lib', 'site-packages', 'natcap', '__init__.py')
     else:
-        distutils_dir = os.path.join(options.env.envname, 'lib', 'python2.7', 'distutils')
         init_file = os.path.join(options.env.envname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
-
-    if os.path.exists(distutils_dir):
-        dry('rm -r <env>/lib/distutils', shutil.rmtree, distutils_dir)
 
     if options.with_invest is True and options.env.dev is False:
         # writing this import appears to help pyinstaller find the __path__
@@ -1174,9 +1152,119 @@ def check_repo(options):
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
     print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
+def supports_color():
+    """
+    Returns True if the running system's terminal supports color, and False
+    otherwise.
+
+    Taken from http://stackoverflow.com/a/22254892/299084
+    """
+    plat = sys.platform
+    supported_platform = plat != 'Pocket PC' and (plat != 'win32' or
+                                                  'ANSICON' in os.environ)
+    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+    if not supported_platform or not is_a_tty:
+        return False
+    return True
+
+TERM_IS_COLOR = supports_color()
+
+def _colorize(color_pattern, msg):
+    """
+    Apply the color pattern (likely an ANSI color escape code sequence)
+    to the message if the current terminal supports color.  If the terminal
+    does not support color, return the messge.
+    """
+    if TERM_IS_COLOR:
+        return color_pattern % msg
+    return msg
+
+def green(msg):
+    """
+    Return a string that is formatted as ANSI green.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[92m%s\033[0m', msg)
+
+def yellow(msg):
+    """
+    Return a string that is formatted as ANSI yellow.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[93m%s\033[0m', msg)
+
+def red(msg):
+    """
+    Return a string that is formatted as ANSI red.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[91m%s\033[0m', msg)
+
+def bold(message):
+    """
+    Return a string formatted as ANSI bold.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize("\033[1m%s\033[0m", message)
+
+
+ERROR = red('ERROR:')
+WARNING = yellow('WARNING:')
+OK = green('OK')
+
+
+def _import_namespace_pkg(modname, print_msg=True):
+    """
+    Import a package within the natcap namespace and print helpful
+    debug messages as packages are discovered.
+
+    Parameters:
+        modname (string): The natcap subpackage name.
+        print_msg=True (bool): Whether to print messages about the import
+            state.
+
+    Returns:
+        Either 'egg' or 'dir' if the package is importable.
+
+    Raises:
+        ImportError: If the package cannot be imported.
+    """
+    module = importlib.import_module('natcap.%s' % modname)
+    try:
+        version = module.__version__
+    except AttributeError:
+        packagename = 'natcap.%s' % modname
+        version = pkg_resources.require(packagename)[0].version
+
+    is_egg = reduce(
+        lambda x, y: x or y,
+        [p.endswith('.egg') for p in module.__file__.split(os.sep)])
+
+    if len(module.__path__) > 1:
+        module_path = module.__path__
+    else:
+        module_path = module.__path__[0]
+
+    if not is_egg:
+        return_type = 'dir'
+        message = '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
+            warn=WARNING, mod=modname, ver=version, dir=module_path)
+    else:
+        return_type = 'egg'
+        message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
+            mod=modname, ver=version, dir=module_path)
+
+    if print_msg is True:
+        print message
+
+    return (module, return_type)
 
 @task
-def check():
+@cmdopts([
+    ('fix-namespace', '', 'Fix issues with the natcap namespace if found'),
+    ('allow-errors', '', 'Errors will be printed, but the task will not fail'),
+])
+def check(options):
     """
     Perform reasonable checks to verify the build environment.
 
@@ -1185,17 +1273,13 @@ def check():
     and for known issues with the natcap python namespace.
     """
     def is_exe(fpath):
+        """
+        Check whether a file is executable and that it exists.
+        """
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
     class FoundEXE(Exception):
         pass
-
-    ERROR = '\033[91mERROR:\033[0m'
-    WARNING = '\033[93mWARNING:\033[0m'
-    OK = '\033[92mOK\033[0m'
-
-    def bold(message):
-        return "\033[1m%s\033[0m" % message
 
     # verify required programs exist
     errors_found = False
@@ -1288,9 +1372,10 @@ def check():
             if hasattr(conflict, 'report') is False:
                 # Setuptools introduced report() in v6.1
                 print ('{error} Setuptools is very out of date. '
-                       'Upgrade and try again'.format(error=ERROR))
-                raise BuildFailure('Setuptools is very out of date. '
-                                   'Upgrade and try again')
+                    'Upgrade and try again'.format(error=ERROR))
+                if options.check.allow_errors is False:
+                    raise BuildFailure('Setuptools is very out of date. '
+                                    'Upgrade and try again')
 
             if severity == required:
                 print '{error} {report}'.format(error=ERROR,
@@ -1333,76 +1418,152 @@ def check():
     # SO:
     #  * If a package is installed to the global site-packages, it better be an
     #    egg.
+    noneggs = []
+    eggs = []
     try:
         print ""
         print bold("Checking natcap namespace")
+        if options.check.fix_namespace is True:
+            print yellow('--fix-namespace provided; Fixing issues as they are'
+                         ' encountered')
+
         import natcap
-        noneggs = []
 
         for importer, modname, ispkg in pkgutil.iter_modules(natcap.__path__):
-            module = importlib.import_module('natcap.%s' % modname)
-            try:
-                version = module.__version__
-            except AttributeError:
-                packagename = 'natcap.%s' % modname
-                version = pkg_resources.require(packagename)[0].version
+            module, pkg_type = _import_namespace_pkg(modname)
 
-            is_egg = reduce(
-                lambda x, y: x or y,
-                [p.endswith('.egg') for p in module.__file__.split(os.sep)])
-
-            if len(module.__path__) > 1:
-                module_path = module.__path__
+            if pkg_type == 'egg':
+                eggs.append(modname)
             else:
-                module_path = module.__path__[0]
-
-            if not is_egg:
                 noneggs.append(modname)
-                print '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-                    warn=WARNING, mod=modname, ver=version, dir=module_path)
-            else:
-                print "natcap.{mod}=={ver} installed as egg ({dir})".format(
-                    mod=modname, ver=version, dir=module_path)
 
         if len(noneggs) > 0:
-            pip_inst_template = \
-                "    pip install --egg --no-binary :all: natcap.%s"
-            namespace_msg = (
-                "\n"
-                "Natcap namespace issues:\n"
-                "You appear to have natcap packages installed to your global \n"
-                "site-packages that have not been installed as eggs.\n"
-                "This will cause import issues when trying to build binaries\n"
-                "with pyinstaller, but should work well for development.\n"
-                "By contrast, eggs should work well for development.\n"
-                "For best results, install these packages as eggs like so:\n")
-            namespace_msg += "\n".join([pip_inst_template % n for n in noneggs])
-            print namespace_msg
-            warnings_found = True
-    except ImportError:
-        setup_file = os.path.join(os.path.dirname(__file__), 'setup.py')
-        setup_uses_versioner = False
-        with open(setup_file) as setup:
-            for line in setup:
-                if 'import natcap.versioner' in line:
-                    setup_uses_versioner = True
-                    break
+            if options.check.fix_namespace is True:
+                for package in noneggs:
+                    print yellow('Reinstalling natcap.%s as egg' % package)
+                    sh('pip uninstall -y natcap.{package} > natcap.{package}.log'.format(package=package))
+                    sh(('pip install --egg --no-binary :all: '
+                        'natcap.{package} > natcap.{package}.log').format(package=package))
+                    print green('Package natcap.%s reinstalled successfully' % package)
+            else:
+                pip_inst_template = \
+                    yellow("    pip install --egg --no-binary :all: natcap.%s")
+                namespace_msg = (
+                    "\n"
+                    "Natcap namespace issues:\n"
+                    "You appear to have natcap packages installed to your global \n"
+                    "site-packages that have not been installed as eggs.\n"
+                    "This will cause import issues when trying to build binaries\n"
+                    "with pyinstaller, but should work well for development.\n"
+                    "By contrast, eggs should work well for development.\n"
+                    "For best results, install these packages as eggs like so:\n")
+                namespace_msg += "\n".join([pip_inst_template % n for n in noneggs])
+                namespace_msg += "\n\nOr run 'paver check --fix-namespace'\n"
+                print namespace_msg
+                warnings_found = True
+        elif len(noneggs) == 0 and len(eggs) == 0:
+            base_warning = 'WARNING: namespace artifacts found.'
+            if options.check.fix_namespace is True:
+                base_warning += ' Attempting to repair'
+            print yellow(base_warning)
 
-        if setup_uses_versioner is True:
-            warnings_found = True
-            print ('{warning} natcap.versioner required by setup.py but not '
-                   'installed.  To fix:').format(warning=WARNING)
-            print '    pip install --egg --no-binary :all: natcap.versioner'
-        else:
-            print 'No natcap installations found!  Excellent :)'
+            # locate the problematic namespace artifacts.
+            namespace_artifacts = []
+            namespace_packages_with_artifacts = set([])
+            for site_pkgs in site.getsitepackages():
+                for namespace_item in glob.glob(os.path.join(
+                        site_pkgs, '*natcap*')):
+                    namespace_artifacts.append(namespace_item)
+
+                    # Namespace items are usually formatted like this:
+                    # natcap.subpackage-version.something OR
+                    # natcap.subpackage-version-something
+                    # Track the package so we can print it to the user.
+                    namespace_packages_with_artifacts.add(
+                        os.path.basename(namespace_item).split('-')[0])
+
+            if options.check.fix_namespace is True:
+                for namespace_artifact in namespace_artifacts:
+                    print yellow('Removing %s' % namespace_artifact)
+
+                    if os.path.isdir(namespace_artifact):
+                        shutil.rmtree(namespace_artifact)
+                    else:
+                        os.remove(namespace_artifact)
+                for ns_item in sorted(namespace_packages_with_artifacts):
+                    print yellow('Namespace artifacts from %s cleaned up; you '
+                                 'may need to reinstall') % ns_item
+            else:
+                warnings_found = True
+                warn = ('{warning} The natcap namespace is importable, but the '
+                        'source could not be found.\n'
+                        'This can happen with incomplete uninstallations. '
+                        'These artifacts were found\n'
+                        'and should be removed:\n').format(warning=WARNING)
+                for artifact in namespace_artifacts:
+                    warn += ' * %s\n' % artifact
+                warn += ("\nUse 'paver check --fix-namespace' to automatically "
+                         "remove these files")
+                print warn
+
+    except ImportError:
+        print 'No natcap installations found.'
+
+
+    # Check if we need to have versioner installed for setup.py
+    setup_file = os.path.join(os.path.dirname(__file__), 'setup.py')
+    setup_uses_versioner = False
+    with open(setup_file) as setup:
+        for line in setup:
+            if 'import natcap.versioner' in line:
+                setup_uses_versioner = True
+                break
+
+    if setup_uses_versioner is True:
+        try:
+            # If 'versioner' is in eggs, we've already proven that we can
+            # import it, so no need to import again.
+            if 'versioner' not in eggs:
+                _, _ = _import_namespace_pkg('versioner')
+        except ImportError:
+            if options.check.fix_namespace is True:
+                print yellow('natcap.versioner required by setup.py but '
+                                'not found.  Installing.')
+                # Install natcap.versioner
+                sh('pip install --egg --no-binary :all: natcap.versioner > natcap.versioner.log')
+
+                # Verify that versioner installed properly.  Must import in new
+                # process to verify. _import_namespace_pkg allows for pretty
+                # printing.
+                try:
+                    sh('python -c "'
+                        'import pavement;'
+                        'pavement._import_namespace_pkg(\'versioner\')'
+                        '"')
+                    print green('natcap.versioner successfully installed as egg')
+                except BuildFailure:
+                    # An exception was raised or some other error encountered.
+                    errors_found = True
+                    print red('Installation failed: natcap.versioner')
+            else:
+                warnings_found = True
+                print ('{warning} natcap.versioner required by setup.py but not '
+                    'installed.  To fix:').format(warning=WARNING)
+                print '    pip install --egg --no-binary :all: natcap.versioner'
+                print 'Or use paver check --fix-namespace'
 
     if errors_found:
-        raise BuildFailure((ERROR + ' Programs missing and/or package '
-                            'requirements not met'))
+        error_string = (' Programs missing and/or package '
+                        'requirements not met')
+        if options.check.allow_errors is True:
+            print red('CRITICAL:') + error_string
+            print red('CRITICAL:') + ' Ignoring errors per user request'
+        else:
+            raise BuildFailure(ERROR + error_string)
     elif warnings_found:
         print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
-        print "All's well."
+        print green("All's well.")
 
 
 @task
@@ -1930,6 +2091,7 @@ def selftest():
     ('envname=', 'e', ('The name of the environment to use')),
     ('python=', '', "The python interpreter to use.  If not provided, an env will be built for you."),
 ], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files', 'check_repo'])
+@might_call('check')
 @might_call('env')
 @might_call('build_data')
 @might_call('build_docs')
@@ -1943,6 +2105,13 @@ def build(options):
     If no extra options are specified, docs, data and binaries will all be generated.
     Any missing and needed repositories will be cloned.
     """
+
+    # Allowing errors will still print them, just not fail the build.  It's
+    # possible that the user might not want to build all available components.
+    call_task('check', options={
+        'fix_namespace': False,
+        'allow_errors': True
+    })
 
     # Check repositories up front so we can fail early if needed.
     # Here, we're only checking that if a repo exists, not cloning it.

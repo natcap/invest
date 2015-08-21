@@ -227,7 +227,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Forest Carbon Edge Effect (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon_edge_effect.bat" "" "${INVEST_ICON}"
-
+  CreateShortCut "${SMPATH}\GLOBIO (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_globio.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Timber (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_timber.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Finfish Aquaculture (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_finfish_aquaculture.bat" "" "${INVEST_ICON}"
