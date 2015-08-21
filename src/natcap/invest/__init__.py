@@ -179,7 +179,7 @@ def _calculate_args_bounding_box(args_dict):
                 local_bb = pygeoprocessing.get_datasource_bounding_box(arg)
                 spatial_ref = pygeoprocessing.get_spatial_ref_uri(arg)
 
-            if local_bb != [0., 0., 0., 0.]:
+            try:
                 # means there's a GIS type with a well defined bounding box
                 # create transform, and reproject local bounding box to lat/lng
                 lat_lng_ref = osr.SpatialReference()
@@ -187,6 +187,7 @@ def _calculate_args_bounding_box(args_dict):
                 to_lat_trans = osr.CoordinateTransformation(
                     spatial_ref, lat_lng_ref)
 
+                _LOGGER.debug(local_bb)
                 for point_index in [0, 2]:
                     local_bb[point_index], local_bb[point_index + 1], _ = (
                         to_lat_trans.TransformPoint(
@@ -196,6 +197,11 @@ def _calculate_args_bounding_box(args_dict):
                     local_bb, bb_intersection, 'intersection')
                 bb_union = _merge_bounding_boxes(
                     local_bb, bb_union, 'union')
+            except:
+                # All kinds of exceptions from bad transforms or CSV files
+                # or dbf files could get us to this point, just don't bother
+                # with the local_bb at all
+                pass
 
         return bb_intersection, bb_union
 
@@ -231,7 +237,7 @@ def log_model(model_name, model_args):
 
     try:
         bounding_box_intersection, bounding_box_union = (
-            calculate_args_bounding_box(model_args))
+            _calculate_args_bounding_box(model_args))
 
         payload = {
             'model_name': model_name,
