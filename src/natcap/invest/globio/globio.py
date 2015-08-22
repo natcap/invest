@@ -4,6 +4,7 @@ import os
 import logging
 import collections
 import csv
+import uuid
 
 import gdal
 import ogr
@@ -52,8 +53,8 @@ def execute(args):
         args['pasture_uri'] - (string) used in "mode (a)" path to pasture raster
         args['potential_vegetation_uri'] - (string) used in "mode (a)" path to
             potential vegetation raster
-        args['sum_yieldgap_uri'] - (string) used in "mode (a)" a path to
-            sum yieldgap raster
+        args['intensification_uri'] - (string) used in "mode (a)" a path to
+            intensification raster
         args['pasture_threshold'] - (float) used in "mode (a)"
         args['intensification_threshold'] - (float) used in "mode (a)"
         args['primary_threshold'] - (float) used in "mode (a)"
@@ -61,8 +62,6 @@ def execute(args):
             parameters
         args['aoi_uri'] - (string) (optional) if it exists then final MSA raster
             is summarized by AOI
-        args['aoi_summary_key'] - (string) (required if args['aoi_uri'])
-            field name of the aoi polygons that uniquely identify them
         args['globio_lulc_uri'] - (string) used in "mode (b)" path to predefined
             globio raster.
     """
@@ -196,7 +195,7 @@ def execute(args):
         smoothed_primary_veg_mask_uri)
 
     primary_veg_smooth_uri = os.path.join(
-        intermediate_dir, 'ffqi%s.tif' % file_suffix)
+        intermediate_dir, 'primary_veg_smooth%s.tif' % file_suffix)
 
     def _primary_veg_smooth_op(
             primary_veg_mask_array, smoothed_primary_veg_mask):
@@ -252,13 +251,14 @@ def execute(args):
 
     #calc_msa_i
     msa_f_values = sorted(msa_f_table)
-    msa_i_other_table = msa_parameter_table['msa_i_other_table']
+    msa_i_other_table = msa_parameter_table['msa_i_other']
     msa_i_primary_table = msa_parameter_table['msa_i_primary']
     msa_i_other_values = sorted(msa_i_other_table)
     msa_i_primary_values = sorted(msa_i_primary_table)
 
     def _msa_i_op(lulc_array, distance_to_infrastructure):
         """calculate msa infrastructure"""
+
         distance_to_infrastructure *= out_pixel_size #convert to meters
         msa_i_primary = numpy.empty(lulc_array.shape)
         msa_i_other = numpy.empty(lulc_array.shape)
@@ -268,7 +268,7 @@ def execute(args):
             if value == '>':
                 msa_i_primary[distance_to_infrastructure >
                               msa_i_primary_table['>'][0]] = (
-                    msa_i_primary_table['>'][1])
+                                  msa_i_primary_table['>'][1])
             elif value == '<':
                 continue
             else:
@@ -278,14 +278,14 @@ def execute(args):
         if '<' in msa_i_primary_table:
             msa_i_primary[distance_to_infrastructure <
                           msa_i_primary_table['<'][0]] = (
-                msa_i_primary_table['<'][1])
+                              msa_i_primary_table['<'][1])
 
         for value in reversed(msa_i_other_values):
             #special case if it's a > or < value
             if value == '>':
                 msa_i_other[distance_to_infrastructure >
                             msa_i_other_table['>'][0]] = (
-                    msa_i_other_table['>'][1])
+                                msa_i_other_table['>'][1])
             elif value == '<':
                 continue
             else:
@@ -294,14 +294,14 @@ def execute(args):
 
         if '<' in msa_i_other_table:
             msa_i_other[distance_to_infrastructure <
-                        msa_i_other_table['<'][0]] = (
-                msa_i_other_table['<'][1])
+                        msa_i_other_table['<'][0]] = (msa_i_other_table['<'][1])
 
         msa_i = numpy.where(
             (lulc_array >= 1) & (lulc_array <= 5), msa_i_primary, 1.0)
         msa_i = numpy.where(
             (lulc_array >= 6) & (lulc_array <= 12), msa_i_other, msa_i)
         return msa_i
+
 
     LOGGER.info('calculate msa_i')
     distance_to_infrastructure_uri = os.path.join(
@@ -353,18 +353,34 @@ def execute(args):
         msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
         layer.CreateField(msa_summary_field_def)
 
+        #make an identifying id per polygon that can be used for aggregation
+        layer_defn = layer.GetLayerDefn()
+        while True:
+            #last 8 characters because shapefile fields are limited to 8 chars
+            poly_id_field = str(uuid.uuid4())[-8:]
+            if layer_defn.GetFieldIndex(poly_id_field) == -1:
+                break
+        layer_id_field = ogr.FieldDefn(poly_id_field, ogr.OFTInteger)
+        layer.CreateField(layer_id_field)
+        for poly_index, poly_feat in enumerate(layer):
+            poly_feat.SetField(poly_id_field, poly_index)
+            layer.SetFeature(poly_feat)
+        layer.SyncToDisk()
+
         #aggregate by ID
         msa_summary = pygeoprocessing.aggregate_raster_values_uri(
-            msa_uri, args['aoi_uri'],
-            shapefile_field=str(args['aoi_summary_key']))
+            msa_uri, summary_aoi_uri, shapefile_field=poly_id_field)
 
         #add new column to output file
         for feature_id in xrange(layer.GetFeatureCount()):
             feature = layer.GetFeature(feature_id)
-            key_value = feature.GetFieldAsInteger(str(args['aoi_summary_key']))
+            key_value = feature.GetFieldAsInteger(poly_id_field)
             feature.SetField(
                 'msa_mean', float(msa_summary.pixel_mean[key_value]))
             layer.SetFeature(feature)
+
+        # don't need a random poly id anymore
+        layer.DeleteField(layer_defn.GetFieldIndex(poly_id_field))
 
 
 def make_gaussian_kernel_uri(sigma, kernel_uri):
@@ -414,10 +430,27 @@ def load_msa_parameter_table(msa_parameter_table_filename):
 
         returns a dictionary of the form
             {
-
-            }
-
-    """
+                'msa_f': {
+                    valuea: msa_f_value, ...
+                    valueb: ...
+                    '<': (bound, msa_f_value),
+                    '>': (bound, msa_f_value)}
+                'msa_i_other_table': {
+                    valuea: msa_i_value, ...
+                    valueb: ...
+                    '<': (bound, msa_i_other_value),
+                    '>': (bound, msa_i_other_value)}
+                'msa_i_primary': {
+                    valuea: msa_i_primary_value, ...
+                    valueb: ...
+                    '<': (bound, msa_i_primary_value),
+                    '>': (bound, msa_i_primary_value)}
+                'msa_lu': {
+                    valuea: msa_lu_value, ...
+                    valueb: ...
+                    '<': (bound, msa_lu_value),
+                    '>': (bound, msa_lu_value)}
+            }"""
 
     with open(msa_parameter_table_filename, 'rb') as msa_parameter_table_file:
         reader = csv.DictReader(msa_parameter_table_file)
@@ -434,7 +467,8 @@ def load_msa_parameter_table(msa_parameter_table_filename):
             else:
                 value = float(line['Value'])
             msa_dict[line['MSA_type']][value] = float(line['MSA_x'])
-    return msa_dict
+    # cast back to a regular dict so we get keyerrors on non-existant keys
+    return dict(msa_dict)
 
 
 def _calculate_globio_lulc_map(
@@ -443,7 +477,14 @@ def _calculate_globio_lulc_map(
         to simplify globio function since it's possible to skip this calculation
         if a predefined globio map has been created.
 
-        returns a filename to the globio map"""
+        args - (dict) the argument dictionary passed in by the 'execute' entry
+            point
+        file_suffix - (string) to append on output file
+        intermediate_dir - (string) path to location for temporary files
+        tmp_dir - (string) path to location for temporary files
+        out_pixel_size - (float) pixel size of output globio map
+
+        returns a (string) filename to the generated globio map"""
 
      #reclassify the landcover map
     lulc_to_globio_table = pygeoprocessing.get_lookup_from_table(
@@ -463,7 +504,7 @@ def _calculate_globio_lulc_map(
     globio_lulc_uri = os.path.join(
         intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
 
-    sum_yieldgap_uri = args['sum_yieldgap_uri']
+    intensification_uri = args['intensification_uri']
     potential_vegetation_uri = args['potential_vegetation_uri']
     pasture_uri = args['pasture_uri']
 
@@ -512,16 +553,14 @@ def _calculate_globio_lulc_map(
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
 
-
-    #remap globio lulc to an internal lulc based on ag and yield gaps
-    #these came from the 'expansion_scenarios.py' script as numbers Justin
-    #provided way back on the unilever project.
+    #remap globio lulc to an internal lulc based on ag and intensification
+    #proportion these came from the 'expansion_scenarios.py'
     pasture_threshold = float(args['pasture_threshold'])
     intensification_threshold = float(args['intensification_threshold'])
     primary_threshold = float(args['primary_threshold'])
 
     def _create_globio_lulc(
-            lulc_array, sum_yieldgap, potential_vegetation_array, pasture_array,
+            lulc_array, intensification, potential_vegetation_array, pasture_array,
             ffqi):
         """vectorize_dataset op to construct the globio lulc given relevant
             biophysical parameters."""
@@ -529,7 +568,7 @@ def _calculate_globio_lulc_map(
         #Step 1.2b: Assign high/low according to threshold based on yieldgap.
         nodata_mask = lulc_array == globio_nodata
         high_low_intensity_agriculture = numpy.where(
-            sum_yieldgap < intensification_threshold, 9.0, 8.0)
+            intensification < intensification_threshold, 9.0, 8.0)
 
         #Step 1.2c: Stamp ag_split classes onto input LULC
         lulc_ag_split = numpy.where(
@@ -567,7 +606,7 @@ def _calculate_globio_lulc_map(
 
     LOGGER.info('create the globio lulc')
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [intermediate_globio_lulc_uri, sum_yieldgap_uri,
+        [intermediate_globio_lulc_uri, intensification_uri,
          potential_vegetation_uri, pasture_uri, ffqi_uri],
         _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32, globio_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,

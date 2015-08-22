@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 900,
+  "height": 650,
   "width": 800,
   "elements": [
     {
@@ -48,11 +48,30 @@
           "disabledBy": "predefined_globio"
         },
         {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "AOI (Vector) (optional)",
+          "defaultValue": "../globio/input/sub_aoi.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that can be used to aggregate MSA sum and mean to a polygon."
+        },
+        {
           "id": "land_use",
           "args_id": "lulc_uri",
           "type": "file",
           "label": "Land Use/Cover (Raster)",
-          "defaultValue": "",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -78,7 +97,6 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/pasture.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -91,20 +109,18 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/potential_vegetation.tif",
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "sum_yieldgap_uri",
-          "args_id": "sum_yieldgap_uri",
+          "id": "intensification_uri",
+          "args_id": "intensification_uri",
           "type": "file",
-          "label": "Sum Yieldgap (Raster)",
-          "defaultValue": "../globio/input/sum_yieldgap.tif",
+          "label": "Intensification (Raster)",
+          "defaultValue": "../globio/input/intensification_soy.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/sum_yieldgap.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -146,53 +162,9 @@
           "required": true,
           "validateAs": {
             "type": "CSV",
-            "fieldsExist": ["MSA calculation", "Value", "MSA_x"]
+            "fieldsExist": ["MSA_type", "Value", "MSA_x"]
           },
           "helpText": "A CSV table containing MSA threshold values as defined in the user's guide.  Provided for advanced users that may wish to change those values."
-        }
-      ]
-    },
-    {
-      "id": "aoi_summary",
-      "args_id": "aoi_summary",
-      "label": "Summarize MSA by AOI",
-      "type": "container",
-      "defaultValue": true,
-      "collapsible": true,
-      "elements": [
-        {
-          "id": "aoi_summary_list",
-          "type": "list",
-          "elements": [
-            {
-              "id": "aoi_uri",
-              "args_id": "aoi_uri",
-              "type": "file",
-              "label": "AOI (Vector)",
-              "defaultValue": "../globio/input/sub_aoi.shp",
-              "required": true,
-              "validateAs": {
-                "type": "OGR",
-                "layers": [
-                  {
-                    "name": {
-                      "inheritFrom": "file"
-                    },
-                    "type": "polygons"
-                  }
-                ]
-              },
-              "helpText": "This is a set of polygons that can be used to aggregate MSA by a given field"
-            },
-            {
-              "id": "aoi_summary_key",
-              "args_id": "aoi_summary_key",
-              "type": "text",
-              "label": "Unique feature key in AOI",
-              "required": true,
-              "defaultValue": "OBJECTID"
-            }
-          ]
         }
       ]
     },
