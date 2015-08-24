@@ -72,8 +72,8 @@
           "required": true
         },
         {
-          "id": "agriculture_code",
-          "args_id": "agriculture_code",
+          "id": "agriculture_lu_code",
+          "args_id": "agriculture_lu_code",
           "type": "text",
           "label": "Agriculture Landcover Code (int)",
           "defaultValue": "12",

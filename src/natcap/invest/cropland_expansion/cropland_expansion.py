@@ -26,7 +26,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['base_lulc_uri'] (string): path to the base landcover map
-        args['agriculture_code'] (string or int): agriculture landcover code
+        args['agriculture_lu_code'] (string or int): agriculture landcover code
         args['max_pixels_to_convert'] (string or int): max pixels to convert per
 
     Returns:
@@ -42,7 +42,7 @@ def execute(args):
         file_suffix = ''
 
     max_pixels_to_convert = int(args['max_pixels_to_convert'])
-    ag_code = int(args['agriculture_code'])
+    ag_lucode = int(args['agriculture_lu_code'])
 
     #create working directories
     output_dir = os.path.join(args['workspace_dir'], 'output')
@@ -54,7 +54,7 @@ def execute(args):
 
     if args['expand_from_ag']:
         _expand_from_ag(
-            args, intermediate_dir, output_dir, file_suffix, ag_code,
+            args, intermediate_dir, output_dir, file_suffix, ag_lucode,
             max_pixels_to_convert)
 
     if args['expand_from_forest_edge']:
@@ -64,18 +64,15 @@ def execute(args):
         _fragment_forest(args)
 
 def _expand_from_ag(
-        args, intermediate_dir, output_dir, file_suffix, ag_code,
+        base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
         max_pixels_to_convert):
     """ """
     #mask agriculture types from LULC
     ag_mask_uri = os.path.join(intermediate_dir, 'ag_mask%s.tif' % file_suffix)
 
-    lulc_nodata = pygeoprocessing.get_nodata_from_uri(
-        args['base_lulc_uri'])
-    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(
-        args['base_lulc_uri'])
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
-    ag_lucode = int(args['agriculture_code'])
     def _mask_ag_op(lulc):
         """create a mask of ag pixels only"""
         ag_mask = (lulc == ag_lucode)
@@ -126,13 +123,13 @@ def _expand_from_ag(
     #disk sort to select the top N pixels to convert
     count = 0
     last_time = time.time()
-    ag_code_array = numpy.array([[ag_code]])
+    ag_lucode_array = numpy.array([[ag_lucode]])
     for _, flatindex in _sort_to_disk(convertable_distances_uri):
         if count >= max_pixels_to_convert:
             break
         col_index = flatindex % n_cols
         row_index = flatindex / n_cols
-        ag_expanded_band.WriteArray(ag_code_array, col_index, row_index)
+        ag_expanded_band.WriteArray(ag_lucode_array, col_index, row_index)
         count += 1
         if time.time() - last_time > 5.0:
             LOGGER.info(
