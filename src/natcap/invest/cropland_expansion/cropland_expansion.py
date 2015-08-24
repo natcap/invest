@@ -6,6 +6,7 @@ import numpy
 import tempfile
 import struct
 import heapq
+import time
 
 import gdal
 import pygeoprocessing
@@ -19,13 +20,19 @@ LOGGER = logging.getLogger(
 def execute(args):
     """Main entry point for cropland expansion tool model.
 
-        args['workspace_dir'] - (string) output directory for intermediate,
+    Args:
+        args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
-        args['results_suffix'] - (optional) (string) string to append to any
+        args['results_suffix'] (string): (optional) string to append to any
             output files
-        args['base_lulc_uri'] - (string)
+        args['base_lulc_uri'] (string): path to the base landcover map
+        args['agriculture_code'] (string or int): agriculture landcover code
+        args['max_pixels_to_convert'] (string or int): max pixels to convert per
 
+    Returns:
+        None.
     """
+
     #append a _ to the suffix if it's not empty and doens't already have one
     try:
         file_suffix = args['results_suffix']
@@ -33,6 +40,9 @@ def execute(args):
             file_suffix = '_' + file_suffix
     except KeyError:
         file_suffix = ''
+
+    max_pixels_to_convert = int(args['max_pixels_to_convert'])
+    ag_code = int(args['agriculture_code'])
 
     #create working directories
     output_dir = os.path.join(args['workspace_dir'], 'output')
@@ -43,7 +53,9 @@ def execute(args):
         [output_dir, intermediate_dir, tmp_dir])
 
     if args['expand_from_ag']:
-        _expand_from_ag(args, intermediate_dir, file_suffix)
+        _expand_from_ag(
+            args, intermediate_dir, output_dir, file_suffix, ag_code,
+            max_pixels_to_convert)
 
     if args['expand_from_forest_edge']:
         _expand_from_forest_edge(args)
@@ -51,7 +63,9 @@ def execute(args):
     if args['fragment_forest']:
         _fragment_forest(args)
 
-def _expand_from_ag(args, intermediate_dir, file_suffix):
+def _expand_from_ag(
+        args, intermediate_dir, output_dir, file_suffix, ag_code,
+        max_pixels_to_convert):
     """ """
     #mask agriculture types from LULC
     ag_mask_uri = os.path.join(intermediate_dir, 'ag_mask%s.tif' % file_suffix)
@@ -61,7 +75,7 @@ def _expand_from_ag(args, intermediate_dir, file_suffix):
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(
         args['base_lulc_uri'])
     ag_mask_nodata = 2
-    ag_lucode = int(args['agriculture_type'])
+    ag_lucode = int(args['agriculture_code'])
     def _mask_ag_op(lulc):
         """create a mask of ag pixels only"""
         ag_mask = (lulc == ag_lucode)
@@ -69,7 +83,8 @@ def _expand_from_ag(args, intermediate_dir, file_suffix):
 
     pygeoprocessing.vectorize_datasets(
         [args['base_lulc_uri']], _mask_ag_op, ag_mask_uri, gdal.GDT_Byte,
-        ag_mask_nodata, pixel_size_out, "intersection", vectorize_op=False)
+        ag_mask_nodata, pixel_size_out, "intersection", vectorize_op=False,
+        assert_datasets_projected=False)
 
     #distance transform mask
     distance_from_ag_uri = os.path.join(
@@ -82,7 +97,7 @@ def _expand_from_ag(args, intermediate_dir, file_suffix):
 
     convertable_type_nodata = -1
     convertable_distances_uri = os.path.join(
-        intermediate_dir, 'convertable_distances%s.tif' % file_suffix)
+        intermediate_dir, 'ag_convertable_distances%s.tif' % file_suffix)
     def _mask_to_convertable_types(distance_from_ag, lulc):
         """masks out the distance transform to a set of given landcover codes"""
         convertable_mask = numpy.in1d(
@@ -94,15 +109,36 @@ def _expand_from_ag(args, intermediate_dir, file_suffix):
         [distance_from_ag_uri, args['base_lulc_uri']],
         _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
         convertable_type_nodata, pixel_size_out, "intersection",
-        vectorize_op=False)
+        vectorize_op=False, assert_datasets_projected=False)
+
+    ag_expanded_uri = os.path.join(
+        output_dir, 'ag_expanded%s.tif' % file_suffix)
+
+    pygeoprocessing.new_raster_from_base_uri(
+        args['base_lulc_uri'], ag_expanded_uri, 'GTiff', lulc_nodata,
+        gdal.GDT_Int32, fill_value=int(lulc_nodata))
+
+    ag_expanded_ds = gdal.Open(ag_expanded_uri, gdal.GA_Update)
+    ag_expanded_band = ag_expanded_ds.GetRasterBand(1)
+
+    n_cols = ag_expanded_band.XSize
 
     #disk sort to select the top N pixels to convert
     count = 0
-    for value, flatindex in _sort_to_disk(convertable_distances_uri):
-        count += 1
-        if count == 100:
+    last_time = time.time()
+    ag_code_array = numpy.array([[ag_code]])
+    for _, flatindex in _sort_to_disk(convertable_distances_uri):
+        if count >= max_pixels_to_convert:
             break
-        LOGGER.debug("%f, %d", value, flatindex)
+        col_index = flatindex % n_cols
+        row_index = flatindex / n_cols
+        ag_expanded_band.WriteArray(ag_code_array, col_index, row_index)
+        count += 1
+        if time.time() - last_time > 5.0:
+            LOGGER.info(
+                "converted %d of %d pixels", count, max_pixels_to_convert)
+            last_time = time.time()
+
 
 def _expand_from_forest_edge(args):
     """ """

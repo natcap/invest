@@ -46,11 +46,11 @@
           "defaultValue": "../globio/input/lulc_2008.tif"
         },
         {
-          "id": "total_expansion_area",
-          "args_id": "total_expansion_area",
+          "id": "max_pixels_to_convert",
+          "args_id": "max_pixels_to_convert",
           "type": "text",
-          "label": "Total Expansion Area (ha)",
-          "defaultValue": "1000",
+          "label": "Max pixels to convert",
+          "defaultValue": "100",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$"
         },
@@ -72,8 +72,8 @@
           "required": true
         },
         {
-          "id": "agriculture_type",
-          "args_id": "agriculture_type",
+          "id": "agriculture_code",
+          "args_id": "agriculture_code",
           "type": "text",
           "label": "Agriculture Landcover Code (int)",
           "defaultValue": "12",
