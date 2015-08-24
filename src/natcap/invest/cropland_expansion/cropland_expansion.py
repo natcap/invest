@@ -52,10 +52,14 @@ def execute(args):
     pygeoprocessing.geoprocessing.create_directories(
         [output_dir, intermediate_dir, tmp_dir])
 
+    #mask out distance transform for everything that can be converted
+    convertable_type_list = numpy.array([
+        int(x) for x in args['convertable_landcover_types'].split()])
+
     if args['expand_from_ag']:
         _expand_from_ag(
-            args, intermediate_dir, output_dir, file_suffix, ag_lucode,
-            max_pixels_to_convert)
+            args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
+            ag_lucode, max_pixels_to_convert, convertable_type_list)
 
     if args['expand_from_forest_edge']:
         _expand_from_forest_edge(args)
@@ -65,8 +69,27 @@ def execute(args):
 
 def _expand_from_ag(
         base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
-        max_pixels_to_convert):
-    """ """
+        max_pixels_to_convert, convertable_type_list):
+    """Expands agricultre into covertable types starting in increasing distance
+    from nearest agriculture.
+
+    Args:
+        base_lulc_uri (string): path to landcover raster that will be used as
+            the base landcover map to agriculture pixels
+        intermediate_dir (string): path to a directory that is safe to write
+            intermediate files
+        output_dir (string): path to a directory that is safe to write output
+            files
+        file_suffix (string): string to append to output files
+        ag_lucode (int): agriculture landcover code type found in the raster
+            at `base_lulc_uri`
+        max_pixels_to_convert (int): number of pixels to convert to agriculture
+        convertable_type_list (list of int): landcover codes that are allowable
+            to be converted to agriculture
+
+    Returns:
+        None.
+    """
     #mask agriculture types from LULC
     ag_mask_uri = os.path.join(intermediate_dir, 'ag_mask%s.tif' % file_suffix)
 
@@ -79,7 +102,7 @@ def _expand_from_ag(
         return numpy.where(lulc == lulc_nodata, ag_mask_nodata, ag_mask)
 
     pygeoprocessing.vectorize_datasets(
-        [args['base_lulc_uri']], _mask_ag_op, ag_mask_uri, gdal.GDT_Byte,
+        [base_lulc_uri], _mask_ag_op, ag_mask_uri, gdal.GDT_Byte,
         ag_mask_nodata, pixel_size_out, "intersection", vectorize_op=False,
         assert_datasets_projected=False)
 
@@ -87,10 +110,6 @@ def _expand_from_ag(
     distance_from_ag_uri = os.path.join(
         intermediate_dir, 'distance_from_ag%s.tif' % file_suffix)
     pygeoprocessing.distance_transform_edt(ag_mask_uri, distance_from_ag_uri)
-
-    #mask out distance transform for everything that can be converted
-    convertable_type_list = numpy.array([
-        int(x) for x in args['convertable_landcover_types'].split()])
 
     convertable_type_nodata = -1
     convertable_distances_uri = os.path.join(
@@ -103,7 +122,7 @@ def _expand_from_ag(
             convertable_mask, distance_from_ag, convertable_type_nodata)
 
     pygeoprocessing.vectorize_datasets(
-        [distance_from_ag_uri, args['base_lulc_uri']],
+        [distance_from_ag_uri, base_lulc_uri],
         _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
         convertable_type_nodata, pixel_size_out, "intersection",
         vectorize_op=False, assert_datasets_projected=False)
@@ -112,7 +131,7 @@ def _expand_from_ag(
         output_dir, 'ag_expanded%s.tif' % file_suffix)
 
     pygeoprocessing.new_raster_from_base_uri(
-        args['base_lulc_uri'], ag_expanded_uri, 'GTiff', lulc_nodata,
+        base_lulc_uri, ag_expanded_uri, 'GTiff', lulc_nodata,
         gdal.GDT_Int32, fill_value=int(lulc_nodata))
 
     ag_expanded_ds = gdal.Open(ag_expanded_uri, gdal.GA_Update)
