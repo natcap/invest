@@ -150,6 +150,13 @@ def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
     original_serviceshed_datasource = ogr.Open(serviceshed_uri)
     serviceshed_datasource_filename = os.path.join(
         workspace_dir, os.path.basename(serviceshed_uri))
+    if (os.path.normpath(serviceshed_uri) ==
+            os.path.normpath(serviceshed_datasource_filename)):
+        raise ValueError(
+            "The input and output serviceshed filenames are the same, "
+            "please choose a different workspace or move the serviceshed "
+            "out of the current workspace %s" % serviceshed_datasource_filename)
+
     if os.path.exists(serviceshed_datasource_filename):
         os.remove(serviceshed_datasource_filename)
     serviceshed_result = esri_driver.CopyDataSource(
