@@ -7,7 +7,7 @@ poster
 pyamg
 pygeoprocessing==0.3.0a7
 pyyaml
-scipy
+scipy>=0.14.0
 setuptools
 shapely
 six>=1.3
