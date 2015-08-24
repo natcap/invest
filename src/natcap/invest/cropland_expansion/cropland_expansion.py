@@ -28,6 +28,8 @@ def execute(args):
         args['base_lulc_uri'] (string): path to the base landcover map
         args['agriculture_lu_code'] (string or int): agriculture landcover code
         args['max_pixels_to_convert'] (string or int): max pixels to convert per
+        args['forest_landcover_types'] (string): a space separated string of
+            forest landcover codes found in `args['base_lulc_uri']`
 
     Returns:
         None.
@@ -56,13 +58,19 @@ def execute(args):
     convertable_type_list = numpy.array([
         int(x) for x in args['convertable_landcover_types'].split()])
 
+    forest_type_list = numpy.array([
+        int(x) for x in args['forest_landcover_types'].split()])
+
     if args['expand_from_ag']:
         _expand_from_ag(
             args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
             ag_lucode, max_pixels_to_convert, convertable_type_list)
 
     if args['expand_from_forest_edge']:
-        _expand_from_forest_edge(args)
+        _expand_from_forest_edge(
+            args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
+            ag_lucode, max_pixels_to_convert, forest_type_list,
+            convertable_type_list)
 
     if args['fragment_forest']:
         _fragment_forest(args)
@@ -156,9 +164,100 @@ def _expand_from_ag(
             last_time = time.time()
 
 
-def _expand_from_forest_edge(args):
-    """ """
-    pass
+def _expand_from_forest_edge(
+        base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
+        max_pixels_to_convert, forest_type_list, convertable_type_list):
+    """Expands agriculture into covertable types starting from the edge of
+    the forest types, inward.
+
+    Args:
+        base_lulc_uri (string): path to landcover raster that will be used as
+            the base landcover map to agriculture pixels
+        intermediate_dir (string): path to a directory that is safe to write
+            intermediate files
+        output_dir (string): path to a directory that is safe to write output
+            files
+        file_suffix (string): string to append to output files
+        ag_lucode (int): agriculture landcover code type found in the raster
+            at `base_lulc_uri`
+        max_pixels_to_convert (int): number of pixels to convert to agriculture
+        forest_type_list (list of int): landcover codes that are allowable
+            to be converted to agriculture
+        convertable_type_list (list of int): landcover codes that are allowable
+            to be converted to agriculture
+
+    Returns:
+        None."""
+    #mask agriculture types from LULC
+    non_forest_mask_uri = os.path.join(
+        intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
+
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
+    ag_mask_nodata = 2
+    def _mask_non_forest_op(lulc):
+        """create a mask of valid non-forest pixels only"""
+        non_forest_mask = ~numpy.in1d(
+            lulc.flatten(), forest_type_list).reshape(lulc.shape)
+        return numpy.where(lulc == lulc_nodata, ag_mask_nodata, non_forest_mask)
+
+    pygeoprocessing.vectorize_datasets(
+        [base_lulc_uri], _mask_non_forest_op, non_forest_mask_uri,
+        gdal.GDT_Byte, ag_mask_nodata, pixel_size_out, "intersection",
+        vectorize_op=False, assert_datasets_projected=False)
+
+    #distance transform mask
+    distance_from_forest_edge_uri = os.path.join(
+        intermediate_dir, 'distance_from_forest_edge%s.tif' % file_suffix)
+    pygeoprocessing.distance_transform_edt(
+        non_forest_mask_uri, distance_from_forest_edge_uri)
+
+    convertable_type_nodata = -1
+    convertable_distances_uri = os.path.join(
+        intermediate_dir, 'forest_edge_convertable_distances%s.tif' %
+        file_suffix)
+    def _mask_to_convertable_types(distance_from_forest_edge, lulc):
+        """masks out the distance transform to a set of given landcover codes"""
+        convertable_mask = numpy.in1d(
+            lulc.flatten(), convertable_type_list).reshape(lulc.shape)
+        return numpy.where(
+            convertable_mask, distance_from_forest_edge,
+            convertable_type_nodata)
+
+    pygeoprocessing.vectorize_datasets(
+        [distance_from_forest_edge_uri, base_lulc_uri],
+        _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
+        convertable_type_nodata, pixel_size_out, "intersection",
+        vectorize_op=False, assert_datasets_projected=False)
+
+    forest_edge_expanded_uri = os.path.join(
+        output_dir, 'forest_edge_expanded%s.tif' % file_suffix)
+
+    pygeoprocessing.new_raster_from_base_uri(
+        base_lulc_uri, forest_edge_expanded_uri, 'GTiff', lulc_nodata,
+        gdal.GDT_Int32, fill_value=int(lulc_nodata))
+
+    forest_edge_ds = gdal.Open(forest_edge_expanded_uri, gdal.GA_Update)
+    forest_edge_band = forest_edge_ds.GetRasterBand(1)
+
+    n_cols = forest_edge_band.XSize
+
+    #disk sort to select the top N pixels to convert
+    count = 0
+    last_time = time.time()
+    ag_lucode_array = numpy.array([[ag_lucode]])
+    for _, flatindex in _sort_to_disk(convertable_distances_uri):
+        if count >= max_pixels_to_convert:
+            break
+        col_index = flatindex % n_cols
+        row_index = flatindex / n_cols
+        forest_edge_band.WriteArray(ag_lucode_array, col_index, row_index)
+        count += 1
+        if time.time() - last_time > 5.0:
+            LOGGER.info(
+                "converted %d of %d pixels", count, max_pixels_to_convert)
+            last_time = time.time()
+
 
 
 def _fragment_forest(args):

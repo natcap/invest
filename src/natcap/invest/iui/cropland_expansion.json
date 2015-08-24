@@ -72,6 +72,14 @@
           "required": true
         },
         {
+          "id": "forest_landcover_types",
+          "args_id": "forest_landcover_types",
+          "type": "text",
+          "label": "Forest Landcover Types (list)",
+          "defaultValue": "1 2 3 4 5",
+          "required": true
+        },
+        {
           "id": "agriculture_lu_code",
           "args_id": "agriculture_lu_code",
           "type": "text",
