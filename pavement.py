@@ -607,6 +607,15 @@ def after_install(options, home_dir):
             "        invest_sdist = invest_sdist.replace('+', '-')\n"
         )
 
+        # Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
+        # --no-use-wheel in favor of --no-binary.  Stable versions of Fedora
+        # currently use pip 6.x
+        try:
+            pkg_resources.require('pip>=7.0.0')
+            no_wheel_flag = "'--no-binary', 'natcap.invest'"
+        except pkg_resources.VersionConflict:
+            no_wheel_flag = "'--no-use-wheel'"
+
         if options.env.dev is False:
             install_string += (
                 # Recent versions of pip build wheels by default before installing, but wheel
@@ -614,17 +623,17 @@ def after_install(options, home_dir):
                 # Pyinstaller also doesn't handle namespace packages all that
                 # well, so --egg --no-use-wheel doesn't really work in a
                 # release environment either.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest', "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', {no_wheel_flag}, "
                 " invest_sdist])\n"
-            )
+            ).format(no_wheel_flag=no_wheel_flag)
         else:
             install_string += (
                 # If we're in a development environment, it's ok (even
                 # preferable) to install natcap namespace packages as flat
                 # eggs.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', '--no-binary', 'natcap.invest', "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', {no_wheel_flag}, "
                 " invest_sdist])\n"
-            )
+            ).format(no_wheel_flag=no_wheel_flag)
     else:
         print 'Skipping the installation of natcap.invest per user input'
 
@@ -634,6 +643,14 @@ def after_install(options, home_dir):
     # Built the bootstrap env via a subprocess call.
     # Calling via the shell so that virtualenv has access to environment
     # vars as needed.
+    try:
+        pkg_resources.require('virtualenv>=13.0.0')
+        no_wheel_flag = 'no-wheel'
+    except pkg_resources.VersionConflict:
+        # Early versions of virtualenv don't ship wheel, so there's no flag for
+        # us to provide.
+        no_wheel_flag = ''
+
     bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(clear)s %(no-wheel)s %(env_name)s"
     bootstrap_opts = {
         "python": sys.executable,
@@ -641,7 +658,7 @@ def after_install(options, home_dir):
         "env_name": options.env.envname,
         "site-pkgs": '--system-site-packages' if options.env.system_site_packages else '',
         "clear": '--clear' if options.env.clear else '',
-        "no-wheel": '--no-wheel',  # exclude wheel.  It has a bug preventing namespace pkgs from compiling
+        "no-wheel": no_wheel_flag,  # exclude wheel.  It has a bug preventing namespace pkgs from compiling
     }
     sh(bootstrap_cmd % bootstrap_opts)
 
@@ -1325,8 +1342,8 @@ def check(options):
     print bold("\nChecking python packages")
     requirements = [
         ('setuptools>=6.1', required, None),
-        ('virtualenv>=13.0.0', required, None),
-        ('pip>=7.1.0', required, None),
+        ('virtualenv', required, None),
+        ('pip>=6.0.0', required, None),
         ('numpy', lib_needed, None),
         ('scipy', lib_needed, None),
         ('paramiko', suggested, None),
