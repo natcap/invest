@@ -38,6 +38,17 @@ _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
 _SDTOUT_HANDLER.setLevel(logging.INFO)
 LOGGER.addHandler(_SDTOUT_HANDLER)
 
+# Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
+# --no-use-wheel in favor of --no-binary.  Stable versions of Fedora
+# currently use pip 6.x
+try:
+    pkg_resources.require('pip>=7.0.0')
+    NO_WHEEL_SUBPROCESS = "'--no-binary', ':all:'"
+    NO_WHEEL_SH = '--no-binary :all:'
+except pkg_resources.VersionConflict:
+    NO_WHEEL_SUBPROCESS = "'--no-use-wheel'"
+    NO_WHEEL_SH = '--no-use-wheel'
+
 
 def user_os_installer():
     """
@@ -607,15 +618,6 @@ def after_install(options, home_dir):
             "        invest_sdist = invest_sdist.replace('+', '-')\n"
         )
 
-        # Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
-        # --no-use-wheel in favor of --no-binary.  Stable versions of Fedora
-        # currently use pip 6.x
-        try:
-            pkg_resources.require('pip>=7.0.0')
-            no_wheel_flag = "'--no-binary', 'natcap.invest'"
-        except pkg_resources.VersionConflict:
-            no_wheel_flag = "'--no-use-wheel'"
-
         if options.env.dev is False:
             install_string += (
                 # Recent versions of pip build wheels by default before installing, but wheel
@@ -625,7 +627,7 @@ def after_install(options, home_dir):
                 # release environment either.
                 "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', {no_wheel_flag}, "
                 " invest_sdist])\n"
-            ).format(no_wheel_flag=no_wheel_flag)
+            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS)
         else:
             install_string += (
                 # If we're in a development environment, it's ok (even
@@ -633,7 +635,7 @@ def after_install(options, home_dir):
                 # eggs.
                 "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', {no_wheel_flag}, "
                 " invest_sdist])\n"
-            ).format(no_wheel_flag=no_wheel_flag)
+            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS)
     else:
         print 'Skipping the installation of natcap.invest per user input'
 
@@ -1461,12 +1463,14 @@ def check(options):
                 for package in noneggs:
                     print yellow('Reinstalling natcap.%s as egg' % package)
                     sh('pip uninstall -y natcap.{package} > natcap.{package}.log'.format(package=package))
-                    sh(('pip install --egg --no-binary :all: '
-                        'natcap.{package} > natcap.{package}.log').format(package=package))
+                    sh(('pip install --egg {no_wheel} '
+                        'natcap.{package} > natcap.{package}.log').format(
+                            package=package, no_wheel=NO_WHEEL_SH))
                     print green('Package natcap.%s reinstalled successfully' % package)
             else:
                 pip_inst_template = \
-                    yellow("    pip install --egg --no-binary :all: natcap.%s")
+                    yellow("    pip install --egg {no_wheel} natcap.%s").format(
+                        no_wheel=NO_WHEEL_SH)
                 namespace_msg = (
                     "\n"
                     "Natcap namespace issues:\n"
@@ -1549,7 +1553,7 @@ def check(options):
                 print yellow('natcap.versioner required by setup.py but '
                                 'not found.  Installing.')
                 # Install natcap.versioner
-                sh('pip install --egg --no-binary :all: natcap.versioner > natcap.versioner.log')
+                sh('pip install --egg {no_wheel} natcap.versioner > natcap.versioner.log'.format(no_wheel=NO_WHEEL_SH))
 
                 # Verify that versioner installed properly.  Must import in new
                 # process to verify. _import_namespace_pkg allows for pretty
@@ -1568,7 +1572,7 @@ def check(options):
                 warnings_found = True
                 print ('{warning} natcap.versioner required by setup.py but not '
                     'installed.  To fix:').format(warning=WARNING)
-                print '    pip install --egg --no-binary :all: natcap.versioner'
+                print '    pip install --egg {no_wheel} natcap.versioner'.format(no_wheel=NO_WHEEL_SH)
                 print 'Or use paver check --fix-namespace'
 
     if errors_found:
