@@ -78,8 +78,8 @@ def execute(args):
 def _expand_from_ag(
         base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
         max_pixels_to_convert, convertable_type_list):
-    """Expands agricultre into covertable types starting in increasing distance
-    from nearest agriculture.
+    """Expands agriculture into convertable types starting in increasing
+    distance from nearest agriculture.
 
     Args:
         base_lulc_uri (string): path to landcover raster that will be used as
@@ -167,7 +167,7 @@ def _expand_from_ag(
 def _expand_from_forest_edge(
         base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
         max_pixels_to_convert, forest_type_list, convertable_type_list):
-    """Expands agriculture into covertable types starting from the edge of
+    """Expands agriculture into convertable types starting from the edge of
     the forest types, inward.
 
     Args:
