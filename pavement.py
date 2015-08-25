@@ -33,7 +33,7 @@ import virtualenv
 import yaml
 
 
-LOGGER = logging.getLogger('invest-bin')
+LOGGER = logging.getLogger('InVEST.pavement')
 _SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
 _SDTOUT_HANDLER.setLevel(logging.INFO)
 LOGGER.addHandler(_SDTOUT_HANDLER)
@@ -710,6 +710,8 @@ Options:
     user_repo_revs = {}  # repo -> version
     repo_paths = sorted(map(lambda x: x.local_path, REPOS))
     args_queue = collections.deque(args[:])
+
+    print 'Fetching %s' % args_queue
 
     rev_flags = ['-r', '--rev']
     while len(args_queue) > 0:
@@ -2325,11 +2327,11 @@ def jenkins_installer(options):
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
     build_options = {}
-    for opt_name, build_opt in [
-            ('nodata', 'skip-data'),
-            ('nodocs', 'skip-data'),
-            ('noinstaller', 'skip-installer'),
-            ('nobin', 'skip-bin')]:
+    for opt_name, build_opt, needed_repo in [
+            ('nodata', 'skip-data', 'data/invest-data'),
+            ('nodocs', 'skip-docs', 'doc/users-guide'),
+            ('noinstaller', 'skip-installer', 'src/invest-natcap.default'),
+            ('nobin', 'skip-bin', 'src/pyinstaller')]:
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
@@ -2339,6 +2341,12 @@ def jenkins_installer(options):
                 # Skip this option entirely.  build() expects this option to be
                 # absent from the build_options dict if we want to not provide
                 # the build option.
+                if needed_repo is not None:
+                    call_task('check_repo', options={
+                        'repo': needed_repo,
+                        'fetch': True,
+                    })
+
                 raise AttributeError
             else:
                 raise Exception('Invalid option: %s' % user_option)
