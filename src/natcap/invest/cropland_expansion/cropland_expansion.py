@@ -352,7 +352,8 @@ def _fragment_forest(
     count = 0
     last_time = time.time()
     ag_lucode_array = numpy.array([[ag_lucode]])
-    for _, flatindex in _sort_to_disk(convertable_distances_uri):
+    #sort to disk by scaling -1 so we increase from middle of forest to the edge
+    for _, flatindex in _sort_to_disk(convertable_distances_uri, -1.0):
         if count >= max_pixels_to_convert:
             break
         col_index = flatindex % n_cols
@@ -365,11 +366,13 @@ def _fragment_forest(
             last_time = time.time()
 
 
-def _sort_to_disk(dataset_uri):
+def _sort_to_disk(dataset_uri, scale=1.0):
     """Sorts the non-nodata pixels in the dataset on disk and returns
         an iterable in sorted order.
 
         dataset_uri - a uri to a GDAL dataset
+        scale - a number to multiply all values by, this can be used to reverse
+            the sort order for example
 
         returns an iterable that returns (value, flat_index)
            in decreasing sorted order by value"""
@@ -385,6 +388,7 @@ def _sort_to_disk(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
+    nodata *= scale # scale the nodata value so they can be filtered out later
 
     n_rows = band.YSize
     n_cols = band.XSize
@@ -404,7 +408,7 @@ def _sort_to_disk(dataset_uri):
 
         #Extract scores make them negative, calculate flat indexes, and sort
         scores = band.ReadAsArray(0, row_index, n_cols, row_strides).flatten()
-
+        scores *= scale # scale the results
         col_indexes = numpy.tile(numpy.arange(n_cols), (row_strides, 1))
         row_offsets = numpy.arange(row_index, row_index+row_strides) * n_cols
         row_offsets.resize((row_strides, 1))
