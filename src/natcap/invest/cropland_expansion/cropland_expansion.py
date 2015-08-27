@@ -294,26 +294,13 @@ def _fragment_forest(
 
     Returns:
         None."""
-    #mask agriculture types from LULC
-    non_forest_mask_uri = os.path.join(
-        intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
+
+    forest_fragmented_uri = os.path.join(
+        output_dir, 'forest_fragmented%s.tif' % file_suffix)
 
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
-    def _mask_non_forest_op(lulc):
-        """create a mask of valid non-forest pixels only"""
-        non_forest_mask = ~numpy.in1d(
-            lulc.flatten(), forest_type_list).reshape(lulc.shape)
-        return numpy.where(lulc == lulc_nodata, ag_mask_nodata, non_forest_mask)
-
-    pygeoprocessing.vectorize_datasets(
-        [base_lulc_uri], _mask_non_forest_op, non_forest_mask_uri,
-        gdal.GDT_Byte, ag_mask_nodata, pixel_size_out, "intersection",
-        vectorize_op=False, assert_datasets_projected=False)
-
-    forest_fragmented_uri = os.path.join(
-        output_dir, 'forest_fragmented%s.tif' % file_suffix)
 
     pygeoprocessing.new_raster_from_base_uri(
         base_lulc_uri, forest_fragmented_uri, 'GTiff', lulc_nodata,
@@ -331,6 +318,24 @@ def _fragment_forest(
         pixels_left_to_convert -= pixels_to_convert
         if pixels_left_to_convert < 0:
             pixels_to_convert += pixels_left_to_convert
+
+        #mask agriculture types from LULC
+        non_forest_mask_uri = os.path.join(
+            intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
+
+        def _mask_non_forest_op(lulc, converted_forest):
+            """create a mask of valid non-forest pixels only"""
+            non_forest_mask = ~numpy.in1d(
+                lulc.flatten(), forest_type_list).reshape(lulc.shape)
+            non_forest_mask = non_forest_mask | (converted_forest == ag_lucode)
+            return numpy.where(
+                lulc == lulc_nodata, ag_mask_nodata, non_forest_mask)
+
+        pygeoprocessing.vectorize_datasets(
+            [base_lulc_uri, forest_fragmented_uri], _mask_non_forest_op,
+            non_forest_mask_uri, gdal.GDT_Byte, ag_mask_nodata, pixel_size_out,
+            "intersection", vectorize_op=False, assert_datasets_projected=False)
+
         #distance transform mask
         distance_from_forest_edge_uri = os.path.join(
             intermediate_dir, 'distance_from_forest_edge_%d%s.tif' % (
@@ -368,6 +373,7 @@ def _fragment_forest(
             col_index = flatindex % n_cols
             row_index = flatindex / n_cols
             forest_fragmented_band.WriteArray(ag_lucode_array, col_index, row_index)
+            # TODO: update the original forest mask so the next DT will be affected
             count += 1
             if time.time() - last_time > 5.0:
                 LOGGER.info(
