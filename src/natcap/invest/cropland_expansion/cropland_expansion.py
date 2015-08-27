@@ -312,30 +312,6 @@ def _fragment_forest(
         gdal.GDT_Byte, ag_mask_nodata, pixel_size_out, "intersection",
         vectorize_op=False, assert_datasets_projected=False)
 
-    #distance transform mask
-    distance_from_forest_edge_uri = os.path.join(
-        intermediate_dir, 'distance_from_forest_edge%s.tif' % file_suffix)
-    pygeoprocessing.distance_transform_edt(
-        non_forest_mask_uri, distance_from_forest_edge_uri)
-
-    convertable_type_nodata = -1
-    convertable_distances_uri = os.path.join(
-        intermediate_dir, 'toward_forest_edge_convertable_distances%s.tif' %
-        file_suffix)
-    def _mask_to_convertable_types(distance_from_forest_edge, lulc):
-        """masks out the distance transform to a set of given landcover codes"""
-        convertable_mask = numpy.in1d(
-            lulc.flatten(), convertable_type_list).reshape(lulc.shape)
-        return numpy.where(
-            convertable_mask, distance_from_forest_edge,
-            convertable_type_nodata)
-
-    pygeoprocessing.vectorize_datasets(
-        [distance_from_forest_edge_uri, base_lulc_uri],
-        _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
-        convertable_type_nodata, pixel_size_out, "intersection",
-        vectorize_op=False, assert_datasets_projected=False)
-
     forest_fragmented_uri = os.path.join(
         output_dir, 'forest_fragmented%s.tif' % file_suffix)
 
@@ -347,23 +323,56 @@ def _fragment_forest(
     forest_fragmented_band = forest_fragmented_ds.GetRasterBand(1)
 
     n_cols = forest_fragmented_band.XSize
+    convertable_type_nodata = -1
+    pixels_left_to_convert = max_pixels_to_convert
+    pixels_to_convert = max_pixels_to_convert / n_steps
+    for step_index in xrange(n_steps):
+        LOGGER.info('fragmentation step %d of %d', step_index+1, n_steps)
+        pixels_left_to_convert -= pixels_to_convert
+        if pixels_left_to_convert < 0:
+            pixels_to_convert += pixels_left_to_convert
+        #distance transform mask
+        distance_from_forest_edge_uri = os.path.join(
+            intermediate_dir, 'distance_from_forest_edge_%d%s.tif' % (
+                step_index, file_suffix))
+        pygeoprocessing.distance_transform_edt(
+            non_forest_mask_uri, distance_from_forest_edge_uri)
 
-    #disk sort to select the top N pixels to convert
-    count = 0
-    last_time = time.time()
-    ag_lucode_array = numpy.array([[ag_lucode]])
-    #sort to disk by scaling -1 so we increase from middle of forest to the edge
-    for _, flatindex in _sort_to_disk(convertable_distances_uri, -1.0):
-        if count >= max_pixels_to_convert:
-            break
-        col_index = flatindex % n_cols
-        row_index = flatindex / n_cols
-        forest_fragmented_band.WriteArray(ag_lucode_array, col_index, row_index)
-        count += 1
-        if time.time() - last_time > 5.0:
-            LOGGER.info(
-                "converted %d of %d pixels", count, max_pixels_to_convert)
-            last_time = time.time()
+        convertable_distances_uri = os.path.join(
+            intermediate_dir, 'toward_forest_edge_convertable_distances%d%s.tif'
+            % (step_index, file_suffix))
+        def _mask_to_convertable_types(distance_from_forest_edge, lulc):
+            """masks out the distance transform to a set of given landcover
+            codes"""
+            convertable_mask = numpy.in1d(
+                lulc.flatten(), convertable_type_list).reshape(lulc.shape)
+            return numpy.where(
+                convertable_mask, distance_from_forest_edge,
+                convertable_type_nodata)
+
+        pygeoprocessing.vectorize_datasets(
+            [distance_from_forest_edge_uri, base_lulc_uri],
+            _mask_to_convertable_types, convertable_distances_uri,
+            gdal.GDT_Float32, convertable_type_nodata, pixel_size_out,
+            "intersection", vectorize_op=False,
+            assert_datasets_projected=False)
+
+        #disk sort to select the top N pixels to convert
+        count = 0
+        last_time = time.time()
+        ag_lucode_array = numpy.array([[ag_lucode]])
+        #sort to disk by scaling -1 so we increase from middle of forest to the edge
+        for _, flatindex in _sort_to_disk(convertable_distances_uri, -1.0):
+            if count >= pixels_to_convert:
+                break
+            col_index = flatindex % n_cols
+            row_index = flatindex / n_cols
+            forest_fragmented_band.WriteArray(ag_lucode_array, col_index, row_index)
+            count += 1
+            if time.time() - last_time > 5.0:
+                LOGGER.info(
+                    "converted %d of %d pixels", count, pixels_to_convert)
+                last_time = time.time()
 
 
 def _sort_to_disk(dataset_uri, scale=1.0):
