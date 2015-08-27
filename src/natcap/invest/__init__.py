@@ -16,12 +16,12 @@ import natcap.versioner
 try:
     import pygeoprocessing
     REQUIRED_PYGEOPROCESSING_VERSION = '0.3.0a7'
-    if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
+    """if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
             distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
         raise Exception(
             "Requires PyGeoprocessing version at least %s.  "
             "Current version %s ",
-            REQUIRED_PYGEOPROCESSING_VERSION, pygeoprocessing.__version__)
+            REQUIRED_PYGEOPROCESSING_VERSION, pygeoprocessing.__version__)"""
 except ImportError:
     pass
 

@@ -55,10 +55,10 @@
           "validText": "^[0-9]+\\.?[0-9]*$"
         },
         {
-          "id": "n_simulation_steps",
-          "args_id": "n_simulation_steps",
+          "id": "n_fragmentation_steps",
+          "args_id": "n_fragmentation_steps",
           "type": "text",
-          "label": "Number of Simulation Steps",
+          "label": "Number of Fragmentation Simulation Steps",
           "defaultValue": "5",
           "required": true,
           "validText": "^[0-9]+*$"

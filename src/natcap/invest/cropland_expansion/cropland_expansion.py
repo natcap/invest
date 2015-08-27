@@ -30,6 +30,8 @@ def execute(args):
         args['max_pixels_to_convert'] (string or int): max pixels to convert per
         args['forest_landcover_types'] (string): a space separated string of
             forest landcover codes found in `args['base_lulc_uri']`
+        args['n_fragmentation_steps'] (string): an int as a string indicating
+            the number of steps to take for the fragmentation conversion
 
     Returns:
         None.
@@ -73,7 +75,10 @@ def execute(args):
             convertable_type_list)
 
     if args['fragment_forest']:
-        _fragment_forest(args)
+        _fragment_forest(
+            args['base_lulc_uri'], intermediate_dir, output_dir,
+            file_suffix, ag_lucode, max_pixels_to_convert, forest_type_list,
+            convertable_type_list, int(args['n_fragmentation_steps']))
 
 def _expand_from_ag(
         base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
@@ -260,9 +265,104 @@ def _expand_from_forest_edge(
 
 
 
-def _fragment_forest(args):
-    """ """
-    pass
+def _fragment_forest(
+        base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
+        max_pixels_to_convert, forest_type_list, convertable_type_list,
+        n_steps):
+    """Expands agriculture into convertable types starting from the furthest
+    distance from the edge of the forward, inward.
+
+    Args:
+        base_lulc_uri (string): path to landcover raster that will be used as
+            the base landcover map to agriculture pixels
+        intermediate_dir (string): path to a directory that is safe to write
+            intermediate files
+        output_dir (string): path to a directory that is safe to write output
+            files
+        file_suffix (string): string to append to output files
+        ag_lucode (int): agriculture landcover code type found in the raster
+            at `base_lulc_uri`
+        max_pixels_to_convert (int): number of pixels to convert to agriculture
+        forest_type_list (list of int): landcover codes that are allowable
+            to be converted to agriculture
+        convertable_type_list (list of int): landcover codes that are allowable
+            to be converted to agriculture
+        n_steps (int): number of steps to convert the landscape; the higher this
+            number the more accurate the fragmentation.  If this value equals
+            `max_pixels_to_convert` one pixel will be converted per step. Note
+            each step will require an expensive distance transform computation.
+
+    Returns:
+        None."""
+    #mask agriculture types from LULC
+    non_forest_mask_uri = os.path.join(
+        intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
+
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
+    ag_mask_nodata = 2
+    def _mask_non_forest_op(lulc):
+        """create a mask of valid non-forest pixels only"""
+        non_forest_mask = ~numpy.in1d(
+            lulc.flatten(), forest_type_list).reshape(lulc.shape)
+        return numpy.where(lulc == lulc_nodata, ag_mask_nodata, non_forest_mask)
+
+    pygeoprocessing.vectorize_datasets(
+        [base_lulc_uri], _mask_non_forest_op, non_forest_mask_uri,
+        gdal.GDT_Byte, ag_mask_nodata, pixel_size_out, "intersection",
+        vectorize_op=False, assert_datasets_projected=False)
+
+    #distance transform mask
+    distance_from_forest_edge_uri = os.path.join(
+        intermediate_dir, 'distance_from_forest_edge%s.tif' % file_suffix)
+    pygeoprocessing.distance_transform_edt(
+        non_forest_mask_uri, distance_from_forest_edge_uri)
+
+    convertable_type_nodata = -1
+    convertable_distances_uri = os.path.join(
+        intermediate_dir, 'toward_forest_edge_convertable_distances%s.tif' %
+        file_suffix)
+    def _mask_to_convertable_types(distance_from_forest_edge, lulc):
+        """masks out the distance transform to a set of given landcover codes"""
+        convertable_mask = numpy.in1d(
+            lulc.flatten(), convertable_type_list).reshape(lulc.shape)
+        return numpy.where(
+            convertable_mask, distance_from_forest_edge,
+            convertable_type_nodata)
+
+    pygeoprocessing.vectorize_datasets(
+        [distance_from_forest_edge_uri, base_lulc_uri],
+        _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
+        convertable_type_nodata, pixel_size_out, "intersection",
+        vectorize_op=False, assert_datasets_projected=False)
+
+    forest_fragmented_uri = os.path.join(
+        output_dir, 'forest_fragmented%s.tif' % file_suffix)
+
+    pygeoprocessing.new_raster_from_base_uri(
+        base_lulc_uri, forest_fragmented_uri, 'GTiff', lulc_nodata,
+        gdal.GDT_Int32, fill_value=int(lulc_nodata))
+
+    forest_fragmented_ds = gdal.Open(forest_fragmented_uri, gdal.GA_Update)
+    forest_fragmented_band = forest_fragmented_ds.GetRasterBand(1)
+
+    n_cols = forest_fragmented_band.XSize
+
+    #disk sort to select the top N pixels to convert
+    count = 0
+    last_time = time.time()
+    ag_lucode_array = numpy.array([[ag_lucode]])
+    for _, flatindex in _sort_to_disk(convertable_distances_uri):
+        if count >= max_pixels_to_convert:
+            break
+        col_index = flatindex % n_cols
+        row_index = flatindex / n_cols
+        forest_fragmented_band.WriteArray(ag_lucode_array, col_index, row_index)
+        count += 1
+        if time.time() - last_time > 5.0:
+            LOGGER.info(
+                "converted %d of %d pixels", count, max_pixels_to_convert)
+            last_time = time.time()
 
 
 def _sort_to_disk(dataset_uri):
