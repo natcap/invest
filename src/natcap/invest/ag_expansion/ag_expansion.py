@@ -416,10 +416,10 @@ def _sort_to_disk(dataset_uri, scale=1.0):
         for score, index in zip(sorted_scores, sorted_indexes):
             sort_file.write(struct.pack('fi', score, index))
 
-        #Reset the file pointer and add an iterator for it to the list
+        #Get the filename and register a command to delete it after the
+        #interpreter exits
         sort_file_name = sort_file.name
         sort_file.close()
-
         def _remove_file(path):
             """Function to remove a file and handle exceptions to register
                 in atexit."""
