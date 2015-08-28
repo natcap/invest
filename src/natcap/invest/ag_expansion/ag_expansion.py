@@ -12,6 +12,7 @@ import atexit
 from osgeo import osr
 from osgeo import gdal
 import pygeoprocessing
+import scipy
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -66,17 +67,20 @@ def execute(args):
         int(x) for x in args['forest_landcover_types'].split()])
 
     if args['expand_from_ag']:
+        LOGGER.info('running expands from ag simulation')
         _expand_from_ag(
             args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
             ag_lucode, area_to_convert, convertable_type_list)
 
     if args['expand_from_forest_edge']:
+        LOGGER.info('running expands from forest edge simulation')
         _expand_from_forest_edge(
             args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
             ag_lucode, area_to_convert, forest_type_list,
             convertable_type_list)
 
     if args['fragment_forest']:
+        LOGGER.info('running forest fragmentation simulation')
         _fragment_forest(
             args['base_lulc_uri'], intermediate_dir, output_dir,
             file_suffix, ag_lucode, area_to_convert, forest_type_list,
@@ -458,7 +462,7 @@ def _sort_to_disk(dataset_uri, scale=1.0):
 
 def _convert_by_score(
         score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
-        reverse_sort=False):
+        reverse_sort=False, cache_size=50000):
     """Takes an input score layer and changes the pixels in `out_raster_uri`
     and converts up to `max_pixels_to_convert` them to `convert_value` type.
 
@@ -477,33 +481,99 @@ def _convert_by_score(
         convert_value (int/float): type is dependant on out_raster_uri. Any
             pixels converted in `out_raster_uri` are set to the value of this
             variable.
-        reverse_sort (boolean): If true, pixels are visited in descreasing order
-            of `score_uri`, otherwise increasing.
+        reverse_sort (boolean): If true, pixels are visited in descreasing
+            order of `score_uri`, otherwise increasing.
+        cache_size (int): number of elements to keep in cache before flushing
+            to `out_raster_uri`
 
     Returns:
         None.
     """
 
+    def _flush_cache_to_band(
+            data_array, row_array, col_array, valid_index, dirty_blocks,
+            out_band):
+        """Internal function to flush the block cache to the output band made
+        as an internal function because it is non-trivial and needs to be
+        called internally while iterating blocks and at the end in case
+        there are any outstanding pixels left to set"""
+
+        sparse_matrix = scipy.sparse.csc_matrix(
+            (data_array[:valid_index],
+             (row_array[:valid_index], col_array[:valid_index])),
+            shape=(n_rows, n_cols))
+        for block_row_index, block_col_index in dirty_blocks:
+            row_index = block_row_index * out_block_row_size
+            col_index = block_col_index * out_block_col_size
+            row_index_end = row_index + out_block_row_size
+            col_index_end = col_index + out_block_col_size
+            row_win = out_block_row_size
+            col_win = out_block_col_size
+            if row_index_end > n_rows:
+                row_index_end = n_rows
+                row_win = n_rows - row_index
+            if col_index_end > n_cols:
+                col_index_end = n_cols
+                col_win = n_cols - col_index
+
+
+            # slice out values, some must be non-zero because of set
+            mask_array = sparse_matrix[
+                row_index:row_index_end, col_index:col_index_end].toarray()
+
+            # read old array so we can write over the top
+            out_array = out_band.ReadAsArray(
+                xoff=col_index, yoff=row_index,
+                win_xsize=col_win, win_ysize=row_win)
+            out_array[mask_array] = convert_value
+            out_band.WriteArray(out_array, xoff=col_index, yoff=row_index)
+
+
     out_ds = gdal.Open(out_raster_uri, gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
+    out_block_col_size, out_block_row_size = out_band.GetBlockSize()
 
-    _, n_cols = pygeoprocessing.get_row_col_from_uri(score_uri)
+    n_rows, n_cols = pygeoprocessing.get_row_col_from_uri(score_uri)
     count = 0
-    convert_value_array = numpy.array([[convert_value]])
 
     scale = -1.0 if reverse_sort else 1.0
     last_time = time.time()
+
+    row_array = numpy.empty((cache_size,), dtype=numpy.uint32)
+    col_array = numpy.empty((cache_size,), dtype=numpy.uint32)
+    data_array = numpy.empty((cache_size,), dtype=numpy.bool)
+    next_index = 0
+
+    dirty_blocks = set()
+
     for _, flatindex in _sort_to_disk(score_uri, scale=scale):
         if count >= max_pixels_to_convert:
             break
         col_index = flatindex % n_cols
         row_index = flatindex / n_cols
-        out_band.WriteArray(convert_value_array, col_index, row_index)
+        row_array[next_index] = row_index
+        col_array[next_index] = col_index
+        data_array[next_index] = True
+        next_index += 1
+        dirty_blocks.add(
+            (row_index / out_block_row_size, col_index / out_block_col_size))
+
         count += 1
         if time.time() - last_time > 5.0:
             LOGGER.info(
                 "converted %d of %d pixels", count, max_pixels_to_convert)
             last_time = time.time()
+
+        if next_index == cache_size:
+            _flush_cache_to_band(
+                data_array, row_array, col_array, next_index, dirty_blocks,
+                out_band)
+            dirty_blocks = set()
+            next_index = 0
+
+    # flush any remaining cache
+    _flush_cache_to_band(
+        data_array, row_array, col_array, next_index, dirty_blocks, out_band)
 
 
 def _make_gaussian_kernel_uri(sigma, kernel_uri):
