@@ -153,56 +153,6 @@ def _expand_from_ag(
         ag_lucode)
 
 
-def _convert_by_score(
-        score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
-        reverse_sort=False):
-    """Takes an input score layer and changes the pixels in `out_raster_uri`
-    and converts up to `max_pixels_to_convert` them to `convert_value` type.
-
-    Args:
-        score_uri (string): path to a raster whose non-nodata values score the
-            pixels to convert.  If `reverse_sort` is True the pixels in
-            `out_raster_uri` are converted from the lowest score to the highest.
-            The resverse is true if `reverse_sort` is False.
-        max_pixels_to_convert (int): number of pixels to convert in
-            `out_raster_uri` up to the number of non nodata valued pixels in
-            `score_uri`.
-        out_raster_uri (string): a path to an existing raster that is of the
-            same dimensions and projection as `score_uri`.  The pixels in this
-            raster are modified depending on the value of `score_uri` and set
-            to the value in `convert_value`.
-        convert_value (int/float): type is dependant on out_raster_uri. Any
-            pixels converted in `out_raster_uri` are set to the value of this
-            variable.
-        reverse_sort (boolean): If true, pixels are visited in descreasing order
-            of `score_uri`, otherwise increasing.
-
-    Returns:
-        None.
-    """
-
-    out_ds = gdal.Open(out_raster_uri, gdal.GA_Update)
-    out_band = out_ds.GetRasterBand(1)
-
-    _, n_cols = pygeoprocessing.get_row_col_from_uri(score_uri)
-    count = 0
-    convert_value_array = numpy.array([[convert_value]])
-
-    scale = -1.0 if reverse_sort else 1.0
-    last_time = time.time()
-    for _, flatindex in _sort_to_disk(score_uri, scale=scale):
-        if count >= max_pixels_to_convert:
-            break
-        col_index = flatindex % n_cols
-        row_index = flatindex / n_cols
-        out_band.WriteArray(convert_value_array, col_index, row_index)
-        count += 1
-        if time.time() - last_time > 5.0:
-            LOGGER.info(
-                "converted %d of %d pixels", count, max_pixels_to_convert)
-            last_time = time.time()
-
-
 def _expand_from_forest_edge(
         base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
         max_pixels_to_convert, forest_type_list, convertable_type_list):
@@ -276,27 +226,10 @@ def _expand_from_forest_edge(
         base_lulc_uri, forest_edge_expanded_uri, 'GTiff', lulc_nodata,
         gdal.GDT_Int32, fill_value=int(lulc_nodata))
 
-    forest_edge_ds = gdal.Open(forest_edge_expanded_uri, gdal.GA_Update)
-    forest_edge_band = forest_edge_ds.GetRasterBand(1)
-
-    n_cols = forest_edge_band.XSize
-
-    #disk sort to select the top N pixels to convert
-    count = 0
-    last_time = time.time()
-    ag_lucode_array = numpy.array([[ag_lucode]])
-    for _, flatindex in _sort_to_disk(convertable_distances_uri):
-        if count >= max_pixels_to_convert:
-            break
-        col_index = flatindex % n_cols
-        row_index = flatindex / n_cols
-        forest_edge_band.WriteArray(ag_lucode_array, col_index, row_index)
-        count += 1
-        if time.time() - last_time > 5.0:
-            LOGGER.info(
-                "converted %d of %d pixels", count, max_pixels_to_convert)
-            last_time = time.time()
-
+    #Convert all the closest to forest edge pixels to ag.
+    _convert_by_score(
+        convertable_distances_uri, max_pixels_to_convert,
+        forest_edge_expanded_uri, ag_lucode)
 
 
 def _fragment_forest(
@@ -340,10 +273,6 @@ def _fragment_forest(
         base_lulc_uri, forest_fragmented_uri, 'GTiff', lulc_nodata,
         gdal.GDT_Int32, fill_value=int(lulc_nodata))
 
-    forest_fragmented_ds = gdal.Open(forest_fragmented_uri, gdal.GA_Update)
-    forest_fragmented_band = forest_fragmented_ds.GetRasterBand(1)
-
-    n_cols = forest_fragmented_band.XSize
     convertable_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
     pixels_to_convert = max_pixels_to_convert / n_steps
@@ -396,24 +325,10 @@ def _fragment_forest(
             "intersection", vectorize_op=False,
             assert_datasets_projected=False)
 
-        #disk sort to select the top N pixels to convert
-        count = 0
-        last_time = time.time()
-        ag_lucode_array = numpy.array([[ag_lucode]])
-        #sort to disk by scaling -1 so we increase from middle of forest to the edge
-        for _, flatindex in _sort_to_disk(convertable_distances_uri, -1.0):
-            if count >= pixels_to_convert:
-                break
-            col_index = flatindex % n_cols
-            row_index = flatindex / n_cols
-            forest_fragmented_band.WriteArray(
-                ag_lucode_array, col_index, row_index)
-            count += 1
-            if time.time() - last_time > 5.0:
-                LOGGER.info(
-                    "converted %d of %d pixels", count, pixels_to_convert)
-                last_time = time.time()
-        forest_fragmented_band.FlushCache()
+        #Convert all the furthest from forest edge pixels to ag.
+        _convert_by_score(
+            convertable_distances_uri, max_pixels_to_convert,
+            forest_fragmented_uri, ag_lucode, reverse_sort=True)
 
 
 def _sort_to_disk(dataset_uri, scale=1.0):
@@ -489,3 +404,55 @@ def _sort_to_disk(dataset_uri, scale=1.0):
         iters.append(_read_score_index_from_disk(sort_file))
 
     return heapq.merge(*iters)
+
+
+def _convert_by_score(
+        score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
+        reverse_sort=False):
+    """Takes an input score layer and changes the pixels in `out_raster_uri`
+    and converts up to `max_pixels_to_convert` them to `convert_value` type.
+
+    Args:
+        score_uri (string): path to a raster whose non-nodata values score the
+            pixels to convert.  If `reverse_sort` is True the pixels in
+            `out_raster_uri` are converted from the lowest score to the highest.
+            The resverse is true if `reverse_sort` is False.
+        max_pixels_to_convert (int): number of pixels to convert in
+            `out_raster_uri` up to the number of non nodata valued pixels in
+            `score_uri`.
+        out_raster_uri (string): a path to an existing raster that is of the
+            same dimensions and projection as `score_uri`.  The pixels in this
+            raster are modified depending on the value of `score_uri` and set
+            to the value in `convert_value`.
+        convert_value (int/float): type is dependant on out_raster_uri. Any
+            pixels converted in `out_raster_uri` are set to the value of this
+            variable.
+        reverse_sort (boolean): If true, pixels are visited in descreasing order
+            of `score_uri`, otherwise increasing.
+
+    Returns:
+        None.
+    """
+
+    out_ds = gdal.Open(out_raster_uri, gdal.GA_Update)
+    out_band = out_ds.GetRasterBand(1)
+
+    _, n_cols = pygeoprocessing.get_row_col_from_uri(score_uri)
+    count = 0
+    convert_value_array = numpy.array([[convert_value]])
+
+    scale = -1.0 if reverse_sort else 1.0
+    last_time = time.time()
+    for _, flatindex in _sort_to_disk(score_uri, scale=scale):
+        if count >= max_pixels_to_convert:
+            break
+        col_index = flatindex % n_cols
+        row_index = flatindex / n_cols
+        out_band.WriteArray(convert_value_array, col_index, row_index)
+        count += 1
+        if time.time() - last_time > 5.0:
+            LOGGER.info(
+                "converted %d of %d pixels", count, max_pixels_to_convert)
+            last_time = time.time()
+
+
