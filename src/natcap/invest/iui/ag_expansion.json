@@ -1,10 +1,10 @@
 {
   "id": "window",
-  "label": "Agriculture Expansion Tool",
+  "label": "Scenario Generator: Agriculture Expansion",
   "targetScript": "natcap.invest.ag_expansion.ag_expansion",
   "modelName": "ag_expansion",
   "localDocURI": "../documentation/ag_expansion.html",
-  "height": 510,
+  "height": 530,
   "width": 600,
   "elements": [
     {
@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "~/Documents/ag_expansion_workspace",
+          "defaultValue": "~/Documents/scenario_ag_expansion_workspace",
           "required": true,
           "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
@@ -43,7 +43,27 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/lulc_2008.tif"
+          "defaultValue": "../scenario_ag_expansion/lulc_2008.tif"
+        },
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "Area of interest (Vector) (optional)",
+          "defaultValue": "../scenario_ag_expansion/ag_mg_aoi.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that will be used to aggregate carbon values at the end of the run if provided."
         },
         {
           "id": "area_to_convert",

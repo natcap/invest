@@ -35,6 +35,9 @@ def execute(args):
             forest landcover codes found in `args['base_lulc_uri']`
         args['n_fragmentation_steps'] (string): an int as a string indicating
             the number of steps to take for the fragmentation conversion
+        args['aoi_uri'] (string): (optional) path to a shapefile that indicates
+            an area of interest.  If present, the expansion scenario operates
+            only under that AOI and the output raster is clipped to that shape.
 
     Returns:
         None.
@@ -66,23 +69,32 @@ def execute(args):
     forest_type_list = numpy.array([
         int(x) for x in args['forest_landcover_types'].split()])
 
+    if 'aoi_uri' in args:
+        #clip base lulc to a new raster
+        base_lulc_uri = pygeoprocessing.temporary_filename()
+        pygeoprocessing.clip_dataset_uri(
+            args['base_lulc_uri'], args['aoi_uri'], base_lulc_uri,
+            assert_projections=True, process_pool=None, all_touched=False)
+    else:
+        base_lulc_uri = args['base_lulc_uri']
+
     if args['expand_from_ag']:
         LOGGER.info('running expands from ag simulation')
         _expand_from_ag(
-            args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
+            base_lulc_uri, intermediate_dir, output_dir, file_suffix,
             ag_lucode, area_to_convert, convertable_type_list)
 
     if args['expand_from_forest_edge']:
         LOGGER.info('running expands from forest edge simulation')
         _expand_from_forest_edge(
-            args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
+            base_lulc_uri, intermediate_dir, output_dir, file_suffix,
             ag_lucode, area_to_convert, forest_type_list,
             convertable_type_list)
 
     if args['fragment_forest']:
         LOGGER.info('running forest fragmentation simulation')
         _fragment_forest(
-            args['base_lulc_uri'], intermediate_dir, output_dir,
+            base_lulc_uri, intermediate_dir, output_dir,
             file_suffix, ag_lucode, area_to_convert, forest_type_list,
             convertable_type_list, int(args['n_fragmentation_steps']))
 
