@@ -69,7 +69,7 @@ def execute(args):
     forest_type_list = numpy.array([
         int(x) for x in args['forest_landcover_types'].split()])
 
-    if 'aoi_uri' in args:
+    if 'aoi_uri' in args and args['aoi_uri'] != '':
         #clip base lulc to a new raster
         base_lulc_uri = pygeoprocessing.temporary_filename()
         pygeoprocessing.clip_dataset_uri(
