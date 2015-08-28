@@ -372,13 +372,14 @@ def _fragment_forest(
                 break
             col_index = flatindex % n_cols
             row_index = flatindex / n_cols
-            forest_fragmented_band.WriteArray(ag_lucode_array, col_index, row_index)
-            # TODO: update the original forest mask so the next DT will be affected
+            forest_fragmented_band.WriteArray(
+                ag_lucode_array, col_index, row_index)
             count += 1
             if time.time() - last_time > 5.0:
                 LOGGER.info(
                     "converted %d of %d pixels", count, pixels_to_convert)
                 last_time = time.time()
+        forest_fragmented_band.FlushCache()
 
 
 def _sort_to_disk(dataset_uri, scale=1.0):
@@ -445,12 +446,12 @@ def _sort_to_disk(dataset_uri, scale=1.0):
             (sorted_indexes[0:left_index], sorted_indexes[right_index::]))
 
         #Dump all the scores and indexes to disk
-        f = tempfile.TemporaryFile()
+        sort_file = tempfile.TemporaryFile()
         for score, index in zip(sorted_scores, sorted_indexes):
-            f.write(struct.pack('fi', score, index))
+            sort_file.write(struct.pack('fi', score, index))
 
         #Reset the file pointer and add an iterator for it to the list
-        f.seek(0)
-        iters.append(_read_score_index_from_disk(f))
+        sort_file.seek(0)
+        iters.append(_read_score_index_from_disk(sort_file))
 
     return heapq.merge(*iters)
