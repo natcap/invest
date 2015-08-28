@@ -117,8 +117,7 @@ def _expand_from_ag(
 
     pygeoprocessing.vectorize_datasets(
         [base_lulc_uri], _mask_ag_op, ag_mask_uri, gdal.GDT_Byte,
-        ag_mask_nodata, pixel_size_out, "intersection", vectorize_op=False,
-        assert_datasets_projected=False)
+        ag_mask_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
     #distance transform mask
     distance_from_ag_uri = os.path.join(
@@ -139,7 +138,7 @@ def _expand_from_ag(
         [distance_from_ag_uri, base_lulc_uri],
         _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
         convertable_type_nodata, pixel_size_out, "intersection",
-        vectorize_op=False, assert_datasets_projected=False)
+        vectorize_op=False)
 
     ag_expanded_uri = os.path.join(
         output_dir, 'ag_expanded%s.tif' % file_suffix)
@@ -194,7 +193,7 @@ def _expand_from_forest_edge(
     pygeoprocessing.vectorize_datasets(
         [base_lulc_uri], _mask_non_forest_op, non_forest_mask_uri,
         gdal.GDT_Byte, ag_mask_nodata, pixel_size_out, "intersection",
-        vectorize_op=False, assert_datasets_projected=False)
+        vectorize_op=False)
 
     #distance transform mask
     distance_from_forest_edge_uri = os.path.join(
@@ -218,7 +217,7 @@ def _expand_from_forest_edge(
         [distance_from_forest_edge_uri, base_lulc_uri],
         _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
         convertable_type_nodata, pixel_size_out, "intersection",
-        vectorize_op=False, assert_datasets_projected=False)
+        vectorize_op=False)
 
     forest_edge_expanded_uri = os.path.join(
         output_dir, 'forest_edge_expanded%s.tif' % file_suffix)
@@ -298,7 +297,7 @@ def _fragment_forest(
         pygeoprocessing.vectorize_datasets(
             [base_lulc_uri, forest_fragmented_uri], _mask_non_forest_op,
             non_forest_mask_uri, gdal.GDT_Byte, ag_mask_nodata, pixel_size_out,
-            "intersection", vectorize_op=False, assert_datasets_projected=False)
+            "intersection", vectorize_op=False)
 
         #distance transform mask
         distance_from_forest_edge_uri = os.path.join(
@@ -323,8 +322,7 @@ def _fragment_forest(
             [distance_from_forest_edge_uri, base_lulc_uri],
             _mask_to_convertable_types, convertable_distances_uri,
             gdal.GDT_Float32, convertable_type_nodata, pixel_size_out,
-            "intersection", vectorize_op=False,
-            assert_datasets_projected=False)
+            "intersection", vectorize_op=False)
 
         #Convert all the furthest from forest edge pixels to ag.
         _convert_by_score(
