@@ -148,12 +148,12 @@ def _expand_from_ag(
         convertable_type_nodata, pixel_size_out, "intersection",
         vectorize_op=False)
 
+    # make a copy of the base for the expanded ag
     ag_expanded_uri = os.path.join(
         output_dir, 'ag_expanded%s.tif' % file_suffix)
-
-    pygeoprocessing.new_raster_from_base_uri(
-        base_lulc_uri, ag_expanded_uri, 'GTiff', lulc_nodata,
-        gdal.GDT_Int32, fill_value=int(lulc_nodata))
+    pygeoprocessing.vectorize_datasets(
+        [base_lulc_uri], lambda x: x, ag_expanded_uri, gdal.GDT_Int32,
+        lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
     #Convert all the closest to edge pixels to ag.
     max_pixels_to_convert = area_to_convert / (
@@ -239,10 +239,9 @@ def _expand_from_forest_edge(
 
     forest_edge_expanded_uri = os.path.join(
         output_dir, 'forest_edge_expanded%s.tif' % file_suffix)
-
-    pygeoprocessing.new_raster_from_base_uri(
-        base_lulc_uri, forest_edge_expanded_uri, 'GTiff', lulc_nodata,
-        gdal.GDT_Int32, fill_value=int(lulc_nodata))
+    pygeoprocessing.vectorize_datasets(
+        [base_lulc_uri], lambda x: x, forest_edge_expanded_uri, gdal.GDT_Int32,
+        lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
     #Convert all the closest to forest edge pixels to ag.
     max_pixels_to_convert = area_to_convert / (
@@ -289,9 +288,9 @@ def _fragment_forest(
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
 
-    pygeoprocessing.new_raster_from_base_uri(
-        base_lulc_uri, forest_fragmented_uri, 'GTiff', lulc_nodata,
-        gdal.GDT_Int32, fill_value=int(lulc_nodata))
+    pygeoprocessing.vectorize_datasets(
+        [base_lulc_uri], lambda x: x, forest_fragmented_uri, gdal.GDT_Int32,
+        lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
     max_pixels_to_convert = area_to_convert / (
         pygeoprocessing.get_cell_size_from_uri(base_lulc_uri) / 10000.0)
