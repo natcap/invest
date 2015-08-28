@@ -7,6 +7,7 @@ import tempfile
 import struct
 import heapq
 import time
+import atexit
 
 import gdal
 import pygeoprocessing
@@ -342,10 +343,26 @@ def _sort_to_disk(dataset_uri, scale=1.0):
         returns an iterable that returns (value, flat_index)
            in decreasing sorted order by value"""
 
-    def _read_score_index_from_disk(f):
+
+    def _read_score_index_from_disk(file_name, buffer_size=8*10000):
+        """Generator to yield a float/int value from a file, does buffering
+        and file managment to avoid keeping file open while function is not
+        invoked"""
+
+        file_buffer = ''
+        file_offset = 0
+        buffer_offset = 1
+
         while True:
-            #TODO: better buffering here
-            packed_score = f.read(8)
+            if buffer_offset > len(file_buffer):
+                data_file = open(file_name, 'rb')
+                data_file.seek(file_offset)
+                file_buffer = data_file.read(buffer_size)
+                data_file.close()
+                file_offset += buffer_size
+                buffer_offset = 0
+            packed_score = file_buffer[buffer_offset:buffer_offset+8]
+            buffer_offset += 8
             if not packed_score:
                 break
             yield struct.unpack('fi', packed_score)
@@ -395,13 +412,26 @@ def _sort_to_disk(dataset_uri, scale=1.0):
             (sorted_indexes[0:left_index], sorted_indexes[right_index::]))
 
         #Dump all the scores and indexes to disk
-        sort_file = tempfile.TemporaryFile()
+        sort_file = tempfile.NamedTemporaryFile(delete=False)
         for score, index in zip(sorted_scores, sorted_indexes):
             sort_file.write(struct.pack('fi', score, index))
 
         #Reset the file pointer and add an iterator for it to the list
-        sort_file.seek(0)
-        iters.append(_read_score_index_from_disk(sort_file))
+        sort_file_name = sort_file.name
+        sort_file.close()
+
+        def _remove_file(path):
+            """Function to remove a file and handle exceptions to register
+                in atexit."""
+            try:
+                os.remove(path)
+            except OSError:
+                # This happens if the file didn't exist, which is okay because
+                # maybe we deleted it in a method
+                pass
+        atexit.register(_remove_file, sort_file_name)
+
+        iters.append(_read_score_index_from_disk(sort_file_name))
 
     return heapq.merge(*iters)
 
@@ -454,5 +484,3 @@ def _convert_by_score(
             LOGGER.info(
                 "converted %d of %d pixels", count, max_pixels_to_convert)
             last_time = time.time()
-
-
