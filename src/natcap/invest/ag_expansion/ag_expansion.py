@@ -8,6 +8,8 @@ import struct
 import heapq
 import time
 import atexit
+import collections
+import csv
 
 from osgeo import osr
 from osgeo import gdal
@@ -172,11 +174,16 @@ def _expand_from_ag(
         lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
     #Convert all the closest to edge pixels to ag.
-    max_pixels_to_convert = area_to_convert / (
-        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri) / 10000.0)
+    pixel_area_ha = (
+        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
+    max_pixels_to_convert = int(area_to_convert / pixel_area_ha)
+    stats_cache = collections.defaultdict(int)
     _convert_by_score(
         convertable_distances_uri, max_pixels_to_convert, ag_expanded_uri,
-        ag_lucode)
+        ag_lucode, stats_cache)
+    stats_uri = os.path.join(
+        output_dir, 'ag_expanded_stats%s.csv' % file_suffix)
+    _log_stats(stats_cache, pixel_area_ha, stats_uri)
 
 
 def _expand_from_forest_edge(
@@ -260,11 +267,16 @@ def _expand_from_forest_edge(
         lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
     #Convert all the closest to forest edge pixels to ag.
-    max_pixels_to_convert = area_to_convert / (
-        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri) / 10000.0)
+    pixel_area_ha = (
+        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
+    max_pixels_to_convert = int(area_to_convert / pixel_area_ha)
+    stats_cache = collections.defaultdict(int)
     _convert_by_score(
         convertable_distances_uri, max_pixels_to_convert,
-        forest_edge_expanded_uri, ag_lucode)
+        forest_edge_expanded_uri, ag_lucode, stats_cache)
+    stats_uri = os.path.join(
+        output_dir, 'forest_edge_expanded_stats%s.csv' % file_suffix)
+    _log_stats(stats_cache, pixel_area_ha, stats_uri)
 
 
 def _fragment_forest(
@@ -308,12 +320,14 @@ def _fragment_forest(
         [base_lulc_uri], lambda x: x, forest_fragmented_uri, gdal.GDT_Int32,
         lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
-    max_pixels_to_convert = area_to_convert / (
-        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri) / 10000.0)
+    pixel_area_ha = (
+        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
+    max_pixels_to_convert = int(area_to_convert / pixel_area_ha)
 
     convertable_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
     pixels_to_convert = max_pixels_to_convert / n_steps
+    stats_cache = collections.defaultdict(int)
     for step_index in xrange(n_steps):
         LOGGER.info('fragmentation step %d of %d', step_index+1, n_steps)
         pixels_left_to_convert -= pixels_to_convert
@@ -345,8 +359,9 @@ def _fragment_forest(
             non_forest_mask_uri, distance_from_forest_edge_uri)
 
         convertable_distances_uri = os.path.join(
-            intermediate_dir, 'toward_forest_edge_convertable_distances%d%s.tif'
-            % (step_index, file_suffix))
+            intermediate_dir,
+            'toward_forest_edge_convertable_distances%d%s.tif' % (
+                step_index, file_suffix))
         def _mask_to_convertable_types(distance_from_forest_edge, lulc):
             """masks out the distance transform to a set of given landcover
             codes"""
@@ -364,8 +379,37 @@ def _fragment_forest(
 
         #Convert all the furthest from forest edge pixels to ag.
         _convert_by_score(
-            convertable_distances_uri, max_pixels_to_convert,
-            forest_fragmented_uri, ag_lucode, reverse_sort=True)
+            convertable_distances_uri, pixels_to_convert,
+            forest_fragmented_uri, ag_lucode, stats_cache, reverse_sort=True)
+    stats_uri = os.path.join(
+        output_dir, 'forest_fragmented_stats%s.csv' % file_suffix)
+    _log_stats(stats_cache, pixel_area_ha, stats_uri)
+
+
+def _log_stats(stats_cache, pixel_area, stats_uri):
+    """Writes pixel change statistics from a simulation to disk in tabular
+    format.
+
+    Args:
+        stats_cache (dict): a dictionary mapping pixel lucodes to number of
+            pixels changed
+        pixel_area (float): size of pixels in hectares so an area column can
+            be generated
+        stats_uri (string): path to a csv file that the table should be
+            generated to
+
+    Returns:
+        None
+    """
+    with open(stats_uri, 'wb') as csv_output_file:
+        stats_writer = csv.writer(
+            csv_output_file, delimiter=',', quotechar=',',
+            quoting=csv.QUOTE_MINIMAL)
+        stats_writer.writerow(
+            ['lucode', 'area converted (Ha)', 'pixels converted'])
+        for lucode in sorted(stats_cache):
+            stats_writer.writerow([
+                lucode, stats_cache[lucode] * pixel_area, stats_cache[lucode]])
 
 
 def _sort_to_disk(dataset_uri, scale=1.0):
@@ -474,7 +518,7 @@ def _sort_to_disk(dataset_uri, scale=1.0):
 
 def _convert_by_score(
         score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
-        reverse_sort=False, cache_size=50000):
+        stats_cache, reverse_sort=False, cache_size=50000):
     """Takes an input score layer and changes the pixels in `out_raster_uri`
     and converts up to `max_pixels_to_convert` them to `convert_value` type.
 
@@ -497,6 +541,8 @@ def _convert_by_score(
             order of `score_uri`, otherwise increasing.
         cache_size (int): number of elements to keep in cache before flushing
             to `out_raster_uri`
+        stats_cache (collections.defaultdict(int)): contains the number of
+            pixels converted indexed by original pixel id.
 
     Returns:
         None.
@@ -504,7 +550,7 @@ def _convert_by_score(
 
     def _flush_cache_to_band(
             data_array, row_array, col_array, valid_index, dirty_blocks,
-            out_band):
+            out_band, stats_counter):
         """Internal function to flush the block cache to the output band made
         as an internal function because it is non-trivial and needs to be
         called internally while iterating blocks and at the end in case
@@ -528,7 +574,6 @@ def _convert_by_score(
                 col_index_end = n_cols
                 col_win = n_cols - col_index
 
-
             # slice out values, some must be non-zero because of set
             mask_array = sparse_matrix[
                 row_index:row_index_end, col_index:col_index_end].toarray()
@@ -537,6 +582,12 @@ def _convert_by_score(
             out_array = out_band.ReadAsArray(
                 xoff=col_index, yoff=row_index,
                 win_xsize=col_win, win_ysize=row_win)
+
+            # keep track of the stats of what ids changed
+            for unique_id in numpy.unique(out_array[mask_array]):
+                stats_counter[unique_id] += numpy.count_nonzero(
+                    out_array[mask_array] == unique_id)
+
             out_array[mask_array] = convert_value
             out_band.WriteArray(out_array, xoff=col_index, yoff=row_index)
 
@@ -579,13 +630,14 @@ def _convert_by_score(
         if next_index == cache_size:
             _flush_cache_to_band(
                 data_array, row_array, col_array, next_index, dirty_blocks,
-                out_band)
+                out_band, stats_cache)
             dirty_blocks = set()
             next_index = 0
 
     # flush any remaining cache
     _flush_cache_to_band(
-        data_array, row_array, col_array, next_index, dirty_blocks, out_band)
+        data_array, row_array, col_array, next_index, dirty_blocks, out_band,
+        stats_cache)
 
 
 def _make_gaussian_kernel_uri(sigma, kernel_uri):
