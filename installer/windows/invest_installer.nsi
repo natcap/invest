@@ -252,6 +252,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Nutrient Retention (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_nutrient.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Scenario Generator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenario Generator: Agriculture Expansion (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_ag_expansion.bat" "" "${INVEST_ICON}"
 
   CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
 
@@ -405,5 +406,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
     !insertmacro downloadData "Timber (optional)" "Timber.zip" 644
     !insertmacro downloadData "Scenario Generator (optional)" "ScenarioGenerator.zip" 0
+    !insertmacro downloadData "Scenario Generator: Agriculture Expansion (optional)" "scenario_ag_expansion.zip" 0
   SectionGroupEnd
 SectionGroupEnd
