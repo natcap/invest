@@ -9,7 +9,8 @@ import heapq
 import time
 import atexit
 
-import gdal
+from osgeo import osr
+from osgeo import gdal
 import pygeoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -124,6 +125,13 @@ def _expand_from_ag(
         intermediate_dir, 'distance_from_ag%s.tif' % file_suffix)
     pygeoprocessing.distance_transform_edt(ag_mask_uri, distance_from_ag_uri)
 
+    gaussian_kernel_uri = os.path.join(intermediate_dir, 'gaussian_kernel.tif')
+    _make_gaussian_kernel_uri(10.0, gaussian_kernel_uri)
+    smooth_distance_from_ag_uri = os.path.join(
+        intermediate_dir, 'smooth_distance_from_ag%s.tif' % file_suffix)
+    pygeoprocessing.convolve_2d_uri(
+        distance_from_ag_uri, gaussian_kernel_uri, smooth_distance_from_ag_uri)
+
     convertable_type_nodata = -1
     convertable_distances_uri = os.path.join(
         intermediate_dir, 'ag_convertable_distances%s.tif' % file_suffix)
@@ -135,7 +143,7 @@ def _expand_from_ag(
             convertable_mask, distance_from_ag, convertable_type_nodata)
 
     pygeoprocessing.vectorize_datasets(
-        [distance_from_ag_uri, base_lulc_uri],
+        [smooth_distance_from_ag_uri, base_lulc_uri],
         _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
         convertable_type_nodata, pixel_size_out, "intersection",
         vectorize_op=False)
@@ -202,6 +210,14 @@ def _expand_from_forest_edge(
         intermediate_dir, 'distance_from_forest_edge%s.tif' % file_suffix)
     pygeoprocessing.distance_transform_edt(
         non_forest_mask_uri, distance_from_forest_edge_uri)
+    gaussian_kernel_uri = os.path.join(intermediate_dir, 'gaussian_kernel.tif')
+    _make_gaussian_kernel_uri(10.0, gaussian_kernel_uri)
+    smooth_distance_from_forest_edge_uri = os.path.join(
+        intermediate_dir,
+        'smooth_distance_from_forest_edge%s.tif' % file_suffix)
+    pygeoprocessing.convolve_2d_uri(
+        distance_from_forest_edge_uri, gaussian_kernel_uri,
+        smooth_distance_from_forest_edge_uri)
 
     convertable_type_nodata = -1
     convertable_distances_uri = os.path.join(
@@ -216,7 +232,7 @@ def _expand_from_forest_edge(
             convertable_type_nodata)
 
     pygeoprocessing.vectorize_datasets(
-        [distance_from_forest_edge_uri, base_lulc_uri],
+        [smooth_distance_from_forest_edge_uri, base_lulc_uri],
         _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
         convertable_type_nodata, pixel_size_out, "intersection",
         vectorize_op=False)
@@ -489,3 +505,54 @@ def _convert_by_score(
             LOGGER.info(
                 "converted %d of %d pixels", count, max_pixels_to_convert)
             last_time = time.time()
+
+
+def _make_gaussian_kernel_uri(sigma, kernel_uri):
+    """Creates a 2D gaussian kernel.
+
+    Args:
+        sigma (float): the sigma as in the classic Gaussian function
+        kernel_uri (string): path to raster on disk to write the gaussian
+            kernel.
+
+    Returns:
+        None.
+    """
+
+    max_distance = sigma * 5
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
+        options=['BIGTIFF=IF_SAFER'])
+
+    #Make some kind of geotransform, it doesn't matter what but
+    #will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
+    srs = osr.SpatialReference()
+    srs.SetUTM(11, 1)
+    srs.SetWellKnownGeogCS('NAD27')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    col_index = numpy.array(xrange(kernel_size))
+    integration = 0.0
+    for row_index in xrange(kernel_size):
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 +
+            (col_index - max_distance) ** 2).reshape(1, kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0,
+            (1 / (2.0 * numpy.pi * sigma ** 2) *
+             numpy.exp(-distance_kernel_row**2 / (2 * sigma ** 2))))
+        integration += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
+    for row_index in xrange(kernel_size):
+        kernel_row = kernel_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
+        kernel_row /= integration
+        kernel_band.WriteArray(kernel_row, 0, row_index)
