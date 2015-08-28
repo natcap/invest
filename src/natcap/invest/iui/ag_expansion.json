@@ -1,9 +1,9 @@
 {
   "id": "window",
-  "label": "Cropland Expansion Tool",
-  "targetScript": "natcap.invest.cropland_expansion.cropland_expansion",
-  "modelName": "cropland_expansion",
-  "localDocURI": "../documentation/cropland_expansion.html",
+  "label": "Agriculture Expansion Tool",
+  "targetScript": "natcap.invest.ag_expansion.ag_expansion",
+  "modelName": "ag_expansion",
+  "localDocURI": "../documentation/ag_expansion.html",
   "height": 600,
   "width": 700,
   "elements": [
@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "~/Documents/cropland_expansion_workspace",
+          "defaultValue": "~/Documents/ag_expansion_workspace",
           "required": true,
           "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
