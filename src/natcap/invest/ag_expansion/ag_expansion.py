@@ -1,4 +1,4 @@
-"""Cropland Expansion Tool"""
+"""Scenario Generation: Agriculture Expansion"""
 
 import os
 import logging
@@ -60,14 +60,12 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
-
     pygeoprocessing.geoprocessing.create_directories(
         [output_dir, intermediate_dir, tmp_dir])
 
-    #mask out distance transform for everything that can be converted
+    # convert all the input strings to lists of ints
     convertable_type_list = numpy.array([
         int(x) for x in args['convertable_landcover_types'].split()])
-
     forest_type_list = numpy.array([
         int(x) for x in args['forest_landcover_types'].split()])
 
@@ -81,20 +79,20 @@ def execute(args):
         base_lulc_uri = args['base_lulc_uri']
 
     if args['expand_from_ag']:
-        LOGGER.info('running expands from ag simulation')
+        LOGGER.info('running expand from ag scenario')
         _expand_from_ag(
             base_lulc_uri, intermediate_dir, output_dir, file_suffix,
             ag_lucode, area_to_convert, convertable_type_list)
 
     if args['expand_from_forest_edge']:
-        LOGGER.info('running expands from forest edge simulation')
+        LOGGER.info('running expand from forest edge scenario')
         _expand_from_forest_edge(
             base_lulc_uri, intermediate_dir, output_dir, file_suffix,
             ag_lucode, area_to_convert, forest_type_list,
             convertable_type_list)
 
     if args['fragment_forest']:
-        LOGGER.info('running forest fragmentation simulation')
+        LOGGER.info('running forest fragmentation scenario')
         _fragment_forest(
             base_lulc_uri, intermediate_dir, output_dir,
             file_suffix, ag_lucode, area_to_convert, forest_type_list,
@@ -123,9 +121,9 @@ def _expand_from_ag(
     Returns:
         None.
     """
-    #mask agriculture types from LULC
-    ag_mask_uri = os.path.join(intermediate_dir, 'ag_mask%s.tif' % file_suffix)
 
+    # make an ag mask so we can get the distance from it
+    ag_mask_uri = os.path.join(intermediate_dir, 'ag_mask%s.tif' % file_suffix)
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
@@ -133,16 +131,16 @@ def _expand_from_ag(
         """create a mask of ag pixels only"""
         ag_mask = (lulc == ag_lucode)
         return numpy.where(lulc == lulc_nodata, ag_mask_nodata, ag_mask)
-
     pygeoprocessing.vectorize_datasets(
         [base_lulc_uri], _mask_ag_op, ag_mask_uri, gdal.GDT_Byte,
         ag_mask_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
-    #distance transform mask
+    # distance transform mask
     distance_from_ag_uri = os.path.join(
         intermediate_dir, 'distance_from_ag%s.tif' % file_suffix)
     pygeoprocessing.distance_transform_edt(ag_mask_uri, distance_from_ag_uri)
 
+    # smooth the distance transform so we don't get scanline artifacts
     gaussian_kernel_uri = os.path.join(intermediate_dir, 'gaussian_kernel.tif')
     _make_gaussian_kernel_uri(10.0, gaussian_kernel_uri)
     smooth_distance_from_ag_uri = os.path.join(
@@ -173,7 +171,7 @@ def _expand_from_ag(
         [base_lulc_uri], lambda x: x, ag_expanded_uri, gdal.GDT_Int32,
         lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
-    #Convert all the closest to edge pixels to ag.
+    # convert all the closest to edge pixels to ag
     pixel_area_ha = (
         pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
     max_pixels_to_convert = int(area_to_convert / pixel_area_ha)
@@ -210,10 +208,10 @@ def _expand_from_forest_edge(
 
     Returns:
         None."""
-    #mask agriculture types from LULC
+
+    # mask everything not forest so we can get a distance to edge of forest
     non_forest_mask_uri = os.path.join(
         intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
-
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
@@ -222,7 +220,6 @@ def _expand_from_forest_edge(
         non_forest_mask = ~numpy.in1d(
             lulc.flatten(), forest_type_list).reshape(lulc.shape)
         return numpy.where(lulc == lulc_nodata, ag_mask_nodata, non_forest_mask)
-
     pygeoprocessing.vectorize_datasets(
         [base_lulc_uri], _mask_non_forest_op, non_forest_mask_uri,
         gdal.GDT_Byte, ag_mask_nodata, pixel_size_out, "intersection",
@@ -235,13 +232,15 @@ def _expand_from_forest_edge(
         non_forest_mask_uri, distance_from_forest_edge_uri)
     gaussian_kernel_uri = os.path.join(intermediate_dir, 'gaussian_kernel.tif')
     _make_gaussian_kernel_uri(10.0, gaussian_kernel_uri)
-    smooth_distance_from_forest_edge_uri = os.path.join(
+    # smooth the distance transform to avoid scanline artifacts
+    smooth_distance_from_edge_uri = os.path.join(
         intermediate_dir,
         'smooth_distance_from_forest_edge%s.tif' % file_suffix)
     pygeoprocessing.convolve_2d_uri(
         distance_from_forest_edge_uri, gaussian_kernel_uri,
-        smooth_distance_from_forest_edge_uri)
+        smooth_distance_from_edge_uri)
 
+    # make a mask of the convertable landcover types
     convertable_type_nodata = -1
     convertable_distances_uri = os.path.join(
         intermediate_dir, 'forest_edge_convertable_distances%s.tif' %
@@ -253,13 +252,11 @@ def _expand_from_forest_edge(
         return numpy.where(
             convertable_mask, distance_from_forest_edge,
             convertable_type_nodata)
-
     pygeoprocessing.vectorize_datasets(
-        [smooth_distance_from_forest_edge_uri, base_lulc_uri],
+        [smooth_distance_from_edge_uri, base_lulc_uri],
         _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
         convertable_type_nodata, pixel_size_out, "intersection",
         vectorize_op=False)
-
     forest_edge_expanded_uri = os.path.join(
         output_dir, 'forest_edge_expanded%s.tif' % file_suffix)
     pygeoprocessing.vectorize_datasets(
@@ -309,21 +306,20 @@ def _fragment_forest(
     Returns:
         None."""
 
+    # create the output raster first so it can be looped on for each frag step
     forest_fragmented_uri = os.path.join(
         output_dir, 'forest_fragmented%s.tif' % file_suffix)
-
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
-
     pygeoprocessing.vectorize_datasets(
         [base_lulc_uri], lambda x: x, forest_fragmented_uri, gdal.GDT_Int32,
         lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
 
+    # convert everything furthest from edge for each of n_steps
     pixel_area_ha = (
         pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
     max_pixels_to_convert = int(area_to_convert / pixel_area_ha)
-
     convertable_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
     pixels_to_convert = max_pixels_to_convert / n_steps
@@ -337,7 +333,6 @@ def _fragment_forest(
         #mask agriculture types from LULC
         non_forest_mask_uri = os.path.join(
             intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
-
         def _mask_non_forest_op(lulc, converted_forest):
             """create a mask of valid non-forest pixels only"""
             non_forest_mask = ~numpy.in1d(
@@ -345,7 +340,6 @@ def _fragment_forest(
             non_forest_mask = non_forest_mask | (converted_forest == ag_lucode)
             return numpy.where(
                 lulc == lulc_nodata, ag_mask_nodata, non_forest_mask)
-
         pygeoprocessing.vectorize_datasets(
             [base_lulc_uri, forest_fragmented_uri], _mask_non_forest_op,
             non_forest_mask_uri, gdal.GDT_Byte, ag_mask_nodata, pixel_size_out,
@@ -370,7 +364,6 @@ def _fragment_forest(
             return numpy.where(
                 convertable_mask, distance_from_forest_edge,
                 convertable_type_nodata)
-
         pygeoprocessing.vectorize_datasets(
             [distance_from_forest_edge_uri, base_lulc_uri],
             _mask_to_convertable_types, convertable_distances_uri,
@@ -381,6 +374,7 @@ def _fragment_forest(
         _convert_by_score(
             convertable_distances_uri, pixels_to_convert,
             forest_fragmented_uri, ag_lucode, stats_cache, reverse_sort=True)
+
     stats_uri = os.path.join(
         output_dir, 'forest_fragmented_stats%s.csv' % file_suffix)
     _log_stats(stats_cache, pixel_area_ha, stats_uri)
@@ -401,6 +395,7 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
     Returns:
         None
     """
+
     with open(stats_uri, 'wb') as csv_output_file:
         stats_writer = csv.writer(
             csv_output_file, delimiter=',', quotechar=',',
@@ -414,20 +409,21 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
 
 def _sort_to_disk(dataset_uri, scale=1.0):
     """Sorts the non-nodata pixels in the dataset on disk and returns
-        an iterable in sorted order.
+    an iterable in sorted order.
 
-        dataset_uri - a uri to a GDAL dataset
-        scale - a number to multiply all values by, this can be used to reverse
-            the sort order for example
+    Args:
+        dataset_uri (string): a path to a floating point GDAL dataset
+        scale (float): a number to multiply all values by, which can be
+            used to reverse the order of the iteration if negative.
 
-        returns an iterable that returns (value, flat_index)
-           in decreasing sorted order by value"""
-
+    Returns:
+        an iterable that produces (value * scale, flat_index) in decreasing
+        sorted order by value * scale"""
 
     def _read_score_index_from_disk(file_name, buffer_size=8*10000):
-        """Generator to yield a float/int value from a file, does buffering
-        and file managment to avoid keeping file open while function is not
-        invoked"""
+        """Generator to yield a float/int value from `file_ name`, does
+        reads a buffer of `buffer_size` big before to avoid keeping the
+        file open between generations."""
 
         file_buffer = ''
         file_offset = 0
@@ -551,15 +547,35 @@ def _convert_by_score(
     def _flush_cache_to_band(
             data_array, row_array, col_array, valid_index, dirty_blocks,
             out_band, stats_counter):
-        """Internal function to flush the block cache to the output band made
-        as an internal function because it is non-trivial and needs to be
-        called internally while iterating blocks and at the end in case
-        there are any outstanding pixels left to set"""
+        """Internal function to flush the block cache to the output band.
+        Provided as an internal function because the exact operation needs
+        to be invoked inside the processing loop and again at the end to
+        finalize the scan.
 
+        Args:
+            data_array (numpy array): 1D array of valid data in buffer
+            row_array (numpy array): 1D array to indicate row indexes for
+                `data_array`
+            col_array (numpy array): 1D array to indicate col indexes for
+                `data_array`
+            valid_index (int): value indicates the non-inclusive left valid
+                entry in the parallel input arrays
+            dirty_blocks (set): contains tuples indicating the block row and
+                column indexes that will need to be set in `out_band`.  Allows
+                us to skip the examination of the entire sparse matrix.
+            out_band (gdal.Band): output band to write to
+            stats_counter (collections.defaultdict(int)): is updated so that
+                the key corresponds to ids in out_band that get set by the
+                sparse matrix, and the number of pixels converted is added
+                to the value of that entry."""
+
+        # construct sparse matrix so it can be indexed later
         sparse_matrix = scipy.sparse.csc_matrix(
             (data_array[:valid_index],
              (row_array[:valid_index], col_array[:valid_index])),
             shape=(n_rows, n_cols))
+
+        # classic memory block iteration
         for block_row_index, block_col_index in dirty_blocks:
             row_index = block_row_index * out_block_row_size
             col_index = block_col_index * out_block_col_size
@@ -595,39 +611,45 @@ def _convert_by_score(
     out_ds = gdal.Open(out_raster_uri, gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
     out_block_col_size, out_block_row_size = out_band.GetBlockSize()
+    n_rows = out_band.YSize
+    n_cols = out_band.XSize
+    pixels_converted = 0
 
-    n_rows, n_cols = pygeoprocessing.get_row_col_from_uri(score_uri)
-    count = 0
-
+    # shortcut to set valid scale
     scale = -1.0 if reverse_sort else 1.0
-    last_time = time.time()
 
+    # initialize the cache to cache_size large
     row_array = numpy.empty((cache_size,), dtype=numpy.uint32)
     col_array = numpy.empty((cache_size,), dtype=numpy.uint32)
     data_array = numpy.empty((cache_size,), dtype=numpy.bool)
     next_index = 0
-
     dirty_blocks = set()
 
+    last_time = time.time()
     for _, flatindex in _sort_to_disk(score_uri, scale=scale):
-        if count >= max_pixels_to_convert:
+        if pixels_converted >= max_pixels_to_convert:
             break
         col_index = flatindex % n_cols
         row_index = flatindex / n_cols
         row_array[next_index] = row_index
         col_array[next_index] = col_index
+        # data_array will only ever recieve True elements, necessary for the
+        # sparse matrix to function since it requires a data array as long
+        # as the row and column arrays
         data_array[next_index] = True
         next_index += 1
         dirty_blocks.add(
             (row_index / out_block_row_size, col_index / out_block_col_size))
+        pixels_converted += 1
 
-        count += 1
         if time.time() - last_time > 5.0:
             LOGGER.info(
-                "converted %d of %d pixels", count, max_pixels_to_convert)
+                "converted %d of %d pixels", pixels_converted,
+                max_pixels_to_convert)
             last_time = time.time()
 
         if next_index == cache_size:
+            # next_index points beyond the end of the cache, flush and reset
             _flush_cache_to_band(
                 data_array, row_array, col_array, next_index, dirty_blocks,
                 out_band, stats_cache)

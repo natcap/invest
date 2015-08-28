@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.ag_expansion.ag_expansion",
   "modelName": "ag_expansion",
   "localDocURI": "../documentation/ag_expansion.html",
-  "height": 530,
+  "height": 535,
   "width": 600,
   "elements": [
     {
