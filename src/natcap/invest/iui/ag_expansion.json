@@ -4,8 +4,8 @@
   "targetScript": "natcap.invest.ag_expansion.ag_expansion",
   "modelName": "ag_expansion",
   "localDocURI": "../documentation/ag_expansion.html",
-  "height": 600,
-  "width": 700,
+  "height": 510,
+  "width": 600,
   "elements": [
     {
       "id": "workspace_list",
@@ -46,11 +46,11 @@
           "defaultValue": "../globio/input/lulc_2008.tif"
         },
         {
-          "id": "max_pixels_to_convert",
-          "args_id": "max_pixels_to_convert",
+          "id": "area_to_convert",
+          "args_id": "area_to_convert",
           "type": "text",
-          "label": "Max pixels to convert",
-          "defaultValue": "100",
+          "label": "Max area to convert (Ha)",
+          "defaultValue": "4000.0",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$"
         },
@@ -61,7 +61,8 @@
           "label": "Number of Fragmentation Simulation Steps",
           "defaultValue": "5",
           "required": true,
-          "validText": "^[0-9]*$"
+          "validText": "^[0-9]*$",
+          "enabledBy": "fragment_forest"
         },
         {
           "id": "convertable_landcover_types",

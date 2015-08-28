@@ -28,7 +28,7 @@ def execute(args):
             output files
         args['base_lulc_uri'] (string): path to the base landcover map
         args['agriculture_lu_code'] (string or int): agriculture landcover code
-        args['max_pixels_to_convert'] (string or int): max pixels to convert per
+        args['area_to_convert'] (string or float): max area (Ha) to convert
         args['forest_landcover_types'] (string): a space separated string of
             forest landcover codes found in `args['base_lulc_uri']`
         args['n_fragmentation_steps'] (string): an int as a string indicating
@@ -46,7 +46,7 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    max_pixels_to_convert = int(args['max_pixels_to_convert'])
+    area_to_convert = float(args['area_to_convert'])
     ag_lucode = int(args['agriculture_lu_code'])
 
     #create working directories
@@ -67,23 +67,23 @@ def execute(args):
     if args['expand_from_ag']:
         _expand_from_ag(
             args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
-            ag_lucode, max_pixels_to_convert, convertable_type_list)
+            ag_lucode, area_to_convert, convertable_type_list)
 
     if args['expand_from_forest_edge']:
         _expand_from_forest_edge(
             args['base_lulc_uri'], intermediate_dir, output_dir, file_suffix,
-            ag_lucode, max_pixels_to_convert, forest_type_list,
+            ag_lucode, area_to_convert, forest_type_list,
             convertable_type_list)
 
     if args['fragment_forest']:
         _fragment_forest(
             args['base_lulc_uri'], intermediate_dir, output_dir,
-            file_suffix, ag_lucode, max_pixels_to_convert, forest_type_list,
+            file_suffix, ag_lucode, area_to_convert, forest_type_list,
             convertable_type_list, int(args['n_fragmentation_steps']))
 
 def _expand_from_ag(
         base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
-        max_pixels_to_convert, convertable_type_list):
+        area_to_convert, convertable_type_list):
     """Expands agriculture into convertable types starting in increasing
     distance from nearest agriculture.
 
@@ -97,7 +97,7 @@ def _expand_from_ag(
         file_suffix (string): string to append to output files
         ag_lucode (int): agriculture landcover code type found in the raster
             at `base_lulc_uri`
-        max_pixels_to_convert (int): number of pixels to convert to agriculture
+        area_to_convert (float): area (Ha) to convert to agriculture
         convertable_type_list (list of int): landcover codes that are allowable
             to be converted to agriculture
 
@@ -148,6 +148,8 @@ def _expand_from_ag(
         gdal.GDT_Int32, fill_value=int(lulc_nodata))
 
     #Convert all the closest to edge pixels to ag.
+    max_pixels_to_convert = area_to_convert / (
+        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri) / 10000.0)
     _convert_by_score(
         convertable_distances_uri, max_pixels_to_convert, ag_expanded_uri,
         ag_lucode)
@@ -155,7 +157,7 @@ def _expand_from_ag(
 
 def _expand_from_forest_edge(
         base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
-        max_pixels_to_convert, forest_type_list, convertable_type_list):
+        area_to_convert, forest_type_list, convertable_type_list):
     """Expands agriculture into convertable types starting from the edge of
     the forest types, inward.
 
@@ -169,7 +171,7 @@ def _expand_from_forest_edge(
         file_suffix (string): string to append to output files
         ag_lucode (int): agriculture landcover code type found in the raster
             at `base_lulc_uri`
-        max_pixels_to_convert (int): number of pixels to convert to agriculture
+        area_to_convert (float): area (Ha) to convert to agriculture
         forest_type_list (list of int): landcover codes that are allowable
             to be converted to agriculture
         convertable_type_list (list of int): landcover codes that are allowable
@@ -227,6 +229,8 @@ def _expand_from_forest_edge(
         gdal.GDT_Int32, fill_value=int(lulc_nodata))
 
     #Convert all the closest to forest edge pixels to ag.
+    max_pixels_to_convert = area_to_convert / (
+        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri) / 10000.0)
     _convert_by_score(
         convertable_distances_uri, max_pixels_to_convert,
         forest_edge_expanded_uri, ag_lucode)
@@ -234,7 +238,7 @@ def _expand_from_forest_edge(
 
 def _fragment_forest(
         base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
-        max_pixels_to_convert, forest_type_list, convertable_type_list,
+        area_to_convert, forest_type_list, convertable_type_list,
         n_steps):
     """Expands agriculture into convertable types starting from the furthest
     distance from the edge of the forward, inward.
@@ -249,7 +253,7 @@ def _fragment_forest(
         file_suffix (string): string to append to output files
         ag_lucode (int): agriculture landcover code type found in the raster
             at `base_lulc_uri`
-        max_pixels_to_convert (int): number of pixels to convert to agriculture
+        area_to_convert (float): area (Ha) to convert to agriculture
         forest_type_list (list of int): landcover codes that are allowable
             to be converted to agriculture
         convertable_type_list (list of int): landcover codes that are allowable
@@ -272,6 +276,9 @@ def _fragment_forest(
     pygeoprocessing.new_raster_from_base_uri(
         base_lulc_uri, forest_fragmented_uri, 'GTiff', lulc_nodata,
         gdal.GDT_Int32, fill_value=int(lulc_nodata))
+
+    max_pixels_to_convert = area_to_convert / (
+        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri) / 10000.0)
 
     convertable_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
