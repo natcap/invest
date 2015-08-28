@@ -147,21 +147,55 @@ def _expand_from_ag(
         base_lulc_uri, ag_expanded_uri, 'GTiff', lulc_nodata,
         gdal.GDT_Int32, fill_value=int(lulc_nodata))
 
-    ag_expanded_ds = gdal.Open(ag_expanded_uri, gdal.GA_Update)
-    ag_expanded_band = ag_expanded_ds.GetRasterBand(1)
+    #Convert all the closest to edge pixels to ag.
+    _convert_by_score(
+        convertable_distances_uri, max_pixels_to_convert, ag_expanded_uri,
+        ag_lucode)
 
-    n_cols = ag_expanded_band.XSize
 
-    #disk sort to select the top N pixels to convert
+def _convert_by_score(
+        score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
+        reverse_sort=False):
+    """Takes an input score layer and changes the pixels in `out_raster_uri`
+    and converts up to `max_pixels_to_convert` them to `convert_value` type.
+
+    Args:
+        score_uri (string): path to a raster whose non-nodata values score the
+            pixels to convert.  If `reverse_sort` is True the pixels in
+            `out_raster_uri` are converted from the lowest score to the highest.
+            The resverse is true if `reverse_sort` is False.
+        max_pixels_to_convert (int): number of pixels to convert in
+            `out_raster_uri` up to the number of non nodata valued pixels in
+            `score_uri`.
+        out_raster_uri (string): a path to an existing raster that is of the
+            same dimensions and projection as `score_uri`.  The pixels in this
+            raster are modified depending on the value of `score_uri` and set
+            to the value in `convert_value`.
+        convert_value (int/float): type is dependant on out_raster_uri. Any
+            pixels converted in `out_raster_uri` are set to the value of this
+            variable.
+        reverse_sort (boolean): If true, pixels are visited in descreasing order
+            of `score_uri`, otherwise increasing.
+
+    Returns:
+        None.
+    """
+
+    out_ds = gdal.Open(out_raster_uri, gdal.GA_Update)
+    out_band = out_ds.GetRasterBand(1)
+
+    _, n_cols = pygeoprocessing.get_row_col_from_uri(score_uri)
     count = 0
+    convert_value_array = numpy.array([[convert_value]])
+
+    scale = -1.0 if reverse_sort else 1.0
     last_time = time.time()
-    ag_lucode_array = numpy.array([[ag_lucode]])
-    for _, flatindex in _sort_to_disk(convertable_distances_uri):
+    for _, flatindex in _sort_to_disk(score_uri, scale=scale):
         if count >= max_pixels_to_convert:
             break
         col_index = flatindex % n_cols
         row_index = flatindex / n_cols
-        ag_expanded_band.WriteArray(ag_lucode_array, col_index, row_index)
+        out_band.WriteArray(convert_value_array, col_index, row_index)
         count += 1
         if time.time() - last_time > 5.0:
             LOGGER.info(
