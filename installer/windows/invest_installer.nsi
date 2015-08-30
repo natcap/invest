@@ -400,7 +400,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
     !insertmacro downloadData "CropProduction (optional)" "CropProduction.zip" 0
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
-    !insertmacro downloadData "Carbon Edge Effects (required for carbon edge model)" "carbon_edge_effect.zip" 0
+    !insertmacro downloadData "Carbon Edge Effects (required for carbon edge model)" "carbon_edge_effect.zip" 8270
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
     !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 728
