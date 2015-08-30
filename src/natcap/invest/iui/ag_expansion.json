@@ -4,8 +4,8 @@
   "targetScript": "natcap.invest.ag_expansion.ag_expansion",
   "modelName": "ag_expansion",
   "localDocURI": "../documentation/ag_expansion.html",
-  "height": 535,
-  "width": 600,
+  "height": 545,
+  "width": 610,
   "elements": [
     {
       "id": "workspace_list",
@@ -43,7 +43,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../scenario_ag_expansion/lulc_2008.tif"
+          "defaultValue": "../scenario_ag_expansion/ag_expansion_lulc_demo.tif"
         },
         {
           "id": "aoi_uri",
