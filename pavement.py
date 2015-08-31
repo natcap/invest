@@ -2221,7 +2221,7 @@ def build(options):
             py_bin = 'bdist_wininst bdist_wheel'
         else:
             py_bin = 'bdist_wheel'
-        sh('{envpython} setup.py {py_bin}'.format(
+        sh('{envpython} setup.py sdist {py_bin}'.format(
             envpython=_python(), py_bin=py_bin))
     else:
         print 'Skipping python binaries per user request'
