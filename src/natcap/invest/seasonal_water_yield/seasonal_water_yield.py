@@ -401,7 +401,7 @@ def calculate_quick_flow(
             quickflow[nodata_mask] = qf_nodata
 
             # if we're on a stream, set quickflow to the precipitation
-            # quickflow[stream_array == 1] = pm_array[stream_array == 1]
+            quickflow[stream_array == 1] = pm_array[stream_array == 1]
             return quickflow
 
         LOGGER.info('calculating QFi_%d of %d', m_index, N_MONTHS)
