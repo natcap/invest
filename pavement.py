@@ -1101,7 +1101,7 @@ def build_docs(options):
         call_task('check_repo', options={
             'force_dev': options.build_docs.force_dev,
             'repo': REPOS_DICT['users-guide'].local_path,
-            'fetch': False,
+            'fetch': True,
         })
 
         guide_dir = os.path.join('doc', 'users-guide')
@@ -1613,7 +1613,7 @@ def build_data(options):
     call_task('check_repo', options={
         'force_dev': options.build_data.force_dev,
         'repo': data_repo.local_path,
-        'fetch': False,
+        'fetch': True,
     })
 
     dist_dir = 'dist'
@@ -1664,7 +1664,7 @@ def build_bin(options):
     call_task('check_repo', options={
         'force_dev': options.build_bin.force_dev,
         'repo': pyi_repo.local_path,
-        'fetch': False,
+        'fetch': True,
     })
 
     # if pyinstaller repo is at version 2.1, remove six.py because it conflicts
@@ -1846,7 +1846,7 @@ def build_installer(options):
         call_task('check_repo', options={
             'force_dev': options.build_installer.force_dev,
             'repo': REPOS_DICT['invest-2'].local_path,
-            'fetch': False,
+            'fetch': True,
         })
         _build_nsis(version, options.build_installer.bindir, 'x86')
     elif command == 'dmg':
@@ -2366,7 +2366,12 @@ def jenkins_installer(options):
                 # Skip this option entirely.  build() expects this option to be
                 # absent from the build_options dict if we want to not provide
                 # the build option.
-                call_task('fetch', args=[needed_repo])
+                if needed_repo is not None:
+                    call_task('check_repo', options={
+                        'repo': needed_repo,
+                        'fetch': True,
+                    })
+
                 raise AttributeError
             else:
                 raise Exception('Invalid option: %s' % user_option)
