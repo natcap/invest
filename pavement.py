@@ -2270,7 +2270,8 @@ def collect_release_files(options):
 
     # copy the installer(s) into the new folder
     installer_files = []
-    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm', '*.zip', '*.whl']:
+    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm', '*.zip', '*.whl',
+                    '*.tar.gz']:
         glob_pattern = os.path.join('dist', pattern)
         installer_files += glob.glob(glob_pattern)
 
