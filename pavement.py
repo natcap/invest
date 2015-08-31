@@ -1,4 +1,3 @@
-import ConfigParser
 import collections
 import distutils
 import getpass
@@ -90,7 +89,8 @@ paver.easy.options(
         skip_installer=False,
         skip_bin=False,
         python=_PYTHON,
-        envname=_ENVNAME
+        envname=_ENVNAME,
+        skip_python=False
     ),
     build_installer=Bunch(
         force_dev=False,
@@ -2110,6 +2110,7 @@ def selftest():
     ('force-dev', '', 'Allow development versions of repositories to be used.'),
     ('skip-data', '', "Don't build the data zipfiles"),
     ('skip-installer', '', "Don't build the installer"),
+    ('skip-python', '', "Don't build python binaries"),
     ('skip-bin', '', "Don't build the binaries"),
     ('envname=', 'e', ('The name of the environment to use')),
     ('python=', '', "The python interpreter to use.  If not provided, an env will be built for you."),
@@ -2208,6 +2209,12 @@ def build(options):
     else:
         print 'Skipping documentation per user request'
 
+    if options.build.skip_python is False:
+        sh('{envpython} setup.py bdist_wheel'.format(
+            envpython=_python()))
+    else:
+        print 'Skipping python binaries per user request'
+
     if options.build.skip_installer is False:
         call_task('build_installer', options=options.build_installer)
     else:
@@ -2252,7 +2259,7 @@ def collect_release_files(options):
 
     # copy the installer(s) into the new folder
     installer_files = []
-    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm', '*.zip']:
+    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm', '*.zip', '*.whl']:
         glob_pattern = os.path.join('dist', pattern)
         installer_files += glob.glob(glob_pattern)
 
@@ -2313,6 +2320,7 @@ def collect_release_files(options):
     ('nobin=', '', "Don't build the binaries"),
     ('nodocs=', '', "Don't build the documentation"),
     ('noinstaller=', '', "Don't build the installer"),
+    ('nopython=', '', "Don't build the various python installers"),
     ('nopush=', '', "Don't Push the build artifacts to dataportal"),
 ], share_with=['clean', 'build', 'jenkins_push_artifacts'])
 def jenkins_installer(options):
@@ -2335,6 +2343,7 @@ def jenkins_installer(options):
             ('nodata', 'skip-data', 'data/invest-data'),
             ('nodocs', 'skip-docs', 'doc/users-guide'),
             ('noinstaller', 'skip-installer', 'src/invest-natcap.default'),
+            ('nopython', 'skip-python', None),
             ('nobin', 'skip-bin', 'src/pyinstaller')]:
         # set these options based on whether they were provided.
         try:
