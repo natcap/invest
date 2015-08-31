@@ -2212,8 +2212,13 @@ def build(options):
     if options.build.skip_python is False:
         # Wheel has an issue with namespace packages on windows.
         # See https://bitbucket.org/pypa/wheel/issues/91
+        # I've implemented cgohlke's fix and pushed it to my fork of wheel.
+        # To install a working wheel package, do this on your windows install:
+        #   pip install hg+https://bitbucket.org/jdouglass/wheel@default
+        #
+        # This requires that you have command-line hg installed.
         if platform.system() == 'Windows':
-            py_bin = 'bdist_wininst'
+            py_bin = 'bdist_wininst bdist_wheel'
         else:
             py_bin = 'bdist_wheel'
         sh('{envpython} setup.py {py_bin}'.format(
