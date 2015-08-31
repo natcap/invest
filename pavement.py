@@ -647,7 +647,7 @@ def after_install(options, home_dir):
     # vars as needed.
     try:
         pkg_resources.require('virtualenv>=13.0.0')
-        no_wheel_flag = 'no-wheel'
+        no_wheel_flag = '--no-wheel'
     except pkg_resources.VersionConflict:
         # Early versions of virtualenv don't ship wheel, so there's no flag for
         # us to provide.
@@ -1331,7 +1331,7 @@ def check(options):
                     if is_exe(exe_file):
                         raise FoundEXE
             except FoundEXE:
-                print "Found %-11s: %s" % (program, exe_file)
+                print "Found %-14s: %s" % (program, exe_file)
                 continue
             else:
                 print "{error} {exe} not found. Required for {step}".format(
