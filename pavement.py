@@ -2210,8 +2210,14 @@ def build(options):
         print 'Skipping documentation per user request'
 
     if options.build.skip_python is False:
-        sh('{envpython} setup.py bdist_wheel'.format(
-            envpython=_python()))
+        # Wheel has an issue with namespace packages on windows.
+        # See https://bitbucket.org/pypa/wheel/issues/91
+        if platform.system() == 'Windows':
+            py_bin = 'bdist_wininst'
+        else:
+            py_bin = 'bdist_wheel'
+        sh('{envpython} setup.py {py_bin}'.format(
+            envpython=_python()), py_bin=py_bin)
     else:
         print 'Skipping python binaries per user request'
 
