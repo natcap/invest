@@ -203,9 +203,9 @@ def execute(args):
             }
             for lucode in sorted(biophysical_table.keys() + [lulc_nodata]):
                 try:
-                    lulc_to_soil[soil_id]['lulc_values'].append(lucode)
                     lulc_to_soil[soil_id]['cn_values'].append(
                         biophysical_table[lucode][soil_column])
+                    lulc_to_soil[soil_id]['lulc_values'].append(lucode)
                 except KeyError:
                     if lucode == lulc_nodata:
                         lulc_to_soil[soil_id]['lulc_values'].append(lucode)
