@@ -34,8 +34,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('ndr core')
 
 cdef double PI = 3.141592653589793238462643383279502884
-cdef int N_BLOCK_ROWS = 16
-cdef int N_BLOCK_COLS = 16
+cdef int N_BLOCK_ROWS = 8
+cdef int N_BLOCK_COLS = 8
 
 cdef class BlockCache:
     cdef numpy.int32_t[:,:] row_tag_cache
