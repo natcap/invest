@@ -89,6 +89,14 @@ cdef class BlockCache:
                     'make the runtime slow for other algorithms. %s',
                     band.GetDescription())
 
+    def __dealloc__(self):
+        self.band_list[:] = []
+        self.block_list[:] = []
+        self.update_list[:] = []
+        self.row_tag_cache = None
+        self.col_tag_cache = None
+        self.cache_dirty = None
+
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
