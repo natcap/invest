@@ -32,11 +32,6 @@ import virtualenv
 import yaml
 
 
-LOGGER = logging.getLogger('InVEST.pavement')
-_SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
-_SDTOUT_HANDLER.setLevel(logging.INFO)
-LOGGER.addHandler(_SDTOUT_HANDLER)
-
 # Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
 # --no-use-wheel in favor of --no-binary.  Stable versions of Fedora
 # currently use pip 6.x
