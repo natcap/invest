@@ -1,4 +1,3 @@
-import ConfigParser
 import collections
 import distutils
 import getpass
@@ -33,10 +32,16 @@ import virtualenv
 import yaml
 
 
-LOGGER = logging.getLogger('invest-bin')
-_SDTOUT_HANDLER = logging.StreamHandler(sys.stdout)
-_SDTOUT_HANDLER.setLevel(logging.INFO)
-LOGGER.addHandler(_SDTOUT_HANDLER)
+# Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
+# --no-use-wheel in favor of --no-binary.  Stable versions of Fedora
+# currently use pip 6.x
+try:
+    pkg_resources.require('pip>=7.0.0')
+    NO_WHEEL_SUBPROCESS = "'--no-binary', ':all:'"
+    NO_WHEEL_SH = '--no-binary :all:'
+except pkg_resources.VersionConflict:
+    NO_WHEEL_SUBPROCESS = "'--no-use-wheel'"
+    NO_WHEEL_SH = '--no-use-wheel'
 
 
 def user_os_installer():
@@ -79,7 +84,8 @@ paver.easy.options(
         skip_installer=False,
         skip_bin=False,
         python=_PYTHON,
-        envname=_ENVNAME
+        envname=_ENVNAME,
+        skip_python=False
     ),
     build_installer=Bunch(
         force_dev=False,
@@ -614,17 +620,17 @@ def after_install(options, home_dir):
                 # Pyinstaller also doesn't handle namespace packages all that
                 # well, so --egg --no-use-wheel doesn't really work in a
                 # release environment either.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--no-binary', 'natcap.invest', "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', {no_wheel_flag}, "
                 " invest_sdist])\n"
-            )
+            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS)
         else:
             install_string += (
                 # If we're in a development environment, it's ok (even
                 # preferable) to install natcap namespace packages as flat
                 # eggs.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', '--no-binary', 'natcap.invest', "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', {no_wheel_flag}, "
                 " invest_sdist])\n"
-            )
+            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS)
     else:
         print 'Skipping the installation of natcap.invest per user input'
 
@@ -634,6 +640,14 @@ def after_install(options, home_dir):
     # Built the bootstrap env via a subprocess call.
     # Calling via the shell so that virtualenv has access to environment
     # vars as needed.
+    try:
+        pkg_resources.require('virtualenv>=13.0.0')
+        no_wheel_flag = '--no-wheel'
+    except pkg_resources.VersionConflict:
+        # Early versions of virtualenv don't ship wheel, so there's no flag for
+        # us to provide.
+        no_wheel_flag = ''
+
     bootstrap_cmd = "%(python)s %(bootstrap_file)s %(site-pkgs)s %(clear)s %(no-wheel)s %(env_name)s"
     bootstrap_opts = {
         "python": sys.executable,
@@ -641,7 +655,7 @@ def after_install(options, home_dir):
         "env_name": options.env.envname,
         "site-pkgs": '--system-site-packages' if options.env.system_site_packages else '',
         "clear": '--clear' if options.env.clear else '',
-        "no-wheel": '--no-wheel',  # exclude wheel.  It has a bug preventing namespace pkgs from compiling
+        "no-wheel": no_wheel_flag,  # exclude wheel.  It has a bug preventing namespace pkgs from compiling
     }
     sh(bootstrap_cmd % bootstrap_opts)
 
@@ -693,6 +707,8 @@ Options:
     user_repo_revs = {}  # repo -> version
     repo_paths = sorted(map(lambda x: x.local_path, REPOS))
     args_queue = collections.deque(args[:])
+
+    print 'Fetching %s' % args_queue
 
     rev_flags = ['-r', '--rev']
     while len(args_queue) > 0:
@@ -1310,7 +1326,7 @@ def check(options):
                     if is_exe(exe_file):
                         raise FoundEXE
             except FoundEXE:
-                print "Found %-11s: %s" % (program, exe_file)
+                print "Found %-14s: %s" % (program, exe_file)
                 continue
             else:
                 print "{error} {exe} not found. Required for {step}".format(
@@ -1325,8 +1341,8 @@ def check(options):
     print bold("\nChecking python packages")
     requirements = [
         ('setuptools>=6.1', required, None),
-        ('virtualenv>=13.0.0', required, None),
-        ('pip>=7.1.0', required, None),
+        ('virtualenv', required, None),
+        ('pip>=6.0.0', required, None),
         ('numpy', lib_needed, None),
         ('scipy', lib_needed, None),
         ('paramiko', suggested, None),
@@ -1442,12 +1458,14 @@ def check(options):
                 for package in noneggs:
                     print yellow('Reinstalling natcap.%s as egg' % package)
                     sh('pip uninstall -y natcap.{package} > natcap.{package}.log'.format(package=package))
-                    sh(('pip install --egg --no-binary :all: '
-                        'natcap.{package} > natcap.{package}.log').format(package=package))
+                    sh(('pip install --egg {no_wheel} '
+                        'natcap.{package} > natcap.{package}.log').format(
+                            package=package, no_wheel=NO_WHEEL_SH))
                     print green('Package natcap.%s reinstalled successfully' % package)
             else:
                 pip_inst_template = \
-                    yellow("    pip install --egg --no-binary :all: natcap.%s")
+                    yellow("    pip install --egg {no_wheel} natcap.%s").format(
+                        no_wheel=NO_WHEEL_SH)
                 namespace_msg = (
                     "\n"
                     "Natcap namespace issues:\n"
@@ -1530,7 +1548,7 @@ def check(options):
                 print yellow('natcap.versioner required by setup.py but '
                                 'not found.  Installing.')
                 # Install natcap.versioner
-                sh('pip install --egg --no-binary :all: natcap.versioner > natcap.versioner.log')
+                sh('pip install --egg {no_wheel} natcap.versioner > natcap.versioner.log'.format(no_wheel=NO_WHEEL_SH))
 
                 # Verify that versioner installed properly.  Must import in new
                 # process to verify. _import_namespace_pkg allows for pretty
@@ -1549,7 +1567,7 @@ def check(options):
                 warnings_found = True
                 print ('{warning} natcap.versioner required by setup.py but not '
                     'installed.  To fix:').format(warning=WARNING)
-                print '    pip install --egg --no-binary :all: natcap.versioner'
+                print '    pip install --egg {no_wheel} natcap.versioner'.format(no_wheel=NO_WHEEL_SH)
                 print 'Or use paver check --fix-namespace'
 
     if errors_found:
@@ -2087,6 +2105,7 @@ def selftest():
     ('force-dev', '', 'Allow development versions of repositories to be used.'),
     ('skip-data', '', "Don't build the data zipfiles"),
     ('skip-installer', '', "Don't build the installer"),
+    ('skip-python', '', "Don't build python binaries"),
     ('skip-bin', '', "Don't build the binaries"),
     ('envname=', 'e', ('The name of the environment to use')),
     ('python=', '', "The python interpreter to use.  If not provided, an env will be built for you."),
@@ -2185,6 +2204,25 @@ def build(options):
     else:
         print 'Skipping documentation per user request'
 
+    if options.build.skip_python is False:
+        # Wheel has an issue with namespace packages on windows.
+        # See https://bitbucket.org/pypa/wheel/issues/91
+        # I've implemented cgohlke's fix and pushed it to my fork of wheel.
+        # To install a working wheel package, do this on your windows install:
+        #   pip install hg+https://bitbucket.org/jdouglass/wheel@default
+        #
+        # This requires that you have command-line hg installed.
+        if platform.system() == 'Windows':
+            py_bin = 'bdist_wininst bdist_wheel'
+        else:
+            py_bin = 'bdist_wheel'
+
+        # We always want to zip the sdist as a gztar because we said so.
+        sh('{envpython} setup.py sdist --formats=gztar {py_bin}'.format(
+            envpython=_python(), py_bin=py_bin))
+    else:
+        print 'Skipping python binaries per user request'
+
     if options.build.skip_installer is False:
         call_task('build_installer', options=options.build_installer)
     else:
@@ -2229,7 +2267,8 @@ def collect_release_files(options):
 
     # copy the installer(s) into the new folder
     installer_files = []
-    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm', '*.zip']:
+    for pattern in ['*.exe', '*.dmg', '*.deb', '*.rpm', '*.zip', '*.whl',
+                    '*.tar.gz']:
         glob_pattern = os.path.join('dist', pattern)
         installer_files += glob.glob(glob_pattern)
 
@@ -2290,6 +2329,7 @@ def collect_release_files(options):
     ('nobin=', '', "Don't build the binaries"),
     ('nodocs=', '', "Don't build the documentation"),
     ('noinstaller=', '', "Don't build the installer"),
+    ('nopython=', '', "Don't build the various python installers"),
     ('nopush=', '', "Don't Push the build artifacts to dataportal"),
 ], share_with=['clean', 'build', 'jenkins_push_artifacts'])
 def jenkins_installer(options):
@@ -2308,11 +2348,12 @@ def jenkins_installer(options):
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
     build_options = {}
-    for opt_name, build_opt in [
-            ('nodata', 'skip-data'),
-            ('nodocs', 'skip-data'),
-            ('noinstaller', 'skip-installer'),
-            ('nobin', 'skip-bin')]:
+    for opt_name, build_opt, needed_repo in [
+            ('nodata', 'skip-data', 'data/invest-data'),
+            ('nodocs', 'skip-docs', 'doc/users-guide'),
+            ('noinstaller', 'skip-installer', 'src/invest-natcap.default'),
+            ('nopython', 'skip-python', None),
+            ('nobin', 'skip-bin', 'src/pyinstaller')]:
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
@@ -2322,6 +2363,12 @@ def jenkins_installer(options):
                 # Skip this option entirely.  build() expects this option to be
                 # absent from the build_options dict if we want to not provide
                 # the build option.
+                if needed_repo is not None:
+                    call_task('check_repo', options={
+                        'repo': needed_repo,
+                        'fetch': True,
+                    })
+
                 raise AttributeError
             else:
                 raise Exception('Invalid option: %s' % user_option)
