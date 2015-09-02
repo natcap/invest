@@ -78,8 +78,10 @@ cdef class BlockCache:
         for raster_n_rows, raster_n_cols in raster_dimensions_list:
             if raster_n_rows != n_rows or raster_n_cols != n_cols:
                 raise ValueError(
-                    "a band was passed in that has a different dimension than"
-                    "the memory block was specified as")
+                    "A band was passed in that has a different dimension than "
+                    "the memory block was specified as.\n"
+                    "raster_dimensions_list=%s\n" % str(raster_dimensions_list)
+                    + "bands=%s" % str([b.GetDescription for b in band_list]))
 
         for band in band_list:
             block_col_size, block_row_size = band.GetBlockSize()
