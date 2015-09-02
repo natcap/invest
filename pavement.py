@@ -1305,6 +1305,9 @@ def check(options):
         ('make', 'documentation'),
         ('pdflatex', 'documentation'),
     ]
+    if platform.system() == 'Linux':
+        programs.append(('fpm', 'installers'))
+
     print bold("Checking binaries")
     for program, build_steps in programs:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
