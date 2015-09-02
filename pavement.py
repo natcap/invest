@@ -1373,7 +1373,7 @@ def check(options):
             'pip install --upgrade hg+https://bitbucket.org/jdouglass/wheel'
         )))
         try:
-            requirements.append(('pywin32', required, 'pywin'))
+            requirements.append(('pywin32', required, 'pywin', None))
 
             # Get the pywin32 version here, as demonstrated by
             # http://stackoverflow.com/a/5071777.  If we can't import pywin,
