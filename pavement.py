@@ -1350,17 +1350,17 @@ def check(options):
     #    This is only for use by required packages.
     print bold("\nChecking python packages")
     requirements = [
-        # requirement        level       version_getter special_install_message
-        ('setuptools>=6.1',  required,   None,          None),
-        ('virtualenv',       required,   None,          None),
-        ('pip>=6.0.0',       required,   None,          None),
-        ('numpy',            lib_needed, None,          None),
-        ('scipy',            lib_needed, None,          None),
-        ('paramiko',         suggested,  None,          None),
-        ('pycrypto',         suggested,  'Crypto',      None),
-        ('h5py',             lib_needed, None,          None),
-        ('gdal',             lib_needed, 'osgeo.gdal',  None),
-        ('shapely',          lib_needed, None,          None),
+        # requirement, level, version_getter, special_install_message
+        ('setuptools>=6.1', required, None, None),
+        ('virtualenv', required, None, None),
+        ('pip>=6.0.0', required, None, None),
+        ('numpy', lib_needed,  None, None),
+        ('scipy', lib_needed,  None, None),
+        ('paramiko', suggested, None, None),
+        ('pycrypto', suggested, 'Crypto', None),
+        ('h5py', lib_needed,  None, None),
+        ('gdal', lib_needed,  'osgeo.gdal', None),
+        ('shapely', lib_needed,  None, None),
     ]
 
     # pywin32 is required for pyinstaller builds
