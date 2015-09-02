@@ -1388,6 +1388,10 @@ def check(options):
             pywin.__version__ = fixed_file_info['FileVersionLS'] >> 16
         except ImportError:
             pass
+    else:
+        # Non-windows OSes also require wheel,just not a special installation
+        # of it.
+        requirements.append(('wheel', required, None, None))
 
     warnings_found = False
     for requirement, severity, import_name, install_msg in requirements:
