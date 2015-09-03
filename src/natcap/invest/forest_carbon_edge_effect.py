@@ -43,7 +43,9 @@ def execute(args):
                     the raster args['lulc_uri']
 
                 'is_forest': either 0 or 1 indicating whether the landcover type
-                    is forest (1) or not (0)
+                    is forest (1) or not (0).  If 1, the value in c_above is
+                    ignored and instead calculated from the edge regression
+                    model.
 
                 'c_above': floating point number indicating tons of carbon per
                     hectare for that landcover type
@@ -54,6 +56,9 @@ def execute(args):
                     1,1,n/a
                     2,1,n/a
                     16,0,28.1
+
+                    Note the "n/a" are optional since that field is ignored when
+                    is_forest=1.
 
         args['lulc_uri'] (string): path to a integer landcover code raster
         args['forest_edge_carbon_model_shape_uri'] (string): path to a shapefile
