@@ -19,8 +19,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
 
-# grid cells are 100km so 1000km this is a good upper bound to search
-DISTANCE_UPPER_BOUND = 100e4
+# grid cells are 100km.  becky says 500km is a good upper bound to search
+DISTANCE_UPPER_BOUND = 500e3
 
 
 def execute(args):
