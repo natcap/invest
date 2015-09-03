@@ -215,7 +215,7 @@ def _calculate_lulc_carbon_map(
             on landcover code type), and 'c_above' (carbon density in terms of
             Mg/Ha)
         non_forest_carbon_map_uri (string): a filepath to the output raster
-            thta will contain total non-forest carbon per cell.
+            that will contain total non-forest carbon per cell.
 
     Returns:
         None"""
