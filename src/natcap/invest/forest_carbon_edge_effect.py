@@ -70,6 +70,10 @@ def execute(args):
                 method 3 linear regression:
                     biomass = theta1 + theta2 * edge_dist_km
 
+        args['biomass_to_carbon_conversion_factor'] (string/float): Number by
+            which to multiply forest biomass to convert to carbon in the edge
+            effect calculation.
+
     Returns:
         None"""
 
@@ -111,6 +115,7 @@ def execute(args):
     _calculate_forest_edge_carbon_map(
         edge_distance_uri, kd_tree, theta_model_parameters,
         method_model_parameter, int(args['n_nearest_model_points']),
+        float(args['biomass_to_carbon_conversion_factor']),
         forest_edge_carbon_map_uri)
 
     # combine maps into output
@@ -378,7 +383,7 @@ def _build_spatial_index(
 def _calculate_forest_edge_carbon_map(
         edge_distance_uri, kd_tree, theta_model_parameters,
         method_model_parameter, n_nearest_model_points,
-        forest_edge_carbon_map_uri):
+        biomass_to_carbon_conversion_factor, forest_edge_carbon_map_uri):
     """Calculates the carbon on the forest pixels accounting for their global
     position with respect to precalculated edge carbon models.
 
@@ -395,6 +400,8 @@ def _calculate_forest_edge_carbon_map(
             inserted into 'kd_tree'.
         n_nearest_model_points (int): number of nearest model points to search
             for.
+        biomass_to_carbon_conversion_factor (float): number by which to multiply
+            the biomass by to get carbon.
         forest_edge_carbon_map_uri (string): a filepath to the output raster
             which will contain total carbon stocks per cell of forest type.
 
@@ -563,10 +570,12 @@ def _calculate_forest_edge_carbon_map(
                 numpy.sum(weights[valid_denom] * biomass[valid_denom], axis=1) /
                 denom[valid_denom])
 
-            # Make sure the result has nodata everywhere the distance was invalid
+            # Ensure the result has nodata everywhere the distance was invalid
             result = numpy.empty(edge_distance_block.shape, dtype=numpy.float32)
             result[:] = carbon_edge_nodata
-            result[valid_edge_distance_mask] = average_biomass
+            # convert biomass to carbon in this stage
+            result[valid_edge_distance_mask] = (
+                average_biomass * biomass_to_carbon_conversion_factor)
             edge_carbon_band.WriteArray(
                 result, xoff=col_offset, yoff=row_offset)
     LOGGER.info('carbon edge calculation 100.0% complete')
