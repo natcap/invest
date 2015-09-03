@@ -58,9 +58,20 @@ def execute(args):
         args['lulc_uri'] (string): path to a integer landcover code raster
         args['forest_edge_carbon_model_shape_uri'] (string): path to a shapefile
             that defines the regions for the local carbon edge models.  Has at
-            least the fields 'method', 'theta1', 'theta2', 'theta3'.
+            least the fields 'method', 'theta1', 'theta2', 'theta3'.  Where
+            'method' is an int between 1..3 describing the biomass regression
+            model, and the thetas are floating point numbers that have different
+            meanings depending on the 'method' parameter.  Specifically
+                method 1 asymptotic model:
+                    biomass = theta1 - theta2 * exp(-theta3 * edge_dist_km)
+                method 2 logarithmic model:
+                    biomass = theta1 + theta2 * numpy.log(edge_dist_km)
+                     (theta3 is ignored for this method)
+                method 3 linear regression:
+                    biomass = theta1 + theta2 * edge_dist_km
 
-    returns None"""
+    Returns:
+        None"""
 
     pygeoprocessing.create_directories([args['workspace_dir']])
     try:
@@ -503,7 +514,7 @@ def _calculate_forest_edge_carbon_map(
                 edge_distance_block[valid_edge_distance_mask],
                 n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
-            # asymtotic model
+            # asymptotic model
             # biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
             biomass_model[:, :, 0] = (
                 thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
