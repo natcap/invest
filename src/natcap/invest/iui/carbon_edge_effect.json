@@ -51,7 +51,17 @@
           "defaultValue": "../carbon_edge_effect/core_data/carbon_edge_regression_model_parameters.shp",
           "required": true,
           "validateAs": {
-            "type": "OGR"
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                }
+              }
+            ],
+            "fieldsExist": [
+              "method", "theta1", "theta2", "theta3"
+            ]
           },
           "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' describing the global carbon edge models.  Provided as default data for the model."
         },
