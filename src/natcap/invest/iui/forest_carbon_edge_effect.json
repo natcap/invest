@@ -5,7 +5,7 @@
   "modelName": "forest_carbon_edge_effect",
   "localDocURI": "../documentation/forest_carbon_edge_effect.html",
   "height": 375,
-  "width": 700,
+  "width": 850,
   "elements": [
     {
       "id": "workspace_list",
@@ -15,7 +15,7 @@
           "id": "workspace",
           "args_id": "workspace_dir",
           "type": "folder",
-          "label": "Workspace",
+          "label": "Workspace Directory",
           "defaultValue": "~/Documents/forest_carbon_edge_workspace",
           "required": true,
           "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
@@ -25,7 +25,7 @@
           "args_id": "results_suffix",
           "type": "text",
           "dataType": "string",
-          "label": "Results Suffix (Optional)",
+          "label": "Results Suffix <em>(optional)</em>",
           "defaultValue": "",
           "returns": {
             "ifEmpty": "pass"
@@ -34,20 +34,39 @@
           "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
         },
         {
-          "id": "n_nearest_model_points",
-          "args_id": "n_nearest_model_points",
-          "type": "text",
-          "label": "Number of nearest model points to average",
-          "defaultValue": "10",
+          "id": "lulc_uri",
+          "args_id": "lulc_uri",
+          "type": "file",
+          "label": "Land-Use/Land-Cover Map (raster)",
+          "defaultValue": "../forest_carbon_edge_effect/forest_carbon_edge_lulc_demo.tif",
           "required": true,
-          "validText": "^[0-9]+$",
-          "helpText": "The number of global carbon edge 100km model points to include in the model average calculation."
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file, with an integer LULC code for each cell."
+        },
+        {
+          "id": "biophysical_table_uri",
+          "args_id": "biophysical_table_uri",
+          "type": "file",
+          "label": "Biophysical Table (csv)",
+          "defaultValue": "../forest_carbon_edge_effect/forest_edge_carbon_lu_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode",
+              "is_forest",
+              "c_above"
+            ]
+          },
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
         },
         {
           "id": "forest_edge_carbon_model_shape_uri",
           "args_id": "forest_edge_carbon_model_shape_uri",
           "type": "file",
-          "label": "Forest carbon edge regression parameter shapefile",
+          "label": "Global forest carbon edge regression models (vector)",
           "defaultValue": "../forest_carbon_edge_effect/core_data/forest_carbon_edge_regression_model_parameters.shp",
           "required": true,
           "validateAs": {
@@ -66,10 +85,20 @@
           "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' describing the global forest carbon edge models.  Provided as default data for the model."
         },
         {
+          "id": "n_nearest_model_points",
+          "args_id": "n_nearest_model_points",
+          "type": "text",
+          "label": "Number of nearest model points to average",
+          "defaultValue": "10",
+          "required": true,
+          "validText": "^[0-9]+$",
+          "helpText": "The number of global carbon edge 100km model points to include in the model average calculation."
+        },
+        {
           "id": "serviceshed_uri",
           "args_id": "serviceshed_uri",
           "type": "file",
-          "label": "Servicesheds (Vector) (optional)",
+          "label": "Servicesheds <em>(optional)</em> (vector)",
           "defaultValue": "../forest_carbon_edge_effect/demo_servicesheds.shp",
           "required": false,
           "validateAs": {
@@ -84,35 +113,6 @@
             ]
           },
           "helpText": "This is a set of polygons that will be used to aggregate carbon values at the end of the run if provided."
-        },
-        {
-          "id": "lulc_uri",
-          "args_id": "lulc_uri",
-          "type": "file",
-          "label": "Land-Use/Land-Cover (Raster)",
-          "defaultValue": "../forest_carbon_edge_effect/forest_carbon_edge_lulc_demo.tif",
-          "required": true,
-          "validateAs": {
-            "type": "GDAL"
-          },
-          "helpText": "A GDAL-supported raster file, with an integer LULC code for each cell."
-        },
-        {
-          "id": "biophysical_table_uri",
-          "args_id": "biophysical_table_uri",
-          "type": "file",
-          "label": "Biophysical Table (CSV)",
-          "defaultValue": "../forest_carbon_edge_effect/forest_edge_carbon_lu_table.csv",
-          "required": true,
-          "validateAs": {
-            "type": "CSV",
-            "fieldsExist": [
-              "lucode",
-              "is_forest",
-              "c_above"
-            ]
-          },
-          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
         }
       ]
     }
