@@ -1,5 +1,9 @@
 .. :changelog:
 
+3.3.0
+=====
+* Introduced a forest carbon edge effect model.
+
 3.2.1
 =====
 * Turning setuptools' zip_safe to False for consistency across the Natcap Namespace.

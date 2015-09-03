@@ -77,7 +77,10 @@ def execute(args):
     Returns:
         None"""
 
-    pygeoprocessing.create_directories([args['workspace_dir']])
+    output_dir = args['workspace_dir']
+    intermediate_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_outputs')
+    pygeoprocessing.create_directories([output_dir, intermediate_dir])
     try:
         file_suffix = args['results_suffix']
         if file_suffix != "" and not file_suffix.startswith('_'):
@@ -87,7 +90,7 @@ def execute(args):
 
     # Map non-forest landcover codes to carbon biomasses
     non_forest_carbon_stocks_uri = os.path.join(
-        args['workspace_dir'],
+        intermediate_dir,
         'non_forest_carbon_stocks%s.tif' % file_suffix)
     LOGGER.info('calculating non-forest carbon')
     _calculate_lulc_carbon_map(
@@ -96,7 +99,7 @@ def execute(args):
 
     # generate a map of pixel distance to forest edge from the landcover map
     edge_distance_uri = os.path.join(
-        args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
+        intermediate_dir, 'edge_distance%s.tif' % file_suffix)
     LOGGER.info('calculating distance from forest edge')
     _map_distance_from_forest_edge(
         args['lulc_uri'], args['biophysical_table_uri'], edge_distance_uri)
@@ -105,12 +108,12 @@ def execute(args):
     LOGGER.info('Building spatial index for forest edge models.')
     kd_tree, theta_model_parameters, method_model_parameter = (
         _build_spatial_index(
-            args['lulc_uri'], args['workspace_dir'],
+            args['lulc_uri'], intermediate_dir,
             args['forest_edge_carbon_model_shape_uri']))
 
     # calculate the edge carbon effect on forests
     forest_edge_carbon_map_uri = os.path.join(
-        args['workspace_dir'], 'forest_edge_carbon_stocks%s.tif' % file_suffix)
+        intermediate_dir, 'forest_edge_carbon_stocks%s.tif' % file_suffix)
     LOGGER.info('calculating forest edge carbon')
     _calculate_forest_edge_carbon_map(
         edge_distance_uri, kd_tree, theta_model_parameters,
@@ -122,8 +125,7 @@ def execute(args):
     LOGGER.info('combining forest and non forest carbon into single raster')
     cell_size_in_meters = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
-    carbon_map_uri = os.path.join(
-        args['workspace_dir'], 'carbon_map%s.tif' % file_suffix)
+    carbon_map_uri = os.path.join(output_dir, 'carbon_map%s.tif' % file_suffix)
     carbon_edge_nodata = pygeoprocessing.get_nodata_from_uri(
         forest_edge_carbon_map_uri)
 
@@ -141,11 +143,15 @@ def execute(args):
     # TASK: generate report (optional) by serviceshed if they exist
     if 'serviceshed_uri' in args:
         LOGGER.info('aggregating carbon map by serviceshed')
+        serviceshed_datasource_filename = os.path.join(
+            output_dir, 'aggregated_carbon_stocks.shp')
         _aggregate_carbon_map(
-            args['serviceshed_uri'], args['workspace_dir'], carbon_map_uri)
+            args['serviceshed_uri'], carbon_map_uri,
+            serviceshed_datasource_filename)
 
 
-def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
+def _aggregate_carbon_map(
+        serviceshed_uri, carbon_map_uri, serviceshed_datasource_filename):
     """Helper function to aggregate carbon values for the given serviceshed.
     Will make a new shapefile that's a copy of 'serviceshed_uri' in
     'workspace_dir' with mean and sum values from the raster at 'carbon_map_uri'
@@ -157,14 +163,14 @@ def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
             the shapefile at serviceshed_uri into.
         carbon_map_uri (string): path to raster that will be aggregated by
             the given serviceshed polygons
+        serviceshed_datasource_filename (string): path to an ESRI shapefile that
+            will be created by this function as the aggregating output.
 
     Returns:
         None"""
 
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_serviceshed_datasource = ogr.Open(serviceshed_uri)
-    serviceshed_datasource_filename = os.path.join(
-        workspace_dir, os.path.basename(serviceshed_uri))
     if (os.path.normpath(serviceshed_uri) ==
             os.path.normpath(serviceshed_datasource_filename)):
         raise ValueError(
