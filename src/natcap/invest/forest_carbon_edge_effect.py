@@ -267,11 +267,9 @@ def _map_distance_from_forest_edge(
     # Build a list of forest lucodes
     biophysical_table = pygeoprocessing.get_lookup_from_table(
         biophysical_table_uri, 'lucode')
-    forest_codes = []
-    for lucode in biophysical_table:
-        is_forest = int(biophysical_table[int(lucode)]['is_forest'])
-        if is_forest == 1:
-            forest_codes.append(lucode)
+    forest_codes = [
+        lucode for (lucode, ludata) in biophysical_table.iteritems()
+        if int(ludata['is_forest']) == 1]
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
     forest_mask_nodata = 255
@@ -560,4 +558,4 @@ def _calculate_forest_edge_carbon_map(
             result[valid_edge_distance_mask] = average_biomass
             edge_carbon_band.WriteArray(
                 result, xoff=col_offset, yoff=row_offset)
-    LOGGER.info('carbon edge calculation 100.0%% complete')
+    LOGGER.info('carbon edge calculation 100.0% complete')
