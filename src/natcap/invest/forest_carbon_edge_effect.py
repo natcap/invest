@@ -140,7 +140,7 @@ def execute(args):
         carbon_edge_nodata, cell_size_in_meters, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
 
-    # TASK: generate report (optional) by aoi if they exist
+    # generate report (optional) by aoi if they exist
     if 'aoi_uri' in args:
         LOGGER.info('aggregating carbon map by aoi')
         aoi_datasource_filename = os.path.join(
