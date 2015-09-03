@@ -1,9 +1,9 @@
 {
   "id": "window",
-  "label": "Carbon Edge Effect Model",
-  "targetScript": "natcap.invest.carbon_edge_effect",
-  "modelName": "carbon_edge_effect",
-  "localDocURI": "../documentation/carbon_edge_effect.html",
+  "label": "Forest Carbon Edge Effect Model",
+  "targetScript": "natcap.invest.forest_carbon_edge_effect",
+  "modelName": "forest_carbon_edge_effect",
+  "localDocURI": "../documentation/forest_carbon_edge_effect.html",
   "height": 375,
   "width": 700,
   "elements": [
@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "~/Documents/carbon_edge_workspace",
+          "defaultValue": "~/Documents/forest_carbon_edge_workspace",
           "required": true,
           "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
@@ -44,11 +44,11 @@
           "helpText": "The number of global carbon edge 100km model points to include in the model average calculation."
         },
         {
-          "id": "carbon_model_shape_uri",
-          "args_id": "carbon_model_shape_uri",
+          "id": "forest_edge_carbon_model_shape_uri",
+          "args_id": "forest_edge_carbon_model_shape_uri",
           "type": "file",
-          "label": "Carbon edge regression parameter shapefile",
-          "defaultValue": "../carbon_edge_effect/core_data/carbon_edge_regression_model_parameters.shp",
+          "label": "Forest carbon edge regression parameter shapefile",
+          "defaultValue": "../forest_carbon_edge_effect/core_data/forest_carbon_edge_regression_model_parameters.shp",
           "required": true,
           "validateAs": {
             "type": "OGR",
@@ -63,14 +63,14 @@
               "method", "theta1", "theta2", "theta3"
             ]
           },
-          "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' describing the global carbon edge models.  Provided as default data for the model."
+          "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' describing the global forest carbon edge models.  Provided as default data for the model."
         },
         {
           "id": "serviceshed_uri",
           "args_id": "serviceshed_uri",
           "type": "file",
           "label": "Servicesheds (Vector) (optional)",
-          "defaultValue": "../carbon_edge_effect/demo_servicesheds.shp",
+          "defaultValue": "../forest_carbon_edge_effect/demo_servicesheds.shp",
           "required": false,
           "validateAs": {
             "type": "OGR",
@@ -90,7 +90,7 @@
           "args_id": "lulc_uri",
           "type": "file",
           "label": "Land-Use/Land-Cover (Raster)",
-          "defaultValue": "../carbon_edge_effect/carbon_edge_lulc_demo.tif",
+          "defaultValue": "../forest_carbon_edge_effect/forest_carbon_edge_lulc_demo.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -102,7 +102,7 @@
           "args_id": "biophysical_table_uri",
           "type": "file",
           "label": "Biophysical Table (CSV)",
-          "defaultValue": "../carbon_edge_effect/edge_carbon_lu_table.csv",
+          "defaultValue": "../forest_carbon_edge_effect/forest_edge_carbon_lu_table.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
