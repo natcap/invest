@@ -33,8 +33,8 @@ class Raster(object):
         self.driver = driver
         self.dataset = None
 
-    @classmethod
-    def from_array(self, array, affine, proj, datatype, nodata_val, driver='GTiff', filepath=None):
+    @staticmethod
+    def from_array(array, affine, proj, datatype, nodata_val, driver='GTiff', filepath=None):
         if len(array.shape) is 2:
             num_bands = 1
         elif len(array.shape) is 3:
@@ -91,9 +91,6 @@ class Raster(object):
     @classmethod
     def create_simple_affine(self, top_left_x, top_left_y, pix_width, pix_height):
         return Affine(pix_width, 0, top_left_x, 0, -(pix_height), top_left_y)
-
-    # def __del__(self):
-    #     self._delete()
 
     def __exit__(self):
         self._delete()

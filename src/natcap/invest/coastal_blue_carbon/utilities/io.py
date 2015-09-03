@@ -114,8 +114,11 @@ def get_inputs(args):
     vars_dict['lulc_snapshot_list'] = lulc_snapshot_list
 
     # Fetch yearly_carbon_price_dict
-    vars_dict['yearly_carbon_price_dict'] = \
-        _get_yearly_carbon_price_dict(vars_dict)
+    if args['do_economic_analysis']:
+        vars_dict['yearly_carbon_price_dict'] = \
+            _get_yearly_carbon_price_dict(vars_dict)
+    else:
+        vars_dict['yearly_carbon_price_dict'] = None
 
     return vars_dict
 
