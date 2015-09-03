@@ -26,7 +26,7 @@ def execute(args):
     """InVEST Carbon Edge Model calculates the carbon due to edge effects in
     forest pixels.
 
-    Args:
+    Parameters:
         args['workspace_dir'] (string): a uri to the directory that will write
             output and other temporary files during calculation. (required)
         args['results_suffix'] (string): a string to append to any output file
@@ -55,9 +55,9 @@ def execute(args):
                     16,0,28.1
 
         args['lulc_uri'] (string): path to a integer landcover code raster
-        args['carbon_model_shape_uri'] (string): path to a shapefile that
-            has points defining carbon edge models.  Has at least the fields
-            'method', 'theta1', 'theta2', 'theta3'.
+        args['forest_edge_carbon_model_shape_uri'] (string): path to a shapefile
+            that defines the regions for the local carbon edge models.  Has at
+            least the fields 'method', 'theta1', 'theta2', 'theta3'.
 
     returns None"""
 
@@ -86,29 +86,27 @@ def execute(args):
         args['lulc_uri'], args['biophysical_table_uri'], edge_distance_uri)
 
     #Build spatial index for gridded global model for closest 3 points
+    LOGGER.info('Building spatial index for forest edge models.')
     kd_tree, theta_model_parameters, method_model_parameter = (
         _build_spatial_index(
             args['lulc_uri'], args['workspace_dir'],
-            args['carbon_model_shape_uri']))
+            args['forest_edge_carbon_model_shape_uri']))
 
     #calculate the edge carbon effect on forests
     forest_edge_carbon_map_uri = os.path.join(
         args['workspace_dir'], 'forest_edge_carbon_stocks%s.tif' % file_suffix)
-
     LOGGER.info('calculating forest edge carbon')
     _calculate_forest_edge_carbon_map(
         edge_distance_uri, kd_tree, theta_model_parameters,
         method_model_parameter, int(args['n_nearest_model_points']),
         forest_edge_carbon_map_uri)
 
+    #combine maps into output
     LOGGER.info('combining forest and non forest carbon into single raster')
     cell_size_in_meters = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
-
-    #combine maps into output
     carbon_map_uri = os.path.join(
         args['workspace_dir'], 'carbon_map%s.tif' % file_suffix)
-
     carbon_edge_nodata = pygeoprocessing.get_nodata_from_uri(
         forest_edge_carbon_map_uri)
     def combine_carbon_maps(non_forest_carbon, forest_carbon):
@@ -116,7 +114,6 @@ def execute(args):
         return numpy.where(
             forest_carbon == carbon_edge_nodata, non_forest_carbon,
             forest_carbon)
-
     pygeoprocessing.vectorize_datasets(
         [non_forest_carbon_stocks_uri, forest_edge_carbon_map_uri],
         combine_carbon_maps, carbon_map_uri, gdal.GDT_Float32,
@@ -135,7 +132,7 @@ def _aggregate_carbon_map(serviceshed_uri, workspace_dir, carbon_map_uri):
     Will make a new shapefile that's a copy of 'serviceshed_uri' in
     'workspace_dir' with mean and sum values from the raster at 'carbon_map_uri'
 
-    Args:
+    Parameters:
         serviceshed_uri (string): path to shapefile that will be used to
             aggregate raster at'carbon_map_uri'
         workspace_dir (string): path to a directory that function can copy
@@ -207,7 +204,7 @@ def _calculate_lulc_carbon_map(
     """Calculates the carbon on the map based on non-forest landcover types
     only.
 
-    Args:
+    Parameters:
         lulc_uri (string): a filepath to the landcover map that contains integer
             landcover codes
         biophysical_table_uri (string): a filepath to a csv table that indexes
@@ -251,7 +248,7 @@ def _map_distance_from_forest_edge(
     """Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
 
-    Args:
+    Parameters:
         lulc_uri (string): path to the landcover raster that contains integer
             landcover codes
         biophysical_table_uri (string): a path to a csv table that indexes
@@ -298,20 +295,21 @@ def _map_distance_from_forest_edge(
     os.remove(non_forest_mask_uri)
 
 def _build_spatial_index(
-        base_raster_uri, local_model_dir, global_carbon_model_shapefile_uri):
+        base_raster_uri, local_model_dir,
+        forest_edge_carbon_model_shapefile_uri):
     """Builds a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
-    Args:
+    Parameters:
         base_raster_uri (string): path to a raster that is used to define the
             bounding box and projection of the local model.
         local_model_dir (string): path to a directory where we can write a
             shapefile of the locally projected global data model grid.
             Function will create a file called 'local_carbon_shape.shp' in
             that location and overwrite one if it exists.
-        global_carbon_model_shapefile_uri (string): a path to an OGR shapefile
-            that has the parameters for the global carbon edge model.  Each
-            georeferenced feature should have fields 'theta1', 'theta2',
+        forest_edge_carbon_model_shapefile_uri (string): a path to an OGR
+            shapefile that has the parameters for the global carbon edge model.
+            Each georeferenced feature should have fields 'theta1', 'theta2',
             'theta3', and 'method'
 
     Returns:
@@ -328,7 +326,7 @@ def _build_spatial_index(
     lulc_projection_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
         base_raster_uri)
     pygeoprocessing.reproject_datasource_uri(
-        global_carbon_model_shapefile_uri, lulc_projection_wkt,
+        forest_edge_carbon_model_shapefile_uri, lulc_projection_wkt,
         carbon_model_reproject_uri)
 
     model_shape_ds = ogr.Open(carbon_model_reproject_uri)
@@ -370,7 +368,7 @@ def _calculate_forest_edge_carbon_map(
     """Calculates the carbon on the forest pixels accounting for their global
     position with respect to precalculated edge carbon models.
 
-    Args:
+    Parameters:
         edge_distance_uri (string): path to the a raster where each pixel
             contains the pixel distance to forest edge.
         kd_tree (scipy.spatial.cKDTree): a kd-tree that has indexed the valid
@@ -557,4 +555,4 @@ def _calculate_forest_edge_carbon_map(
             result[valid_edge_distance_mask] = average_biomass
             edge_carbon_band.WriteArray(
                 result, xoff=col_offset, yoff=row_offset)
-    LOGGER.info('carbon edge calculation approx. 100.0%% complete')
+    LOGGER.info('carbon edge calculation 100.0%% complete')
