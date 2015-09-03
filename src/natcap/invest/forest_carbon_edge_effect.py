@@ -6,8 +6,8 @@ import os
 import logging
 import math
 import time
-
 import uuid
+
 import numpy
 from osgeo import gdal
 from osgeo import ogr
