@@ -510,9 +510,17 @@ def _calculate_forest_edge_carbon_map(
             coord_points = zip(
                 row_coords[valid_edge_distance_mask].ravel(),
                 col_coords[valid_edge_distance_mask].ravel())
-            distances, indexes = kd_tree.query(
-                coord_points, k=n_nearest_model_points,
-                distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
+            try:
+                distances, indexes = kd_tree.query(
+                    coord_points, k=n_nearest_model_points,
+                    distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
+            except TypeError:
+                LOGGER.warn(
+                    "n_jobs parameter not supported, reverting to single "
+                    "threaded query")
+                distances, indexes = kd_tree.query(
+                    coord_points, k=n_nearest_model_points,
+                    distance_upper_bound=DISTANCE_UPPER_BOUND)
 
             # the 3 is for the 3 thetas in the carbon model
             thetas = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
