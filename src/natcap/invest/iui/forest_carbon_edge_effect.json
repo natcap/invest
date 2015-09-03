@@ -92,7 +92,7 @@
           "defaultValue": "10",
           "required": true,
           "validText": "^[0-9]*$",
-          "helpText": "The number of global carbon edge 100km model points to include in the model average calculation."
+          "helpText": "Used when calculating the biomass in a pixel.  This number determines the number of closest regression models that are used when calculating the total biomass.  Each local model is linearly weighted by distance such that the biomass in the pixel is a function of each of these points with the closest point having the highest effect."
         },
         {
           "id": "biomass_to_carbon_conversion_factor",
@@ -105,11 +105,11 @@
           "helpText": "Number by which to multiply forest biomass to convert to carbon. Default value is 0.47 (according to IPCC 2006). This pertains to forest classes only; values in the biophysical table for non-forest classes should already be in terms of carbon, not biomass."
         },
         {
-          "id": "serviceshed_uri",
-          "args_id": "serviceshed_uri",
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
           "type": "file",
-          "label": "Servicesheds <em>(optional)</em> (vector)",
-          "defaultValue": "../forest_carbon_edge_effect/demo_servicesheds.shp",
+          "label": "Service areas of interest <em>(optional)</em> (vector)",
+          "defaultValue": "../forest_carbon_edge_effect/demo_aoi.shp",
           "required": false,
           "validateAs": {
             "type": "OGR",

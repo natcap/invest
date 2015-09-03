@@ -34,7 +34,7 @@ def execute(args):
             name (optional)
         args['n_nearest_model_points'] (int): number of nearest neighbor model
             points to search for
-        args['serviceshed_uri'] (string): (optional) if present, a path to a
+        args['aoi_uri'] (string): (optional) if present, a path to a
             shapefile that will be used to aggregate carbon stock results at the
             end of the run.
         args['biophysical_table_uri'] (string): a path to a CSV table that has
@@ -140,48 +140,48 @@ def execute(args):
         carbon_edge_nodata, cell_size_in_meters, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
 
-    # TASK: generate report (optional) by serviceshed if they exist
-    if 'serviceshed_uri' in args:
-        LOGGER.info('aggregating carbon map by serviceshed')
-        serviceshed_datasource_filename = os.path.join(
+    # TASK: generate report (optional) by aoi if they exist
+    if 'aoi_uri' in args:
+        LOGGER.info('aggregating carbon map by aoi')
+        aoi_datasource_filename = os.path.join(
             output_dir, 'aggregated_carbon_stocks.shp')
         _aggregate_carbon_map(
-            args['serviceshed_uri'], carbon_map_uri,
-            serviceshed_datasource_filename)
+            args['aoi_uri'], carbon_map_uri,
+            aoi_datasource_filename)
 
 
 def _aggregate_carbon_map(
-        serviceshed_uri, carbon_map_uri, serviceshed_datasource_filename):
+        aoi_uri, carbon_map_uri, aoi_datasource_filename):
     """Helper function to aggregate carbon values for the given serviceshed.
-    Will make a new shapefile that's a copy of 'serviceshed_uri' in
+    Will make a new shapefile that's a copy of 'aoi_uri' in
     'workspace_dir' with mean and sum values from the raster at 'carbon_map_uri'
 
     Parameters:
-        serviceshed_uri (string): path to shapefile that will be used to
+        aoi_uri (string): path to shapefile that will be used to
             aggregate raster at'carbon_map_uri'
         workspace_dir (string): path to a directory that function can copy
-            the shapefile at serviceshed_uri into.
+            the shapefile at aoi_uri into.
         carbon_map_uri (string): path to raster that will be aggregated by
             the given serviceshed polygons
-        serviceshed_datasource_filename (string): path to an ESRI shapefile that
+        aoi_datasource_filename (string): path to an ESRI shapefile that
             will be created by this function as the aggregating output.
 
     Returns:
         None"""
 
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    original_serviceshed_datasource = ogr.Open(serviceshed_uri)
-    if (os.path.normpath(serviceshed_uri) ==
-            os.path.normpath(serviceshed_datasource_filename)):
+    original_serviceshed_datasource = ogr.Open(aoi_uri)
+    if (os.path.normpath(aoi_uri) ==
+            os.path.normpath(aoi_datasource_filename)):
         raise ValueError(
             "The input and output serviceshed filenames are the same, "
             "please choose a different workspace or move the serviceshed "
-            "out of the current workspace %s" % serviceshed_datasource_filename)
+            "out of the current workspace %s" % aoi_datasource_filename)
 
-    if os.path.exists(serviceshed_datasource_filename):
-        os.remove(serviceshed_datasource_filename)
+    if os.path.exists(aoi_datasource_filename):
+        os.remove(aoi_datasource_filename)
     serviceshed_result = esri_driver.CopyDataSource(
-        original_serviceshed_datasource, serviceshed_datasource_filename)
+        original_serviceshed_datasource, aoi_datasource_filename)
     original_serviceshed_datasource = None
     serviceshed_layer = serviceshed_result.GetLayer()
 
@@ -200,7 +200,7 @@ def _aggregate_carbon_map(
 
     # aggregate carbon stocks by the new ID field
     serviceshed_stats = pygeoprocessing.aggregate_raster_values_uri(
-        carbon_map_uri, serviceshed_datasource_filename,
+        carbon_map_uri, aoi_datasource_filename,
         shapefile_field=poly_id_field, ignore_nodata=True,
         threshold_amount_lookup=None, ignore_value_list=[],
         process_pool=None, all_touched=False)
