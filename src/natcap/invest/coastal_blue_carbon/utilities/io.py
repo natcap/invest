@@ -2,8 +2,10 @@
 
 import csv
 import os
-import pygeoprocessing as pygeo
 import pprint as pp
+
+import gdal
+import pygeoprocessing as pygeo
 
 from natcap.invest.coastal_blue_carbon.classes.raster import Raster
 from natcap.invest.coastal_blue_carbon.global_variables import *
@@ -109,8 +111,8 @@ def get_inputs(args):
     # Set LULC_Snapshots' NODATA to Program Standard
     lulc_snapshot_list = []
     for i in vars_dict['lulc_snapshot_list']:
-        lulc_snapshot_list.append(
-            Raster.from_file(i).set_nodata(NODATA_INT).uri)
+        lulc_snapshot_list.append(Raster.from_file(
+            i).set_datatype_and_nodata(gdal.GDT_Int32, NODATA_INT).uri)
     vars_dict['lulc_snapshot_list'] = lulc_snapshot_list
 
     # Fetch yearly_carbon_price_dict

@@ -94,5 +94,29 @@ class TestCBCPreprocessor(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
 
+class TestValidateTransition(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_validate_transition(self):
+        t1 = (1, 2)
+        t2 = (2, NODATA_INT)
+        t3 = (NODATA_INT, 1)
+        t4 = (NODATA_INT, NODATA_INT)
+
+        cbc_preprocessor._validate_transitions(set([t1]))
+
+        with self.assertRaises(AssertionError):
+            cbc_preprocessor._validate_transitions(set([t2]))
+
+        with self.assertRaises(AssertionError):
+            cbc_preprocessor._validate_transitions(set([t3]))
+
+        cbc_preprocessor._validate_transitions(set([t4]))
+
+    def tearDown(self):
+        pass
+
+
 if __name__ == '__main__':
     unittest.main()

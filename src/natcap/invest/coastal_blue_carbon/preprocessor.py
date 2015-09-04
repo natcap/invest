@@ -6,6 +6,7 @@ import csv
 from itertools import product
 import pprint as pp
 
+import gdal
 import pygeoprocessing
 
 from natcap.invest.coastal_blue_carbon.global_variables import *
@@ -127,29 +128,30 @@ def _validate_inputs(vars_dict):
     # assert all raster values in lookup table
     raster_val_set = set()
     for snapshot_idx in range(0, len(lulc_snapshot_list)):
-        raster = Raster.from_file(lulc_snapshot_list[snapshot_idx]).set_nodata(
-            NODATA_INT)
+        raster = Raster.from_file(lulc_snapshot_list[
+            snapshot_idx]).set_datatype_and_nodata(gdal.GDT_Int32, NODATA_INT)
         raster_val_set = raster_val_set.union(set(raster.unique()))
 
     code_set = set(lulc_lookup_dict.keys())
     code_set.add(NODATA_INT)
 
     try:
-        assert(not raster_val_set.difference(code_set))
+        if raster_val_set.difference(code_set):
+            raise AssertionError
     except:
-        class NotAllClassesInLookupTable(ValueError):
-            def __init__(self, message):
-                self.message = message
-        raise NotAllClassesInLookupTable(
-            "At least one raster value is not in the lookup table")
+        msg = "These raster values are not in the lookup table: %s" %\
+            raster_val_set.difference(code_set)
+        raise ValueError(msg)
 
 
 def _preprocess_data(vars_dict):
     """Preprocess data."""
 
     def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
-        raster_t1 = Raster.from_file(raster_t1_uri).set_nodata(NODATA_INT)
-        raster_t2 = Raster.from_file(raster_t2_uri).set_nodata(NODATA_INT)
+        raster_t1 = Raster.from_file(
+            raster_t1_uri).set_datatype_and_nodata(gdal.GDT_Int32, NODATA_INT)
+        raster_t2 = Raster.from_file(
+            raster_t2_uri).set_datatype_and_nodata(gdal.GDT_Int32, NODATA_INT)
 
         band_t1 = raster_t1.get_band(1).data.flatten()
         band_t2 = raster_t2.get_band(1).data.flatten()
@@ -200,6 +202,10 @@ def _preprocess_data(vars_dict):
         transition_set = _get_land_cover_transitions(
             lulc_snapshot_list[snapshot_idx],
             lulc_snapshot_list[snapshot_idx+1])
+
+        # make sure that no lulc transitions interact with nodata values
+        _validate_transitions(transition_set)
+
         for transition_tuple in transition_set:
             transition_matrix_dict = _mark_transition_type(
                 lulc_lookup_dict,
@@ -209,6 +215,25 @@ def _preprocess_data(vars_dict):
     vars_dict['transition_matrix_dict'] = transition_matrix_dict
 
     return vars_dict
+
+
+def _validate_transitions(transition_set):
+    """Asserts that transitions between rasters are nodata to nodata
+    and lulc-code to lulc-code.
+
+    Args:
+        transition_set (set): a set of tuples
+
+    Raises:
+        AssertionError
+    """
+    for t in transition_set:
+        if t[0] == NODATA_INT and t[1] != NODATA_INT:
+            raise AssertionError(
+                'invalid transition from nodata value to lulc-code')
+        if t[0] != NODATA_INT and t[1] == NODATA_INT:
+            raise AssertionError(
+                'invalid transition from lulc-code to nodata value')
 
 
 def _create_transition_table(vars_dict):
