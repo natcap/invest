@@ -406,6 +406,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
     !insertmacro downloadData "Timber (optional)" "Timber.zip" 644
     !insertmacro downloadData "Scenario Generator (optional)" "ScenarioGenerator.zip" 0
-    !insertmacro downloadData "Scenario Generator: Agriculture Expansion (optional)" "scenario_ag_expansion.zip" 0
+    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd
 SectionGroupEnd
