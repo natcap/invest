@@ -1,5 +1,9 @@
 .. :changelog:
 
+3.3.0
+=====
+* Introduced a new InVEST model, "Scenario Generator: Proximity Based" and renamed the previous "Scenario Generator" to "Scenario Generator: Rule Based".
+
 3.2.1
 =====
 * Turning setuptools' zip_safe to False for consistency across the Natcap Namespace.
