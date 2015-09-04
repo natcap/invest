@@ -305,7 +305,7 @@ def _fragment_forest(
         area_to_convert, forest_type_list, convertable_type_list,
         n_steps):
     """Expands agriculture into convertable types starting from the furthest
-    distance from the edge of the forward, inward.
+    distance from the edge of the forest, inward.
 
     Args:
         base_lulc_uri (string): path to landcover raster that will be used as
