@@ -43,7 +43,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../scenario_proximity/scenario_proximity_lulc_demo.tif"
+          "defaultValue": "../scenario_proximity/scenario_proximity_lulc.tif"
         },
         {
           "id": "aoi_uri",
