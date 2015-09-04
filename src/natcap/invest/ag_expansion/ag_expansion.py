@@ -95,10 +95,13 @@ def execute(args):
 
     if args['expand_from_forest_edge']:
         LOGGER.info('running expand from forest edge scenario')
+        forest_edge_expanded_uri = os.path.join(
+            output_dir, 'forest_edge_expanded%s.tif' % file_suffix)
+        stats_uri = os.path.join(
+            output_dir, 'forest_edge_expanded_stats%s.csv' % file_suffix)
         _expand_from_forest_edge(
-            base_lulc_uri, intermediate_dir, output_dir, file_suffix,
-            ag_lucode, area_to_convert, forest_type_list,
-            convertable_type_list)
+            base_lulc_uri, ag_lucode, area_to_convert, forest_type_list,
+            convertable_type_list, forest_edge_expanded_uri, stats_uri)
 
     if args['fragment_forest']:
         LOGGER.info('running forest fragmentation scenario')
@@ -213,19 +216,15 @@ def _expand_from_ag(
 
 
 def _expand_from_forest_edge(
-        base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
-        area_to_convert, forest_type_list, convertable_type_list):
-    """Expands agriculture into convertable types starting from the edge of
+        base_lulc_uri, ag_lucode,
+        area_to_convert, forest_type_list, convertable_type_list,
+        forest_edge_expanded_uri, stats_uri):
+    """Expands agriculture into convertible types starting from the edge of
     the forest types, inward.
 
     Parameters:
         base_lulc_uri (string): path to landcover raster that will be used as
             the base landcover map to agriculture pixels
-        intermediate_dir (string): path to a directory that is safe to write
-            intermediate files
-        output_dir (string): path to a directory that is safe to write output
-            files
-        file_suffix (string): string to append to output files
         ag_lucode (int): agriculture landcover code type found in the raster
             at `base_lulc_uri`
         area_to_convert (float): area (Ha) to convert to agriculture
@@ -233,13 +232,24 @@ def _expand_from_forest_edge(
             to be converted to agriculture
         convertable_type_list (list of int): landcover codes that are allowable
             to be converted to agriculture
+        forest_edge_expanded_uri (string): path to an output raster that
+            contains a converted landcover map with the given parameters for
+            types and area.
+        stats_uri (string): a path to an output csv that records the number
+            type, and area of pixels converted in `forest_edge_expanded_uri`
 
     Returns:
         None."""
 
+    tmp_file_registry = {
+        'non_forest_mask': pygeoprocessing.temporary_filename(),
+        'gaussian_kernel': pygeoprocessing.temporary_filename(),
+        'distance_from_forest_edge': pygeoprocessing.temporary_filename(),
+        'smooth_distance_from_edge': pygeoprocessing.temporary_filename(),
+        'convertable_distances': pygeoprocessing.temporary_filename(),
+    }
+
     # mask everything not forest so we can get a distance to edge of forest
-    non_forest_mask_uri = os.path.join(
-        intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
@@ -250,30 +260,24 @@ def _expand_from_forest_edge(
             lulc.flatten(), forest_type_list).reshape(lulc.shape)
         return numpy.where(lulc == lulc_nodata, ag_mask_nodata, non_forest_mask)
     pygeoprocessing.vectorize_datasets(
-        [base_lulc_uri], _mask_non_forest_op, non_forest_mask_uri,
-        gdal.GDT_Byte, ag_mask_nodata, pixel_size_out, "intersection",
-        vectorize_op=False)
+        [base_lulc_uri], _mask_non_forest_op,
+        tmp_file_registry['non_forest_mask'], gdal.GDT_Byte, ag_mask_nodata,
+        pixel_size_out, "intersection", vectorize_op=False)
 
     #distance transform mask
-    distance_from_forest_edge_uri = os.path.join(
-        intermediate_dir, 'distance_from_forest_edge%s.tif' % file_suffix)
     pygeoprocessing.distance_transform_edt(
-        non_forest_mask_uri, distance_from_forest_edge_uri)
-    gaussian_kernel_uri = os.path.join(intermediate_dir, 'gaussian_kernel.tif')
-    _make_gaussian_kernel_uri(10.0, gaussian_kernel_uri)
+        tmp_file_registry['non_forest_mask'],
+        tmp_file_registry['distance_from_forest_edge'])
+    _make_gaussian_kernel_uri(10.0, tmp_file_registry['gaussian_kernel'])
     # smooth the distance transform to avoid scanline artifacts
-    smooth_distance_from_edge_uri = os.path.join(
-        intermediate_dir,
-        'smooth_distance_from_forest_edge%s.tif' % file_suffix)
     pygeoprocessing.convolve_2d_uri(
-        distance_from_forest_edge_uri, gaussian_kernel_uri,
-        smooth_distance_from_edge_uri)
+        tmp_file_registry['distance_from_forest_edge'],
+        tmp_file_registry['gaussian_kernel'],
+        tmp_file_registry['smooth_distance_from_edge'])
 
     # make a mask of the convertable landcover types
     convertable_type_nodata = -1
-    convertable_distances_uri = os.path.join(
-        intermediate_dir, 'forest_edge_convertable_distances%s.tif' %
-        file_suffix)
+
     def _mask_to_convertable_types(distance_from_forest_edge, lulc):
         """masks out the distance transform to a set of given landcover codes"""
         convertable_mask = numpy.in1d(
@@ -282,12 +286,12 @@ def _expand_from_forest_edge(
             convertable_mask, distance_from_forest_edge,
             convertable_type_nodata)
     pygeoprocessing.vectorize_datasets(
-        [smooth_distance_from_edge_uri, base_lulc_uri],
-        _mask_to_convertable_types, convertable_distances_uri, gdal.GDT_Float32,
-        convertable_type_nodata, pixel_size_out, "intersection",
-        vectorize_op=False)
-    forest_edge_expanded_uri = os.path.join(
-        output_dir, 'forest_edge_expanded%s.tif' % file_suffix)
+        [tmp_file_registry['smooth_distance_from_edge'], base_lulc_uri],
+        _mask_to_convertable_types, tmp_file_registry['convertable_distances'],
+        gdal.GDT_Float32, convertable_type_nodata, pixel_size_out,
+        "intersection", vectorize_op=False)
+
+    # make a copy of the base landcover to start the conversion
     pygeoprocessing.vectorize_datasets(
         [base_lulc_uri], lambda x: x, forest_edge_expanded_uri, gdal.GDT_Int32,
         lulc_nodata, pixel_size_out, "intersection", vectorize_op=False)
@@ -298,10 +302,8 @@ def _expand_from_forest_edge(
     max_pixels_to_convert = int(area_to_convert / pixel_area_ha)
     stats_cache = collections.defaultdict(int)
     _convert_by_score(
-        convertable_distances_uri, max_pixels_to_convert,
+        tmp_file_registry['convertable_distances'], max_pixels_to_convert,
         forest_edge_expanded_uri, ag_lucode, stats_cache)
-    stats_uri = os.path.join(
-        output_dir, 'forest_edge_expanded_stats%s.csv' % file_suffix)
     _log_stats(stats_cache, pixel_area_ha, stats_uri)
 
 
