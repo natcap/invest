@@ -149,7 +149,7 @@ def execute(args):
     pygeoprocessing.vectorize_datasets(
         [output_file_registry['non_forest_carbon_stocks'],
          output_file_registry['forest_edge_carbon_map']],
-        combine_carbon_maps, carbon_edge_nodata['carbon_map'],
+        combine_carbon_maps, output_file_registry['carbon_map'],
         gdal.GDT_Float32, carbon_edge_nodata, cell_size_in_meters,
         'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
 
