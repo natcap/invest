@@ -306,6 +306,10 @@ def _expand_from_forest_edge(
         forest_edge_expanded_uri, ag_lucode, stats_cache)
     _log_stats(stats_cache, pixel_area_ha, stats_uri)
 
+    # remove temporary files
+    for filename in tmp_file_registry.itervalues():
+        os.remove(filename)
+
 
 def _fragment_forest(
         base_lulc_uri, ag_lucode,
