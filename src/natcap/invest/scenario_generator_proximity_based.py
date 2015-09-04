@@ -1,4 +1,4 @@
-"""Scenario Generation: Agriculture Expansion"""
+"""Scenario Generation: Proximity Based"""
 
 import os
 import logging
@@ -20,11 +20,11 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger(
-    'natcap.invest.cropland_expansion')
+    'natcap.invest.scenario_generator_proximity_based')
 
 
 def execute(args):
-    """Main entry point for cropland expansion tool model.
+    """Main entry point for proximity based scenario generator model.
 
     Parameters:
         args['workspace_dir'] (string): output directory for intermediate,
@@ -718,8 +718,8 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
         kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
         options=['BIGTIFF=IF_SAFER'])
 
-    #Make some kind of geotransform, it doesn't matter what but
-    #will make GIS libraries behave better if it's all defined
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
     kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
     srs = osr.SpatialReference()
     srs.SetUTM(11, 1)

@@ -1,9 +1,9 @@
 {
   "id": "window",
-  "label": "Scenario Generator: Agriculture Expansion",
-  "targetScript": "natcap.invest.ag_expansion.ag_expansion",
-  "modelName": "ag_expansion",
-  "localDocURI": "../documentation/ag_expansion.html",
+  "label": "Scenario Generator: Proximity Based",
+  "targetScript": "natcap.invest.scenario_generator_proximity_based",
+  "modelName": "scenario_generator_proximity_based",
+  "localDocURI": "../documentation/scenario_generator_proximity_based.html",
   "height": 545,
   "width": 610,
   "elements": [
