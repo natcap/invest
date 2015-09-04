@@ -46,7 +46,7 @@ def execute(args):
         None.
     """
 
-    #append a _ to the suffix if it's not empty and doens't already have one
+    # append a _ to the suffix if it's not empty and doesn't already have one
     try:
         file_suffix = args['results_suffix']
         if file_suffix != "" and not file_suffix.startswith('_'):
@@ -54,15 +54,16 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    area_to_convert = float(args['area_to_convert'])
-    ag_lucode = int(args['agriculture_lu_code'])
-
     #create working directories
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    output_dir = os.path.join(args['workspace_dir'])
+    intermediate_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_outputs')
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
     pygeoprocessing.geoprocessing.create_directories(
         [output_dir, intermediate_dir, tmp_dir])
+
+    area_to_convert = float(args['area_to_convert'])
+    ag_lucode = int(args['agriculture_lu_code'])
 
     # convert all the input strings to lists of ints
     convertable_type_list = numpy.array([
