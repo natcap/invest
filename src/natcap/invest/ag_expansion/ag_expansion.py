@@ -102,10 +102,14 @@ def execute(args):
 
     if args['fragment_forest']:
         LOGGER.info('running forest fragmentation scenario')
+        forest_fragmented_uri = os.path.join(
+            output_dir, 'forest_fragmented%s.tif' % file_suffix)
+        stats_uri = os.path.join(
+            output_dir, 'forest_fragmented_stats%s.csv' % file_suffix)
         _fragment_forest(
-            base_lulc_uri, intermediate_dir, output_dir,
-            file_suffix, ag_lucode, area_to_convert, forest_type_list,
-            convertable_type_list, int(args['n_fragmentation_steps']))
+            base_lulc_uri, ag_lucode, area_to_convert, forest_type_list,
+            convertable_type_list, int(args['n_fragmentation_steps']),
+            forest_fragmented_uri, stats_uri)
 
 
 def _expand_from_ag(
@@ -301,20 +305,15 @@ def _expand_from_forest_edge(
 
 
 def _fragment_forest(
-        base_lulc_uri, intermediate_dir, output_dir, file_suffix, ag_lucode,
+        base_lulc_uri, ag_lucode,
         area_to_convert, forest_type_list, convertable_type_list,
-        n_steps):
+        n_steps, forest_fragmented_uri, stats_uri):
     """Expands agriculture into convertable types starting from the furthest
     distance from the edge of the forest, inward.
 
     Args:
         base_lulc_uri (string): path to landcover raster that will be used as
             the base landcover map to agriculture pixels
-        intermediate_dir (string): path to a directory that is safe to write
-            intermediate files
-        output_dir (string): path to a directory that is safe to write output
-            files
-        file_suffix (string): string to append to output files
         ag_lucode (int): agriculture landcover code type found in the raster
             at `base_lulc_uri`
         area_to_convert (float): area (Ha) to convert to agriculture
@@ -326,13 +325,22 @@ def _fragment_forest(
             number the more accurate the fragmentation.  If this value equals
             `max_pixels_to_convert` one pixel will be converted per step. Note
             each step will require an expensive distance transform computation.
+        forest_fragmented_uri (string): an output raster that will contain the
+            final fragmented forest layer.
+        stats_uri (string): a path to an output csv that records the number
+            type, and area of pixels converted in `forest_fragmented_uri`
 
     Returns:
         None."""
 
-    # create the output raster first so it can be looped on for each frag step
-    forest_fragmented_uri = os.path.join(
-        output_dir, 'forest_fragmented%s.tif' % file_suffix)
+    tmp_file_registry = {
+        'non_forest_mask': pygeoprocessing.temporary_filename(),
+        'distance_from_forest_edge': pygeoprocessing.temporary_filename(),
+        'convertable_distances': pygeoprocessing.temporary_filename(),
+    }
+
+    # create the output raster first as a copy of the base landcover so it can
+    # be looped on for each frag step
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
@@ -355,8 +363,6 @@ def _fragment_forest(
             pixels_to_convert += pixels_left_to_convert
 
         #mask agriculture types from LULC
-        non_forest_mask_uri = os.path.join(
-            intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
         def _mask_non_forest_op(lulc, converted_forest):
             """create a mask of valid non-forest pixels only"""
             non_forest_mask = ~numpy.in1d(
@@ -366,20 +372,14 @@ def _fragment_forest(
                 lulc == lulc_nodata, ag_mask_nodata, non_forest_mask)
         pygeoprocessing.vectorize_datasets(
             [base_lulc_uri, forest_fragmented_uri], _mask_non_forest_op,
-            non_forest_mask_uri, gdal.GDT_Byte, ag_mask_nodata, pixel_size_out,
+            tmp_file_registry['non_forest_mask'], gdal.GDT_Byte, ag_mask_nodata, pixel_size_out,
             "intersection", vectorize_op=False)
 
-        #distance transform mask
-        distance_from_forest_edge_uri = os.path.join(
-            intermediate_dir, 'distance_from_forest_edge_%d%s.tif' % (
-                step_index, file_suffix))
+        # current step's distance transform mask
         pygeoprocessing.distance_transform_edt(
-            non_forest_mask_uri, distance_from_forest_edge_uri)
+            tmp_file_registry['non_forest_mask'],
+            tmp_file_registry['distance_from_forest_edge'])
 
-        convertable_distances_uri = os.path.join(
-            intermediate_dir,
-            'toward_forest_edge_convertable_distances%d%s.tif' % (
-                step_index, file_suffix))
         def _mask_to_convertable_types(distance_from_forest_edge, lulc):
             """masks out the distance transform to a set of given landcover
             codes"""
@@ -389,19 +389,20 @@ def _fragment_forest(
                 convertable_mask, distance_from_forest_edge,
                 convertable_type_nodata)
         pygeoprocessing.vectorize_datasets(
-            [distance_from_forest_edge_uri, base_lulc_uri],
-            _mask_to_convertable_types, convertable_distances_uri,
-            gdal.GDT_Float32, convertable_type_nodata, pixel_size_out,
-            "intersection", vectorize_op=False)
+            [tmp_file_registry['distance_from_forest_edge'], base_lulc_uri],
+            _mask_to_convertable_types,
+            tmp_file_registry['convertable_distances'], gdal.GDT_Float32,
+            convertable_type_nodata, pixel_size_out, "intersection",
+            vectorize_op=False)
 
         #Convert all the furthest from forest edge pixels to ag.
         _convert_by_score(
-            convertable_distances_uri, pixels_to_convert,
+            tmp_file_registry['convertable_distances'], pixels_to_convert,
             forest_fragmented_uri, ag_lucode, stats_cache, reverse_sort=True)
 
-    stats_uri = os.path.join(
-        output_dir, 'forest_fragmented_stats%s.csv' % file_suffix)
     _log_stats(stats_cache, pixel_area_ha, stats_uri)
+    for filename in tmp_file_registry.values():
+        os.remove(filename)
 
 
 def _log_stats(stats_cache, pixel_area, stats_uri):
