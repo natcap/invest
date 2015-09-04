@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(
 def execute(args):
     """Main entry point for cropland expansion tool model.
 
-    Args:
+    Parameters:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -118,7 +118,7 @@ def _expand_from_ag(
     """Expands agriculture into convertible types starting in increasing
     distance from nearest agriculture.
 
-    Args:
+    Parameters:
         base_lulc_uri (string): path to landcover raster that will be used as
             the base landcover map to agriculture pixels
         output_dir (string): path to a directory that is safe to write output
@@ -218,7 +218,7 @@ def _expand_from_forest_edge(
     """Expands agriculture into convertable types starting from the edge of
     the forest types, inward.
 
-    Args:
+    Parameters:
         base_lulc_uri (string): path to landcover raster that will be used as
             the base landcover map to agriculture pixels
         intermediate_dir (string): path to a directory that is safe to write
@@ -243,6 +243,7 @@ def _expand_from_forest_edge(
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
     ag_mask_nodata = 2
+
     def _mask_non_forest_op(lulc):
         """create a mask of valid non-forest pixels only"""
         non_forest_mask = ~numpy.in1d(
@@ -311,7 +312,7 @@ def _fragment_forest(
     """Expands agriculture into convertable types starting from the furthest
     distance from the edge of the forest, inward.
 
-    Args:
+    Parameters:
         base_lulc_uri (string): path to landcover raster that will be used as
             the base landcover map to agriculture pixels
         ag_lucode (int): agriculture landcover code type found in the raster
@@ -409,7 +410,7 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
     """Writes pixel change statistics from a simulation to disk in tabular
     format.
 
-    Args:
+    Parameters:
         stats_cache (dict): a dictionary mapping pixel lucodes to number of
             pixels changed
         pixel_area (float): size of pixels in hectares so an area column can
@@ -436,7 +437,7 @@ def _sort_to_disk(dataset_uri, scale=1.0):
     """Sorts the non-nodata pixels in the dataset on disk and returns
     an iterable in sorted order.
 
-    Args:
+    Parameters:
         dataset_uri (string): a path to a floating point GDAL dataset
         scale (float): a number to multiply all values by, which can be
             used to reverse the order of the iteration if negative.
@@ -543,7 +544,7 @@ def _convert_by_score(
     """Takes an input score layer and changes the pixels in `out_raster_uri`
     and converts up to `max_pixels_to_convert` them to `convert_value` type.
 
-    Args:
+    Parameters:
         score_uri (string): path to a raster whose non-nodata values score the
             pixels to convert.  If `reverse_sort` is True the pixels in
             `out_raster_uri` are converted from the lowest score to the highest.
@@ -577,7 +578,7 @@ def _convert_by_score(
         to be invoked inside the processing loop and again at the end to
         finalize the scan.
 
-        Args:
+        Parameters:
             data_array (numpy array): 1D array of valid data in buffer
             row_array (numpy array): 1D array to indicate row indexes for
                 `data_array`
@@ -592,7 +593,11 @@ def _convert_by_score(
             stats_counter (collections.defaultdict(int)): is updated so that
                 the key corresponds to ids in out_band that get set by the
                 sparse matrix, and the number of pixels converted is added
-                to the value of that entry."""
+                to the value of that entry.
+
+        Returns:
+            None
+        """
 
         # construct sparse matrix so it can be indexed later
         sparse_matrix = scipy.sparse.csc_matrix(
@@ -631,7 +636,6 @@ def _convert_by_score(
 
             out_array[mask_array] = convert_value
             out_band.WriteArray(out_array, xoff=col_index, yoff=row_index)
-
 
     out_ds = gdal.Open(out_raster_uri, gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
@@ -690,7 +694,7 @@ def _convert_by_score(
 def _make_gaussian_kernel_uri(sigma, kernel_uri):
     """Creates a 2D gaussian kernel.
 
-    Args:
+    Parameters:
         sigma (float): the sigma as in the classic Gaussian function
         kernel_uri (string): path to raster on disk to write the gaussian
             kernel.
