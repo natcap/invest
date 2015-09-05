@@ -75,14 +75,13 @@
           "validText": "^[0-9]+\\.?[0-9]*$"
         },
         {
-          "id": "n_fragmentation_steps",
-          "args_id": "n_fragmentation_steps",
+          "id": "base_landcover_types",
+          "args_id": "base_landcover_types",
           "type": "text",
-          "label": "Number of Fragmentation Simulation Steps",
-          "defaultValue": "5",
-          "required": true,
-          "validText": "^[0-9]*$",
-          "enabledBy": "fragment_forest"
+          "label": "Base Landcover Types (list)",
+          "defaultValue": "1 2 3 4 5",
+          "validText": "^[0-9 ]+$",
+          "required": true
         },
         {
           "id": "convertable_landcover_types",
@@ -90,48 +89,45 @@
           "type": "text",
           "label": "Convertable Landcover Types (list)",
           "defaultValue": "1 2 3 4 5",
+          "validText": "^[0-9 ]+$",
           "required": true
         },
         {
-          "id": "forest_landcover_types",
-          "args_id": "forest_landcover_types",
+          "id": "new_landcover_code",
+          "args_id": "new_landcover_code",
           "type": "text",
-          "label": "Forest Landcover Types (list)",
-          "defaultValue": "1 2 3 4 5",
-          "required": true
-        },
-        {
-          "id": "agriculture_lu_code",
-          "args_id": "agriculture_lu_code",
-          "type": "text",
-          "label": "Agriculture Landcover Code (int)",
+          "label": "Replacement Landcover Code (int)",
           "defaultValue": "12",
           "required": true,
           "validText": "^[0-9]+$"
         },
         {
-          "id": "expand_from_ag",
-          "args_id": "expand_from_ag",
+          "id": "convert_toward_base_edge",
+          "args_id": "convert_toward_base_edge",
           "type": "checkbox",
-          "label": "Expand From Ag",
+          "label": "Convert Toward Base Edge",
           "defaultValue": false,
-          "required": false
+          "required": false,
+          "helpText": "This scenario converts the convertible landcover types starting at the furthest pixel away from the edge of the base landcover types and works inward."
         },
         {
-          "id": "expand_from_forest_edge",
-          "args_id": "expand_from_forest_edge",
+          "id": "convert_from_base_edge",
+          "args_id": "convert_from_base_edge",
           "type": "checkbox",
-          "label": "Expand From Forest Edge",
+          "label": "Convert From Base Edge",
           "defaultValue": false,
-          "required": false
+          "required": false,
+          "helpText": "This scenario converts the convertible landcover types starting at the closest the edge of the base landcover types and works outward."
         },
         {
-          "id": "fragment_forest",
-          "args_id": "fragment_forest",
-          "type": "checkbox",
-          "label": "Fragment Forest",
-          "defaultValue": false,
-          "required": false
+          "id": "n_fragmentation_steps",
+          "args_id": "n_fragmentation_steps",
+          "type": "text",
+          "label": "Number of Steps Toward Conversion",
+          "defaultValue": "1",
+          "required": true,
+          "validText": "^[0-9]*$",
+          "helpText": "This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover types.  This can affect the final result if the base types are also convertable types."
         }
       ]
     }
