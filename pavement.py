@@ -1,3 +1,4 @@
+import argparse
 import collections
 import distutils
 import getpass
@@ -6,7 +7,6 @@ import imp
 import importlib
 import inspect
 import json
-import logging
 import os
 import pkgutil
 import platform
@@ -78,6 +78,7 @@ def user_os_installer():
 _ENVNAME = 'release_env'
 _PYTHON = sys.executable
 paver.easy.options(
+    dry_run=False,
     build=Bunch(
         force_dev=False,
         skip_data=False,
@@ -683,119 +684,71 @@ def after_install(options, home_dir):
 
 @task
 @consume_args  # when consuming args, it's a list of str arguments.
-def fetch(args):
+def fetch(args, options):
     """
     Clone repositories the correct locations.
     """
 
-    help_string = """
-Usage: paver fetch [--help] REPO_1 [-r REV] REPO_2 [-r REV] ... REPO_N [-r REV]
-
-Positional arguments:
-    REPO_N          The path (or a part of the path) to a repository tracked by
-                    this infrastructure.
-    -r --rev REV    The revision to update this repo to.
-
-Options:
-    -h --help       Display this help and exit.
-
-    """
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('repo', metavar='REPO[@rev]', nargs='+',
+                            help=('The repository to fetch.  Optionally, the '
+                                  'revision to update to can be specified by '
+                                  'using the "@" symbol.  Example: '
+                                  ' `paver fetch data/invest-data@27`'))
 
     # figure out which repos/revs we're hoping to update.
     # None is our internal, temp keyword representing the LATEST possible
     # rev.
     user_repo_revs = {}  # repo -> version
-    repo_paths = sorted(map(lambda x: x.local_path, REPOS))
-    args_queue = collections.deque(args[:])
-
-    print 'Fetching %s' % args_queue
-
-    rev_flags = ['-r', '--rev']
-    while len(args_queue) > 0:
-        current_arg = args_queue.popleft()
-
-        # If the user provides repo revisions, it MUST be a specific repo.
-        if current_arg in repo_paths or current_arg in rev_flags:
-            # the user might provide a revision.
-            # It's a rev if it's not a repo.
-            try:
-                possible_rev = args_queue.popleft()
-            except IndexError:
-                # When no other args after the repo
-                user_repo_revs[current_arg] = None
-                continue
-
-            if possible_rev in repo_paths:
-                # then it's not a revision, it's a repo.  put it back.
-                # Also, assume user wants the repo we're currently working with
-                # to be updated to the tip OR whatever.
-                user_repo_revs[current_arg] = None
-                args_queue.appendleft(possible_rev)
-                continue
-            elif possible_rev in rev_flags:
-                requested_rev = args_queue.popleft()
-                user_repo_revs[current_arg] = requested_rev
-        elif current_arg.startswith('-'):
-            if current_arg not in ['--help', '-h']:
-                print 'ERROR: Unknown argument %s' % current_arg
-            print help_string
-            return
+    parsed_args = arg_parser.parse_args(args[:])
+    for user_repo in parsed_args.repo:
+        repo_parts = user_repo.split('@')
+        if len(repo_parts) == 1:
+            repo_name = repo_parts[0]
+            repo_rev = None
+        elif len(repo_parts) == 2:
+            repo_name, repo_rev = repo_parts
         else:
-            print "ERROR: unknown repo %s" % current_arg
-            print "Allowed repos: \n    %s" % ',\n    '.join(repo_paths)
-            print "Shared substrings are also allowed for grouping together"
-            print "several repositories"
-            return
+            raise BuildFailure("Can't parse repo/rev {repo}".format(user_repo))
 
-    # determine which groupings the user wants to operate on.
+        # if the repo name ends with a trailing / (or \\ on Windows), trim it
+        # Improves comparison of repo strings.  Tab-completion likes to add the
+        # trailing slash.
+        if repo_name.endswith(os.sep):
+            repo_name = repo_name[:-1]
+        user_repo_revs[repo_name] = repo_rev
+
+    # determine which known repos the user wants to operate on.
     # example: `src` would represent all repos under src/
     # example: `data` would represent all repos under data/
     # example: `src/pyinstaller` would represent the pyinstaller repo
-    repos = set([])
-    for argument in args:
-        if not argument.startswith('-'):
-            repos.add(argument)
+    desired_repo_revs = {}
+    known_repos = dict((repo.local_path, repo) for repo in REPOS)
+    for known_repo_path, repo_obj in known_repos.iteritems():
+        for user_repo, user_rev in user_repo_revs.iteritems():
+            if user_repo in known_repo_path:
+                if known_repo_path in desired_repo_revs:
+                    raise BuildFailure('The same repo has been selected twice')
+                else:
+                    desired_repo_revs[repo_obj] = user_rev
 
-    def _user_requested_repo(local_repo_path):
-        """
-        Check if the user requested this repository.
-        Does so by checking prefixes provided by the user.
+    for user_requested_repo, target_rev in desired_repo_revs.iteritems():
+        print 'Fetching {path}'.format(path=user_requested_repo)
 
-        Arguments:
-            local_repo_path (string): the path to the local repository
-                relative to the CWD. (example: src/pyinstaller)
-
-        Returns:
-            Boolean: Whether the user did request this repo.
-        """
-        # check that the user wants to update this repo
-        for user_arg_prefix in repos:
-            if local_repo_path.startswith(user_arg_prefix):
-                return True
-        return False
-
-    for repo in REPOS:
-        print 'Checking %s' % repo.local_path
-
-        # If the user did not request this repo AND the user didn't want to
-        # update everything (by specifying no positional args), skip this repo.
-        if not _user_requested_repo(repo.local_path) and len(repos) > 0:
-            continue
-
-        # is repo up-to-date?  If not, update it.
-        # If the user specified a target revision, use that instead.
-        try:
-            target_rev = user_repo_revs[repo.local_path]
-            if target_rev is None:
-                raise KeyError
-        except KeyError:
+        # If the user did not define a target rev, we use the one on disk.
+        if target_rev is None:
             try:
-                target_rev = repo.tracked_version()
+                target_rev = user_requested_repo.tracked_version()
             except KeyError:
-                print 'WARNING: repo not tracked in versions.json: %s' % repo.local_path
-                raise BuildFailure
+                repo_path = user_requested_repo.local_path
+                raise BuildFailure(('Repo not tracked in versions.json: '
+                                   '{repo}').format(repo=repo_path))
 
-        repo.get(target_rev)
+        if options.dry_run:
+            print 'Fetching {parh}'.format(user_requested_repo.local_path)
+            continue
+        else:
+            user_requested_repo.get(target_rev)
 
 
 @task
