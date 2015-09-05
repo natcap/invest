@@ -109,7 +109,7 @@
           "args_id": "aoi_uri",
           "type": "file",
           "label": "Service areas of interest <em>(optional)</em> (vector)",
-          "defaultValue": "../forest_carbon_edge_effect/demo_aoi.shp",
+          "defaultValue": "../forest_carbon_edge_effect/forest_carbon_edge_demo_aoi.shp",
           "required": false,
           "validateAs": {
             "type": "OGR",
