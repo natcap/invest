@@ -105,7 +105,7 @@
           "id": "convert_toward_base_edge",
           "args_id": "convert_toward_base_edge",
           "type": "checkbox",
-          "label": "Convert Furthest from Base Edge to Nearest",
+          "label": "Convert From Edge",
           "defaultValue": true,
           "required": false,
           "helpText": "This scenario converts the convertible landcover types starting at the furthest pixel from the closest base landcover types and moves inward."
@@ -114,7 +114,7 @@
           "id": "convert_from_base_edge",
           "args_id": "convert_from_base_edge",
           "type": "checkbox",
-          "label": "Convert Nearest to Base Edge to Furthest",
+          "label": "Convert To Edge",
           "defaultValue": true,
           "required": false,
           "helpText": "This scenario converts the convertible landcover types starting at the closest pixel in the base landcover types and moves outward."
