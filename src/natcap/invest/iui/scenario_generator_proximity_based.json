@@ -75,19 +75,19 @@
           "validText": "^[0-9]+\\.?[0-9]*$"
         },
         {
-          "id": "base_landcover_types",
-          "args_id": "base_landcover_types",
+          "id": "base_landcover_codes",
+          "args_id": "base_landcover_codes",
           "type": "text",
-          "label": "Base Landcover Types (list)",
+          "label": "Base Landcover Codes (list)",
           "defaultValue": "1 2 3 4 5",
           "validText": "^[0-9 ]+$",
           "required": true
         },
         {
-          "id": "convertable_landcover_types",
-          "args_id": "convertable_landcover_types",
+          "id": "convertable_landcover_codes",
+          "args_id": "convertable_landcover_codes",
           "type": "text",
-          "label": "Convertable Landcover Types (list)",
+          "label": "Convertable Landcover Codes (list)",
           "defaultValue": "1 2 3 4 5",
           "validText": "^[0-9 ]+$",
           "required": true
@@ -105,19 +105,19 @@
           "id": "convert_toward_base_edge",
           "args_id": "convert_toward_base_edge",
           "type": "checkbox",
-          "label": "Convert From Edge",
+          "label": "Convert To Edge",
           "defaultValue": true,
           "required": false,
-          "helpText": "This scenario converts the convertible landcover types starting at the furthest pixel from the closest base landcover types and moves inward."
+          "helpText": "This scenario converts the convertible landcover codes starting at the furthest pixel from the closest base landcover codes and moves inward."
         },
         {
           "id": "convert_from_base_edge",
           "args_id": "convert_from_base_edge",
           "type": "checkbox",
-          "label": "Convert To Edge",
+          "label": "Convert From Edge",
           "defaultValue": true,
           "required": false,
-          "helpText": "This scenario converts the convertible landcover types starting at the closest pixel in the base landcover types and moves outward."
+          "helpText": "This scenario converts the convertible landcover codes starting at the closest pixel in the base landcover codes and moves outward."
         },
         {
           "id": "n_fragmentation_steps",
@@ -127,7 +127,7 @@
           "defaultValue": "1",
           "required": true,
           "validText": "^[0-9]*$",
-          "helpText": "This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover types.  This can affect the final result if the base types are also convertable types."
+          "helpText": "This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover codes.  This can affect the final result if the base types are also convertable types."
         }
       ]
     }
