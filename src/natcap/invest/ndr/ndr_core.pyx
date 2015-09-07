@@ -81,7 +81,7 @@ cdef class BlockCache:
                     "A band was passed in that has a different dimension than "
                     "the memory block was specified as.\n"
                     "raster_dimensions_list=%s\n" % str(raster_dimensions_list)
-                    + "bands=%s" % str([b.GetDescription for b in band_list]))
+                    + "bands=%s" % str([b.GetDescription() for b in band_list]))
 
         for band in band_list:
             block_col_size, block_row_size = band.GetBlockSize()
