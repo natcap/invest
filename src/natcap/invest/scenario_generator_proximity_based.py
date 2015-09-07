@@ -109,27 +109,27 @@ def execute(args):
             output_dir, basename+file_suffix+'.tif')
         stats_uri = os.path.join(
             output_dir, basename+file_suffix+'.csv')
-        distance_from_base_edge_uri = os.path.join(
-            intermediate_dir, 'distance_'+basename+file_suffix+'.tif')
+        distance_from_edge_uri = os.path.join(
+            intermediate_dir, basename+'_distance'+file_suffix+'.tif')
         _convert_landscape(
             base_lulc_uri, replacement_lucode, area_to_convert,
             base_landcover_codes, convertable_type_list, score_weight,
-            int(args['n_fragmentation_steps']), output_landscape_raster_uri,
-            stats_uri, distance_from_base_edge_uri)
+            int(args['n_fragmentation_steps']), distance_from_edge_uri,
+            output_landscape_raster_uri, stats_uri)
 
 
 def _convert_landscape(
-        base_lulc_uri, replacement_lucode, area_to_convert, base_landcover_codes,
-        convertable_type_list, score_weight, n_steps,
-        output_landscape_raster_uri, stats_uri, distance_from_base_edge_uri):
+        base_lulc_uri, replacement_lucode, area_to_convert,
+        base_landcover_codes, convertable_type_list, score_weight, n_steps,
+        distance_from_edge_uri, output_landscape_raster_uri, stats_uri):
     """Expands agriculture into convertable codes starting from the furthest
     distance from the edge of the forest, inward.
 
     Parameters:
         base_lulc_uri (string): path to landcover raster that will be used as
             the base landcover map to agriculture pixels
-        replacement_lucode (int): agriculture landcover code type found in the raster
-            at `base_lulc_uri`
+        replacement_lucode (int): agriculture landcover code type found in the
+            raster at `base_lulc_uri`
         area_to_convert (float): area (Ha) to convert to agriculture
         base_landcover_codes (list of int): landcover codes that are used to
             calculate proximity
@@ -140,6 +140,8 @@ def _convert_landscape(
             current value of the `base_landcover_codes` pixels in
             `output_landscape_raster_uri`.  On the first step the distance
             is calculated from `base_lulc_uri`.
+        distance_from_edge_uri (string): an intermediate output showing the
+            pixel distance from the edge of the base landcover types
         output_landscape_raster_uri (string): an output raster that will
             contain the final fragmented forest layer.
         stats_uri (string): a path to an output csv that records the number
@@ -150,19 +152,22 @@ def _convert_landscape(
 
     tmp_file_registry = {
         'non_base_mask': pygeoprocessing.temporary_filename(),
+        'base_mask': pygeoprocessing.temporary_filename(),
         'gaussian_kernel': pygeoprocessing.temporary_filename(),
-        #'distance_from_base_edge': distance_from_base_edge_uri,
+        'distance_from_base_mask_edge': pygeoprocessing.temporary_filename(),
+        'distance_from_non_base_mask_edge':
+            pygeoprocessing.temporary_filename(),
         'convertable_distances': pygeoprocessing.temporary_filename(),
         'smooth_distance_from_edge': pygeoprocessing.temporary_filename(),
 
     }
-    _make_gaussian_kernel_uri(10.0, tmp_file_registry['gaussian_kernel'])
+    _make_gaussian_kernel_uri(1.0, tmp_file_registry['gaussian_kernel'])
 
     # create the output raster first as a copy of the base landcover so it can
     # be looped on for each step
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
-    non_base_nodata = 2
+    mask_nodata = 2
     pygeoprocessing.vectorize_datasets(
         [base_lulc_uri], lambda x: x, output_landscape_raster_uri,
         gdal.GDT_Int32, lulc_nodata, pixel_size_out, "intersection",
@@ -176,36 +181,64 @@ def _convert_landscape(
     pixels_left_to_convert = max_pixels_to_convert
     pixels_to_convert = max_pixels_to_convert / n_steps
     stats_cache = collections.defaultdict(int)
+
+    # pylint complains when these are defined inside the loop
+    invert_mask = None
+    distance_nodata = None
+
     for step_index in xrange(n_steps):
         LOGGER.info('step %d of %d', step_index+1, n_steps)
         pixels_left_to_convert -= pixels_to_convert
         if pixels_left_to_convert < 0:
             pixels_to_convert += pixels_left_to_convert
 
-        #mask non-base codes from map
-        def _mask_non_base_op(current_lulc):
+        # create distance transforms for inside and outside the base lulc codes
+        for invert_mask, mask_id, distance_id in [
+                (False, 'non_base_mask', 'distance_from_non_base_mask_edge'),
+                (True, 'base_mask', 'distance_from_base_mask_edge')]:
+            #mask non-base codes from map
+            def _mask_base_op(lulc_array):
+                """create a mask of valid non-base pixels only"""
+                base_mask = numpy.in1d(
+                    lulc_array.flatten(), base_landcover_codes).reshape(
+                        lulc_array.shape)
+                if invert_mask:
+                    base_mask = ~base_mask
+                return numpy.where(
+                    lulc_array == lulc_nodata, mask_nodata, base_mask)
+            pygeoprocessing.vectorize_datasets(
+                [output_landscape_raster_uri], _mask_base_op,
+                tmp_file_registry[mask_id], gdal.GDT_Byte,
+                mask_nodata, pixel_size_out, "intersection",
+                vectorize_op=False)
+
+            # create distance transform for the current mask
+            pygeoprocessing.distance_transform_edt(
+                tmp_file_registry[mask_id], tmp_file_registry[distance_id])
+
+        # combine inner and outer distance transforms into one
+        distance_nodata = pygeoprocessing.get_nodata_from_uri(
+            tmp_file_registry['distance_from_base_mask_edge'])
+
+        def _combine_masks(base_distance_array, non_base_distance_array):
             """create a mask of valid non-base pixels only"""
-            non_base_mask = ~numpy.in1d(
-                current_lulc.flatten(), base_landcover_codes).reshape(
-                    current_lulc.shape)
-            return numpy.where(
-                current_lulc == lulc_nodata, non_base_nodata, non_base_mask)
+            result = non_base_distance_array
+            valid_base_mask = base_distance_array > 0.0
+            result[valid_base_mask] = base_distance_array[valid_base_mask]
+            return result
         pygeoprocessing.vectorize_datasets(
-            [output_landscape_raster_uri], _mask_non_base_op,
-            tmp_file_registry['non_base_mask'], gdal.GDT_Byte,
-            non_base_nodata, pixel_size_out, "intersection",
+            [tmp_file_registry['distance_from_base_mask_edge'],
+             tmp_file_registry['distance_from_non_base_mask_edge']],
+            _combine_masks, distance_from_edge_uri,
+            gdal.GDT_Float32, distance_nodata, pixel_size_out, "intersection",
             vectorize_op=False)
 
-        # current step's distance transform mask
-        pygeoprocessing.distance_transform_edt(
-            tmp_file_registry['non_base_mask'],
-            distance_from_base_edge_uri)  # tmp_file_registry['distance_from_base_edge'])
         # smooth the distance transform to avoid scanline artifacts
         pygeoprocessing.convolve_2d_uri(
-            distance_from_base_edge_uri,  # tmp_file_registry['distance_from_base_edge'],
-            tmp_file_registry['gaussian_kernel'],
+            distance_from_edge_uri, tmp_file_registry['gaussian_kernel'],
             tmp_file_registry['smooth_distance_from_edge'])
 
+        # turn inside and outside masks into a single mask
         def _mask_to_convertable_codes(distance_from_base_edge, lulc):
             """masks out the distance transform to a set of given landcover
             codes"""
