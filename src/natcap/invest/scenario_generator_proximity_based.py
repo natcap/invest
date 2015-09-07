@@ -109,17 +109,19 @@ def execute(args):
             output_dir, basename+file_suffix+'.tif')
         stats_uri = os.path.join(
             output_dir, basename+file_suffix+'.csv')
+        distance_from_base_edge_uri = os.path.join(
+            intermediate_dir, 'distance_'+basename+file_suffix+'.tif')
         _convert_landscape(
             base_lulc_uri, replacement_lucode, area_to_convert,
             base_landcover_codes, convertable_type_list, score_weight,
             int(args['n_fragmentation_steps']), output_landscape_raster_uri,
-            stats_uri)
+            stats_uri, distance_from_base_edge_uri)
 
 
 def _convert_landscape(
         base_lulc_uri, replacement_lucode, area_to_convert, base_landcover_codes,
         convertable_type_list, score_weight, n_steps,
-        output_landscape_raster_uri, stats_uri):
+        output_landscape_raster_uri, stats_uri, distance_from_base_edge_uri):
     """Expands agriculture into convertable codes starting from the furthest
     distance from the edge of the forest, inward.
 
@@ -149,7 +151,7 @@ def _convert_landscape(
     tmp_file_registry = {
         'non_base_mask': pygeoprocessing.temporary_filename(),
         'gaussian_kernel': pygeoprocessing.temporary_filename(),
-        'distance_from_base_edge': pygeoprocessing.temporary_filename(),
+        #'distance_from_base_edge': distance_from_base_edge_uri,
         'convertable_distances': pygeoprocessing.temporary_filename(),
         'smooth_distance_from_edge': pygeoprocessing.temporary_filename(),
 
@@ -197,10 +199,10 @@ def _convert_landscape(
         # current step's distance transform mask
         pygeoprocessing.distance_transform_edt(
             tmp_file_registry['non_base_mask'],
-            tmp_file_registry['distance_from_base_edge'])
+            distance_from_base_edge_uri)  # tmp_file_registry['distance_from_base_edge'])
         # smooth the distance transform to avoid scanline artifacts
         pygeoprocessing.convolve_2d_uri(
-            tmp_file_registry['distance_from_base_edge'],
+            distance_from_base_edge_uri,  # tmp_file_registry['distance_from_base_edge'],
             tmp_file_registry['gaussian_kernel'],
             tmp_file_registry['smooth_distance_from_edge'])
 

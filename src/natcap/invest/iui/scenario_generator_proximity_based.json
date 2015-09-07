@@ -105,7 +105,7 @@
           "id": "convert_toward_base_edge",
           "args_id": "convert_toward_base_edge",
           "type": "checkbox",
-          "label": "Convert To Edge",
+          "label": "Convert Toward Edge",
           "defaultValue": true,
           "required": false,
           "helpText": "This scenario converts the convertible landcover codes starting at the furthest pixel from the closest base landcover codes and moves inward."
