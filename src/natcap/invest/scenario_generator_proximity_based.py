@@ -1,6 +1,7 @@
 """Scenario Generation: Proximity Based"""
 
 import os
+import math
 import logging
 import numpy
 import tempfile
@@ -292,7 +293,7 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
                 lucode, stats_cache[lucode] * pixel_area, stats_cache[lucode]])
 
 
-def _sort_to_disk(dataset_uri, score_weight=1.0):
+def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
     """Sorts the non-nodata pixels in the dataset on disk and returns
     an iterable in sorted order.
 
@@ -339,61 +340,94 @@ def _sort_to_disk(dataset_uri, score_weight=1.0):
     #This will be a list of file iterators we'll pass to heap.merge
     iters = []
 
-    #Set the row strides to be something reasonable, like 1MB blocks
-    row_strides = max(int(10 * 2**20 / (4 * n_cols)), 1)
+    cols_per_block, rows_per_block = band.GetBlockSize()
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
 
-    for row_index in xrange(0, n_rows, row_strides):
+    valid_index = 0
+    flat_index_cache = numpy.empty((cache_element_size,), dtype=numpy.float32)
+    score_cache = numpy.empty((cache_element_size,), dtype=numpy.int32)
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
 
-        #It's possible we're on the last set of rows and the stride is too big
-        #update if so
-        if row_index + row_strides >= n_rows:
-            row_strides = n_rows - row_index
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
 
-        #Extract scores make them negative, calculate flat indexes, and sort
-        scores = band.ReadAsArray(0, row_index, n_cols, row_strides).flatten()
-        scores *= score_weight  # scale the results
-        col_indexes = numpy.tile(numpy.arange(n_cols), (row_strides, 1))
-        row_offsets = numpy.arange(row_index, row_index+row_strides) * n_cols
-        row_offsets.resize((row_strides, 1))
+            scores = band.ReadAsArray(
+                xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
+                win_ysize=row_block_width).flatten()
 
-        flat_indexes = (col_indexes + row_offsets).flatten()
+            scores *= score_weight  # scale the results
 
-        sort_index = scores.argsort()
-        sorted_scores = scores[sort_index]
-        sorted_indexes = flat_indexes[sort_index]
+            col_coords, row_coords = numpy.meshgrid(
+                xrange(col_offset, col_offset + col_block_width),
+                xrange(row_offset, row_offset + row_block_width))
 
-        #Determine where the nodata values are so we can splice them out
-        left_index = numpy.searchsorted(sorted_scores, nodata, side='left')
-        right_index = numpy.searchsorted(sorted_scores, nodata, side='right')
+            flat_indexes = (col_coords + row_coords * n_cols).flatten()
 
-        #Splice out the nodata values and order the array in descreasing order
-        sorted_scores = numpy.concatenate(
-            (sorted_scores[0:left_index], sorted_scores[right_index::]))
-        sorted_indexes = numpy.concatenate(
-            (sorted_indexes[0:left_index], sorted_indexes[right_index::]))
+            sort_index = scores.argsort()
+            sorted_scores = scores[sort_index]
+            sorted_indexes = flat_indexes[sort_index]
 
-        #Dump all the scores and indexes to disk
-        sort_file = tempfile.NamedTemporaryFile(delete=False)
-        for score, index in zip(sorted_scores, sorted_indexes):
-            sort_file.write(struct.pack('fi', score, index))
+            # search for nodata values are so we can splice them out
+            left_index = numpy.searchsorted(sorted_scores, nodata, side='left')
+            right_index = numpy.searchsorted(
+                sorted_scores, nodata, side='right')
 
-        #Get the filename and register a command to delete it after the
-        #interpreter exits
-        sort_file_name = sort_file.name
-        sort_file.close()
+            #  remove nodata values and sort in descreasing order
+            sorted_scores = numpy.concatenate(
+                (sorted_scores[0:left_index], sorted_scores[right_index::]))
+            sorted_indexes = numpy.concatenate(
+                (sorted_indexes[0:left_index], sorted_indexes[right_index::]))
 
-        def _remove_file(path):
-            """Function to remove a file and handle exceptions to register
-                in atexit."""
-            try:
-                os.remove(path)
-            except OSError:
-                # This happens if the file didn't exist, which is okay because
-                # maybe we deleted it in a method
-                pass
-        atexit.register(_remove_file, sort_file_name)
+            while sorted_scores.size + valid_index > score_cache.size:
+                elements_open = (
+                    score_cache.size - (sorted_scores.size + valid_index))
+                score_cache[valid_index:] = sorted_scores[:elements_open]
+                flat_index_cache[valid_index:] = sorted_indexes[:elements_open]
 
-        iters.append(_read_score_index_from_disk(sort_file_name))
+
+                # sort the whole bunch to disk
+                sort_index = score_cache.argsort()
+                score_cache[:] = score_cache[sort_index]
+                flat_index_cache[:] = flat_index_cache[sort_index]
+
+                #Dump all the scores and indexes to disk
+                sort_file = tempfile.NamedTemporaryFile(delete=False)
+                for score, index in zip(score_cache, flat_index_cache):
+                    sort_file.write(struct.pack('fi', score, index))
+
+
+                # dump the rest of the elements that didn't get sorted into
+                # the cache for the next iteration
+                valid_index = 0
+                score_cache[:elements_open] = sorted_scores[elements_open:]
+                flat_index_cache[:elements_open] = (
+                    sorted_indexes[elements_open:])
+
+                #Get the filename and register a command to delete it after the
+                #interpreter exits
+                sort_file_name = sort_file.name
+                sort_file.close()
+
+                def _remove_file(path):
+                    """Function to remove a file and handle exceptions to
+                        register in atexit."""
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        # This happens if the file didn't exist, okay because
+                        # maybe we deleted it in a method
+                        pass
+                atexit.register(_remove_file, sort_file_name)
+
+                iters.append(_read_score_index_from_disk(sort_file_name))
 
     return heapq.merge(*iters)
 
