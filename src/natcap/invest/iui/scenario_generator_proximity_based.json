@@ -70,7 +70,7 @@
           "args_id": "area_to_convert",
           "type": "text",
           "label": "Max area to convert (Ha)",
-          "defaultValue": "4000.0",
+          "defaultValue": "20000.0",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$"
         },
@@ -93,8 +93,8 @@
           "required": true
         },
         {
-          "id": "new_landcover_code",
-          "args_id": "new_landcover_code",
+          "id": "replacment_lucode",
+          "args_id": "replacment_lucode",
           "type": "text",
           "label": "Replacement Landcover Code (int)",
           "defaultValue": "12",
@@ -105,19 +105,19 @@
           "id": "convert_toward_base_edge",
           "args_id": "convert_toward_base_edge",
           "type": "checkbox",
-          "label": "Convert Toward Base Edge",
-          "defaultValue": false,
+          "label": "Convert Furthest from Base Edge to Nearest",
+          "defaultValue": true,
           "required": false,
-          "helpText": "This scenario converts the convertible landcover types starting at the furthest pixel away from the edge of the base landcover types and works inward."
+          "helpText": "This scenario converts the convertible landcover types starting at the furthest pixel from the closest base landcover types and moves inward."
         },
         {
           "id": "convert_from_base_edge",
           "args_id": "convert_from_base_edge",
           "type": "checkbox",
-          "label": "Convert From Base Edge",
-          "defaultValue": false,
+          "label": "Convert Nearest to Base Edge to Furthest",
+          "defaultValue": true,
           "required": false,
-          "helpText": "This scenario converts the convertible landcover types starting at the closest the edge of the base landcover types and works outward."
+          "helpText": "This scenario converts the convertible landcover types starting at the closest pixel in the base landcover types and moves outward."
         },
         {
           "id": "n_fragmentation_steps",

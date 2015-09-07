@@ -32,19 +32,36 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['base_lulc_uri'] (string): path to the base landcover map
-        args['agriculture_lu_code'] (string or int): agriculture landcover code
+        args['replacment_lucode'] (string or int): code to replace when
+            converting pixels
         args['area_to_convert'] (string or float): max area (Ha) to convert
-        args['forest_landcover_types'] (string): a space separated string of
-            forest landcover codes found in `args['base_lulc_uri']`
+        args['base_landcover_types'] (string): a space separated string of
+            landcover codes that are used to determine the proximity when
+            refering to "towards" or "away" from the base landcover types
+        args['convertable_landcover_types'] (string): a space separated string
+            of landcover codes that can be converted in the generation phase
+            found in `args['base_lulc_uri']`.
         args['n_fragmentation_steps'] (string): an int as a string indicating
             the number of steps to take for the fragmentation conversion
         args['aoi_uri'] (string): (optional) path to a shapefile that indicates
             an area of interest.  If present, the expansion scenario operates
             only under that AOI and the output raster is clipped to that shape.
+        args['convert_toward_base_edge'] (boolean): if True will run the
+            conversion simulation starting from the furthest pixel from the
+            edge and work inwards.  Workspace will contain output files named
+            'toward_base{suffix}.{tif,csv}.
+        args['convert_from_base_edge'] (boolean): if True will run the
+            conversion simulation starting from the nearest pixel on the
+            edge and work inwards.  Workspace will contain output files named
+            'toward_base{suffix}.{tif,csv}.
 
     Returns:
         None.
     """
+
+    if (not args['convert_toward_base_edge'] and
+            not args['convert_from_base_edge']):
+        raise ValueError("Neither scenario was selected.")
 
     # append a _ to the suffix if it's not empty and doesn't already have one
     try:
@@ -63,13 +80,13 @@ def execute(args):
         [output_dir, intermediate_dir, tmp_dir])
 
     area_to_convert = float(args['area_to_convert'])
-    ag_lucode = int(args['agriculture_lu_code'])
+    replacement_lucode = int(args['replacment_lucode'])
 
     # convert all the input strings to lists of ints
     convertable_type_list = numpy.array([
         int(x) for x in args['convertable_landcover_types'].split()])
-    forest_type_list = numpy.array([
-        int(x) for x in args['forest_landcover_types'].split()])
+    base_landcover_types = numpy.array([
+        int(x) for x in args['base_landcover_types'].split()])
 
     if 'aoi_uri' in args and args['aoi_uri'] != '':
         #clip base lulc to a new raster
@@ -91,7 +108,7 @@ def execute(args):
         ag_expanded_uri = os.path.join(
             output_dir, 'ag_expanded%s.tif' % file_suffix)
         _expand_from_ag(
-            base_lulc_uri, ag_lucode, area_to_convert, convertable_type_list,
+            base_lulc_uri, replacement_lucode, area_to_convert, convertable_type_list,
             convertable_distances_uri, ag_mask_uri, ag_expanded_uri, stats_uri)
 
     if args['expand_from_forest_edge']:
@@ -101,7 +118,7 @@ def execute(args):
         stats_uri = os.path.join(
             output_dir, 'forest_edge_expanded_stats%s.csv' % file_suffix)
         _expand_from_forest_edge(
-            base_lulc_uri, ag_lucode, area_to_convert, forest_type_list,
+            base_lulc_uri, replacement_lucode, area_to_convert, base_landcover_types,
             convertable_type_list, forest_edge_expanded_uri, stats_uri)
 
     if args['fragment_forest']:
@@ -111,7 +128,7 @@ def execute(args):
         stats_uri = os.path.join(
             output_dir, 'forest_fragmented_stats%s.csv' % file_suffix)
         _fragment_forest(
-            base_lulc_uri, ag_lucode, area_to_convert, forest_type_list,
+            base_lulc_uri, replacement_lucode, area_to_convert, base_landcover_types,
             convertable_type_list, int(args['n_fragmentation_steps']),
             forest_fragmented_uri, stats_uri)
 
