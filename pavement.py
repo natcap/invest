@@ -35,8 +35,11 @@ import yaml
 # Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
 # --no-use-wheel in favor of --no-binary.  Stable versions of Fedora
 # currently use pip 6.x
+# virtualenv 13.0.0 upgraded pip to 7.0.0, but the older flags still work for
+# now.
 try:
     pkg_resources.require('pip>=7.0.0')
+    pkg_resources.require('virtualenv>=13.0.0')
     NO_WHEEL_SUBPROCESS = "'--no-binary', ':all:'"
     NO_WHEEL_SH = '--no-binary :all:'
 except pkg_resources.VersionConflict:
@@ -1305,7 +1308,7 @@ def check(options):
     requirements = [
         # requirement, level, version_getter, special_install_message
         ('setuptools>=8.0', required, None, None),  # 8.0 implements pep440
-        ('virtualenv', required, None, None),
+        ('virtualenv>=12.0.1', required, None, None),
         ('pip>=6.0.0', required, None, None),
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
