@@ -252,7 +252,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Nutrient Retention (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_nutrient.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Scenario Generator: Rule Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_ag_expansion.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator_proximity_based.bat" "" "${INVEST_ICON}"
 
   CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
 
