@@ -329,6 +329,46 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
                 break
             yield struct.unpack('fi', packed_score)
 
+    def _sort_cache_to_iterator(flat_index_cache, score_cache):
+        """Flushes the current cache to a heap and returns it
+
+        Parameters:
+            flat_index_cache (1d numpy.array): contains flat indexes to the
+                score pixels `score_cache`
+            score_cache (1d numpy.array): contains score pixels
+            valid_index (int): maximum index in `flat_index_cache` and
+                `score_cache` that should be flushed to a heap
+
+        Returns:
+            Iterable to visit scores/indexes in increasing score order."""
+
+        # sort the whole bunch to disk
+        sort_index = score_cache.argsort()
+        score_cache = score_cache[sort_index]
+        flat_index_cache = flat_index_cache[sort_index]
+
+        #Dump all the scores and indexes to disk
+        sort_file = tempfile.NamedTemporaryFile(delete=False)
+        for score, index in zip(score_cache, flat_index_cache):
+            sort_file.write(struct.pack('fi', score, index))
+
+        #Get the filename and register a command to delete it after the
+        #interpreter exits
+        sort_file_name = sort_file.name
+        sort_file.close()
+
+        def _remove_file(path):
+            """Function to remove a file and handle exceptions to
+                register in atexit."""
+            try:
+                os.remove(path)
+            except OSError:
+                # This happens if the file didn't exist, okay because
+                # maybe we deleted it in a method
+                pass
+        atexit.register(_remove_file, sort_file_name)
+        return _read_score_index_from_disk(sort_file_name)
+
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
@@ -343,6 +383,7 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
     cols_per_block, rows_per_block = band.GetBlockSize()
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+    n_elements_per_block = cols_per_block * rows_per_block
 
     valid_index = 0
     flat_index_cache = numpy.empty((cache_element_size,), dtype=numpy.float32)
@@ -359,10 +400,15 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
             if col_block_width > cols_per_block:
                 col_block_width = cols_per_block
 
+            # check if we need to flush the cache before reading new elements
+            if n_elements_per_block + valid_index > cache_element_size:
+                iters.append(_sort_cache_to_iterator(
+                    flat_index_cache[:valid_index], score_cache[:valid_index]))
+                valid_index = 0
+
             scores = band.ReadAsArray(
                 xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
                 win_ysize=row_block_width).flatten()
-
             scores *= score_weight  # scale the results
 
             col_coords, row_coords = numpy.meshgrid(
@@ -380,55 +426,21 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
             right_index = numpy.searchsorted(
                 sorted_scores, nodata, side='right')
 
-            #  remove nodata values and sort in descreasing order
+            #  remove nodata values and sort in decreasing order
             sorted_scores = numpy.concatenate(
                 (sorted_scores[0:left_index], sorted_scores[right_index::]))
             sorted_indexes = numpy.concatenate(
                 (sorted_indexes[0:left_index], sorted_indexes[right_index::]))
 
-            while sorted_scores.size + valid_index > score_cache.size:
-                elements_open = (
-                    score_cache.size - (sorted_scores.size + valid_index))
-                score_cache[valid_index:] = sorted_scores[:elements_open]
-                flat_index_cache[valid_index:] = sorted_indexes[:elements_open]
+            # write into the cache
+            score_cache[valid_index:valid_index+sorted_scores.size] = (
+                sorted_scores)
+            flat_index_cache[valid_index:valid_index+sorted_scores.size] = (
+                sorted_indexes)
+            valid_index += sorted_scores.size
 
-
-                # sort the whole bunch to disk
-                sort_index = score_cache.argsort()
-                score_cache[:] = score_cache[sort_index]
-                flat_index_cache[:] = flat_index_cache[sort_index]
-
-                #Dump all the scores and indexes to disk
-                sort_file = tempfile.NamedTemporaryFile(delete=False)
-                for score, index in zip(score_cache, flat_index_cache):
-                    sort_file.write(struct.pack('fi', score, index))
-
-
-                # dump the rest of the elements that didn't get sorted into
-                # the cache for the next iteration
-                valid_index = 0
-                score_cache[:elements_open] = sorted_scores[elements_open:]
-                flat_index_cache[:elements_open] = (
-                    sorted_indexes[elements_open:])
-
-                #Get the filename and register a command to delete it after the
-                #interpreter exits
-                sort_file_name = sort_file.name
-                sort_file.close()
-
-                def _remove_file(path):
-                    """Function to remove a file and handle exceptions to
-                        register in atexit."""
-                    try:
-                        os.remove(path)
-                    except OSError:
-                        # This happens if the file didn't exist, okay because
-                        # maybe we deleted it in a method
-                        pass
-                atexit.register(_remove_file, sort_file_name)
-
-                iters.append(_read_score_index_from_disk(sort_file_name))
-
+    iters.append(_sort_cache_to_iterator(
+        flat_index_cache[:valid_index], score_cache[:valid_index]))
     return heapq.merge(*iters)
 
 
