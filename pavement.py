@@ -1304,7 +1304,7 @@ def check(options):
     print bold("\nChecking python packages")
     requirements = [
         # requirement, level, version_getter, special_install_message
-        ('setuptools>=6.1', required, None, None),
+        ('setuptools>=8.0', required, None, None),  # 8.0 implements pep440
         ('virtualenv', required, None, None),
         ('pip>=6.0.0', required, None, None),
         ('numpy', lib_needed,  None, None),
@@ -1325,6 +1325,8 @@ def check(options):
         #   pip install hg+https://bitbucket.org/jdouglass/wheel@default
         #
         # This requires that you have command-line hg installed.
+        # Setuptools >= 8.0 is required.  Local version notation (+...)
+        # will not work with setuptools < 8.0.
         requirements.append(('wheel>=0.25.0+natcap.1', required, None, (
             'pip install --upgrade hg+https://bitbucket.org/jdouglass/wheel'
         )))
