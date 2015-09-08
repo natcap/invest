@@ -87,7 +87,7 @@
           "id": "convertable_landcover_codes",
           "args_id": "convertable_landcover_codes",
           "type": "text",
-          "label": "Convertable Landcover Codes (list)",
+          "label": "Convertible Landcover Codes (list)",
           "defaultValue": "1 2 3 4 5",
           "validText": "^[0-9 ]+$",
           "required": true
