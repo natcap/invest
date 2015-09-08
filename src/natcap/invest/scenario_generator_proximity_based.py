@@ -94,7 +94,7 @@ def execute(args):
         base_lulc_uri = pygeoprocessing.temporary_filename()
         pygeoprocessing.clip_dataset_uri(
             args['base_lulc_uri'], args['aoi_uri'], base_lulc_uri,
-            assert_projections=True, process_pool=None, all_touched=False)
+            assert_projections=True, all_touched=False)
     else:
         base_lulc_uri = args['base_lulc_uri']
 
