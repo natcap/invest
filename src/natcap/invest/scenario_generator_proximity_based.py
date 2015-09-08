@@ -122,7 +122,7 @@ def execute(args):
 def _convert_landscape(
         base_lulc_uri, replacement_lucode, area_to_convert,
         base_landcover_codes, convertable_type_list, score_weight, n_steps,
-        distance_from_edge_uri, output_landscape_raster_uri, stats_uri):
+        smooth_distance_from_edge_uri, output_landscape_raster_uri, stats_uri):
     """Expands agriculture into convertable codes starting from the furthest
     distance from the edge of the forest, inward.
 
@@ -141,8 +141,8 @@ def _convert_landscape(
             current value of the `base_landcover_codes` pixels in
             `output_landscape_raster_uri`.  On the first step the distance
             is calculated from `base_lulc_uri`.
-        distance_from_edge_uri (string): an intermediate output showing the
-            pixel distance from the edge of the base landcover types
+        smooth_distance_from_edge_uri (string): an intermediate output showing
+            the pixel distance from the edge of the base landcover types
         output_landscape_raster_uri (string): an output raster that will
             contain the final fragmented forest layer.
         stats_uri (string): a path to an output csv that records the number
@@ -160,7 +160,7 @@ def _convert_landscape(
             pygeoprocessing.temporary_filename(),
         'convertable_distances': pygeoprocessing.temporary_filename(),
         'smooth_distance_from_edge': pygeoprocessing.temporary_filename(),
-
+        'distance_from_edge': pygeoprocessing.temporary_filename(),
     }
     _make_gaussian_kernel_uri(1.0, tmp_file_registry['gaussian_kernel'])
 
@@ -230,14 +230,15 @@ def _convert_landscape(
         pygeoprocessing.vectorize_datasets(
             [tmp_file_registry['distance_from_base_mask_edge'],
              tmp_file_registry['distance_from_non_base_mask_edge']],
-            _combine_masks, distance_from_edge_uri,
+            _combine_masks, tmp_file_registry['distance_from_edge'],
             gdal.GDT_Float32, distance_nodata, pixel_size_out, "intersection",
             vectorize_op=False)
 
         # smooth the distance transform to avoid scanline artifacts
         pygeoprocessing.convolve_2d_uri(
-            distance_from_edge_uri, tmp_file_registry['gaussian_kernel'],
-            tmp_file_registry['smooth_distance_from_edge'])
+            tmp_file_registry['distance_from_edge'],
+            tmp_file_registry['gaussian_kernel'],
+            smooth_distance_from_edge_uri)
 
         # turn inside and outside masks into a single mask
         def _mask_to_convertable_codes(distance_from_base_edge, lulc):
@@ -249,8 +250,8 @@ def _convert_landscape(
                 convertable_mask, distance_from_base_edge,
                 convertable_type_nodata)
         pygeoprocessing.vectorize_datasets(
-            [tmp_file_registry['smooth_distance_from_edge'],
-             output_landscape_raster_uri], _mask_to_convertable_codes,
+            [smooth_distance_from_edge_uri, output_landscape_raster_uri],
+            _mask_to_convertable_codes,
             tmp_file_registry['convertable_distances'], gdal.GDT_Float32,
             convertable_type_nodata, pixel_size_out, "intersection",
             vectorize_op=False)
@@ -329,15 +330,13 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
                 break
             yield struct.unpack('fi', packed_score)
 
-    def _sort_cache_to_iterator(flat_index_cache, score_cache):
+    def _sort_cache_to_iterator(index_cache, score_cache):
         """Flushes the current cache to a heap and returns it
 
         Parameters:
-            flat_index_cache (1d numpy.array): contains flat indexes to the
+            index_cache (1d numpy.array): contains flat indexes to the
                 score pixels `score_cache`
             score_cache (1d numpy.array): contains score pixels
-            valid_index (int): maximum index in `flat_index_cache` and
-                `score_cache` that should be flushed to a heap
 
         Returns:
             Iterable to visit scores/indexes in increasing score order."""
@@ -345,12 +344,14 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
         # sort the whole bunch to disk
         sort_index = score_cache.argsort()
         score_cache = score_cache[sort_index]
-        flat_index_cache = flat_index_cache[sort_index]
+        index_cache = index_cache[sort_index]
 
         #Dump all the scores and indexes to disk
         sort_file = tempfile.NamedTemporaryFile(delete=False)
-        for score, index in zip(score_cache, flat_index_cache):
-            sort_file.write(struct.pack('fi', score, index))
+        sort_file.write(
+            struct.pack(
+                'fi' * score_cache.size,
+                *[x for t in zip(score_cache, index_cache) for x in t]))
 
         #Get the filename and register a command to delete it after the
         #interpreter exits
@@ -385,9 +386,8 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
     n_elements_per_block = cols_per_block * rows_per_block
 
-    valid_index = 0
-    flat_index_cache = numpy.empty((cache_element_size,), dtype=numpy.float32)
-    score_cache = numpy.empty((cache_element_size,), dtype=numpy.int32)
+    index_cache = numpy.empty((0,), dtype=numpy.float32)
+    score_cache = numpy.empty((0,), dtype=numpy.int32)
     for row_block_index in xrange(n_row_blocks):
         row_offset = row_block_index * rows_per_block
         row_block_width = n_rows - row_offset
@@ -401,10 +401,10 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
                 col_block_width = cols_per_block
 
             # check if we need to flush the cache before reading new elements
-            if n_elements_per_block + valid_index > cache_element_size:
-                iters.append(_sort_cache_to_iterator(
-                    flat_index_cache[:valid_index], score_cache[:valid_index]))
-                valid_index = 0
+            if index_cache.size + n_elements_per_block > cache_element_size:
+                iters.append(_sort_cache_to_iterator(index_cache, score_cache))
+                index_cache = numpy.empty((0,), dtype=numpy.float32)
+                score_cache = numpy.empty((0,), dtype=numpy.int32)
 
             scores = band.ReadAsArray(
                 xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
@@ -427,20 +427,15 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
                 sorted_scores, nodata, side='right')
 
             #  remove nodata values and sort in decreasing order
-            sorted_scores = numpy.concatenate(
-                (sorted_scores[0:left_index], sorted_scores[right_index::]))
-            sorted_indexes = numpy.concatenate(
-                (sorted_indexes[0:left_index], sorted_indexes[right_index::]))
-
-            # write into the cache
-            score_cache[valid_index:valid_index+sorted_scores.size] = (
-                sorted_scores)
-            flat_index_cache[valid_index:valid_index+sorted_scores.size] = (
-                sorted_indexes)
-            valid_index += sorted_scores.size
+            score_cache = numpy.concatenate(
+                (score_cache, sorted_scores[0:left_index],
+                 sorted_scores[right_index::]))
+            index_cache = numpy.concatenate(
+                (index_cache, sorted_indexes[0:left_index],
+                 sorted_indexes[right_index::]))
 
     iters.append(_sort_cache_to_iterator(
-        flat_index_cache[:valid_index], score_cache[:valid_index]))
+        index_cache, score_cache))
     return heapq.merge(*iters)
 
 
