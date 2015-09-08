@@ -172,7 +172,7 @@ def _convert_landscape(
     pygeoprocessing.vectorize_datasets(
         [base_lulc_uri], lambda x: x, output_landscape_raster_uri,
         gdal.GDT_Int32, lulc_nodata, pixel_size_out, "intersection",
-        vectorize_op=False)
+        vectorize_op=False, datasets_are_pre_aligned=True)
 
     # convert everything furthest from edge for each of n_steps
     pixel_area_ha = (
@@ -211,7 +211,7 @@ def _convert_landscape(
                 [output_landscape_raster_uri], _mask_base_op,
                 tmp_file_registry[mask_id], gdal.GDT_Byte,
                 mask_nodata, pixel_size_out, "intersection",
-                vectorize_op=False)
+                vectorize_op=False, datasets_are_pre_aligned=True)
 
             # create distance transform for the current mask
             pygeoprocessing.distance_transform_edt(
@@ -232,7 +232,7 @@ def _convert_landscape(
              tmp_file_registry['distance_from_non_base_mask_edge']],
             _combine_masks, tmp_file_registry['distance_from_edge'],
             gdal.GDT_Float32, distance_nodata, pixel_size_out, "intersection",
-            vectorize_op=False)
+            vectorize_op=False, datasets_are_pre_aligned=True)
 
         # smooth the distance transform to avoid scanline artifacts
         pygeoprocessing.convolve_2d_uri(
@@ -254,7 +254,7 @@ def _convert_landscape(
             _mask_to_convertable_codes,
             tmp_file_registry['convertable_distances'], gdal.GDT_Float32,
             convertable_type_nodata, pixel_size_out, "intersection",
-            vectorize_op=False)
+            vectorize_op=False, datasets_are_pre_aligned=True)
 
         #Convert a wad of pixels
         _convert_by_score(
@@ -294,7 +294,7 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
                 lucode, stats_cache[lucode] * pixel_area, stats_cache[lucode]])
 
 
-def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
+def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**30):
     """Sorts the non-nodata pixels in the dataset on disk and returns
     an iterable in sorted order.
 
@@ -307,28 +307,38 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
         an iterable that produces (value * score_weight, flat_index) in
         decreasing sorted order by value * score_weight"""
 
-    def _read_score_index_from_disk(file_name, buffer_size=8*10000):
-        """Generator to yield a float/int value from `file_ name`, does
+    def _read_score_index_from_disk(
+            score_file_name, index_file_name, buffer_size=8*10000):
+        """Generator to yield a float/int value from the given filenames.
         reads a buffer of `buffer_size` big before to avoid keeping the
         file open between generations."""
 
-        file_buffer = ''
+        score_buffer = ''
+        index_buffer = ''
         file_offset = 0
-        buffer_offset = 1
+        buffer_offset = 1  # initialize to 1 to trigger the first load
 
         while True:
-            if buffer_offset > len(file_buffer):
-                data_file = open(file_name, 'rb')
-                data_file.seek(file_offset)
-                file_buffer = data_file.read(buffer_size)
-                data_file.close()
+            if buffer_offset > len(score_buffer):
+                score_file = open(score_file_name, 'rb')
+                index_file = open(index_file_name, 'rb')
+                score_file.seek(file_offset)
+                index_file.seek(file_offset)
+
+                score_buffer = score_file.read(buffer_size)
+                index_buffer = index_file.read(buffer_size)
+                score_file.close()
+                index_file.close()
+
                 file_offset += buffer_size
                 buffer_offset = 0
-            packed_score = file_buffer[buffer_offset:buffer_offset+8]
-            buffer_offset += 8
+            packed_score = score_buffer[buffer_offset:buffer_offset+4]
+            packed_index = index_buffer[buffer_offset:buffer_offset+4]
+            buffer_offset += 4
             if not packed_score:
                 break
-            yield struct.unpack('fi', packed_score)
+            yield (struct.unpack('f', packed_score)[0],
+                   struct.unpack('i', packed_index)[0])
 
     def _sort_cache_to_iterator(index_cache, score_cache):
         """Flushes the current cache to a heap and returns it
@@ -347,16 +357,17 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
         index_cache = index_cache[sort_index]
 
         #Dump all the scores and indexes to disk
-        sort_file = tempfile.NamedTemporaryFile(delete=False)
-        sort_file.write(
-            struct.pack(
-                'fi' * score_cache.size,
-                *[x for t in zip(score_cache, index_cache) for x in t]))
+        score_file = tempfile.NamedTemporaryFile(delete=False)
+        score_file.write(struct.pack('%sf' % score_cache.size, *score_cache))
+        index_file = tempfile.NamedTemporaryFile(delete=False)
+        index_file.write(struct.pack('%si' % index_cache.size, *index_cache))
 
         #Get the filename and register a command to delete it after the
         #interpreter exits
-        sort_file_name = sort_file.name
-        sort_file.close()
+        score_file_name = score_file.name
+        score_file.close()
+        index_file_name = index_file.name
+        index_file.close()
 
         def _remove_file(path):
             """Function to remove a file and handle exceptions to
@@ -367,8 +378,9 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=10**5):
                 # This happens if the file didn't exist, okay because
                 # maybe we deleted it in a method
                 pass
-        atexit.register(_remove_file, sort_file_name)
-        return _read_score_index_from_disk(sort_file_name)
+        atexit.register(_remove_file, score_file_name)
+        atexit.register(_remove_file, index_file_name)
+        return _read_score_index_from_disk(score_file_name, index_file_name)
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
@@ -553,8 +565,7 @@ def _convert_by_score(
     dirty_blocks = set()
 
     last_time = time.time()
-    for _, flatindex in _sort_to_disk(
-            score_uri, score_weight=score_weight):
+    for _, flatindex in _sort_to_disk(score_uri, score_weight=score_weight):
         if pixels_converted >= max_pixels_to_convert:
             break
         col_index = flatindex % n_cols
