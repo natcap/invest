@@ -294,7 +294,7 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
                 lucode, stats_cache[lucode] * pixel_area, stats_cache[lucode]])
 
 
-def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**30):
+def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
     """Sorts the non-nodata pixels in the dataset on disk and returns
     an iterable in sorted order.
 
@@ -308,7 +308,7 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**30):
         decreasing sorted order by value * score_weight"""
 
     def _read_score_index_from_disk(
-            score_file_name, index_file_name, buffer_size=8*10000):
+            score_file_name, index_file_name, buffer_size=4*10000):
         """Generator to yield a float/int value from the given filenames.
         reads a buffer of `buffer_size` big before to avoid keeping the
         file open between generations."""
@@ -453,7 +453,7 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**30):
 
 def _convert_by_score(
         score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
-        stats_cache, score_weight, cache_size=50000):
+        stats_cache, score_weight, cache_size=2**24):
     """Takes an input score layer and changes the pixels in `out_raster_uri`
     and converts up to `max_pixels_to_convert` them to `convert_value` type.
 
