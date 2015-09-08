@@ -1278,6 +1278,7 @@ def check(options):
         ('git', 'binaries'),
         ('make', 'documentation'),
         ('pdflatex', 'documentation'),
+        ('pandoc', 'documentation'),
     ]
     if platform.system() == 'Linux':
         programs.append(('fpm', 'installers'))
