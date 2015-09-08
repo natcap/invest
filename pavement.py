@@ -1,5 +1,4 @@
 import argparse
-import collections
 import distutils
 import getpass
 import glob
@@ -111,7 +110,8 @@ paver.easy.options(
         with_invest=False,
         requirements='',
         bootstrap_file='bootstrap.py',
-        dev=False
+        dev=False,
+        with_pygeoprocessing=False
     ),
     build_docs=Bunch(
         force_dev=False,
@@ -323,6 +323,7 @@ REPOS_DICT = {
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
     'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
     'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
+    'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
 }
 REPOS = REPOS_DICT.values()
 
@@ -501,6 +502,7 @@ def dev_env(options):
     Setup a development environment with:
         * access to system-site-packages
         * InVEST installed
+        * pygeoprocessing installed
 
     Saved to test_env, or the envname of choice.  If an env of the same name
     exists, clear out the existing env.
@@ -509,6 +511,7 @@ def dev_env(options):
         'system_site_packages': True,
         'clear': True,
         'with_invest': not options.dev_env.noinvest,
+        'with_pygeoprocessing': True,
         'envname': options.dev_env.envname,
         'dev': True,
     })
@@ -520,6 +523,8 @@ def dev_env(options):
     ('clear', '', 'Clear out the non-root install and start from scratch.'),
     ('envname=', 'e', ('The name of the environment to use')),
     ('with-invest', '', 'Install the current version of InVEST into the env'),
+    ('with-pygeoprocessing', '', ('Install the current version of '
+                                  'pygeoprocessing into the env')),
     ('requirements=', 'r', 'Install requirements from a file'),
     ('dev', 'd', ('Install InVEST namespace packages as flat eggs instead of '
                   'in a single folder hierarchy.  Better for development, '
@@ -529,6 +534,12 @@ def env(options):
     """
     Set up a virtualenv for the project.
     """
+
+    call_task('check_repo', options={
+        'force-dev': False,
+        'repo': 'src/pygeoprocessing',
+        'fetch': True,
+    })
 
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
@@ -559,6 +570,13 @@ def after_install(options, home_dir):
         "           os.makedirs(distutils_dir)\n"
         "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
     ).format(src_distutils_cfg=source_file)
+
+    if options.env.with_pygeoprocessing is True:
+        install_string += (
+            "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', './src/pygeoprocessing'])\n"
+        )
+    else:
+        print 'Skipping the installation of pygeoprocessing per user input.'
 
     requirements_files = ['requirements.txt']
     if options.env.requirements not in [None, '']:
@@ -602,7 +620,7 @@ def after_install(options, home_dir):
 
             install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
 
-    if options.with_invest is True:
+    if options.env.with_invest is True:
         # Build an sdist and install it as an egg.  Works better with
         # pyinstaller, it would seem.  Also, namespace packages complicate
         # imports, so installing all natcap pkgs as eggs seems to work as
@@ -736,7 +754,7 @@ def fetch(args, options):
                     desired_repo_revs[repo_obj] = user_rev
 
     for user_requested_repo, target_rev in desired_repo_revs.iteritems():
-        print 'Fetching {path}'.format(path=user_requested_repo)
+        print 'Fetching {path}'.format(path=user_requested_repo.local_path)
 
         # If the user did not define a target rev, we use the one on disk.
         if target_rev is None:
