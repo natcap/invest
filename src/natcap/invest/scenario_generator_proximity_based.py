@@ -39,7 +39,7 @@ def execute(args):
         args['base_landcover_codes'] (string): a space separated string of
             landcover codes that are used to determine the proximity when
             refering to "towards" or "away" from the base landcover codes
-        args['convertable_landcover_codes'] (string): a space separated string
+        args['convertible_landcover_codes'] (string): a space separated string
             of landcover codes that can be converted in the generation phase
             found in `args['base_lulc_uri']`.
         args['n_fragmentation_steps'] (string): an int as a string indicating
@@ -84,8 +84,8 @@ def execute(args):
     replacement_lucode = int(args['replacment_lucode'])
 
     # convert all the input strings to lists of ints
-    convertable_type_list = numpy.array([
-        int(x) for x in args['convertable_landcover_codes'].split()])
+    convertible_type_list = numpy.array([
+        int(x) for x in args['convertible_landcover_codes'].split()])
     base_landcover_codes = numpy.array([
         int(x) for x in args['base_landcover_codes'].split()])
 
@@ -114,16 +114,16 @@ def execute(args):
             intermediate_dir, basename+'_distance'+file_suffix+'.tif')
         _convert_landscape(
             base_lulc_uri, replacement_lucode, area_to_convert,
-            base_landcover_codes, convertable_type_list, score_weight,
+            base_landcover_codes, convertible_type_list, score_weight,
             int(args['n_fragmentation_steps']), distance_from_edge_uri,
             output_landscape_raster_uri, stats_uri)
 
 
 def _convert_landscape(
         base_lulc_uri, replacement_lucode, area_to_convert,
-        base_landcover_codes, convertable_type_list, score_weight, n_steps,
+        base_landcover_codes, convertible_type_list, score_weight, n_steps,
         smooth_distance_from_edge_uri, output_landscape_raster_uri, stats_uri):
-    """Expands agriculture into convertable codes starting from the furthest
+    """Expands agriculture into convertible codes starting from the furthest
     distance from the edge of the forest, inward.
 
     Parameters:
@@ -134,7 +134,7 @@ def _convert_landscape(
         area_to_convert (float): area (Ha) to convert to agriculture
         base_landcover_codes (list of int): landcover codes that are used to
             calculate proximity
-        convertable_type_list (list of int): landcover codes that are allowable
+        convertible_type_list (list of int): landcover codes that are allowable
             to be converted to agriculture
         n_steps (int): number of steps to convert the landscape.  On each step
             the distance transform will be applied on the
@@ -158,7 +158,7 @@ def _convert_landscape(
         'distance_from_base_mask_edge': pygeoprocessing.temporary_filename(),
         'distance_from_non_base_mask_edge':
             pygeoprocessing.temporary_filename(),
-        'convertable_distances': pygeoprocessing.temporary_filename(),
+        'convertible_distances': pygeoprocessing.temporary_filename(),
         'smooth_distance_from_edge': pygeoprocessing.temporary_filename(),
         'distance_from_edge': pygeoprocessing.temporary_filename(),
     }
@@ -178,7 +178,7 @@ def _convert_landscape(
     pixel_area_ha = (
         pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
     max_pixels_to_convert = int(area_to_convert / pixel_area_ha)
-    convertable_type_nodata = -1
+    convertible_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
     pixels_to_convert = max_pixels_to_convert / n_steps
     stats_cache = collections.defaultdict(int)
@@ -242,19 +242,19 @@ def _convert_landscape(
             smooth_distance_from_edge_uri)
 
         # turn inside and outside masks into a single mask
-        def _mask_to_convertable_codes(distance_from_base_edge, lulc):
+        def _mask_to_convertible_codes(distance_from_base_edge, lulc):
             """masks out the distance transform to a set of given landcover
             codes"""
-            convertable_mask = numpy.in1d(
-                lulc.flatten(), convertable_type_list).reshape(lulc.shape)
+            convertible_mask = numpy.in1d(
+                lulc.flatten(), convertible_type_list).reshape(lulc.shape)
             return numpy.where(
-                convertable_mask, distance_from_base_edge,
-                convertable_type_nodata)
+                convertible_mask, distance_from_base_edge,
+                convertible_type_nodata)
         pygeoprocessing.vectorize_datasets(
             [smooth_distance_from_edge_uri, output_landscape_raster_uri],
-            _mask_to_convertable_codes,
-            tmp_file_registry['convertable_distances'], gdal.GDT_Float32,
-            convertable_type_nodata, pixel_size_out, "intersection",
+            _mask_to_convertible_codes,
+            tmp_file_registry['convertible_distances'], gdal.GDT_Float32,
+            convertible_type_nodata, pixel_size_out, "intersection",
             vectorize_op=False, datasets_are_pre_aligned=True)
 
         #Convert a wad of pixels
@@ -262,7 +262,7 @@ def _convert_landscape(
             'convert %d pixels to lucode %d', pixels_to_convert,
             replacement_lucode)
         _convert_by_score(
-            tmp_file_registry['convertable_distances'], pixels_to_convert,
+            tmp_file_registry['convertible_distances'], pixels_to_convert,
             output_landscape_raster_uri, replacement_lucode, stats_cache,
             score_weight)
 

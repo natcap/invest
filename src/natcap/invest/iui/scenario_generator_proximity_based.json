@@ -84,8 +84,8 @@
           "required": true
         },
         {
-          "id": "convertable_landcover_codes",
-          "args_id": "convertable_landcover_codes",
+          "id": "convertible_landcover_codes",
+          "args_id": "convertible_landcover_codes",
           "type": "text",
           "label": "Convertible Landcover Codes (list)",
           "defaultValue": "1 2 3 4 5",
@@ -127,7 +127,7 @@
           "defaultValue": "1",
           "required": true,
           "validText": "^[0-9]*$",
-          "helpText": "This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover codes.  This can affect the final result if the base types are also convertable types."
+          "helpText": "This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover codes.  This can affect the final result if the base types are also convertible types."
         }
       ]
     }
