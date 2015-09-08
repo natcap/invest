@@ -2121,29 +2121,19 @@ def build(options):
     # Check repositories up front so we can fail early if needed.
     # Here, we're only checking that if a repo exists, not cloning it.
     # The appropriate tasks will clone the repos they need.
-    for repo in REPOS_DICT.values():
-        call_task('check_repo', options={
-            'force_dev': options.build.force_dev,
-            'repo': repo.local_path,
-            'fetch': False,
-        })
+    for repo, skip_condition in [
+                (REPOS_DICT['users-guide'], 'skip_guide'),
+                (REPOS_DICT['invest-data'], 'skip_data'),
+                (REPOS_DICT['invest-2'], 'skip_installer'),
+                (REPOS_DICT['pyinstaller'], 'skip_bin'),
+            ]:
         tracked_rev = repo.tracked_version()
-
-        # if we ARE NOT allowing dev builds and the version differs, fail the
-        # build.  HOWEVER, if the repo has not been checked out, we'll just
-        # clone it later.
-        if options.build.force_dev is False and repo.ischeckedout():
-            if not repo.at_known_rev():
-                current_rev = repo.current_rev()
-                raise BuildFailure(
-                    ('ERROR: %(local_path)s at rev %(cur_rev)s, '
-                     'but expected to be at rev %(exp_rev)s') % {
-                        'local_path': repo.local_path,
-                        'cur_rev': current_rev,
-                        'exp_rev': tracked_rev
-                    })
-        else:
-            print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
+        if getattr(options.build, skip_condition) is False:
+            call_task('check_repo', options={
+                'force_dev': options.build.force_dev,
+                'repo': repo.local_path,
+                'fetch': False,
+            })
         print 'Repo %s is expected to be at rev %s' % (repo.local_path, tracked_rev)
 
     call_task('clean', options=options)
@@ -2334,12 +2324,12 @@ def jenkins_installer(options):
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
     build_options = {}
-    for opt_name, build_opt, needed_repo in [
-            ('nodata', 'skip-data', 'data/invest-data'),
-            ('nodocs', 'skip-docs', 'doc/users-guide'),
-            ('noinstaller', 'skip-installer', 'src/invest-natcap.default'),
-            ('nopython', 'skip-python', None),
-            ('nobin', 'skip-bin', 'src/pyinstaller')]:
+    for opt_name, build_opts, needed_repo in [
+            ('nodata', ['skip_data'], 'data/invest-data'),
+            ('nodocs', ['skip_guide', 'skip_api'], 'doc/users-guide'),
+            ('noinstaller', ['skip_installer'], 'src/invest-natcap.default'),
+            ('nopython', ['skip_python'], None),
+            ('nobin', ['skip_bin'], 'src/pyinstaller')]:
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
@@ -2358,7 +2348,8 @@ def jenkins_installer(options):
                 raise AttributeError
             else:
                 raise Exception('Invalid option: %s' % user_option)
-            build_options[build_opt] = user_option
+            for build_opt in build_opts:
+                build_options[build_opt] = user_option
         except AttributeError:
             print 'Skipping option %s' % opt_name
             pass
