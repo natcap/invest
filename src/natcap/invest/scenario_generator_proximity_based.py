@@ -105,7 +105,7 @@ def execute(args):
     for scenario_enabled, basename, score_weight in scenarios:
         if not scenario_enabled:
             continue
-        LOGGER.info('running %s scenario', basename)
+        LOGGER.info('executing %s scenario', basename)
         output_landscape_raster_uri = os.path.join(
             output_dir, basename+file_suffix+'.tif')
         stats_uri = os.path.join(
@@ -194,6 +194,7 @@ def _convert_landscape(
             pixels_to_convert += pixels_left_to_convert
 
         # create distance transforms for inside and outside the base lulc codes
+        LOGGER.info('create distance transform for current landcover')
         for invert_mask, mask_id, distance_id in [
                 (False, 'non_base_mask', 'distance_from_non_base_mask_edge'),
                 (True, 'base_mask', 'distance_from_base_mask_edge')]:
@@ -257,6 +258,9 @@ def _convert_landscape(
             vectorize_op=False, datasets_are_pre_aligned=True)
 
         #Convert a wad of pixels
+        LOGGER.info(
+            'convert %d pixels to lucode %d', pixels_to_convert,
+            replacement_lucode)
         _convert_by_score(
             tmp_file_registry['convertable_distances'], pixels_to_convert,
             output_landscape_raster_uri, replacement_lucode, stats_cache,
