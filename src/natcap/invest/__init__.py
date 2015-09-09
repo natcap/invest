@@ -9,21 +9,11 @@ import platform
 import sys
 import hashlib
 import json
-import distutils.version
+import pkg_resources
 
 import natcap.versioner
 
-try:
-    import pygeoprocessing
-    REQUIRED_PYGEOPROCESSING_VERSION = '0.3.0a7'
-    if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
-            distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
-        raise Exception(
-            "Requires PyGeoprocessing version at least %s.  "
-            "Current version %s ",
-            REQUIRED_PYGEOPROCESSING_VERSION, pygeoprocessing.__version__)
-except ImportError:
-    pass
+pkg_resources.require('pygeoprocessing>=0.3.0a7')
 
 __version__ = natcap.versioner.get_version('natcap.invest')
 
