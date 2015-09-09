@@ -38,7 +38,7 @@
           "args_id": "lulc_to_globio_table_uri",
           "type": "file",
           "label": "Landcover to GLOBIO Landcover Table (CSV)",
-          "defaultValue": "../globio/input/lulc_conversion_table.csv",
+          "defaultValue": "../globio/lulc_conversion_table.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
@@ -52,7 +52,7 @@
           "args_id": "aoi_uri",
           "type": "file",
           "label": "AOI (Vector) (optional)",
-          "defaultValue": "../globio/input/sub_aoi.shp",
+          "defaultValue": "../globio/sub_aoi.shp",
           "required": false,
           "validateAs": {
             "type": "OGR",
@@ -76,7 +76,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/lulc_2008.tif",
+          "defaultValue": "../globio/lulc_2008.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -84,7 +84,7 @@
           "args_id": "infrastructure_dir",
           "type": "folder",
           "label": "Infrastructure Directory",
-          "defaultValue": "../globio/input/infrastructure_dir",
+          "defaultValue": "../globio/infrastructure_dir",
           "required": true
         },
         {
@@ -92,7 +92,7 @@
           "args_id": "pasture_uri",
           "type": "file",
           "label": "Pasture (Raster)",
-          "defaultValue": "../globio/input/pasture.tif",
+          "defaultValue": "../globio/pasture.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -104,7 +104,7 @@
           "args_id": "potential_vegetation_uri",
           "type": "file",
           "label": "Potential Vegetation (Raster)",
-          "defaultValue": "../globio/input/potential_vegetation.tif",
+          "defaultValue": "../globio/potential_vegetation.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -146,7 +146,7 @@
           "args_id": "msa_parameters_uri",
           "type": "file",
           "label": "MSA Parameter Table (CSV)",
-          "defaultValue": "../globio/input/msa_parameters.csv",
+          "defaultValue": "../globio/msa_parameters.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
