@@ -201,7 +201,7 @@ class Repository(object):
         return tracked_rev
 
     def at_known_rev(self):
-        if self.ischeckedout() is False:
+        if not self.ischeckedout():
             return False
 
         tracked_version = self.format_rev(self.tracked_version())
@@ -247,7 +247,7 @@ class HgRepository(Repository):
 
     def tracked_version(self, convert=True):
         json_version = Repository.tracked_version(self)
-        if convert is False or not os.path.exists(self.local_path):
+        if not convert or not os.path.exists(self.local_path):
             return json_version
         return self._format_log(template='{node}', rev=json_version)
 
@@ -406,7 +406,7 @@ def _repo_is_valid(repo, options):
         print "    paver fetch %s" % repo.local_path
         return False
 
-    if not repo.at_known_rev() and options.force_dev is False:
+    if not repo.at_known_rev() and not options.force_dev:
         current_rev = repo.current_rev()
         print 'ERROR: Revision mismatch in repo %s' % repo.local_path
         print '*****  Repository at rev %s' % current_rev
@@ -461,7 +461,7 @@ def version(options):
         else:
             try:
                 at_known_rev = repo.at_known_rev()
-                if at_known_rev is False:
+                if not at_known_rev:
                     at_known_rev = 'MODIFIED'
             except KeyError:
                 at_known_rev = 'UNTRACKED'
@@ -571,7 +571,7 @@ def after_install(options, home_dir):
         "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
     ).format(src_distutils_cfg=source_file)
 
-    if options.env.with_pygeoprocessing is True:
+    if options.env.with_pygeoprocessing:
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', './src/pygeoprocessing'])\n"
         )
@@ -587,7 +587,7 @@ def after_install(options, home_dir):
     pkg_pip_params = {
         'natcap.versioner': ['-I']
     }
-    if options.env.dev is True:
+    if options.env.dev:
         # I only want to install natcap namespace packages as flat wheels if
         # we're in a development environment (not a build environment).
         # Pyinstaller seems to work best with namespace packages that are all
@@ -620,7 +620,7 @@ def after_install(options, home_dir):
 
             install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
 
-    if options.env.with_invest is True:
+    if options.env.with_invest:
         # Build an sdist and install it as an egg.  Works better with
         # pyinstaller, it would seem.  Also, namespace packages complicate
         # imports, so installing all natcap pkgs as eggs seems to work as
@@ -635,7 +635,7 @@ def after_install(options, home_dir):
             "        invest_sdist = invest_sdist.replace('+', '-')\n"
         )
 
-        if options.env.dev is False:
+        if not options.env.dev:
             install_string += (
                 # Recent versions of pip build wheels by default before installing, but wheel
                 # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
@@ -688,7 +688,7 @@ def after_install(options, home_dir):
     else:
         init_file = os.path.join(options.env.envname, 'lib', 'python2.7', 'site-packages', 'natcap', '__init__.py')
 
-    if options.with_invest is True and options.env.dev is False:
+    if options.with_invest and not options.env.dev:
         # writing this import appears to help pyinstaller find the __path__
         # attribute from a package.  Only write it if InVEST is installed and
         # is installed as a package (not a dev environment)
@@ -1066,7 +1066,7 @@ def build_docs(options):
 
     # If the user has not provided the skip-guide flag, build the User's guide.
     skip_guide = getattr(options, 'skip_guide', False)
-    if skip_guide is False:
+    if not skip_guide:
         call_task('check_repo', options={
             'force_dev': options.build_docs.force_dev,
             'repo': REPOS_DICT['users-guide'].local_path,
@@ -1086,7 +1086,7 @@ def build_docs(options):
         print "Skipping the User's Guide"
 
     skip_api = getattr(options, 'skip_api', False)
-    if skip_api is False:
+    if not skip_api:
         sh('{python} setup.py build_sphinx'.format(python=options.build_docs.python))
         archive_name = archive_template % 'apidocs'
         call_task('zip', args=[archive_name, 'build/sphinx/html', 'apidocs'])
@@ -1114,14 +1114,14 @@ def check_repo(options):
     if repo is None:
         raise BuildFailure('Repo %s is invalid' % repo_path)
 
-    if not repo.ischeckedout() and options.check_repo.fetch is False:
+    if not repo.ischeckedout() and not options.check_repo.fetch:
         print (
             'Repo %s is not checked out. '
             'Use `paver fetch %s`.' % (
                 repo.local_path, repo.local_path))
         return
 
-    if options.check_repo.fetch is True:
+    if options.check_repo.fetch:
         call_task('fetch', args=[repo_path])
 
     if not repo.ischeckedout():
@@ -1130,7 +1130,7 @@ def check_repo(options):
     tracked_rev = repo.format_rev(repo.tracked_version())
     current_rev = repo.current_rev()
     if tracked_rev != current_rev:
-        if options.check_repo.force_dev is False:
+        if not options.check_repo.force_dev:
             raise BuildFailure(
                 ('ERROR: %(local_path)s at rev %(cur_rev)s, '
                     'but expected to be at rev %(exp_rev)s') % {
@@ -1244,7 +1244,7 @@ def _import_namespace_pkg(modname, print_msg=True):
         message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
             mod=modname, ver=version, dir=module_path)
 
-    if print_msg is True:
+    if print_msg:
         print message
 
     return (module, return_type)
@@ -1387,11 +1387,11 @@ def check(options):
                 req=requirement)
         except (pkg_resources.VersionConflict,
                 pkg_resources.DistributionNotFound) as conflict:
-            if hasattr(conflict, 'report') is False:
+            if not hasattr(conflict, 'report'):
                 # Setuptools introduced report() in v6.1
                 print ('{error} Setuptools is very out of date. '
                     'Upgrade and try again'.format(error=ERROR))
-                if options.check.allow_errors is False:
+                if not options.check.allow_errors:
                     raise BuildFailure('Setuptools is very out of date. '
                                     'Upgrade and try again')
 
@@ -1447,7 +1447,7 @@ def check(options):
     try:
         print ""
         print bold("Checking natcap namespace")
-        if options.check.fix_namespace is True:
+        if options.check.fix_namespace:
             print yellow('--fix-namespace provided; Fixing issues as they are'
                          ' encountered')
 
@@ -1462,7 +1462,7 @@ def check(options):
                 noneggs.append(modname)
 
         if len(noneggs) > 0:
-            if options.check.fix_namespace is True:
+            if options.check.fix_namespace:
                 for package in noneggs:
                     print yellow('Reinstalling natcap.%s as egg' % package)
                     sh('pip uninstall -y natcap.{package} > natcap.{package}.log'.format(package=package))
@@ -1489,7 +1489,7 @@ def check(options):
                 warnings_found = True
         elif len(noneggs) == 0 and len(eggs) == 0:
             base_warning = 'WARNING: namespace artifacts found.'
-            if options.check.fix_namespace is True:
+            if options.check.fix_namespace:
                 base_warning += ' Attempting to repair'
             print yellow(base_warning)
 
@@ -1508,7 +1508,7 @@ def check(options):
                     namespace_packages_with_artifacts.add(
                         os.path.basename(namespace_item).split('-')[0])
 
-            if options.check.fix_namespace is True:
+            if options.check.fix_namespace:
                 for namespace_artifact in namespace_artifacts:
                     print yellow('Removing %s' % namespace_artifact)
 
@@ -1545,14 +1545,14 @@ def check(options):
                 setup_uses_versioner = True
                 break
 
-    if setup_uses_versioner is True:
+    if setup_uses_versioner:
         try:
             # If 'versioner' is in eggs, we've already proven that we can
             # import it, so no need to import again.
             if 'versioner' not in eggs:
                 _, _ = _import_namespace_pkg('versioner')
         except ImportError:
-            if options.check.fix_namespace is True:
+            if options.check.fix_namespace:
                 print yellow('natcap.versioner required by setup.py but '
                                 'not found.  Installing.')
                 # Install natcap.versioner
@@ -1581,7 +1581,7 @@ def check(options):
     if errors_found:
         error_string = (' Programs missing and/or package '
                         'requirements not met')
-        if options.check.allow_errors is True:
+        if options.check.allow_errors:
             print red('CRITICAL:') + error_string
             print red('CRITICAL:') + ' Ignoring errors per user request'
         else:
@@ -2150,7 +2150,7 @@ def build(options):
                 (REPOS_DICT['pyinstaller'], 'skip_bin'),
             ]:
         tracked_rev = repo.tracked_version()
-        if getattr(options.build, skip_condition) is False:
+        if not getattr(options.build, skip_condition):
             call_task('check_repo', options={
                 'force_dev': options.build.force_dev,
                 'repo': repo.local_path,
@@ -2179,7 +2179,7 @@ def build(options):
             return os.path.join(options.build.envname, 'Scripts', 'python.exe')
         return os.path.join(options.build.envname, 'bin', 'python')
 
-    if options.build.skip_bin is False:
+    if not options.build.skip_bin:
         call_task('build_bin', options={
             'python': _python(),
             'force_dev': options.build.force_dev,
@@ -2187,13 +2187,13 @@ def build(options):
     else:
         print 'Skipping binaries per user request'
 
-    if options.build.skip_data is False:
+    if not options.build.skip_data:
         call_task('build_data', options=options.build_data)
     else:
         print 'Skipping data per user request'
 
-    if (options.build_docs.skip_api is False or
-            options.build_docs.skip_guide is False):
+    if (not options.build_docs.skip_api or
+            not options.build_docs.skip_guide):
         call_task('build_docs', options={
             'skip_api': options.build_docs.skip_api,
             'skip_guide': options.build_docs.skip_guide,
@@ -2202,7 +2202,7 @@ def build(options):
     else:
         print 'Skipping documentation per user request'
 
-    if options.build.skip_python is False:
+    if not options.build.skip_python:
         # Wheel has an issue with namespace packages on windows.
         # See https://bitbucket.org/pypa/wheel/issues/91
         # I've implemented cgohlke's fix and pushed it to my fork of wheel.
@@ -2221,7 +2221,7 @@ def build(options):
     else:
         print 'Skipping python binaries per user request'
 
-    if options.build.skip_installer is False:
+    if not options.build.skip_installer:
         call_task('build_installer', options=options.build_installer)
     else:
         print 'Skipping installer per user request'
