@@ -227,7 +227,7 @@ def execute(args):
     msa_f_values = sorted(msa_f_table)
 
     def _msa_f_op(primary_veg_smooth):
-        """calcualte msa fragmentation"""
+        """calculate msa fragmentation"""
         nodata_mask = primary_veg_mask_nodata == primary_veg_smooth
 
         msa_f = numpy.empty(primary_veg_smooth.shape)
