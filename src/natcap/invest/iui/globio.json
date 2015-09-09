@@ -1,7 +1,7 @@
 {
   "id": "window",
   "label": "GLOBIO",
-  "targetScript": "natcap.invest.globio.globio",
+  "targetScript": "natcap.invest.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
   "height": 650,
