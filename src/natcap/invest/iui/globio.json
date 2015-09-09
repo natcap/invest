@@ -129,7 +129,7 @@
           "defaultValue": "0.46",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
-          "disabledBy": "predefined_globio"
+          "helpText": "This parameter linearly interpolates the MSA_LU values between GLOBIO landcover types 8 and 9 to generate a single landcover type 12 that's evaluated across the entire raster."
         },
         {
           "id": "primary_threshold",

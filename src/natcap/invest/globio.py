@@ -17,6 +17,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.globio.globio')
 
+
 def execute(args):
     """Main entry point for GLOBIO model.
 
@@ -68,7 +69,8 @@ def execute(args):
     Returns:
         None"""
 
-    msa_parameter_table = load_msa_parameter_table(args['msa_parameters_uri'])
+    msa_parameter_table = load_msa_parameter_table(
+        args['msa_parameters_uri'], float(args['intensification_fraction']))
 
     #append a _ to the suffix if it's not empty and doens't already have one
     try:
@@ -424,11 +426,17 @@ def make_gaussian_kernel_uri(sigma, kernel_uri):
         kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
-def load_msa_parameter_table(msa_parameter_table_filename):
+def load_msa_parameter_table(
+        msa_parameter_table_filename, intensification_fraction):
     """Loads a specifically formatted parameter table into a dictionary that
-        can be used to dymanicaly define the MSA ranges.
+    can be used to dynamically define the MSA ranges.
 
-        msa_parameter_table_filename - (string) path to msa csv table
+    Parameters:
+        msa_parameter_table_filename (string): path to msa csv table
+        intensification_fraction (float): a number between 0 and 1 indicating
+            what level between msa_lu 8 and 9 to define the general GLOBIO
+            code "12" to.
+
 
         returns a dictionary of the form
             {
@@ -451,8 +459,11 @@ def load_msa_parameter_table(msa_parameter_table_filename):
                     valuea: msa_lu_value, ...
                     valueb: ...
                     '<': (bound, msa_lu_value),
-                    '>': (bound, msa_lu_value)}
-            }"""
+                    '>': (bound, msa_lu_value)
+                    12: (msa_lu_8 * intensification_fraction +
+                         msa_lu_9 * (1.0 - intensification_fraction)}
+            }
+    """
 
     with open(msa_parameter_table_filename, 'rb') as msa_parameter_table_file:
         reader = csv.DictReader(msa_parameter_table_file)
@@ -470,6 +481,9 @@ def load_msa_parameter_table(msa_parameter_table_filename):
                 value = float(line['Value'])
             msa_dict[line['MSA_type']][value] = float(line['MSA_x'])
     # cast back to a regular dict so we get keyerrors on non-existant keys
+    msa_dict['msa_lu'][12] = (
+        msa_dict['msa_lu'][8] * intensification_fraction +
+        msa_dict['msa_lu'][9] * (1.0 - intensification_fraction))
     return dict(msa_dict)
 
 
@@ -506,7 +520,6 @@ def _calculate_globio_lulc_map(
     globio_lulc_uri = os.path.join(
         intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
 
-    intensification_uri = args['intensification_uri']
     potential_vegetation_uri = args['potential_vegetation_uri']
     pasture_uri = args['pasture_uri']
 
@@ -558,23 +571,21 @@ def _calculate_globio_lulc_map(
     #remap globio lulc to an internal lulc based on ag and intensification
     #proportion these came from the 'expansion_scenarios.py'
     pasture_threshold = float(args['pasture_threshold'])
-    intensification_threshold = float(args['intensification_threshold'])
     primary_threshold = float(args['primary_threshold'])
 
     def _create_globio_lulc(
-            lulc_array, intensification, potential_vegetation_array, pasture_array,
+            lulc_array, potential_vegetation_array, pasture_array,
             ffqi):
         """vectorize_dataset op to construct the globio lulc given relevant
             biophysical parameters."""
 
-        #Step 1.2b: Assign high/low according to threshold based on yieldgap.
+        # Step 1.2b: Assign high/low according to threshold based on yieldgap.
         nodata_mask = lulc_array == globio_nodata
-        high_low_intensity_agriculture = numpy.where(
-            intensification < intensification_threshold, 9.0, 8.0)
 
-        #Step 1.2c: Stamp ag_split classes onto input LULC
+        # Step 1.2c: Classify all ag classes as a new LULC value "12" per our
+        # custom design of agriculture
         lulc_ag_split = numpy.where(
-            lulc_array == 132.0, high_low_intensity_agriculture, lulc_array)
+            lulc_array == 132.0, 12, lulc_array)
         nodata_mask = nodata_mask | (lulc_array == globio_nodata)
 
         #Step 1.3a: Split Scrublands and grasslands into pristine
@@ -602,16 +613,16 @@ def _calculate_globio_lulc_map(
         #Step 1.4b: Stamp ag_split classes onto input LULC
         globio_lulc = numpy.where(
             broad_lulc_shrub_split == 130, four_types_of_forest,
-            broad_lulc_shrub_split) #stamp primary vegetation
+            broad_lulc_shrub_split)  # stamp primary vegetation
 
         return numpy.where(nodata_mask, globio_nodata, globio_lulc)
 
     LOGGER.info('create the globio lulc')
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [intermediate_globio_lulc_uri, intensification_uri,
-         potential_vegetation_uri, pasture_uri, ffqi_uri],
-        _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32, globio_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        assert_datasets_projected=False, vectorize_op=False)
+        [intermediate_globio_lulc_uri, potential_vegetation_uri, pasture_uri,
+         ffqi_uri], _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32,
+        globio_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, assert_datasets_projected=False,
+        vectorize_op=False)
 
     return globio_lulc_uri
