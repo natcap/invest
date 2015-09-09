@@ -72,7 +72,7 @@ def execute(args):
     msa_parameter_table = load_msa_parameter_table(
         args['msa_parameters_uri'], float(args['intensification_fraction']))
 
-    #append a _ to the suffix if it's not empty and doens't already have one
+    #append a _ to the suffix if it's not empty and doesn't already have one
     try:
         file_suffix = args['results_suffix']
         if file_suffix != "" and not file_suffix.startswith('_'):
@@ -81,8 +81,9 @@ def execute(args):
         file_suffix = ''
 
     #create working directories
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    output_dir = os.path.join(args['workspace_dir'])
+    intermediate_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_outputs')
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
 
     pygeoprocessing.geoprocessing.create_directories(
@@ -117,8 +118,7 @@ def execute(args):
                         infrastructure_filenames[-1]))
             if filename.lower().endswith(".shp"):
                 infrastructure_tmp_raster = (
-                    os.path.join(tmp_dir, os.path.basename(
-                        filename.lower() + ".tif")))
+                    pygeoprocessing.temporary_filename())
                 pygeoprocessing.geoprocessing.new_raster_from_base_uri(
                     globio_lulc_uri, infrastructure_tmp_raster,
                     'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
@@ -168,6 +168,10 @@ def execute(args):
         infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
+
+    # clean up the temporary filenames
+    for filename in infrastructure_filenames:
+        os.remove(filename)
 
     #calc_msa_f
     primary_veg_mask_uri = os.path.join(
