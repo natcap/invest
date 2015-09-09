@@ -112,18 +112,6 @@
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "intensification_uri",
-          "args_id": "intensification_uri",
-          "type": "file",
-          "label": "Intensification (Raster)",
-          "defaultValue": "../globio/input/intensification_soy.tif",
-          "required": true,
-          "validateAs": {
-            "type": "GDAL"
-          },
-          "disabledBy": "predefined_globio"
-        },
-        {
           "id": "pasture_threshold",
           "args_id": "pasture_threshold",
           "type": "text",
@@ -134,10 +122,10 @@
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "intensification_threshold",
-          "args_id": "intensification_threshold",
+          "id": "intensification_fraction",
+          "args_id": "intensification_fraction",
           "type": "text",
-          "label": "Intensification Threshold",
+          "label": "Fraction of Intensification across Land Use/Cover Raster",
           "defaultValue": "0.46",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
