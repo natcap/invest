@@ -539,7 +539,7 @@ def make_dictionary_from_csv(csv_uri, key_field):
             # if the key / column header begins with 'L_' we can not
             # set that to uppercase, since it will interfere with
             # matching the threat names to the sensitivity table
-            if key[0:2] == 'L_':
+            if key.startswith('L_'):
                 row_upper[key] = row[key]
             else:
                 row_upper[key.upper()] = row[key]
