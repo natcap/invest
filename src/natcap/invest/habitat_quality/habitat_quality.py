@@ -532,17 +532,17 @@ def make_dictionary_from_csv(csv_uri, key_field):
     csv_file = open(csv_uri, 'rU')
     reader = csv.DictReader(csv_file)
     for row in reader:
-	# create new dictionary to hold modified key values for case
-	# handling
-	row_upper = {}
-	for key in row.keys():
-		# if the key / column header begins with 'L_' we can not
-		# set that to uppercase, since it will interfere with
-		# matching the threat names to the sensitivity table
-		if key[0:1] = 'L_':
-			row_upper[key] = row[key]
-		else:
-			row_upper[key.upper()] = row[key]
+        # create new dictionary to hold modified key values for case
+        # handling
+        row_upper = {}
+        for key in row.keys():
+            # if the key / column header begins with 'L_' we can not
+            # set that to uppercase, since it will interfere with
+            # matching the threat names to the sensitivity table
+            if key[0:2] == 'L_':
+                row_upper[key] = row[key]
+            else:
+                row_upper[key.upper()] = row[key]
 
 	out_dict[row_upper[key_field]] = row_upper
     csv_file.close()
