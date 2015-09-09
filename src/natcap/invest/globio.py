@@ -20,51 +20,53 @@ LOGGER = logging.getLogger('natcap.invest.globio.globio')
 def execute(args):
     """Main entry point for GLOBIO model.
 
-        The model operates in two modes.  Mode (a) generates a landcover map
-            based on a base landcover map and information about crop yields,
-            infrastructure, and more.  Mode (b) assumes the globio landcover
-            map is generated.  These modes are used below to describe input
-            parameters.
+    The model operates in two modes.  Mode (a) generates a landcover map
+    based on a base landcover map and information about crop yields,
+    infrastructure, and more.  Mode (b) assumes the globio landcover
+    map is generated.  These modes are used below to describe input
+    parameters.
 
-        args['workspace_dir'] - (string) output directory for intermediate,
+    Parameters:
+
+        args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
-        args['predefined_globio'] - (boolean) if True then "mode (b)" else
+        args['predefined_globio'] (boolean): if True then "mode (b)" else
             "mode (a)"
-        args['results_suffix'] - (optional) (string) string to append to any
+        args['results_suffix'] (string): (optional) string to append to any
             output files
-        args['lulc_uri'] - (string) used in "mode (a)" path to a base landcover
+        args['lulc_uri'] (string): used in "mode (a)" path to a base landcover
             map with integer codes
-        args['lulc_to_globio_table_uri'] - (string) used in "mode (a)" path to
+        args['lulc_to_globio_table_uri'] (string): used in "mode (a)" path to
             table that translates the land-cover args['lulc_uri'] to
             intermediate GLOBIO classes, from which they will be further
-            differentiated using the additional data in the model.
+            differentiated using the additional data in the model.  Contains
+            at least the following fields:
 
-                'lucode': Land use and land cover class code of the dataset
-                    used. LULC codes match the 'values' column in the LULC
-                    raster of mode (b) and must be numeric and unique.
-                'globio_lucode': The LULC code corresponding to the GLOBIO class
-                    to which it should be converted, using intermediate codes
-                    described in the example below.
+            'lucode': Land use and land cover class code of the dataset
+                used. LULC codes match the 'values' column in the LULC
+                raster of mode (b) and must be numeric and unique.
+            'globio_lucode': The LULC code corresponding to the GLOBIO class
+                to which it should be converted, using intermediate codes
+                described in the example below.
 
-        args['infrastructure_dir'] - (string) used in "mode (a)" a path to a
+        args['infrastructure_dir'] (string): used in "mode (a)" a path to a
             folder containing maps of any forms of infrastructure to
-            consider in the calculation of MSAI. These data may be in either
+            consider in the calculation of MSA. These data may be in either
             raster or vector format.
-        args['pasture_uri'] - (string) used in "mode (a)" path to pasture raster
-        args['potential_vegetation_uri'] - (string) used in "mode (a)" path to
+        args['pasture_uri'] (string): used in "mode (a)" path to pasture raster
+        args['potential_vegetation_uri'] (string): used in "mode (a)" path to
             potential vegetation raster
-        args['intensification_uri'] - (string) used in "mode (a)" a path to
-            intensification raster
-        args['pasture_threshold'] - (float) used in "mode (a)"
-        args['intensification_threshold'] - (float) used in "mode (a)"
-        args['primary_threshold'] - (float) used in "mode (a)"
-        args['msa_parameters_uri'] - (string) path to MSA classification
+        args['pasture_threshold'] (float): used in "mode (a)"
+        args['intensification_fraction'] (float): used in "mode (a)"
+        args['primary_threshold'] (float): used in "mode (a)"
+        args['msa_parameters_uri'] (string): path to MSA classification
             parameters
-        args['aoi_uri'] - (string) (optional) if it exists then final MSA raster
+        args['aoi_uri'] (string): (optional) if it exists then final MSA raster
             is summarized by AOI
-        args['globio_lulc_uri'] - (string) used in "mode (b)" path to predefined
+        args['globio_lulc_uri'] (string): used in "mode (b)" path to predefined
             globio raster.
-    """
+    Returns:
+        None"""
 
     msa_parameter_table = load_msa_parameter_table(args['msa_parameters_uri'])
 
