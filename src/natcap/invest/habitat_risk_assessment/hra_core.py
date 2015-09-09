@@ -407,7 +407,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
     plt.savefig(out_uri, format='png')
-    # Clearing the state of the axes / figures so we don't accumulate 
+    # Clearing the state of the axes / figures so we don't accumulate
     # duplicate information when creating plots in this function
     plt.cla()
     plt.clf()

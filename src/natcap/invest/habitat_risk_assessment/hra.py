@@ -402,9 +402,9 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             '''Since the stressor is buffered, we actually want to make sure to
             preserve that value. If there is an overlap, return s value.'''
 
-	    return np.where(
-		((h_pix != h_nodata) & (s_pix != s_nodata)), s_pix, h_nodata)
-		
+            return np.where(
+                ((h_pix != h_nodata) & (s_pix != s_nodata)), s_pix, h_nodata)
+
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
@@ -418,7 +418,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             resample_method_list=None,
             dataset_to_align_index=None,
             aoi_uri=None,
-	    vectorize_op=False)
+            vectorize_op=False)
 
         h_s_c[pair]['DS'] = out_uri
         h_s_e[pair]['DS'] = out_uri
@@ -942,8 +942,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 # If there is no overlap, just return whatever is underneath.
                 # It will either be the value of that patial region or nodata
-	    	return np.where(
-			(base_pix != base_nodata), spat_pix, base_nodata)
+                return np.where(
+                    (base_pix != base_nodata), spat_pix, base_nodata)
 
             out_uri = os.path.join(dir, filename + '.tif')
 
@@ -958,7 +958,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 resample_method_list=None,
                 dataset_to_align_index=0,
                 aoi_uri=None,
-		vectorize_op=False)
+                vectorize_op=False)
 
             if c_name in h_s_c[pair]['Crit_Rasters']:
                 h_s_c[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
@@ -1017,10 +1017,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 # If there is no overlap, just return whatever is underneath.
                 # It will either be the value of that patial region or nodata
-		return np.where(
-			(base_pix != base_nodata), spat_pix, base_nodata)
-            
-	    out_uri = os.path.join(dir, filename + '.tif')
+                return np.where(
+                    (base_pix != base_nodata), spat_pix, base_nodata)
+
+            out_uri = os.path.join(dir, filename + '.tif')
 
             pygeoprocessing.geoprocessing.vectorize_datasets(
                 [base_uri, out_uri_pre_overlap],
@@ -1032,7 +1032,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 "union",
                 resample_method_list=None,
                 dataset_to_align_index=0, aoi_uri=None,
-		vectorize_op=False)
+                vectorize_op=False)
 
             if c_name in habitats[h]['Crit_Rasters']:
                 habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
@@ -1090,10 +1090,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 # If there is no overlap, just return whatever is underneath.
                 # It will either be the value of that patial region or nodata
-		return np.where(
-			(base_pix != base_nodata), spat_pix, base_nodata)
-            
-	    out_uri = os.path.join(dir, filename + '.tif')
+                return np.where(
+                    (base_pix != base_nodata), spat_pix, base_nodata)
+
+            out_uri = os.path.join(dir, filename + '.tif')
 
             pygeoprocessing.geoprocessing.vectorize_datasets(
                 [base_uri, out_uri_pre_overlap],
@@ -1105,7 +1105,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 "union",
                 resample_method_list=None,
                 dataset_to_align_index=0, aoi_uri=None,
-		vectorize_op=False)
+                vectorize_op=False)
 
             if c_name in h_s_e[pair]['Crit_Rasters']:
                 h_s_e[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
