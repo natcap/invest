@@ -1,5 +1,9 @@
 .. :changelog:
 
+3.3.0
+=====
+* Fixed a crash with the NDR model that could occur if the DEM and landcover maps were different resolutions.
+
 3.2.1
 =====
 * Turning setuptools' zip_safe to False for consistency across the Natcap Namespace.
