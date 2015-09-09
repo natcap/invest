@@ -75,10 +75,10 @@
           "validText": "^[0-9]+\\.?[0-9]*$"
         },
         {
-          "id": "base_landcover_codes",
-          "args_id": "base_landcover_codes",
+          "id": "focal_landcover_codes",
+          "args_id": "focal_landcover_codes",
           "type": "text",
-          "label": "Base Landcover Codes (list)",
+          "label": "Focal Landcover Codes (list)",
           "defaultValue": "1 2 3 4 5",
           "validText": "^[0-9 ]+$",
           "required": true
@@ -102,19 +102,19 @@
           "validText": "^[0-9]+$"
         },
         {
-          "id": "convert_toward_base_edge",
-          "args_id": "convert_toward_base_edge",
+          "id": "convert_farthest_from_edge",
+          "args_id": "convert_farthest_from_edge",
           "type": "checkbox",
-          "label": "Convert Toward Edge",
+          "label": "Farthest from edge",
           "defaultValue": true,
           "required": false,
           "helpText": "This scenario converts the convertible landcover codes starting at the furthest pixel from the closest base landcover codes and moves inward."
         },
         {
-          "id": "convert_from_base_edge",
-          "args_id": "convert_from_base_edge",
+          "id": "convert_nearest_to_edge",
+          "args_id": "convert_nearest_to_edge",
           "type": "checkbox",
-          "label": "Convert From Edge",
+          "label": "Nearest to edge",
           "defaultValue": true,
           "required": false,
           "helpText": "This scenario converts the convertible landcover codes starting at the closest pixel in the base landcover codes and moves outward."
@@ -123,7 +123,7 @@
           "id": "n_fragmentation_steps",
           "args_id": "n_fragmentation_steps",
           "type": "text",
-          "label": "Number of Steps Toward Conversion",
+          "label": "Number of Steps in Conversion",
           "defaultValue": "1",
           "required": true,
           "validText": "^[0-9]*$",

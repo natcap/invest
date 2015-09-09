@@ -36,7 +36,7 @@ def execute(args):
         args['replacment_lucode'] (string or int): code to replace when
             converting pixels
         args['area_to_convert'] (string or float): max area (Ha) to convert
-        args['base_landcover_codes'] (string): a space separated string of
+        args['focal_landcover_codes'] (string): a space separated string of
             landcover codes that are used to determine the proximity when
             refering to "towards" or "away" from the base landcover codes
         args['convertible_landcover_codes'] (string): a space separated string
@@ -47,11 +47,11 @@ def execute(args):
         args['aoi_uri'] (string): (optional) path to a shapefile that indicates
             an area of interest.  If present, the expansion scenario operates
             only under that AOI and the output raster is clipped to that shape.
-        args['convert_toward_base_edge'] (boolean): if True will run the
+        args['convert_farthest_from_edge'] (boolean): if True will run the
             conversion simulation starting from the furthest pixel from the
             edge and work inwards.  Workspace will contain output files named
             'toward_base{suffix}.{tif,csv}.
-        args['convert_from_base_edge'] (boolean): if True will run the
+        args['convert_nearest_to_edge'] (boolean): if True will run the
             conversion simulation starting from the nearest pixel on the
             edge and work inwards.  Workspace will contain output files named
             'toward_base{suffix}.{tif,csv}.
@@ -60,8 +60,8 @@ def execute(args):
         None.
     """
 
-    if (not args['convert_toward_base_edge'] and
-            not args['convert_from_base_edge']):
+    if (not args['convert_farthest_from_edge'] and
+            not args['convert_nearest_to_edge']):
         raise ValueError("Neither scenario was selected.")
 
     # append a _ to the suffix if it's not empty and doesn't already have one
@@ -86,8 +86,8 @@ def execute(args):
     # convert all the input strings to lists of ints
     convertible_type_list = numpy.array([
         int(x) for x in args['convertible_landcover_codes'].split()])
-    base_landcover_codes = numpy.array([
-        int(x) for x in args['base_landcover_codes'].split()])
+    focal_landcover_codes = numpy.array([
+        int(x) for x in args['focal_landcover_codes'].split()])
 
     if 'aoi_uri' in args and args['aoi_uri'] != '':
         #clip base lulc to a new raster
@@ -99,8 +99,8 @@ def execute(args):
         base_lulc_uri = args['base_lulc_uri']
 
     scenarios = [
-        (args['convert_toward_base_edge'], 'toward_edge', -1.0),
-        (args['convert_from_base_edge'], 'from_edge', 1.0)]
+        (args['convert_farthest_from_edge'], 'farthest_from_edge', -1.0),
+        (args['convert_nearest_to_edge'], 'nearest_to_edge', 1.0)]
 
     for scenario_enabled, basename, score_weight in scenarios:
         if not scenario_enabled:
@@ -114,14 +114,14 @@ def execute(args):
             intermediate_dir, basename+'_distance'+file_suffix+'.tif')
         _convert_landscape(
             base_lulc_uri, replacement_lucode, area_to_convert,
-            base_landcover_codes, convertible_type_list, score_weight,
+            focal_landcover_codes, convertible_type_list, score_weight,
             int(args['n_fragmentation_steps']), distance_from_edge_uri,
             output_landscape_raster_uri, stats_uri)
 
 
 def _convert_landscape(
         base_lulc_uri, replacement_lucode, area_to_convert,
-        base_landcover_codes, convertible_type_list, score_weight, n_steps,
+        focal_landcover_codes, convertible_type_list, score_weight, n_steps,
         smooth_distance_from_edge_uri, output_landscape_raster_uri, stats_uri):
     """Expands agriculture into convertible codes starting from the furthest
     distance from the edge of the forest, inward.
@@ -132,13 +132,13 @@ def _convert_landscape(
         replacement_lucode (int): agriculture landcover code type found in the
             raster at `base_lulc_uri`
         area_to_convert (float): area (Ha) to convert to agriculture
-        base_landcover_codes (list of int): landcover codes that are used to
+        focal_landcover_codes (list of int): landcover codes that are used to
             calculate proximity
         convertible_type_list (list of int): landcover codes that are allowable
             to be converted to agriculture
         n_steps (int): number of steps to convert the landscape.  On each step
             the distance transform will be applied on the
-            current value of the `base_landcover_codes` pixels in
+            current value of the `focal_landcover_codes` pixels in
             `output_landscape_raster_uri`.  On the first step the distance
             is calculated from `base_lulc_uri`.
         smooth_distance_from_edge_uri (string): an intermediate output showing
@@ -202,7 +202,7 @@ def _convert_landscape(
             def _mask_base_op(lulc_array):
                 """create a mask of valid non-base pixels only"""
                 base_mask = numpy.in1d(
-                    lulc_array.flatten(), base_landcover_codes).reshape(
+                    lulc_array.flatten(), focal_landcover_codes).reshape(
                         lulc_array.shape)
                 if invert_mask:
                     base_mask = ~base_mask
