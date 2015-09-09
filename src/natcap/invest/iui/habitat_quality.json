@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../HabitatQuality",
+          "defaultValue": "~/Documents/habitat_quality_workspace",
           "required": true,
           "validateAs": {
             "type": "folder"
@@ -41,7 +41,7 @@
           "args_id": "landuse_cur_uri",
           "type": "file",
           "label": "Current Land Cover (Raster)",
-          "defaultValue": "../HabitatQuality/Input/lc_samp_cur_b/w001001.adf",
+          "defaultValue": "../HabitatQuality/lc_samp_cur_b/w001001.adf",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -83,7 +83,7 @@
           "args_id": "threats_uri",
           "type": "file",
           "label": "Threats Data",
-          "defaultValue": "../HabitatQuality/Input/threats_samp.csv",
+          "defaultValue": "../HabitatQuality/threats_samp.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
@@ -136,7 +136,7 @@
           "args_id": "access_uri",
           "type": "file",
           "label": "Accessibility to Threats (Vector) (Optional)",
-          "defaultValue": "../HabitatQuality/Input/access_samp.shp",
+          "defaultValue": "../HabitatQuality/access_samp.shp",
           "required": false,
           "validateAs": {
             "type": "OGR",
@@ -162,7 +162,7 @@
           "args_id": "sensitivity_uri",
           "type": "file",
           "label": "Sensitivity of Land Cover Types to Each Threat, File (CSV)",
-          "defaultValue": "../HabitatQuality/Input/sensitivity_samp.csv",
+          "defaultValue": "../HabitatQuality/sensitivity_samp.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
