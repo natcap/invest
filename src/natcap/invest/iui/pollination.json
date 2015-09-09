@@ -17,7 +17,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../Pollination",
+          "defaultValue": "~/Documents/pollination_workspace",
           "required": true,
           "validateAs": {
             "type": "folder",
