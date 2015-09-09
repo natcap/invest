@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../WindEnergy",
+          "defaultValue": "~/Documents/wind_energy_workspace",
           "required": true,
           "validateAs": {
             "type": "folder"

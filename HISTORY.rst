@@ -1,5 +1,9 @@
 .. :changelog:
 
+3.3.0
+=====
+* Refactored all the InVEST model user interfaces so that Workspace defaults to the user's home "Documents" directory.
+
 3.2.1
 =====
 * Turning setuptools' zip_safe to False for consistency across the Natcap Namespace.
