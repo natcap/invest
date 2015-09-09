@@ -172,12 +172,17 @@ def main():
             return 1
 
     else:
-        matching_models = [model for model in list_models() if
+        known_models = list_models()
+        matching_models = [model for model in known_models if
                            model.startswith(args.model)]
+
+        exact_matches = [model for model in known_models if
+                         model == args.model]
 
         if len(matching_models) == 1:
             modelname = matching_models[0]
-            natcap.invest.iui.modelui.main(modelname + '.json')
+        elif len(exact_matches) == 1:
+            modelname = exact_matches[0]
         elif len(matching_models) == 0:
             print "Error: '%s' not a known model" % args.model
             return 1
@@ -185,6 +190,8 @@ def main():
             print "Model string '%s' is ambiguous:" % args.model
             print '    %s' % ' '.join(matching_models)
             return 2
+
+        natcap.invest.iui.modelui.main(modelname + '.json')
 
 if __name__ == '__main__':
     main()
