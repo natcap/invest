@@ -2,7 +2,7 @@
 
 3.3.0
 =====
-* Refactored all the InVEST model user interfaces so that Workspace defaults to the user's home directory under a directory called "Documents".  The workspace itself is called
+* Refactored all the InVEST model user interfaces so that Workspace defaults to the user's home "Documents" directory.
 
 3.2.1
 =====
