@@ -2,6 +2,7 @@
 
 3.3.0
 =====
+* Introduced a forest carbon edge effect model.
 * Refactored all the InVEST model user interfaces so that Workspace defaults to the user's home "Documents" directory.
 
 3.2.1
