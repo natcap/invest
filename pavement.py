@@ -1305,6 +1305,9 @@ def check(options):
         ('make', 'documentation'),
         ('pdflatex', 'documentation'),
     ]
+    if platform.system() == 'Linux':
+        programs.append(('fpm', 'installers'))
+
     print bold("Checking binaries")
     for program, build_steps in programs:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
@@ -1337,25 +1340,43 @@ def check(options):
     suggested = 'suggested'
     lib_needed = 'lib_needed'
 
-    # (requirement, level, version_getter)
+    # (requirement, level, version_getter, special_install_message)
+    # requirement: This is the setuptools package requirement string.
+    # level: one of required, suggested, lib_needed.
+    # version_getter: some packages are imported by a different name.
+    #    This is that name.  If None, default to the requirement's distname.
+    # special_install_message: A special installation message if needed.
+    #    If None, no special message will be shown after the conflict report.
+    #    This is only for use by required packages.
     print bold("\nChecking python packages")
     requirements = [
-        ('setuptools>=6.1', required, None),
-        ('virtualenv', required, None),
-        ('pip>=6.0.0', required, None),
-        ('numpy', lib_needed, None),
-        ('scipy', lib_needed, None),
-        ('paramiko', suggested, None),
-        ('pycrypto', suggested, 'Crypto'),
-        ('h5py', lib_needed, None),
-        ('gdal', lib_needed, 'osgeo.gdal'),
-        ('shapely', lib_needed, None),
+        # requirement, level, version_getter, special_install_message
+        ('setuptools>=6.1', required, None, None),
+        ('virtualenv', required, None, None),
+        ('pip>=6.0.0', required, None, None),
+        ('numpy', lib_needed,  None, None),
+        ('scipy', lib_needed,  None, None),
+        ('paramiko', suggested, None, None),
+        ('pycrypto', suggested, 'Crypto', None),
+        ('h5py', lib_needed,  None, None),
+        ('gdal', lib_needed,  'osgeo.gdal', None),
+        ('shapely', lib_needed,  None, None),
     ]
 
     # pywin32 is required for pyinstaller builds
     if platform.system() == 'Windows':
+        # Wheel has an issue with namespace packages on windows.
+        # See https://bitbucket.org/pypa/wheel/issues/91
+        # I've implemented cgohlke's fix and pushed it to my fork of wheel.
+        # To install a working wheel package, do this on your windows install:
+        #   pip install hg+https://bitbucket.org/jdouglass/wheel@default
+        #
+        # This requires that you have command-line hg installed.
+        requirements.append(('wheel>=0.25.0+natcap.1', required, None, (
+            'pip install --upgrade hg+https://bitbucket.org/jdouglass/wheel'
+        )))
         try:
-            requirements.append(('pywin32', required, 'pywin'))
+            requirements.append(('pywin32', required, 'pywin', None))
 
             # Get the pywin32 version here, as demonstrated by
             # http://stackoverflow.com/a/5071777.  If we can't import pywin,
@@ -1367,9 +1388,13 @@ def check(options):
             pywin.__version__ = fixed_file_info['FileVersionLS'] >> 16
         except ImportError:
             pass
+    else:
+        # Non-windows OSes also require wheel,just not a special installation
+        # of it.
+        requirements.append(('wheel', required, None, None))
 
     warnings_found = False
-    for requirement, severity, import_name in requirements:
+    for requirement, severity, import_name, install_msg in requirements:
         try:
             pkg_resources.require(requirement)
             pkg_req = pkg_resources.Requirement.parse(requirement)
@@ -1394,8 +1419,13 @@ def check(options):
                                     'Upgrade and try again')
 
             if severity == required:
-                print '{error} {report}'.format(error=ERROR,
-                                                report=conflict.report())
+                if install_msg is None:
+                    install_msg = ''
+                else:
+                    fmt_install_msg = 'Install this package via:\n    ' + install_msg
+                print '{error} {report} \n{msg}'.format(error=ERROR,
+                                                      report=conflict.report(),
+                                                      msg=fmt_install_msg)
                 errors_found = True
             elif severity == lib_needed:
                 if isinstance(conflict, pkg_resources.DistributionNotFound):
@@ -1414,6 +1444,7 @@ def check(options):
                 print '{warning} {report}'.format(warning=WARNING,
                                                   report=conflict.report())
                 warnings_found = True
+
         except ImportError:
             print '{error} Package not found: {req}'.format(error=ERROR,
                                                             req=requirement)

@@ -23,6 +23,7 @@ TOOLS_IN_DEVELOPMENT = set([
     'scenic_quality',
 ])
 
+
 def iui_dir():
     """
     Return the path to the IUI folder.
@@ -39,13 +40,13 @@ def iui_dir():
             # Assume we're in an egg or other binary installation format that
             # doesn't use the plain directory structure.
             basedir = pkg_resources.resource_filename('natcap.invest', 'iui')
-    #print 'BASEDIR: %s' % basedir
     return basedir
 
 
 def load_config():
     """
-    Load configuration options from a config file and assume defaults if they aren't there.
+    Load configuration options from a config file and assume defaults if they
+    aren't there.
     """
 
     try:
@@ -65,6 +66,7 @@ def load_config():
     base_config.update(user_config)
     return base_config
 
+
 def list_models():
     """
     List all models that have .json files defined in the iui dir.
@@ -78,6 +80,7 @@ def list_models():
         model_names.append(json_name)
     return sorted(model_names)
 
+
 def print_models():
     """
     Pretty-print available models.
@@ -90,6 +93,7 @@ def print_models():
         else:
             unstable = ''
         print '    %-30s %s' % (model_name, unstable)
+
 
 def write_console_files(out_dir, extension):
     """
@@ -110,6 +114,7 @@ def write_console_files(out_dir, extension):
         console_file = open(console_filepath)
         console_file.write(content_template % {'model': model_name})
         console_file.close()
+
 
 def main():
     """
@@ -137,9 +142,13 @@ def main():
         'open-source python environment.'),
         prog='invest'
     )
-    parser.add_argument('--version', action='version', version=natcap.invest.__version__)
-    parser.add_argument('--list', action='store_true', help='List available models')
-    parser.add_argument('model', nargs='?', help='The model/tool to run.  Use --list to show available models/tools.')
+    parser.add_argument('--version', action='version',
+                        version=natcap.invest.__version__)
+    parser.add_argument('--list', action='store_true',
+                        help='List available models')
+    parser.add_argument('model', nargs='?', help=(
+        'The model/tool to run. Use --list to show available models/tools. '
+        'Identifiable model prefixes may also be used.'))
 
     args = parser.parse_args()
     user_config = load_config()
@@ -148,7 +157,8 @@ def main():
         print_models()
         return 0
 
-    if args.model not in list_models():
+    # args.model is '' when the user provided no input.
+    if args.model == '':
         parser.print_help()
         print ''
         print_models()
@@ -158,11 +168,30 @@ def main():
 
         args.model = raw_input("Choose a model: ")
         if args.model not in list_models():
-            error_msg = "Error: '%s' not a known model" % args.model
-            print error_msg
+            print "Error: '%s' not a known model" % args.model
             return 1
 
-    natcap.invest.iui.modelui.main(args.model + '.json')
+    else:
+        known_models = list_models()
+        matching_models = [model for model in known_models if
+                           model.startswith(args.model)]
+
+        exact_matches = [model for model in known_models if
+                         model == args.model]
+
+        if len(matching_models) == 1:
+            modelname = matching_models[0]
+        elif len(exact_matches) == 1:
+            modelname = exact_matches[0]
+        elif len(matching_models) == 0:
+            print "Error: '%s' not a known model" % args.model
+            return 1
+        else:
+            print "Model string '%s' is ambiguous:" % args.model
+            print '    %s' % ' '.join(matching_models)
+            return 2
+
+        natcap.invest.iui.modelui.main(modelname + '.json')
 
 if __name__ == '__main__':
     main()
