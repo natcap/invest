@@ -572,8 +572,12 @@ def after_install(options, home_dir):
     ).format(src_distutils_cfg=source_file)
 
     if options.env.with_pygeoprocessing:
+        # install with --no-deps (will otherwise try to install numpy, gdal,
+        # etc.), and -I to ignore any existing pygeoprocessing install (as
+        # might exist in system-site-packages).
         install_string += (
-            "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', './src/pygeoprocessing'])\n"
+            "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
+            "'--no-deps', '-I', './src/pygeoprocessing'])\n"
         )
     else:
         print 'Skipping the installation of pygeoprocessing per user input.'
