@@ -1710,13 +1710,15 @@ def build_bin(options):
         os.path.normpath(os.path.join(options.env.envname, 'lib')))
     if platform.system() != 'Windows':
         env_site_pkgs = os.path.join(env_site_pkgs, 'python2.7')
+    env_site_pkgs = os.path.join(env_site_pkgs, 'site-packages')
     try:
         print "PYTHONPATH: %s" % os.environ['PYTHONPATH']
     except KeyError:
         print "Nothing in 'PYTHONPATH'"
-    sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
+    sh('%(python)s %(pyinstaller)s --clean --noconfirm --paths=%(paths)s invest.spec' % {
         'python': python_exe,
         'pyinstaller': pyinstaller_file,
+        'paths': env_site_pkgs,
     }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
