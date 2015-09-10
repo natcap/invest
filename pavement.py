@@ -2172,6 +2172,7 @@ def build(options):
             'clear': True,
             'envname': options.build.envname,
             'with_invest': True,
+            'with_pygeoprocessing': True,
             'requirements': '',
         })
 
