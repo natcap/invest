@@ -2143,14 +2143,18 @@ def build(options):
     # Check repositories up front so we can fail early if needed.
     # Here, we're only checking that if a repo exists, not cloning it.
     # The appropriate tasks will clone the repos they need.
-    for repo, skip_condition in [
-                (REPOS_DICT['users-guide'], 'skip_guide'),
-                (REPOS_DICT['invest-data'], 'skip_data'),
-                (REPOS_DICT['invest-2'], 'skip_installer'),
-                (REPOS_DICT['pyinstaller'], 'skip_bin'),
+    for repo, taskname, skip_condition in [
+                (REPOS_DICT['users-guide'], 'build_docs', 'skip_guide'),
+                (REPOS_DICT['invest-data'], 'build', 'skip_data'),
+                (REPOS_DICT['invest-2'], 'build', 'skip_installer'),
+                (REPOS_DICT['pyinstaller'], 'build', 'skip_bin'),
             ]:
         tracked_rev = repo.tracked_version()
-        if not getattr(options.build, skip_condition):
+
+        # Options are shared between several tasks, so we need to be sure that
+        # the correction option is bing fetched from the correct task.
+        task_options = getattr(options, taskname)
+        if not getattr(task_options, skip_condition):
             call_task('check_repo', options={
                 'force_dev': options.build.force_dev,
                 'repo': repo.local_path,
