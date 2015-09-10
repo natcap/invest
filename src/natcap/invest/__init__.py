@@ -13,7 +13,12 @@ import pkg_resources
 
 import natcap.versioner
 
-pkg_resources.require('pygeoprocessing>=0.3.0a7')
+try:
+    pkg_resources.require('pygeoprocessing>=0.3.0a7')
+except pkg_resources.DistributionNotFound:
+    # there are times where this is ok ... we only want to actually require
+    # pygeoprocessing when we need to run a model!
+    pass
 
 __version__ = natcap.versioner.get_version('natcap.invest')
 
