@@ -254,6 +254,7 @@ def log_model(model_name, model_args):
         path = "PYRO:natcap.invest.remote_logging@localhost:54321"
         logging_server = Pyro4.Proxy(path)
         logging_server.log_invest_run(payload)
-    except Exception as e:
+    except Exception as exception:
         # An exception was thrown, we don't care.
-        _LOGGER.warn('an exception encountered when logging %s', str(e))
+        _LOGGER.warn(
+            'an exception encountered when logging %s', str(exception))
