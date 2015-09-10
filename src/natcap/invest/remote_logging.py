@@ -41,7 +41,7 @@ class LoggingServer(object):
         ]
     _TABLE_NAME = 'natcap_model_log_table'
     def __init__(self, database_filepath):
-        """Launches a new logger and initalizes an sqlite database at
+        """Launches a new logger and initializes an sqlite database at
         `database_filepath` if not previously defined.
 
         Args:

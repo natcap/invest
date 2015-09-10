@@ -1,5 +1,6 @@
 """init module for natcap.invest"""
 
+import urllib
 import locale
 import os
 import platform
@@ -24,6 +25,8 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 _LOGGER = logging.getLogger('natcap.invest.remote_logging')
+INVEST_USAGE_LOGGER_URL = ('http://data.naturalcapitalproject.org/'
+                           'server_registry/invest_usage_logger/')
 
 
 def is_release():
@@ -251,7 +254,8 @@ def log_model(model_name, model_args):
             'bounding_box_union': str(bounding_box_union)
         }
 
-        path = "PYRO:natcap.invest.remote_logging@localhost:54321"
+        # http://data.naturalcapitalproject.org/server_registry/invest_usage_logger/
+        path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
         logging_server = Pyro4.Proxy(path)
         logging_server.log_invest_run(payload)
     except Exception as exception:
