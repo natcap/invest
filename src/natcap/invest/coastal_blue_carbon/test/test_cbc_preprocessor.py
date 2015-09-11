@@ -75,7 +75,8 @@ class TestCBCPreprocessor(unittest.TestCase):
             os.path.join(
                 self.workspace_dir,
                 'outputs_preprocessor', 'transitions.csv'), 'lulc-class')
-        assert(transition_dict['seagrass']['seagrass'] == 'accum')
+        self.assertEqual(
+            transition_dict['seagrass']['seagrass'], 'accum')
 
     def test_append_legend(self):
         cbc_preprocessor.execute(self.args)
@@ -83,7 +84,7 @@ class TestCBCPreprocessor(unittest.TestCase):
             os.path.join(
                 self.workspace_dir,
                 'outputs_preprocessor', 'transitions.csv'), 'lulc-class')
-        pp.pprint(transition_dict)
+        self.assertTrue('man-made' in transition_dict)
 
     def tearDown(self):
         # remove lookup.csv

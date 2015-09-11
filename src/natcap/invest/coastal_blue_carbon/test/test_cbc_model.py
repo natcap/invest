@@ -135,25 +135,26 @@ class TestCBCModelSimple(unittest.TestCase):
         r.initialize_stock()
         r.run_transient_analysis()
 
-        print "Total Carbon Stock"
-        for i in r.total_carbon_stock_raster_list:
-            print i.get_band(1)[0,0]
-        print "Total Emissions"
-        for i in r.emissions_raster_list:
-            print i.get_band(1)[0,0]
-        print "Total Sequestration"
-        for i in r.sequestration_raster_list:
-            print i.get_band(1)[0,0]
-        print "Net Sequestration"
-        for i in r.net_sequestration_raster_list:
-            print i.get_band(1)[0,0]
-        print "Litter Stock"
-        for i in r.litter_carbon_stock_raster_list:
-            print i.get_band(1)[0,0]
-        print "Net Present Value"
-        print r.npv_raster.get_band(1)[0,0]
+        # print "Total Carbon Stock"
+        # for i in r.total_carbon_stock_raster_list:
+        #     print i.get_band(1)[0,0]
+        # print "Total Emissions"
+        # for i in r.emissions_raster_list:
+        #     print i.get_band(1)[0,0]
+        # print "Total Sequestration"
+        # for i in r.sequestration_raster_list:
+        #     print i.get_band(1)[0,0]
+        # print "Net Sequestration"
+        # for i in r.net_sequestration_raster_list:
+        #     print i.get_band(1)[0,0]
+        # print "Litter Stock"
+        # for i in r.litter_carbon_stock_raster_list:
+        #     print i.get_band(1)[0,0]
+        # print "Net Present Value"
+        # print r.npv_raster.get_band(1)[0,0]
 
-        assert(r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
+        self.assertTrue(
+            r.total_carbon_stock_raster_list[0].get_band(1)[0, 0] == 2.5)
         testing.assert_array_almost_equal(
             r.total_carbon_stock_raster_list[1].get_band(1)[0, 0], 1.03125)
         testing.assert_array_almost_equal(

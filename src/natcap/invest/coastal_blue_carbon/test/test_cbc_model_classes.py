@@ -76,10 +76,8 @@ class TestDisturbedCarbonStock(unittest.TestCase):
             final_soil_stock_disturbed_raster,
             biomass_half_life_raster,
             soil_half_life_raster)
-        print "DisturbedCarbonStock"
-        print d
-        print "EMISSIONS"
-        print d.get_total_emissions_between_years(2000, 2005)
+        self.assertEqual(
+            d.get_total_emissions_between_years(2000, 2005)[0, 0], 0)
 
 
 class TestAccumulatedCarbonStock(unittest.TestCase):
@@ -108,9 +106,12 @@ class TestAccumulatedCarbonStock(unittest.TestCase):
         end_year = 2001
 
         # sequestration between 2001 and 2002
-        assert(a.get_biomass_sequestered_by_year(end_year).get_band(1)[0, 0] == 2)
-        assert(a.get_soil_sequestered_by_year(end_year).get_band(1)[0, 0] == 1)
-        assert(a.get_total_sequestered_by_year(end_year).get_band(1)[0 ,0] == 3)
+        self.assertEqual(
+            a.get_biomass_sequestered_by_year(end_year).get_band(1)[0, 0], 2)
+        self.assertEqual(
+            a.get_soil_sequestered_by_year(end_year).get_band(1)[0, 0], 1)
+        self.assertEqual(
+            a.get_total_sequestered_by_year(end_year).get_band(1)[0, 0], 3)
 
 
 if __name__ == '__main__':

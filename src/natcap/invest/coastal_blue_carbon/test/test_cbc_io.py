@@ -121,7 +121,8 @@ class TestGetInputs(unittest.TestCase):
     def test_get_inputs(self):
         vars_dict = io.get_inputs(self.args)
         # pp.pprint(vars_dict)
-        # add validation here
+        self.assertDictContainsSubset({'discount_rate': '6.0'}, vars_dict)
+        self.assertTrue('lulc_lookup_dict' in vars_dict)
 
     # def test_get_discounted_price_dictionary(self):
     #     discounted_price_dict = io._get_discounted_price_dict(self.args)
