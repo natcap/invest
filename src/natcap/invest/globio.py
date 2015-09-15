@@ -50,10 +50,10 @@ def execute(args):
                 to which it should be converted, using intermediate codes
                 described in the example below.
 
-        args['infrastructure_dir'] (string): used in "mode (a)" a path to a
-            folder containing maps of any forms of infrastructure to
-            consider in the calculation of MSA. These data may be in either
-            raster or vector format.
+        args['infrastructure_dir'] (string): used in "mode (a) and (b)" a path
+            to a folder containing maps of either gdal compatible rasters or
+            OGR compatible shapefiles.  These data will be used in the
+            infrastructure to calculation of MSA.
         args['pasture_uri'] (string): used in "mode (a)" path to pasture raster
         args['potential_vegetation_uri'] (string): used in "mode (a)" path to
             potential vegetation raster
@@ -630,3 +630,23 @@ def _calculate_globio_lulc_map(
         vectorize_op=False)
 
     return globio_lulc_uri
+
+
+def _collapse_infrastructure_layers(infrastructure_dir, infrastructure_uri):
+    """Gathers all the GIS layers in the given directory and collapsese them
+    to a single byte raster mask where 1 indicates a pixel overlapping with
+    one of the original infrastructure layers, 0 does not, and nodata
+    indicates a region that has no layers that overlap but are still contained
+    in the bounding box.
+
+    Parameters:
+        infrastructure_dir (string): path to a directory containing maps of
+            either gdal compatible rasters or OGR compatible shapefiles.
+        infrastructure_uri (string): (output) path to a file that will be a
+            byte raster with 1s everywhere there was a GIS layer present in
+            the GIS layers in `infrastructure_dir`.
+
+    Returns:
+        None
+    """
+    pass
