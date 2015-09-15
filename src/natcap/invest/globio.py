@@ -456,11 +456,23 @@ def _calculate_globio_lulc_map(
         primary_threshold (float): the threshold to classify the calculated
             FFQI pixels into core forest or secondary
         file_suffix - (string) to append on output file
-        intermediate_dir - (string) path to location for temporary files
+        intermediate_dir - (string) path to location for temporary files of
+            which the following files are created
+                'intermediate_globio_lulc.tif': reclassified landcover map to
+                    globio landcover codes
+                'ffqi.tif': index of fragmentation due to infrastructure and
+                    original values of landscape
+                'globio_lulc.tif': primary output of the function, starts
+                    with intermeidate globio and modifies based on the other
+                    biophysical parameters to the function as described in the
+                    GLOBIO process
+
         tmp_dir - (string) path to location for temporary files
         out_pixel_size - (float) pixel size of output globio map
 
-        returns a (string) filename to the generated globio map"""
+    Returns:
+        a (string) filename to the generated globio GeoTIFF map
+    """
 
      #reclassify the landcover map
     lulc_to_globio_table = pygeoprocessing.get_lookup_from_table(
