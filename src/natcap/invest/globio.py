@@ -116,6 +116,7 @@ def execute(args):
     def _primary_veg_mask_op(lulc_array):
         """masking out natural areas"""
         nodata_mask = lulc_array == globio_nodata
+        # landcover type 1 in the GLOBIO schema represents primary vegetation
         result = (lulc_array == 1)
         return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
 
