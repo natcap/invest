@@ -98,80 +98,15 @@ def execute(args):
     else:
         out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
             args['globio_lulc_uri'])
-        LOGGER.info('no need to calcualte GLOBIO LULC because it is passed in')
+        LOGGER.info('no need to calculate GLOBIO LULC because it is passed in')
         globio_lulc_uri = args['globio_lulc_uri']
 
     globio_nodata = pygeoprocessing.get_nodata_from_uri(globio_lulc_uri)
 
-    #load the infrastructure layers from disk
-    infrastructure_filenames = []
-    infrastructure_nodata_list = []
-    for root_directory, _, filename_list in os.walk(
-            args['infrastructure_dir']):
-
-        for filename in filename_list:
-            if filename.lower().endswith(".tif"):
-                infrastructure_filenames.append(
-                    os.path.join(root_directory, filename))
-                infrastructure_nodata_list.append(
-                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
-                        infrastructure_filenames[-1]))
-            if filename.lower().endswith(".shp"):
-                infrastructure_tmp_raster = (
-                    pygeoprocessing.temporary_filename())
-                pygeoprocessing.geoprocessing.new_raster_from_base_uri(
-                    globio_lulc_uri, infrastructure_tmp_raster,
-                    'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
-                pygeoprocessing.geoprocessing.rasterize_layer_uri(
-                    infrastructure_tmp_raster,
-                    os.path.join(root_directory, filename), burn_values=[1],
-                    option_list=["ALL_TOUCHED=TRUE"])
-                infrastructure_filenames.append(infrastructure_tmp_raster)
-                infrastructure_nodata_list.append(
-                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
-                        infrastructure_filenames[-1]))
-
-    if len(infrastructure_filenames) == 0:
-        raise ValueError(
-            "infrastructure directory didn't have any GeoTIFFS or "
-            "Shapefiles at %s", args['infrastructure_dir'])
-
-    infrastructure_nodata = -1
     infrastructure_uri = os.path.join(
         intermediate_dir, 'combined_infrastructure%s.tif' % file_suffix)
-
-    def _collapse_infrastructure_op(*infrastructure_array_list):
-        """Combines all input infrastructure into a single map where if any
-            pixel on the stack is 1 gets passed through, any nodata pixel
-            masks out all of them"""
-        nodata_mask = (
-            infrastructure_array_list[0] == infrastructure_nodata_list[0])
-        infrastructure_result = infrastructure_array_list[0] > 0
-        for index in range(1, len(infrastructure_array_list)):
-            current_nodata = (
-                infrastructure_array_list[index] ==
-                infrastructure_nodata_list[index])
-
-            infrastructure_result = (
-                infrastructure_result |
-                ((infrastructure_array_list[index] > 0) & ~current_nodata))
-
-            nodata_mask = (
-                nodata_mask & current_nodata)
-
-        return numpy.where(
-            nodata_mask, infrastructure_nodata, infrastructure_result)
-
-    LOGGER.info('collapse infrastructure into one raster')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
-        infrastructure_filenames, _collapse_infrastructure_op,
-        infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        assert_datasets_projected=False, vectorize_op=False)
-
-    # clean up the temporary filenames
-    for filename in infrastructure_filenames:
-        os.remove(filename)
+    _collapse_infrastructure_layers(
+        args['infrastructure_dir'], globio_lulc_uri, infrastructure_uri)
 
     #calc_msa_f
     primary_veg_mask_uri = os.path.join(
@@ -632,8 +567,9 @@ def _calculate_globio_lulc_map(
     return globio_lulc_uri
 
 
-def _collapse_infrastructure_layers(infrastructure_dir, infrastructure_uri):
-    """Gathers all the GIS layers in the given directory and collapsese them
+def _collapse_infrastructure_layers(
+        infrastructure_dir, base_raster_uri, infrastructure_uri):
+    """Gathers all the GIS layers in the given directory and collapses them
     to a single byte raster mask where 1 indicates a pixel overlapping with
     one of the original infrastructure layers, 0 does not, and nodata
     indicates a region that has no layers that overlap but are still contained
@@ -642,6 +578,8 @@ def _collapse_infrastructure_layers(infrastructure_dir, infrastructure_uri):
     Parameters:
         infrastructure_dir (string): path to a directory containing maps of
             either gdal compatible rasters or OGR compatible shapefiles.
+        base_raster_uri (string): a path to a file that has the dimensions and
+            projection of the desired output infrastructure file.
         infrastructure_uri (string): (output) path to a file that will be a
             byte raster with 1s everywhere there was a GIS layer present in
             the GIS layers in `infrastructure_dir`.
@@ -649,4 +587,73 @@ def _collapse_infrastructure_layers(infrastructure_dir, infrastructure_uri):
     Returns:
         None
     """
-    pass
+    #load the infrastructure layers from disk
+    infrastructure_filenames = []
+    infrastructure_nodata_list = []
+    infrastructure_tmp_filenames = []
+    for root_directory, _, filename_list in os.walk(infrastructure_dir):
+
+        for filename in filename_list:
+            if filename.lower().endswith(".tif"):
+                infrastructure_filenames.append(
+                    os.path.join(root_directory, filename))
+                infrastructure_nodata_list.append(
+                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                        infrastructure_filenames[-1]))
+            if filename.lower().endswith(".shp"):
+                infrastructure_tmp_raster = (
+                    pygeoprocessing.temporary_filename())
+                pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+                    base_raster_uri, infrastructure_tmp_raster,
+                    'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
+                pygeoprocessing.geoprocessing.rasterize_layer_uri(
+                    infrastructure_tmp_raster,
+                    os.path.join(root_directory, filename), burn_values=[1],
+                    option_list=["ALL_TOUCHED=TRUE"])
+                infrastructure_filenames.append(infrastructure_tmp_raster)
+                infrastructure_tmp_filenames.append(infrastructure_tmp_raster)
+                infrastructure_nodata_list.append(
+                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                        infrastructure_filenames[-1]))
+
+    if len(infrastructure_filenames) == 0:
+        raise ValueError(
+            "infrastructure directory didn't have any GeoTIFFS or "
+            "Shapefiles at %s", infrastructure_dir)
+
+    infrastructure_nodata = -1
+
+    def _collapse_infrastructure_op(*infrastructure_array_list):
+        """Combines all input infrastructure into a single map where if any
+            pixel on the stack is 1 gets passed through, any nodata pixel
+            masks out all of them"""
+        nodata_mask = (
+            infrastructure_array_list[0] == infrastructure_nodata_list[0])
+        infrastructure_result = infrastructure_array_list[0] > 0
+        for index in range(1, len(infrastructure_array_list)):
+            current_nodata = (
+                infrastructure_array_list[index] ==
+                infrastructure_nodata_list[index])
+
+            infrastructure_result = (
+                infrastructure_result |
+                ((infrastructure_array_list[index] > 0) & ~current_nodata))
+
+            nodata_mask = (
+                nodata_mask & current_nodata)
+
+        return numpy.where(
+            nodata_mask, infrastructure_nodata, infrastructure_result)
+
+    LOGGER.info('collapse infrastructure into one raster')
+    out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        base_raster_uri)
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        infrastructure_filenames, _collapse_infrastructure_op,
+        infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        assert_datasets_projected=False, vectorize_op=False)
+
+    # clean up the temporary filenames
+    for filename in infrastructure_tmp_filenames:
+        os.remove(filename)
