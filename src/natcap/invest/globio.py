@@ -128,6 +128,9 @@ def execute(args):
         assert_datasets_projected=False, vectorize_op=False)
 
     LOGGER.info('gaussian filter primary veg')
+    # this value of sigma == 9.0 was derived by Justin Johnson as a good
+    # approximation to the connectivity index.  I don't have any other
+    # documentation than his original code base.
     sigma = 9.0
     gaussian_kernel_uri = os.path.join(
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
