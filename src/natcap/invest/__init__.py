@@ -9,21 +9,25 @@ import platform
 import sys
 import hashlib
 import json
-import distutils.version
+import pkg_resources
 
+import pygeoprocessing
 import natcap.versioner
 
-try:
-    import pygeoprocessing
-    REQUIRED_PYGEOPROCESSING_VERSION = '0.3.0a7'
-    if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
-            distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
-        raise Exception(
-            "Requires PyGeoprocessing version at least %s.  "
-            "Current version %s ",
-            REQUIRED_PYGEOPROCESSING_VERSION, pygeoprocessing.__version__)
-except ImportError:
-    pass
+# Verify that the installed pygeoprocessing meets the minimum requirements.
+# Pyinstaller binaries do not allow us to use pkg_resources.require(), as
+# no EGG_INFO is included in the binary distribution.
+# pkg_resources is preferred over distutils.StrictVersion and
+# distutils.LooseVersion, since pkg_resources.parse_version is
+# PEP440-compliant and it's very likely that a dev version of pygeoprocessing
+# will be found.
+PYGEOPROCESSING_REQUIRED = '0.3.0a7'
+if (pkg_resources.parse_version(pygeoprocessing.__version__) <\
+        pkg_resources.parse_version(PYGEOPROCESSING_REQUIRED)):
+    raise ValueError(('Pygeoprocessing >= {req_version} required, '
+                      'but version {found_ver} was found').format(
+                          req_version=PYGEOPROCESSING_REQUIRED,
+                          found_ver=pygeoprocessing.__version__))
 
 __version__ = natcap.versioner.get_version('natcap.invest')
 
