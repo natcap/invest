@@ -17,6 +17,11 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.globio')
 
+# this value of sigma == 9.0 was derived by Justin Johnson as a good
+# approximation to use as a gaussian filter to replace the connectivity index.
+# I don't have any other documentation than his original code base.
+SIGMA = 9.0
+
 
 def execute(args):
     """Main entry point for GLOBIO model.
@@ -128,13 +133,9 @@ def execute(args):
         assert_datasets_projected=False, vectorize_op=False)
 
     LOGGER.info('gaussian filter primary veg')
-    # this value of sigma == 9.0 was derived by Justin Johnson as a good
-    # approximation to the connectivity index.  I don't have any other
-    # documentation than his original code base.
-    sigma = 9.0
     gaussian_kernel_uri = os.path.join(
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
-    make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
+    make_gaussian_kernel_uri(SIGMA, gaussian_kernel_uri)
     smoothed_primary_veg_mask_uri = os.path.join(
         tmp_dir, 'smoothed_primary_veg_mask%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.convolve_2d_uri(
@@ -474,6 +475,8 @@ def _calculate_globio_lulc_map(
     def _forest_area_mask_op(lulc_array):
         """masking out forest areas"""
         nodata_mask = lulc_array == globio_nodata
+        # landcover code 130 represents all MODIS forest codes which originate
+        # as 1-5
         result = (lulc_array == 130)
         return numpy.where(nodata_mask, forest_areas_nodata, result)
 
@@ -485,10 +488,9 @@ def _calculate_globio_lulc_map(
         assert_datasets_projected=False, vectorize_op=False)
 
     LOGGER.info('gaussian filter natural areas')
-    sigma = 9.0
     gaussian_kernel_uri = os.path.join(
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
-    make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
+    make_gaussian_kernel_uri(SIGMA, gaussian_kernel_uri)
     smoothed_forest_areas_uri = os.path.join(
         tmp_dir, 'smoothed_forest_areas%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.convolve_2d_uri(
@@ -527,12 +529,16 @@ def _calculate_globio_lulc_map(
 
         # Step 1.2c: Classify all ag classes as a new LULC value "12" per our
         # custom design of agriculture
+        # landcover 132 represents agriculture landcover types in the GLOBIO
+        # classification scheme
         lulc_ag_split = numpy.where(
-            lulc_array == 132.0, 12, lulc_array)
+            lulc_array == 132, 12, lulc_array)
         nodata_mask = nodata_mask | (lulc_array == globio_nodata)
 
-        #Step 1.3a: Split Scrublands and grasslands into pristine
-        #vegetations, livestock grazing areas, and man-made pastures.
+        # Step 1.3a: Split Scrublands and grasslands into pristine
+        # vegetations, livestock grazing areas, and man-made pastures.
+        # landcover 131 represents grassland/shrubland in the GLOBIO
+        # classification
         three_types_of_scrubland = numpy.where(
             (potential_vegetation_array <= 8) & (lulc_ag_split == 131), 6.0,
             5.0)
@@ -542,18 +548,22 @@ def _calculate_globio_lulc_map(
             (pasture_array < pasture_threshold), 1.0,
             three_types_of_scrubland)
 
-        #Step 1.3b: Stamp ag_split classes onto input LULC
+        # Step 1.3b: Stamp ag_split classes onto input LULC
+        # landcover 131 represents grassland/shrubland in the GLOBIO
+        # classification
         broad_lulc_shrub_split = numpy.where(
             lulc_ag_split == 131, three_types_of_scrubland, lulc_ag_split)
 
-        #Step 1.4a: Split Forests into Primary, Secondary
+        # Step 1.4a: Split Forests into Primary, Secondary
         four_types_of_forest = numpy.empty(lulc_array.shape)
-        #1.0 is primary forest
+        # 1 is primary forest
         four_types_of_forest[(ffqi >= primary_threshold)] = 1
-        #3 is secondary forest
+        # 3 is secondary forest
         four_types_of_forest[(ffqi < primary_threshold)] = 3
 
-        #Step 1.4b: Stamp ag_split classes onto input LULC
+        # Step 1.4b: Stamp ag_split classes onto input LULC
+        # landcover code 130 represents all MODIS forest codes which originate
+        # as 1-5
         globio_lulc = numpy.where(
             broad_lulc_shrub_split == 130, four_types_of_forest,
             broad_lulc_shrub_split)  # stamp primary vegetation
