@@ -572,8 +572,12 @@ def after_install(options, home_dir):
     ).format(src_distutils_cfg=source_file)
 
     if options.env.with_pygeoprocessing:
+        # install with --no-deps (will otherwise try to install numpy, gdal,
+        # etc.), and -I to ignore any existing pygeoprocessing install (as
+        # might exist in system-site-packages).
         install_string += (
-            "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', './src/pygeoprocessing'])\n"
+            "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
+            "'--no-deps', '-I', './src/pygeoprocessing'])\n"
         )
     else:
         print 'Skipping the installation of pygeoprocessing per user input.'
@@ -1706,13 +1710,15 @@ def build_bin(options):
         os.path.normpath(os.path.join(options.env.envname, 'lib')))
     if platform.system() != 'Windows':
         env_site_pkgs = os.path.join(env_site_pkgs, 'python2.7')
+    env_site_pkgs = os.path.join(env_site_pkgs, 'site-packages')
     try:
         print "PYTHONPATH: %s" % os.environ['PYTHONPATH']
     except KeyError:
         print "Nothing in 'PYTHONPATH'"
-    sh('%(python)s %(pyinstaller)s --clean --noconfirm invest.spec' % {
+    sh('%(python)s %(pyinstaller)s --clean --noconfirm --paths=%(paths)s invest.spec' % {
         'python': python_exe,
         'pyinstaller': pyinstaller_file,
+        'paths': env_site_pkgs,
     }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
@@ -2172,6 +2178,7 @@ def build(options):
             'clear': True,
             'envname': options.build.envname,
             'with_invest': True,
+            'with_pygeoprocessing': True,
             'requirements': '',
         })
 
