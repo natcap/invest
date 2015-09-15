@@ -99,7 +99,10 @@ def execute(args):
         out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
             args['lulc_uri'])
         globio_lulc_uri = _calculate_globio_lulc_map(
-            args, file_suffix, intermediate_dir, tmp_dir, out_pixel_size)
+            args['lulc_to_globio_table_uri'], args['lulc_uri'],
+            args['potential_vegetation_uri'], args['pasture_uri'],
+            float(args['pasture_threshold']), float(args['primary_threshold']),
+            file_suffix, intermediate_dir, tmp_dir, out_pixel_size)
     else:
         out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
             args['globio_lulc_uri'])
@@ -432,13 +435,26 @@ def load_msa_parameter_table(
 
 
 def _calculate_globio_lulc_map(
-        args, file_suffix, intermediate_dir, tmp_dir, out_pixel_size):
+        lulc_to_globio_table_uri, lulc_uri, potential_vegetation_uri,
+        pasture_uri, pasture_threshold, primary_threshold, file_suffix,
+        intermediate_dir, tmp_dir, out_pixel_size):
     """Used to translate a general landcover map into a GLOBIO version.
-        to simplify globio function since it's possible to skip this calculation
-        if a predefined globio map has been created.
+    to simplify globio function since it's possible to skip this calculation
+    if a predefined globio map has been created.
 
-        args - (dict) the argument dictionary passed in by the 'execute' entry
-            point
+    Parameters:
+        lulc_to_globio_table_uri (string): a table that maps arbitrary
+            landcover values to globio equivalents.
+        lulc_uri (string): path to the raw landcover map.
+        potential_vegetation_uri (string): a landcover map that indicates what
+            the vegetation types would be if left to revert to natural state
+        pasture_uri (string): a path to a raster that indicates the percent
+            of pasture contained in the pixel.  used to classify forest types
+            from scrubland.
+        pasture_threshold (float): the threshold to classify pixels in pasture
+            as potential forest or scrub
+        primary_threshold (float): the threshold to classify the calculated
+            FFQI pixels into core forest or secondary
         file_suffix - (string) to append on output file
         intermediate_dir - (string) path to location for temporary files
         tmp_dir - (string) path to location for temporary files
@@ -448,7 +464,7 @@ def _calculate_globio_lulc_map(
 
      #reclassify the landcover map
     lulc_to_globio_table = pygeoprocessing.get_lookup_from_table(
-        args['lulc_to_globio_table_uri'], 'lucode')
+        lulc_to_globio_table_uri, 'lucode')
 
     lulc_to_globio = dict(
         [(lulc_code, int(table['globio_lucode'])) for
@@ -458,14 +474,11 @@ def _calculate_globio_lulc_map(
         intermediate_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        args['lulc_uri'], lulc_to_globio, intermediate_globio_lulc_uri,
+        lulc_uri, lulc_to_globio, intermediate_globio_lulc_uri,
         gdal.GDT_Int32, globio_nodata, exception_flag='values_required')
 
     globio_lulc_uri = os.path.join(
         intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
-
-    potential_vegetation_uri = args['potential_vegetation_uri']
-    pasture_uri = args['pasture_uri']
 
     #smoothed natural areas are natural areas run through a gaussian filter
     forest_areas_uri = os.path.join(
@@ -515,9 +528,6 @@ def _calculate_globio_lulc_map(
 
     #remap globio lulc to an internal lulc based on ag and intensification
     #proportion these came from the 'expansion_scenarios.py'
-    pasture_threshold = float(args['pasture_threshold'])
-    primary_threshold = float(args['primary_threshold'])
-
     def _create_globio_lulc(
             lulc_array, potential_vegetation_array, pasture_array,
             ffqi):
