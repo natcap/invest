@@ -1,9 +1,9 @@
 {
   "id": "window",
   "label": "Scenario Generator: Proximity Based",
-  "targetScript": "natcap.invest.scenario_generator_proximity_based",
-  "modelName": "scenario_generator_proximity_based",
-  "localDocURI": "../documentation/scenario_generator_proximity_based.html",
+  "targetScript": "natcap.invest.scenario_gen_proximity",
+  "modelName": "scenario_gen_proximity",
+  "localDocURI": "../documentation/scenario_gen_proximity.html",
   "height": 610,
   "width": 610,
   "elements": [
