@@ -633,8 +633,8 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
         integration += numpy.sum(kernel)
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
-    for row_index in xrange(kernel_size):
-        kernel_row = kernel_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
-        kernel_row /= integration
-        kernel_band.WriteArray(kernel_row, 0, row_index)
+    kernel_dataset.FlushCache()
+    for kernel_data, kernel_block in pygeoprocessing.iterblocks(kernel_uri):
+        kernel_block /= integration
+        kernel_band.WriteArray(
+            kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
