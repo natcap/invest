@@ -226,6 +226,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\Scenic Quality (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenic_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Forest Carbon Edge Effect (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_forest_carbon_edge_effect.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\GLOBIO (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_globio.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Timber (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_timber.bat" "" "${INVEST_ICON}"
@@ -376,30 +377,31 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   ;they were calculated by hand by decompressing all the .zip files and recording
   ;the size by hand.
   SectionGroup "Freshwater Datasets" SEC_FRESHWATER_DATA
-    !insertmacro downloadData "Freshwater base datasets (optional for freshwater models)" "Freshwater.zip" 4710
+    !insertmacro downloadData "Freshwater Base Datasets (optional for freshwater models)" "Freshwater.zip" 4710
     !insertmacro downloadData "Hydropower (optional)" "Hydropower.zip" 100
     !insertmacro downloadData "Nutrient Retention (required to run model)" "WP_Nutrient_Retention.zip" 4
     !insertmacro downloadData "SDR (required to run model)" "Sedimentation.zip" 4
   SectionGroupEnd
 
   SectionGroup "Marine Datasets" SEC_MARINE_DATA
-    !insertmacro downloadData "Marine base datasets (required for many marine models)" "Marine.zip" 1784696
+    !insertmacro downloadData "Marine Base Datasets (required for many marine models)" "Marine.zip" 1784696
     !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 856
     !insertmacro downloadData "Blue Carbon (optional)" "BlueCarbon.zip" 856
-    !insertmacro downloadData "Coastal protection (optional)" "CoastalProtection.zip" 117760
+    !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 117760
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 784
-    !insertmacro downloadData "Habitat risk assessment (optional)" "HabitatRiskAssess.zip" 8116
+    !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 8116
     !insertmacro downloadData "Marine Water Quality (optional)" "MarineWaterQuality.zip" 13312
-    !insertmacro downloadData "Overlap analysis (optional)" "OverlapAnalysis.zip" 3692
-    !insertmacro downloadData "Scenic quality (optional)" "ScenicQuality.zip" 9421
+    !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3692
+    !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831620
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 4804
     !insertmacro downloadData "Recreation (optional)" "Recreation.zip" 24
   SectionGroupEnd
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
-    !insertmacro downloadData "CropProduction (optional)" "CropProduction.zip" 0
+    !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 0
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
+    !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
     !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 728
