@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.scenario_generator_proximity_based",
   "modelName": "scenario_generator_proximity_based",
   "localDocURI": "../documentation/scenario_generator_proximity_based.html",
-  "height": 545,
+  "height": 610,
   "width": 610,
   "elements": [
     {

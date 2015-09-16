@@ -306,6 +306,10 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
         dataset_uri (string): a path to a floating point GDAL dataset
         score_weight (float): a number to multiply all values by, which can be
             used to reverse the order of the iteration if negative.
+        cache_element_size (int): approximate number of single elements to hold
+            in memory before flushing to disk.  Due to the internal blocksize
+            of the input raster, it is possible this cache could go over
+            this value by that size before the cache is flushed.
 
     Returns:
         an iterable that produces (value * score_weight, flat_index) in
@@ -386,72 +390,52 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
         atexit.register(_remove_file, index_file_name)
         return _read_score_index_from_disk(score_file_name, index_file_name)
 
-    dataset = gdal.Open(dataset_uri)
-    band = dataset.GetRasterBand(1)
-    nodata = band.GetNoDataValue()
+    nodata = pygeoprocessing.get_nodata_from_uri(dataset_uri)
     nodata *= score_weight  # scale the nodata so they can be filtered out
 
-    n_rows = band.YSize
-    n_cols = band.XSize
-
-    #This will be a list of file iterators we'll pass to heap.merge
+    # This will be a list of file iterators we'll pass to heap.merge
     iters = []
 
-    cols_per_block, rows_per_block = band.GetBlockSize()
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-    n_elements_per_block = cols_per_block * rows_per_block
+    _, n_cols = pygeoprocessing.get_row_col_from_uri(dataset_uri)
 
     index_cache = numpy.empty((0,), dtype=numpy.float32)
     score_cache = numpy.empty((0,), dtype=numpy.int32)
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
+    for scores_data, scores_block in pygeoprocessing.iterblocks(dataset_uri):
+        # flatten and scale the results
+        scores_block = scores_block.flatten() * score_weight
 
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
+        col_coords, row_coords = numpy.meshgrid(
+            xrange(scores_data['xoff'], scores_data['xoff'] +
+                   scores_data['win_xsize']),
+            xrange(scores_data['yoff'], scores_data['yoff'] +
+                   scores_data['win_ysize']))
 
-            # check if we need to flush the cache before reading new elements
-            if index_cache.size + n_elements_per_block > cache_element_size:
-                iters.append(_sort_cache_to_iterator(index_cache, score_cache))
-                index_cache = numpy.empty((0,), dtype=numpy.float32)
-                score_cache = numpy.empty((0,), dtype=numpy.int32)
+        flat_indexes = (col_coords + row_coords * n_cols).flatten()
 
-            scores = band.ReadAsArray(
-                xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
-                win_ysize=row_block_width).flatten()
-            scores *= score_weight  # scale the results
+        sort_index = scores_block.argsort()
+        sorted_scores = scores_block[sort_index]
+        sorted_indexes = flat_indexes[sort_index]
 
-            col_coords, row_coords = numpy.meshgrid(
-                xrange(col_offset, col_offset + col_block_width),
-                xrange(row_offset, row_offset + row_block_width))
+        # search for nodata values are so we can splice them out
+        left_index = numpy.searchsorted(sorted_scores, nodata, side='left')
+        right_index = numpy.searchsorted(
+            sorted_scores, nodata, side='right')
 
-            flat_indexes = (col_coords + row_coords * n_cols).flatten()
+        # remove nodata values and sort in decreasing order
+        score_cache = numpy.concatenate(
+            (score_cache, sorted_scores[0:left_index],
+             sorted_scores[right_index::]))
+        index_cache = numpy.concatenate(
+            (index_cache, sorted_indexes[0:left_index],
+             sorted_indexes[right_index::]))
 
-            sort_index = scores.argsort()
-            sorted_scores = scores[sort_index]
-            sorted_indexes = flat_indexes[sort_index]
+        # check if we need to flush the cache
+        if index_cache.size >= cache_element_size:
+            iters.append(_sort_cache_to_iterator(index_cache, score_cache))
+            index_cache = numpy.empty((0,), dtype=numpy.float32)
+            score_cache = numpy.empty((0,), dtype=numpy.int32)
 
-            # search for nodata values are so we can splice them out
-            left_index = numpy.searchsorted(sorted_scores, nodata, side='left')
-            right_index = numpy.searchsorted(
-                sorted_scores, nodata, side='right')
-
-            #  remove nodata values and sort in decreasing order
-            score_cache = numpy.concatenate(
-                (score_cache, sorted_scores[0:left_index],
-                 sorted_scores[right_index::]))
-            index_cache = numpy.concatenate(
-                (index_cache, sorted_indexes[0:left_index],
-                 sorted_indexes[right_index::]))
-
-    iters.append(_sort_cache_to_iterator(
-        index_cache, score_cache))
+    iters.append(_sort_cache_to_iterator(index_cache, score_cache))
     return heapq.merge(*iters)
 
 
