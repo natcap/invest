@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.forest_carbon_edge_effect",
   "modelName": "forest_carbon_edge_effect",
   "localDocURI": "../documentation/forest_carbon_edge_effect.html",
-  "height": 420,
+  "height": 500,
   "width": 850,
   "elements": [
     {

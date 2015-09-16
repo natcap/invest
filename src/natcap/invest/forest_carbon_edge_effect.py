@@ -437,173 +437,140 @@ def _calculate_forest_edge_carbon_map(
     edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
 
     # create edge distance band for memory block reading
-    edge_distance_dataset = gdal.Open(edge_distance_uri)
-    edge_distance_band = edge_distance_dataset.GetRasterBand(1)
-    block_size = edge_distance_band.GetBlockSize()
     n_rows = edge_carbon_dataset.RasterYSize
     n_cols = edge_carbon_dataset.RasterXSize
-    cols_per_block, rows_per_block = block_size[0], block_size[1]
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
+    n_cells = n_rows * n_cols
+    n_cells_processed = 0
     # timer to give updates per call
     last_time = time.time()
-
-    # used to dynamically set the size of the memory blocks read for when we
-    # encounter a non memory block window perhaps on the right or bottom edge.
-    last_row_block_width = None
-    last_col_block_width = None
 
     cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         edge_distance_uri) ** 2 / 10000.0
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
+    for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
+            edge_distance_uri):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info(
+                'carbon edge calculation approx. %.2f%% complete',
+                (n_cells_processed / float(n_cells) * 100.0))
+            last_time = current_time
+        n_cells_processed += (
+            edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
+        valid_edge_distance_mask = (edge_distance_block > 0)
 
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
+        # if no valid forest pixels to calculate, skip to the next block
+        if not valid_edge_distance_mask.any():
+            continue
 
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info(
-                    'carbon edge calculation approx. %.2f%% complete',
-                    ((row_block_index * n_col_blocks + col_block_index) /
-                     float(n_row_blocks * n_col_blocks) * 100.0))
-                last_time = current_time
+        # calculate local coordinates for each pixel so we can test for
+        # distance to the nearest carbon model points
+        col_range = numpy.linspace(
+            edge_carbon_geotransform[0] +
+            edge_carbon_geotransform[1] * edge_distance_data['xoff'],
+            edge_carbon_geotransform[0] +
+            edge_carbon_geotransform[1] * (
+                edge_distance_data['xoff'] + edge_distance_data['win_xsize']),
+            num=edge_distance_data['win_xsize'], endpoint=False)
+        row_range = numpy.linspace(
+            edge_carbon_geotransform[3] +
+            edge_carbon_geotransform[5] * edge_distance_data['yoff'],
+            edge_carbon_geotransform[3] +
+            edge_carbon_geotransform[5] * (
+                edge_distance_data['yoff'] + edge_distance_data['win_ysize']),
+            num=edge_distance_data['win_ysize'], endpoint=False)
+        col_coords, row_coords = numpy.meshgrid(col_range, row_range)
 
-            # Sets the local read row/col block size.  This predicate is true
-            # at least once since last_* initialized with None. There's no way
-            # row_block_width/col_block_width could be uninitialized
-            if (last_row_block_width != row_block_width or
-                    last_col_block_width != col_block_width):
-                edge_distance_block = numpy.zeros(
-                    (row_block_width, col_block_width), dtype=numpy.float32)
+        # query nearest points for every point in the grid
+        # n_jobs=-1 means use all available cpus
+        coord_points = zip(
+            row_coords[valid_edge_distance_mask].ravel(),
+            col_coords[valid_edge_distance_mask].ravel())
+        try:
+            distances, indexes = kd_tree.query(
+                coord_points, k=n_nearest_model_points,
+                distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
+        except TypeError:
+            LOGGER.warn(
+                "n_jobs parameter not supported, reverting to single "
+                "threaded query")
+            distances, indexes = kd_tree.query(
+                coord_points, k=n_nearest_model_points,
+                distance_upper_bound=DISTANCE_UPPER_BOUND)
 
-                last_row_block_width = row_block_width
-                last_col_block_width = col_block_width
+        # the 3 is for the 3 thetas in the carbon model
+        thetas = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
+        valid_index_mask = (indexes != kd_tree.n)
+        thetas[valid_index_mask] = theta_model_parameters[
+            indexes[valid_index_mask]]
 
-            edge_distance_band.ReadAsArray(
-                xoff=col_offset, yoff=row_offset,
-                win_xsize=col_block_width,
-                win_ysize=row_block_width,
-                buf_obj=edge_distance_block)
-            valid_edge_distance_mask = (edge_distance_block > 0)
+        # the 3 is for the 3 models (asym, exp, linear)
+        biomass_model = numpy.zeros(
+            (indexes.shape[0], indexes.shape[1], 3))
+        # reshape to an N,nearest_points so we can multiply by thetas
+        valid_edge_distances = numpy.repeat(
+            edge_distance_block[valid_edge_distance_mask],
+            n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
-            # if no valid forest pixels to calculate, skip to the next block
-            if not valid_edge_distance_mask.any():
-                continue
+        # asymptotic model
+        # biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
+        biomass_model[:, :, 0] = (
+            thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
+                -thetas[:, :, 2] * valid_edge_distances)
+            ) * cell_area_ha
 
-            # calculate local coordinates for each pixel so we can test for
-            # distance to the nearest carbon model points
-            col_range = numpy.linspace(
-                edge_carbon_geotransform[0] +
-                edge_carbon_geotransform[1] * col_offset,
-                edge_carbon_geotransform[0] +
-                edge_carbon_geotransform[1] * (col_offset + col_block_width),
-                num=col_block_width, endpoint=False)
-            row_range = numpy.linspace(
-                edge_carbon_geotransform[3] +
-                edge_carbon_geotransform[5] * row_offset,
-                edge_carbon_geotransform[3] +
-                edge_carbon_geotransform[5] * (row_offset + row_block_width),
-                num=row_block_width, endpoint=False)
-            col_coords, row_coords = numpy.meshgrid(col_range, row_range)
+        # logarithmic model
+        # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
+        biomass_model[:, :, 1] = (
+            thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
+                valid_edge_distances)) * cell_area_ha
 
-            # query nearest points for every point in the grid
-            # n_jobs=-1 means use all available cpus
-            coord_points = zip(
-                row_coords[valid_edge_distance_mask].ravel(),
-                col_coords[valid_edge_distance_mask].ravel())
-            try:
-                distances, indexes = kd_tree.query(
-                    coord_points, k=n_nearest_model_points,
-                    distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
-            except TypeError:
-                LOGGER.warn(
-                    "n_jobs parameter not supported, reverting to single "
-                    "threaded query")
-                distances, indexes = kd_tree.query(
-                    coord_points, k=n_nearest_model_points,
-                    distance_upper_bound=DISTANCE_UPPER_BOUND)
+        # linear regression
+        # biomass_3 = t1 + t2 * edge_dist_km
+        biomass_model[:, :, 2] = (
+            (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances) *
+            cell_area_ha)
 
-            # the 3 is for the 3 thetas in the carbon model
-            thetas = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
-            valid_index_mask = (indexes != kd_tree.n)
-            thetas[valid_index_mask] = theta_model_parameters[
-                indexes[valid_index_mask]]
+        # Collapse the biomass down to the valid models
+        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
+        model_index[valid_index_mask] = (
+            method_model_parameter[indexes[valid_index_mask]] - 1)
 
-            # the 3 is for the 3 models (asym, exp, linear)
-            biomass_model = numpy.zeros(
-                (indexes.shape[0], indexes.shape[1], 3))
-            # reshape to an N,nearest_points so we can multiply by thetas
-            valid_edge_distances = numpy.repeat(
-                edge_distance_block[valid_edge_distance_mask],
-                n_nearest_model_points).reshape(-1, n_nearest_model_points)
+        # reduce the axis=1 dimensionality of the model by selecting the
+        # appropriate value via the model_index array
+        # Got this trick from http://stackoverflow.com/questions/18702746/reduce-a-dimension-of-numpy-array-by-selecting
+        biomass_y, biomass_x = numpy.meshgrid(
+            numpy.arange(biomass_model.shape[1]),
+            numpy.arange(biomass_model.shape[0]))
+        biomass = biomass_model[biomass_x, biomass_y, model_index]
 
-            # asymptotic model
-            # biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
-            biomass_model[:, :, 0] = (
-                thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
-                    -thetas[:, :, 2] * valid_edge_distances)
-                ) * cell_area_ha
+        # reshape the array so that each set of points is in a separate
+        # dimension, here distances are distances to each valid model
+        # point, not distance to edge of forest
+        weights = numpy.zeros(distances.shape)
+        valid_distance_mask = (distances > 0) & (distances < numpy.inf)
+        weights[valid_distance_mask] = (
+            n_nearest_model_points / distances[valid_distance_mask])
 
-            # logarithmic model
-            # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
-            biomass_model[:, :, 1] = (
-                thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
-                    valid_edge_distances)) * cell_area_ha
+        # Denominator is the sum of the weights per nearest point (axis 1)
+        denom = numpy.sum(weights, axis=1)
+        # To avoid a divide by 0
+        valid_denom = denom != 0
+        average_biomass = numpy.zeros(distances.shape[0])
+        average_biomass[valid_denom] = (
+            numpy.sum(weights[valid_denom] *
+                      biomass[valid_denom], axis=1) / denom[valid_denom])
 
-            # linear regression
-            # biomass_3 = t1 + t2 * edge_dist_km
-            biomass_model[:, :, 2] = (
-                (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances) *
-                cell_area_ha)
-
-            # Collapse the biomass down to the valid models
-            model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
-            model_index[valid_index_mask] = (
-                method_model_parameter[indexes[valid_index_mask]] - 1)
-
-            # reduce the axis=1 dimensionality of the model by selecting the
-            # appropriate value via the model_index array
-            # Got this trick from http://stackoverflow.com/questions/18702746/reduce-a-dimension-of-numpy-array-by-selecting
-            biomass_y, biomass_x = numpy.meshgrid(
-                numpy.arange(biomass_model.shape[1]),
-                numpy.arange(biomass_model.shape[0]))
-            biomass = biomass_model[biomass_x, biomass_y, model_index]
-
-            # reshape the array so that each set of points is in a separate
-            # dimension, here distances are distances to each valid model
-            # point, not distance to edge of forest
-            weights = numpy.zeros(distances.shape)
-            valid_distance_mask = (distances > 0) & (distances < numpy.inf)
-            weights[valid_distance_mask] = (
-                n_nearest_model_points / distances[valid_distance_mask])
-
-            # Denominator is the sum of the weights per nearest point (axis 1)
-            denom = numpy.sum(weights, axis=1)
-            # To avoid a divide by 0
-            valid_denom = denom != 0
-            average_biomass = numpy.zeros(distances.shape[0])
-            average_biomass[valid_denom] = (
-                numpy.sum(weights[valid_denom] *
-                          biomass[valid_denom], axis=1) / denom[valid_denom])
-
-            # Ensure the result has nodata everywhere the distance was invalid
-            result = numpy.empty(
-                edge_distance_block.shape, dtype=numpy.float32)
-            result[:] = carbon_edge_nodata
-            # convert biomass to carbon in this stage
-            result[valid_edge_distance_mask] = (
-                average_biomass * biomass_to_carbon_conversion_factor)
-            edge_carbon_band.WriteArray(
-                result, xoff=col_offset, yoff=row_offset)
+        # Ensure the result has nodata everywhere the distance was invalid
+        result = numpy.empty(
+            edge_distance_block.shape, dtype=numpy.float32)
+        result[:] = carbon_edge_nodata
+        # convert biomass to carbon in this stage
+        result[valid_edge_distance_mask] = (
+            average_biomass * biomass_to_carbon_conversion_factor)
+        edge_carbon_band.WriteArray(
+            result, xoff=edge_distance_data['xoff'],
+            yoff=edge_distance_data['yoff'])
     LOGGER.info('carbon edge calculation 100.0% complete')
