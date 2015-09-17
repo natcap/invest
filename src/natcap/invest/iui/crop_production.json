@@ -22,7 +22,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../CropProduction",
+          "defaultValue": "~/Documents/crop_production_workspace",
           "required": true,
           "validateAs": {
             "type": "folder"
