@@ -464,7 +464,7 @@ class Executor(threading.Thread):
             # UnicodeDecodeError is thrown if the workspace path cannot be
             # correctly decoded according to the filesystem's encoding.
             LOGGER.warn('Cannot decode workspace with the fs encoding. '
-                        'workspace=%s, Encoding=%s' % (workspace, ENCODING))
+                        'workspace=%s, Encoding=%s', workspace, ENCODING)
 
         try:
             os.makedirs(workspace)
@@ -479,19 +479,15 @@ class Executor(threading.Thread):
         # locate the model to be loaded.
         try:
             if os.path.isfile(module):
-                model = imp.load_source('model', module)
-               # Model name is name of module file, minus the extension
-                model_name = os.path.splitext(os.path.basename(module))[0]
-                LOGGER.debug('Loading %s from %s', model_name, model)
-                model = importlib.import_module(module)
+                model = importlib.import_module(
+                    imp.load_source('model', module))
             else:
                 model = importlib.import_module(module)
-                model_name = os.path.splitext(os.path.basename(module))[0]
                 LOGGER.debug('Loading %s in frozen environment', model)
-        except ImportError as e:
+        except ImportError as exception:
             LOGGER.error('ImportError found when locating %s', module)
             self.printTraceback()
-            self.setThreadFailed(True, e)
+            self.setThreadFailed(True, exception)
             return
 
         # Create the log filename from the current time and save that in the
@@ -501,7 +497,8 @@ class Executor(threading.Thread):
         filename = '%s-log-%s.txt' % (module, timestamp)
         log_file_uri = os.path.abspath(
             os.path.join(workspace, filename))
-        self.log_file = codecs.open(log_file_uri, 'w', encoding='utf-8', buffering=0)
+        self.log_file = codecs.open(
+            log_file_uri, 'w', encoding='utf-8', buffering=0)
 
         # Now that the log file is open, write the arguments to it.
         self.print_args(args)
@@ -517,7 +514,9 @@ class Executor(threading.Thread):
                         fileio.get_free_space(workspace))
             _log_model(module, args)
 
-            LOGGER.info('Pointing temporary directory at the workspace at %s' % args['workspace_dir'])
+            LOGGER.info(
+                'Pointing temporary directory at the workspace at %s',
+                args['workspace_dir'])
             temporary_path = os.path.join(args['workspace_dir'], 'tmp')
             try:
                 os.makedirs(temporary_path)
@@ -528,9 +527,13 @@ class Executor(threading.Thread):
                     raise
             for tmp_variable in ['TMP', 'TEMP', 'TMPDIR']:
                 if tmp_variable in os.environ:
-                    LOGGER.info('Updating os.environ["%s"]=%s to %s' % (tmp_variable, os.environ[tmp_variable], args['workspace_dir']))
+                    LOGGER.info(
+                        'Updating os.environ["%s"]=%s to %s', tmp_variable,
+                        os.environ[tmp_variable], args['workspace_dir'])
                 else:
-                    LOGGER.info('Setting os.environ["%s"]=%s' % (tmp_variable, args['workspace_dir']))
+                    LOGGER.info(
+                        'Setting os.environ["%s"]=%s', tmp_variable,
+                        args['workspace_dir'])
 
                 os.environ[tmp_variable] = temporary_path
 
@@ -539,11 +542,6 @@ class Executor(threading.Thread):
 
             model_start_time = time.time()
             LOGGER.info('Starting %s', module)
-            if '_process_pool' in args:
-                raise Exception("There's already a process_pool, aborting!")
-            args['_process_pool'] = None
-#            process_pool = pygeoprocessing.geoprocessing.PoolNoDaemon()
-#            args['_process_pool'] = process_pool
 
             # If we're including metadata, add per-run metadata here.
             if '_iui_meta' in args:
@@ -554,9 +552,9 @@ class Executor(threading.Thread):
                 args['_iui_meta']['logfile'] = logfile_data
 
             model.execute(args)
-        except Exception as e:
-            #We are explicitly handling all exceptions and below we have a special
-            #case for out of disk space
+        except Exception as exception:
+            # We are explicitly handling all exceptions and below we have a
+            # special case for out of disk space
             LOGGER.error('---------------------------------------------------')
             LOGGER.error('---------------------- ERROR ----------------------')
             LOGGER.error('---------------------------------------------------')
@@ -568,20 +566,24 @@ class Executor(threading.Thread):
             # e to a more informative exception.
             # EnvironmentError exception contains the errno and __class__
             # attributes
-            if issubclass(e.__class__, EnvironmentError):
-                LOGGER.debug('error %s number %s', e.__class__, e.errno)
-                LOGGER.debug('Error message: %s', str(e))
+            if issubclass(exception.__class__, EnvironmentError):
+                LOGGER.debug(
+                    'error %s number %s', exception.__class__, exception.errno)
+                LOGGER.debug('Error message: %s', str(exception))
 
                 # Actually check the error code for the exception and use a new
                 # custom exception with more information.
                 # The exception.__class__  is necessary as the second argument.
-                # If not included, will throw an exception, which will cause the
-                # thread to silently crash.
-                if (isinstance(e, WindowsError.__class__) and (e.errno in [8, 28])) or\
-                        (isinstance(e, IOError.__class__) and (e.errno == 28)):
+                # If not included, will throw an exception, which will cause
+                # the thread to silently crash.
+                if ((isinstance(exception, WindowsError.__class__) and
+                     (exception.errno in [8, 28])) or
+                        (isinstance(exception, IOError.__class__) and
+                         (exception.errno == 28))):
                     LOGGER.debug('Insufficient disk space detected')
-                    e = InsufficientDiskSpace('You do not have sufficient disk '
-                                              'space available for this model to finish running.')
+                    exception = InsufficientDiskSpace(
+                        'You do not have sufficient disk  space available for '
+                        ' this model to finish running.')
                 else:
                     LOGGER.debug('Exception not disk-space related')
             else:
@@ -589,39 +591,40 @@ class Executor(threading.Thread):
 
             #This intentionally handles all exceptions
             self.printTraceback()
-            self.setThreadFailed(True, e)
-            #Quit the rest of the function
+            self.setThreadFailed(True, exception)
             return
 
         # clean up the temporary folder, but only if we've completed the model
         # successfully.
         try:
             shutil.rmtree(temporary_path)
-        except Exception as error:
-            LOGGER.warn(error)
+        except Exception as exception:
+            LOGGER.warn(exception)
 
-        if workspace != None:
+        if workspace is not None:
             #Try opening up a file explorer to see the results.
             try:
                 LOGGER.info('Opening file explorer to workspace directory')
                 if platform.system() == 'Windows':
-                    # Try to launch a windows file explorer to visit the workspace
-                    # directory now that the operation has finished executing.
+                    # Try to launch a windows file explorer to visit the
+                    # workspace directory now that the operation has finished
+                    # executing.
                     LOGGER.info('Using windows explorer to view files')
-                    subprocess.Popen('explorer "%s"' % os.path.normpath(workspace))
+                    subprocess.Popen(
+                        'explorer "%s"' % os.path.normpath(workspace))
                 else:
-                    # Assume we're on linux.  No biggie, just use xdg-open to use the
-                    # default file opening scheme.
+                    # Assume we're on linux.  No biggie, just use xdg-open to
+                    # use the default file opening scheme.
                     LOGGER.info('Not on windows, using default file browser')
                     subprocess.Popen(['xdg-open', workspace])
             except OSError:
                 # OSError is thrown if the given file browser program (whether
                 # explorer or xdg-open) cannot be found.  No biggie, just pass.
-                LOGGER.error('Cannot find default file browser. Platform: %s |' +
+                LOGGER.error(
+                    'Cannot find default file browser. Platform: %s |'
                     ' folder: %s', platform.system(), workspace)
 
         LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
-        # Log the elapsed time.
         elapsed_time = round(time.time() - model_start_time, 2)
         LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
