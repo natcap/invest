@@ -24,7 +24,6 @@ __version__ = natcap.versioner.get_version('natcap.invest')
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-_LOGGER = logging.getLogger('natcap.invest.remote_logging')
 INVEST_USAGE_LOGGER_URL = ('http://data.naturalcapitalproject.org/'
                            'server_registry/invest_usage_logger/')
 
@@ -193,8 +192,6 @@ def _calculate_args_bounding_box(args_dict):
                 lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
                 to_lat_trans = osr.CoordinateTransformation(
                     spatial_ref, lat_lng_ref)
-
-                _LOGGER.debug(local_bb)
                 for point_index in [0, 2]:
                     local_bb[point_index], local_bb[point_index + 1], _ = (
                         to_lat_trans.TransformPoint(
@@ -226,6 +223,8 @@ def log_model(model_name, model_args):
 
     Returns:
         None."""
+
+    logger = logging.getLogger('natcap.invest.log_model')
 
     def _node_hash():
         """Returns a hash for the current computational node."""
@@ -260,5 +259,5 @@ def log_model(model_name, model_args):
         logging_server.log_invest_run(payload)
     except Exception as exception:
         # An exception was thrown, we don't care.
-        _LOGGER.warn(
+        logger.warn(
             'an exception encountered when logging %s', str(exception))
