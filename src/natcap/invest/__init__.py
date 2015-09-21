@@ -9,7 +9,6 @@ import hashlib
 import json
 import pkg_resources
 import logging
-
 import Pyro4
 import gdal
 import ogr
@@ -212,7 +211,7 @@ def _calculate_args_bounding_box(args_dict):
     return _merge_local_bounding_boxes(args_dict)
 
 
-def log_model(model_name, model_args):
+def log_model(model_name, model_args, session_id=None):
     """Submit a POST request to the defined URL with the modelname passed in as
     input.  The InVEST version number is also submitted, retrieved from the
     package's resources.
@@ -250,11 +249,14 @@ def log_model(model_name, model_args):
             'system_preferred_encoding': locale.getdefaultlocale()[1],
             'system_default_language': locale.getdefaultlocale()[0],
             'bounding_box_intersection': str(bounding_box_intersection),
-            'bounding_box_union': str(bounding_box_union)
+            'bounding_box_union': str(bounding_box_union),
+            'session_id': session_id,
         }
 
         # http://data.naturalcapitalproject.org/server_registry/invest_usage_logger/
-        path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
+        #path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
+        # TODO: Debugging for local server
+        path = "PYRO:natcap.invest.remote_logging@localhost:54321"
         logging_server = Pyro4.Proxy(path)
         logging_server.log_invest_run(payload)
     except Exception as exception:
