@@ -1,15 +1,12 @@
 """executor module for natcap.invest.iui"""
 
+import uuid
 import urllib
 import locale
 import platform
 import hashlib
 import json
 import Pyro4
-import gdal
-import ogr
-import osr
-import pygeoprocessing
 import threading
 import os
 import sys
@@ -27,6 +24,10 @@ import tempfile
 from types import StringType
 import importlib
 
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
+import pygeoprocessing
 import natcap.invest
 import natcap.invest.iui
 from natcap.invest import fileio as fileio
@@ -449,6 +450,7 @@ class Executor(threading.Thread):
         LOGGER.info('Parameters saved to disk')
 
     def runModel(self, module, args):
+        session_id = str(uuid.uuid4())
         args = args.copy()
         try:
             workspace = args['workspace_dir']
@@ -513,7 +515,7 @@ class Executor(threading.Thread):
             LOGGER.info('Disk space remaining for workspace: %s',
                         fileio.get_free_space(workspace))
             log_thread = threading.Thread(
-                target=_log_model, args=(module, args))
+                target=_log_model, args=(module, args, session_id))
             log_thread.start()
 
             LOGGER.info(
@@ -554,6 +556,10 @@ class Executor(threading.Thread):
                 args['_iui_meta']['logfile'] = logfile_data
 
             model.execute(args)
+
+            exit_thread = threading.Thread(
+                target=_log_exit_status, args=(session_id, ':)'))
+            exit_thread.start()
         except Exception as exception:
             # We are explicitly handling all exceptions and below we have a
             # special case for out of disk space
@@ -594,6 +600,9 @@ class Executor(threading.Thread):
             #This intentionally handles all exceptions
             self.printTraceback()
             self.setThreadFailed(True, exception)
+            exit_thread = threading.Thread(
+                target=_log_exit_status, args=(session_id, str(exception)))
+            exit_thread.start()
             return
 
         # clean up the temporary folder, but only if we've completed the model
@@ -629,8 +638,9 @@ class Executor(threading.Thread):
         LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
         elapsed_time = round(time.time() - model_start_time, 2)
         # wait 5 seconds just in case it took that long to resolve the remote
-        # log
+        # logging server for whatever reason
         log_thread.join(5.0)
+        exit_thread.join(5.0)
         LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
 
@@ -771,19 +781,48 @@ def _calculate_args_bounding_box(args_dict):
     return _merge_local_bounding_boxes(args_dict)
 
 
-def _log_model(model_name, model_args, session_id=None):
-    """Submit a POST request to the defined URL with the modelname passed in as
-    input.  The InVEST version number is also submitted, retrieved from the
-    package's resources.
+def _log_exit_status(session_id, status):
+    """Log the completion of a model with the given status.
 
-    Args:
+    Parameters:
+        session_id (string): a unique string that can be used to identify
+            the current session between the model initial start and exit.
+        status (string): a string describing the exit status of the model,
+            'success' would indicate the successful completion while an
+            exception string could indicate a failure.
+
+    Returns:
+        None
+    """
+    logger = logging.getLogger('natcap.invest.iui._log_exit_status')
+
+    try:
+        payload = {
+            'session_id': session_id,
+            'status': status,
+        }
+
+        logging_server = _get_logging_server()
+        logging_server.log_invest_exit_status(payload)
+    except Exception as exception:
+        # An exception was thrown, we don't care.
+        logger.warn(
+            'an exception encountered when _log_exit_status %s',
+            str(exception))
+
+
+def _log_model(model_name, model_args, session_id=None):
+    """Log information about a model run to a remote server.
+
+    Parameters:
         model_name (string): a python string of the package version.
         model_args (dict): the traditional InVEST argument dictionary.
 
     Returns:
-        None."""
+        None
+    """
 
-    logger = logging.getLogger('natcap.invest.iui.log_model')
+    logger = logging.getLogger('natcap.invest.iui._log_model')
 
     def _node_hash():
         """Returns a hash for the current computational node."""
@@ -813,13 +852,26 @@ def _log_model(model_name, model_args, session_id=None):
             'session_id': session_id,
         }
 
-        # http://data.naturalcapitalproject.org/server_registry/invest_usage_logger/
-        #path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
-        # TODO: local ip for debugging for local server
-        path = "PYRO:natcap.invest.remote_logging@localhost:54321"
-        logging_server = Pyro4.Proxy(path)
+        logging_server = _get_logging_server()
         logging_server.log_invest_run(payload)
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
             'an exception encountered when logging %s', str(exception))
+
+
+def _get_logging_server(path=None):
+    """Returns a remote procedure call logging server from the
+    https://bitbucket.org/natcap/natcap_model_logger project.
+
+    Parameters:
+        path (string): A Pyro4 compatible url for getting a Proxy object.
+
+    """
+
+    if path is None:
+        #path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
+        # TODO: local ip for debugging for local server
+        path = "PYRO:natcap.invest.remote_logging@localhost:54321"
+    logging_server = Pyro4.Proxy(path)
+    return logging_server
