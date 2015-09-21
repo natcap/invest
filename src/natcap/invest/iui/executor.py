@@ -512,7 +512,9 @@ class Executor(threading.Thread):
             LOGGER.info('Python architecture: %s', platform.architecture())
             LOGGER.info('Disk space remaining for workspace: %s',
                         fileio.get_free_space(workspace))
-            _log_model(module, args)
+            log_thread = threading.Thread(
+                target=_log_model, args=(module, args))
+            log_thread.start()
 
             LOGGER.info(
                 'Pointing temporary directory at the workspace at %s',
@@ -626,6 +628,9 @@ class Executor(threading.Thread):
 
         LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
         elapsed_time = round(time.time() - model_start_time, 2)
+        # wait 5 seconds just in case it took that long to resolve the remote
+        # log
+        log_thread.join(5.0)
         LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
 
