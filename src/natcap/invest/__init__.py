@@ -5,17 +5,28 @@ import sys
 import pkg_resources
 import logging
 
+import pygeoprocessing
 import natcap.versioner
 
-pkg_resources.require('pygeoprocessing>=0.3.0a7')
+# Verify that the installed pygeoprocessing meets the minimum requirements.
+# Pyinstaller binaries do not allow us to use pkg_resources.require(), as
+# no EGG_INFO is included in the binary distribution.
+# pkg_resources is preferred over distutils.StrictVersion and
+# distutils.LooseVersion, since pkg_resources.parse_version is
+# PEP440-compliant and it's very likely that a dev version of pygeoprocessing
+# will be found.
+PYGEOPROCESSING_REQUIRED = '0.3.0a8'
+if (pkg_resources.parse_version(pygeoprocessing.__version__) <
+        pkg_resources.parse_version(PYGEOPROCESSING_REQUIRED)):
+    raise ValueError(('Pygeoprocessing >= {req_version} required, '
+                      'but version {found_ver} was found').format(
+                          req_version=PYGEOPROCESSING_REQUIRED,
+                          found_ver=pygeoprocessing.__version__))
 
 __version__ = natcap.versioner.get_version('natcap.invest')
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-INVEST_USAGE_LOGGER_URL = ('http://data.naturalcapitalproject.org/'
-                           'server_registry/invest_usage_logger/')
 
 
 def is_release():
