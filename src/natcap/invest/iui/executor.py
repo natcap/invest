@@ -559,9 +559,9 @@ class Executor(threading.Thread):
 
             model.execute(args)
 
-            exit_thread = threading.Thread(
+            log_exit_thread = threading.Thread(
                 target=_log_exit_status, args=(session_id, ':)'))
-            exit_thread.start()
+            log_exit_thread.start()
         except Exception as exception:
             # We are explicitly handling all exceptions and below we have a
             # special case for out of disk space
@@ -602,10 +602,10 @@ class Executor(threading.Thread):
             #This intentionally handles all exceptions
             self.printTraceback()
             self.setThreadFailed(True, exception)
-            exit_thread = threading.Thread(
+            log_exit_thread = threading.Thread(
                 target=_log_exit_status, args=(
                     session_id, str(traceback.format_exc())))
-            exit_thread.start()
+            log_exit_thread.start()
             return
 
         # clean up the temporary folder, but only if we've completed the model
@@ -643,7 +643,7 @@ class Executor(threading.Thread):
         # wait 5 seconds just in case it took that long to resolve the remote
         # logging server for whatever reason
         log_thread.join(5.0)
-        exit_thread.join(5.0)
+        log_exit_thread.join(5.0)
         LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
 
