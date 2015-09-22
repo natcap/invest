@@ -286,7 +286,7 @@ class Executor(threading.Thread):
 
     def printTraceback(self):
         LOGGER.debug('Printing traceback')
-        print(str(traceback.print_exc()) + '\n')
+        print(str(traceback.format_exc()) + '\n')
 
     def addOperation(self, op, args=None, uri=None, index=None):
         #op is a string index to self.funcmap
