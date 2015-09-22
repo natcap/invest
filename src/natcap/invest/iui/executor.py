@@ -35,6 +35,8 @@ import pygeoprocessing.geoprocessing
 
 LOGGER = natcap.invest.iui.get_ui_logger(None)
 ENCODING = sys.getfilesystemencoding()
+INVEST_USAGE_LOGGER_URL = ('http://data.naturalcapitalproject.org/'
+                           'server_registry/invest_usage_logger/')
 
 # If we're not on windows, python doesn't know what a
 # WindowsError is.  Using shutil to import an empty WindowsError
@@ -871,8 +873,6 @@ def _get_logging_server(path=None):
     """
 
     if path is None:
-        #path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
-        # TODO: local ip for debugging for local server
-        path = "PYRO:natcap.invest.remote_logging@localhost:54321"
+        path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
     logging_server = Pyro4.Proxy(path)
     return logging_server
