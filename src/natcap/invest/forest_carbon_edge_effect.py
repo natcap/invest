@@ -24,7 +24,7 @@ DISTANCE_UPPER_BOUND = 500e3
 
 def execute(args):
     """InVEST Carbon Edge Model calculates the carbon due to edge effects in
-    forest pixels.
+    tropical forest pixels.
 
     Parameters:
         args['workspace_dir'] (string): a uri to the directory that will write
@@ -62,7 +62,7 @@ def execute(args):
                     is ignored when is_tropical_forest==1.
 
         args['lulc_uri'] (string): path to a integer landcover code raster
-        args['forest_edge_carbon_model_shape_uri'] (string): path to a
+        args['tropical_forest_edge_carbon_model_shape_uri'] (string): path to a
             shapefile that defines the regions for the local carbon edge
             models.  Has at least the fields 'method', 'theta1', 'theta2',
             'theta3'.  Where 'method' is an int between 1..3 describing the
@@ -102,8 +102,9 @@ def execute(args):
             intermediate_dir, 'non_forest_carbon_stocks%s.tif' % file_suffix),
         'edge_distance': os.path.join(
             intermediate_dir, 'edge_distance%s.tif' % file_suffix),
-        'forest_edge_carbon_map': os.path.join(
-            intermediate_dir, 'forest_edge_carbon_stocks%s.tif' % file_suffix),
+        'tropical_forest_edge_carbon_map': os.path.join(
+            intermediate_dir, 'tropical_forest_edge_carbon_stocks%s.tif' %
+            file_suffix),
         'carbon_map': os.path.join(
             output_dir, 'carbon_map%s.tif' % file_suffix),
         'aoi_datasource': os.path.join(
@@ -118,7 +119,7 @@ def execute(args):
 
     # generate a map of pixel distance to forest edge from the landcover map
     LOGGER.info('calculating distance from forest edge')
-    _map_distance_from_forest_edge(
+    _map_distance_from_tropical_forest_edge(
         args['lulc_uri'], args['biophysical_table_uri'],
         output_file_registry['edge_distance'])
 
@@ -127,22 +128,22 @@ def execute(args):
     kd_tree, theta_model_parameters, method_model_parameter = (
         _build_spatial_index(
             args['lulc_uri'], intermediate_dir,
-            args['forest_edge_carbon_model_shape_uri']))
+            args['tropical_forest_edge_carbon_model_shape_uri']))
 
     # calculate the edge carbon effect on forests
     LOGGER.info('calculating forest edge carbon')
-    _calculate_forest_edge_carbon_map(
+    _calculate_tropical_forest_edge_carbon_map(
         output_file_registry['edge_distance'], kd_tree, theta_model_parameters,
         method_model_parameter, int(args['n_nearest_model_points']),
         float(args['biomass_to_carbon_conversion_factor']),
-        output_file_registry['forest_edge_carbon_map'])
+        output_file_registry['tropical_forest_edge_carbon_map'])
 
     # combine maps into output
     LOGGER.info('combining forest and non forest carbon into single raster')
     cell_size_in_meters = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
     carbon_edge_nodata = pygeoprocessing.get_nodata_from_uri(
-        output_file_registry['forest_edge_carbon_map'])
+        output_file_registry['tropical_forest_edge_carbon_map'])
 
     def combine_carbon_maps(non_forest_carbon, forest_carbon):
         """This combines the forest and non forest maps into one"""
@@ -151,7 +152,7 @@ def execute(args):
             forest_carbon)
     pygeoprocessing.vectorize_datasets(
         [output_file_registry['non_forest_carbon_stocks'],
-         output_file_registry['forest_edge_carbon_map']],
+         output_file_registry['tropical_forest_edge_carbon_map']],
         combine_carbon_maps, output_file_registry['carbon_map'],
         gdal.GDT_Float32, carbon_edge_nodata, cell_size_in_meters,
         'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
@@ -248,9 +249,9 @@ def _calculate_lulc_carbon_map(
             integer landcover codes
         biophysical_table_uri (string): a filepath to a csv table that indexes
             landcover codes to surface carbon, contains at least the fields
-            'lucode' (landcover integer code), 'is_tropical_forest' (0 or 1 depending
-            on landcover code type), and 'c_above' (carbon density in terms of
-            Mg/Ha)
+            'lucode' (landcover integer code), 'is_tropical_forest' (0 or 1
+            depending on landcover code type), and 'c_above' (carbon density in
+            terms of Mg/Ha)
         non_forest_carbon_map_uri (string): a filepath to the output raster
             that will contain total non-forest carbon per cell.
 
@@ -268,7 +269,8 @@ def _calculate_lulc_carbon_map(
     # Build a lookup table
     carbon_map_nodata = -9999.0
     for lucode in biophysical_table:
-        is_tropical_forest = int(biophysical_table[int(lucode)]['is_tropical_forest'])
+        is_tropical_forest = (
+            int(biophysical_table[int(lucode)]['is_tropical_forest']))
         if is_tropical_forest == 1:
             # if forest, lookup table is nodata
             lucode_to_per_pixel_carbon[int(lucode)] = carbon_map_nodata
@@ -282,7 +284,7 @@ def _calculate_lulc_carbon_map(
         non_forest_carbon_map_uri, gdal.GDT_Float32, carbon_map_nodata)
 
 
-def _map_distance_from_forest_edge(
+def _map_distance_from_tropical_forest_edge(
         lulc_uri, biophysical_table_uri, edge_distance_uri):
     """Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
@@ -292,8 +294,8 @@ def _map_distance_from_forest_edge(
             landcover codes
         biophysical_table_uri (string): a path to a csv table that indexes
             landcover codes to forest type, contains at least the fields
-            'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1 depending
-            on landcover code type)
+            'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1
+            depending on landcover code type)
         edge_distance_uri (string): path to output raster where each pixel
             contains the euclidian pixel distance to nearest forest edges on
             all non-nodata values of lulc_uri
@@ -335,7 +337,7 @@ def _map_distance_from_forest_edge(
 
 def _build_spatial_index(
         base_raster_uri, local_model_dir,
-        forest_edge_carbon_model_shapefile_uri):
+        tropical_forest_edge_carbon_model_shapefile_uri):
     """Builds a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
@@ -346,10 +348,10 @@ def _build_spatial_index(
             shapefile of the locally projected global data model grid.
             Function will create a file called 'local_carbon_shape.shp' in
             that location and overwrite one if it exists.
-        forest_edge_carbon_model_shapefile_uri (string): a path to an OGR
-            shapefile that has the parameters for the global carbon edge model.
-            Each georeferenced feature should have fields 'theta1', 'theta2',
-            'theta3', and 'method'
+        tropical_forest_edge_carbon_model_shapefile_uri (string): a path to an
+            OGR shapefile that has the parameters for the global carbon edge
+            model. Each georeferenced feature should have fields 'theta1',
+            'theta2', 'theta3', and 'method'
 
     Returns:
         a tuple of:
@@ -365,7 +367,7 @@ def _build_spatial_index(
     lulc_projection_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
         base_raster_uri)
     pygeoprocessing.reproject_datasource_uri(
-        forest_edge_carbon_model_shapefile_uri, lulc_projection_wkt,
+        tropical_forest_edge_carbon_model_shapefile_uri, lulc_projection_wkt,
         carbon_model_reproject_uri)
 
     model_shape_ds = ogr.Open(carbon_model_reproject_uri)
@@ -401,10 +403,11 @@ def _build_spatial_index(
     return kd_tree, theta_model_parameters, method_model_parameter
 
 
-def _calculate_forest_edge_carbon_map(
+def _calculate_tropical_forest_edge_carbon_map(
         edge_distance_uri, kd_tree, theta_model_parameters,
         method_model_parameter, n_nearest_model_points,
-        biomass_to_carbon_conversion_factor, forest_edge_carbon_map_uri):
+        biomass_to_carbon_conversion_factor,
+        tropical_forest_edge_carbon_map_uri):
     """Calculates the carbon on the forest pixels accounting for their global
     position with respect to precalculated edge carbon models.
 
@@ -423,8 +426,9 @@ def _calculate_forest_edge_carbon_map(
             for.
         biomass_to_carbon_conversion_factor (float): number by which to
             multiply the biomass by to get carbon.
-        forest_edge_carbon_map_uri (string): a filepath to the output raster
-            which will contain total carbon stocks per cell of forest type.
+        tropical_forest_edge_carbon_map_uri (string): a filepath to the output
+            raster which will contain total carbon stocks per cell of forest
+            type.
 
     Returns:
         None"""
@@ -433,9 +437,9 @@ def _calculate_forest_edge_carbon_map(
     carbon_edge_nodata = -9999.0
     # fill nodata, in case we skip entire memory blocks that are non-forest
     pygeoprocessing.new_raster_from_base_uri(
-        edge_distance_uri, forest_edge_carbon_map_uri, 'GTiff',
+        edge_distance_uri, tropical_forest_edge_carbon_map_uri, 'GTiff',
         carbon_edge_nodata, gdal.GDT_Float32, fill_value=carbon_edge_nodata)
-    edge_carbon_dataset = gdal.Open(forest_edge_carbon_map_uri, gdal.GA_Update)
+    edge_carbon_dataset = gdal.Open(tropical_forest_edge_carbon_map_uri, gdal.GA_Update)
     edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
     edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
 

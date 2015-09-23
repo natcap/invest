@@ -63,8 +63,8 @@
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
         },
         {
-          "id": "forest_edge_carbon_model_shape_uri",
-          "args_id": "forest_edge_carbon_model_shape_uri",
+          "id": "tropical_forest_edge_carbon_model_shape_uri",
+          "args_id": "tropical_forest_edge_carbon_model_shape_uri",
           "type": "file",
           "label": "Global forest carbon edge regression models (vector)",
           "defaultValue": "../forest_carbon_edge_effect/core_data/forest_carbon_edge_regression_model_parameters.shp",
