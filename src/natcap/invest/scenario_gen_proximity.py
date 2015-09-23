@@ -162,6 +162,8 @@ def _convert_landscape(
         'smooth_distance_from_edge': pygeoprocessing.temporary_filename(),
         'distance_from_edge': pygeoprocessing.temporary_filename(),
     }
+    # a sigma of 1.0 gives nice visual results to smooth pixel level artifacts
+    # since a pixel is the 1.0 unit
     _make_gaussian_kernel_uri(1.0, tmp_file_registry['gaussian_kernel'])
 
     # create the output raster first as a copy of the base landcover so it can
@@ -601,7 +603,9 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
         None.
     """
 
-    max_distance = sigma * 5
+    # going 3.0 times out from the sigma gives you over 99% of area under
+    # the guassian curve
+    max_distance = sigma * 3.0
     kernel_size = int(numpy.round(max_distance * 2 + 1))
 
     driver = gdal.GetDriverByName('GTiff')
