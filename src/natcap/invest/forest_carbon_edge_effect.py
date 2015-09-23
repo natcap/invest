@@ -4,7 +4,6 @@ et. al (in review)"""
 
 import os
 import logging
-import math
 import time
 import uuid
 
@@ -38,25 +37,29 @@ def execute(args):
             shapefile that will be used to aggregate carbon stock results at
             the end of the run.
         args['biophysical_table_uri'] (string): a path to a CSV table that has
-            at least a header for an 'lucode', 'is_forest', and 'c_above'.
+            at least a header for an 'lucode', 'is_tropical_forest', and
+            'c_above'.
                 'lucode': an integer that corresponds to landcover codes in
                     the raster args['lulc_uri']
-                'is_forest': either 0 or 1 indicating whether the landcover
-                    type is forest (1) or not (0).  If 1, the value in c_above
-                    is ignored and instead calculated from the edge regression
-                    model.
-                'c_above': floating point number indicating tons of carbon per
-                    hectare for that landcover type
+                'is_tropical_forest': either 0 or 1 indicating whether the
+                    landcover type is forest (1) or not (0).  If 1, the value
+                    in 'c_above' is ignored and instead calculated from the
+                    edge regression model.
+                'c_above': floating point number indicating tons of above
+                    ground carbon per hectare for that landcover type
+                {'c_below', 'c_dead', 'c_soil'}: three other optional carbon
+                    pools that will statically map landcover types to the
+                    carbon densities in the table.
 
                 Example:
-                    lucode, is_forest, c_above
-                    0,0,32.8
-                    1,1,n/a
-                    2,1,n/a
-                    16,0,28.1
+                    lucode,is_tropical_forest,c_above,c_soil
+                    0,0,32.8,5
+                    1,1,n/a,2.5
+                    2,1,n/a,1.8
+                    16,0,28.1,4.3
 
-                    Note the "n/a" are optional since that field is ignored
-                    when is_forest==1.
+                    Note the "n/a" in 'c_above' are optional since that field
+                    is ignored when is_tropical_forest==1.
 
         args['lulc_uri'] (string): path to a integer landcover code raster
         args['forest_edge_carbon_model_shape_uri'] (string): path to a
@@ -245,7 +248,7 @@ def _calculate_lulc_carbon_map(
             integer landcover codes
         biophysical_table_uri (string): a filepath to a csv table that indexes
             landcover codes to surface carbon, contains at least the fields
-            'lucode' (landcover integer code), 'is_forest' (0 or 1 depending
+            'lucode' (landcover integer code), 'is_tropical_forest' (0 or 1 depending
             on landcover code type), and 'c_above' (carbon density in terms of
             Mg/Ha)
         non_forest_carbon_map_uri (string): a filepath to the output raster
@@ -265,8 +268,8 @@ def _calculate_lulc_carbon_map(
     # Build a lookup table
     carbon_map_nodata = -9999.0
     for lucode in biophysical_table:
-        is_forest = int(biophysical_table[int(lucode)]['is_forest'])
-        if is_forest == 1:
+        is_tropical_forest = int(biophysical_table[int(lucode)]['is_tropical_forest'])
+        if is_tropical_forest == 1:
             # if forest, lookup table is nodata
             lucode_to_per_pixel_carbon[int(lucode)] = carbon_map_nodata
         else:
@@ -289,7 +292,7 @@ def _map_distance_from_forest_edge(
             landcover codes
         biophysical_table_uri (string): a path to a csv table that indexes
             landcover codes to forest type, contains at least the fields
-            'lucode' (landcover integer code) and 'is_forest' (0 or 1 depending
+            'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1 depending
             on landcover code type)
         edge_distance_uri (string): path to output raster where each pixel
             contains the euclidian pixel distance to nearest forest edges on
@@ -303,7 +306,7 @@ def _map_distance_from_forest_edge(
         biophysical_table_uri, 'lucode')
     forest_codes = [
         lucode for (lucode, ludata) in biophysical_table.iteritems()
-        if int(ludata['is_forest']) == 1]
+        if int(ludata['is_tropical_forest']) == 1]
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
     forest_mask_nodata = 255

@@ -56,7 +56,7 @@
             "type": "CSV",
             "fieldsExist": [
               "lucode",
-              "is_forest",
+              "is_tropical_forest",
               "c_above"
             ]
           },
