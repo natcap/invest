@@ -123,8 +123,10 @@ def _convert_landscape(
         base_lulc_uri, replacement_lucode, area_to_convert,
         focal_landcover_codes, convertible_type_list, score_weight, n_steps,
         smooth_distance_from_edge_uri, output_landscape_raster_uri, stats_uri):
-    """Expands agriculture into convertible codes starting from the furthest
-    distance from the edge of the forest, inward.
+    """Expands the replacement lucodes in relation to the focal landcover
+    codes.  If the sign on `score_weight` is positive, expansion occurs marches
+    away from the focal types, while if `score_weight` is negative conversion
+    marches toward the focal types.
 
     Parameters:
         base_lulc_uri (string): path to landcover raster that will be used as
@@ -136,6 +138,11 @@ def _convert_landscape(
             calculate proximity
         convertible_type_list (list of int): landcover codes that are allowable
             to be converted to agriculture
+        score_weight (float): this value is used to multiply the distance from
+            the focal landcover types when prioritizing which pixels in
+            `convertable_type_list` are to be converted.  If negative,
+            conversion occurs toward the focal types, if positive occurs away
+            from the focal types.
         n_steps (int): number of steps to convert the landscape.  On each step
             the distance transform will be applied on the
             current value of the `focal_landcover_codes` pixels in
