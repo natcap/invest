@@ -665,11 +665,13 @@ def _calculate_args_bounding_box(args_dict):
         """Helper function to merge two bounding boxes through union or
             intersection
 
-            Args:
+            Parameters:
                 bb1 (list of float): bounding box of the form
                     [minx, maxy, maxx, miny] or None
                 bb2 (list of float): bounding box of the form
                     [minx, maxy, maxx, miny] or None
+                mode (string): either "union" or "intersection" indicating the
+                    how to combine the two bounding boxes.
 
             Returns:
                 either the intersection or union of bb1 and bb2 depending
