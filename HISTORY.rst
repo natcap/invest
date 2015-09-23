@@ -2,6 +2,7 @@
 
 3.3.0
 =====
+* Introduced a new InVEST model, "Scenario Generator: Proximity Based" and renamed the previous "Scenario Generator" to "Scenario Generator: Rule Based".
 * Introduced a forest carbon edge effect model.
 * Refactored all the InVEST model user interfaces so that Workspace defaults to the user's home "Documents" directory.
 
