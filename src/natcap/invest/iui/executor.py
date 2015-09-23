@@ -708,7 +708,8 @@ def _calculate_args_bounding_box(args_dict):
                 gis types.  They can be any other type, including dictionaries.
             bb_intersection (list or None): if list, has the form
                 [xmin, ymin, xmax, ymax], where coordinates are in lng, lat
-            bb_union (list): same as bb_intersection
+            bb_union (list or None): if list, has the form
+                [xmin, ymin, xmax, ymax], where coordinates are in lng, lat
 
         Returns:
             (intersection, union) bounding box tuples of all filepaths to GIS
