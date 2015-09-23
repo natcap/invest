@@ -604,7 +604,7 @@ class Executor(threading.Thread):
             self.setThreadFailed(True, exception)
             log_exit_thread = threading.Thread(
                 target=_log_exit_status, args=(
-                    session_id, str(traceback.format_exc())))
+                    session_id, traceback.format_exc()))
             log_exit_thread.start()
             return
 
