@@ -501,12 +501,14 @@ class CBCModel(object):
         years_list = self.lulc_snapshot_years_list
         if self.vars_dict['analysis_year'] != '':
             years_list.append(self.vars_dict['analysis_year'])
+
         # Total Carbon Stock
         for i in range(0, len(self.total_carbon_stock_raster_list)):
             r = self.total_carbon_stock_raster_list[i]
             filename = 'carbon_stock_at_%s.tif' % years_list[i]
             r.save_raster(
                 os.path.join(self.vars_dict['outputs_dir'], filename))
+
         # Total Emissions
         for i in range(0, len(self.emissions_raster_list)):
             r = self.emissions_raster_list[i]
@@ -514,13 +516,15 @@ class CBCModel(object):
                 years_list[i], years_list[i+1])
             r.save_raster(os.path.join(
                 self.vars_dict['outputs_dir'], filename))
+
         # Total Sequestration
         for i in range(0, len(self.sequestration_raster_list)):
             r = self.sequestration_raster_list[i]
-            filename = 'carbon_sequestration_between_%s_and_%s.tif' % (
+            filename = 'carbon_accumulation_between_%s_and_%s.tif' % (
                 years_list[i], years_list[i+1])
             r.save_raster(os.path.join(
                 self.vars_dict['outputs_dir'], filename))
+
         # Net Sequestration
         for i in range(0, len(self.net_sequestration_raster_list)):
             r = self.net_sequestration_raster_list[i]
@@ -528,6 +532,16 @@ class CBCModel(object):
                 years_list[i], years_list[i+1])
             r.save_raster(os.path.join(
                 self.vars_dict['outputs_dir'], filename))
+
+        # Net Sequestration from Base Year to Analysis Year
+        r = self.net_sequestration_raster_list[0].zeros()
+        for i in range(0, len(self.net_sequestration_raster_list)):
+            r += self.net_sequestration_raster_list[i]
+        filename = 'net_carbon_sequestration_between_%s_and_%s.tif' % (
+            years_list[0], years_list[-1])
+        r.save_raster(os.path.join(
+            self.vars_dict['outputs_dir'], filename))
+
         # Net Present Value
         if self.do_economic_analysis:
             r = self.npv_raster
