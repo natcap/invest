@@ -127,7 +127,6 @@ def execute(args):
         args['biophysical_table_uri'], 'lucode')
     biophysical_keys = [
         x.lower() for x in biophysical_table.itervalues().next().keys()]
-    LOGGER.debug(biophysical_keys)
     for carbon_pool_type, ignore_tropical_type in [
             ('c_above', True), ('c_below', False), ('c_soil', False),
             ('c_dead', False)]:
