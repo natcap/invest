@@ -14,6 +14,10 @@ import pkg_resources
 import pygeoprocessing
 import natcap.versioner
 
+from natcap.invest.tests import test
+
+__all__ = ['test']
+
 # Verify that the installed pygeoprocessing meets the minimum requirements.
 # Pyinstaller binaries do not allow us to use pkg_resources.require(), as
 # no EGG_INFO is included in the binary distribution.
