@@ -2473,6 +2473,40 @@ def forked_by(options):
     except AttributeError:
         pass
 
+@task
+@consume_args
+def compress_raster(args):
+    """
+    Compress a raster.
+
+    Call `paver compress_raster --help` for full details.
+    """
+    parser = argparse.ArgumentParser(description=(
+        'Compress and tile a GDAL-compatible raster.'))
+    parser.add_argument('-x', '--blockxsize', nargs='?', default=256, type=int, help=(
+        'The block size along the X axis.  Default=256'))
+    parser.add_argument('-y', '--blockysize', nargs='?', default=256, type=int, help=(
+        'The block size along the Y axis.  Default=256'))
+    parser.add_argument('inraster', type=str, help=(
+        'The raster to compress'))
+    parser.add_argument('outraster', type=str, help=(
+        'The path to the output raster'))
+
+    parsed_args = parser.parse_args(args)
+
+    sh(('gdal_translate '
+        '-of "GTiff" '
+        '-co "COMPRESS=LZW" '
+        '-co "TILED=YES" '
+        '-co "BLOCKXSIZE={blockx}" '
+        '-co "BLOCKYSIZE={blocky}" '
+        '{in_raster} {out_raster}').format(
+            blockx=parsed_args.blockxsize,
+            blocky=parsed_args.blockysize,
+            in_raster=os.path.abspath(parsed_args.inraster),
+            out_raster=os.path.abspath(parsed_args.outraster),
+        ))
+
 
 @task
 @might_call('push')
