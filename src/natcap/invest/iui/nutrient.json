@@ -16,7 +16,7 @@
             "args_id" : "workspace_dir",
             "type": "folder",
             "label": "Workspace",
-            "defaultValue": "../Nutrient_Retention",
+            "defaultValue": "~/Documents/nutrient_retention_workspace",
             "required": true,
             "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
@@ -109,7 +109,7 @@
             "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
             "required": true,
             "validateAs": {"type": "OGR",
-                   "layers": [{"name": {"inheritFrom": "file"}, 
+                   "layers": [{"name": {"inheritFrom": "file"},
                            "type": "polygons",
                            "projection": {"exists": true}
                           }],
@@ -137,7 +137,7 @@
                                                      {"field": "LULC_veg",
                                                       "validateAs":{"type": "number",
                                                                   "allowedValues": {"pattern":"^[01]"}
-                                                                  }}, 
+                                                                  }},
                                                      {"field": "root_depth",
                                                       "validateAs": {"type": "number",
                                                                      "allowedValues":{"pattern":"^[-+]?[0-9]*\\.?[0-9]+$"}
@@ -162,7 +162,7 @@
             "required": false,
             "helpText": "Select to calculate nitrogen export."
         },
-        {        
+        {
             "id" : "threshold_flow_accumulation",
             "args_id" : "accum_threshold",
             "type": "text",
@@ -172,7 +172,7 @@
             "validText": "^[0-9]+$",
             "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
         },
-        {        
+        {
             "id" : "water_purification_threshold_table_uri",
             "args_id" : "water_purification_threshold_table_uri",
             "type": "file",
@@ -198,7 +198,7 @@
             "id" : "valuation_list",
             "type" : "list",
             "elements" : [
-            {        
+            {
                 "id" : "water_purification_valuation_table_uri",
                 "args_id" : "water_purification_valuation_table_uri",
                 "type": "file",

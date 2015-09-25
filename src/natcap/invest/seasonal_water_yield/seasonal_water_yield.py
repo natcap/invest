@@ -1,5 +1,6 @@
 """InVEST Seasonal Water Yield Model"""
 
+import sys
 import os
 import logging
 import re
@@ -334,10 +335,26 @@ def execute(args):
 
 
 def calculate_quick_flow(
-        precip_uri_list, lulc_uri,
-        cn_uri, n_events, stream_uri, qfi_uri, qf_monthly_uri_list,
-        si_uri):
-    """Calculates quick flow """
+        precip_uri_list, lulc_uri, cn_uri, n_events, stream_uri, qfi_uri,
+        qf_monthly_uri_list, si_uri):
+    """Calculates quick flow
+
+    Parameters:
+        precip_uri_list (list of string): list of paths to files that correspond
+            to precipitation per month.  Files should be in order of increasing
+            month, although the final calculation is not affected if not.
+        lulc_uri (string): path to landcover raster
+        cn_uri (string): path to curve number raster
+        n_events (dict of int -> int): maps the number of rain events per month
+            where the index to n_events is the calendar month starting at 1.
+        stream_uri (string): path to stream mask raster where 1 indicates a
+            stream pixel, 0 is a non-stream but otherwise valid area from the
+            original DEM, and nodata indicates areas outside the valid DEM.
+        qfi_uri (string): path to output quickflow index raster
+        qf_monthly_uri_list (list of string): list of paths to output monthly
+            rasters.
+        si_uri (string): list to output raster for potential maximum retention
+        """
 
     si_nodata = -1
     cn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(cn_uri)
@@ -359,6 +376,7 @@ def calculate_quick_flow(
     p_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         precip_uri_list[0])
 
+    m_index = None
     for m_index in range(1, N_MONTHS + 1):
         def qf_op(pm_array, s_array, stream_array):
             """calculate quickflow"""
@@ -368,16 +386,21 @@ def calculate_quick_flow(
             alpha = pm_array / n_events[m_index] / 25.4
 
             quickflow = (25.4 * n_events[m_index] * (
-                (alpha - s_array) * numpy.exp((-0.2 * s_array)/alpha) +
+                (alpha - s_array) * numpy.exp(-0.2 * s_array / alpha) +
                 s_array ** 2 / alpha * numpy.exp((0.8 * s_array) / alpha) *
                 scipy.special.expn(1, s_array / alpha)))
 
-            #if alpha == 0, then QF should be zero
+            # in cases where precipitation is small, alpha will be small and
+            # the quickflow can get into an inf / 0.0 state.  This zeros the
+            # result so at least we don't get a block of nodata pixels out
+            quickflow[numpy.isnan(quickflow)] = 0.0
+
+            # if alpha == 0, then QF should be zero
             quickflow[alpha == 0] = 0.0
-            #mask out nodata
+            # mask out nodata
             quickflow[nodata_mask] = qf_nodata
 
-            #if we're on a stream, set quickflow to the precipitation
+            # if we're on a stream, set quickflow to the precipitation
             quickflow[stream_array == 1] = pm_array[stream_array == 1]
             return quickflow
 
@@ -387,7 +410,6 @@ def calculate_quick_flow(
             qf_monthly_uri_list[m_index-1], gdal.GDT_Float32, qf_nodata,
             pixel_size, 'intersection', vectorize_op=False,
             datasets_are_pre_aligned=True)
-        del qf_op
 
     LOGGER.info('calculating QFi')
     def qfi_sum(*qf_values):
