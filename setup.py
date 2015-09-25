@@ -147,6 +147,7 @@ setup(
         'natcap.invest.sdr',
         'natcap.invest.seasonal_water_yield',
         'natcap.invest.testing',
+        'natcap.invest.tests',
         'natcap.invest.timber',
         'natcap.invest.wave_energy',
         'natcap.invest.wind_energy',
