@@ -180,7 +180,9 @@ class CBCModel(object):
         d_list = self.disturbed_carbon_stock_object_list
         emitted_over_time_raster = d_list[0].final_biomass_stock_disturbed_raster.zeros()
         for i in range(0, idx+1):
-            emitted_over_time_raster += d_list[i].get_total_emissions_between_years(start_year, end_year)
+            emissions_raster = d_list[i].get_total_emissions_between_years(start_year, end_year)
+            emitted_over_time_raster += emissions_raster
+            emissions_raster._delete()
         self.emissions_raster_list[idx] = emitted_over_time_raster
 
         # Net Sequestration between Start_Year and End_Year
@@ -435,16 +437,19 @@ class CBCModel(object):
             _reclass_lulc_to_pct_disturbed(self.vars_dict, idx, 'soil'))
 
         # Get pre-transition carbon stock
-        prev_biomass_carbon_stock_biomass_raster = \
+        prev_biomass_carbon_stock_raster = \
             self.biomass_carbon_stock_raster_list[idx]
-        prev_soil_carbon_stock_soil_raster = \
+        prev_soil_carbon_stock_raster = \
             self.soil_carbon_stock_raster_list[idx]
 
         # Calculate total amount of carbon stock disturbed
         final_biomass_stock_disturbed_raster = \
-            pct_biomass_stock_disturbed_raster * prev_biomass_carbon_stock_biomass_raster
+            pct_biomass_stock_disturbed_raster * prev_biomass_carbon_stock_raster
         final_soil_stock_disturbed_raster = \
-            pct_soil_stock_disturbed_raster * prev_soil_carbon_stock_soil_raster
+            pct_soil_stock_disturbed_raster * prev_soil_carbon_stock_raster
+
+        pct_biomass_stock_disturbed_raster._delete()
+        pct_soil_stock_disturbed_raster._delete()
 
         # Find half-lives
         biomass_half_life_raster = Raster.from_file(
@@ -476,6 +481,8 @@ class CBCModel(object):
             npv_raster = net_sequestered_raster * \
                 self.yearly_carbon_price_dict[year]
             self.npv_raster += npv_raster
+            net_sequestered_raster._delete()
+            npv_raster._delete()
         LOGGER.info("...NPV raster updated.")
 
     def _compute_net_sequestration(self, idx, year):
@@ -493,6 +500,8 @@ class CBCModel(object):
 
         # Net Sequestration for a given year
         net_sequestered_raster = sequestered_raster - emitted_raster
+        sequestered_raster._delete()
+        emitted_raster._delete()
 
         return net_sequestered_raster
 
