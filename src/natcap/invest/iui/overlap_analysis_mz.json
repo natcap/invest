@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../OverlapAnalysis",
+          "defaultValue": "~/Documents/overlap_analysis_workspace",
           "required": true,
           "validateAs": {
             "type": "folder"

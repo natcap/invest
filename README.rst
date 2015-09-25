@@ -94,6 +94,8 @@ on the command-line somewhere on your PATH, depending on what you'd like to buil
   * ``makensis`` (NSIS, for generating Windows installers)
   * ``hdiutil`` (for generating mac DMGs)
   * ``pdflatex`` (for generating PDF versions of the User's Guide)
+  * ``pandoc`` (for converting .docx files to rst when building the User's
+    Guide.  See http://pandoc.org/installing.html)  
 
 
 For building InVEST binaries, you will also need to have a compiler configured.

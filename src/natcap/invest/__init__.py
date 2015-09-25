@@ -9,23 +9,28 @@ import platform
 import sys
 import hashlib
 import json
-import distutils.version
+import pkg_resources
 
+import pygeoprocessing
 import natcap.versioner
 
-try:
-    import pygeoprocessing
-    REQUIRED_PYGEOPROCESSING_VERSION = '0.3.0a7'
-    if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
-            distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
-        raise Exception(
-            "Requires PyGeoprocessing version at least %s.  "
-            "Current version %s ",
-            REQUIRED_PYGEOPROCESSING_VERSION, pygeoprocessing.__version__)
-except ImportError:
-    pass
+# Verify that the installed pygeoprocessing meets the minimum requirements.
+# Pyinstaller binaries do not allow us to use pkg_resources.require(), as
+# no EGG_INFO is included in the binary distribution.
+# pkg_resources is preferred over distutils.StrictVersion and
+# distutils.LooseVersion, since pkg_resources.parse_version is
+# PEP440-compliant and it's very likely that a dev version of pygeoprocessing
+# will be found.
+PYGEOPROCESSING_REQUIRED = '0.3.0a8'
+if (pkg_resources.parse_version(pygeoprocessing.__version__) <
+        pkg_resources.parse_version(PYGEOPROCESSING_REQUIRED)):
+    raise ValueError(('Pygeoprocessing >= {req_version} required, '
+                      'but version {found_ver} was found').format(
+                          req_version=PYGEOPROCESSING_REQUIRED,
+                          found_ver=pygeoprocessing.__version__))
 
 __version__ = natcap.versioner.get_version('natcap.invest')
+
 
 def is_release():
     """Returns a boolean indicating whether this invest release is actually a
@@ -33,6 +38,7 @@ def is_release():
     if 'post' in __version__:
         return False
     return True
+
 
 def local_dir(source_file):
     """Return the path to where the target_file would be on disk.  If this is
@@ -60,6 +66,7 @@ def local_dir(source_file):
             pass
     return source_dirname
 
+
 def _user_hash():
     """Returns a hash for the user, based on the machine."""
     data = {
@@ -73,6 +80,7 @@ def _user_hash():
         return md5.hexdigest()
     except:
         return None
+
 
 def log_model(model_name, model_version=None):
     """Submit a POST request to the defined URL with the modelname passed in as
@@ -104,14 +112,12 @@ def log_model(model_name, model_version=None):
         },
     }
 
-    if model_version == None:
+    if model_version is None:
         model_version = __version__
     data['model_version'] = model_version
 
     try:
         urlopen(Request(path, urlencode(data)))
-    except:
+    except Exception:
         # An exception was thrown, we don't care.
         print 'an exception encountered when logging'
-        pass
-
