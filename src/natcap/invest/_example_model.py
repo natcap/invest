@@ -15,7 +15,7 @@ def execute(args):
 
     Parameters:
         args (dict): A dict of key-value pairs.
-            args['workspace_uri'] (string): A URI to the output workspace.
+            args['workspace_dir'] (string): A URI to the output workspace.
             args['example_lulc'] (string): A URI to the LULC to process.
             args['suffix'] (string, optional): A suffix to be appended to
                 the output filenames.
@@ -25,9 +25,9 @@ def execute(args):
     """
 
     dir_registry = {
-        'intermediate': os.path.join(args['workspace_uri'],
+        'intermediate': os.path.join(args['workspace_dir'],
                                     'intermediate_outputs'),
-        'output': args['workspace_uri']
+        'output': args['workspace_dir']
     }
 
     def _add_suffix(path):

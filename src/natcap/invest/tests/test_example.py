@@ -51,7 +51,7 @@ class ExampleUnitTests(unittest.TestCase):
         from natcap.invest import _example_model
 
         args = {
-            'workspace_uri': tempfile.mkdtemp(),
+            'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
         }
         _example_model.execute(args)
@@ -62,10 +62,10 @@ class ExampleUnitTests(unittest.TestCase):
             [6, -1, -1, -1, -1],
             [0, 6, 7, 8, 9]], numpy.int32)
         expected_raster = _create_lulc(expected_matrix)
-        sum_raster = os.path.join(args['workspace_uri'], 'sum.tif')
+        sum_raster = os.path.join(args['workspace_dir'], 'sum.tif')
         pygeoprocessing.testing.assert_rasters_equal(sum_raster, expected_raster)
 
-        shutil.rmtree(args['workspace_uri'])
+        shutil.rmtree(args['workspace_dir'])
         for filename in [args['example_lulc'], expected_raster]:
             os.remove(filename)
 
@@ -75,13 +75,13 @@ class ExampleUnitTests(unittest.TestCase):
         """
         from natcap.invest import _example_model
         args = {
-            'workspace_uri': tempfile.mkdtemp(),
+            'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
             'suffix': 'foo',
         }
         _example_model.execute(args)
 
-        self.assertTrue(os.path.exists(os.path.join(args['workspace_uri'],
+        self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
 
     def test_execute_with_suffix_and_underscore(self):
@@ -90,12 +90,12 @@ class ExampleUnitTests(unittest.TestCase):
         """
         from natcap.invest import _example_model
         args = {
-            'workspace_uri': tempfile.mkdtemp(),
+            'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
             'suffix': 'foo',
         }
         _example_model.execute(args)
 
-        self.assertTrue(os.path.exists(os.path.join(args['workspace_uri'],
+        self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
 
