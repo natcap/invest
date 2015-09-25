@@ -683,17 +683,10 @@ def _calculate_args_bounding_box(args_dict):
         if bb2 is None:
             return bb1
 
-        less_than_or_equal = lambda x, y: x if x <= y else y
-        greater_than = lambda x, y: x if x > y else y
-
         if mode == "union":
-            comparison_ops = [
-                less_than_or_equal, greater_than, greater_than,
-                less_than_or_equal]
+            comparison_ops = [min, max, max, min]
         if mode == "intersection":
-            comparison_ops = [
-                greater_than, less_than_or_equal, less_than_or_equal,
-                greater_than]
+            comparison_ops = [max, min, min, max]
 
         bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
