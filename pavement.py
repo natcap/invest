@@ -2533,11 +2533,20 @@ def test(args):
     nosetests.
 
     If --jenkins is provided, xunit reports and extra logging will be produced.
+    If --with-data is provided, test data repos will be cloned.
+
+    --jenkins implies --with-data.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--jenkins', default=False, action='store_true',
             help='Use options that are useful for Jenkins reports')
+    parser.add_argument('--with-data', default=False, action='store_true',
+            help='Clone/update the data repo if needed')
     parsed_args = parser.parse_args(args)
+
+    if parsed_args.with_data:
+        call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
+        call_task('fetch', args=[REPOS_DICT['sample-data'].local_path])
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _run_tests():
@@ -2547,7 +2556,11 @@ def test(args):
         """
         if parsed_args.jenkins:
             call_task('check_repo', options={
-                'repo': REPOS_DICT['test-data'],
+                'repo': REPOS_DICT['test-data'].local_path,
+                'fetch': True,
+            })
+            call_task('check_repo', options={
+                'repo': REPOS_DICT['sample-data'].local_path,
                 'fetch': True,
             })
             jenkins_flags = (
