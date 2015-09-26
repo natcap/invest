@@ -2603,8 +2603,8 @@ def test(args):
                                         capture=True)
                 local_version = sh('python setup.py --version', capture=True)
             except BuildFailure:
-                # When natcap.invest is not installed.
-                installed_version = True
+                # When natcap.invest is not installed, so force reinstall
+                installed_version = False
                 local_version = True
         else:
             # If changes are uncommitted, force reinstall.
