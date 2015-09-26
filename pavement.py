@@ -2539,22 +2539,42 @@ def test(args):
             help='Use options that are useful for Jenkins reports')
     parsed_args = parser.parse_args(args)
 
-    if parsed_args.jenkins:
-        jenkins_flags = (
-            '--with-xunit '
-            '--with-coverage '
-            '--cover-xml '
-            '--cover-tests '
-            '--logging-filter=None '
-            '--nologcapture '
-        )
-    else:
-        jenkins_flags = ''
+    @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
+    def _run_tests():
+        if parsed_args.jenkins:
+            call_task('check_repo', options={
+                'repo': REPOS_DICT['test-data'],
+                'fetch': True,
+            })
+            jenkins_flags = (
+                '--with-xunit '
+                '--with-coverage '
+                '--cover-xml '
+                '--cover-tests '
+                '--logging-filter=None '
+                '--nologcapture '
+            )
+        else:
+            jenkins_flags = ''
 
-    sh(('nosetests -vs {jenkins_opts} '
-        'tests/*.py '
-        'src/natcap/invest/tests/*.py').format(
-            jenkins_opts=jenkins_flags))
+        sh(('nosetests -vs {jenkins_opts} '
+            'tests/*.py '
+            'src/natcap/invest/tests/*.py').format(
+                jenkins_opts=jenkins_flags))
+
+    @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
+    def _update_invest():
+        sh('pip uninstall -y natcap.invest')
+        sh('python setup.py install')
+
+    # Build an env if needed.        
+    if not os.path.exists(paver.easy.options.dev_env.envname):
+        call_task('dev_env')
+    else:
+        _update_invest()
+
+    # run the tests within the virtualenv.
+    _run_tests()
 
 @task
 @might_call('push')
