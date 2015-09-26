@@ -2597,10 +2597,15 @@ def test(args):
         if not changes_uncommitted:
             # If no uncommitted changes, check that the versions match.
             # If versions don't match, reinstall.
-            installed_version = sh(('python -c "import natcap.invest;'
-                                    'print natcap.invest.__version__"'),
-                                    capture=True)
-            local_version = sh('python setup.py --version', capture=True)
+            try:
+                installed_version = sh(('python -c "import natcap.invest;'
+                                        'print natcap.invest.__version__"'),
+                                        capture=True)
+                local_version = sh('python setup.py --version', capture=True)
+            except BuildFailure:
+                # When natcap.invest is not installed.
+                installed_version = True
+                local_version = True
         else:
             # If changes are uncommitted, force reinstall.
             installed_version = True
