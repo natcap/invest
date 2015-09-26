@@ -2509,6 +2509,37 @@ def compress_raster(args):
 
 
 @task
+@consume_args
+def test(args):
+    """
+    Run all tests in the two test suites.  Currently implemented with
+    nosetests.
+
+    If --jenkins is provided, xunit reports and extra logging will be produced.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--jenkins', default=False, action='store_true',
+            help='Use options that are useful for Jenkins reports')
+    parsed_args = parser.parse_args(args)
+
+    if parsed_args.jenkins:
+        jenkins_flags = (
+            '--with-xunit '
+            '--with-coverage '
+            '--cover-xml '
+            '--cover-tests '
+            '--logging-filter=None '
+            '--nologcapture '
+        )
+    else:
+        jenkins_flags = ''
+
+    sh(('nosetests -vs {jenkins_opts} '
+        'tests/*.py '
+        'src/natcap/invest/tests/*.py').format(
+            jenkins_opts=jenkins_flags))
+
+@task
 @might_call('push')
 @cmdopts([
     ('python=', '', 'Python exe'),
