@@ -2588,10 +2588,12 @@ def test(args):
         """
         # If there are uncommitted changes, or the installed version of InVEST
         # differs from the local version, reinstall InVEST into the virtualenv.
-        changes_uncommitted = sh((
+        changed_files = sh((
             'hg status -a -m -r -d '
             'src/natcap/invest/ pavement.py setup.py setup.cfg MANIFEST.in'),
-            capture=True).strip() != ''
+            capture=True)
+        print 'Changed files: ' + changed_files
+        changes_uncommitted = changed_files.strip() == ''
         if not changes_uncommitted:
             # If no uncommitted changes, check that the versions match.
             # If versions don't match, reinstall.
