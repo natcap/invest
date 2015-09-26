@@ -2564,8 +2564,20 @@ def test(args):
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _update_invest():
-        sh('pip uninstall -y natcap.invest')
-        sh('python setup.py install')
+        # If there are uncommitted changes, or the installed version of InVEST
+        # differs from the local version, reinstall InVEST into the virtualenv.
+        changes_uncommitted = sh((
+            'hg status -c -a -m '
+            'src/natcap/invest/ pavement.py setup.py setup.cfg MANIFEST.in'),
+            capture=True).strip() == ''
+        installed_version = sh(('python -c "import natcap.invest;'
+                                'print natcap.invest.__version__"'),
+                                capture=True)
+        local_version = sh('python setup.py --version', capture=True)
+
+        if changes_uncommitted or (installed_version != local_version):
+            sh('pip uninstall -y natcap.invest')
+            sh('python setup.py install')
 
     # Build an env if needed.        
     if not os.path.exists(paver.easy.options.dev_env.envname):
