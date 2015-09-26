@@ -235,9 +235,18 @@ class HgRepository(Repository):
                                                  'rev': rev})
 
     def _format_log(self, template='', rev='.'):
-        return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
-            'dest': self.local_path, 'rev': rev, 'template': template},
-            capture=True).rstrip()
+        for check_again in [True, False]:
+            try:
+                return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
+                    'dest': self.local_path, 'rev': rev, 'template': template},
+                    capture=True).rstrip()
+            except BuildFailure as failure:
+                if check_again is True:
+                    # Pull and try to format again
+                    self.pull()
+                else:
+                    raise failure
+
 
     def format_rev(self, rev):
         return self._format_log('{node}', rev=rev)
@@ -315,8 +324,16 @@ class GitRepository(Repository):
                   capture=True).rstrip()
 
     def format_rev(self, rev):
-        return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
-                  capture=True, cwd=self.local_path)
+        for check_again in [True, False]:
+            try:
+                return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
+                          capture=True, cwd=self.local_path)
+            except BuildFailure as failure:
+                if check_again is True:
+                    # Pull and try to format again
+                    self.pull()
+                else:
+                    raise failure
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
