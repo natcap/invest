@@ -440,6 +440,28 @@ separately.  To install in this way:
 Then, download and install the gdal python package.
 
 
+Running Tests
+=============
+
+To run the full suite of tests:
+
+::
+    $ paver test
+
+Or if you're looking for some extra verbosity (or you're building on jenkins):
+
+::
+    $ paver test --jenkins
+
+You may also launch tests from the python shell:
+
+::
+    >>> import natcap.invest
+    >>> natcap.invest.test()
+
+Tests are implemented with ``unittest``, so any appropriate test running should work.
+
+
 Releasing InVEST
 ================
 This repository uses paver as a single entry point for common distribution needs.
