@@ -3,8 +3,6 @@ Deposition model."""
 
 import logging
 import os
-import shutil
-import math
 
 from osgeo import gdal
 from osgeo import ogr
@@ -22,32 +20,31 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
-    """
-        Nutrient delivery ratio model:
+    """Nutrient delivery ratio model:
 
-        args - a python dictionary with the following entries:
-            'workspace_dir' - a string uri pointing to the current workspace.
-            'dem_uri' - a string uri pointing to the Digital Elevation Map
-                (DEM), a GDAL raster on disk.
-            'pixel_yield_uri' - a string uri pointing to the water yield raster
-                output from the InVEST Water Yield model.
-            'lulc_uri' - a string uri pointing to the landcover GDAL raster.
-            'watersheds_uri' - a string uri pointing to an OGR shapefile on
-                disk representing the user's watersheds.
-            'biophysical_table_uri' - a string uri to a supported table on disk
-                containing nutrient retention values. (SAY WHAT VALUES ARE)
-            'calc_p' - True if phosphorous is meant to be modeled, if True then
-                biophyscial table must have p fields in them.
-            'calc_n' - True if nitrogen is meant to be modeled, if True then
-                biophyscial table must have n fields in them.
-            'results_suffix' - (optional) a text field to append to all output files.
-            'threshold_flow_accumulation' - a number representing the flow accumulation.
-            '_prepare' - (optional) The preprocessed set of data created by the
-                ndr._prepare call.  This argument could be used in cases where the
-                call to this function is scripted and can save a significant amount
-                of runtime.
+    Parameters:
+        args['workspace_dir'] (string):  path to current workspace
+        args['dem_uri'] (string): path to digital elevation map raster
+        args['lulc_uri'] (string): a path to landcover map raster
+        args['watersheds_uri'] (string): path to the watershed shapefile
+        args['biophysical_table_uri'] (string): path to csv table on disk
+            containing nutrient retention values. (SAY WHAT VALUES ARE)
+        args['calc_p'] (boolean): if True, phosphorous is modeled,
+            additionally if True then biophysical table must have p fields in
+            them
+        args['calc_n'] (boolean): if True nitrogen will be modeled,
+            additionally biophysical table must have n fields in them.
+        args['results_suffix'] (string): (optional) a text field to append to
+            all output files
+        args['threshold_flow_accumulation']: a number representing the flow
+            accumulation in terms of upstream pixels.
+        args['_prepare'] - (optional) The preprocessed set of data created by
+            the ndr._prepare call.  This argument could be used in cases where
+            the call to this function is scripted and can save a significant
+            amount DEM processing runtime.
 
-        returns nothing.
+    Returns:
+        None
     """
 
     LOGGER.info(r'  _   _    ____    ____     ')
@@ -63,14 +60,14 @@ def execute(args):
             that are necessary depending on the nutrient type requested by
             the user"""
 
-        #Make sure all the nutrient inputs are good
+        # Make sure all the nutrient inputs are good
         if len(nutrients_to_process) == 0:
             raise ValueError("Neither phosphorous nor nitrogen was selected"
                              " to be processed.  Choose at least one.")
 
-        #Build up a list that'll let us iterate through all the input tables
-        #and check for the required rows, and report errors if something
-        #is missing.
+        # Build up a list that'll let us iterate through all the input tables
+        # and check for the required rows, and report errors if something
+        # is missing.
         row_header_table_list = []
 
         lu_parameter_row = lucode_to_parameters.values()[0]
@@ -90,9 +87,10 @@ def execute(args):
         if len(missing_headers) > 0:
             raise ValueError('\n'.join(missing_headers))
 
-
     if not args['calc_p'] and not args['calc_n']:
-        raise Exception('Neither "Calculate Nitrogen" nor "Calculate Phosporus" is selected.  At least one must be selected.')
+        raise Exception(
+            'Neither "Calculate Nitrogen" nor "Calculate Phosporus" is '
+            'selected.  At least one must be selected.')
 
     #Load all the tables for preprocessing
     workspace = args['workspace_dir']
@@ -142,10 +140,16 @@ def execute(args):
     pygeoprocessing.geoprocessing.align_dataset_list(
         [args['dem_uri'], args['lulc_uri']],
         [dem_uri, lulc_uri], ['nearest'] * 2,
-        out_pixel_size, 'intersection', dataset_to_align_index=0,
-        aoi_uri=args['watersheds_uri'])
+        out_pixel_size, 'dataset', dataset_to_align_index=0,
+        dataset_to_bound_index=0, aoi_uri=args['watersheds_uri'])
 
-    nodata_landuse = pygeoprocessing.geoprocessing.get_nodata_from_uri(lulc_uri)
+    dem_row, dem_col = pygeoprocessing.get_row_col_from_uri(dem_uri)
+    lulc_row, lulc_col = pygeoprocessing.get_row_col_from_uri(lulc_uri)
+    LOGGER.debug(
+        "dem_uri, lulc_uri sizes %d %d %d %d", dem_row, dem_col, lulc_row, lulc_col)
+
+    nodata_landuse = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        lulc_uri)
     nodata_load = -1.0
 
     #classify streams from the flow accumulation raster
@@ -167,11 +171,12 @@ def execute(args):
                 if lucode != nodata_landuse:
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] *
-                        (1 - lucode_to_parameters[lucode] \
-                            [subsurface_proportion_type]) *
+                        (1 - lucode_to_parameters[lucode]
+                         [subsurface_proportion_type]) *
                         cell_area_ha)
             return result
         return map_load
+
     def map_subsurface_load_function(load_type, subsurface_proportion_type):
         """Function generator to map arbitrary nutrient type"""
         def map_load(lucode_array):
@@ -182,11 +187,12 @@ def execute(args):
                 if lucode != nodata_landuse:
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] *
-                        (lucode_to_parameters[lucode] \
-                            [subsurface_proportion_type]) *
+                        (lucode_to_parameters[lucode]
+                         [subsurface_proportion_type]) *
                         cell_area_ha)
             return result
         return map_load
+
     def map_const_value(const_value, nodata):
         """Function generator to map arbitrary efficiency type"""
         def map_const(lucode_array):
@@ -195,6 +201,7 @@ def execute(args):
             return numpy.where(
                 lucode_array == nodata_landuse, nodata, const_value)
         return map_const
+
     def map_eff_function(load_type):
         """Function generator to map arbitrary efficiency type"""
         def map_eff(lucode_array, stream_array):
@@ -247,7 +254,8 @@ def execute(args):
             "intersection", vectorize_op=False)
 
         sub_crit_len_uri[nutrient] = os.path.join(
-            intermediate_dir, 'sub_crit_len_%s%s.tif' % (nutrient, file_suffix))
+            intermediate_dir, 'sub_crit_len_%s%s.tif' % (
+                nutrient, file_suffix))
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri], map_const_value(
                 args['subsurface_critical_length_%s' % nutrient], nodata_load),
@@ -273,8 +281,8 @@ def execute(args):
 
     watershed_output_datasource_uri = os.path.join(
         output_dir, 'watershed_results_ndr%s.shp' % file_suffix)
-    #If there is already an existing shapefile with the same name and path,
-    #delete it then copy the input shapefile into the designated output folder
+    # If there is already an existing shapefile with the same name and path,
+    # delete it then copy the input shapefile into the designated output folder
     if os.path.isfile(watershed_output_datasource_uri):
         os.remove(watershed_output_datasource_uri)
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -314,6 +322,7 @@ def execute(args):
     s_bar_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         s_accumulation_uri)
     LOGGER.info("calculating %s", s_bar_uri)
+
     def bar_op(base_accumulation, flow_accumulation):
         """Calcualtes the bar operation"""
         return numpy.where(
@@ -329,6 +338,7 @@ def execute(args):
     d_up_uri = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
     cell_area = out_pixel_size ** 2
     d_up_nodata = -1.0
+
     def d_up(s_bar, flow_accumulation):
         """Calculate the d_up index
             w_bar * s_bar * sqrt(upstream area) """
@@ -400,6 +410,12 @@ def execute(args):
     current_l_lulc_uri = pygeoprocessing.geoprocessing.temporary_filename()
     l_lulc_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
 
+    # define some variables outside the loop for closure
+    effective_retention_nodata = None
+    ndr_nodata = None
+    sub_effective_retention_nodata = None
+    load_nodata = None
+    export_nodata = None
     for nutrient in nutrients_to_process:
         effective_retention_uri = os.path.join(
             intermediate_dir, 'effective_retention_%s%s.tif' %
@@ -415,6 +431,7 @@ def execute(args):
         ndr_uri = os.path.join(
             intermediate_dir, 'ndr_%s%s.tif' % (nutrient, file_suffix))
         ndr_nodata = -1.0
+
         def calculate_ndr(effective_retention_array, ic_array):
             '''calcualte NDR'''
             return numpy.where(
@@ -442,11 +459,13 @@ def execute(args):
         sub_ndr_uri = os.path.join(
             intermediate_dir, 'sub_ndr_%s%s.tif' % (nutrient, file_suffix))
         ndr_nodata = -1.0
-        def calculate_sub_ndr(effective_retention_array):
+
+        def calculate_sub_ndr(sub_effective_retention_array):
             '''calcualte NDR'''
             return numpy.where(
-                (effective_retention_array == effective_retention_nodata),
-                ndr_nodata, (1.0 - effective_retention_array))
+                (sub_effective_retention_array ==
+                 sub_effective_retention_nodata), ndr_nodata,
+                (1.0 - sub_effective_retention_array))
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [sub_effective_retention_uri], calculate_sub_ndr, sub_ndr_uri,
@@ -459,8 +478,9 @@ def execute(args):
         load_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
             load_uri[nutrient])
         export_nodata = -1.0
+
         def calculate_export(
-            load_array, ndr_array, sub_load_array, sub_ndr_array):
+                load_array, ndr_array, sub_load_array, sub_ndr_array):
             '''combine ndr and subsurface ndr'''
             return numpy.where(
                 (load_array == load_nodata) | (ndr_array == ndr_nodata),
@@ -495,6 +515,7 @@ def execute(args):
             current_l_lulc_uri, l_lulc_temp_uri, dem_uri, lulc_uri]:
         os.remove(uri)
 
+
 def add_fields_to_shapefile(
         key_field, field_summaries, output_layer, field_header_order=None):
     """Adds fields and their values indexed by key fields to an OGR
@@ -513,7 +534,7 @@ def add_fields_to_shapefile(
             random key order in field summaries is used.
 
         returns nothing"""
-    if field_header_order == None:
+    if field_header_order is None:
         field_header_order = field_summaries.keys()
 
     for field_name in field_header_order:
@@ -585,6 +606,7 @@ def _prepare(**args):
         aligned_dem_uri, original_slope_uri)
     slope_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         original_slope_uri)
+
     def threshold_slope(slope):
         '''Threshold slope between 0.001 and 1.0'''
         slope_copy = slope / 100
