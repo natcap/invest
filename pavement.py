@@ -2612,7 +2612,10 @@ def test(args):
             local_version = True
 
         if changes_uncommitted or (installed_version != local_version):
-            sh('pip uninstall -y natcap.invest')
+            try:
+                sh('pip uninstall -y natcap.invest')
+            except BuildFailure:
+                pass
             sh('python setup.py install')
 
     # Build an env if needed.        
