@@ -2593,7 +2593,7 @@ def test(args):
             'src/natcap/invest/ pavement.py setup.py setup.cfg MANIFEST.in'),
             capture=True)
         print 'Changed files: ' + changed_files
-        changes_uncommitted = changed_files.strip() == ''
+        changes_uncommitted = changed_files.strip() != ''
         if not changes_uncommitted:
             # If no uncommitted changes, check that the versions match.
             # If versions don't match, reinstall.
