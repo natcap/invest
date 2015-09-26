@@ -2541,6 +2541,10 @@ def test(args):
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _run_tests():
+        """
+        Run tests within a virtualenv.  If we're running with the --jenkins
+        flag, add a couple more options suitable for that environment.
+        """
         if parsed_args.jenkins:
             call_task('check_repo', options={
                 'repo': REPOS_DICT['test-data'],
@@ -2564,6 +2568,11 @@ def test(args):
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _update_invest():
+        """
+        Determine if InVEST needs to be updated based on known version strings.
+        If so, remove the existing installation of InVEST and reinstall.
+        Runs within the virtualenv.
+        """
         # If there are uncommitted changes, or the installed version of InVEST
         # differs from the local version, reinstall InVEST into the virtualenv.
         changes_uncommitted = sh((
