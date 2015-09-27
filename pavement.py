@@ -1374,6 +1374,18 @@ def check(options):
         requirements.append(('wheel>=0.25.0+natcap.1', required, None, (
             'pip install --upgrade hg+https://bitbucket.org/jdouglass/wheel'
         )))
+
+        # paver has a restriction within @paver.virtual.virtualenv where it
+        # (unnecessarily) always treats the activation of a virtualenv like
+        # it's on a POSIX system.  I've submitted a PR to fix this to the
+        # upstream paver repo (https://github.com/paver/paver/pull/153),
+        # but until then, I've created a local version of paver for devs on
+        # Windows systems.
+        requirements.append(('paver>=1.2.4+natcap.1', required, None, (
+            'pip install --upgrade '
+            'git+https://github.com/phargogh/paver@natcap-version'
+        )))
+
         try:
             requirements.append(('pywin32', required, 'pywin', None))
 
@@ -2618,7 +2630,7 @@ def test(args):
                 pass
             sh('python setup.py install')
 
-    # Build an env if needed.        
+    # Build an env if needed.
     if not os.path.exists(paver.easy.options.dev_env.envname):
         call_task('dev_env')
     else:
