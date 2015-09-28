@@ -333,10 +333,14 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
         score_buffer = ''
         index_buffer = ''
         file_offset = 0
-        buffer_offset = 1  # initialize to 1 to trigger the first load
+        buffer_offset = 0  # initialize to 0 to trigger the first load
+
+        # in case user passes a buffer size that is not a perfect multiple of 4
+        buffer_size = buffer_size - buffer_size % 4
 
         while True:
-            if buffer_offset > len(score_buffer):
+            assert buffer_offset <= len(score_buffer)
+            if buffer_offset == len(score_buffer):
                 score_file = open(score_file_name, 'rb')
                 index_file = open(index_file_name, 'rb')
                 score_file.seek(file_offset)

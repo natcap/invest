@@ -1694,7 +1694,7 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
     # the reprojected raster
     coord_trans = osr.CoordinateTransformation(raster_sr, aoi_sr)
 
-    pixel_size = pygeoprocessing.geoprocessing.pixel_size_based_on_coordinate_transform_uri(
+    pixel_size = pixel_size_based_on_coordinate_transform_uri(
             clipped_uri, coord_trans, point_one)
 
     LOGGER.debug('Reprojecting dataset')
@@ -2025,3 +2025,43 @@ def calculate_distances_grid(land_shape_uri, harvested_masked_uri, tmp_dist_fina
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [tmp_dist_uri], dist_meters_op, tmp_dist_final_uri, gdal.GDT_Float32,
         out_nodata, pixel_size, 'intersection', vectorize_op=False)
+
+
+def pixel_size_based_on_coordinate_transform_uri(
+        dataset_uri, coord_trans, point):
+    """Get width and height of cell in meters.
+
+    A wrapper for pixel_size_based_on_coordinate_transform that takes a dataset
+    uri as an input and opens it before sending it along.
+
+    Args:
+        dataset_uri (string): a URI to a gdal dataset
+
+        All other parameters pass along
+
+    Returns:
+        result (tuple): (pixel_width_meters, pixel_height_meters)
+    """
+    dataset = gdal.Open(dataset_uri)
+    geo_tran = dataset.GetGeoTransform()
+    pixel_size_x = geo_tran[1]
+    pixel_size_y = geo_tran[5]
+    top_left_x = point[0]
+    top_left_y = point[1]
+    # Create the second point by adding the pixel width/height
+    new_x = top_left_x + pixel_size_x
+    new_y = top_left_y + pixel_size_y
+    # Transform two points into meters
+    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
+    point_2 = coord_trans.TransformPoint(new_x, new_y)
+    # Calculate the x/y difference between two points
+    # taking the absolue value because the direction doesn't matter for pixel
+    # size in the case of most coordinate systems where y increases up and x
+    # increases to the right (right handed coordinate system).
+    pixel_diff_x = abs(point_2[0] - point_1[0])
+    pixel_diff_y = abs(point_2[1] - point_1[1])
+
+    # Close and clean up dataset
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+    return (pixel_diff_x, pixel_diff_y)
