@@ -26,7 +26,7 @@ def execute(args):
 
     dir_registry = {
         'intermediate': os.path.join(args['workspace_dir'],
-                                    'intermediate_outputs'),
+                                     'intermediate_outputs'),
         'output': args['workspace_dir']
     }
 
@@ -43,7 +43,6 @@ def execute(args):
             suffix = '_' + suffix
         filepath_prefix, ext = os.path.splitext(path)
         return filepath_prefix + suffix + ext
-
 
     filepath_registry = {
         'sum': _add_suffix(os.path.join(dir_registry['output'], 'sum.tif')),
@@ -79,12 +78,12 @@ def _simple_op(lulc_filepath, out_filepath):
         Add 5 to any landcover codes that have a value between 1 and 9.
         """
 
-        nodata_mask = (lulc_values!= lulc_nodata)
+        nodata_mask = (lulc_values != lulc_nodata)
         valid_lulc_codes = numpy.in1d(lulc_values,
                                       valid_values).reshape(lulc_values.shape)
         return numpy.where(nodata_mask & valid_lulc_codes, lulc_values + 5,
                            numpy.where(nodata_mask, lulc_values, lulc_nodata))
 
     pygeoprocessing.vectorize_datasets(
-        [lulc_filepath], simple_local_op, out_filepath, gdal.GDT_Int32, lulc_nodata,
-        lulc_cell_size, 'intersection', vectorize_op=False)
+        [lulc_filepath], simple_local_op, out_filepath, gdal.GDT_Int32,
+        lulc_nodata, lulc_cell_size, 'intersection', vectorize_op=False)
