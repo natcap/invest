@@ -1,3 +1,4 @@
+"""Example model for demonstrating basic API and testing functionality."""
 import os
 import logging
 
@@ -10,8 +11,9 @@ LOGGER = logging.getLogger('natcap.invest._example_model')
 
 def execute(args):
     """
-    An example model, to demonstrate the interface and testing of the InVEST
-    suite of models.
+    An example model.
+
+    Demonstrates the interface and testing of the InVEST suite of models.
 
     Parameters:
         args (dict): A dict of key-value pairs.
@@ -23,7 +25,6 @@ def execute(args):
     Returns:
         None
     """
-
     dir_registry = {
         'intermediate': os.path.join(args['workspace_dir'],
                                      'intermediate_outputs'),
@@ -31,9 +32,7 @@ def execute(args):
     }
 
     def _add_suffix(path):
-        """
-        Add a suffix to the input path.
-        """
+        """Add a suffix to the input path."""
         try:
             suffix = args['suffix']
         except KeyError:
@@ -74,10 +73,7 @@ def _simple_op(lulc_filepath, out_filepath):
     valid_values = numpy.arange(1, 10)
 
     def simple_local_op(lulc_values):
-        """
-        Add 5 to any landcover codes that have a value between 1 and 9.
-        """
-
+        """Add 5 to any landcover codes that have a value between 1 and 9."""
         nodata_mask = (lulc_values != lulc_nodata)
         valid_lulc_codes = numpy.in1d(lulc_values,
                                       valid_values).reshape(lulc_values.shape)
