@@ -1,3 +1,15 @@
+"""Tests for natcap.invest._example_model.
+
+This module is intended only to demonstrate how a model might be tested given
+common needs of InVEST models.  Key things to note:
+
+    * Sample data creation that's repeated outside a test method has its own
+      function.
+    * The module-under-test (natcap.invest._example_model) is imported in
+      each test method.
+    * Each test method is responsible for the appropriate cleanup of created
+      sample data and workspaces.
+"""
 import unittest
 import tempfile
 import shutil
@@ -39,15 +51,16 @@ def _create_lulc(matrix=None):
     lulc_nodata = -1
     srs = sampledata.SRS_WILLAMETTE
     return pygeoprocessing.testing.create_raster_on_disk(
-        [lulc_matrix], srs.origin, srs.projection, lulc_nodata, srs.pixel_size(30),
-        datatype=gdal.GDT_Int32)
+        [lulc_matrix], srs.origin, srs.projection, lulc_nodata,
+        srs.pixel_size(30), datatype=gdal.GDT_Int32)
 
 
 class ExampleUnitTests(unittest.TestCase):
+
+    """Tests for natcap.invest._example_model."""
+
     def test_execute(self):
-        """
-        Example execution to ensure correctness when called via execute()
-        """
+        """Example execution to ensure correctness when called via execute."""
         from natcap.invest import _example_model
 
         args = {
@@ -63,16 +76,15 @@ class ExampleUnitTests(unittest.TestCase):
             [0, 6, 7, 8, 9]], numpy.int32)
         expected_raster = _create_lulc(expected_matrix)
         sum_raster = os.path.join(args['workspace_dir'], 'sum.tif')
-        pygeoprocessing.testing.assert_rasters_equal(sum_raster, expected_raster)
+        pygeoprocessing.testing.assert_rasters_equal(sum_raster,
+                                                     expected_raster)
 
         shutil.rmtree(args['workspace_dir'])
         for filename in [args['example_lulc'], expected_raster]:
             os.remove(filename)
 
     def test_execute_with_suffix(self):
-        """
-        When a suffix is added, verify it's added correctly.
-        """
+        """When a suffix is added, verify it's added correctly."""
         from natcap.invest import _example_model
         args = {
             'workspace_dir': tempfile.mkdtemp(),
@@ -85,9 +97,7 @@ class ExampleUnitTests(unittest.TestCase):
                                                     'sum_foo.tif')))
 
     def test_execute_with_suffix_and_underscore(self):
-        """
-        When the user's suffix has an underscore, don't add another one.
-        """
+        """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import _example_model
         args = {
             'workspace_dir': tempfile.mkdtemp(),
@@ -98,4 +108,3 @@ class ExampleUnitTests(unittest.TestCase):
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
-
