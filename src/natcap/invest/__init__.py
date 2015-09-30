@@ -10,7 +10,9 @@ import natcap.versioner
 
 from natcap.invest.tests import test
 
-__all__ = ['test']
+
+__all__ = ['is_release', 'local_dir', 'test', 'PYGEOPROCESSING_REQUIRED']
+
 
 # Verify that the installed pygeoprocessing meets the minimum requirements.
 # Pyinstaller binaries do not allow us to use pkg_resources.require(), as
