@@ -226,6 +226,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\Scenic Quality (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenic_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Forest Carbon Edge Effect (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_forest_carbon_edge_effect.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\GLOBIO (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_globio.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Timber (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_timber.bat" "" "${INVEST_ICON}"
@@ -251,7 +252,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${HRA}\(2) Habitat Risk Assessment (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Nutrient Retention (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_nutrient.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenario Generator: Rule Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator_proximity_based.bat" "" "${INVEST_ICON}"
 
   CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
 
@@ -399,11 +401,13 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
     !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 0
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
-    !insertmacro downloadData "Terrestrial Base Datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
+    !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
+    !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
     !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 728
     !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
     !insertmacro downloadData "Timber (optional)" "Timber.zip" 644
-    !insertmacro downloadData "Scenario Generator (optional)" "ScenarioGenerator.zip" 0
+    !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 0
+    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd
 SectionGroupEnd

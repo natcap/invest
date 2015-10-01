@@ -235,9 +235,18 @@ class HgRepository(Repository):
                                                  'rev': rev})
 
     def _format_log(self, template='', rev='.'):
-        return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
-            'dest': self.local_path, 'rev': rev, 'template': template},
-            capture=True).rstrip()
+        for check_again in [True, False]:
+            try:
+                return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
+                    'dest': self.local_path, 'rev': rev, 'template': template},
+                    capture=True).rstrip()
+            except BuildFailure as failure:
+                if check_again is True:
+                    # Pull and try to format again
+                    self.pull()
+                else:
+                    raise failure
+
 
     def format_rev(self, rev):
         return self._format_log('{node}', rev=rev)
@@ -315,12 +324,21 @@ class GitRepository(Repository):
                   capture=True).rstrip()
 
     def format_rev(self, rev):
-        return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
-                  capture=True, cwd=self.local_path)
+        for check_again in [True, False]:
+            try:
+                return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
+                          capture=True, cwd=self.local_path)
+            except BuildFailure as failure:
+                if check_again is True:
+                    # Pull and try to format again
+                    self.pull()
+                else:
+                    raise failure
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
+    'test-data': SVNRepository('tests/data', 'svn://scm.naturalcapitalproject.org/svn/invest-test-data'),
     'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
     'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
     'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
@@ -1356,6 +1374,18 @@ def check(options):
         requirements.append(('wheel>=0.25.0+natcap.1', required, None, (
             'pip install --upgrade hg+https://bitbucket.org/jdouglass/wheel'
         )))
+
+        # paver has a restriction within @paver.virtual.virtualenv where it
+        # (unnecessarily) always treats the activation of a virtualenv like
+        # it's on a POSIX system.  I've submitted a PR to fix this to the
+        # upstream paver repo (https://github.com/paver/paver/pull/153),
+        # but until then, I've created a local version of paver for devs on
+        # Windows systems.
+        requirements.append(('paver>=1.2.4+natcap.1', required, None, (
+            'pip install --upgrade '
+            'git+https://github.com/phargogh/paver@natcap-version'
+        )))
+
         try:
             requirements.append(('pywin32', required, 'pywin', None))
 
@@ -2472,6 +2502,142 @@ def forked_by(options):
     except AttributeError:
         pass
 
+@task
+@consume_args
+def compress_raster(args):
+    """
+    Compress a raster.
+
+    Call `paver compress_raster --help` for full details.
+    """
+    parser = argparse.ArgumentParser(description=(
+        'Compress and tile a GDAL-compatible raster.'))
+    parser.add_argument('-x', '--blockxsize', nargs='?', default=256, type=int, help=(
+        'The block size along the X axis.  Default=256'))
+    parser.add_argument('-y', '--blockysize', nargs='?', default=256, type=int, help=(
+        'The block size along the Y axis.  Default=256'))
+    parser.add_argument('inraster', type=str, help=(
+        'The raster to compress'))
+    parser.add_argument('outraster', type=str, help=(
+        'The path to the output raster'))
+
+    parsed_args = parser.parse_args(args)
+
+    sh(('gdal_translate '
+        '-of "GTiff" '
+        '-co "COMPRESS=LZW" '
+        '-co "TILED=YES" '
+        '-co "BLOCKXSIZE={blockx}" '
+        '-co "BLOCKYSIZE={blocky}" '
+        '{in_raster} {out_raster}').format(
+            blockx=parsed_args.blockxsize,
+            blocky=parsed_args.blockysize,
+            in_raster=os.path.abspath(parsed_args.inraster),
+            out_raster=os.path.abspath(parsed_args.outraster),
+        ))
+
+
+@task
+@consume_args
+def test(args):
+    """
+    Run all tests in the two test suites.  Currently implemented with
+    nosetests.
+
+    If --jenkins is provided, xunit reports and extra logging will be produced.
+    If --with-data is provided, test data repos will be cloned.
+
+    --jenkins implies --with-data.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--jenkins', default=False, action='store_true',
+            help='Use options that are useful for Jenkins reports')
+    parser.add_argument('--with-data', default=False, action='store_true',
+            help='Clone/update the data repo if needed')
+    parsed_args = parser.parse_args(args)
+
+    if parsed_args.with_data:
+        call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
+        call_task('fetch', args=[REPOS_DICT['sample-data'].local_path])
+
+    @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
+    def _run_tests():
+        """
+        Run tests within a virtualenv.  If we're running with the --jenkins
+        flag, add a couple more options suitable for that environment.
+        """
+        if parsed_args.jenkins:
+            call_task('check_repo', options={
+                'repo': REPOS_DICT['test-data'].local_path,
+                'fetch': True,
+            })
+            call_task('check_repo', options={
+                'repo': REPOS_DICT['sample-data'].local_path,
+                'fetch': True,
+            })
+            jenkins_flags = (
+                '--with-xunit '
+                '--with-coverage '
+                '--cover-xml '
+                '--cover-tests '
+                '--logging-filter=None '
+                '--nologcapture '
+            )
+        else:
+            jenkins_flags = ''
+
+        sh(('nosetests -vs {jenkins_opts} '
+            'tests/*.py '
+            'src/natcap/invest/tests/*.py').format(
+                jenkins_opts=jenkins_flags))
+
+    @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
+    def _update_invest():
+        """
+        Determine if InVEST needs to be updated based on known version strings.
+        If so, remove the existing installation of InVEST and reinstall.
+        Runs within the virtualenv.
+        """
+        # If there are uncommitted changes, or the installed version of InVEST
+        # differs from the local version, reinstall InVEST into the virtualenv.
+        changed_files = sh((
+            'hg status -a -m -r -d '
+            'src/natcap/invest/ pavement.py setup.py setup.cfg MANIFEST.in'),
+            capture=True)
+        print 'Changed files: ' + changed_files
+        changes_uncommitted = changed_files.strip() != ''
+        if not changes_uncommitted:
+            # If no uncommitted changes, check that the versions match.
+            # If versions don't match, reinstall.
+            try:
+                installed_version = sh(('python -c "import natcap.invest;'
+                                        'print natcap.invest.__version__"'),
+                                        capture=True)
+                local_version = sh('python setup.py --version', capture=True)
+            except BuildFailure:
+                # When natcap.invest is not installed, so force reinstall
+                installed_version = False
+                local_version = True
+        else:
+            # If changes are uncommitted, force reinstall.
+            installed_version = True
+            local_version = True
+
+        if changes_uncommitted or (installed_version != local_version):
+            try:
+                sh('pip uninstall -y natcap.invest')
+            except BuildFailure:
+                pass
+            sh('python setup.py install')
+
+    # Build an env if needed.
+    if not os.path.exists(paver.easy.options.dev_env.envname):
+        call_task('dev_env')
+    else:
+        _update_invest()
+
+    # run the tests within the virtualenv.
+    _run_tests()
 
 @task
 @might_call('push')

@@ -1,0 +1,135 @@
+{
+  "id": "window",
+  "label": "Scenario Generator: Proximity Based",
+  "targetScript": "natcap.invest.scenario_gen_proximity",
+  "modelName": "scenario_gen_proximity",
+  "localDocURI": "../documentation/scenario_gen_proximity.html",
+  "height": 610,
+  "width": 610,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "~/Documents/scenario_proximity_workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "base_lulc_uri",
+          "args_id": "base_lulc_uri",
+          "type": "file",
+          "label": "Base Land Use/Cover (Raster)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "defaultValue": "../scenario_proximity/scenario_proximity_lulc.tif"
+        },
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "Area of interest (Vector) (optional)",
+          "defaultValue": "../scenario_proximity/scenario_proximity_aoi.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that will be used to aggregate carbon values at the end of the run if provided."
+        },
+        {
+          "id": "area_to_convert",
+          "args_id": "area_to_convert",
+          "type": "text",
+          "label": "Max area to convert (Ha)",
+          "defaultValue": "20000.0",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$"
+        },
+        {
+          "id": "focal_landcover_codes",
+          "args_id": "focal_landcover_codes",
+          "type": "text",
+          "label": "Focal Landcover Codes (list)",
+          "defaultValue": "1 2 3 4 5",
+          "validText": "^[0-9 ]+$",
+          "required": true
+        },
+        {
+          "id": "convertible_landcover_codes",
+          "args_id": "convertible_landcover_codes",
+          "type": "text",
+          "label": "Convertible Landcover Codes (list)",
+          "defaultValue": "1 2 3 4 5",
+          "validText": "^[0-9 ]+$",
+          "required": true
+        },
+        {
+          "id": "replacment_lucode",
+          "args_id": "replacment_lucode",
+          "type": "text",
+          "label": "Replacement Landcover Code (int)",
+          "defaultValue": "12",
+          "required": true,
+          "validText": "^[0-9]+$"
+        },
+        {
+          "id": "convert_farthest_from_edge",
+          "args_id": "convert_farthest_from_edge",
+          "type": "checkbox",
+          "label": "Farthest from edge",
+          "defaultValue": true,
+          "required": false,
+          "helpText": "This scenario converts the convertible landcover codes starting at the furthest pixel from the closest base landcover codes and moves inward."
+        },
+        {
+          "id": "convert_nearest_to_edge",
+          "args_id": "convert_nearest_to_edge",
+          "type": "checkbox",
+          "label": "Nearest to edge",
+          "defaultValue": true,
+          "required": false,
+          "helpText": "This scenario converts the convertible landcover codes starting at the closest pixel in the base landcover codes and moves outward."
+        },
+        {
+          "id": "n_fragmentation_steps",
+          "args_id": "n_fragmentation_steps",
+          "type": "text",
+          "label": "Number of Steps in Conversion",
+          "defaultValue": "1",
+          "required": true,
+          "validText": "^[0-9]*$",
+          "helpText": "This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover codes.  This can affect the final result if the base types are also convertible types."
+        }
+      ]
+    }
+  ]
+}
