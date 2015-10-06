@@ -28,7 +28,16 @@ def execute(args):
         args['lulc_uri'] (string): a path to landcover map raster
         args['watersheds_uri'] (string): path to the watershed shapefile
         args['biophysical_table_uri'] (string): path to csv table on disk
-            containing nutrient retention values. (SAY WHAT VALUES ARE)
+            containing nutrient retention values.
+
+            For each nutrient type [t] in args['calc_[t]'] that is true, must
+            contain the following headers:
+
+            'load_[t]', 'eff_[t]', 'crit_len_[t]'
+
+            If args['calc_n'] is True, must also contain the header
+            'proportion_subsurface_n' field.
+
         args['calc_p'] (boolean): if True, phosphorous is modeled,
             additionally if True then biophysical table must have p fields in
             them
@@ -46,14 +55,6 @@ def execute(args):
     Returns:
         None
     """
-
-    LOGGER.info(r'  _   _    ____    ____     ')
-    LOGGER.info(r' | \ |"|  |  _"\U |  _"\ u  ')
-    LOGGER.info(r'<|  \| |>/| | | |\| |_) |/  ')
-    LOGGER.info(r'U| |\  |uU| |_| |\|  _ <    ')
-    LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
-    LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
-    LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
         """Validates common errors in inputs that can't be checked easily in
@@ -569,6 +570,16 @@ def execute(args):
             zero_absorption_source_uri, loss_uri, lulc_mask_uri,
             current_l_lulc_uri, l_lulc_temp_uri, dem_uri, lulc_uri]:
         os.remove(uri)
+
+
+    LOGGER.info(r'NDR complete!')
+    LOGGER.info(r'  _   _    ____    ____     ')
+    LOGGER.info(r' | \ |"|  |  _"\U |  _"\ u  ')
+    LOGGER.info(r'<|  \| |>/| | | |\| |_) |/  ')
+    LOGGER.info(r'U| |\  |uU| |_| |\|  _ <    ')
+    LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
+    LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
+    LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
 
 def add_fields_to_shapefile(
