@@ -56,9 +56,22 @@ def execute(args):
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
-        """Validation helper method to check that table headers are included
-            that are necessary depending on the nutrient type requested by
-            the user"""
+        """Validates common errors in inputs that can't be checked easily in
+        the user interface.
+
+        Parameters:
+            nutrients_to_process (list): list of 'n' and/or 'p'
+            lucode_to_parameters (dictionary): biophysical input table mapping
+                lucode to dictionary of table parameters.  Used to validate
+                the correct columns are input
+
+        Returns:
+            None
+
+        Raises:
+            ValueError whenever a missing field in the parameter table is
+            detected along with a message describing every missing field.
+        """
 
         # Make sure all the nutrient inputs are good
         if len(nutrients_to_process) == 0:
@@ -84,6 +97,8 @@ def execute(args):
                         missing_headers.append(
                             "Missing header %s from %s" % (header, table_type))
 
+        # proportion_subsurface_n is a special case in which phosphorous does
+        # not have an equivalent.
         if ('n' in nutrients_to_process and
                 'proportion_subsurface_n' not in lu_parameter_row):
             missing_headers.append(
@@ -168,7 +183,17 @@ def execute(args):
         stream_uri)
 
     def map_load_function(load_type, subsurface_proportion_type=None):
-        """Function generator to map arbitrary nutrient type"""
+        """Function generator to map arbitrary nutrient type to surface load
+
+        Parameters:
+            load_type (string): either 'n' or 'p', used for indexing headers
+            subsurface_proportion_type (string): if None no subsurface transfer
+                is mapped.  Otherwise indexed from lucode_to_parameters
+
+        Returns:
+            map_load (function(lucode_array)): a function that can be passed to
+                vectorize_datasets.
+        """
         def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
             result = numpy.empty(lucode_array.shape)
@@ -189,7 +214,17 @@ def execute(args):
 
     def map_subsurface_load_function(
             load_type, subsurface_proportion_type=None):
-        """Function generator to map arbitrary nutrient type"""
+        """Function generator to map arbitrary nutrient type to subsurface load
+
+        Parameters:
+            load_type (string): either 'n' or 'p', used for indexing headers
+            subsurface_proportion_type (string): if None no subsurface transfer
+                is mapped.  Otherwise indexed from lucode_to_parameters
+
+        Returns:
+            map_load (function(lucode_array)): a function that can be passed to
+                vectorize_datasets to create subsurface load raster.
+        """
         def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
             result = numpy.empty(lucode_array.shape)
