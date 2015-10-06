@@ -28,7 +28,16 @@ def execute(args):
         args['lulc_uri'] (string): a path to landcover map raster
         args['watersheds_uri'] (string): path to the watershed shapefile
         args['biophysical_table_uri'] (string): path to csv table on disk
-            containing nutrient retention values. (SAY WHAT VALUES ARE)
+            containing nutrient retention values.
+
+            For each nutrient type [t] in args['calc_[t]'] that is true, must
+            contain the following headers:
+
+            'load_[t]', 'eff_[t]', 'crit_len_[t]'
+
+            If args['calc_n'] is True, must also contain the header
+            'proportion_subsurface_n' field.
+
         args['calc_p'] (boolean): if True, phosphorous is modeled,
             additionally if True then biophysical table must have p fields in
             them
@@ -47,18 +56,23 @@ def execute(args):
         None
     """
 
-    LOGGER.info(r'  _   _    ____    ____     ')
-    LOGGER.info(r' | \ |"|  |  _"\U |  _"\ u  ')
-    LOGGER.info(r'<|  \| |>/| | | |\| |_) |/  ')
-    LOGGER.info(r'U| |\  |uU| |_| |\|  _ <    ')
-    LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
-    LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
-    LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
-
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
-        """Validation helper method to check that table headers are included
-            that are necessary depending on the nutrient type requested by
-            the user"""
+        """Validates common errors in inputs that can't be checked easily in
+        the user interface.
+
+        Parameters:
+            nutrients_to_process (list): list of 'n' and/or 'p'
+            lucode_to_parameters (dictionary): biophysical input table mapping
+                lucode to dictionary of table parameters.  Used to validate
+                the correct columns are input
+
+        Returns:
+            None
+
+        Raises:
+            ValueError whenever a missing field in the parameter table is
+            detected along with a message describing every missing field.
+        """
 
         # Make sure all the nutrient inputs are good
         if len(nutrients_to_process) == 0:
@@ -83,6 +97,14 @@ def execute(args):
                     if header not in row:
                         missing_headers.append(
                             "Missing header %s from %s" % (header, table_type))
+
+        # proportion_subsurface_n is a special case in which phosphorous does
+        # not have an equivalent.
+        if ('n' in nutrients_to_process and
+                'proportion_subsurface_n' not in lu_parameter_row):
+            missing_headers.append(
+                "Missing header proportion_subsurface_n from " +
+                args['biophysical_table_uri'])
 
         if len(missing_headers) > 0:
             raise ValueError('\n'.join(missing_headers))
@@ -161,35 +183,63 @@ def execute(args):
     nodata_stream = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         stream_uri)
 
-    def map_load_function(load_type, subsurface_proportion_type):
-        """Function generator to map arbitrary nutrient type"""
+    def map_load_function(load_type, subsurface_proportion_type=None):
+        """Function generator to map arbitrary nutrient type to surface load
+
+        Parameters:
+            load_type (string): either 'n' or 'p', used for indexing headers
+            subsurface_proportion_type (string): if None no subsurface transfer
+                is mapped.  Otherwise indexed from lucode_to_parameters
+
+        Returns:
+            map_load (function(lucode_array)): a function that can be passed to
+                vectorize_datasets.
+        """
         def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
             result = numpy.empty(lucode_array.shape)
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
                 if lucode != nodata_landuse:
-                    result[lucode_array == lucode] = (
-                        lucode_to_parameters[lucode][load_type] *
-                        (1 - lucode_to_parameters[lucode]
-                         [subsurface_proportion_type]) *
-                        cell_area_ha)
+                    if subsurface_proportion_type is not None:
+                        result[lucode_array == lucode] = (
+                            lucode_to_parameters[lucode][load_type] *
+                            (1 - lucode_to_parameters[lucode]
+                             [subsurface_proportion_type]) *
+                            cell_area_ha)
+                    else:
+                        result[lucode_array == lucode] = (
+                            lucode_to_parameters[lucode][load_type])
             return result
         return map_load
 
-    def map_subsurface_load_function(load_type, subsurface_proportion_type):
-        """Function generator to map arbitrary nutrient type"""
+    def map_subsurface_load_function(
+            load_type, subsurface_proportion_type=None):
+        """Function generator to map arbitrary nutrient type to subsurface load
+
+        Parameters:
+            load_type (string): either 'n' or 'p', used for indexing headers
+            subsurface_proportion_type (string): if None no subsurface transfer
+                is mapped.  Otherwise indexed from lucode_to_parameters
+
+        Returns:
+            map_load (function(lucode_array)): a function that can be passed to
+                vectorize_datasets to create subsurface load raster.
+        """
         def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
             result = numpy.empty(lucode_array.shape)
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
                 if lucode != nodata_landuse:
-                    result[lucode_array == lucode] = (
-                        lucode_to_parameters[lucode][load_type] *
-                        (lucode_to_parameters[lucode]
-                         [subsurface_proportion_type]) *
-                        cell_area_ha)
+                    if subsurface_proportion_type is not None:
+                        result[lucode_array == lucode] = (
+                            lucode_to_parameters[lucode][load_type] *
+                            (lucode_to_parameters[lucode]
+                             [subsurface_proportion_type]) *
+                            cell_area_ha)
+                    else:
+                        result[lucode_array == lucode] = 0.0
             return result
         return map_load
 
@@ -230,9 +280,15 @@ def execute(args):
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
+        # Perrine says that 'n' i the only case where we could consider a prop
+        # subsurface component.  So there's a special case for that.
+        if nutrient == 'n':
+            subsurface_proportion_type = 'proportion_subsurface_n'
+        else:
+            subsurface_proportion_type = None
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri], map_load_function(
-                'load_%s' % nutrient, 'proportion_subsurface_%s' % nutrient),
+                'load_%s' % nutrient, subsurface_proportion_type),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
@@ -240,7 +296,7 @@ def execute(args):
             intermediate_dir, 'sub_load_%s%s.tif' % (nutrient, file_suffix))
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri], map_subsurface_load_function(
-                'load_%s' % nutrient, 'proportion_subsurface_%s' % nutrient),
+                'load_%s' % nutrient, subsurface_proportion_type),
             sub_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
@@ -514,6 +570,15 @@ def execute(args):
             zero_absorption_source_uri, loss_uri, lulc_mask_uri,
             current_l_lulc_uri, l_lulc_temp_uri, dem_uri, lulc_uri]:
         os.remove(uri)
+
+    LOGGER.info(r'NDR complete!')
+    LOGGER.info(r'  _   _    ____    ____     ')
+    LOGGER.info(r' | \ |"|  |  _"\U |  _"\ u  ')
+    LOGGER.info(r'<|  \| |>/| | | |\| |_) |/  ')
+    LOGGER.info(r'U| |\  |uU| |_| |\|  _ <    ')
+    LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
+    LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
+    LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
 
 def add_fields_to_shapefile(
