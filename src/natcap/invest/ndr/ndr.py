@@ -84,6 +84,12 @@ def execute(args):
                         missing_headers.append(
                             "Missing header %s from %s" % (header, table_type))
 
+        if ('n' in nutrients_to_process and
+                'proportion_subsurface_n' not in lu_parameter_row):
+            missing_headers.append(
+                "Missing header proportion_subsurface_n from " +
+                args['biophysical_table_uri'])
+
         if len(missing_headers) > 0:
             raise ValueError('\n'.join(missing_headers))
 
@@ -161,7 +167,7 @@ def execute(args):
     nodata_stream = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         stream_uri)
 
-    def map_load_function(load_type, subsurface_proportion_type):
+    def map_load_function(load_type, subsurface_proportion_type=None):
         """Function generator to map arbitrary nutrient type"""
         def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
@@ -169,15 +175,20 @@ def execute(args):
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
                 if lucode != nodata_landuse:
-                    result[lucode_array == lucode] = (
-                        lucode_to_parameters[lucode][load_type] *
-                        (1 - lucode_to_parameters[lucode]
-                         [subsurface_proportion_type]) *
-                        cell_area_ha)
+                    if subsurface_proportion_type is not None:
+                        result[lucode_array == lucode] = (
+                            lucode_to_parameters[lucode][load_type] *
+                            (1 - lucode_to_parameters[lucode]
+                             [subsurface_proportion_type]) *
+                            cell_area_ha)
+                    else:
+                        result[lucode_array == lucode] = (
+                            lucode_to_parameters[lucode][load_type])
             return result
         return map_load
 
-    def map_subsurface_load_function(load_type, subsurface_proportion_type):
+    def map_subsurface_load_function(
+            load_type, subsurface_proportion_type=None):
         """Function generator to map arbitrary nutrient type"""
         def map_load(lucode_array):
             """converts unit load to total load & handles nodata"""
@@ -185,11 +196,14 @@ def execute(args):
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
                 if lucode != nodata_landuse:
-                    result[lucode_array == lucode] = (
-                        lucode_to_parameters[lucode][load_type] *
-                        (lucode_to_parameters[lucode]
-                         [subsurface_proportion_type]) *
-                        cell_area_ha)
+                    if subsurface_proportion_type is not None:
+                        result[lucode_array == lucode] = (
+                            lucode_to_parameters[lucode][load_type] *
+                            (lucode_to_parameters[lucode]
+                             [subsurface_proportion_type]) *
+                            cell_area_ha)
+                    else:
+                        result[lucode_array == lucode] = 0.0
             return result
         return map_load
 
@@ -230,9 +244,15 @@ def execute(args):
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
+        # Perrine says that 'n' i the only case where we could consider a prop
+        # subsurface component.  So there's a special case for that.
+        if nutrient == 'n':
+            subsurface_proportion_type = 'proportion_subsurface_n'
+        else:
+            subsurface_proportion_type = None
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri], map_load_function(
-                'load_%s' % nutrient, 'proportion_subsurface_%s' % nutrient),
+                'load_%s' % nutrient, subsurface_proportion_type),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
@@ -240,7 +260,7 @@ def execute(args):
             intermediate_dir, 'sub_load_%s%s.tif' % (nutrient, file_suffix))
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri], map_subsurface_load_function(
-                'load_%s' % nutrient, 'proportion_subsurface_%s' % nutrient),
+                'load_%s' % nutrient, subsurface_proportion_type),
             sub_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
