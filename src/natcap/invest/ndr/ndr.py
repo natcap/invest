@@ -571,7 +571,6 @@ def execute(args):
             current_l_lulc_uri, l_lulc_temp_uri, dem_uri, lulc_uri]:
         os.remove(uri)
 
-
     LOGGER.info(r'NDR complete!')
     LOGGER.info(r'  _   _    ____    ____     ')
     LOGGER.info(r' | \ |"|  |  _"\U |  _"\ u  ')
