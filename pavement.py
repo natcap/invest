@@ -1386,6 +1386,12 @@ def check(options):
             'git+https://github.com/phargogh/paver@natcap-version'
         )))
 
+        # Don't need to try/except this ... paver is imported at the top of
+        # this file so we know that paver exists.  If it doesn't have a version
+        # module, the ImportError should definitely be raised.
+        from paver import version
+        paver.__version__ = version.VERSION
+
         try:
             requirements.append(('pywin32', required, 'pywin', None))
 
