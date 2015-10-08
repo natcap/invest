@@ -10,7 +10,7 @@ SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', '_example_model')
 
 
-class MinimumRequirementsTest(unittest.TestCase):
+class ValuationAvgGridDistWindSchedTest(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_regression(self):
@@ -53,8 +53,6 @@ class MinimumRequirementsTest(unittest.TestCase):
 	    'wind_schedule': os.path.join(
 		    SAMPLE_DATA, 'WindEnergy', 'input',
 		    'price_table_example.csv')
-	    #'wind_price': ,
-	    #'rate_change': 
 
         }
         
