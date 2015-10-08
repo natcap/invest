@@ -2568,7 +2568,7 @@ def test(args):
 
     if parsed_args.with_data:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
-        call_task('fetch', args=[REPOS_DICT['sample-data'].local_path])
+        call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _run_tests():
