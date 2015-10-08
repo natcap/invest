@@ -61,6 +61,10 @@ def user_os_installer():
     if platform.system() == 'Linux':
         # check if we're running an RPM system approach taken from
         # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
+        if not os.path.exists('/usr/bin/rpm') and os.path.exists('/bin/rpm'):
+            # We're on openSUSE, an RPM system.
+            return 'rpm'
+
         exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm'])
         if exit_code == 0:
             return 'rpm'
@@ -2564,7 +2568,7 @@ def test(args):
 
     if parsed_args.with_data:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
-        call_task('fetch', args=[REPOS_DICT['sample-data'].local_path])
+        call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _run_tests():
