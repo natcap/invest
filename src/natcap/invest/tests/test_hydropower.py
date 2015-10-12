@@ -56,20 +56,54 @@ def _create_lulc(matrix=None):
 
 def _create_watershed(fields=None, attributes=None):
     """
-    Create a watershed shapefile with 
+    Create a watershed shapefile of polygons
 
+    This Watershed Shapefile is created with the following characteristis:
+        * SRS is in the SRS_WILLAMETTE.
+        * Vector type is Polygon
+        * Polygons are 100m x 100m
+
+    Parameters:
+        fields (dict or None): a python dictionary mapping string fieldname
+            to a string datatype representation of the target ogr fieldtype.
+            Example: {'ws_id': 'int'}.  See
+            ``pygeoprocessing.testing.sampledata.VECTOR_FIELD_TYPES.keys()``
+            for the complete list of all allowed types.  If None, the datatype
+            will be determined automatically based on the types of the
+            attribute values.
+        attributes (list of dicts): a list of python dictionary mapping
+            fieldname to field value.  The field value's type must match the
+            type defined in the fields input.  It is an error if it doesn't.
 
     """
     pass
-    
+
     projection = sampledata.SRS_WILLAMETTE
-    
+
     pos_x = 443800.0
     pos_y = 4957000.0
-    
-    geometries = [Polygon([(pos_x, pos_y), (pos_x + 100, pos_y), (pos_x, pos_y - 100),(pos_x + 100, pos_y - 100)]), Polygon([(pos_x + 100, pos_y),(pos_x + 200, pos_y),(pos_x + 100, pos_y - 100),(pos_x + 200, pos_y - 100)]), Polygon([(pos_x, pos_y - 100),(pos_x + 100, pos_y - 100),(pos_x, pos_y - 200),(pos_x + 100, pos_y - 200)])]
 
-   
+    #poly_geom = {'poly_1': {'uleft': (pos_x, pos_y), 'uright': (pos_x + 100, pos_y),
+    #                        'lleft': (pos_x, pos_y - 100), 'lright': (pos_x + 100, pos_y - 100)}
+    #             'poly_2': {'uleft': (pos_x + 100, pos_y), 'uright': (pos_x + 200, pos_y),
+    #                        'lleft': (pos_x + 100, pos_y - 100), 'lright': (pos_x + 200, pos_y - 100)}
+    #             'poly_3': {'uleft': (pos_x, pos_y - 100), 'uright': (pos_x + 100, pos_y -100),
+    #                        'lleft': (pos_x, pos_y - 200), 'lright': (pos_x + 100, pos_y - 200)}
+
+    poly_geoms = {
+                 'poly_1': [(pos_x, pos_y), (pos_x + 100, pos_y),
+                            (pos_x, pos_y - 100), (pos_x + 100, pos_y - 100)]
+                 'poly_2': [(pos_x + 100, pos_y), (pos_x + 200, pos_y),
+                            (pos_x + 100, pos_y - 100), (pos_x + 200, pos_y - 100)]
+                 'poly_3': [(pos_x, pos_y - 100), (pos_x + 100, pos_y -100),
+                            (pos_x, pos_y - 200), (pos_x + 100, pos_y - 200)]}
+
+
+
+
+    geometries = [Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2']),
+                    Polygon(poly_geoms['poly_3'])]
+
     return pygeoprocessing.testing.create_vector_on_disk(
 		    geometries, projection, fields, attributes,
 		    vector_format='ESRI Shapefile')
@@ -132,19 +166,29 @@ class HydropowerUnitTests(unittest.TestCase):
     def test_compute_waterhsed_valuation(self):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import hydropower
-        pass 
-	fields = {'ws_id': 'int',
-		  'rsupply_vl': 
-		  }
-	attributes = [{'ws_id': 1, 'rsupply_vl': 1000},
-		      {'ws_id': 2, 'rsupply_vl': 2000},
-		      {'ws_id': 3, 'rsupply_vl': 3000}]
-        
+        pass
+
+        fields = {'ws_id': 'int', 'rsupply_vl': 'real'}
+
+        attributes = [
+                {'ws_id': 1, 'rsupply_vl': 1000},
+                {'ws_id': 2, 'rsupply_vl': 2000},
+                {'ws_id': 3, 'rsupply_vl': 3000}]
+
         watershed_uri = _create_watershed(fields, attributes)
 
-	val_dict = {'1': {'efficiency': 0.75, 'fraction': 0.6,'height': 25, 'discount': 5,'time_span': 100,'kw_price': 0.07,'cost': 0}, '2': {'efficiency': 0.85, 'fraction': 0.7,'height': 20, 'discount': 5,'time_span': 100,'kw_price': 0.07,'cost': 0}, '3': {'efficiency': 0.9, 'fraction': 0.6,'height': 30, 'discount': 5,'time_span': 100,'kw_price': 0.07,'cost': 0}}
-	
-	hydropower.compute_watershed_valuation(watershed_uri, val_dict)
+        val_dict = {
+                '1': {'efficiency': 0.75, 'fraction': 0.6, 'height': 25,
+                      'discount': 5, 'time_span': 100, 'kw_price': 0.07,
+                      'cost': 0},
+                '2': {'efficiency': 0.85, 'fraction': 0.7,'height': 20,
+                      'discount': 5, 'time_span': 100, 'kw_price': 0.07,
+                      'cost': 0},
+                '3': {'efficiency': 0.9, 'fraction': 0.6, 'height': 30,
+                      'discount': 5, 'time_span': 100, 'kw_price': 0.07,
+                      'cost': 0}}
+
+        hydropower.compute_watershed_valuation(watershed_uri, val_dict)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
@@ -152,16 +196,21 @@ class HydropowerUnitTests(unittest.TestCase):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import hydropower
         pass
-	fields = {'ws_id': 'int',
-		  'wyield_mn': , 
-		  'wyield_vol': , 
-		  'consum_mn_mn': , 
-		  'consum_vol':  
-		  }
-	attributes = [{'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000, 'consum_vol': 10000, 'consum_mn': 10000}, {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 1000, 'consum_vol': 10000, 'consum_mn': 10000}, {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 1000, 'consum_vol': 10000, 'consum_mn': 10000}]
-        
+
+        fields = {'ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real',
+                  'consum_mn': 'real', 'consum_vol': 'real'}
+
+        attributes = [
+                {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000,
+                 'consum_vol': 10000, 'consum_mn': 10000},
+                {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 1000,
+                 'consum_vol': 10000, 'consum_mn': 10000},
+                {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 1000,
+                 'consum_vol': 10000, 'consum_mn': 10000}]
+
         watershed_uri = _create_watershed(fields, attributes)
-	hydropower.compute_rsupply_volume(watershed_uri)
+
+        hydropower.compute_rsupply_volume(watershed_uri)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
@@ -169,19 +218,23 @@ class HydropowerUnitTests(unittest.TestCase):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import hydropower
         pass
-	fields = {'ws_id': 'int',
-		  'wyield_mn': , 
-		  'wyield_vol': , 
-		  'consum_mn_mn': , 
-		  'consum_vol':  
-		  }
-	attributes = [{'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000, 'consum_vol': 10000, 'consum_mn': 10000}, {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 1000, 'consum_vol': 10000, 'consum_mn': 10000}, {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 1000, 'consum_vol': 10000, 'consum_mn': 10000}]
-        
+
+        fields = {'ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real',
+                  'consum_mn': 'real', 'consum_vol': 'real'}
+
+        attributes = [
+                {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000,
+                 'consum_vol': 10000, 'consum_mn': 10000},
+                {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 1000,
+                 'consum_vol': 10000, 'consum_mn': 10000},
+                {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 1000,
+                 'consum_vol': 10000, 'consum_mn': 10000}]
+
         watershed_uri = _create_watershed(fields, attributes)
 
-	key_field = 'ws_id'
-	wanted_list = ['wyield_vol', 'consum_vol']
-	hydropower.extract_datasource_table_by_key(watershed_uri, key_field, wanted_list)
+        key_field = 'ws_id'
+        wanted_list = ['wyield_vol', 'consum_vol']
+        hydropower.extract_datasource_table_by_key(watershed_uri, key_field, wanted_list)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
@@ -189,13 +242,16 @@ class HydropowerUnitTests(unittest.TestCase):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import hydropower
         pass
-	filename = tempfile.tmpfile()
-	fields = ['id', 'precip', 'volume']
-	data = {0: {'id':1, 'precip': 100, 'volume': 150},
-	        1: {'id':2, 'precip': 100, 'volume': 150},
-	        2: {'id':3, 'precip': 100, 'volume': 150}}
 
-	hydropower.write_new_table(filename, fields, data)
+        filename = tempfile.tmpfile()
+
+        fields = ['id', 'precip', 'volume']
+
+        data = {0: {'id':1, 'precip': 100, 'volume': 150},
+                1: {'id':2, 'precip': 100, 'volume': 150},
+                2: {'id':3, 'precip': 100, 'volume': 150}}
+
+        hydropower.write_new_table(filename, fields, data)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
@@ -203,34 +259,39 @@ class HydropowerUnitTests(unittest.TestCase):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import hydropower
         pass
-	
-	fields = {'ws_id': 'int',
-		  'wyield_mn': , 
-		  'num_pixels':  
-		  }
-	attributes = [{'ws_id': 1, 'wyield_mn': 1000, 'num_pixels': 20}, {'ws_id': 2, 'wyield_mn': 1000, 'num_pixels': 15}, {'ws_id': 3, 'wyield_mn': 1000, 'num_pixels': 10}]
-        
+
+        fields = {'ws_id': 'int', 'wyield_mn': 'real', 'num_pixels': 'real'}
+
+        attributes = [{'ws_id': 1, 'wyield_mn': 1000, 'num_pixels': 20},
+                      {'ws_id': 2, 'wyield_mn': 1000, 'num_pixels': 15},
+                      {'ws_id': 3, 'wyield_mn': 1000, 'num_pixels': 10}]
+
         watershed_uri = _create_watershed(fields, attributes)
-	pixel_area = 100
-	hydropower.compute_water_yield_volume(shape_uri, pixel_area)
+
+        pixel_area = 100
+
+        hydropower.compute_water_yield_volume(shape_uri, pixel_area)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
     def test_add_dict_to_shape(self):
         """When the user's suffix has an underscore, don't add another one."""
-        from natcap.invest import hydropower 
+        from natcap.invest import hydropower
         pass
-	fields = {'ws_id': 'int'
-		  }
-	attributes = [{'ws_id': 1}, {'ws_id': 2}, {'ws_id': 3}]
-        
+
+        fields = {'ws_id': 'int'}
+
+        attributes = [{'ws_id': 1}, {'ws_id': 2}, {'ws_id': 3}]
+
         watershed_uri = _create_watershed(fields, attributes)
 
-	field_dict = {'1': 5, '2': 10, '3': 15}
-	field_name = 'test'
-	key = 'ws_id'
+        field_dict = {'1': 5, '2': 10, '3': 15}
 
-	hydropower.add_dict_to_shape(shape_uri, field_dict, field_name, key)
+        field_name = 'test'
+
+        key = 'ws_id'
+
+        hydropower.add_dict_to_shape(shape_uri, field_dict, field_name, key)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
