@@ -115,7 +115,7 @@ class HydropowerUnitTests(unittest.TestCase):
     def test_execute(self):
         """Example execution to ensure correctness when called via execute."""
         from natcap.invest import _example_model
-
+        pass
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
@@ -140,7 +140,7 @@ class HydropowerUnitTests(unittest.TestCase):
         """When a suffix is added, verify it's added correctly."""
         from natcap.invest import _example_model
         pass
-	args = {
+        args = {
             'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
             'suffix': 'foo',
@@ -154,7 +154,7 @@ class HydropowerUnitTests(unittest.TestCase):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import _example_model
         pass
-	args = {
+        args = {
             'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
             'suffix': 'foo',
@@ -166,7 +166,7 @@ class HydropowerUnitTests(unittest.TestCase):
     def test_compute_waterhsed_valuation(self):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import hydropower
-        pass
+        #pass
 
         fields = {'ws_id': 'int', 'rsupply_vl': 'real'}
 
@@ -190,8 +190,8 @@ class HydropowerUnitTests(unittest.TestCase):
 
         hydropower.compute_watershed_valuation(watershed_uri, val_dict)
 
-        self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
-                                                    'sum_foo.tif')))
+        #self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
+        #                                           'sum_foo.tif')))
     def test_compute_rsupply_volume(self):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import hydropower
