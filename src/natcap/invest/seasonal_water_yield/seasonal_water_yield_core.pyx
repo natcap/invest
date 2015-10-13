@@ -3058,7 +3058,7 @@ def route_sf(
                 sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
                 sf_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             else:
-                sf_down_sum = r_sum_avail / 1000.0 * pixel_area
+                sf_down_sum = r_sum_avail
                 sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = sf_down_sum
                 r_avail = r_avail_block[row_index, col_index, row_block_offset, col_block_offset]
                 if r_sum_avail != 0:
@@ -3100,7 +3100,7 @@ def route_sf(
                     #calc base case
                     r_sum_avail = r_sum_avail_block[
                         row_index, col_index, row_block_offset, col_block_offset]
-                    sf_down_sum += outflow_weight * r_sum_avail / 1000.0 * pixel_area
+                    sf_down_sum += outflow_weight * r_sum_avail
                 else:
                     if sf_block[neighbor_row_index, neighbor_col_index,
                         neighbor_row_block_offset, neighbor_col_block_offset] == sf_nodata:
