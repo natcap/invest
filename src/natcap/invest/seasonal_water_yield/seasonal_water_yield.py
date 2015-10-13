@@ -22,6 +22,7 @@ LOGGER = logging.getLogger(
 
 N_MONTHS = 12
 
+
 def execute(args):
     """This function invokes the seasonal water yield model given
         URI inputs of files. It may write log, warning, or error messages to

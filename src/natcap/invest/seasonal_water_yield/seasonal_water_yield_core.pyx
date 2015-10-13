@@ -483,8 +483,13 @@ cdef route_recharge(
             r_i = 0
             aet_sum = aet_nodata
 
-        r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_r_sum_avail
         recharge_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma*r_i, 0)
+
+        # also add in r_avail from the current pixel
+        current_r_sum_avail += recharge_avail_block[
+            row_index, col_index, row_block_offset, col_block_offset]
+
+        r_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_r_sum_avail
         recharge_block[row_index, col_index, row_block_offset, col_block_offset] = r_i
         aet_block[row_index, col_index, row_block_offset, col_block_offset] = aet_sum
         cache_dirty[row_index, col_index] = 1
