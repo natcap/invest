@@ -57,7 +57,7 @@
           },
           "defaultValue": 1,
           "required": true,
-          "enabledBy": "grid",
+          "enabledBy": "grid_type",
           "helpText": "Select whether the grid should contain rectangular or hexagonal units."
         },
         {
@@ -68,53 +68,53 @@
           "validText": "[0-9]+(\\.[0-9][0-9])?",
           "dataType": "float",
           "required": true,
-          "enabledBy": "grid",
+          "enabledBy": "grid_type",
           "defaultValue": "5000",
           "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
-        },
+        }
+      ]
+    },
+    {
+      "id": "fit_regression",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "fit_regression",
+      "label": "Fit Regression",
+      "defaultValue": false,
+      "elements": [
         {
-          "id": "fit_regression",
-          "type": "container",
-          "collapsible": true,
-          "args_id": "fit_regression",
-          "label": "Fit Regression",
-          "defaultValue": false,
+          "id": "fit_regression_list",
+          "type": "list",
           "elements": [
             {
-              "id": "fit_regression_list",
-              "type": "list",
-              "elements": [
-                {
-                  "id": "predictor_dataset_path",
-                  "args_id": "predictor_dataset_path",
-                  "type": "folder",
-                  "label": "Predictor Directory",
-                  "required": true,
-                  "enabledBy": "fit_regression_list",
-                  "defaultValue": "../Recreation/input/initial/predictors",
-                  "helpText": "A directory that contains any data to be included in the regression fit."
-                },
-                {
-                  "id": "grid_type",
-                  "args_id": "grid_type",
-                  "type": "dropdown",
-                  "label": "Grid Type",
-                  "options": [
-                    "Photo User Days",
-                    "Photo Travel Distance"
-                  ],
-                  "returns": {
-                    "mapValues": {
-                      "Photo User Days": "pud",
-                      "Photo Travel Distance": "ptd"
-                    }
-                  },
-                  "defaultValue": "pud",
-                  "required": true,
-                  "enabledBy": "fit_regression_list",
-                  "helpText": "Select whether the grid should contain rectangular or hexagonal units."
+              "id": "predictor_dataset_path",
+              "args_id": "predictor_dataset_path",
+              "type": "folder",
+              "label": "Predictor Directory",
+              "required": true,
+              "enabledBy": "fit_regression_list",
+              "defaultValue": "../Recreation/input/initial/predictors",
+              "helpText": "A directory that contains any data to be included in the regression fit."
+            },
+            {
+              "id": "grid_type",
+              "args_id": "grid_type",
+              "type": "dropdown",
+              "label": "Grid Type",
+              "options": [
+                "Photo User Days",
+                "Photo Travel Distance"
+              ],
+              "returns": {
+                "mapValues": {
+                  "Photo User Days": "pud",
+                  "Photo Travel Distance": "ptd"
                 }
-              ]
+              },
+              "defaultValue": "pud",
+              "required": true,
+              "enabledBy": "fit_regression_list",
+              "helpText": "Select whether the grid should contain rectangular or hexagonal units."
             }
           ]
         }
