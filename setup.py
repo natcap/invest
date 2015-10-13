@@ -196,11 +196,6 @@ setup(
         'natcap.invest.scenario_generator': [
             '*.js',
         ],
-        'natcap.invest.recreation': [
-            '*.php',
-            '*.r',
-            '*.json',
-        ],
         'natcap.invest.wave_energy': [
             'wave_energy_scripts/*.sh',
             'wave_energy_scripts/*.txt'
