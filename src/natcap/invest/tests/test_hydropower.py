@@ -14,6 +14,7 @@ import unittest
 import tempfile
 import shutil
 import os
+import csv
 
 from osgeo import gdal
 from osgeo import ogr
@@ -247,7 +248,6 @@ class HydropowerUnitTests(unittest.TestCase):
         shape = None
         shape_regression = None
 
-    @nottest
     def test_extract_datasource_table_by_key(self):
         """Test a function that returns a dictionary base on a Shapefiles attributes"""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -257,38 +257,57 @@ class HydropowerUnitTests(unittest.TestCase):
 
         attributes = [
                 {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000,
-                 'consum_vol': 10000, 'consum_mn': 10000},
-                {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 1000,
-                 'consum_vol': 10000, 'consum_mn': 10000},
-                {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 1000,
-                 'consum_vol': 10000, 'consum_mn': 10000}]
+                 'consum_vol': 100, 'consum_mn': 10000},
+                {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 800,
+                 'consum_vol': 420, 'consum_mn': 10000},
+                {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 600,
+                 'consum_vol': 350, 'consum_mn': 10000}]
 
         watershed_uri = _create_watershed(fields, attributes)
 
         key_field = 'ws_id'
         wanted_list = ['wyield_vol', 'consum_vol']
-        hydropower_water_yield.extract_datasource_table_by_key(watershed_uri, key_field, wanted_list)
+        results = hydropower_water_yield.extract_datasource_table_by_key(
+                    watershed_uri, key_field, wanted_list)
 
-        self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
-                                                    'sum_foo.tif')))
+        expected_res = {1: {'wyield_vol': 1000, 'consum_vol': 100},
+                        2: {'wyield_vol': 800, 'consum_vol': 420},
+                        3: {'wyield_vol': 600, 'consum_vol': 350}}
 
-    @nottest
+        for exp_key in expected_res.keys():
+            if exp_key not in results:
+                raise AssertionError('Key %s not found in returned results' % exp_key)
+            for sub_key in expected_res[exp_key].keys():
+                if sub_key not in results[exp_key].keys():
+                    raise AssertionError('Key %s not found in returned results' % sub_key)
+                pygeoprocessing.testing.assert_almost_equal(
+                    expected_res[exp_key][sub_key], results[exp_key][sub_key])
+
     def test_write_new_table(self):
         """Verify that a new CSV table is written to properly"""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        filename = tempfile.mkstemp()
+        filename = tempfile.mkstemp()[1]
 
         fields = ['id', 'precip', 'volume']
 
         data = {0: {'id':1, 'precip': 100, 'volume': 150},
-                1: {'id':2, 'precip': 100, 'volume': 150},
-                2: {'id':3, 'precip': 100, 'volume': 150}}
+                1: {'id':2, 'precip': 150, 'volume': 350},
+                2: {'id':3, 'precip': 170, 'volume': 250}}
 
         hydropower_water_yield.write_new_table(filename, fields, data)
 
-        self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
-                                                    'sum_foo.tif')))
+        csv_file = open(filename, 'rb')
+        reader = csv.DictReader(csv_file)
+        for row in reader:
+            for key in [0, 1, 2]:
+                for sub_key in data[key].keys():
+                    if sub_key not in row:
+                        raise AssertionError('Key %s not found in CSV table' % sub_key)
+                    pygeoprocessing.testing.assert_almost_equal(
+                        float(data[key][sub_key]), float(row[sub_key]))
+
+        csv_file.close()
 
     @nottest
     def test_compute_water_yield_volume(self):
