@@ -2550,9 +2550,19 @@ def compress_raster(args):
 @task
 @consume_args
 def test(args):
-    """
-    Run all tests in the two test suites.  Currently implemented with
-    nosetests.
+    """Run the suite of InVEST tests within a virtualenv.
+
+    When run, paver will determine whether InVEST needs to be installed into
+    the active virtualenv, creating the env if needed.  InVEST will be
+    installed into the virtualenv if:
+
+        * InVEST is not already installed into the virtualenv.
+        * The version of InVEST installed into the virtualenv is older than
+          what is currently available to be installed from the source tree.
+        * There are uncommitted changes in the source tree.
+
+    Default behavior is to run all tests contained in tests/*.py and
+    src/natcap/invest/tests/*.py.
 
     If --jenkins is provided, xunit reports and extra logging will be produced.
     If --with-data is provided, test data repos will be cloned.
@@ -2564,7 +2574,12 @@ def test(args):
             help='Use options that are useful for Jenkins reports')
     parser.add_argument('--with-data', default=False, action='store_true',
             help='Clone/update the data repo if needed')
+    parser.add_argument('nose_args', nargs='*',
+                        help=('Nosetests-compatible strings indicating '
+                              'filename[:classname[.testname]]'),
+                        metavar='TEST')
     parsed_args = parser.parse_args(args)
+    print 'parsed args: ', parsed_args
 
     if parsed_args.with_data:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
@@ -2596,10 +2611,23 @@ def test(args):
         else:
             jenkins_flags = ''
 
-        sh(('nosetests -vs {jenkins_opts} '
-            'tests/*.py '
-            'src/natcap/invest/tests/*.py').format(
-                jenkins_opts=jenkins_flags))
+        if len(parsed_args.nose_args) == 0:
+            # Specifying all tests by hand here because Windows doesn't like the *
+            # wildcard operator like Linux/Mac does.
+            regression_tests = glob.glob(os.path.join('tests', '*.py'))
+            _unit_glob = glob.glob(os.path.join('src', 'natcap', 'invest',
+                                                'tests', '*.py'))
+            unit_tests = [t for t in _unit_glob
+                        if os.path.basename(t) != '__init__.py']
+            tests = regression_tests + unit_tests
+        else:
+            # If the user gave us some test names to run, run those instead!
+            tests = parsed_args.nose_args
+
+        sh(('nosetests -vs {jenkins_opts} {tests}').format(
+                jenkins_opts=jenkins_flags,
+                tests=' '.join(tests)
+            ))
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _update_invest():
