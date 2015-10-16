@@ -188,7 +188,6 @@ class HydropowerUnitTests(unittest.TestCase):
         shape = None
         shape_regression = None
 
-    @nottest
     def test_compute_rsupply_volume(self):
         """Verify the real supply volume is computed correctly"""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -197,19 +196,56 @@ class HydropowerUnitTests(unittest.TestCase):
                   'consum_mn': 'real', 'consum_vol': 'real'}
 
         attributes = [
-                {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000,
-                 'consum_vol': 10000, 'consum_mn': 10000},
-                {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 1000,
-                 'consum_vol': 10000, 'consum_mn': 10000},
-                {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 1000,
-                 'consum_vol': 10000, 'consum_mn': 10000}]
+                {'ws_id': 1, 'wyield_mn': 400, 'wyield_vol': 1200,
+                 'consum_vol': 300, 'consum_mn': 80},
+                {'ws_id': 2, 'wyield_mn': 450, 'wyield_vol': 1100,
+                 'consum_vol': 300, 'consum_mn': 75},
+                {'ws_id': 3, 'wyield_mn': 500, 'wyield_vol': 1000,
+                 'consum_vol': 200, 'consum_mn': 50}]
 
         watershed_uri = _create_watershed(fields, attributes)
 
         hydropower_water_yield.compute_rsupply_volume(watershed_uri)
 
-        self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
-                                                    'sum_foo.tif')))
+        results = {
+            1 : {'rsupply_vl': 900, 'rsupply_mn': 320},
+            2 : {'rsupply_vl': 800, 'rsupply_mn': 375},
+            3 : {'rsupply_vl': 800, 'rsupply_mn': 450}
+        }
+
+        # Check that the 'hp_energy' / 'hp_val' fields were added and are correct
+        shape = ogr.Open(watershed_uri)
+        # Check that the shapefiles have the same number of layers
+        layer_count = shape.GetLayerCount()
+
+        for layer_num in range(layer_count):
+            # Get the current layer
+            layer = shape.GetLayer(layer_num)
+
+            # Get the first features of the layers and loop through all the
+            # features
+            feat = layer.GetNextFeature()
+            while feat is not None:
+                # Check that the field counts for the features are the same
+                layer_def = layer.GetLayerDefn()
+                field_count = layer_def.GetFieldCount()
+                ws_id_index = feat.GetFieldIndex('ws_id')
+                ws_id = feat.GetField(ws_id_index)
+
+                for key in ['rsupply_vl', 'rsupply_mn']:
+                    try:
+                        key_index = feat.GetFieldIndex(key)
+                        key_val = feat.GetField(key_index)
+                        pygeoprocessing.testing.assert_almost_equal(
+                            results[ws_id][key], key_val)
+                    except ValueError:
+                        raise AssertionError('Could not find field %s' % key)
+
+                feat = None
+                feat = layer.GetNextFeature()
+
+        shape = None
+        shape_regression = None
 
     @nottest
     def test_extract_datasource_table_by_key(self):
