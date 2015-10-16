@@ -16,43 +16,13 @@ import shutil
 import os
 
 from osgeo import gdal
+from osgeo import ogr
 import numpy
 import numpy.testing
 import pygeoprocessing.testing
 from pygeoprocessing.testing import sampledata
 from shapely.geometry import Polygon
-
-def _create_lulc(matrix=None):
-    """
-    Create an LULC for the _example_model.
-
-    This LULC is created with the following characteristics:
-        * SRS is in the SRS_WILLAMETTE.
-        * Nodata is -1.
-        * Raster type is `gdal.GDT_Int32`
-        * Pixel size is 30m
-
-    Parameters:
-        matrix=None (numpy.array): A numpy array to use as a landcover matrix.
-            The output raster created will be saved with these pixel values.
-            If None, a default matrix will be used.
-
-    Returns:
-        A string filepath to a new LULC raster on disk.
-    """
-    if matrix is None:
-        lulc_matrix = numpy.array([
-            [0, 1, 2, 3, 4],
-            [1, 2, 4, 5, 11],
-            [1, -1, -1, -1, -1],
-            [0, 1, 2, 3, 4]], numpy.int32)
-    else:
-        lulc_matrix = matrix
-    lulc_nodata = -1
-    srs = sampledata.SRS_WILLAMETTE
-    return pygeoprocessing.testing.create_raster_on_disk(
-        [lulc_matrix], srs.origin, srs.projection, lulc_nodata,
-        srs.pixel_size(30), datatype=gdal.GDT_Int32)
+from nose.tools import nottest
 
 def _create_watershed(fields=None, attributes=None):
     """
@@ -76,25 +46,17 @@ def _create_watershed(fields=None, attributes=None):
             type defined in the fields input.  It is an error if it doesn't.
 
     """
-    pass
 
-    projection = sampledata.SRS_WILLAMETTE
+    srs = sampledata.SRS_WILLAMETTE
 
     pos_x = 443800.0
     pos_y = 4957000.0
 
-    #poly_geom = {'poly_1': {'uleft': (pos_x, pos_y), 'uright': (pos_x + 100, pos_y),
-    #                        'lleft': (pos_x, pos_y - 100), 'lright': (pos_x + 100, pos_y - 100)}
-    #             'poly_2': {'uleft': (pos_x + 100, pos_y), 'uright': (pos_x + 200, pos_y),
-    #                        'lleft': (pos_x + 100, pos_y - 100), 'lright': (pos_x + 200, pos_y - 100)}
-    #             'poly_3': {'uleft': (pos_x, pos_y - 100), 'uright': (pos_x + 100, pos_y -100),
-    #                        'lleft': (pos_x, pos_y - 200), 'lright': (pos_x + 100, pos_y - 200)}
-
     poly_geoms = {
                  'poly_1': [(pos_x, pos_y), (pos_x + 100, pos_y),
-                            (pos_x, pos_y - 100), (pos_x + 100, pos_y - 100)]
+                            (pos_x, pos_y - 100), (pos_x + 100, pos_y - 100)],
                  'poly_2': [(pos_x + 100, pos_y), (pos_x + 200, pos_y),
-                            (pos_x + 100, pos_y - 100), (pos_x + 200, pos_y - 100)]
+                            (pos_x + 100, pos_y - 100), (pos_x + 200, pos_y - 100)],
                  'poly_3': [(pos_x, pos_y - 100), (pos_x + 100, pos_y -100),
                             (pos_x, pos_y - 200), (pos_x + 100, pos_y - 200)]}
 
@@ -105,17 +67,16 @@ def _create_watershed(fields=None, attributes=None):
                     Polygon(poly_geoms['poly_3'])]
 
     return pygeoprocessing.testing.create_vector_on_disk(
-		    geometries, projection, fields, attributes,
+		    geometries, srs.projection, fields, attributes,
 		    vector_format='ESRI Shapefile')
 
 class HydropowerUnitTests(unittest.TestCase):
 
     """Tests for natcap.hydropower."""
-
+    @nottest
     def test_execute(self):
         """Example execution to ensure correctness when called via execute."""
         from natcap.invest import _example_model
-        pass
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
@@ -135,11 +96,10 @@ class HydropowerUnitTests(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
         for filename in [args['example_lulc'], expected_raster]:
             os.remove(filename)
-
+    @nottest
     def test_execute_with_suffix(self):
         """When a suffix is added, verify it's added correctly."""
         from natcap.invest import _example_model
-        pass
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
@@ -149,11 +109,10 @@ class HydropowerUnitTests(unittest.TestCase):
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
-
+    @nottest
     def test_execute_with_suffix_and_underscore(self):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest import _example_model
-        pass
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'example_lulc': _create_lulc(),
@@ -164,38 +123,75 @@ class HydropowerUnitTests(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
     def test_compute_waterhsed_valuation(self):
-        """When the user's suffix has an underscore, don't add another one."""
-        from natcap.invest import hydropower
-        #pass
+        """Verify valuation is computed correctly"""
+        from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'rsupply_vl': 'real'}
 
         attributes = [
-                {'ws_id': 1, 'rsupply_vl': 1000},
-                {'ws_id': 2, 'rsupply_vl': 2000},
-                {'ws_id': 3, 'rsupply_vl': 3000}]
+                {'ws_id': 1, 'rsupply_vl': 1000.0},
+                {'ws_id': 2, 'rsupply_vl': 2000.0},
+                {'ws_id': 3, 'rsupply_vl': 3000.0}]
 
         watershed_uri = _create_watershed(fields, attributes)
 
         val_dict = {
-                '1': {'efficiency': 0.75, 'fraction': 0.6, 'height': 25,
-                      'discount': 5, 'time_span': 100, 'kw_price': 0.07,
-                      'cost': 0},
-                '2': {'efficiency': 0.85, 'fraction': 0.7,'height': 20,
-                      'discount': 5, 'time_span': 100, 'kw_price': 0.07,
-                      'cost': 0},
-                '3': {'efficiency': 0.9, 'fraction': 0.6, 'height': 30,
-                      'discount': 5, 'time_span': 100, 'kw_price': 0.07,
-                      'cost': 0}}
+                1: {'efficiency': 0.75, 'fraction': 0.6, 'height': 25.0,
+                      'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
+                      'cost': 0.0},
+                2: {'efficiency': 0.85, 'fraction': 0.7, 'height': 20.0,
+                      'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
+                      'cost': 0.0},
+                3: {'efficiency': 0.9, 'fraction': 0.6, 'height': 30.0,
+                      'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
+                      'cost': 0.0}}
 
-        hydropower.compute_watershed_valuation(watershed_uri, val_dict)
+        hydropower_water_yield.compute_watershed_valuation(watershed_uri, val_dict)
 
-        #self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
-        #                                           'sum_foo.tif')))
+        results = {
+            1 : {'hp_energy': 30.6, 'hp_val': 44.63993483},
+            2 : {'hp_energy': 64.736, 'hp_val': 94.43826213},
+            3 : {'hp_energy': 132.192, 'hp_val': 192.84451846}
+        }
+
+        # Check that the 'hp_energy' / 'hp_val' fields were added and are correct
+        shape = ogr.Open(watershed_uri)
+        # Check that the shapefiles have the same number of layers
+        layer_count = shape.GetLayerCount()
+
+        for layer_num in range(layer_count):
+            # Get the current layer
+            layer = shape.GetLayer(layer_num)
+
+            # Get the first features of the layers and loop through all the
+            # features
+            feat = layer.GetNextFeature()
+            while feat is not None:
+                # Check that the field counts for the features are the same
+                layer_def = layer.GetLayerDefn()
+                field_count = layer_def.GetFieldCount()
+                ws_id_index = feat.GetFieldIndex('ws_id')
+                ws_id = feat.GetField(ws_id_index)
+
+                for key in ['hp_energy', 'hp_val']:
+                    try:
+                        key_index = feat.GetFieldIndex(key)
+                        key_val = feat.GetField(key_index)
+                        pygeoprocessing.testing.assert_almost_equal(
+                            results[ws_id][key], key_val)
+                    except ValueError:
+                        raise AssertionError('Could not find field %s' % key)
+
+                feat = None
+                feat = layer.GetNextFeature()
+
+        shape = None
+        shape_regression = None
+
+    @nottest
     def test_compute_rsupply_volume(self):
-        """When the user's suffix has an underscore, don't add another one."""
-        from natcap.invest import hydropower
-        pass
+        """Verify the real supply volume is computed correctly"""
+        from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real',
                   'consum_mn': 'real', 'consum_vol': 'real'}
@@ -210,14 +206,15 @@ class HydropowerUnitTests(unittest.TestCase):
 
         watershed_uri = _create_watershed(fields, attributes)
 
-        hydropower.compute_rsupply_volume(watershed_uri)
+        hydropower_water_yield.compute_rsupply_volume(watershed_uri)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
+
+    @nottest
     def test_extract_datasource_table_by_key(self):
-        """When the user's suffix has an underscore, don't add another one."""
-        from natcap.invest import hydropower
-        pass
+        """Test a function that returns a dictionary base on a Shapefiles attributes"""
+        from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real',
                   'consum_mn': 'real', 'consum_vol': 'real'}
@@ -234,16 +231,17 @@ class HydropowerUnitTests(unittest.TestCase):
 
         key_field = 'ws_id'
         wanted_list = ['wyield_vol', 'consum_vol']
-        hydropower.extract_datasource_table_by_key(watershed_uri, key_field, wanted_list)
+        hydropower_water_yield.extract_datasource_table_by_key(watershed_uri, key_field, wanted_list)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
-    def test_write_new_table(self):
-        """When the user's suffix has an underscore, don't add another one."""
-        from natcap.invest import hydropower
-        pass
 
-        filename = tempfile.tmpfile()
+    @nottest
+    def test_write_new_table(self):
+        """Verify that a new CSV table is written to properly"""
+        from natcap.invest.hydropower import hydropower_water_yield
+
+        filename = tempfile.mkstemp()
 
         fields = ['id', 'precip', 'volume']
 
@@ -251,14 +249,15 @@ class HydropowerUnitTests(unittest.TestCase):
                 1: {'id':2, 'precip': 100, 'volume': 150},
                 2: {'id':3, 'precip': 100, 'volume': 150}}
 
-        hydropower.write_new_table(filename, fields, data)
+        hydropower_water_yield.write_new_table(filename, fields, data)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
+
+    @nottest
     def test_compute_water_yield_volume(self):
-        """When the user's suffix has an underscore, don't add another one."""
-        from natcap.invest import hydropower
-        pass
+        """Verify that water yield volume is computed correctly"""
+        from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'wyield_mn': 'real', 'num_pixels': 'real'}
 
@@ -270,14 +269,15 @@ class HydropowerUnitTests(unittest.TestCase):
 
         pixel_area = 100
 
-        hydropower.compute_water_yield_volume(shape_uri, pixel_area)
+        hydropower_water_yield.compute_water_yield_volume(shape_uri, pixel_area)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
+
+    @nottest
     def test_add_dict_to_shape(self):
-        """When the user's suffix has an underscore, don't add another one."""
-        from natcap.invest import hydropower
-        pass
+        """Verify values from a dictionary are added to a shapefile properly."""
+        from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int'}
 
@@ -291,7 +291,7 @@ class HydropowerUnitTests(unittest.TestCase):
 
         key = 'ws_id'
 
-        hydropower.add_dict_to_shape(shape_uri, field_dict, field_name, key)
+        hydropower_water_yield.add_dict_to_shape(shape_uri, field_dict, field_name, key)
 
         self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
                                                     'sum_foo.tif')))
