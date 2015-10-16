@@ -449,7 +449,17 @@ To run the full suite of tests:
 
     $ paver test
 
-Or if you're looking for some extra verbosity (or you're building on jenkins):
+To specify a test (or multiple tests) to run via `paver test`, use the nosetests 
+format to specify test files, classes, and/or test methods to run.  For example:
+
+::
+
+    $ paver test tests/test_example.py:ExampleTest.test_regression
+
+This will only run this one test, ignoring all other tests that would normally be 
+run.
+
+If you're looking for some extra verbosity (or you're building on jenkins):
 
 ::
 
