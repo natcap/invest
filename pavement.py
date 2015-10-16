@@ -1441,10 +1441,10 @@ def check(options):
 
             if severity == required:
                 if install_msg is None:
-                    install_msg = ''
+                    fmt_install_msg = ''
                 else:
-                    fmt_install_msg = 'Install this package via:\n    ' + install_msg
-                print '{error} {report} \n{msg}'.format(error=ERROR,
+                    fmt_install_msg = '\nInstall this package via:\n    ' + install_msg
+                print 'Python package {error} {report} {msg}'.format(error=ERROR,
                                                       report=conflict.report(),
                                                       msg=fmt_install_msg)
                 errors_found = True
