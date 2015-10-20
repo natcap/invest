@@ -65,7 +65,12 @@ def user_os_installer():
             # We're on openSUSE, an RPM system.
             return 'rpm'
 
-        exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm'])
+        try:
+            exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm'])
+        except OSError:
+            # If we're on a debian system, RPM isn't installed by default.
+            return 'deb'
+
         if exit_code == 0:
             return 'rpm'
         return 'deb'
