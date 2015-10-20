@@ -63,7 +63,9 @@ def execute(args):
         args['potential_vegetation_uri'] (string): used in "mode (a)" path to
             potential vegetation raster
         args['pasture_threshold'] (float): used in "mode (a)"
-        args['intensification_fraction'] (float): used in "mode (a)"
+        args['intensification_fraction'] (float): used in "mode (a)"; a value
+            between 0 and 1 denoting proportion of total agriculture that
+            should be classified as 'high input'
         args['primary_threshold'] (float): used in "mode (a)"
         args['msa_parameters_uri'] (string): path to MSA classification
             parameters
@@ -407,8 +409,8 @@ def load_msa_parameter_table(
                     valueb: ...
                     '<': (bound, msa_lu_value),
                     '>': (bound, msa_lu_value)
-                    12: (msa_lu_8 * intensification_fraction +
-                         msa_lu_9 * (1.0 - intensification_fraction)}
+                    12: (msa_lu_8 * (1.0 - intensification_fraction) +
+                         msa_lu_9 * intensification_fraction}
             }
     """
 
@@ -429,8 +431,8 @@ def load_msa_parameter_table(
             msa_dict[line['MSA_type']][value] = float(line['MSA_x'])
     # cast back to a regular dict so we get keyerrors on non-existant keys
     msa_dict['msa_lu'][12] = (
-        msa_dict['msa_lu'][8] * intensification_fraction +
-        msa_dict['msa_lu'][9] * (1.0 - intensification_fraction))
+        msa_dict['msa_lu'][8] * (1.0 - intensification_fraction) +
+        msa_dict['msa_lu'][9] * intensification_fraction)
     return dict(msa_dict)
 
 
