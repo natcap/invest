@@ -329,6 +329,13 @@ def execute(args):
         # don't need a random poly id anymore
         layer.DeleteField(layer_defn.GetFieldIndex(poly_id_field))
 
+    for root_dir, _, files in os.walk(tmp_dir):
+        for filename in files:
+            try:
+                os.remove(os.path.join(root_dir, filename))
+            except OSError:
+                LOGGER.warn("couldn't remove temporary file %s", filename)
+
 
 def make_gaussian_kernel_uri(sigma, kernel_uri):
     """create a gaussian kernel raster"""
@@ -479,7 +486,7 @@ def _calculate_globio_lulc_map(
          (lulc_code, table) in lulc_to_globio_table.items()])
 
     intermediate_globio_lulc_uri = os.path.join(
-        intermediate_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
+        tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         lulc_uri, lulc_to_globio, intermediate_globio_lulc_uri,
