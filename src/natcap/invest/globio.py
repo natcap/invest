@@ -211,9 +211,7 @@ def execute(args):
     def _msa_i_op(lulc_array, distance_to_infrastructure):
         """calculate msa infrastructure"""
 
-        distance_to_infrastructure *= out_pixel_size #convert to meters
-        LOGGER.debug(out_pixel_size)
-        LOGGER.debug(distance_to_infrastructure)
+        distance_to_infrastructure *= out_pixel_size  #convert to meters
         msa_i_primary = numpy.empty(lulc_array.shape)
         msa_i_other = numpy.empty(lulc_array.shape)
 
@@ -358,7 +356,7 @@ def make_gaussian_kernel_uri(sigma, kernel_uri):
     for row_index in xrange(kernel_size):
         kernel = numpy.exp(
             -((row_index - max_distance)**2 +
-                (col_index - max_distance) ** 2)/(2.0*sigma**2)).reshape(
+              (col_index - max_distance) ** 2)/(2.0*sigma**2)).reshape(
                     1, kernel_size)
 
         integration += numpy.sum(kernel)
