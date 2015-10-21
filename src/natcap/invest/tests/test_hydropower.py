@@ -19,9 +19,9 @@ from pygeoprocessing.testing import sampledata
 from shapely.geometry import Polygon
 from nose.tools import nottest
 
-def _create_watershed(fields=None, attributes=None, subshed=True):
+def _create_watershed(fields=None, attributes=None, subshed=True, execute=False):
     """
-    Create a watershed shapefile of 3 polygons
+    Create a watershed shapefile
 
     This Watershed Shapefile is created with the following characteristis:
         * SRS is in the SRS_WILLAMETTE.
@@ -43,6 +43,7 @@ def _create_watershed(fields=None, attributes=None, subshed=True):
         subshed (boolean): True or False depicting whether the created vector
             should be representative of a sub watershed or watershed.
             Watershed will return one polygon, sub watershed will return 3.
+        execute (boolean): Determines how to construct the sub shed polygons
 
     Returns:
         A string filepath to the vector on disk
@@ -54,21 +55,29 @@ def _create_watershed(fields=None, attributes=None, subshed=True):
     pos_y = srs.origin[1]
 
     if subshed:
-        poly_geoms = {
+        if not execute:
+            poly_geoms = {
                  'poly_1': [(pos_x, pos_y), (pos_x + 100, pos_y),
-                            (pos_x, pos_y - 100), (pos_x + 100, pos_y - 100)],
+                            (pos_x + 100, pos_y - 100), (pos_x, pos_y - 100), (pos_x, pos_y)],
                  'poly_2': [(pos_x + 100, pos_y), (pos_x + 200, pos_y),
-                            (pos_x + 100, pos_y - 100), (pos_x + 200, pos_y - 100)],
+                             (pos_x + 200, pos_y - 100), (pos_x + 100, pos_y - 100), (pos_x + 100, pos_y)],
                  'poly_3': [(pos_x, pos_y - 100), (pos_x + 100, pos_y -100),
-                            (pos_x, pos_y - 200), (pos_x + 100, pos_y - 200)]}
+                            (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200), (pos_x, pos_y - 100)]}
 
-        geometries = [Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2']),
+            geometries = [Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2']),
                         Polygon(poly_geoms['poly_3'])]
+        else:
+            poly_geoms = {
+                 'poly_1': [(pos_x, pos_y), (pos_x + 200, pos_y),
+                            (pos_x + 200, pos_y - 100), (pos_x, pos_y - 100), (pos_x, pos_y)],
+                 'poly_2': [(pos_x, pos_y - 100), (pos_x + 200, pos_y - 100),
+                             (pos_x + 200, pos_y - 200), (pos_x, pos_y - 200), (pos_x, pos_y - 100)]}
 
+            geometries = [Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
     else:
         poly_geoms = {
                  'poly_1': [(pos_x, pos_y), (pos_x + 200, pos_y),
-                            (pos_x, pos_y - 200), (pos_x + 200, pos_y - 200)]}
+                            (pos_x + 200, pos_y - 200), (pos_x, pos_y - 200), (pos_x, pos_y)]}
 
         geometries = [Polygon(poly_geoms['poly_1'])]
 
@@ -114,7 +123,7 @@ def _create_csv(fields, data):
 
     return filename
 
-def _create_raster(matrix=None, dtype=gdal.GDT_Int32):
+def _create_raster(matrix=None, dtype=gdal.GDT_Int32, nodata=-1):
     """
     Create a raster for the hydropower_water_yield model.
 
@@ -140,11 +149,11 @@ def _create_raster(matrix=None, dtype=gdal.GDT_Int32):
             [0, 1, 2, 3, 4]], numpy.int32)
     else:
         lulc_matrix = matrix
-    lulc_nodata = -1
+    lulc_nodata = nodata
     srs = sampledata.SRS_WILLAMETTE
     return pygeoprocessing.testing.create_raster_on_disk(
         [lulc_matrix], srs.origin, srs.projection, lulc_nodata,
-        srs.pixel_size(30), datatype=dtype)
+        srs.pixel_size(100), datatype=dtype)
 
 class HydropowerUnitTests(unittest.TestCase):
 
@@ -154,43 +163,30 @@ class HydropowerUnitTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
-            [0, 2]], numpy.int32)
+            [2, 2]], numpy.int32)
         root_matrix = numpy.array([
-            [10, 10],
-            [10, 10]], numpy.float32)
+            [100, 1500],
+            [1300, 1300]], numpy.float32)
         precip_matrix = numpy.array([
-            [10, 10],
-            [10, 10]], numpy.float32)
+            [1000, 2000],
+            [4000, 2000]], numpy.float32)
         eto_matrix = numpy.array([
-            [10, 10],
-            [10, 10]], numpy.float32)
+            [900, 1000],
+            [900, 1300]], numpy.float32)
         pawc_matrix = numpy.array([
-            [10, 10],
-            [10, 10]], numpy.float32)
+            [0.19, 0.13],
+            [0.11, 0.11]], numpy.float32)
 
         fields_ws = {'ws_id': 'int'}
         fields_sub = {'subws_id': 'int'}
         attr_ws = [{'ws_id': 1}]
-        attr_sub = [
-                {'subws_id': 1}, {'subws_id': 2}]
+        attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
 
         bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
 
-        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 50, 'LULC_veg': 0},
-                1: {'lucode':1, 'Kc': 0.3, 'root_depth': 50, 'LULC_veg': 0},
-                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 150, 'LULC_veg': 1}}
-
-        demand_fields = ['lucode', 'demand']
-
-        demand_data = {0: {'lucode':0, 'demand': 50},
-                1: {'lucode':1, 'demand': 50},
-                2: {'lucode':2, 'demand': 0}}
-
-        val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
-                        'fraction', 'cost', 'height', 'kw_price']
-
-        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
-                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07}}
+        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
+                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
+                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
 
         args = {
             'workspace_dir': tempfile.mkdtemp(),
@@ -199,11 +195,224 @@ class HydropowerUnitTests(unittest.TestCase):
             'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
             'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
-            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False),
-            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True),
+            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
+            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
             'biophysical_table_uri': _create_csv(bio_fields, bio_data),
             'seasonality_constant': 5,
-            'results_suffix': '',
+            'water_scarcity_container': False,
+            'valuation_container': False
+        }
+        hydropower_water_yield.execute(args)
+
+        test_files = [
+            args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
+            args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
+            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri']]
+
+        wyield_res = numpy.array([
+            [730, 1451.94876],
+            [3494.87048, 1344.52666]], numpy.float32)
+        wyield_path = _create_raster(wyield_res, gdal.GDT_Float32)
+        #pixel_files =  ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
+        pixel_files =  'wyield_test.tif'
+
+        #for file_path in pixel_files:
+        #pygeoprocessing.testing.assert_rasters_equal(
+        #    wyield_path,
+        raster = gdal.Open(os.path.join(args['workspace_dir'], 'output', 'per_pixel', 'wyield.tif'))
+        band = raster.GetRasterBand(1)
+        computed_res = band.ReadAsArray()
+        print computed_res
+        a = wyield_res.flatten()
+        b = computed_res.flatten()
+        print a
+        print b
+        for x, y in zip(a,b):
+            pygeoprocessing.testing.assert_almost_equal(x, y, places=4)
+
+        computed_res = None
+        band = None
+        raster = None
+
+        shutil.rmtree(args['workspace_dir'])
+        os.remove(wyield_path)
+        for filename in test_files:
+            os.remove(filename)
+
+
+    @nottest
+    def test_execute_bad_nodata(self):
+        """Example execution to ensure correctness when called via execute."""
+        from natcap.invest.hydropower import hydropower_water_yield
+        lulc_matrix = numpy.array([
+            [0, 1],
+            [2, 2]], numpy.int32)
+        root_matrix = numpy.array([
+            [100, 1500],
+            [1300, 1300]], numpy.float32)
+        precip_matrix = numpy.array([
+            [1000, 2000],
+            [4000, 2000]], numpy.float32)
+        eto_matrix = numpy.array([
+            [900, 1000],
+            [900, 1300]], numpy.float32)
+        pawc_matrix = numpy.array([
+            [0.19, 0.13],
+            [0.11, 0.11]], numpy.float32)
+
+        fields_ws = {'ws_id': 'int'}
+        fields_sub = {'subws_id': 'int'}
+        attr_ws = [{'ws_id': 1}]
+        attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
+
+        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
+
+        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
+                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
+                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
+
+        args = {
+            'workspace_dir': tempfile.mkdtemp(),
+            'lulc_uri': _create_raster(lulc_matrix, nodata=None),
+            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32, nodata=None),
+            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32, nodata=None),
+            'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32, nodata=None),
+            'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32, nodata=None),
+            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
+            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'seasonality_constant': 5,
+            'water_scarcity_container': False,
+            'valuation_container': False
+        }
+        hydropower_water_yield.execute(args)
+
+        test_files = [
+            args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
+            args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
+            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri']]
+
+        shutil.rmtree(args['workspace_dir'])
+        for filename in test_files:
+            os.remove(filename)
+    @nottest
+    def test_execute_scarcity(self):
+        """Example execution to ensure correctness when called via execute."""
+        from natcap.invest.hydropower import hydropower_water_yield
+        lulc_matrix = numpy.array([
+            [0, 1],
+            [2, 2]], numpy.int32)
+        root_matrix = numpy.array([
+            [100, 1500],
+            [1300, 1300]], numpy.float32)
+        precip_matrix = numpy.array([
+            [1000, 2000],
+            [4000, 2000]], numpy.float32)
+        eto_matrix = numpy.array([
+            [900, 1000],
+            [900, 1300]], numpy.float32)
+        pawc_matrix = numpy.array([
+            [0.19, 0.13],
+            [0.11, 0.11]], numpy.float32)
+
+        fields_ws = {'ws_id': 'int'}
+        fields_sub = {'subws_id': 'int'}
+        attr_ws = [{'ws_id': 1}]
+        attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
+
+        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
+
+        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
+                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
+                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
+
+        demand_fields = ['lucode', 'demand']
+
+        demand_data = {0: {'lucode':0, 'demand': 500},
+                1: {'lucode':1, 'demand': 0},
+                2: {'lucode':2, 'demand': 0}}
+
+        args = {
+            'workspace_dir': tempfile.mkdtemp(),
+            'lulc_uri': _create_raster(lulc_matrix),
+            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
+            'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
+            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
+            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'seasonality_constant': 5,
+            'demand_table_uri': _create_csv(demand_fields, demand_data),
+            'water_scarcity_container': True,
+            'valuation_container': False
+        }
+        hydropower_water_yield.execute(args)
+
+        test_files = [
+            args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
+            args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
+            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
+            args['demand_table_uri']]
+
+        shutil.rmtree(args['workspace_dir'])
+        for filename in test_files:
+            os.remove(filename)
+    @nottest
+    def test_execute_valuation(self):
+        """Example execution to ensure correctness when called via execute."""
+        from natcap.invest.hydropower import hydropower_water_yield
+        lulc_matrix = numpy.array([
+            [0, 1],
+            [2, 2]], numpy.int32)
+        root_matrix = numpy.array([
+            [100, 1500],
+            [1300, 1300]], numpy.float32)
+        precip_matrix = numpy.array([
+            [1000, 2000],
+            [4000, 2000]], numpy.float32)
+        eto_matrix = numpy.array([
+            [900, 1000],
+            [900, 1300]], numpy.float32)
+        pawc_matrix = numpy.array([
+            [0.19, 0.13],
+            [0.11, 0.11]], numpy.float32)
+
+        fields_ws = {'ws_id': 'int'}
+        fields_sub = {'subws_id': 'int'}
+        attr_ws = [{'ws_id': 1}]
+        attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
+
+        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
+
+        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
+                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
+                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
+
+        demand_fields = ['lucode', 'demand']
+
+        demand_data = {0: {'lucode':0, 'demand': 500},
+                1: {'lucode':1, 'demand': 0},
+                2: {'lucode':2, 'demand': 0}}
+
+        val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
+                        'fraction', 'cost', 'height', 'kw_price', 'desc']
+
+        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
+                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07,
+                        'desc': 'Hydropower1'}}
+
+        args = {
+            'workspace_dir': tempfile.mkdtemp(),
+            'lulc_uri': _create_raster(lulc_matrix),
+            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
+            'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
+            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
+            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'seasonality_constant': 5,
             'demand_table_uri': _create_csv(demand_fields, demand_data),
             'valuation_table_uri': _create_csv(val_fields, val_data),
             'water_scarcity_container': True,
@@ -219,36 +428,174 @@ class HydropowerUnitTests(unittest.TestCase):
 
         shutil.rmtree(args['workspace_dir'])
         for filename in test_files:
-            print filename
             os.remove(filename)
-
     @nottest
     def test_execute_with_suffix(self):
         """When a suffix is added, verify it's added correctly."""
-        from natcap.invest import _example_model
+        from natcap.invest.hydropower import hydropower_water_yield
+        lulc_matrix = numpy.array([
+            [0, 1],
+            [2, 2]], numpy.int32)
+        root_matrix = numpy.array([
+            [100, 1500],
+            [1300, 1300]], numpy.float32)
+        precip_matrix = numpy.array([
+            [1000, 2000],
+            [4000, 2000]], numpy.float32)
+        eto_matrix = numpy.array([
+            [900, 1000],
+            [900, 1300]], numpy.float32)
+        pawc_matrix = numpy.array([
+            [0.19, 0.13],
+            [0.11, 0.11]], numpy.float32)
+
+        fields_ws = {'ws_id': 'int'}
+        fields_sub = {'subws_id': 'int'}
+        attr_ws = [{'ws_id': 1}]
+        attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
+
+        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
+
+        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
+                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
+                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
+
+        demand_fields = ['lucode', 'demand']
+
+        demand_data = {0: {'lucode':0, 'demand': 500},
+                1: {'lucode':1, 'demand': 0},
+                2: {'lucode':2, 'demand': 0}}
+
+        val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
+                        'fraction', 'cost', 'height', 'kw_price']
+
+        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
+                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07}}
+
         args = {
             'workspace_dir': tempfile.mkdtemp(),
-            'example_lulc': _create_lulc(),
-            'suffix': 'foo',
+            'lulc_uri': _create_raster(lulc_matrix),
+            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
+            'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
+            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
+            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'seasonality_constant': 5,
+            'results_suffix': 'test',
+            'demand_table_uri': _create_csv(demand_fields, demand_data),
+            'valuation_table_uri': _create_csv(val_fields, val_data),
+            'water_scarcity_container': True,
+            'valuation_container': True
         }
-        _example_model.execute(args)
+        hydropower_water_yield.execute(args)
 
-        self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
-                                                    'sum_foo.tif')))
+        test_files = [
+            args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
+            args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
+            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
+            args['demand_table_uri'], args['valuation_table_uri']]
+
+        output_files = ['watershed_results_wyield_test.csv','subwatershed_results_wyield_test.csv',
+            'watershed_results_wyield_test.shp','subwatershed_results_wyield_test.shp',]
+        pixel_files =  ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
+
+        for file_path in output_files:
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace_dir'], 'output', file_path)))
+        for file_path in pixel_files:
+            self.assertTrue(os.path.exists(
+                os.path.join(
+                    args['workspace_dir'], 'output', 'per_pixel', file_path)))
+
+        shutil.rmtree(args['workspace_dir'])
+        for filename in test_files:
+            os.remove(filename)
     @nottest
     def test_execute_with_suffix_and_underscore(self):
         """When the user's suffix has an underscore, don't add another one."""
-        from natcap.invest import _example_model
+        from natcap.invest.hydropower import hydropower_water_yield
+        lulc_matrix = numpy.array([
+            [0, 1],
+            [2, 2]], numpy.int32)
+        root_matrix = numpy.array([
+            [100, 1500],
+            [1300, 1300]], numpy.float32)
+        precip_matrix = numpy.array([
+            [1000, 2000],
+            [4000, 2000]], numpy.float32)
+        eto_matrix = numpy.array([
+            [900, 1000],
+            [900, 1300]], numpy.float32)
+        pawc_matrix = numpy.array([
+            [0.19, 0.13],
+            [0.11, 0.11]], numpy.float32)
+
+        fields_ws = {'ws_id': 'int'}
+        fields_sub = {'subws_id': 'int'}
+        attr_ws = [{'ws_id': 1}]
+        attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
+
+        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
+
+        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
+                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
+                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
+
+        demand_fields = ['lucode', 'demand']
+
+        demand_data = {0: {'lucode':0, 'demand': 500},
+                1: {'lucode':1, 'demand': 0},
+                2: {'lucode':2, 'demand': 0}}
+
+        val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
+                        'fraction', 'cost', 'height', 'kw_price']
+
+        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
+                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07}}
+
         args = {
             'workspace_dir': tempfile.mkdtemp(),
-            'example_lulc': _create_lulc(),
-            'suffix': 'foo',
+            'lulc_uri': _create_raster(lulc_matrix),
+            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
+            'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
+            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
+            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'seasonality_constant': 5,
+            'results_suffix': '_test',
+            'demand_table_uri': _create_csv(demand_fields, demand_data),
+            'valuation_table_uri': _create_csv(val_fields, val_data),
+            'water_scarcity_container': True,
+            'valuation_container': True
         }
-        _example_model.execute(args)
+        hydropower_water_yield.execute(args)
 
-        self.assertTrue(os.path.exists(os.path.join(args['workspace_dir'],
-                                                    'sum_foo.tif')))
-    @nottest
+        test_files = [
+            args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
+            args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
+            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
+            args['demand_table_uri'], args['valuation_table_uri']]
+
+        output_files = ['watershed_results_wyield_test.csv','subwatershed_results_wyield_test.csv',
+            'watershed_results_wyield_test.shp','subwatershed_results_wyield_test.shp',]
+        pixel_files =  ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
+
+        for file_path in output_files:
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace_dir'], 'output', file_path)))
+        for file_path in pixel_files:
+            self.assertTrue(os.path.exists(
+                os.path.join(
+                    args['workspace_dir'], 'output', 'per_pixel', file_path)))
+
+        shutil.rmtree(args['workspace_dir'])
+        for filename in test_files:
+            os.remove(filename)
+
     def test_compute_waterhsed_valuation(self):
         """Verify valuation is computed correctly"""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -315,7 +662,6 @@ class HydropowerUnitTests(unittest.TestCase):
         shape = None
         shape_regression = None
 
-    @nottest
     def test_compute_rsupply_volume(self):
         """Verify the real supply volume is computed correctly"""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -375,7 +721,6 @@ class HydropowerUnitTests(unittest.TestCase):
         shape = None
         shape_regression = None
 
-    @nottest
     def test_extract_datasource_table_by_key(self):
         """Test a function that returns a dictionary base on a Shapefiles attributes"""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -411,7 +756,6 @@ class HydropowerUnitTests(unittest.TestCase):
                 pygeoprocessing.testing.assert_almost_equal(
                     expected_res[exp_key][sub_key], results[exp_key][sub_key])
 
-    @nottest
     def test_write_new_table(self):
         """Verify that a new CSV table is written to properly"""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -438,7 +782,6 @@ class HydropowerUnitTests(unittest.TestCase):
 
         csv_file.close()
 
-    @nottest
     def test_compute_water_yield_volume(self):
         """Verify that water yield volume is computed correctly"""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -494,7 +837,6 @@ class HydropowerUnitTests(unittest.TestCase):
         shape = None
         shape_regression = None
 
-    @nottest
     def test_add_dict_to_shape(self):
         """Verify values from a dictionary are added to a shapefile properly."""
         from natcap.invest.hydropower import hydropower_water_yield
