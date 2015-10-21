@@ -43,7 +43,7 @@ def execute(args):
             at least a header for an 'lucode' and 'c_above'. If
             args['compute_forest_edge_effects'] is True, table must also
             contain an 'is_tropical_forest' header.  If
-            args['pools_to_calculate'] is 'all' must contain headers 'c_below',
+            args['pools_to_calculate'] if 'all' must contain headers 'c_below',
             'c_dead', and 'c_soil'.
                 'lucode': an integer that corresponds to landcover codes in
                     the raster args['lulc_uri']
