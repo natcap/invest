@@ -17,7 +17,7 @@ class ValuationTest(unittest.TestCase):
         """
         Regression test for basic functionality.
         """
-        from natcap.invest import hydropower
+        from natcap.invest.hydropower import hydropower_water_yield
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': os.path.join(SAMPLE_DATA, 'Base_Data',
@@ -36,34 +36,32 @@ class ValuationTest(unittest.TestCase):
                               'input', 'biophysical_table.csv'),
             'seasonality_constant': 5,
             'results_suffix': '',
-	    'water_scarcity_container': True,
+            'water_scarcity_container': True,
             'demand_table_uri': os.path.join(SAMPLE_DATA, 'Hydropower',
                               'input', 'water_demand_table.csv'),
-	    'valuation_container': True,
+            'valuation_container': True,
             'valuation_table_uri': os.path.join(SAMPLE_DATA, 'Hydropower',
                               'input', 'hydropower_valuation_table.csv'),
         }
         hydropower_water_yield.execute(args)
 
-	raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
-	for raster_path in raster_results:
+        raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
+        for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, raster_path))
 
-	vector_results = ['watershed_results_wyield.shp']
-	for vector_path in vector_results:
+        vector_results = ['watershed_results_wyield.shp']
+        for vector_path in vector_results:
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, vector_path))
 
-	    
-	table_results = ['watershed_results_wyield.csv']
-	for table_path in table_results:
+        table_results = ['watershed_results_wyield.csv']
+        for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
-
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -74,7 +72,7 @@ class WaterYieldTest(unittest.TestCase):
         """
         Regression test for basic functionality.
         """
-        from natcap.invest import hydropower
+        from natcap.invest.hydropower import hydropower_water_yield
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': os.path.join(SAMPLE_DATA, 'Base_Data',
@@ -93,30 +91,28 @@ class WaterYieldTest(unittest.TestCase):
                               'input', 'biophysical_table.csv'),
             'seasonality_constant': 5,
             'results_suffix': '',
-	    'water_scarcity_container': False,
-	    'valuation_container': False
+            'water_scarcity_container': False,
+            'valuation_container': False
         }
         hydropower_water_yield.execute(args)
 
-	raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
-	for raster_path in raster_results:
+        raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
+        for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, raster_path))
 
-	vector_results = ['watershed_results_wyield.shp']
-	for vector_path in vector_results:
+        vector_results = ['watershed_results_wyield.shp']
+        for vector_path in vector_results:
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, vector_path))
 
-	    
-	table_results = ['watershed_results_wyield.csv']
-	for table_path in table_results:
+        table_results = ['watershed_results_wyield.csv']
+        for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
-
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -127,7 +123,7 @@ class WaterYieldSubwatershedTest(unittest.TestCase):
         """
         Regression test for basic functionality.
         """
-        from natcap.invest import hydropower
+        from natcap.invest.hydropower import hydropower_water_yield
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': os.path.join(SAMPLE_DATA, 'Base_Data',
@@ -148,30 +144,28 @@ class WaterYieldSubwatershedTest(unittest.TestCase):
                               'input', 'biophysical_table.csv'),
             'seasonality_constant': 5,
             'results_suffix': '',
-	    'water_scarcity_container': False,
-	    'valuation_container': False
+            'water_scarcity_container': False,
+            'valuation_container': False
         }
         hydropower_water_yield.execute(args)
 
-	raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
-	for raster_path in raster_results:
+        raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
+        for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, raster_path))
 
-	vector_results = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
-	for vector_path in vector_results:
+        vector_results = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
+        for vector_path in vector_results:
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, vector_path))
 
-	    
-	table_results = ['watershed_results_wyield.csv', 'subwatersheds_results_wyield.csv']
-	for table_path in table_results:
+        table_results = ['watershed_results_wyield.csv', 'subwatersheds_results_wyield.csv']
+        for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
-
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -182,7 +176,7 @@ class ScarcityTest(unittest.TestCase):
         """
         Regression test for basic functionality.
         """
-        from natcap.invest import hydropower
+        from natcap.invest.hydropower import hydropower_water_yield
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': os.path.join(SAMPLE_DATA, 'Base_Data',
@@ -201,32 +195,30 @@ class ScarcityTest(unittest.TestCase):
                               'input', 'biophysical_table.csv'),
             'seasonality_constant': 5,
             'results_suffix': '',
-	    'water_scarcity_container': True,
+            'water_scarcity_container': True,
             'demand_table_uri': os.path.join(SAMPLE_DATA, 'Hydropower',
                               'input', 'water_demand_table.csv'),
-	    'valuation_container': False
+            'valuation_container': False
         }
         hydropower_water_yield.execute(args)
 
-	raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
-	for raster_path in raster_results:
+        raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
+        for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, raster_path))
 
-	vector_results = ['watershed_results_wyield.shp']
-	for vector_path in vector_results:
+        vector_results = ['watershed_results_wyield.shp']
+        for vector_path in vector_results:
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, vector_path))
 
-	    
-	table_results = ['watershed_results_wyield.csv']
-	for table_path in table_results:
+        table_results = ['watershed_results_wyield.csv']
+        for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
-
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -237,7 +229,7 @@ class ScarcitySubwatershedTest(unittest.TestCase):
         """
         Regression test for basic functionality.
         """
-        from natcap.invest import hydropower
+        from natcap.invest.hydropower import hydropower_water_yield
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': os.path.join(SAMPLE_DATA, 'Base_Data',
@@ -258,32 +250,30 @@ class ScarcitySubwatershedTest(unittest.TestCase):
                               'input', 'biophysical_table.csv'),
             'seasonality_constant': 5,
             'results_suffix': '',
-	    'water_scarcity_container': True,
+            'water_scarcity_container': True,
             'demand_table_uri': os.path.join(SAMPLE_DATA, 'Hydropower',
                               'input', 'water_demand_table.csv'),
-	    'valuation_container': False
+            'valuation_container': False
         }
         hydropower_water_yield.execute(args)
 
-	raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
-	for raster_path in raster_results:
+        raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
+        for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, raster_path))
 
-	vector_results = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
-	for vector_path in vector_results:
+        vector_results = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
+        for vector_path in vector_results:
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, vector_path))
 
-	    
-	table_results = ['watershed_results_wyield.csv', 'subwatersheds_results_wyield.csv']
-	for table_path in table_results:
+        table_results = ['watershed_results_wyield.csv', 'subwatersheds_results_wyield.csv']
+        for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
-
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -294,7 +284,7 @@ class ValuationSubwatershedTest(unittest.TestCase):
         """
         Regression test for basic functionality.
         """
-        from natcap.invest import hydropower
+        from natcap.invest.hydropower import hydropower_water_yeild
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': os.path.join(SAMPLE_DATA, 'Base_Data',
@@ -315,33 +305,31 @@ class ValuationSubwatershedTest(unittest.TestCase):
                               'input', 'biophysical_table.csv'),
             'seasonality_constant': 5,
             'results_suffix': '',
-	    'water_scarcity_container': True,
+            'water_scarcity_container': True,
             'demand_table_uri': os.path.join(SAMPLE_DATA, 'Hydropower',
                               'input', 'water_demand_table.csv'),
-	    'valuation_container': True,
+            'valuation_container': True,
             'valuation_table_uri': os.path.join(SAMPLE_DATA, 'Hydropower',
                               'input', 'hydropower_valuation_table.csv'),
         }
         hydropower_water_yield.execute(args)
 
-	raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
-	for raster_path in raster_results:
+        raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
+        for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, raster_path))
 
-	vector_results = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
-	for vector_path in vector_results:
+        vector_results = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
+        for vector_path in vector_results:
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, vector_path))
 
-	    
-	table_results = ['watershed_results_wyield.csv', 'subwatersheds_results_wyield.csv']
-	for table_path in table_results:
+        table_results = ['watershed_results_wyield.csv', 'subwatersheds_results_wyield.csv']
+        for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
-
 
         shutil.rmtree(args['workspace_dir'])
