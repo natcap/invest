@@ -158,6 +158,7 @@ def _create_raster(matrix=None, dtype=gdal.GDT_Int32, nodata=-1):
 class HydropowerUnitTests(unittest.TestCase):
 
     """Tests for natcap.invest.hydropower.hydropower_water_yeild"""
+    @notttest
     def test_execute(self):
         """Example execution to ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -284,22 +285,21 @@ class HydropowerUnitTests(unittest.TestCase):
         for filename in res_csv_paths:
             os.remove(filename)
 
-    @nottest
     def test_execute_bad_nodata(self):
         """Example execution to ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
-            [0, 1],
-            [2, 2]], numpy.int32)
+            [0, 1, None],
+            [2, 2, None]], numpy.int32)
         root_matrix = numpy.array([
-            [100, 1500],
-            [1300, 1300]], numpy.float32)
+            [100, 1500, None],
+            [1300, 1300, None]], numpy.float32)
         precip_matrix = numpy.array([
             [1000, 2000],
             [4000, 2000]], numpy.float32)
         eto_matrix = numpy.array([
-            [900, 1000],
-            [900, 1300]], numpy.float32)
+            [900, 1000, None],
+            [900, 1300, None]], numpy.float32)
         pawc_matrix = numpy.array([
             [0.19, 0.13],
             [0.11, 0.11]], numpy.float32)
@@ -336,8 +336,29 @@ class HydropowerUnitTests(unittest.TestCase):
             args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
             args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri']]
 
+        wyield_res = numpy.array([
+            [730, 1451.94876],
+            [3494.87048, 1344.52666]], numpy.float32)
+        wyield_path = _create_raster(wyield_res, gdal.GDT_Float32)
+        fractp_res = numpy.array([
+            [0.27, 0.27402562],
+            [0.12628238, 0.32773667]], numpy.float32)
+        fractp_path = _create_raster(fractp_res, gdal.GDT_Float32)
+        aet_res = numpy.array([
+            [270.0, 548.05124],
+            [505.12952, 655.47334]], numpy.float32)
+        aet_path = _create_raster(aet_res, gdal.GDT_Float32)
+
+        pixel_files =  ['aet.tif', 'fractp.tif', 'wyield.tif']
+        exp_pix_results = [aet_path, fractp_path, wyield_path]
+        for comp_res, exp_res in zip(pixel_files, exp_pix_results):
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', 'per_pixel', comp_res), exp_res)
+
         shutil.rmtree(args['workspace_dir'])
         for filename in test_files:
+            os.remove(filename)
+        for filename in exp_pix_results:
             os.remove(filename)
 
     @nottest
