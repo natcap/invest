@@ -158,7 +158,6 @@ def _create_raster(matrix=None, dtype=gdal.GDT_Int32, nodata=-1):
 class HydropowerUnitTests(unittest.TestCase):
 
     """Tests for natcap.invest.hydropower.hydropower_water_yeild"""
-    @notttest
     def test_execute(self):
         """Example execution to ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -225,32 +224,32 @@ class HydropowerUnitTests(unittest.TestCase):
 
         pixel_files =  ['aet.tif', 'fractp.tif', 'wyield.tif']
         exp_pix_results = [aet_path, fractp_path, wyield_path]
-        #for comp_res, exp_res in zip(pixel_files, exp_pix_results):
-        #    pygeoprocessing.testing.assert_rasters_equal(
-        #        os.path.join(args['workspace_dir'], 'output', 'per_pixel', comp_res), exp_res)
+        for comp_res, exp_res in zip(pixel_files, exp_pix_results):
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', 'per_pixel', comp_res), exp_res)
 
         res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
                       'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
                       'num_pixels': 'int'}
         res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
-                     'wyield_mn': 1755.336475, 'wyield_vol': 7021.3459, 'num_pixels': 4}]
+                     'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4}]
 
         sub_res_fields = {'subws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
                       'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
                       'num_pixels': 'int'}
         sub_res_attr = [{'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
-                     'wyield_mn': 1090.97438, 'wyield_vol': 2181.94876, 'num_pixels': 2},
+                     'wyield_mn': 1090.97438, 'wyield_vol': 21819.4876, 'num_pixels': 2},
                      {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
-                     'wyield_mn': 2419.69857, 'wyield_vol': 4839.39714, 'num_pixels': 2}]
+                     'wyield_mn': 2419.69857, 'wyield_vol': 48393.9713999, 'num_pixels': 2}]
 
         watershed_res = _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
         subwatershed_res = _create_watershed(fields=sub_res_fields, attributes=sub_res_attr, subshed=True, execute=True)
 
         res_shp_paths = [watershed_res, subwatershed_res]
         shp_paths = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
-        #for comp_res, exp_res in zip(shp_paths, res_shp_paths):
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', comp_res), exp_res)
+        for comp_res, exp_res in zip(shp_paths, res_shp_paths):
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', comp_res), exp_res)
 
 
         csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
@@ -259,11 +258,11 @@ class HydropowerUnitTests(unittest.TestCase):
                             'wyield_mn', 'wyield_vol']
 
         csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
-                            'wyield_mn': 1755.336475, 'wyield_vol': 7021.3459, 'num_pixels': 4}}
+                            'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4}}
         csv_data_subws = {0: {'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
-                            'wyield_mn': 1090.97438, 'wyield_vol': 2181.94876, 'num_pixels': 2},
+                            'wyield_mn': 1090.97438, 'wyield_vol': 21819.4876, 'num_pixels': 2},
                        1: {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
-                            'wyield_mn': 2419.69857, 'wyield_vol': 4839.39714, 'num_pixels': 2}}
+                            'wyield_mn': 2419.69857, 'wyield_vol': 48393.9713999, 'num_pixels': 2}}
 
         csv_ws_res = _create_csv(csv_fields_ws, csv_data_ws)
         csv_subws_res = _create_csv(csv_fields_subws, csv_data_subws)
@@ -289,17 +288,17 @@ class HydropowerUnitTests(unittest.TestCase):
         """Example execution to ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
-            [0, 1, None],
-            [2, 2, None]], numpy.int32)
+            [0, 1],
+            [2, 2]], numpy.int32)
         root_matrix = numpy.array([
-            [100, 1500, None],
-            [1300, 1300, None]], numpy.float32)
+            [100, 1500],
+            [1300, 1300]], numpy.float32)
         precip_matrix = numpy.array([
             [1000, 2000],
             [4000, 2000]], numpy.float32)
         eto_matrix = numpy.array([
-            [900, 1000, None],
-            [900, 1300, None]], numpy.float32)
+            [900, 1000],
+            [900, 1300]], numpy.float32)
         pawc_matrix = numpy.array([
             [0.19, 0.13],
             [0.11, 0.11]], numpy.float32)
@@ -361,7 +360,6 @@ class HydropowerUnitTests(unittest.TestCase):
         for filename in exp_pix_results:
             os.remove(filename)
 
-    @nottest
     def test_execute_scarcity(self):
         """Example execution to ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -421,10 +419,45 @@ class HydropowerUnitTests(unittest.TestCase):
             args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
             args['demand_table_uri']]
 
+        res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
+                      'AET_mn': 'real', 'wyield_mn': 'real',
+                      'wyield_vol': 'real', 'num_pixels': 'int',
+                      'consum_vol': 'real', 'consum_mn': 'real',
+                      'rsupply_vl': 'real', 'rsupply_mn': 'real'}
+        res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5,
+                     'AET_mn': 494.663525, 'wyield_mn': 1755.336475,
+                     'wyield_vol': 70213.459, 'num_pixels': 4,
+                     'consum_vol': 500, 'consum_mn': 125,
+                     'rsupply_vl': 65213.459, 'rsupply_mn': 1630.336475}]
+
+        res_ws_shp = _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+
+        shp_path = 'watershed_results_wyield.shp'
+        pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', shp_path), res_ws_shp)
+
+
+        csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+                         'wyield_mn', 'wyield_vol', 'consum_vol', 'consum_mn',
+                         'rsupply_vl', 'rsupply_mn']
+        csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
+                            'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4,
+                            'consum_vol': 500, 'consum_mn': 125, 'rsupply_vl': 65213.459,
+                            'rsupply_mn': 1630.336475}}
+
+        res_ws_csv = _create_csv(csv_fields_ws, csv_data_ws)
+
+        csv_path = 'watershed_results_wyield.csv'
+        pygeoprocessing.testing.assert_csv_equal(
+            os.path.join(args['workspace_dir'], 'output', csv_path), res_ws_csv, tolerance=4)
+
         shutil.rmtree(args['workspace_dir'])
+
         for filename in test_files:
             os.remove(filename)
-    @nottest
+        for filename in [res_ws_shp, res_ws_csv]:
+            os.remove(filename)
+
     def test_execute_valuation(self):
         """Example execution to ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -492,10 +525,48 @@ class HydropowerUnitTests(unittest.TestCase):
             args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
             args['demand_table_uri'], args['valuation_table_uri']]
 
+        res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
+                      'AET_mn': 'real', 'wyield_mn': 'real',
+                      'wyield_vol': 'real', 'num_pixels': 'int',
+                      'consum_vol': 'real', 'consum_mn': 'real',
+                      'rsupply_vl': 'real', 'rsupply_mn': 'real',
+                      'hp_energy': 'real', 'hp_val': 'real'}
+        res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5,
+                     'AET_mn': 494.663525, 'wyield_mn': 1755.336475,
+                     'wyield_vol': 70213.459, 'num_pixels': 4,
+                     'consum_vol': 500, 'consum_mn': 125,
+                     'rsupply_vl': 65213.459, 'rsupply_mn': 1630.336475,
+                     'hp_energy': 212.856730176, 'hp_val': 67.73453119}]
+
+        res_ws_shp = _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+
+        shp_path = 'watershed_results_wyield.shp'
+        pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', shp_path), res_ws_shp)
+
+
+        csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+                         'wyield_mn', 'wyield_vol', 'consum_vol', 'consum_mn',
+                         'rsupply_vl', 'rsupply_mn', 'hp_energy', 'hp_val']
+        csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
+                            'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4,
+                            'consum_vol': 500, 'consum_mn': 125, 'rsupply_vl': 65213.459,
+                            'rsupply_mn': 1630.336475, 'hp_energy': 212.856730176,
+                            'hp_val': 67.73453119}}
+
+        res_ws_csv = _create_csv(csv_fields_ws, csv_data_ws)
+
+        csv_path = 'watershed_results_wyield.csv'
+        pygeoprocessing.testing.assert_csv_equal(
+            os.path.join(args['workspace_dir'], 'output', csv_path), res_ws_csv, tolerance=4)
+
         shutil.rmtree(args['workspace_dir'])
+
         for filename in test_files:
             os.remove(filename)
-    @nottest
+        for filename in [res_ws_shp, res_ws_csv]:
+            os.remove(filename)
+
     def test_execute_with_suffix(self):
         """When a suffix is added, verify it's added correctly."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -578,7 +649,7 @@ class HydropowerUnitTests(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
         for filename in test_files:
             os.remove(filename)
-    @nottest
+
     def test_execute_with_suffix_and_underscore(self):
         """When the user's suffix has an underscore, don't add another one."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -959,4 +1030,3 @@ class HydropowerUnitTests(unittest.TestCase):
 
         shape = None
         shape_regression = None
-
