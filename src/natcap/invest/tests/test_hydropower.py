@@ -222,10 +222,6 @@ class HydropowerUnitTests(unittest.TestCase):
             [505.12952, 655.47334]], numpy.float32)
         aet_path = _create_raster(aet_res, gdal.GDT_Float32)
 
-        #print "TOLERANCE: %s" % pygeoprocessing.testing.assertions.TOLERANCE
-        #pygeoprocessing.testing.assertions.TOLERANCE = 2
-        #print "TOLERANCE: %s" % pygeoprocessing.testing.assertions.TOLERANCE
-
         pixel_files =  ['aet.tif', 'fractp.tif', 'wyield.tif']
         exp_pix_results = [aet_path, fractp_path, wyield_path]
         #for comp_res, exp_res in zip(pixel_files, exp_pix_results):
@@ -251,9 +247,31 @@ class HydropowerUnitTests(unittest.TestCase):
 
         res_shp_paths = [watershed_res, subwatershed_res]
         shp_paths = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
-        for comp_res, exp_res in zip(shp_paths, res_shp_paths):
-            pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', comp_res), exp_res)
+        #for comp_res, exp_res in zip(shp_paths, res_shp_paths):
+        #    pygeoprocessing.testing.assert_vectors_equal(
+        #        os.path.join(args['workspace_dir'], 'output', comp_res), exp_res)
+
+
+        csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+                         'wyield_mn', 'wyield_vol']
+        csv_fields_subws = ['subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+                            'wyield_mn', 'wyield_vol']
+
+        csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
+                            'wyield_mn': 1755.336475, 'wyield_vol': 7021.3459, 'num_pixels': 4}}
+        csv_data_subws = {0: {'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
+                            'wyield_mn': 1090.97438, 'wyield_vol': 2181.94876, 'num_pixels': 2},
+                       1: {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
+                            'wyield_mn': 2419.69857, 'wyield_vol': 4839.39714, 'num_pixels': 2}}
+
+        csv_ws_res = _create_csv(csv_fields_ws, csv_data_ws)
+        csv_subws_res = _create_csv(csv_fields_subws, csv_data_subws)
+
+        res_csv_paths = [csv_ws_res, csv_subws_res]
+        csv_paths = ['watershed_results_wyield.csv', 'subwatershed_results_wyield.csv']
+        for comp_res, exp_res in zip(csv_paths, res_csv_paths):
+            pygeoprocessing.testing.assert_csv_equal(
+                os.path.join(args['workspace_dir'], 'output', comp_res), exp_res, tolerance=4)
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -263,8 +281,8 @@ class HydropowerUnitTests(unittest.TestCase):
             os.remove(filename)
         for filename in res_shp_paths:
             os.remove(filename)
-
-
+        for filename in res_csv_paths:
+            os.remove(filename)
 
     @nottest
     def test_execute_bad_nodata(self):
@@ -321,6 +339,7 @@ class HydropowerUnitTests(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
         for filename in test_files:
             os.remove(filename)
+
     @nottest
     def test_execute_scarcity(self):
         """Example execution to ensure correctness when called via execute."""
