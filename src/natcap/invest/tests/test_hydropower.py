@@ -213,31 +213,57 @@ class HydropowerUnitTests(unittest.TestCase):
             [730, 1451.94876],
             [3494.87048, 1344.52666]], numpy.float32)
         wyield_path = _create_raster(wyield_res, gdal.GDT_Float32)
-        #pixel_files =  ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
-        pixel_files =  'wyield_test.tif'
+        fractp_res = numpy.array([
+            [0.27, 0.27402562],
+            [0.12628238, 0.32773667]], numpy.float32)
+        fractp_path = _create_raster(fractp_res, gdal.GDT_Float32)
+        aet_res = numpy.array([
+            [270.0, 548.05124],
+            [505.12952, 655.47334]], numpy.float32)
+        aet_path = _create_raster(aet_res, gdal.GDT_Float32)
 
-        #for file_path in pixel_files:
-        #pygeoprocessing.testing.assert_rasters_equal(
-        #    wyield_path,
-        raster = gdal.Open(os.path.join(args['workspace_dir'], 'output', 'per_pixel', 'wyield.tif'))
-        band = raster.GetRasterBand(1)
-        computed_res = band.ReadAsArray()
-        print computed_res
-        a = wyield_res.flatten()
-        b = computed_res.flatten()
-        print a
-        print b
-        for x, y in zip(a,b):
-            pygeoprocessing.testing.assert_almost_equal(x, y, places=4)
+        #print "TOLERANCE: %s" % pygeoprocessing.testing.assertions.TOLERANCE
+        #pygeoprocessing.testing.assertions.TOLERANCE = 2
+        #print "TOLERANCE: %s" % pygeoprocessing.testing.assertions.TOLERANCE
 
-        computed_res = None
-        band = None
-        raster = None
+        pixel_files =  ['aet.tif', 'fractp.tif', 'wyield.tif']
+        exp_pix_results = [aet_path, fractp_path, wyield_path]
+        #for comp_res, exp_res in zip(pixel_files, exp_pix_results):
+        #    pygeoprocessing.testing.assert_rasters_equal(
+        #        os.path.join(args['workspace_dir'], 'output', 'per_pixel', comp_res), exp_res)
+
+        res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
+                      'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
+                      'num_pixels': 'int'}
+        res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
+                     'wyield_mn': 1755.336475, 'wyield_vol': 7021.3459, 'num_pixels': 4}]
+
+        sub_res_fields = {'subws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
+                      'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
+                      'num_pixels': 'int'}
+        sub_res_attr = [{'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
+                     'wyield_mn': 1090.97438, 'wyield_vol': 2181.94876, 'num_pixels': 2},
+                     {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
+                     'wyield_mn': 2419.69857, 'wyield_vol': 4839.39714, 'num_pixels': 2}]
+
+        watershed_res = _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+        subwatershed_res = _create_watershed(fields=sub_res_fields, attributes=sub_res_attr, subshed=True, execute=True)
+
+        res_shp_paths = [watershed_res, subwatershed_res]
+        shp_paths = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
+        for comp_res, exp_res in zip(shp_paths, res_shp_paths):
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', comp_res), exp_res)
 
         shutil.rmtree(args['workspace_dir'])
-        os.remove(wyield_path)
+
         for filename in test_files:
             os.remove(filename)
+        for filename in exp_pix_results:
+            os.remove(filename)
+        for filename in res_shp_paths:
+            os.remove(filename)
+
 
 
     @nottest
