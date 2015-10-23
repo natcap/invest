@@ -906,7 +906,6 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
         returns - A tuple of the x and y pixel sizes of the global DEM
               given in the units of what 'shape' is projected in"""
     shape = ogr.Open(shape_path)
-    global_dem = gdal.Open(ds_uri)
 
     # Get a point in the clipped shape to determine output grid size
     feat = shape.GetLayer(0).GetNextFeature()
@@ -920,10 +919,9 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
 
     # Get the size of the pixels in meters, to be used for creating rasters
     pixel_size_tuple = pixel_size_based_on_coordinate_transform(
-            global_dem, coord_trans, reference_point_latlng)
+            ds_uri, coord_trans, reference_point_latlng)
 
     return pixel_size_tuple
-
 
 def get_coordinate_transformation(source_sr, target_sr):
     """This function takes a source and target spatial reference and creates
@@ -1592,8 +1590,7 @@ def count_pixels_groups(raster_uri, group_values):
 
     return pixel_count
 
-
-def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
+def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
     """Get width and height of cell in meters.
 
     Calculates the pixel width and height in meters given a coordinate
@@ -1603,8 +1600,8 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     dataset may be in lat/long (WGS84).
 
     Args:
-        dataset (gdal.Dataset): a projected GDAL dataset in the form of
-            lat/long decimal degrees
+        dataset_uri (string): a String for a GDAL path on disk, projected
+            in the form of lat/long decimal degrees
         coord_trans (osr.CoordinateTransformation): an OSR coordinate
             transformation from dataset coordinate system to meters
         point (tuple): a reference point close to the coordinate transform
@@ -1615,6 +1612,7 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
         pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
             height in meters)
     """
+    dataset = gdal.Open(dataset_uri)
     # Get the first points (x, y) from geoTransform
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
@@ -1633,4 +1631,10 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     # increases to the right (right handed coordinate system).
     pixel_diff_x = abs(point_2[0] - point_1[0])
     pixel_diff_y = abs(point_2[1] - point_1[1])
+
+    # Close and clean up dataset
+    band = None
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+
     return (pixel_diff_x, pixel_diff_y)
