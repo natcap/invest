@@ -373,15 +373,20 @@ class SuffixTest(unittest.TestCase):
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
         for raster_path in raster_results:
-            self.assertTrue(os.path.exists(os.path.join(REGRESSION_DATA, raster_path)))
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace'], 'output', 'per_pixel' raster_path)))
 
-        vector_results = ['watershed_results_wyield_test.shp', 'subwatershed_results_wyield_test.shp']
+        vector_results = ['watershed_results_wyield_test.shp',
+                          'subwatershed_results_wyield_test.shp']
         for vector_path in vector_results:
-            self.assertTrue(os.path.exists(os.path.join(REGRESSION_DATA, vector_path)))
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace'], 'output', vector_path)))
 
-        table_results = ['watershed_results_wyield_test.csv', 'subwatersheds_results_wyield_test.csv']
+        table_results = ['watershed_results_wyield_test.csv',
+                         'subwatersheds_results_wyield_test.csv']
         for table_path in table_results:
-            self.assertTrue(os.path.exists(os.path.join(REGRESSION_DATA, table_path)))
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace'], 'output', table_path)))
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -424,14 +429,19 @@ class SuffixUnderscoreTest(unittest.TestCase):
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
         for raster_path in raster_results:
-            self.assertTrue(os.path.exists(os.path.join(REGRESSION_DATA, raster_path)))
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace'], 'output', 'per_pixel' raster_path)))
 
-        vector_results = ['watershed_results_wyield_test.shp', 'subwatershed_results_wyield_test.shp']
+        vector_results = ['watershed_results_wyield_test.shp',
+                          'subwatershed_results_wyield_test.shp']
         for vector_path in vector_results:
-            self.assertTrue(os.path.exists(os.path.join(REGRESSION_DATA, vector_path)))
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace'], 'output', vector_path)))
 
-        table_results = ['watershed_results_wyield_test.csv', 'subwatersheds_results_wyield_test.csv']
+        table_results = ['watershed_results_wyield_test.csv',
+                         'subwatersheds_results_wyield_test.csv']
         for table_path in table_results:
-            self.assertTrue(os.path.exists(os.path.join(REGRESSION_DATA, table_path)))
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace'], 'output', table_path)))
 
         shutil.rmtree(args['workspace_dir'])
