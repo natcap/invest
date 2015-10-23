@@ -1633,7 +1633,6 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
     pixel_diff_y = abs(point_2[1] - point_1[1])
 
     # Close and clean up dataset
-    band = None
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
 
