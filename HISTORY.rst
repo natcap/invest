@@ -2,7 +2,8 @@
 
 3.3.0
 =====
-
+* GLOBIO now uses an intensification parameter and not a map to average all agriculture across the GLOBIO 8 and 9 classes.
+* GLOBIO outputs modified so core outputs are in workspace and intermediate outputs are in a subdirectory called 'intermediate_outputs'.
 * Fixed a crash with the NDR model that could occur if the DEM and landcover maps were different resolutions.
 * Introduced a new InVEST model, "Scenario Generator: Proximity Based" and renamed the previous "Scenario Generator" to "Scenario Generator: Rule Based".
 * Introduced a forest carbon edge effect model.
