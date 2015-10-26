@@ -1,6 +1,5 @@
 """InVEST Seasonal Water Yield Model"""
 
-import sys
 import os
 import logging
 import re
@@ -27,6 +26,56 @@ def execute(args):
     """This function invokes the seasonal water yield model given
         URI inputs of files. It may write log, warning, or error messages to
         stdout.
+
+    Parameters:
+        args['workspace_dir'] (string): output directory for intermediate,
+        temporary, and final files
+        args['results_suffix'] (string): (optional) string to append to any
+            output files
+        args['threshold_flow_accumulation'] (number): used when classifying
+            stream pixels from the DEM by thresholding the number of upstream
+            cells that must flow int a cell before it's considered
+            part of a stream.
+        args['et0_dir'] (string): required if args['user_defined_recharge'] is
+            False.  Path to a directory that contains rasters of
+            monthly reference evapotranspiration; units in mm.
+        args['precip_dir'] (string): required if args['user_defined_recharge']
+            is False. A path to a directory that contains rasters of monthly
+            precipitation; units in mm.
+        args['dem_uri'] (string): a path to a digital elevation raster
+        args['lulc_uri'] (string): a path to a land cover raster used to
+            classify biophysical properties of pixels.
+        args['soil_group_uri'] (string): required if
+            args['user_defined_recharge'] is  False. A path to a raster
+            indicating SCS soil groups where integer values are mapped to soil
+            types:
+                1: A
+                2: B
+                3: C
+                4: D
+        args['aoi_uri'] (string): path to a vector that indicates the area over
+            which the model should be run, as well as the area in which to
+            aggregate over when calculating the output Qb.
+        args['biophysical_table_uri'] (string): path to a CSV table that maps
+            landcover codes paired with soil group types to curve numbers as
+            well as Kc values.  Headers must be 'lucode', 'CN_A', 'CN_B',
+            'CN_C', 'CN_D', and 'Kc'.
+        args['rain_events_table_uri'] (string): Required if
+            args['user_defined_recharge'] is  False. Path to a CSV table that
+            has headers 'month' (1-12) and 'events' (int >= 0) that indicates
+            the number of rain events per month
+        args['alpha_m'] (float): proportion of upslope annual available
+            recharge that is available in month m.
+        args['beta_i'] (float): is the fraction of the upgradient subsidy that
+            is available for downgradient evapotranspiration.
+        args['gamma'] (float): is the fraction of pixel recharge that is
+            available to downgradient pixels.
+        args['user_defined_recharge'] (boolean): if True, indicates user will
+            provide pre-defined recharge raster layer
+        args['recharge_uri'] (string): required if
+            args['user_defined_recharge'] is True.  If provided pixels indicate
+            the amount of recharge; units in mm.
+
     """
 
     alpha_m = float(fractions.Fraction(args['alpha_m']))
@@ -286,7 +335,7 @@ def execute(args):
             zero_absorption_source_uri, loss_uri, r_sum_avail_uri, 'flux_only',
             include_source=False)
 
-    #calcualte Qb as the sum of recharge_avail over the aoi
+    #calculate Qb as the sum of recharge_avail over the aoi
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
         recharge_avail_uri, args['aoi_uri'])
 
