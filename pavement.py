@@ -46,6 +46,24 @@ except pkg_resources.VersionConflict:
     NO_WHEEL_SH = '--no-use-wheel'
 
 
+class FoundEXE(Exception):
+    """Descriptive exception indicating we found a target executable."""
+    pass
+
+
+def is_exe(fpath):
+    """
+    Check whether a file is executable and that it exists.
+
+    Parameters:
+        fpath (string): The filepath to check.
+
+    Returns:
+        A boolean.
+    """
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+
 def user_os_installer():
     """
     Determine the operating system installer.
@@ -59,14 +77,25 @@ def user_os_installer():
 
     """
     if platform.system() == 'Linux':
-        if os.path.isfile('/usr/bin/rpm') or os.path.isfile('/bin/rpm'):
+        try:
+            # Loop through the path and check for the presence of the rpm
+            # binary.
+            for path in os.environ["PATH"].split(os.pathsep):
+                path = path.strip('"')
+                rpm_path = os.path.join(path, 'rpm')
+                if is_exe(rpm_path):
+                    raise FoundEXE
+        except FoundEXE:
             # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
             # -q -f /path/to/rpm checks to see if RPM owns RPM.
             # If it's not owned by RPM, we can assume it's owned by apt/dpkg.
-            exit_code = subprocess.call(['`which rpm`', '-q', '-f', '`which rpm`'])
+            exit_code = subprocess.call([rpm_path, '-q', '-f', rpm_path])
             if exit_code == 0:
                 return 'rpm'
-        return 'deb'
+            return 'deb'
+        else:
+            # RPM was not found on this system, assume it's debian.
+            return 'deb'
 
     if platform.system() == 'Darwin':
         return 'dmg'
@@ -1286,15 +1315,6 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
-    def is_exe(fpath):
-        """
-        Check whether a file is executable and that it exists.
-        """
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    class FoundEXE(Exception):
-        pass
-
     # verify required programs exist
     errors_found = False
     programs = [
