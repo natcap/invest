@@ -59,20 +59,13 @@ def user_os_installer():
 
     """
     if platform.system() == 'Linux':
-        # check if we're running an RPM system approach taken from
-        # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
-        if not os.path.exists('/usr/bin/rpm') and os.path.exists('/bin/rpm'):
-            # We're on openSUSE, an RPM system.
-            return 'rpm'
-
-        try:
-            exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm'])
-        except OSError:
-            # If we're on a debian system, RPM isn't installed by default.
-            return 'deb'
-
-        if exit_code == 0:
-            return 'rpm'
+        if os.path.isfile('/usr/bin/rpm') or os.path.isfile('/bin/rpm'):
+            # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
+            # -q -f /path/to/rpm checks to see if RPM owns RPM.
+            # If it's not owned by RPM, we can assume it's owned by apt/dpkg.
+            exit_code = subprocess.call(['`which rpm`', '-q', '-f', '`which rpm`'])
+            if exit_code == 0:
+                return 'rpm'
         return 'deb'
 
     if platform.system() == 'Darwin':
