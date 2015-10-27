@@ -129,12 +129,12 @@ def execute(args):
             args['workspace_dir'], 'qb%s.txt' % file_suffix),
         'kc_path': os.path.join(
             args['workspace_dir'], 'kc%s.tif' % file_suffix),
-        # note, recharge path may be changed later depending on whether or not
-        # the user provided a predefined recharge file.  If so, this parameter
-        # will refer to the aligned recharge raster
-        'recharge_path': os.path.join(
-            args['workspace_dir'], 'recharge%s.tif' % file_suffix),
         }
+
+    # this variable is only needed if there is not a predefined recharge file
+    if not args['user_defined_recharge']:
+        output_file_registry['recharge_path'] = os.path.join(
+            args['workspace_dir'], 'recharge%s.tif' % file_suffix)
 
     temporary_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
@@ -144,6 +144,10 @@ def execute(args):
             pygeoprocessing.geoprocessing.temporary_filename()),
         'soil_group_aligned_path': pygeoprocessing.temporary_filename()
     }
+
+    if args['user_defined_recharge']:
+        temporary_file_registry['recharge_aligned_path'] = (
+            pygeoprocessing.geoprocessing.temporary_filename())
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         args['lulc_path'])
@@ -209,9 +213,8 @@ def execute(args):
     align_index = 0
     if args['user_defined_recharge']:
         input_align_list.append(args['recharge_path'])
-        recharge_aligned_path = (
-            pygeoprocessing.geoprocessing.temporary_filename())
-        output_align_list.append(recharge_aligned_path)
+        output_align_list.append(
+            temporary_file_registry['recharge_aligned_path'])
         interpolate_list.append('nearest')
         align_index = len(interpolate_list) - 1
 
@@ -457,6 +460,7 @@ def calculate_quick_flow(
 
     si_nodata = -1
     cn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(cn_path)
+
     def si_op(ci_array, stream_array):
         """potential maximum retention"""
         si_array = 1000.0 / ci_array - 10
@@ -478,31 +482,44 @@ def calculate_quick_flow(
 
     m_index = None
     for m_index in range(1, N_MONTHS + 1):
-        def qf_op(pm_array, s_array, stream_array):
-            """calculate quickflow"""
+        def qf_op(p_im, s_i, stream_array):
+            """Calculate quickflow as in equation 1a in user's guide
 
-            nodata_mask = (pm_array == p_nodata) | (s_array == si_nodata)
+            Parameters:
+                p_im (numpy.array): precipitation at pixel i on month m
+                s_i (numpy.array): factor that is 1000/CN_i - 10
+                    (Equation 1b from user's guide)
+                stream_mask (numpy.array): 1 if stream, otherwise not a stream
+                    pixel.
 
-            alpha = pm_array / n_events[m_index] / 25.4
+            Returns:
+                quickflow (numpy.array)"""
 
-            quickflow = (25.4 * n_events[m_index] * (
-                (alpha - s_array) * numpy.exp(-0.2 * s_array / alpha) +
-                s_array ** 2 / alpha * numpy.exp((0.8 * s_array) / alpha) *
-                scipy.special.expn(1, s_array / alpha)))
+            nodata_mask = (p_im == p_nodata) | (s_i == si_nodata)
 
-            # in cases where precipitation is small, alpha will be small and
+            #a_im is the mean rain depth on a rainy day at pixel i on month m
+            a_im = p_im / n_events[m_index] / 25.4
+
+            #qf_im is the quickflow at pixel i on month m (Equation 1a in the
+            # user's guide)
+            qf_im = (25.4 * n_events[m_index] * (
+                (a_im - s_i) * numpy.exp(-0.2 * s_i / a_im) +
+                s_i ** 2 / a_im * numpy.exp((0.8 * s_i) / a_im) *
+                scipy.special.expn(1, s_i / a_im)))
+
+            # in cases where precipitation is small, a_im will be small and
             # the quickflow can get into an inf / 0.0 state.  This zeros the
             # result so at least we don't get a block of nodata pixels out
-            quickflow[numpy.isnan(quickflow)] = 0.0
+            qf_im[numpy.isnan(qf_im)] = 0.0
 
-            # if alpha == 0, then QF should be zero
-            quickflow[alpha == 0] = 0.0
+            # if a_im == 0, then QF should be zero
+            qf_im[a_im == 0] = 0.0
             # mask out nodata
-            quickflow[nodata_mask] = qf_nodata
+            qf_im[nodata_mask] = qf_nodata
 
             # if we're on a stream, set quickflow to the precipitation
-            quickflow[stream_array == 1] = pm_array[stream_array == 1]
-            return quickflow
+            qf_im[stream_array == 1] = p_im[stream_array == 1]
+            return qf_im
 
         LOGGER.info('calculating QFi_%d of %d', m_index, N_MONTHS)
         pygeoprocessing.geoprocessing.vectorize_datasets(
