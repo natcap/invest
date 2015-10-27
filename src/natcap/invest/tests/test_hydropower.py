@@ -23,7 +23,7 @@ def _create_watershed(fields=None, attributes=None, subshed=True, execute=False)
     """
     Create a watershed shapefile
 
-    This Watershed Shapefile is created with the following characteristis:
+    This Watershed Shapefile is created with the following characteristics:
         * SRS is in the SRS_WILLAMETTE.
         * Vector type is Polygon
         * Polygons are 100m x 100m
@@ -39,11 +39,12 @@ def _create_watershed(fields=None, attributes=None, subshed=True, execute=False)
         attributes (list of dicts): a list of python dictionary mapping
             fieldname to field value.  The field value's type must match the
             type defined in the fields input.  It is an error if it doesn't.
-
         subshed (boolean): True or False depicting whether the created vector
             should be representative of a sub watershed or watershed.
-            Watershed will return one polygon, sub watershed will return 3.
-        execute (boolean): Determines how to construct the sub shed polygons
+            Watershed will return one polygon, sub watershed will return 2 or 3
+            depending on the value of 'execute'.
+        execute (boolean): Determines how to construct the sub shed polygons.
+            If True, create 2 sub watershed polygons, else create 3
 
     Returns:
         A string filepath to the vector on disk
@@ -86,21 +87,23 @@ def _create_watershed(fields=None, attributes=None, subshed=True, execute=False)
 		    vector_format='ESRI Shapefile')
 
 def _create_csv(fields, data):
-    """Create a new csv table from a dictionary
+    """
+    Create a new csv table from a dictionary
 
-        filename - a URI path for the new table to be written to disk
-
-        fields - a python list of the column names. The order of the fields in
+    Parameters:
+        fields (list): a python list of the column names. The order of the fields in
             the list will be the order in how they are written. ex:
             ['id', 'precip', 'total']
-
-        data - a python dictionary representing the table. The dictionary
-            should be constructed with unique numerical keys that point to a
-            dictionary which represents a row in the table:
+        data (dict): a python dictionary representing the table. The dictionary
+            should be constructed with unique numerical keys that point to
+            another dictionary which represents a row in the table:
             data = {0 : {'id':1, 'precip':43, 'total': 65},
                     1 : {'id':2, 'precip':65, 'total': 94}}
+            The unique outer keys determine the ordering of the rows to be
+            written.
 
-        returns - nothing
+    Returns:
+        A filepath to the csv file on disk
     """
     temp, filename = tempfile.mkstemp(suffix='.csv')
     os.close(temp)
@@ -123,32 +126,25 @@ def _create_csv(fields, data):
 
     return filename
 
-def _create_raster(matrix=None, dtype=gdal.GDT_Int32, nodata=-1):
+def _create_raster(matrix, dtype=gdal.GDT_Int32, nodata=-1):
     """
     Create a raster for the hydropower_water_yield model.
 
     This raster is created with the following characteristics:
         * SRS is in the SRS_WILLAMETTE.
         * Nodata is -1.
-        * Raster type is `gdal.GDT_Int32`
-        * Pixel size is 30m
+        * Raster type is defaulted with `gdal.GDT_Int32`
+        * Pixel size is 100m
 
     Parameters:
-        matrix=None (numpy.array): A numpy array to use as a landcover matrix.
+        matrix (numpy.array): A numpy array to use as the raster matrix.
             The output raster created will be saved with these pixel values.
-            If None, a default matrix will be used.
 
     Returns:
-        A string filepath to a new LULC raster on disk.
+        A string filepath to a new raster on disk.
     """
-    if matrix is None:
-        lulc_matrix = numpy.array([
-            [0, 1, 2, 3, 4],
-            [1, 2, 4, 5, 11],
-            [1, -1, -1, -1, -1],
-            [0, 1, 2, 3, 4]], numpy.int32)
-    else:
-        lulc_matrix = matrix
+
+    lulc_matrix = matrix
     lulc_nodata = nodata
     srs = sampledata.SRS_WILLAMETTE
     return pygeoprocessing.testing.create_raster_on_disk(
@@ -156,10 +152,10 @@ def _create_raster(matrix=None, dtype=gdal.GDT_Int32, nodata=-1):
         srs.pixel_size(100), datatype=dtype)
 
 class HydropowerUnitTests(unittest.TestCase):
-
-    """Tests for natcap.invest.hydropower.hydropower_water_yeild"""
+    """Tests for natcap.invest.hydropower.hydropower_water_yield"""
     def test_execute(self):
-        """Example execution to ensure correctness when called via execute."""
+        """Example execution for the water yield portion of the model
+            to ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
@@ -285,7 +281,8 @@ class HydropowerUnitTests(unittest.TestCase):
             os.remove(filename)
 
     def test_execute_bad_nodata(self):
-        """Example execution to ensure correctness when called via execute."""
+        """Example execution of the Water Yield component of the model
+            testing correctness where input rasters have a nodata type of NONE."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
@@ -361,7 +358,8 @@ class HydropowerUnitTests(unittest.TestCase):
             os.remove(filename)
 
     def test_execute_scarcity(self):
-        """Example execution to ensure correctness when called via execute."""
+        """Example execution of the Scarcity component of the model to
+            ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
@@ -459,7 +457,8 @@ class HydropowerUnitTests(unittest.TestCase):
             os.remove(filename)
 
     def test_execute_valuation(self):
-        """Example execution to ensure correctness when called via execute."""
+        """Example execution of the Valuation component of the model
+            to ensure correctness when called via execute."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
@@ -568,7 +567,7 @@ class HydropowerUnitTests(unittest.TestCase):
             os.remove(filename)
 
     def test_execute_with_suffix(self):
-        """When a suffix is added, verify it's added correctly."""
+        """Testing that a suffix is added correctly when provided."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
@@ -651,7 +650,7 @@ class HydropowerUnitTests(unittest.TestCase):
             os.remove(filename)
 
     def test_execute_with_suffix_and_underscore(self):
-        """When the user's suffix has an underscore, don't add another one."""
+        """Testing that a suffix given with an underscore is added correctly."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
@@ -734,7 +733,7 @@ class HydropowerUnitTests(unittest.TestCase):
             os.remove(filename)
 
     def test_compute_waterhsed_valuation(self):
-        """Verify valuation is computed correctly"""
+        """Testing 'compute_watershed_valuation' function"""
         from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'rsupply_vl': 'real'}
@@ -800,7 +799,7 @@ class HydropowerUnitTests(unittest.TestCase):
         shape_regression = None
 
     def test_compute_rsupply_volume(self):
-        """Verify the real supply volume is computed correctly"""
+        """Testing the 'compute_rsupply_volume' function"""
         from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real',
@@ -859,7 +858,8 @@ class HydropowerUnitTests(unittest.TestCase):
         shape_regression = None
 
     def test_extract_datasource_table_by_key(self):
-        """Test a function that returns a dictionary base on a Shapefiles attributes"""
+        """Testing the 'extract_datasource_table_by_key' function, which
+            returns a dictionary based on a Shapefiles attributes"""
         from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real',
@@ -894,7 +894,7 @@ class HydropowerUnitTests(unittest.TestCase):
                     expected_res[exp_key][sub_key], results[exp_key][sub_key])
 
     def test_write_new_table(self):
-        """Verify that a new CSV table is written to properly"""
+        """Testing 'write_new_table' function, which produces a CSV file."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         filename = tempfile.mkstemp()[1]
@@ -920,7 +920,7 @@ class HydropowerUnitTests(unittest.TestCase):
         csv_file.close()
 
     def test_compute_water_yield_volume(self):
-        """Verify that water yield volume is computed correctly"""
+        """Testing 'compute_water_yield_volume' function"""
         from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'wyield_mn': 'real', 'num_pixels': 'int'}
@@ -975,7 +975,7 @@ class HydropowerUnitTests(unittest.TestCase):
         shape_regression = None
 
     def test_add_dict_to_shape(self):
-        """Verify values from a dictionary are added to a shapefile properly."""
+        """Testing the 'add_dict_to_shape' function."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int'}
