@@ -128,15 +128,35 @@ def _create_csv(fields, data):
 
 def _setup_dictionary_for_shape(component):
 
-def _create_biophysical_table():
+def _create_input_table(component):
 
-    bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
+    if component == "biophysical":
+        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
 
-    bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
-                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
-                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
+        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
+                    1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
+                    2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
 
-    return _create_csv(bio_fields, bio_data)
+        return _create_csv(bio_fields, bio_data)
+
+    elif component == "scarcity":
+        demand_fields = ['lucode', 'demand']
+
+        demand_data = {0: {'lucode':0, 'demand': 500},
+                1: {'lucode':1, 'demand': 0},
+                2: {'lucode':2, 'demand': 0}}
+
+        return _create_csv(demand_fields, demand_data)
+
+    else:
+        val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
+                        'fraction', 'cost', 'height', 'kw_price']
+
+        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
+                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07}}
+
+        return _create_csv(val_fields, val_data)
+
 
 def _create_execute_result_watersheds(component, sub_shed=False):
     if sub_shed:
@@ -277,7 +297,7 @@ class HydropowerUnitTests(unittest.TestCase):
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
             'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
             'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
-            'biophysical_table_uri': _create_biophysical_table(),
+            'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'water_scarcity_container': False,
             'valuation_container': False
@@ -362,12 +382,6 @@ class HydropowerUnitTests(unittest.TestCase):
         attr_ws = [{'ws_id': 1}]
         attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
 
-        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
-
-        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
-                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
-                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
-
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix, nodata=None),
@@ -377,7 +391,7 @@ class HydropowerUnitTests(unittest.TestCase):
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32, nodata=None),
             'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
             'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
-            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'water_scarcity_container': False,
             'valuation_container': False
@@ -438,19 +452,7 @@ class HydropowerUnitTests(unittest.TestCase):
         fields_sub = {'subws_id': 'int'}
         attr_ws = [{'ws_id': 1}]
         attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
-
-        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
-
-        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
-                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
-                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
-
-        demand_fields = ['lucode', 'demand']
-
-        demand_data = {0: {'lucode':0, 'demand': 500},
-                1: {'lucode':1, 'demand': 0},
-                2: {'lucode':2, 'demand': 0}}
-
+S
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
@@ -460,9 +462,9 @@ class HydropowerUnitTests(unittest.TestCase):
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
             'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
             'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
-            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
-            'demand_table_uri': _create_csv(demand_fields, demand_data),
+            'demand_table_uri': _create_input_table("scarcity"),
             'water_scarcity_container': True,
             'valuation_container': False
         }
@@ -518,25 +520,6 @@ class HydropowerUnitTests(unittest.TestCase):
         attr_ws = [{'ws_id': 1}]
         attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
 
-        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
-
-        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
-                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
-                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
-
-        demand_fields = ['lucode', 'demand']
-
-        demand_data = {0: {'lucode':0, 'demand': 500},
-                1: {'lucode':1, 'demand': 0},
-                2: {'lucode':2, 'demand': 0}}
-
-        val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
-                        'fraction', 'cost', 'height', 'kw_price', 'desc']
-
-        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
-                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07,
-                        'desc': 'Hydropower1'}}
-
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
@@ -546,10 +529,10 @@ class HydropowerUnitTests(unittest.TestCase):
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
             'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
             'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
-            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
-            'demand_table_uri': _create_csv(demand_fields, demand_data),
-            'valuation_table_uri': _create_csv(val_fields, val_data),
+            'demand_table_uri': _create_input_table("scarcity"),
+            'valuation_table_uri': _create_input_table("valuation"),
             'water_scarcity_container': True,
             'valuation_container': True
         }
@@ -604,24 +587,6 @@ class HydropowerUnitTests(unittest.TestCase):
         attr_ws = [{'ws_id': 1}]
         attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
 
-        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
-
-        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
-                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
-                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
-
-        demand_fields = ['lucode', 'demand']
-
-        demand_data = {0: {'lucode':0, 'demand': 500},
-                1: {'lucode':1, 'demand': 0},
-                2: {'lucode':2, 'demand': 0}}
-
-        val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
-                        'fraction', 'cost', 'height', 'kw_price']
-
-        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
-                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07}}
-
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
@@ -631,11 +596,11 @@ class HydropowerUnitTests(unittest.TestCase):
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
             'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
             'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
-            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'results_suffix': 'test',
-            'demand_table_uri': _create_csv(demand_fields, demand_data),
-            'valuation_table_uri': _create_csv(val_fields, val_data),
+            'demand_table_uri': _create_input_table("scarcity"),
+            'valuation_table_uri': _create_input_table("valuation"),
             'water_scarcity_container': True,
             'valuation_container': True
         }
@@ -687,24 +652,6 @@ class HydropowerUnitTests(unittest.TestCase):
         attr_ws = [{'ws_id': 1}]
         attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
 
-        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
-
-        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
-                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
-                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
-
-        demand_fields = ['lucode', 'demand']
-
-        demand_data = {0: {'lucode':0, 'demand': 500},
-                1: {'lucode':1, 'demand': 0},
-                2: {'lucode':2, 'demand': 0}}
-
-        val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
-                        'fraction', 'cost', 'height', 'kw_price']
-
-        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
-                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07}}
-
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
@@ -714,11 +661,11 @@ class HydropowerUnitTests(unittest.TestCase):
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
             'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
             'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
-            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'results_suffix': '_test',
-            'demand_table_uri': _create_csv(demand_fields, demand_data),
-            'valuation_table_uri': _create_csv(val_fields, val_data),
+            'demand_table_uri': _create_input_table("scarcity"),
+            'valuation_table_uri': _create_input_table("valuation"),
             'water_scarcity_container': True,
             'valuation_container': True
         }
