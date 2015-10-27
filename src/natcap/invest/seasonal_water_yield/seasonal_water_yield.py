@@ -95,40 +95,23 @@ def execute(args):
     pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
 
     output_file_registry = {
-        'qfi_path': os.path.join(
-            args['workspace_dir'], 'qf%s.tif' % file_suffix),
-        'cn_path': os.path.join(
-            args['workspace_dir'], 'cn%s.tif' % file_suffix),
-        'flow_dir_path': os.path.join(
-            args['workspace_dir'], 'flow_dir%s.tif' % file_suffix),
-        'flow_accum_path': os.path.join(
-            args['workspace_dir'], 'flow_accum%s.tif' % file_suffix),
-        'stream_path': os.path.join(
-            args['workspace_dir'], 'stream%s.tif' % file_suffix),
-        'outflow_weights_path': os.path.join(
-            args['workspace_dir'], 'outflow_weights%s.tif' % file_suffix),
-        'outflow_direction_path': os.path.join(
-            args['workspace_dir'], 'outflow_direction%s.tif' % file_suffix),
-        'si_path': os.path.join(
-            args['workspace_dir'], 'si%s.tif' % file_suffix),
-        'recharge_avail_path': os.path.join(
-            args['workspace_dir'], 'recharge_avail%s.tif' % file_suffix),
-        'r_sum_avail_path': os.path.join(
-            args['workspace_dir'], 'r_sum_avail%s.tif' % file_suffix),
-        'vri_path': os.path.join(
-            args['workspace_dir'], 'vri%s.tif' % file_suffix),
-        'aet_path': os.path.join(
-            args['workspace_dir'], 'aet%s.tif' % file_suffix),
-        'r_sum_avail_pour_path': os.path.join(
-            args['workspace_dir'], 'r_sum_avail_pour%s.tif' % file_suffix),
-        'sf_path': os.path.join(
-            args['workspace_dir'], 'sf%s.tif' % file_suffix),
-        'sf_down_path': os.path.join(
-            args['workspace_dir'], 'sf_down%s.tif' % file_suffix),
-        'qb_out_path': os.path.join(
-            args['workspace_dir'], 'qb%s.txt' % file_suffix),
-        'kc_path': os.path.join(
-            args['workspace_dir'], 'kc%s.tif' % file_suffix),
+        'aet_path': os.path.join(args['workspace_dir'], 'aet%s.tif' % file_suffix),
+        'cn_path': os.path.join(args['workspace_dir'], 'cn%s.tif' % file_suffix),
+        'flow_accum_path': os.path.join(args['workspace_dir'], 'flow_accum%s.tif' % file_suffix),
+        'flow_dir_path': os.path.join(args['workspace_dir'], 'flow_dir%s.tif' % file_suffix),
+        'kc_path': os.path.join(args['workspace_dir'], 'kc%s.tif' % file_suffix),
+        'L_avail_path': os.path.join(args['workspace_dir'], 'L_avail%s.tif' % file_suffix),
+        'L_path': os.path.join(args['workspace_dir'], 'L%s.tif' % file_suffix),
+        'outflow_direction_path': os.path.join(args['workspace_dir'], 'outflow_direction%s.tif' % file_suffix),
+        'outflow_weights_path': os.path.join(args['workspace_dir'], 'outflow_weights%s.tif' % file_suffix),
+        'qb_out_path': os.path.join(args['workspace_dir'], 'qb%s.txt' % file_suffix),
+        'qfi_path': os.path.join(args['workspace_dir'], 'qf%s.tif' % file_suffix),
+        'r_sum_avail_pour_path': os.path.join(args['workspace_dir'], 'r_sum_avail_pour%s.tif' % file_suffix),
+        'sf_down_path': os.path.join(args['workspace_dir'], 'sf_down%s.tif' % file_suffix),
+        'sf_path': os.path.join(args['workspace_dir'], 'sf%s.tif' % file_suffix),
+        'si_path': os.path.join(args['workspace_dir'], 'si%s.tif' % file_suffix),
+        'stream_path': os.path.join(args['workspace_dir'], 'stream%s.tif' % file_suffix),
+        'vri_path': os.path.join(args['workspace_dir'], 'vri%s.tif' % file_suffix),
         }
 
     # this variable is only needed if there is not a predefined recharge file
@@ -266,65 +249,10 @@ def execute(args):
             for month in rain_events_lookup])
 
         LOGGER.info('calculating curve number')
-        soil_nodata = pygeoprocessing.get_nodata_from_uri(
-            args['soil_group_path'])
-        map_soil_type_to_header = {
-            1: 'cn_a',
-            2: 'cn_b',
-            3: 'cn_c',
-            4: 'cn_d',
-        }
-        cn_nodata = -1
-        lulc_to_soil = {}
-        lulc_nodata = pygeoprocessing.get_nodata_from_uri(
-            temporary_file_registry['lulc_aligned_path'])
-        for soil_id, soil_column in map_soil_type_to_header.iteritems():
-            lulc_to_soil[soil_id] = {
-                'lulc_values': [],
-                'cn_values': []
-            }
-            for lucode in sorted(biophysical_table.keys() + [lulc_nodata]):
-                try:
-                    lulc_to_soil[soil_id]['cn_values'].append(
-                        biophysical_table[lucode][soil_column])
-                    lulc_to_soil[soil_id]['lulc_values'].append(lucode)
-                except KeyError:
-                    if lucode == lulc_nodata:
-                        lulc_to_soil[soil_id]['lulc_values'].append(lucode)
-                        lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
-                    else:
-                        raise
-            lulc_to_soil[soil_id]['lulc_values'] = (
-                numpy.array(lulc_to_soil[soil_id]['lulc_values'],
-                            dtype=numpy.int32))
-            lulc_to_soil[soil_id]['cn_values'] = (
-                numpy.array(lulc_to_soil[soil_id]['cn_values'],
-                            dtype=numpy.float32))
-
-        def cn_op(lulc_array, soil_group_array):
-            """map lulc code and soil to a curve number"""
-            cn_result = numpy.empty(lulc_array.shape)
-            cn_result[:] = cn_nodata
-            for soil_group_id in numpy.unique(soil_group_array):
-                if soil_group_id == soil_nodata:
-                    continue
-                current_soil_mask = (soil_group_array == soil_group_id)
-                index = numpy.digitize(
-                    lulc_array.ravel(),
-                    lulc_to_soil[soil_group_id]['lulc_values'], right=True)
-                cn_values = (
-                    lulc_to_soil[soil_group_id]['cn_values'][index]).reshape(
-                        lulc_array.shape)
-                cn_result[current_soil_mask] = cn_values[current_soil_mask]
-            return cn_result
-
-        cn_nodata = -1
-        pygeoprocessing.vectorize_datasets(
-            [temporary_file_registry['lulc_aligned_path'],
-             temporary_file_registry['soil_group_aligned_path']], cn_op,
-            output_file_registry['cn_path'], gdal.GDT_Float32, cn_nodata,
-            pixel_size, 'intersection', vectorize_op=False,
-            datasets_are_pre_aligned=True)
+        _calculate_curve_number_raster(
+            temporary_file_registry['lulc_aligned_path'],
+            temporary_file_registry['soil_group_aligned_path'],
+            biophysical_table, pixel_size, output_file_registry['cn_path'])
 
         LOGGER.info('calculate quick flow')
         calculate_quick_flow(
@@ -540,3 +468,64 @@ def calculate_quick_flow(
         qf_monthly_path_list, qfi_sum, qfi_path,
         gdal.GDT_Float32, qf_nodata, pixel_size, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
+
+
+def _calculate_curve_number_raster(
+        lulc_path, soil_group_path, biophysical_table, pixel_size, cn_path):
+    """Calculate the CN raster from the landcover and soil group rasters"""
+
+    soil_nodata = pygeoprocessing.get_nodata_from_uri(soil_group_path)
+    map_soil_type_to_header = {
+        1: 'cn_a',
+        2: 'cn_b',
+        3: 'cn_c',
+        4: 'cn_d',
+    }
+    cn_nodata = -1
+    lulc_to_soil = {}
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_path)
+    for soil_id, soil_column in map_soil_type_to_header.iteritems():
+        lulc_to_soil[soil_id] = {
+            'lulc_values': [],
+            'cn_values': []
+        }
+        for lucode in sorted(biophysical_table.keys() + [lulc_nodata]):
+            try:
+                lulc_to_soil[soil_id]['cn_values'].append(
+                    biophysical_table[lucode][soil_column])
+                lulc_to_soil[soil_id]['lulc_values'].append(lucode)
+            except KeyError:
+                if lucode == lulc_nodata:
+                    lulc_to_soil[soil_id]['lulc_values'].append(lucode)
+                    lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
+                else:
+                    raise
+        lulc_to_soil[soil_id]['lulc_values'] = (
+            numpy.array(lulc_to_soil[soil_id]['lulc_values'],
+                        dtype=numpy.int32))
+        lulc_to_soil[soil_id]['cn_values'] = (
+            numpy.array(lulc_to_soil[soil_id]['cn_values'],
+                        dtype=numpy.float32))
+
+    def cn_op(lulc_array, soil_group_array):
+        """map lulc code and soil to a curve number"""
+        cn_result = numpy.empty(lulc_array.shape)
+        cn_result[:] = cn_nodata
+        for soil_group_id in numpy.unique(soil_group_array):
+            if soil_group_id == soil_nodata:
+                continue
+            current_soil_mask = (soil_group_array == soil_group_id)
+            index = numpy.digitize(
+                lulc_array.ravel(),
+                lulc_to_soil[soil_group_id]['lulc_values'], right=True)
+            cn_values = (
+                lulc_to_soil[soil_group_id]['cn_values'][index]).reshape(
+                    lulc_array.shape)
+            cn_result[current_soil_mask] = cn_values[current_soil_mask]
+        return cn_result
+
+    cn_nodata = -1
+    pygeoprocessing.vectorize_datasets(
+        [lulc_path, soil_group_path], cn_op, cn_path, gdal.GDT_Float32,
+        cn_nodata, pixel_size, 'intersection', vectorize_op=False,
+        datasets_are_pre_aligned=True)
