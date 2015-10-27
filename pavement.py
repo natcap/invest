@@ -46,6 +46,19 @@ except pkg_resources.VersionConflict:
     NO_WHEEL_SH = '--no-use-wheel'
 
 
+def is_exe(fpath):
+    """
+    Check whether a file is executable and that it exists.
+
+    Parameters:
+        fpath (string): The filepath to check.
+
+    Returns:
+        A boolean.
+    """
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+
 def user_os_installer():
     """
     Determine the operating system installer.
@@ -59,15 +72,18 @@ def user_os_installer():
 
     """
     if platform.system() == 'Linux':
-        # check if we're running an RPM system approach taken from
-        # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
-        if not os.path.exists('/usr/bin/rpm') and os.path.exists('/bin/rpm'):
-            # We're on openSUSE, an RPM system.
-            return 'rpm'
-
-        exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm'])
-        if exit_code == 0:
-            return 'rpm'
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            rpm_path = os.path.join(path, 'rpm')
+            if is_exe(rpm_path):
+                # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
+                # -q -f /path/to/rpm checks to see if RPM owns RPM.
+                # If it's not owned by RPM, we can assume it's owned by apt/dpkg.
+                exit_code = subprocess.call([rpm_path, '-q', '-f', rpm_path])
+                if exit_code == 0:
+                    return 'rpm'
+                else:
+                    break
         return 'deb'
 
     if platform.system() == 'Darwin':
@@ -1288,15 +1304,6 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
-    def is_exe(fpath):
-        """
-        Check whether a file is executable and that it exists.
-        """
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    class FoundEXE(Exception):
-        pass
-
     # verify required programs exist
     errors_found = False
     programs = [
@@ -1323,16 +1330,16 @@ def check(options):
                     error=ERROR, program=program)
                 errors_found = True
         else:
-            try:
-                for path in os.environ["PATH"].split(os.pathsep):
-                    path = path.strip('"')
-                    exe_file = os.path.join(path, program)
-                    if is_exe(exe_file):
-                        raise FoundEXE
-            except FoundEXE:
-                print "Found %-14s: %s" % (program, exe_file)
-                continue
-            else:
+            found_exe = False
+            for path in os.environ["PATH"].split(os.pathsep):
+                path = path.strip('"')
+                exe_file = os.path.join(path, program)
+                if is_exe(exe_file):
+                    found_exe = True
+                    print "Found %-14s: %s" % (program, exe_file)
+                    break
+
+            if not found_exe:
                 print "{error} {exe} not found. Required for {step}".format(
                     error=ERROR, exe=program, step=build_steps)
                 errors_found = True
