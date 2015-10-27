@@ -126,6 +126,96 @@ def _create_csv(fields, data):
 
     return filename
 
+def _setup_dictionary_for_shape(component):
+
+def _create_biophysical_table():
+
+    bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
+
+    bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
+                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
+                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
+
+    return _create_csv(bio_fields, bio_data)
+
+def _create_execute_result_watersheds(component, sub_shed=False):
+    if sub_shed:
+        sub_res_fields = {'subws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
+                      'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
+                      'num_pixels': 'int'}
+        sub_res_attr = [{'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
+                     'wyield_mn': 1090.97438, 'wyield_vol': 21819.4876, 'num_pixels': 2},
+                     {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
+                     'wyield_mn': 2419.69857, 'wyield_vol': 48393.9713999, 'num_pixels': 2}]
+        return _create_watershed(fields=sub_res_fields, attributes=sub_res_attr, subshed=True, execute=True)
+
+    res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
+                      'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
+                      'num_pixels': 'int'}
+    res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
+                 'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4}]
+
+    if component == "water_yield":
+        return _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+
+    else:
+        scarcity_fields = ['consum_vol', 'consum_mn', 'rsupply_vl', 'rsupply_mn']
+        scarcity_values = [500, 125, 65213.459, 1630.336475]
+        for field, value in zip(scarcity_fields, scarcity_values):
+            res_fields[field] = 'real'
+            res_attr[field] = value
+
+        if component == "valuation":
+            valuation_fields = ['hp_energy', 'hp_val']
+            valuation_values = [212.856730176, 67.73453119]
+            for field, value in zip(valuation_fields, valuation_values):
+                res_fields[field] = 'real'
+                res_attr[field] = value
+            return _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+
+        else:
+            return _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+
+
+def _create_execute_result_tables(component, sub_shed=False):
+    if sub_shed:
+        csv_fields_subws = ['subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+                            'wyield_mn', 'wyield_vol']
+        csv_data_subws = {0: {'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
+                            'wyield_mn': 1090.97438, 'wyield_vol': 21819.4876, 'num_pixels': 2},
+                       1: {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
+                            'wyield_mn': 2419.69857, 'wyield_vol': 48393.9713999, 'num_pixels': 2}}
+
+        return _create_csv(csv_fields_subws, csv_data_subws)
+
+    csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+                     'wyield_mn', 'wyield_vol']
+
+
+    csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
+                        'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4}}
+
+    if component == "water_yield":
+        return _create_csv(csv_fields_ws, csv_data_ws)
+
+    else:
+        scarcity_fields = ['consum_vol', 'consum_mn', 'rsupply_vl', 'rsupply_mn']
+        scarcity_values = [500, 125, 65213.459, 1630.336475]
+        for field, value in zip(scarcity_fields, scarcity_values):
+            csv_fields_ws[field] = 'real'
+            csv_data_ws[field] = value
+
+        if component == "valuation":
+            valuation_fields = ['hp_energy', 'hp_val']
+            valuation_values = [212.856730176, 67.73453119]
+            for field, value in zip(valuation_fields, valuation_values):
+                csv_fields_ws[field] = 'real'
+                csv_data_ws[field] = value
+            return _create_csv(csv_fields_ws, csv_data_ws)
+        else:
+            return _create_csv(csv_fields_ws, csv_data_ws)
+
+
 def _create_raster(matrix, dtype=gdal.GDT_Int32, nodata=-1):
     """
     Create a raster for the hydropower_water_yield model.
@@ -178,12 +268,6 @@ class HydropowerUnitTests(unittest.TestCase):
         attr_ws = [{'ws_id': 1}]
         attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
 
-        bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
-
-        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
-                1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
-                2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
-
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
@@ -193,7 +277,7 @@ class HydropowerUnitTests(unittest.TestCase):
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
             'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
             'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
-            'biophysical_table_uri': _create_csv(bio_fields, bio_data),
+            'biophysical_table_uri': _create_biophysical_table(),
             'seasonality_constant': 5,
             'water_scarcity_container': False,
             'valuation_container': False
@@ -224,22 +308,8 @@ class HydropowerUnitTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', 'per_pixel', comp_res), exp_res)
 
-        res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
-                      'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
-                      'num_pixels': 'int'}
-        res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
-                     'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4}]
-
-        sub_res_fields = {'subws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
-                      'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
-                      'num_pixels': 'int'}
-        sub_res_attr = [{'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
-                     'wyield_mn': 1090.97438, 'wyield_vol': 21819.4876, 'num_pixels': 2},
-                     {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
-                     'wyield_mn': 2419.69857, 'wyield_vol': 48393.9713999, 'num_pixels': 2}]
-
-        watershed_res = _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
-        subwatershed_res = _create_watershed(fields=sub_res_fields, attributes=sub_res_attr, subshed=True, execute=True)
+        watershed_res = _create_execute_result_watersheds("water_yield")
+        subwatershed_res = _create_execute_result_watersheds("water_yield", True)
 
         res_shp_paths = [watershed_res, subwatershed_res]
         shp_paths = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
@@ -247,21 +317,8 @@ class HydropowerUnitTests(unittest.TestCase):
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', comp_res), exp_res)
 
-
-        csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-                         'wyield_mn', 'wyield_vol']
-        csv_fields_subws = ['subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-                            'wyield_mn', 'wyield_vol']
-
-        csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
-                            'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4}}
-        csv_data_subws = {0: {'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
-                            'wyield_mn': 1090.97438, 'wyield_vol': 21819.4876, 'num_pixels': 2},
-                       1: {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
-                            'wyield_mn': 2419.69857, 'wyield_vol': 48393.9713999, 'num_pixels': 2}}
-
-        csv_ws_res = _create_csv(csv_fields_ws, csv_data_ws)
-        csv_subws_res = _create_csv(csv_fields_subws, csv_data_subws)
+        csv_ws_res = _create_execute_result_tables("water_yield")
+        csv_subws_res = _create_execute_result_tables("water_yield", True)
 
         res_csv_paths = [csv_ws_res, csv_subws_res]
         csv_paths = ['watershed_results_wyield.csv', 'subwatershed_results_wyield.csv']
@@ -417,33 +474,13 @@ class HydropowerUnitTests(unittest.TestCase):
             args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
             args['demand_table_uri']]
 
-        res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
-                      'AET_mn': 'real', 'wyield_mn': 'real',
-                      'wyield_vol': 'real', 'num_pixels': 'int',
-                      'consum_vol': 'real', 'consum_mn': 'real',
-                      'rsupply_vl': 'real', 'rsupply_mn': 'real'}
-        res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5,
-                     'AET_mn': 494.663525, 'wyield_mn': 1755.336475,
-                     'wyield_vol': 70213.459, 'num_pixels': 4,
-                     'consum_vol': 500, 'consum_mn': 125,
-                     'rsupply_vl': 65213.459, 'rsupply_mn': 1630.336475}]
-
-        res_ws_shp = _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+        res_ws_shp = _create_execute_result_watersheds("scarcity")
 
         shp_path = 'watershed_results_wyield.shp'
         pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', shp_path), res_ws_shp)
 
-
-        csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-                         'wyield_mn', 'wyield_vol', 'consum_vol', 'consum_mn',
-                         'rsupply_vl', 'rsupply_mn']
-        csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
-                            'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4,
-                            'consum_vol': 500, 'consum_mn': 125, 'rsupply_vl': 65213.459,
-                            'rsupply_mn': 1630.336475}}
-
-        res_ws_csv = _create_csv(csv_fields_ws, csv_data_ws)
+        res_ws_csv = _create_execute_result_tables("scarcity")
 
         csv_path = 'watershed_results_wyield.csv'
         pygeoprocessing.testing.assert_csv_equal(
@@ -524,36 +561,13 @@ class HydropowerUnitTests(unittest.TestCase):
             args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
             args['demand_table_uri'], args['valuation_table_uri']]
 
-        res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
-                      'AET_mn': 'real', 'wyield_mn': 'real',
-                      'wyield_vol': 'real', 'num_pixels': 'int',
-                      'consum_vol': 'real', 'consum_mn': 'real',
-                      'rsupply_vl': 'real', 'rsupply_mn': 'real',
-                      'hp_energy': 'real', 'hp_val': 'real'}
-        res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5,
-                     'AET_mn': 494.663525, 'wyield_mn': 1755.336475,
-                     'wyield_vol': 70213.459, 'num_pixels': 4,
-                     'consum_vol': 500, 'consum_mn': 125,
-                     'rsupply_vl': 65213.459, 'rsupply_mn': 1630.336475,
-                     'hp_energy': 212.856730176, 'hp_val': 67.73453119}]
-
-        res_ws_shp = _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+        res_ws_shp = _create_execute_result_watersheds("valuation")
 
         shp_path = 'watershed_results_wyield.shp'
         pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', shp_path), res_ws_shp)
 
-
-        csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-                         'wyield_mn', 'wyield_vol', 'consum_vol', 'consum_mn',
-                         'rsupply_vl', 'rsupply_mn', 'hp_energy', 'hp_val']
-        csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
-                            'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4,
-                            'consum_vol': 500, 'consum_mn': 125, 'rsupply_vl': 65213.459,
-                            'rsupply_mn': 1630.336475, 'hp_energy': 212.856730176,
-                            'hp_val': 67.73453119}}
-
-        res_ws_csv = _create_csv(csv_fields_ws, csv_data_ws)
+        res_ws_csv = _create_execute_result_tables("valuation")
 
         csv_path = 'watershed_results_wyield.csv'
         pygeoprocessing.testing.assert_csv_equal(
