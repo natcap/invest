@@ -46,11 +46,6 @@ except pkg_resources.VersionConflict:
     NO_WHEEL_SH = '--no-use-wheel'
 
 
-class FoundEXE(Exception):
-    """Descriptive exception indicating we found a target executable."""
-    pass
-
-
 def is_exe(fpath):
     """
     Check whether a file is executable and that it exists.
@@ -1335,16 +1330,16 @@ def check(options):
                     error=ERROR, program=program)
                 errors_found = True
         else:
-            try:
-                for path in os.environ["PATH"].split(os.pathsep):
-                    path = path.strip('"')
-                    exe_file = os.path.join(path, program)
-                    if is_exe(exe_file):
-                        raise FoundEXE
-            except FoundEXE:
-                print "Found %-14s: %s" % (program, exe_file)
-                continue
-            else:
+            found_exe = False
+            for path in os.environ["PATH"].split(os.pathsep):
+                path = path.strip('"')
+                exe_file = os.path.join(path, program)
+                if is_exe(exe_file):
+                    found_exe = True
+                    print "Found %-14s: %s" % (program, exe_file)
+                    break
+
+            if not found_exe:
                 print "{error} {exe} not found. Required for {step}".format(
                     error=ERROR, exe=program, step=build_steps)
                 errors_found = True
