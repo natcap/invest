@@ -77,25 +77,19 @@ def user_os_installer():
 
     """
     if platform.system() == 'Linux':
-        try:
-            # Loop through the path and check for the presence of the rpm
-            # binary.
-            for path in os.environ["PATH"].split(os.pathsep):
-                path = path.strip('"')
-                rpm_path = os.path.join(path, 'rpm')
-                if is_exe(rpm_path):
-                    raise FoundEXE
-        except FoundEXE:
-            # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
-            # -q -f /path/to/rpm checks to see if RPM owns RPM.
-            # If it's not owned by RPM, we can assume it's owned by apt/dpkg.
-            exit_code = subprocess.call([rpm_path, '-q', '-f', rpm_path])
-            if exit_code == 0:
-                return 'rpm'
-            return 'deb'
-        else:
-            # RPM was not found on this system, assume it's debian.
-            return 'deb'
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            rpm_path = os.path.join(path, 'rpm')
+            if is_exe(rpm_path):
+                # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
+                # -q -f /path/to/rpm checks to see if RPM owns RPM.
+                # If it's not owned by RPM, we can assume it's owned by apt/dpkg.
+                exit_code = subprocess.call([rpm_path, '-q', '-f', rpm_path])
+                if exit_code == 0:
+                    return 'rpm'
+                else:
+                    break
+        return 'deb'
 
     if platform.system() == 'Darwin':
         return 'dmg'
