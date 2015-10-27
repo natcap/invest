@@ -86,6 +86,7 @@ def _create_watershed(fields=None, attributes=None, subshed=True, execute=False)
 		    geometries, srs.projection, fields, attributes,
 		    vector_format='ESRI Shapefile')
 
+
 def _create_csv(fields, data):
     """
     Create a new csv table from a dictionary
@@ -126,10 +127,18 @@ def _create_csv(fields, data):
 
     return filename
 
-def _setup_dictionary_for_shape(component):
 
 def _create_input_table(component):
+    """
+    Creates a csv file for the biophysical, scarcity, or valuation inputs
 
+    Parameters:
+        components (string): a String indicating which csv table to build
+            and return. Either "biophysical", "scarcity", or "valuation"
+
+    Returns:
+        A filepath to the csv table on disk.
+    """
     if component == "biophysical":
         bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
 
@@ -159,6 +168,18 @@ def _create_input_table(component):
 
 
 def _create_execute_result_watersheds(component, sub_shed=False):
+    """
+    Creates a watershed / subwatershed shapefile of results correlating
+        to the 'component'
+
+    Parameters:
+        component (string): a String indicating which results to construct
+            for what components of the model were run. Can be "water_yield",
+            "scarcity", or "valuation".
+
+    Returns:
+        A filepath to a shapefile on disk
+    """
     if sub_shed:
         sub_res_fields = {'subws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
                       'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
@@ -198,6 +219,17 @@ def _create_execute_result_watersheds(component, sub_shed=False):
 
 
 def _create_execute_result_tables(component, sub_shed=False):
+    """
+    Creates a csv table of results correlating to the 'component'
+
+    Parameters:
+        component (string): a String indicating which results to construct
+            for what components of the model were run. Can be "water_yield",
+            "scarcity", or "valuation".
+
+    Returns:
+        A filepath to a csv table on disk
+    """
     if sub_shed:
         csv_fields_subws = ['subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
                             'wyield_mn', 'wyield_vol']
@@ -348,14 +380,10 @@ class HydropowerUnitTests(unittest.TestCase):
 
         shutil.rmtree(args['workspace_dir'])
 
-        for filename in test_files:
-            os.remove(filename)
-        for filename in exp_pix_results:
-            os.remove(filename)
-        for filename in res_shp_paths:
-            os.remove(filename)
-        for filename in res_csv_paths:
-            os.remove(filename)
+        file_list = [test_files, exp_pix_results, res_shp_paths, res_csv_paths]
+        for flist in file_list:
+            for filename in flist:
+                os.remove(filename)
 
     def test_execute_bad_nodata(self):
         """Example execution of the Water Yield component of the model
@@ -741,13 +769,11 @@ S
                 # Check that the field counts for the features are the same
                 layer_def = layer.GetLayerDefn()
                 field_count = layer_def.GetFieldCount()
-                ws_id_index = feat.GetFieldIndex('ws_id')
-                ws_id = feat.GetField(ws_id_index)
+                ws_id = feat.GetField('ws_id')
 
                 for key in ['hp_energy', 'hp_val']:
                     try:
-                        key_index = feat.GetFieldIndex(key)
-                        key_val = feat.GetField(key_index)
+                        key_val = feat.GetField(key)
                         pygeoprocessing.testing.assert_almost_equal(
                             results[ws_id][key], key_val)
                     except ValueError:
@@ -800,13 +826,11 @@ S
                 # Check that the field counts for the features are the same
                 layer_def = layer.GetLayerDefn()
                 field_count = layer_def.GetFieldCount()
-                ws_id_index = feat.GetFieldIndex('ws_id')
-                ws_id = feat.GetField(ws_id_index)
+                ws_id = feat.GetField('ws_id')
 
                 for key in ['rsupply_vl', 'rsupply_mn']:
                     try:
-                        key_index = feat.GetFieldIndex(key)
-                        key_val = feat.GetField(key_index)
+                        key_val = feat.GetField(key)
                         pygeoprocessing.testing.assert_almost_equal(
                             results[ws_id][key], key_val)
                     except ValueError:
@@ -902,28 +926,20 @@ S
             3: {'wyield_vol': 200}
             }
 
-        # Check that the 'hp_energy' / 'hp_val' fields were added and are correct
         shape = ogr.Open(watershed_uri)
-        # Check that the shapefiles have the same number of layers
         layer_count = shape.GetLayerCount()
 
         for layer_num in range(layer_count):
-            # Get the current layer
             layer = shape.GetLayer(layer_num)
 
-            # Get the first features of the layers and loop through all the
-            # features
             feat = layer.GetNextFeature()
             while feat is not None:
-                # Check that the field counts for the features are the same
                 layer_def = layer.GetLayerDefn()
                 field_count = layer_def.GetFieldCount()
-                ws_id_index = feat.GetFieldIndex('ws_id')
-                ws_id = feat.GetField(ws_id_index)
+                ws_id = feat.GetField('ws_id')
 
                 try:
-                    key_index = feat.GetFieldIndex('wyield_vol')
-                    key_val = feat.GetField(key_index)
+                    key_val = feat.GetField('wyield_vol')
                     pygeoprocessing.testing.assert_almost_equal(
                         results[ws_id]['wyield_vol'], key_val)
                 except ValueError:
@@ -959,28 +975,20 @@ S
             3: {'precip': 15.8}
             }
 
-        # Check that the 'hp_energy' / 'hp_val' fields were added and are correct
         shape = ogr.Open(watershed_uri)
-        # Check that the shapefiles have the same number of layers
         layer_count = shape.GetLayerCount()
 
         for layer_num in range(layer_count):
-            # Get the current layer
             layer = shape.GetLayer(layer_num)
 
-            # Get the first features of the layers and loop through all the
-            # features
             feat = layer.GetNextFeature()
             while feat is not None:
-                # Check that the field counts for the features are the same
                 layer_def = layer.GetLayerDefn()
                 field_count = layer_def.GetFieldCount()
-                ws_id_index = feat.GetFieldIndex('ws_id')
-                ws_id = feat.GetField(ws_id_index)
+                ws_id = feat.GetField('ws_id')
 
                 try:
-                    key_index = feat.GetFieldIndex('precip')
-                    key_val = feat.GetField(key_index)
+                    key_val = feat.GetField('precip')
                     pygeoprocessing.testing.assert_almost_equal(
                         results[ws_id]['precip'], key_val)
                 except ValueError:
