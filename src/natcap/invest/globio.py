@@ -63,7 +63,9 @@ def execute(args):
         args['potential_vegetation_uri'] (string): used in "mode (a)" path to
             potential vegetation raster
         args['pasture_threshold'] (float): used in "mode (a)"
-        args['intensification_fraction'] (float): used in "mode (a)"
+        args['intensification_fraction'] (float): used in "mode (a)"; a value
+            between 0 and 1 denoting proportion of total agriculture that
+            should be classified as 'high input'
         args['primary_threshold'] (float): used in "mode (a)"
         args['msa_parameters_uri'] (string): path to MSA classification
             parameters
@@ -133,7 +135,7 @@ def execute(args):
         [globio_lulc_uri], _primary_veg_mask_op,
         primary_veg_mask_uri, gdal.GDT_Int32, primary_veg_mask_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
-        assert_datasets_projected=False, vectorize_op=False)
+        vectorize_op=False)
 
     LOGGER.info('gaussian filter primary veg')
     gaussian_kernel_uri = os.path.join(
@@ -161,8 +163,7 @@ def execute(args):
         [primary_veg_mask_uri, smoothed_primary_veg_mask_uri],
         _primary_veg_smooth_op, primary_veg_smooth_uri, gdal.GDT_Float32,
         primary_veg_mask_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, assert_datasets_projected=False,
-        vectorize_op=False)
+        dataset_to_align_index=0, vectorize_op=False)
 
     msa_nodata = -1
 
@@ -198,7 +199,7 @@ def execute(args):
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [primary_veg_smooth_uri], _msa_f_op, msa_f_uri, gdal.GDT_Float32,
         msa_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
-        assert_datasets_projected=False, vectorize_op=False)
+        vectorize_op=False)
 
     #calc_msa_i
     msa_f_values = sorted(msa_f_table)
@@ -210,7 +211,7 @@ def execute(args):
     def _msa_i_op(lulc_array, distance_to_infrastructure):
         """calculate msa infrastructure"""
 
-        distance_to_infrastructure *= out_pixel_size #convert to meters
+        distance_to_infrastructure *= out_pixel_size  #convert to meters
         msa_i_primary = numpy.empty(lulc_array.shape)
         msa_i_other = numpy.empty(lulc_array.shape)
 
@@ -247,10 +248,7 @@ def execute(args):
             msa_i_other[distance_to_infrastructure <
                         msa_i_other_table['<'][0]] = (msa_i_other_table['<'][1])
 
-        msa_i = numpy.where(
-            (lulc_array >= 1) & (lulc_array <= 5), msa_i_primary, 1.0)
-        msa_i = numpy.where(
-            (lulc_array >= 6) & (lulc_array <= 12), msa_i_other, msa_i)
+        msa_i = numpy.where(lulc_array == 1, msa_i_primary, msa_i_other)
         return msa_i
 
 
@@ -263,8 +261,7 @@ def execute(args):
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [globio_lulc_uri, distance_to_infrastructure_uri], _msa_i_op, msa_i_uri,
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, assert_datasets_projected=False,
-        vectorize_op=False)
+        dataset_to_align_index=0, vectorize_op=False)
 
     #calc_msa_lu
     msa_lu_uri = os.path.join(
@@ -284,8 +281,7 @@ def execute(args):
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [msa_f_uri, msa_lu_uri, msa_i_uri], _msa_op, msa_uri,
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, assert_datasets_projected=False,
-        vectorize_op=False)
+        dataset_to_align_index=0, vectorize_op=False)
 
     if 'aoi_uri' in args:
         #copy the aoi to an output shapefile
@@ -333,6 +329,13 @@ def execute(args):
         # don't need a random poly id anymore
         layer.DeleteField(layer_defn.GetFieldIndex(poly_id_field))
 
+    for root_dir, _, files in os.walk(tmp_dir):
+        for filename in files:
+            try:
+                os.remove(os.path.join(root_dir, filename))
+            except OSError:
+                LOGGER.warn("couldn't remove temporary file %s", filename)
+
 
 def make_gaussian_kernel_uri(sigma, kernel_uri):
     """create a gaussian kernel raster"""
@@ -360,7 +363,7 @@ def make_gaussian_kernel_uri(sigma, kernel_uri):
     for row_index in xrange(kernel_size):
         kernel = numpy.exp(
             -((row_index - max_distance)**2 +
-                (col_index - max_distance) ** 2)/(2.0*sigma**2)).reshape(
+              (col_index - max_distance) ** 2)/(2.0*sigma**2)).reshape(
                     1, kernel_size)
 
         integration += numpy.sum(kernel)
@@ -407,8 +410,8 @@ def load_msa_parameter_table(
                     valueb: ...
                     '<': (bound, msa_lu_value),
                     '>': (bound, msa_lu_value)
-                    12: (msa_lu_8 * intensification_fraction +
-                         msa_lu_9 * (1.0 - intensification_fraction)}
+                    12: (msa_lu_8 * (1.0 - intensification_fraction) +
+                         msa_lu_9 * intensification_fraction}
             }
     """
 
@@ -429,8 +432,8 @@ def load_msa_parameter_table(
             msa_dict[line['MSA_type']][value] = float(line['MSA_x'])
     # cast back to a regular dict so we get keyerrors on non-existant keys
     msa_dict['msa_lu'][12] = (
-        msa_dict['msa_lu'][8] * intensification_fraction +
-        msa_dict['msa_lu'][9] * (1.0 - intensification_fraction))
+        msa_dict['msa_lu'][8] * (1.0 - intensification_fraction) +
+        msa_dict['msa_lu'][9] * intensification_fraction)
     return dict(msa_dict)
 
 
@@ -483,7 +486,7 @@ def _calculate_globio_lulc_map(
          (lulc_code, table) in lulc_to_globio_table.items()])
 
     intermediate_globio_lulc_uri = os.path.join(
-        intermediate_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
+        tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         lulc_uri, lulc_to_globio, intermediate_globio_lulc_uri,
@@ -510,7 +513,7 @@ def _calculate_globio_lulc_map(
         [intermediate_globio_lulc_uri], _forest_area_mask_op,
         forest_areas_uri, gdal.GDT_Int32, forest_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
-        assert_datasets_projected=False, vectorize_op=False)
+        vectorize_op=False)
 
     LOGGER.info('gaussian filter natural areas')
     gaussian_kernel_uri = os.path.join(
@@ -536,7 +539,7 @@ def _calculate_globio_lulc_map(
         [forest_areas_uri, smoothed_forest_areas_uri], _ffqi_op,
         ffqi_uri, gdal.GDT_Float32, forest_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
-        assert_datasets_projected=False, vectorize_op=False)
+        vectorize_op=False)
 
     #remap globio lulc to an internal lulc based on ag and intensification
     #proportion these came from the 'expansion_scenarios.py'
@@ -597,8 +600,7 @@ def _calculate_globio_lulc_map(
         [intermediate_globio_lulc_uri, potential_vegetation_uri, pasture_uri,
          ffqi_uri], _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32,
         globio_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, assert_datasets_projected=False,
-        vectorize_op=False)
+        dataset_to_align_index=0, vectorize_op=False)
 
     return globio_lulc_uri
 
@@ -688,7 +690,7 @@ def _collapse_infrastructure_layers(
         infrastructure_filenames, _collapse_infrastructure_op,
         infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
-        assert_datasets_projected=False, vectorize_op=False)
+        vectorize_op=False)
 
     # clean up the temporary filenames
     for filename in infrastructure_tmp_filenames:
