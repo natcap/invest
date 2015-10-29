@@ -1,4 +1,4 @@
-"""Tests for natcap.invest.hydropower.hydropower_water_yeild.
+"""Tests for natcap.invest.hydropower.hydropower_water_yield.
 
     This module is intended for unit testing of the hydropower_water_yield
     model. The goal is to thoroughly test each of the modules functions
@@ -19,7 +19,8 @@ from pygeoprocessing.testing import sampledata
 from shapely.geometry import Polygon
 from nose.tools import nottest
 
-def _create_watershed(fields=None, attributes=None, subshed=True, execute=False):
+def _create_watershed(
+        fields=None, attributes=None, subshed=True, execute=False):
     """
     Create a watershed shapefile
 
@@ -58,33 +59,41 @@ def _create_watershed(fields=None, attributes=None, subshed=True, execute=False)
     if subshed:
         if not execute:
             poly_geoms = {
-                 'poly_1': [(pos_x, pos_y), (pos_x + 100, pos_y),
-                            (pos_x + 100, pos_y - 100), (pos_x, pos_y - 100), (pos_x, pos_y)],
-                 'poly_2': [(pos_x + 100, pos_y), (pos_x + 200, pos_y),
-                             (pos_x + 200, pos_y - 100), (pos_x + 100, pos_y - 100), (pos_x + 100, pos_y)],
-                 'poly_3': [(pos_x, pos_y - 100), (pos_x + 100, pos_y -100),
-                            (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200), (pos_x, pos_y - 100)]}
+                'poly_1': [(pos_x, pos_y), (pos_x + 100, pos_y),
+                           (pos_x + 100, pos_y - 100), (pos_x, pos_y - 100),
+                           (pos_x, pos_y)],
+                'poly_2': [(pos_x + 100, pos_y), (pos_x + 200, pos_y),
+                           (pos_x + 200, pos_y - 100),
+                           (pos_x + 100, pos_y - 100), (pos_x + 100, pos_y)],
+                'poly_3': [(pos_x, pos_y - 100), (pos_x + 100, pos_y -100),
+                           (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200),
+                           (pos_x, pos_y - 100)]}
 
-            geometries = [Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2']),
-                        Polygon(poly_geoms['poly_3'])]
+            geometries = [Polygon(poly_geoms['poly_1']),
+                          Polygon(poly_geoms['poly_2']),
+                          Polygon(poly_geoms['poly_3'])]
         else:
             poly_geoms = {
-                 'poly_1': [(pos_x, pos_y), (pos_x + 200, pos_y),
-                            (pos_x + 200, pos_y - 100), (pos_x, pos_y - 100), (pos_x, pos_y)],
-                 'poly_2': [(pos_x, pos_y - 100), (pos_x + 200, pos_y - 100),
-                             (pos_x + 200, pos_y - 200), (pos_x, pos_y - 200), (pos_x, pos_y - 100)]}
+                'poly_1': [(pos_x, pos_y), (pos_x + 200, pos_y),
+                           (pos_x + 200, pos_y - 100), (pos_x, pos_y - 100),
+                           (pos_x, pos_y)],
+                'poly_2': [(pos_x, pos_y - 100), (pos_x + 200, pos_y - 100),
+                           (pos_x + 200, pos_y - 200), (pos_x, pos_y - 200),
+                           (pos_x, pos_y - 100)]}
 
-            geometries = [Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
+            geometries = [Polygon(poly_geoms['poly_1']),
+                          Polygon(poly_geoms['poly_2'])]
     else:
         poly_geoms = {
-                 'poly_1': [(pos_x, pos_y), (pos_x + 200, pos_y),
-                            (pos_x + 200, pos_y - 200), (pos_x, pos_y - 200), (pos_x, pos_y)]}
+            'poly_1': [(pos_x, pos_y), (pos_x + 200, pos_y),
+                       (pos_x + 200, pos_y - 200), (pos_x, pos_y - 200),
+                       (pos_x, pos_y)]}
 
         geometries = [Polygon(poly_geoms['poly_1'])]
 
     return pygeoprocessing.testing.create_vector_on_disk(
-		    geometries, srs.projection, fields, attributes,
-		    vector_format='ESRI Shapefile')
+        geometries, srs.projection, fields, attributes,
+        vector_format='ESRI Shapefile')
 
 
 def _create_csv(fields, data):
@@ -92,8 +101,8 @@ def _create_csv(fields, data):
     Create a new csv table from a dictionary
 
     Parameters:
-        fields (list): a python list of the column names. The order of the fields in
-            the list will be the order in how they are written. ex:
+        fields (list): a python list of the column names. The order of the
+            fields in the list will be the order in how they are written. ex:
             ['id', 'precip', 'total']
         data (dict): a python dictionary representing the table. The dictionary
             should be constructed with unique numerical keys that point to
@@ -133,7 +142,7 @@ def _create_input_table(component):
     Creates a csv file for the biophysical, scarcity, or valuation inputs
 
     Parameters:
-        components (string): a String indicating which csv table to build
+        component (string): a String indicating which csv table to build
             and return. Either "biophysical", "scarcity", or "valuation"
 
     Returns:
@@ -142,9 +151,12 @@ def _create_input_table(component):
     if component == "biophysical":
         bio_fields = ['lucode', 'Kc', 'root_depth', 'LULC_veg']
 
-        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500, 'LULC_veg': 0},
-                    1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000, 'LULC_veg': 1},
-                    2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000, 'LULC_veg': 1}}
+        bio_data = {0: {'lucode':0, 'Kc': 0.3, 'root_depth': 500,
+                        'LULC_veg': 0},
+                    1: {'lucode':1, 'Kc': 0.75, 'root_depth': 5000,
+                        'LULC_veg': 1},
+                    2: {'lucode':2, 'Kc': 0.85, 'root_depth': 5000,
+                        'LULC_veg': 1}}
 
         return _create_csv(bio_fields, bio_data)
 
@@ -152,22 +164,23 @@ def _create_input_table(component):
         demand_fields = ['lucode', 'demand']
 
         demand_data = {0: {'lucode':0, 'demand': 500},
-                1: {'lucode':1, 'demand': 0},
-                2: {'lucode':2, 'demand': 0}}
+                       1: {'lucode':1, 'demand': 0},
+                       2: {'lucode':2, 'demand': 0}}
 
         return _create_csv(demand_fields, demand_data)
 
     else:
         val_fields = ['ws_id', 'time_span', 'discount', 'efficiency',
-                        'fraction', 'cost', 'height', 'kw_price']
+                      'fraction', 'cost', 'height', 'kw_price']
 
-        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5, 'efficiency': 0.8,
-                        'fraction': 0.6, 'cost': 0, 'height': 25, 'kw_price': 0.07}}
+        val_data = {0: {'ws_id': 1, 'time_span': 20, 'discount': 5,
+                        'efficiency': 0.8, 'fraction': 0.6, 'cost': 0,
+                        'height': 25, 'kw_price': 0.07}}
 
         return _create_csv(val_fields, val_data)
 
 
-def _create_execute_result_watersheds(component, sub_shed=False):
+def _create_result_watersheds(component, sub_shed=False):
     """
     Creates a watershed / subwatershed shapefile of results correlating
         to the 'component'
@@ -176,31 +189,43 @@ def _create_execute_result_watersheds(component, sub_shed=False):
         component (string): a String indicating which results to construct
             for what components of the model were run. Can be "water_yield",
             "scarcity", or "valuation".
+        sub_shed=False (boolean): a Boolean indicating whether or not to
+            create a shapefile using subwatershed characteristics.
 
     Returns:
         A filepath to a shapefile on disk
     """
     if sub_shed:
-        sub_res_fields = {'subws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
-                      'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
-                      'num_pixels': 'int'}
-        sub_res_attr = [{'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
-                     'wyield_mn': 1090.97438, 'wyield_vol': 21819.4876, 'num_pixels': 2},
-                     {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
-                     'wyield_mn': 2419.69857, 'wyield_vol': 48393.9713999, 'num_pixels': 2}]
-        return _create_watershed(fields=sub_res_fields, attributes=sub_res_attr, subshed=True, execute=True)
+        sub_res_fields = {'subws_id': 'int', 'precip_mn': 'real',
+                          'PET_mn': 'real', 'AET_mn': 'real',
+                          'wyield_mn': 'real', 'wyield_vol': 'real',
+                          'num_pixels': 'int'}
+        sub_res_attr = [{'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510,
+                         'AET_mn': 409.02562, 'wyield_mn': 1090.97438,
+                         'wyield_vol': 21819.4876, 'num_pixels': 2},
+                        {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935,
+                         'AET_mn': 580.30143, 'wyield_mn': 2419.69857,
+                         'wyield_vol': 48393.9713999, 'num_pixels': 2}]
+
+        return _create_watershed(
+            fields=sub_res_fields, attributes=sub_res_attr, subshed=True,
+            execute=True)
 
     res_fields = {'ws_id': 'int', 'precip_mn': 'real', 'PET_mn': 'real',
-                      'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
-                      'num_pixels': 'int'}
-    res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
-                 'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4}]
+                  'AET_mn': 'real', 'wyield_mn': 'real', 'wyield_vol': 'real',
+                  'num_pixels': 'int'}
+    res_attr = [{'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5,
+                 'AET_mn': 494.663525, 'wyield_mn': 1755.336475,
+                 'wyield_vol': 70213.459, 'num_pixels': 4}]
 
     if component == "water_yield":
-        return _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+        return _create_watershed(
+            fields=res_fields, attributes=res_attr, subshed=False,
+            execute=True)
 
     else:
-        scarcity_fields = ['consum_vol', 'consum_mn', 'rsupply_vl', 'rsupply_mn']
+        scarcity_fields = ['consum_vol', 'consum_mn', 'rsupply_vl',
+                           'rsupply_mn']
         scarcity_values = [500, 125, 65213.459, 1630.336475]
         for field, value in zip(scarcity_fields, scarcity_values):
             res_fields[field] = 'real'
@@ -212,13 +237,17 @@ def _create_execute_result_watersheds(component, sub_shed=False):
             for field, value in zip(valuation_fields, valuation_values):
                 res_fields[field] = 'real'
                 res_attr[field] = value
-            return _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+            return _create_watershed(
+                fields=res_fields, attributes=res_attr, subshed=False,
+                execute=True)
 
         else:
-            return _create_watershed(fields=res_fields, attributes=res_attr, subshed=False, execute=True)
+            return _create_watershed(
+                fields=res_fields, attributes=res_attr, subshed=False,
+                execute=True)
 
 
-def _create_execute_result_tables(component, sub_shed=False):
+def _create_result_tables(component, sub_shed=False):
     """
     Creates a csv table of results correlating to the 'component'
 
@@ -226,32 +255,37 @@ def _create_execute_result_tables(component, sub_shed=False):
         component (string): a String indicating which results to construct
             for what components of the model were run. Can be "water_yield",
             "scarcity", or "valuation".
+        sub_shed=False (boolean): a Boolean indicating whether or not to
+            create a csv table using subwatershed characteristics.
 
     Returns:
         A filepath to a csv table on disk
     """
     if sub_shed:
-        csv_fields_subws = ['subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-                            'wyield_mn', 'wyield_vol']
-        csv_data_subws = {0: {'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510, 'AET_mn': 409.02562,
-                            'wyield_mn': 1090.97438, 'wyield_vol': 21819.4876, 'num_pixels': 2},
-                       1: {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935, 'AET_mn': 580.30143,
-                            'wyield_mn': 2419.69857, 'wyield_vol': 48393.9713999, 'num_pixels': 2}}
+        csv_fields_subws = ['subws_id', 'num_pixels', 'precip_mn', 'PET_mn',
+                            'AET_mn', 'wyield_mn', 'wyield_vol']
+        csv_data_subws = {0: {'subws_id': 1, 'precip_mn': 1500, 'PET_mn': 510,
+                              'AET_mn': 409.02562, 'wyield_mn': 1090.97438,
+                              'wyield_vol': 21819.4876, 'num_pixels': 2},
+                          1: {'subws_id': 2, 'precip_mn': 3000, 'PET_mn': 935,
+                              'AET_mn': 580.30143, 'wyield_mn': 2419.69857,
+                              'wyield_vol': 48393.9713999, 'num_pixels': 2}}
 
         return _create_csv(csv_fields_subws, csv_data_subws)
 
     csv_fields_ws = ['ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
                      'wyield_mn', 'wyield_vol']
 
-
-    csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5, 'AET_mn': 494.663525,
-                        'wyield_mn': 1755.336475, 'wyield_vol': 70213.459, 'num_pixels': 4}}
+    csv_data_ws = {0: {'ws_id': 1, 'precip_mn': 2250, 'PET_mn': 722.5,
+                       'AET_mn': 494.663525, 'wyield_mn': 1755.336475,
+                       'wyield_vol': 70213.459, 'num_pixels': 4}}
 
     if component == "water_yield":
         return _create_csv(csv_fields_ws, csv_data_ws)
 
     else:
-        scarcity_fields = ['consum_vol', 'consum_mn', 'rsupply_vl', 'rsupply_mn']
+        scarcity_fields = ['consum_vol', 'consum_mn', 'rsupply_vl',
+                           'rsupply_mn']
         scarcity_values = [500, 125, 65213.459, 1630.336475]
         for field, value in zip(scarcity_fields, scarcity_values):
             csv_fields_ws[field] = 'real'
@@ -281,6 +315,11 @@ def _create_raster(matrix, dtype=gdal.GDT_Int32, nodata=-1):
     Parameters:
         matrix (numpy.array): A numpy array to use as the raster matrix.
             The output raster created will be saved with these pixel values.
+        dtype=gdal.GDT_Int32 (GDAL datatype): a GDAL datatype to use
+            for the new raster. Common types are gdal.GDT_Int32 and
+            gdal.GDT_Float32.
+        nodata=-1 (int or float or None): a number to set as the rasters
+            nodata value. If None then no nodata value is set.
 
     Returns:
         A string filepath to a new raster on disk.
@@ -323,12 +362,18 @@ class HydropowerUnitTests(unittest.TestCase):
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
-            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
-            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'depth_to_root_rest_layer_uri': _create_raster(
+                root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(
+                precip_matrix, gdal.GDT_Float32),
             'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
-            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
-            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'watersheds_uri': _create_watershed(
+                fields=fields_ws, attributes=attr_ws, subshed=False,
+                execute=True),
+            'sub_watersheds_uri': _create_watershed(
+                fields=fields_sub, attributes=attr_sub, subshed=True,
+                execute=True),
             'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'water_scarcity_container': False,
@@ -339,7 +384,8 @@ class HydropowerUnitTests(unittest.TestCase):
         test_files = [
             args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
             args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
-            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri']]
+            args['watersheds_uri'], args['sub_watersheds_uri'],
+            args['biophysical_table_uri']]
 
         wyield_res = numpy.array([
             [730, 1451.94876],
@@ -354,40 +400,49 @@ class HydropowerUnitTests(unittest.TestCase):
             [505.12952, 655.47334]], numpy.float32)
         aet_path = _create_raster(aet_res, gdal.GDT_Float32)
 
-        pixel_files =  ['aet.tif', 'fractp.tif', 'wyield.tif']
+        pixel_files = ['aet.tif', 'fractp.tif', 'wyield.tif']
         exp_pix_results = [aet_path, fractp_path, wyield_path]
         for comp_res, exp_res in zip(pixel_files, exp_pix_results):
             pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', 'per_pixel', comp_res), exp_res)
+                os.path.join(
+                    args['workspace_dir'], 'output', 'per_pixel', comp_res),
+                exp_res)
 
-        watershed_res = _create_execute_result_watersheds("water_yield")
-        subwatershed_res = _create_execute_result_watersheds("water_yield", True)
+        watershed_res = _create_result_watersheds("water_yield")
+        subwatershed_res = _create_result_watersheds(
+            "water_yield", True)
 
         res_shp_paths = [watershed_res, subwatershed_res]
-        shp_paths = ['watershed_results_wyield.shp', 'subwatershed_results_wyield.shp']
+        shp_paths = ['watershed_results_wyield.shp',
+                     'subwatershed_results_wyield.shp']
         for comp_res, exp_res in zip(shp_paths, res_shp_paths):
             pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', comp_res), exp_res)
+                os.path.join(args['workspace_dir'], 'output', comp_res),
+                exp_res)
 
-        csv_ws_res = _create_execute_result_tables("water_yield")
-        csv_subws_res = _create_execute_result_tables("water_yield", True)
+        csv_ws_res = _create_result_tables("water_yield")
+        csv_subws_res = _create_result_tables("water_yield", True)
 
         res_csv_paths = [csv_ws_res, csv_subws_res]
-        csv_paths = ['watershed_results_wyield.csv', 'subwatershed_results_wyield.csv']
+        csv_paths = ['watershed_results_wyield.csv',
+                     'subwatershed_results_wyield.csv']
         for comp_res, exp_res in zip(csv_paths, res_csv_paths):
             pygeoprocessing.testing.assert_csv_equal(
-                os.path.join(args['workspace_dir'], 'output', comp_res), exp_res, tolerance=4)
+                os.path.join(args['workspace_dir'], 'output', comp_res),
+                exp_res, tolerance=4)
 
         shutil.rmtree(args['workspace_dir'])
 
-        file_list = [test_files, exp_pix_results, res_shp_paths, res_csv_paths]
+        file_list = [test_files, exp_pix_results, res_shp_paths,
+                     res_csv_paths]
         for flist in file_list:
             for filename in flist:
                 os.remove(filename)
 
     def test_execute_bad_nodata(self):
         """Example execution of the Water Yield component of the model
-            testing correctness where input rasters have a nodata type of NONE."""
+            testing correctness where input rasters have a nodata type
+            of NONE."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
@@ -413,12 +468,20 @@ class HydropowerUnitTests(unittest.TestCase):
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix, nodata=None),
-            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32, nodata=None),
-            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32, nodata=None),
-            'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32, nodata=None),
-            'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32, nodata=None),
-            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
-            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'depth_to_root_rest_layer_uri': _create_raster(
+                root_matrix, gdal.GDT_Float32, nodata=None),
+            'precipitation_uri': _create_raster(
+                precip_matrix, gdal.GDT_Float32, nodata=None),
+            'pawc_uri': _create_raster(
+                pawc_matrix, gdal.GDT_Float32, nodata=None),
+            'eto_uri': _create_raster(
+                eto_matrix, gdal.GDT_Float32, nodata=None),
+            'watersheds_uri': _create_watershed(
+                fields=fields_ws, attributes=attr_ws, subshed=False,
+                execute=True),
+            'sub_watersheds_uri': _create_watershed(
+                fields=fields_sub, attributes=attr_sub, subshed=True,
+                execute=True),
             'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'water_scarcity_container': False,
@@ -429,7 +492,8 @@ class HydropowerUnitTests(unittest.TestCase):
         test_files = [
             args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
             args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
-            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri']]
+            args['watersheds_uri'], args['sub_watersheds_uri'],
+            args['biophysical_table_uri']]
 
         wyield_res = numpy.array([
             [730, 1451.94876],
@@ -444,11 +508,13 @@ class HydropowerUnitTests(unittest.TestCase):
             [505.12952, 655.47334]], numpy.float32)
         aet_path = _create_raster(aet_res, gdal.GDT_Float32)
 
-        pixel_files =  ['aet.tif', 'fractp.tif', 'wyield.tif']
+        pixel_files = ['aet.tif', 'fractp.tif', 'wyield.tif']
         exp_pix_results = [aet_path, fractp_path, wyield_path]
         for comp_res, exp_res in zip(pixel_files, exp_pix_results):
             pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', 'per_pixel', comp_res), exp_res)
+                os.path.join(
+                    args['workspace_dir'], 'output', 'per_pixel', comp_res),
+                exp_res)
 
         shutil.rmtree(args['workspace_dir'])
         for filename in test_files:
@@ -480,16 +546,22 @@ class HydropowerUnitTests(unittest.TestCase):
         fields_sub = {'subws_id': 'int'}
         attr_ws = [{'ws_id': 1}]
         attr_sub = [{'subws_id': 1}, {'subws_id': 2}]
-S
+
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
-            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
-            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'depth_to_root_rest_layer_uri': _create_raster(
+                root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(
+                precip_matrix, gdal.GDT_Float32),
             'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
-            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
-            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'watersheds_uri': _create_watershed(
+                fields=fields_ws, attributes=attr_ws, subshed=False,
+                execute=True),
+            'sub_watersheds_uri': _create_watershed(
+                fields=fields_sub, attributes=attr_sub, subshed=True,
+                execute=True),
             'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'demand_table_uri': _create_input_table("scarcity"),
@@ -501,20 +573,22 @@ S
         test_files = [
             args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
             args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
-            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
-            args['demand_table_uri']]
+            args['watersheds_uri'], args['sub_watersheds_uri'],
+            args['biophysical_table_uri'], args['demand_table_uri']]
 
-        res_ws_shp = _create_execute_result_watersheds("scarcity")
+        res_ws_shp = _create_result_watersheds("scarcity")
 
         shp_path = 'watershed_results_wyield.shp'
         pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', shp_path), res_ws_shp)
+            os.path.join(args['workspace_dir'], 'output', shp_path),
+            res_ws_shp)
 
-        res_ws_csv = _create_execute_result_tables("scarcity")
+        res_ws_csv = _create_result_tables("scarcity")
 
         csv_path = 'watershed_results_wyield.csv'
         pygeoprocessing.testing.assert_csv_equal(
-            os.path.join(args['workspace_dir'], 'output', csv_path), res_ws_csv, tolerance=4)
+            os.path.join(args['workspace_dir'], 'output', csv_path),
+            res_ws_csv, tolerance=4)
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -551,12 +625,18 @@ S
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
-            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
-            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'depth_to_root_rest_layer_uri': _create_raster(
+                root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(
+                precip_matrix, gdal.GDT_Float32),
             'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
-            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
-            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'watersheds_uri': _create_watershed(
+                fields=fields_ws, attributes=attr_ws, subshed=False,
+                execute=True),
+            'sub_watersheds_uri': _create_watershed(
+                fields=fields_sub, attributes=attr_sub, subshed=True,
+                execute=True),
             'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'demand_table_uri': _create_input_table("scarcity"),
@@ -569,20 +649,23 @@ S
         test_files = [
             args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
             args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
-            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
-            args['demand_table_uri'], args['valuation_table_uri']]
+            args['watersheds_uri'], args['sub_watersheds_uri'],
+            args['biophysical_table_uri'], args['demand_table_uri'],
+            args['valuation_table_uri']]
 
-        res_ws_shp = _create_execute_result_watersheds("valuation")
+        res_ws_shp = _create_result_watersheds("valuation")
 
         shp_path = 'watershed_results_wyield.shp'
         pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', shp_path), res_ws_shp)
+            os.path.join(args['workspace_dir'], 'output', shp_path),
+            res_ws_shp)
 
-        res_ws_csv = _create_execute_result_tables("valuation")
+        res_ws_csv = _create_result_tables("valuation")
 
         csv_path = 'watershed_results_wyield.csv'
         pygeoprocessing.testing.assert_csv_equal(
-            os.path.join(args['workspace_dir'], 'output', csv_path), res_ws_csv, tolerance=4)
+            os.path.join(args['workspace_dir'], 'output', csv_path),
+            res_ws_csv, tolerance=4)
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -618,12 +701,18 @@ S
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
-            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
-            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'depth_to_root_rest_layer_uri': _create_raster(
+                root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(
+                precip_matrix, gdal.GDT_Float32),
             'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
-            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
-            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'watersheds_uri': _create_watershed(
+                fields=fields_ws, attributes=attr_ws, subshed=False,
+                execute=True),
+            'sub_watersheds_uri': _create_watershed(
+                fields=fields_sub, attributes=attr_sub, subshed=True,
+                execute=True),
             'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'results_suffix': 'test',
@@ -637,12 +726,15 @@ S
         test_files = [
             args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
             args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
-            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
-            args['demand_table_uri'], args['valuation_table_uri']]
+            args['watersheds_uri'], args['sub_watersheds_uri'],
+            args['biophysical_table_uri'], args['demand_table_uri'],
+            args['valuation_table_uri']]
 
-        output_files = ['watershed_results_wyield_test.csv','subwatershed_results_wyield_test.csv',
-            'watershed_results_wyield_test.shp','subwatershed_results_wyield_test.shp',]
-        pixel_files =  ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
+        output_files = ['watershed_results_wyield_test.csv',
+                        'subwatershed_results_wyield_test.csv',
+                        'watershed_results_wyield_test.shp',
+                        'subwatershed_results_wyield_test.shp']
+        pixel_files = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
 
         for file_path in output_files:
             self.assertTrue(os.path.exists(
@@ -657,7 +749,8 @@ S
             os.remove(filename)
 
     def test_execute_with_suffix_and_underscore(self):
-        """Testing that a suffix given with an underscore is added correctly."""
+        """Testing that a suffix given with an underscore is added
+            correctly."""
         from natcap.invest.hydropower import hydropower_water_yield
         lulc_matrix = numpy.array([
             [0, 1],
@@ -683,12 +776,18 @@ S
         args = {
             'workspace_dir': tempfile.mkdtemp(),
             'lulc_uri': _create_raster(lulc_matrix),
-            'depth_to_root_rest_layer_uri': _create_raster(root_matrix, gdal.GDT_Float32),
-            'precipitation_uri': _create_raster(precip_matrix, gdal.GDT_Float32),
+            'depth_to_root_rest_layer_uri': _create_raster(
+                root_matrix, gdal.GDT_Float32),
+            'precipitation_uri': _create_raster(
+                precip_matrix, gdal.GDT_Float32),
             'pawc_uri': _create_raster(pawc_matrix, gdal.GDT_Float32),
             'eto_uri': _create_raster(eto_matrix, gdal.GDT_Float32),
-            'watersheds_uri': _create_watershed(fields=fields_ws, attributes=attr_ws, subshed=False, execute=True),
-            'sub_watersheds_uri': _create_watershed(fields=fields_sub, attributes=attr_sub, subshed=True, execute=True),
+            'watersheds_uri': _create_watershed(
+                fields=fields_ws, attributes=attr_ws, subshed=False,
+                execute=True),
+            'sub_watersheds_uri': _create_watershed(
+                fields=fields_sub, attributes=attr_sub, subshed=True,
+                execute=True),
             'biophysical_table_uri': _create_input_table("biophysical"),
             'seasonality_constant': 5,
             'results_suffix': '_test',
@@ -702,12 +801,15 @@ S
         test_files = [
             args['lulc_uri'], args['depth_to_root_rest_layer_uri'],
             args['precipitation_uri'], args['pawc_uri'], args['eto_uri'],
-            args['watersheds_uri'], args['sub_watersheds_uri'], args['biophysical_table_uri'],
-            args['demand_table_uri'], args['valuation_table_uri']]
+            args['watersheds_uri'], args['sub_watersheds_uri'],
+            args['biophysical_table_uri'], args['demand_table_uri'],
+            args['valuation_table_uri']]
 
-        output_files = ['watershed_results_wyield_test.csv','subwatershed_results_wyield_test.csv',
-            'watershed_results_wyield_test.shp','subwatershed_results_wyield_test.shp',]
-        pixel_files =  ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
+        output_files = ['watershed_results_wyield_test.csv',
+                        'subwatershed_results_wyield_test.csv',
+                        'watershed_results_wyield_test.shp',
+                        'subwatershed_results_wyield_test.shp']
+        pixel_files = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
 
         for file_path in output_files:
             self.assertTrue(os.path.exists(
@@ -721,31 +823,32 @@ S
         for filename in test_files:
             os.remove(filename)
 
-    def test_compute_waterhsed_valuation(self):
+    def test_compute_watershed_valuation(self):
         """Testing 'compute_watershed_valuation' function"""
         from natcap.invest.hydropower import hydropower_water_yield
 
         fields = {'ws_id': 'int', 'rsupply_vl': 'real'}
 
         attributes = [
-                {'ws_id': 1, 'rsupply_vl': 1000.0},
-                {'ws_id': 2, 'rsupply_vl': 2000.0},
-                {'ws_id': 3, 'rsupply_vl': 3000.0}]
+            {'ws_id': 1, 'rsupply_vl': 1000.0},
+            {'ws_id': 2, 'rsupply_vl': 2000.0},
+            {'ws_id': 3, 'rsupply_vl': 3000.0}]
 
         watershed_uri = _create_watershed(fields, attributes)
 
         val_dict = {
-                1: {'efficiency': 0.75, 'fraction': 0.6, 'height': 25.0,
-                      'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
-                      'cost': 0.0},
-                2: {'efficiency': 0.85, 'fraction': 0.7, 'height': 20.0,
-                      'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
-                      'cost': 0.0},
-                3: {'efficiency': 0.9, 'fraction': 0.6, 'height': 30.0,
-                      'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
-                      'cost': 0.0}}
+            1: {'efficiency': 0.75, 'fraction': 0.6, 'height': 25.0,
+                'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
+                'cost': 0.0},
+            2: {'efficiency': 0.85, 'fraction': 0.7, 'height': 20.0,
+                'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
+                'cost': 0.0},
+            3: {'efficiency': 0.9, 'fraction': 0.6, 'height': 30.0,
+                'discount': 5.0, 'time_span': 100.0, 'kw_price': 0.07,
+                'cost': 0.0}}
 
-        hydropower_water_yield.compute_watershed_valuation(watershed_uri, val_dict)
+        hydropower_water_yield.compute_watershed_valuation(
+            watershed_uri, val_dict)
 
         results = {
             1 : {'hp_energy': 30.6, 'hp_val': 44.63993483},
@@ -753,7 +856,8 @@ S
             3 : {'hp_energy': 132.192, 'hp_val': 192.84451846}
         }
 
-        # Check that the 'hp_energy' / 'hp_val' fields were added and are correct
+        # Check that the 'hp_energy' / 'hp_val' fields were added and are
+        # correct
         shape = ogr.Open(watershed_uri)
         # Check that the shapefiles have the same number of layers
         layer_count = shape.GetLayerCount()
@@ -767,8 +871,6 @@ S
             feat = layer.GetNextFeature()
             while feat is not None:
                 # Check that the field counts for the features are the same
-                layer_def = layer.GetLayerDefn()
-                field_count = layer_def.GetFieldCount()
                 ws_id = feat.GetField('ws_id')
 
                 for key in ['hp_energy', 'hp_val']:
@@ -783,7 +885,6 @@ S
                 feat = layer.GetNextFeature()
 
         shape = None
-        shape_regression = None
 
     def test_compute_rsupply_volume(self):
         """Testing the 'compute_rsupply_volume' function"""
@@ -793,12 +894,12 @@ S
                   'consum_mn': 'real', 'consum_vol': 'real'}
 
         attributes = [
-                {'ws_id': 1, 'wyield_mn': 400, 'wyield_vol': 1200,
-                 'consum_vol': 300, 'consum_mn': 80},
-                {'ws_id': 2, 'wyield_mn': 450, 'wyield_vol': 1100,
-                 'consum_vol': 300, 'consum_mn': 75},
-                {'ws_id': 3, 'wyield_mn': 500, 'wyield_vol': 1000,
-                 'consum_vol': 200, 'consum_mn': 50}]
+            {'ws_id': 1, 'wyield_mn': 400, 'wyield_vol': 1200,
+             'consum_vol': 300, 'consum_mn': 80},
+            {'ws_id': 2, 'wyield_mn': 450, 'wyield_vol': 1100,
+             'consum_vol': 300, 'consum_mn': 75},
+            {'ws_id': 3, 'wyield_mn': 500, 'wyield_vol': 1000,
+             'consum_vol': 200, 'consum_mn': 50}]
 
         watershed_uri = _create_watershed(fields, attributes)
 
@@ -810,7 +911,8 @@ S
             3 : {'rsupply_vl': 800, 'rsupply_mn': 450}
         }
 
-        # Check that the 'hp_energy' / 'hp_val' fields were added and are correct
+        # Check that the 'hp_energy' / 'hp_val' fields were added and are
+        # correct
         shape = ogr.Open(watershed_uri)
         # Check that the shapefiles have the same number of layers
         layer_count = shape.GetLayerCount()
@@ -824,8 +926,6 @@ S
             feat = layer.GetNextFeature()
             while feat is not None:
                 # Check that the field counts for the features are the same
-                layer_def = layer.GetLayerDefn()
-                field_count = layer_def.GetFieldCount()
                 ws_id = feat.GetField('ws_id')
 
                 for key in ['rsupply_vl', 'rsupply_mn']:
@@ -840,9 +940,8 @@ S
                 feat = layer.GetNextFeature()
 
         shape = None
-        shape_regression = None
 
-    def test_extract_datasource_table_by_key(self):
+    def test_extract_datasource_table(self):
         """Testing the 'extract_datasource_table_by_key' function, which
             returns a dictionary based on a Shapefiles attributes"""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -851,19 +950,19 @@ S
                   'consum_mn': 'real', 'consum_vol': 'real'}
 
         attributes = [
-                {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000,
-                 'consum_vol': 100, 'consum_mn': 10000},
-                {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 800,
-                 'consum_vol': 420, 'consum_mn': 10000},
-                {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 600,
-                 'consum_vol': 350, 'consum_mn': 10000}]
+            {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000,
+             'consum_vol': 100, 'consum_mn': 10000},
+            {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 800,
+             'consum_vol': 420, 'consum_mn': 10000},
+            {'ws_id': 3, 'wyield_mn': 1000, 'wyield_vol': 600,
+             'consum_vol': 350, 'consum_mn': 10000}]
 
         watershed_uri = _create_watershed(fields, attributes)
 
         key_field = 'ws_id'
         wanted_list = ['wyield_vol', 'consum_vol']
         results = hydropower_water_yield.extract_datasource_table_by_key(
-                    watershed_uri, key_field, wanted_list)
+            watershed_uri, key_field, wanted_list)
 
         expected_res = {1: {'wyield_vol': 1000, 'consum_vol': 100},
                         2: {'wyield_vol': 800, 'consum_vol': 420},
@@ -871,10 +970,12 @@ S
 
         for exp_key in expected_res.keys():
             if exp_key not in results:
-                raise AssertionError('Key %s not found in returned results' % exp_key)
+                raise AssertionError(
+                    'Key %s not found in returned results' % exp_key)
             for sub_key in expected_res[exp_key].keys():
                 if sub_key not in results[exp_key].keys():
-                    raise AssertionError('Key %s not found in returned results' % sub_key)
+                    raise AssertionError(
+                        'Key %s not found in returned results' % sub_key)
                 pygeoprocessing.testing.assert_almost_equal(
                     expected_res[exp_key][sub_key], results[exp_key][sub_key])
 
@@ -898,7 +999,8 @@ S
         for row, key in zip(reader, [0, 1, 2]):
             for sub_key in data[key].keys():
                 if sub_key not in row:
-                    raise AssertionError('Key %s not found in CSV table' % sub_key)
+                    raise AssertionError(
+                        'Key %s not found in CSV table' % sub_key)
                 pygeoprocessing.testing.assert_almost_equal(
                     float(data[key][sub_key]), float(row[sub_key]))
 
@@ -918,7 +1020,8 @@ S
 
         pixel_area = 100
 
-        hydropower_water_yield.compute_water_yield_volume(watershed_uri, pixel_area)
+        hydropower_water_yield.compute_water_yield_volume(
+            watershed_uri, pixel_area)
 
         results = {
             1: {'wyield_vol': 800},
@@ -934,8 +1037,6 @@ S
 
             feat = layer.GetNextFeature()
             while feat is not None:
-                layer_def = layer.GetLayerDefn()
-                field_count = layer_def.GetFieldCount()
                 ws_id = feat.GetField('ws_id')
 
                 try:
@@ -943,13 +1044,13 @@ S
                     pygeoprocessing.testing.assert_almost_equal(
                         results[ws_id]['wyield_vol'], key_val)
                 except ValueError:
-                    raise AssertionError('Could not find field %s' % key)
+                    raise AssertionError(
+                        'Could not find field %s' % 'wyield_vol')
 
                 feat = None
                 feat = layer.GetNextFeature()
 
         shape = None
-        shape_regression = None
 
     def test_add_dict_to_shape(self):
         """Testing the 'add_dict_to_shape' function."""
@@ -967,7 +1068,8 @@ S
 
         key = 'ws_id'
 
-        hydropower_water_yield.add_dict_to_shape(watershed_uri, field_dict, field_name, key)
+        hydropower_water_yield.add_dict_to_shape(
+            watershed_uri, field_dict, field_name, key)
 
         results = {
             1: {'precip': 50.0},
@@ -983,19 +1085,17 @@ S
 
             feat = layer.GetNextFeature()
             while feat is not None:
-                layer_def = layer.GetLayerDefn()
-                field_count = layer_def.GetFieldCount()
                 ws_id = feat.GetField('ws_id')
 
                 try:
-                    key_val = feat.GetField('precip')
+                    field_val = feat.GetField(field_name)
                     pygeoprocessing.testing.assert_almost_equal(
-                        results[ws_id]['precip'], key_val)
+                        results[ws_id][field_name], field_val)
                 except ValueError:
-                    raise AssertionError('Could not find field %s' % key)
+                    raise AssertionError(
+                        'Could not find field %s' % field_name)
 
                 feat = None
                 feat = layer.GetNextFeature()
 
         shape = None
-        shape_regression = None
