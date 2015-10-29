@@ -40,8 +40,11 @@ def execute(args):
             shapefile that will be used to aggregate carbon stock results at
             the end of the run.
         args['biophysical_table_uri'] (string): a path to a CSV table that has
-            at least a header for an 'lucode', 'is_tropical_forest', and
-            'c_above'.
+            at least a header for an 'lucode' and 'c_above'. If
+            args['compute_forest_edge_effects'] is True, table must also
+            contain an 'is_tropical_forest' header.  If
+            args['pools_to_calculate'] if 'all' must contain headers 'c_below',
+            'c_dead', and 'c_soil'.
                 'lucode': an integer that corresponds to landcover codes in
                     the raster args['lulc_uri']
                 'is_tropical_forest': either 0 or 1 indicating whether the
@@ -55,16 +58,25 @@ def execute(args):
                     carbon densities in the table.
 
                 Example:
-                    lucode,is_tropical_forest,c_above,c_soil
-                    0,0,32.8,5
-                    1,1,n/a,2.5
-                    2,1,n/a,1.8
-                    16,0,28.1,4.3
+                    lucode,is_tropical_forest,c_above,c_soil,c_dead,c_below
+                    0,0,32.8,5,5.2,2.1
+                    1,1,n/a,2.5,0.0,0.0
+                    2,1,n/a,1.8,1.0,0.0
+                    16,0,28.1,4.3,0.0,2.0
 
                     Note the "n/a" in 'c_above' are optional since that field
                     is ignored when is_tropical_forest==1.
 
         args['lulc_uri'] (string): path to a integer landcover code raster
+        args['pools_to_calculate'] (string): one of "all" or "above_ground".
+            If "all" model expects 'c_above', 'c_below', 'c_dead', 'c_soil'
+            in header of biophysical_table and will make a translated carbon
+            map for each based off the landcover map.  If "above_ground", this
+            is only done with 'c_above'.
+        args['compute_forest_edge_effects'] (boolean): if True, requires
+            biophysical table to have 'is_tropical_forest' forest field, and
+            any landcover codes that have a 1 in this column calculate carbon
+            stocks using the Chaplin-Kramer et. al method and ignore 'c_above'.
         args['tropical_forest_edge_carbon_model_shape_uri'] (string): path to a
             shapefile that defines the regions for the local carbon edge
             models.  Has at least the fields 'method', 'theta1', 'theta2',
@@ -103,22 +115,30 @@ def execute(args):
     output_file_registry = {
         'c_above_map': os.path.join(
             intermediate_dir, 'c_above_carbon_stocks%s.tif' % file_suffix),
-        'c_below_map': os.path.join(
-            intermediate_dir, 'c_below_carbon_stocks%s.tif' % file_suffix),
-        'c_soil_map': os.path.join(
-            intermediate_dir, 'c_soil_carbon_stocks%s.tif' % file_suffix),
-        'c_dead_map': os.path.join(
-            intermediate_dir, 'c_dead_carbon_stocks%s.tif' % file_suffix),
-        'edge_distance': os.path.join(
-            intermediate_dir, 'edge_distance%s.tif' % file_suffix),
-        'tropical_forest_edge_carbon_map': os.path.join(
-            intermediate_dir, 'tropical_forest_edge_carbon_stocks%s.tif' %
-            file_suffix),
         'carbon_map': os.path.join(
             output_dir, 'carbon_map%s.tif' % file_suffix),
         'aoi_datasource': os.path.join(
             output_dir, 'aggregated_carbon_stocks.shp')
     }
+
+    if args['pools_to_calculate'] == 'all':
+        output_file_registry['c_below_map'] = os.path.join(
+            intermediate_dir, 'c_below_carbon_stocks%s.tif' % file_suffix)
+        output_file_registry['c_soil_map'] = os.path.join(
+            intermediate_dir, 'c_soil_carbon_stocks%s.tif' % file_suffix)
+        output_file_registry['c_dead_map'] = os.path.join(
+            intermediate_dir, 'c_dead_carbon_stocks%s.tif' % file_suffix)
+    elif args['pools_to_calculate'] != 'above_ground':
+        raise ValueError(
+            "Unknown value for args['pools_to_calculate']=%s" %
+            args['pools_to_calculate'])
+
+    if args['compute_forest_edge_effects']:
+        output_file_registry['edge_distance'] = os.path.join(
+            intermediate_dir, 'edge_distance%s.tif' % file_suffix)
+        output_file_registry['tropical_forest_edge_carbon_map'] = os.path.join(
+            intermediate_dir, 'tropical_forest_edge_carbon_stocks%s.tif' %
+            file_suffix)
 
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('calculating direct mapped carbon stocks')
@@ -127,42 +147,48 @@ def execute(args):
         args['biophysical_table_uri'], 'lucode')
     biophysical_keys = [
         x.lower() for x in biophysical_table.itervalues().next().keys()]
-    for carbon_pool_type, ignore_tropical_type in [
-            ('c_above', True), ('c_below', False), ('c_soil', False),
-            ('c_dead', False)]:
+    pool_list = [('c_above', True)]
+    if args['pools_to_calculate'] == 'all':
+        pool_list.extend([
+            ('c_below', False), ('c_soil', False), ('c_dead', False)])
+    for carbon_pool_type, ignore_tropical_type in pool_list:
         if carbon_pool_type in biophysical_keys:
             carbon_maps.append(
                 output_file_registry[carbon_pool_type+'_map'])
             _calculate_lulc_carbon_map(
                 args['lulc_uri'], args['biophysical_table_uri'],
-                carbon_pool_type, ignore_tropical_type, carbon_maps[-1])
+                carbon_pool_type, ignore_tropical_type,
+                args['compute_forest_edge_effects'], carbon_maps[-1])
 
-    # generate a map of pixel distance to forest edge from the landcover map
-    LOGGER.info('calculating distance from forest edge')
-    _map_distance_from_tropical_forest_edge(
-        args['lulc_uri'], args['biophysical_table_uri'],
-        output_file_registry['edge_distance'])
+    if args['compute_forest_edge_effects']:
+        # generate a map of pixel distance to forest edge from the landcover map
+        LOGGER.info('calculating distance from forest edge')
+        _map_distance_from_tropical_forest_edge(
+            args['lulc_uri'], args['biophysical_table_uri'],
+            output_file_registry['edge_distance'])
 
-    # Build spatial index for gridded global model for closest 3 points
-    LOGGER.info('Building spatial index for forest edge models.')
-    kd_tree, theta_model_parameters, method_model_parameter = (
-        _build_spatial_index(
-            args['lulc_uri'], intermediate_dir,
-            args['tropical_forest_edge_carbon_model_shape_uri']))
+        # Build spatial index for gridded global model for closest 3 points
+        LOGGER.info('Building spatial index for forest edge models.')
+        kd_tree, theta_model_parameters, method_model_parameter = (
+            _build_spatial_index(
+                args['lulc_uri'], intermediate_dir,
+                args['tropical_forest_edge_carbon_model_shape_uri']))
 
-    # calculate the edge carbon effect on forests
-    LOGGER.info('calculating forest edge carbon')
-    _calculate_tropical_forest_edge_carbon_map(
-        output_file_registry['edge_distance'], kd_tree, theta_model_parameters,
-        method_model_parameter, int(args['n_nearest_model_points']),
-        float(args['biomass_to_carbon_conversion_factor']),
-        output_file_registry['tropical_forest_edge_carbon_map'])
+        # calculate the edge carbon effect on forests
+        LOGGER.info('calculating forest edge carbon')
+        _calculate_tropical_forest_edge_carbon_map(
+            output_file_registry['edge_distance'], kd_tree,
+            theta_model_parameters, method_model_parameter,
+            int(args['n_nearest_model_points']),
+            float(args['biomass_to_carbon_conversion_factor']),
+            output_file_registry['tropical_forest_edge_carbon_map'])
 
-    # This is also a carbon stock
-    carbon_maps.append(output_file_registry['tropical_forest_edge_carbon_map'])
+        # This is also a carbon stock
+        carbon_maps.append(
+            output_file_registry['tropical_forest_edge_carbon_map'])
 
     # combine maps into a single output
-    LOGGER.info('combining forest and non forest carbon into single raster')
+    LOGGER.info('combining carbon maps into single raster')
     cell_size_in_meters = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
 
@@ -268,7 +294,7 @@ def _aggregate_carbon_map(
 
 def _calculate_lulc_carbon_map(
         lulc_uri, biophysical_table_uri, carbon_pool_type,
-        ignore_tropical_type, carbon_map_uri):
+        ignore_tropical_type, compute_forest_edge_effects, carbon_map_uri):
     """Calculates the carbon on the map based on non-forest landcover types
     only.
 
@@ -285,6 +311,8 @@ def _calculate_lulc_carbon_map(
         ignore_tropical_type (boolean): if true, any landcover type whose
             'is_tropical_forest' field == 1 will be ignored for mapping the
             carbon pool type.
+        compute_forest_edge_effects (boolean): if true the 'is_tropical_forest'
+            header will be considered, if not, it is ignored
         carbon_map_uri (string): a filepath to the output raster
             that will contain total mapped carbon per cell.
 
@@ -301,14 +329,24 @@ def _calculate_lulc_carbon_map(
 
     # Build a lookup table
     for lucode in biophysical_table:
-        is_tropical_forest = (
-            int(biophysical_table[int(lucode)]['is_tropical_forest']))
+        if compute_forest_edge_effects:
+            is_tropical_forest = (
+                int(biophysical_table[int(lucode)]['is_tropical_forest']))
+        else:
+            is_tropical_forest = 0
         if ignore_tropical_type and is_tropical_forest == 1:
             # if forest, lookup table is nodata
             lucode_to_per_pixel_carbon[int(lucode)] = CARBON_MAP_NODATA
         else:
-            lucode_to_per_pixel_carbon[int(lucode)] = float(
-                biophysical_table[lucode][carbon_pool_type]) * cell_area_ha
+            try:
+                lucode_to_per_pixel_carbon[int(lucode)] = float(
+                    biophysical_table[lucode][carbon_pool_type]) * cell_area_ha
+            except ValueError:
+                raise ValueError(
+                    "Could not interpret carbon pool type as a number. "
+                    "lucode: %s, pool_type: %s, value: %s" %
+                    (lucode, carbon_pool_type,
+                     biophysical_table[lucode][carbon_pool_type]))
 
     # map aboveground carbon from table to lulc that is not forest
     pygeoprocessing.reclassify_dataset_uri(
