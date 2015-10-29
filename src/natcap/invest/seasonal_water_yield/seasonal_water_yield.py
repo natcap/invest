@@ -99,19 +99,19 @@ def execute(args):
         'flow_accum_path': os.path.join(args['workspace_dir'], 'flow_accum.tif'),
         'flow_dir_path': os.path.join(args['workspace_dir'], 'flow_dir.tif'),
         'kc_path': os.path.join(args['workspace_dir'], 'kc.tif'),
-        'L_avail_path': os.path.join(args['workspace_dir'], 'L_avail.tif'),
-        'L_path': os.path.join(args['workspace_dir'], 'L.tif'),
+        'l_avail_path': os.path.join(args['workspace_dir'], 'L_avail.tif'),
+        'l_path': os.path.join(args['workspace_dir'], 'L.tif'),
+        'l_sum_avail_path': os.path.join(args['workspace_dir'], 'L_sum_avail.tif'),
         'outflow_direction_path': os.path.join(args['workspace_dir'], 'outflow_direction.tif'),
         'outflow_weights_path': os.path.join(args['workspace_dir'], 'outflow_weights.tif'),
         'qb_out_path': os.path.join(args['workspace_dir'], 'qb.txt'),
         'qfi_path': os.path.join(args['workspace_dir'], 'qf.tif'),
-        'r_sum_avail_pour_path': os.path.join(args['workspace_dir'], 'r_sum_avail_pour.tif'),
+        'l_sum_avail_pour_path': os.path.join(args['workspace_dir'], 'L_sum_avail_pour.tif'),
         'sf_down_path': os.path.join(args['workspace_dir'], 'sf_down.tif'),
         'sf_path': os.path.join(args['workspace_dir'], 'sf.tif'),
         'si_path': os.path.join(args['workspace_dir'], 'si.tif'),
         'stream_path': os.path.join(args['workspace_dir'], 'stream.tif'),
         'vri_path': os.path.join(args['workspace_dir'], 'vri.tif'),
-
         }
 
     # add a suffix to all the output files
@@ -123,6 +123,8 @@ def execute(args):
     if not args['user_defined_local_recharge']:
         output_file_registry['local_recharge_path'] = os.path.join(
             args['workspace_dir'], 'local_recharge%s.tif' % file_suffix)
+        output_file_registry['local_recharge_avail_path'] = os.path.join(
+            args['workspace_dir'], 'local_recharge_avail%s.tif' % file_suffix)
 
     temporary_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
@@ -299,12 +301,14 @@ def execute(args):
             beta_i, gamma, output_file_registry['stream_path'],
             output_file_registry['local_recharge_path'],
             output_file_registry['local_recharge_avail_path'],
-            output_file_registry['r_sum_avail_path'],
+            output_file_registry['l_sum_avail_path'],
             output_file_registry['aet_path'], output_file_registry['kc_path'])
     else:
-        output_file_registry['local_recharge_path'] = local_recharge_aligned_path
-        local_recharge_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-            output_file_registry['local_recharge_path'])
+        output_file_registry['local_recharge_path'] = (
+            local_recharge_aligned_path)
+        local_recharge_nodata = (
+            pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                output_file_registry['local_recharge_path']))
 
         def calc_local_recharge_avail(local_recharge_array):
             local_recharge_threshold = local_recharge_array * gamma
@@ -331,13 +335,12 @@ def execute(args):
             output_file_registry['local_recharge_avail_path'],
             temporary_file_registry['zero_absorption_source_path'],
             temporary_file_registry['loss_path'],
-            output_file_registry['r_sum_avail_path'], 'flux_only',
+            output_file_registry['l_sum_avail_path'], 'flux_only',
             include_source=False)
 
     #calculate Qb as the sum of local_recharge_avail over the aoi
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
-        output_file_registry['local_recharge_avail_path'], args['aoi_path'])
-
+        output_file_registry['local_recharge_path'], args['aoi_path'])
     qb_result = qb_results.total[9999] / qb_results.n_pixels[9999]
     #9999 is the value used to index fields if no shapefile ID is provided
     qb_file = open(output_file_registry['qb_out_path'], 'w')
@@ -361,19 +364,19 @@ def execute(args):
         pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
 
-    LOGGER.info('calculating r_sum_avail_pour')
+    LOGGER.info('calculating l_sum_avail_pour')
     seasonal_water_yield_core.calculate_r_sum_avail_pour(
-        output_file_registry['r_sum_avail_path'],
+        output_file_registry['l_sum_avail_path'],
         output_file_registry['outflow_weights_path'],
         output_file_registry['outflow_direction_path'],
-        output_file_registry['r_sum_avail_pour_path'])
+        output_file_registry['l_sum_avail_pour_path'])
 
     LOGGER.info('calculating slow flow')
     seasonal_water_yield_core.route_sf(
         temporary_file_registry['dem_aligned_path'],
         output_file_registry['local_recharge_avail_path'],
-        output_file_registry['r_sum_avail_path'],
-        output_file_registry['r_sum_avail_pour_path'],
+        output_file_registry['l_sum_avail_path'],
+        output_file_registry['l_sum_avail_pour_path'],
         output_file_registry['outflow_direction_path'],
         output_file_registry['outflow_weights_path'],
         output_file_registry['stream_path'],
