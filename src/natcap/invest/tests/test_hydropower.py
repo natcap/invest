@@ -856,21 +856,14 @@ class HydropowerUnitTests(unittest.TestCase):
             3 : {'hp_energy': 132.192, 'hp_val': 192.84451846}
         }
 
-        # Check that the 'hp_energy' / 'hp_val' fields were added and are
-        # correct
         shape = ogr.Open(watershed_uri)
-        # Check that the shapefiles have the same number of layers
         layer_count = shape.GetLayerCount()
 
         for layer_num in range(layer_count):
-            # Get the current layer
             layer = shape.GetLayer(layer_num)
 
-            # Get the first features of the layers and loop through all the
-            # features
             feat = layer.GetNextFeature()
             while feat is not None:
-                # Check that the field counts for the features are the same
                 ws_id = feat.GetField('ws_id')
 
                 for key in ['hp_energy', 'hp_val']:
@@ -885,6 +878,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 feat = layer.GetNextFeature()
 
         shape = None
+        os.remove(watershed_uri)
 
     def test_compute_rsupply_volume(self):
         """Testing the 'compute_rsupply_volume' function"""
@@ -911,21 +905,14 @@ class HydropowerUnitTests(unittest.TestCase):
             3 : {'rsupply_vl': 800, 'rsupply_mn': 450}
         }
 
-        # Check that the 'hp_energy' / 'hp_val' fields were added and are
-        # correct
         shape = ogr.Open(watershed_uri)
-        # Check that the shapefiles have the same number of layers
         layer_count = shape.GetLayerCount()
 
         for layer_num in range(layer_count):
-            # Get the current layer
             layer = shape.GetLayer(layer_num)
 
-            # Get the first features of the layers and loop through all the
-            # features
             feat = layer.GetNextFeature()
             while feat is not None:
-                # Check that the field counts for the features are the same
                 ws_id = feat.GetField('ws_id')
 
                 for key in ['rsupply_vl', 'rsupply_mn']:
@@ -940,6 +927,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 feat = layer.GetNextFeature()
 
         shape = None
+        os.remove(watershed_uri)
 
     def test_extract_datasource_table(self):
         """Testing the 'extract_datasource_table_by_key' function, which
@@ -968,16 +956,18 @@ class HydropowerUnitTests(unittest.TestCase):
                         2: {'wyield_vol': 800, 'consum_vol': 420},
                         3: {'wyield_vol': 600, 'consum_vol': 350}}
 
-        for exp_key in expected_res.keys():
-            if exp_key not in results:
+        for res_key in results.keys():
+            if res_key not in expected_res.keys():
                 raise AssertionError(
-                    'Key %s not found in returned results' % exp_key)
-            for sub_key in expected_res[exp_key].keys():
-                if sub_key not in results[exp_key].keys():
+                    'Extra Key %s found in returned results' % res_key)
+            for sub_key in results[res_key].keys():
+                if sub_key not in expected_res[res_key].keys():
                     raise AssertionError(
-                        'Key %s not found in returned results' % sub_key)
+                        'Extra key %s found in returned results' % sub_key)
                 pygeoprocessing.testing.assert_almost_equal(
-                    expected_res[exp_key][sub_key], results[exp_key][sub_key])
+                    expected_res[res_key][sub_key], results[res_key][sub_key])
+
+        os.remove(watershed_uri)
 
     def test_write_new_table(self):
         """Testing 'write_new_table' function, which produces a CSV file."""
@@ -1005,6 +995,7 @@ class HydropowerUnitTests(unittest.TestCase):
                     float(data[key][sub_key]), float(row[sub_key]))
 
         csv_file.close()
+        os.remove(filename)
 
     def test_compute_water_yield_volume(self):
         """Testing 'compute_water_yield_volume' function"""
@@ -1026,8 +1017,7 @@ class HydropowerUnitTests(unittest.TestCase):
         results = {
             1: {'wyield_vol': 800},
             2: {'wyield_vol': 450},
-            3: {'wyield_vol': 200}
-            }
+            3: {'wyield_vol': 200}}
 
         shape = ogr.Open(watershed_uri)
         layer_count = shape.GetLayerCount()
@@ -1051,6 +1041,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 feat = layer.GetNextFeature()
 
         shape = None
+        os.remove(watershed_uri)
 
     def test_add_dict_to_shape(self):
         """Testing the 'add_dict_to_shape' function."""
@@ -1065,7 +1056,6 @@ class HydropowerUnitTests(unittest.TestCase):
         field_dict = {1: 50.0, 2: 10.5, 3: 15.8}
 
         field_name = 'precip'
-
         key = 'ws_id'
 
         hydropower_water_yield.add_dict_to_shape(
@@ -1074,8 +1064,7 @@ class HydropowerUnitTests(unittest.TestCase):
         results = {
             1: {'precip': 50.0},
             2: {'precip': 10.5},
-            3: {'precip': 15.8}
-            }
+            3: {'precip': 15.8}}
 
         shape = ogr.Open(watershed_uri)
         layer_count = shape.GetLayerCount()
@@ -1099,3 +1088,4 @@ class HydropowerUnitTests(unittest.TestCase):
                 feat = layer.GetNextFeature()
 
         shape = None
+        os.remove(watershed_uri)
