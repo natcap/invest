@@ -2698,7 +2698,7 @@ def resolve_flats(
     return True
 
 
-def calculate_recharge(
+def calculate_local_recharge(
     precip_uri_list, et0_uri_list, qfi_uri_list, flow_dir_uri, outflow_weights_uri,
     outflow_direction_uri, dem_uri, lulc_uri, kc_lookup, alpha_m, beta_i, gamma,
     stream_uri, recharge_uri, recharge_avail_uri, r_sum_avail_uri,

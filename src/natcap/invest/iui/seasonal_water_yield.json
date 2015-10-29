@@ -49,7 +49,7 @@
           "label": "ET0 Directory",
           "defaultValue": "../SeasonalWaterYield/input/et0_proj",
           "required": true,
-          "disabledBy": "user_defined_recharge_container",
+          "disabledBy": "user_defined_local_recharge_container",
           "helpText": "The selected folder has a list of ET0 files with a specified format."
         },
         {
@@ -59,7 +59,7 @@
           "label": "Precipitation Directory",
           "defaultValue": "../SeasonalWaterYield/input/precip_proj",
           "required": true,
-          "disabledBy": "user_defined_recharge_container",
+          "disabledBy": "user_defined_local_recharge_container",
           "helpText": "The selected folder has a list of monthly precipitation files with a specified format."
         },
         {
@@ -96,7 +96,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "disabledBy": "user_defined_recharge_container",
+          "disabledBy": "user_defined_local_recharge_container",
           "helpText": "Map of SCS soil groups (A, B, C, or D) mapped to integer values (1, 2, 3, or 4) used in combination of the LULC map to compute the CN map."
         },
         {
@@ -155,7 +155,7 @@
               "events"
             ]
           },
-          "disabledBy": "user_defined_recharge_container"
+          "disabledBy": "user_defined_local_recharge_container"
         },
         {
           "id": "alpha_m",
@@ -184,19 +184,19 @@
       ]
     },
     {
-      "id": "user_defined_recharge_container",
+      "id": "user_defined_local_recharge_container",
       "type": "container",
       "collapsible": true,
-      "args_id": "user_defined_recharge",
+      "args_id": "user_defined_local_recharge",
       "label": "User Defined Recharge Layer (Advanced)",
       "elements": [
         {
-          "id": "user_defined_recharge_list",
+          "id": "user_defined_local_recharge_list",
           "type": "list",
           "elements": [
             {
-              "id": "recharge_path",
-              "args_id": "recharge_path",
+              "id": "local_recharge_path",
+              "args_id": "local_recharge_path",
               "type": "file",
               "label": "(Raster)",
               "defaultValue": "",

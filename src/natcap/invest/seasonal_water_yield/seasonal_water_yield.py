@@ -37,17 +37,17 @@ def execute(args):
             stream pixels from the DEM by thresholding the number of upstream
             cells that must flow int a cell before it's considered
             part of a stream.
-        args['et0_dir'] (string): required if args['user_defined_recharge'] is
+        args['et0_dir'] (string): required if args['user_defined_local_recharge'] is
             False.  Path to a directory that contains rasters of
             monthly reference evapotranspiration; units in mm.
-        args['precip_dir'] (string): required if args['user_defined_recharge']
+        args['precip_dir'] (string): required if args['user_defined_local_recharge']
             is False. A path to a directory that contains rasters of monthly
             precipitation; units in mm.
         args['dem_path'] (string): a path to a digital elevation raster
         args['lulc_path'] (string): a path to a land cover raster used to
             classify biophysical properties of pixels.
         args['soil_group_path'] (string): required if
-            args['user_defined_recharge'] is  False. A path to a raster
+            args['user_defined_local_recharge'] is  False. A path to a raster
             indicating SCS soil groups where integer values are mapped to soil
             types:
                 1: A
@@ -62,21 +62,20 @@ def execute(args):
             well as Kc values.  Headers must be 'lucode', 'CN_A', 'CN_B',
             'CN_C', 'CN_D', and 'Kc'.
         args['rain_events_table_path'] (string): Required if
-            args['user_defined_recharge'] is  False. Path to a CSV table that
+            args['user_defined_local_recharge'] is  False. Path to a CSV table that
             has headers 'month' (1-12) and 'events' (int >= 0) that indicates
             the number of rain events per month
         args['alpha_m'] (float or string): proportion of upslope annual
-            available recharge that is available in month m.
+            available local recharge that is available in month m.
         args['beta_i'] (float or string): is the fraction of the upgradient
             subsidy that is available for downgradient evapotranspiration.
-        args['gamma'] (float or string): is the fraction of pixel recharge that
+        args['gamma'] (float or string): is the fraction of pixel local recharge that
             is available to downgradient pixels.
-        args['user_defined_recharge'] (boolean): if True, indicates user will
-            provide pre-defined recharge raster layer
-        args['recharge_path'] (string): required if
-            args['user_defined_recharge'] is True.  If provided pixels indicate
-            the amount of recharge; units in mm.
-
+        args['user_defined_local_recharge'] (boolean): if True, indicates user will
+            provide pre-defined local recharge raster layer
+        args['local_recharge_path'] (string): required if
+            args['user_defined_local_recharge'] is True.  If provided pixels indicate
+            the amount of local recharge; units in mm.
     """
 
     # prepare and test inputs for common errors
@@ -95,29 +94,35 @@ def execute(args):
     pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
 
     output_file_registry = {
-        'aet_path': os.path.join(args['workspace_dir'], 'aet%s.tif' % file_suffix),
-        'cn_path': os.path.join(args['workspace_dir'], 'cn%s.tif' % file_suffix),
-        'flow_accum_path': os.path.join(args['workspace_dir'], 'flow_accum%s.tif' % file_suffix),
-        'flow_dir_path': os.path.join(args['workspace_dir'], 'flow_dir%s.tif' % file_suffix),
-        'kc_path': os.path.join(args['workspace_dir'], 'kc%s.tif' % file_suffix),
-        'L_avail_path': os.path.join(args['workspace_dir'], 'L_avail%s.tif' % file_suffix),
-        'L_path': os.path.join(args['workspace_dir'], 'L%s.tif' % file_suffix),
-        'outflow_direction_path': os.path.join(args['workspace_dir'], 'outflow_direction%s.tif' % file_suffix),
-        'outflow_weights_path': os.path.join(args['workspace_dir'], 'outflow_weights%s.tif' % file_suffix),
-        'qb_out_path': os.path.join(args['workspace_dir'], 'qb%s.txt' % file_suffix),
-        'qfi_path': os.path.join(args['workspace_dir'], 'qf%s.tif' % file_suffix),
-        'r_sum_avail_pour_path': os.path.join(args['workspace_dir'], 'r_sum_avail_pour%s.tif' % file_suffix),
-        'sf_down_path': os.path.join(args['workspace_dir'], 'sf_down%s.tif' % file_suffix),
-        'sf_path': os.path.join(args['workspace_dir'], 'sf%s.tif' % file_suffix),
-        'si_path': os.path.join(args['workspace_dir'], 'si%s.tif' % file_suffix),
-        'stream_path': os.path.join(args['workspace_dir'], 'stream%s.tif' % file_suffix),
-        'vri_path': os.path.join(args['workspace_dir'], 'vri%s.tif' % file_suffix),
+        'aet_path': os.path.join(args['workspace_dir'], 'aet.tif'),
+        'cn_path': os.path.join(args['workspace_dir'], 'cn.tif'),
+        'flow_accum_path': os.path.join(args['workspace_dir'], 'flow_accum.tif'),
+        'flow_dir_path': os.path.join(args['workspace_dir'], 'flow_dir.tif'),
+        'kc_path': os.path.join(args['workspace_dir'], 'kc.tif'),
+        'L_avail_path': os.path.join(args['workspace_dir'], 'L_avail.tif'),
+        'L_path': os.path.join(args['workspace_dir'], 'L.tif'),
+        'outflow_direction_path': os.path.join(args['workspace_dir'], 'outflow_direction.tif'),
+        'outflow_weights_path': os.path.join(args['workspace_dir'], 'outflow_weights.tif'),
+        'qb_out_path': os.path.join(args['workspace_dir'], 'qb.txt'),
+        'qfi_path': os.path.join(args['workspace_dir'], 'qf.tif'),
+        'r_sum_avail_pour_path': os.path.join(args['workspace_dir'], 'r_sum_avail_pour.tif'),
+        'sf_down_path': os.path.join(args['workspace_dir'], 'sf_down.tif'),
+        'sf_path': os.path.join(args['workspace_dir'], 'sf.tif'),
+        'si_path': os.path.join(args['workspace_dir'], 'si.tif'),
+        'stream_path': os.path.join(args['workspace_dir'], 'stream.tif'),
+        'vri_path': os.path.join(args['workspace_dir'], 'vri.tif'),
+
         }
 
+    # add a suffix to all the output files
+    for file_id in output_file_registry:
+        output_file_registry[file_id] = file_suffix.join(
+            os.path.splitext(output_file_registry[file_id]))
+
     # this variable is only needed if there is not a predefined recharge file
-    if not args['user_defined_recharge']:
-        output_file_registry['recharge_path'] = os.path.join(
-            args['workspace_dir'], 'recharge%s.tif' % file_suffix)
+    if not args['user_defined_local_recharge']:
+        output_file_registry['local_recharge_path'] = os.path.join(
+            args['workspace_dir'], 'local_recharge%s.tif' % file_suffix)
 
     temporary_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
@@ -128,8 +133,8 @@ def execute(args):
         'soil_group_aligned_path': pygeoprocessing.temporary_filename()
     }
 
-    if args['user_defined_recharge']:
-        temporary_file_registry['recharge_aligned_path'] = (
+    if args['user_defined_local_recharge']:
+        temporary_file_registry['local_recharge_aligned_path'] = (
             pygeoprocessing.geoprocessing.temporary_filename())
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
@@ -142,7 +147,7 @@ def execute(args):
         temporary_file_registry['dem_aligned_path'],
         ]
 
-    if not args['user_defined_recharge']:
+    if not args['user_defined_local_recharge']:
         precip_path_list = []
         et0_path_list = []
 
@@ -194,10 +199,10 @@ def execute(args):
 
     interpolate_list = ['nearest'] * len(input_align_list)
     align_index = 0
-    if args['user_defined_recharge']:
-        input_align_list.append(args['recharge_path'])
+    if args['user_defined_local_recharge']:
+        input_align_list.append(args['local_recharge_path'])
         output_align_list.append(
-            temporary_file_registry['recharge_aligned_path'])
+            temporary_file_registry['local_recharge_aligned_path'])
         interpolate_list.append('nearest')
         align_index = len(interpolate_list) - 1
 
@@ -239,7 +244,7 @@ def execute(args):
         output_file_registry['kc_path'], gdal.GDT_Float32, -1)
 
     LOGGER.info('calculate slow flow')
-    if not args['user_defined_recharge']:
+    if not args['user_defined_local_recharge']:
         LOGGER.info('loading number of monthly events')
         rain_events_lookup = (
             pygeoprocessing.geoprocessing.get_lookup_from_table(
@@ -254,16 +259,37 @@ def execute(args):
             temporary_file_registry['soil_group_aligned_path'],
             biophysical_table, pixel_size, output_file_registry['cn_path'])
 
-        LOGGER.info('calculate quick flow')
-        calculate_quick_flow(
-            precip_path_aligned_list,
-            temporary_file_registry['lulc_aligned_path'],
-            output_file_registry['cn_path'], n_events,
-            output_file_registry['stream_path'],
-            output_file_registry['qfi_path'], qf_monthly_path_list,
-            output_file_registry['si_path'])
+        _calculate_si_raster(
+            output_file_registry['cn_path'],
+            output_file_registry['si_path'],
+            output_file_registry['stream_path'])
 
-        seasonal_water_yield_core.calculate_recharge(
+        for month_index in xrange(N_MONTHS):
+            LOGGER.info('calculate quick flow for month %d', month_index+1)
+            _calculate_monthly_quick_flow(
+                precip_path_aligned_list[month_index],
+                temporary_file_registry['lulc_aligned_path'],
+                output_file_registry['cn_path'], n_events[month_index+1],
+                output_file_registry['stream_path'],
+                qf_monthly_path_list[month_index],
+                output_file_registry['si_path'])
+
+        qf_nodata = -1
+        LOGGER.info('calculating QFi')
+
+        def qfi_sum_op(*qf_values):
+            """sum the monthly qfis"""
+            qf_sum = qf_values[0].copy()
+            for index in range(1, len(qf_values)):
+                qf_sum += qf_values[index]
+            qf_sum[qf_values[0] == qf_nodata] = qf_nodata
+            return qf_sum
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            qf_monthly_path_list, qfi_sum_op, output_file_registry['qfi_path'],
+            gdal.GDT_Float32, qf_nodata, pixel_size, 'intersection',
+            vectorize_op=False, datasets_are_pre_aligned=True)
+
+        seasonal_water_yield_core.calculate_local_recharge(
             precip_path_aligned_list, et0_path_aligned_list,
             qf_monthly_path_list, output_file_registry['flow_dir_path'],
             output_file_registry['outflow_weights_path'],
@@ -271,27 +297,27 @@ def execute(args):
             temporary_file_registry['dem_aligned_path'],
             temporary_file_registry['lulc_aligned_path'], kc_lookup, alpha_m,
             beta_i, gamma, output_file_registry['stream_path'],
-            output_file_registry['recharge_path'],
-            output_file_registry['recharge_avail_path'],
+            output_file_registry['local_recharge_path'],
+            output_file_registry['local_recharge_avail_path'],
             output_file_registry['r_sum_avail_path'],
             output_file_registry['aet_path'], output_file_registry['kc_path'])
     else:
-        output_file_registry['recharge_path'] = recharge_aligned_path
-        recharge_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-            output_file_registry['recharge_path'])
+        output_file_registry['local_recharge_path'] = local_recharge_aligned_path
+        local_recharge_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+            output_file_registry['local_recharge_path'])
 
-        def calc_recharge_avail(recharge_array):
-            recharge_threshold = recharge_array * gamma
-            recharge_threshold[recharge_threshold < 0] = 0.0
+        def calc_local_recharge_avail(local_recharge_array):
+            local_recharge_threshold = local_recharge_array * gamma
+            local_recharge_threshold[local_recharge_threshold < 0] = 0.0
             return numpy.where(
-                recharge_array != recharge_nodata,
-                recharge_threshold, recharge_nodata)
+                local_recharge_array != local_recharge_nodata,
+                local_recharge_threshold, local_recharge_nodata)
 
-        #calc recharge avail
+        #calc local_recharge avail
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [output_file_registry['recharge_aligned_path']],
-            calc_recharge_avail, output_file_registry['recharge_avail_path'],
-            gdal.GDT_Float32, recharge_nodata, pixel_size, 'intersection',
+            [output_file_registry['local_recharge_aligned_path']],
+            calc_local_recharge_avail, output_file_registry['local_recharge_avail_path'],
+            gdal.GDT_Float32, local_recharge_nodata, pixel_size, 'intersection',
             vectorize_op=False, datasets_are_pre_aligned=True)
 
         #calc r_sum_avail with flux accumulation
@@ -302,15 +328,15 @@ def execute(args):
         pygeoprocessing.routing.route_flux(
             output_file_registry['flow_dir_path'],
             temporary_file_registry['dem_path_aligned'],
-            output_file_registry['recharge_avail_path'],
+            output_file_registry['local_recharge_avail_path'],
             temporary_file_registry['zero_absorption_source_path'],
             temporary_file_registry['loss_path'],
             output_file_registry['r_sum_avail_path'], 'flux_only',
             include_source=False)
 
-    #calculate Qb as the sum of recharge_avail over the aoi
+    #calculate Qb as the sum of local_recharge_avail over the aoi
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
-        output_file_registry['recharge_avail_path'], args['aoi_path'])
+        output_file_registry['local_recharge_avail_path'], args['aoi_path'])
 
     qb_result = qb_results.total[9999] / qb_results.n_pixels[9999]
     #9999 is the value used to index fields if no shapefile ID is provided
@@ -320,9 +346,9 @@ def execute(args):
     LOGGER.info("Qb = %f", qb_result)
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
-        output_file_registry['recharge_path'])
+        output_file_registry['local_recharge_path'])
     ri_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-        output_file_registry['recharge_path'])
+        output_file_registry['local_recharge_path'])
 
     def vri_op(ri_array):
         """calc vri index"""
@@ -330,7 +356,7 @@ def execute(args):
             ri_array != ri_nodata, ri_array / qb_result, ri_nodata)
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [output_file_registry['recharge_path']], vri_op,
+        [output_file_registry['local_recharge_path']], vri_op,
         output_file_registry['vri_path'], gdal.GDT_Float32, ri_nodata,
         pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
@@ -345,7 +371,7 @@ def execute(args):
     LOGGER.info('calculating slow flow')
     seasonal_water_yield_core.route_sf(
         temporary_file_registry['dem_aligned_path'],
-        output_file_registry['recharge_avail_path'],
+        output_file_registry['local_recharge_avail_path'],
         output_file_registry['r_sum_avail_path'],
         output_file_registry['r_sum_avail_pour_path'],
         output_file_registry['outflow_direction_path'],
@@ -363,10 +389,10 @@ def execute(args):
     LOGGER.info('      //_| //_|')
 
 
-def calculate_quick_flow(
-        precip_path_list, lulc_path, cn_path, n_events, stream_path, qfi_path,
-        qf_monthly_path_list, si_path):
-    """Calculates quick flow
+def _calculate_monthly_quick_flow(
+        precip_path, lulc_path, cn_path, n_events, stream_path,
+        qf_monthly_path, si_path):
+    """Calculates quick flow for a month
 
     Parameters:
         precip_path_list (list of string): list of paths to files that
@@ -380,7 +406,6 @@ def calculate_quick_flow(
         stream_path (string): path to stream mask raster where 1 indicates a
             stream pixel, 0 is a non-stream but otherwise valid area from the
             original DEM, and nodata indicates areas outside the valid DEM.
-        qfi_path (string): path to output quickflow index raster
         qf_monthly_path_list (list of string): list of paths to output monthly
             rasters.
         si_path (string): list to output raster for potential maximum retention
@@ -405,70 +430,50 @@ def calculate_quick_flow(
         datasets_are_pre_aligned=True)
 
     qf_nodata = -1
-    p_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-        precip_path_list[0])
+    p_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(precip_path)
+    def qf_op(p_im, s_i, stream_array):
+        """Calculate quickflow as in equation 1a in user's guide
 
-    m_index = None
-    for m_index in range(1, N_MONTHS + 1):
-        def qf_op(p_im, s_i, stream_array):
-            """Calculate quickflow as in equation 1a in user's guide
+        Parameters:
+            p_im (numpy.array): precipitation at pixel i on month m
+            s_i (numpy.array): factor that is 1000/CN_i - 10
+                (Equation 1b from user's guide)
+            stream_mask (numpy.array): 1 if stream, otherwise not a stream
+                pixel.
 
-            Parameters:
-                p_im (numpy.array): precipitation at pixel i on month m
-                s_i (numpy.array): factor that is 1000/CN_i - 10
-                    (Equation 1b from user's guide)
-                stream_mask (numpy.array): 1 if stream, otherwise not a stream
-                    pixel.
+        Returns:
+            quickflow (numpy.array)"""
 
-            Returns:
-                quickflow (numpy.array)"""
+        nodata_mask = (p_im == p_nodata) | (s_i == si_nodata)
 
-            nodata_mask = (p_im == p_nodata) | (s_i == si_nodata)
+        #a_im is the mean rain depth on a rainy day at pixel i on month m
+        a_im = p_im / n_events / 25.4
 
-            #a_im is the mean rain depth on a rainy day at pixel i on month m
-            a_im = p_im / n_events[m_index] / 25.4
+        #qf_im is the quickflow at pixel i on month m (Equation 1a in the
+        # user's guide)
+        qf_im = (25.4 * n_events * (
+            (a_im - s_i) * numpy.exp(-0.2 * s_i / a_im) +
+            s_i ** 2 / a_im * numpy.exp((0.8 * s_i) / a_im) *
+            scipy.special.expn(1, s_i / a_im)))
 
-            #qf_im is the quickflow at pixel i on month m (Equation 1a in the
-            # user's guide)
-            qf_im = (25.4 * n_events[m_index] * (
-                (a_im - s_i) * numpy.exp(-0.2 * s_i / a_im) +
-                s_i ** 2 / a_im * numpy.exp((0.8 * s_i) / a_im) *
-                scipy.special.expn(1, s_i / a_im)))
+        # in cases where precipitation is small, a_im will be small and
+        # the quickflow can get into an inf / 0.0 state.  This zeros the
+        # result so at least we don't get a block of nodata pixels out
+        qf_im[numpy.isnan(qf_im)] = 0.0
 
-            # in cases where precipitation is small, a_im will be small and
-            # the quickflow can get into an inf / 0.0 state.  This zeros the
-            # result so at least we don't get a block of nodata pixels out
-            qf_im[numpy.isnan(qf_im)] = 0.0
+        # if a_im == 0, then QF should be zero
+        qf_im[a_im == 0] = 0.0
+        # mask out nodata
+        qf_im[nodata_mask] = qf_nodata
 
-            # if a_im == 0, then QF should be zero
-            qf_im[a_im == 0] = 0.0
-            # mask out nodata
-            qf_im[nodata_mask] = qf_nodata
+        # if we're on a stream, set quickflow to the precipitation
+        qf_im[stream_array == 1] = p_im[stream_array == 1]
+        return qf_im
 
-            # if we're on a stream, set quickflow to the precipitation
-            qf_im[stream_array == 1] = p_im[stream_array == 1]
-            return qf_im
-
-        LOGGER.info('calculating QFi_%d of %d', m_index, N_MONTHS)
-        pygeoprocessing.geoprocessing.vectorize_datasets(
-            [precip_path_list[m_index-1], si_path, stream_path], qf_op,
-            qf_monthly_path_list[m_index-1], gdal.GDT_Float32, qf_nodata,
-            pixel_size, 'intersection', vectorize_op=False,
-            datasets_are_pre_aligned=True)
-
-    LOGGER.info('calculating QFi')
-    def qfi_sum(*qf_values):
-        """sum the monthly qfis"""
-        qf_sum = qf_values[0].copy()
-        for index in range(1, len(qf_values)):
-            qf_sum += qf_values[index]
-        qf_sum[qf_values[0] == qf_nodata] = qf_nodata
-        return qf_sum
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        qf_monthly_path_list, qfi_sum, qfi_path,
+        [precip_path, si_path, stream_path], qf_op, qf_monthly_path,
         gdal.GDT_Float32, qf_nodata, pixel_size, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
-
 
 def _calculate_curve_number_raster(
         lulc_path, soil_group_path, biophysical_table, pixel_size, cn_path):
@@ -528,4 +533,39 @@ def _calculate_curve_number_raster(
     pygeoprocessing.vectorize_datasets(
         [lulc_path, soil_group_path], cn_op, cn_path, gdal.GDT_Float32,
         cn_nodata, pixel_size, 'intersection', vectorize_op=False,
+        datasets_are_pre_aligned=True)
+
+
+def _calculate_si_raster(cn_path, si_path, stream_path):
+    """Calculates the S factor of the SCS Runoff equation also known as the
+    potential maximum retention.
+
+    Parameters:
+        cn_path (string): path to curve number raster
+        lulc_path (string): path to landcover raster
+        si_path (string): path to output s_i raster
+
+    Returns:
+        None
+    """
+
+    si_nodata = -1
+    cn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(cn_path)
+
+    def si_op(ci_factor, stream_mask):
+        """calculate si factor"""
+        valid_mask = (ci_factor != cn_nodata) & (ci_factor > 0)
+        si_array = numpy.empty(ci_factor.shape)
+        si_array[:] = si_nodata
+        # multiply by the stream mask != 1 so we get 0s on the stream and
+        # unaffected results everywhere else
+        si_array[valid_mask] = (
+            (1000.0 / ci_factor[valid_mask] - 10) * (
+                stream_mask[valid_mask] != 1))
+        return si_array
+
+    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(cn_path)
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [cn_path, stream_path], si_op, si_path, gdal.GDT_Float32,
+        si_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
