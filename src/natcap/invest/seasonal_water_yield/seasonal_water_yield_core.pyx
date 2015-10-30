@@ -361,7 +361,7 @@ cdef route_local_recharge(
     cdef double in_flux
     cdef int current_neighbor_index
     cdef int current_index
-    cdef float current_r_sum_avail
+    cdef float current_l_sum_avail
     cdef float qf_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(qfi_path_list[0])
     cdef int month_index
     cdef float aet_sum
@@ -371,7 +371,7 @@ cdef route_local_recharge(
     cdef float qf_i
     cdef float qfi_m
     cdef float p_m
-    cdef float r_i
+    cdef float l_i
     cdef int neighbors_calculated = 0
 
     cdef time_t last_time, current_time
@@ -391,7 +391,7 @@ cdef route_local_recharge(
 
         current_neighbor_index = cell_neighbor_to_process.top()
         cell_neighbor_to_process.pop()
-        current_r_sum_avail = r_sum_stack.top()
+        current_l_sum_avail = r_sum_stack.top()
         r_sum_stack.pop()
         neighbors_calculated = 1
 
@@ -440,25 +440,23 @@ cdef route_local_recharge(
                 #push current cell and and loop
                 cells_to_process.push(current_index)
                 cell_neighbor_to_process.push(direction_index)
-                r_sum_stack.push(current_r_sum_avail)
+                r_sum_stack.push(current_l_sum_avail)
                 cells_to_process.push(neighbor_row * n_cols + neighbor_col)
                 cell_neighbor_to_process.push(0)
                 r_sum_stack.push(0.0)
                 neighbors_calculated = 0
                 break
             else:
-                #'calculate r_avail_i and r_i'
-                #add the contribution of the upstream to r_avail and r_i
-                current_r_sum_avail += (
+                #'calculate l_avail_i and l_i'
+                #add the contribution of the upstream to l_avail and l_i
+                current_l_sum_avail += (
                     l_sum_avail_block[neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset] +
-                    li_avail_block[neighbor_row_index, neighbor_col_index,
                         neighbor_row_block_offset, neighbor_col_block_offset]) * outflow_weight
 
         if not neighbors_calculated:
             continue
 
-        #if we got here current_r_sum_avail is correct
+        #if we got here current_l_sum_avail is correct
         block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
         p_i = 0.0
         qf_i = 0.0
@@ -472,23 +470,24 @@ cdef route_local_recharge(
             qfi_m = qfi_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
             qf_i += qfi_m
             aet_m = min(
-                pet_m, p_m - qfi_m + alpha_m * beta_i * current_r_sum_avail)
+                pet_m, p_m - qfi_m + alpha_m * beta_i * current_l_sum_avail)
             aet_sum += aet_m
-        r_i = p_i - qf_i - aet_sum
+        l_i = p_i - qf_i - aet_sum
 
-        #if it's a stream, set local_recharge to 0 and ae to nodata
+        #if it's a stream, set all recharge to 0 and aet to nodata
         if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
-            r_i = 0
+            l_i = 0
+            current_l_sum_avail = 0
             aet_sum = aet_nodata
 
-        li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma*r_i, 0)
+        li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma * l_i, 0)
 
         # also add in r_avail from the current pixel
-        current_r_sum_avail += li_avail_block[
+        current_l_sum_avail += li_avail_block[
             row_index, col_index, row_block_offset, col_block_offset]
 
-        l_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_r_sum_avail
-        li_block[row_index, col_index, row_block_offset, col_block_offset] = r_i
+        l_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_l_sum_avail
+        li_block[row_index, col_index, row_block_offset, col_block_offset] = l_i
         aet_block[row_index, col_index, row_block_offset, col_block_offset] = aet_sum
         cache_dirty[row_index, col_index] = 1
 
@@ -3150,7 +3149,7 @@ def route_sf(
                 if r_sum_avail == 0:
                     sf_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
                 else:
-                    #could r_sum_avail be < than r_i in this case?
+                    #could r_sum_avail be < than l_i in this case?
                     sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_avail / (r_avail+r_sum_avail), 0)
                 cache_dirty[row_index, col_index] = 1
 
