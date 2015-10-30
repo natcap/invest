@@ -37,12 +37,13 @@ def execute(args):
             stream pixels from the DEM by thresholding the number of upstream
             cells that must flow int a cell before it's considered
             part of a stream.
-        args['et0_dir'] (string): required if args['user_defined_local_recharge'] is
-            False.  Path to a directory that contains rasters of
-            monthly reference evapotranspiration; units in mm.
-        args['precip_dir'] (string): required if args['user_defined_local_recharge']
-            is False. A path to a directory that contains rasters of monthly
-            precipitation; units in mm.
+        args['et0_dir'] (string): required if
+            args['user_defined_local_recharge'] is False.  Path to a directory
+            that contains rasters of monthly reference evapotranspiration;
+            units in mm.
+        args['precip_dir'] (string): required if
+            args['user_defined_local_recharge'] is False. A path to a directory
+            that contains rasters of monthly precipitation; units in mm.
         args['dem_path'] (string): a path to a digital elevation raster
         args['lulc_path'] (string): a path to a land cover raster used to
             classify biophysical properties of pixels.
@@ -54,28 +55,28 @@ def execute(args):
                 2: B
                 3: C
                 4: D
-        args['aoi_path'] (string): path to a vector that indicates the area over
-            which the model should be run, as well as the area in which to
+        args['aoi_path'] (string): path to a vector that indicates the area
+            over which the model should be run, as well as the area in which to
             aggregate over when calculating the output Qb.
         args['biophysical_table_path'] (string): path to a CSV table that maps
             landcover codes paired with soil group types to curve numbers as
             well as Kc values.  Headers must be 'lucode', 'CN_A', 'CN_B',
             'CN_C', 'CN_D', and 'Kc'.
         args['rain_events_table_path'] (string): Required if
-            args['user_defined_local_recharge'] is  False. Path to a CSV table that
-            has headers 'month' (1-12) and 'events' (int >= 0) that indicates
-            the number of rain events per month
+            args['user_defined_local_recharge'] is  False. Path to a CSV table
+            that has headers 'month' (1-12) and 'events' (int >= 0) that
+            indicates the number of rain events per month
         args['alpha_m'] (float or string): proportion of upslope annual
             available local recharge that is available in month m.
         args['beta_i'] (float or string): is the fraction of the upgradient
             subsidy that is available for downgradient evapotranspiration.
-        args['gamma'] (float or string): is the fraction of pixel local recharge that
-            is available to downgradient pixels.
-        args['user_defined_local_recharge'] (boolean): if True, indicates user will
-            provide pre-defined local recharge raster layer
+        args['gamma'] (float or string): is the fraction of pixel local
+            recharge that is available to downgradient pixels.
+        args['user_defined_local_recharge'] (boolean): if True, indicates user
+            will provide pre-defined local recharge raster layer
         args['local_recharge_path'] (string): required if
-            args['user_defined_local_recharge'] is True.  If provided pixels indicate
-            the amount of local recharge; units in mm.
+            args['user_defined_local_recharge'] is True.  If provided pixels
+            indicate the amount of local recharge; units in mm.
     """
 
     # prepare and test inputs for common errors
@@ -105,10 +106,11 @@ def execute(args):
 
     pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
 
+    #TODO: Change all the output file tags to be called the variables in the UG
     output_file_registry = {
         'aet_path': os.path.join(args['workspace_dir'], 'aet.tif'),
+        'aetm_path_list': [None] * N_MONTHS,
         'cn_path': os.path.join(args['workspace_dir'], 'cn.tif'),
-        'flow_accum_path': os.path.join(args['workspace_dir'], 'flow_accum.tif'),
         'flow_dir_path': os.path.join(args['workspace_dir'], 'flow_dir.tif'),
         'kc_path': os.path.join(args['workspace_dir'], 'kc.tif'),
         'l_avail_path': os.path.join(args['workspace_dir'], 'L_avail.tif'),
@@ -117,7 +119,8 @@ def execute(args):
         'outflow_direction_path': os.path.join(args['workspace_dir'], 'outflow_direction.tif'),
         'outflow_weights_path': os.path.join(args['workspace_dir'], 'outflow_weights.tif'),
         'qb_out_path': os.path.join(args['workspace_dir'], 'qb.txt'),
-        'qfi_path': os.path.join(args['workspace_dir'], 'qf.tif'),
+        'qf_path': os.path.join(args['workspace_dir'], 'qf.tif'),
+        'qfm_path_list': [None] * N_MONTHS,
         'l_sum_avail_pour_path': os.path.join(args['workspace_dir'], 'L_sum_avail_pour.tif'),
         'b_sum_path': os.path.join(args['workspace_dir'], 'B_sum.tif'),
         'b_path': os.path.join(args['workspace_dir'], 'B.tif'),
@@ -128,22 +131,27 @@ def execute(args):
 
     # add a suffix to all the output files
     for file_id in output_file_registry:
-        output_file_registry[file_id] = file_suffix.join(
-            os.path.splitext(output_file_registry[file_id]))
+        if isinstance(output_file_registry[file_id], basestring):
+            output_file_registry[file_id] = file_suffix.join(
+                os.path.splitext(output_file_registry[file_id]))
 
     # add the monthly quick flow rasters
-    output_file_registry['monthly_qf_paths'] = [None] * N_MONTHS
     for m_index in range(N_MONTHS):
-        output_file_registry['monthly_qf_paths'][m_index] = (
+        output_file_registry['qfm_path_list'][m_index] = (
             os.path.join(args['workspace_dir'], 'qf_%d%s.tif' % (
+                m_index+1, file_suffix)))
+        output_file_registry['aetm_path_list'][m_index] = (
+            os.path.join(args['workspace_dir'], 'aetm_%d%s.tif' % (
                 m_index+1, file_suffix)))
 
     # this variable is only needed if there is not a predefined recharge file
     if not args['user_defined_local_recharge']:
         output_file_registry['local_recharge_path'] = os.path.join(
-            args['workspace_dir'], 'local_recharge%s.tif' % file_suffix)
+            args['workspace_dir'], 'L_i%s.tif' % file_suffix)
         output_file_registry['local_recharge_avail_path'] = os.path.join(
-            args['workspace_dir'], 'local_recharge_avail%s.tif' % file_suffix)
+            args['workspace_dir'], 'L_avail_i%s.tif' % file_suffix)
+        output_file_registry['annual_precip_path'] = os.path.join(
+            args['workspace_dir'], 'P_i%s.tif' % file_suffix)
 
     temporary_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
@@ -151,7 +159,8 @@ def execute(args):
         'loss_path': pygeoprocessing.geoprocessing.temporary_filename(),
         'zero_absorption_source_path': (
             pygeoprocessing.geoprocessing.temporary_filename()),
-        'soil_group_aligned_path': pygeoprocessing.temporary_filename()
+        'soil_group_aligned_path': pygeoprocessing.temporary_filename(),
+        'flow_accum_path': pygeoprocessing.temporary_filename(),
     }
 
     if args['user_defined_local_recharge']:
@@ -234,17 +243,23 @@ def execute(args):
     pygeoprocessing.routing.flow_accumulation(
         output_file_registry['flow_dir_path'],
         temporary_file_registry['dem_aligned_path'],
-        output_file_registry['flow_accum_path'])
+        temporary_file_registry['flow_accum_path'])
 
     LOGGER.info('stream thresholding')
     pygeoprocessing.routing.stream_threshold(
-        output_file_registry['flow_accum_path'],
+        temporary_file_registry['flow_accum_path'],
         threshold_flow_accumulation,
         output_file_registry['stream_path'])
 
-
-    LOGGER.info('calculate quick flow')
-    if not args['user_defined_local_recharge']:
+    LOGGER.info('quick flow')
+    if args['user_defined_local_recharge']:
+        output_file_registry['local_recharge_path'] = (
+            temporary_file_registry['local_recharge_aligned_path'])
+        local_recharge_nodata = (
+            pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                output_file_registry['local_recharge_path']))
+    else:
+        # user didn't predefine local recharge, calculate it
         LOGGER.info('loading number of monthly events')
         rain_events_lookup = (
             pygeoprocessing.geoprocessing.get_lookup_from_table(
@@ -272,7 +287,7 @@ def execute(args):
                 temporary_file_registry['lulc_aligned_path'],
                 output_file_registry['cn_path'], n_events[month_index+1],
                 output_file_registry['stream_path'],
-                output_file_registry['monthly_qf_paths'][month_index],
+                output_file_registry['qfm_path_list'][month_index],
                 output_file_registry['si_path'])
 
         qf_nodata = -1
@@ -287,15 +302,32 @@ def execute(args):
             qf_sum[~valid_mask] = qf_nodata
             return qf_sum
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            output_file_registry['monthly_qf_paths'], qfi_sum_op,
-            output_file_registry['qfi_path'], gdal.GDT_Float32, qf_nodata,
+            output_file_registry['qfm_path_list'], qfi_sum_op,
+            output_file_registry['qf_path'], gdal.GDT_Float32, qf_nodata,
             pixel_size, 'intersection', vectorize_op=False,
             datasets_are_pre_aligned=True)
-        sys.exit(1)
 
-        """seasonal_water_yield_core.calculate_local_recharge(
+        LOGGER.info('calculate local recharge')
+        kc_lookup = dict([
+            (lucode, biophysical_table[lucode]['kc']) for lucode in
+            biophysical_table])
+
+        LOGGER.info('flow weights')
+        seasonal_water_yield_core.calculate_flow_weights(
+            output_file_registry['flow_dir_path'],
+            output_file_registry['outflow_weights_path'],
+            output_file_registry['outflow_direction_path'])
+
+        LOGGER.info('classifying kc')
+        pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+            temporary_file_registry['lulc_aligned_path'], kc_lookup,
+            output_file_registry['kc_path'], gdal.GDT_Float32, -1)
+
+        # call through to a cython function that does the necessary routing
+        # between AET and L.sum.avail in equation [7], [4], and [3]
+        seasonal_water_yield_core.calculate_local_recharge(
             precip_path_aligned_list, et0_path_aligned_list,
-            output_file_registry['monthly_qf_paths'],
+            output_file_registry['qfm_path_list'],
             output_file_registry['flow_dir_path'],
             output_file_registry['outflow_weights_path'],
             output_file_registry['outflow_direction_path'],
@@ -305,34 +337,30 @@ def execute(args):
             output_file_registry['local_recharge_path'],
             output_file_registry['local_recharge_avail_path'],
             output_file_registry['l_sum_avail_path'],
-            output_file_registry['aet_path'], output_file_registry['kc_path'])"""
-    else:
-        output_file_registry['local_recharge_path'] = (
-            temporary_file_registry['local_recharge_aligned_path'])
-        local_recharge_nodata = (
-            pygeoprocessing.geoprocessing.get_nodata_from_uri(
-                output_file_registry['local_recharge_path']))
+            output_file_registry['aet_path'], output_file_registry['kc_path'])
+
+    sys.exit(1)
+
+    LOGGER.info('local recharge avail')
 
     def calc_local_recharge_avail(local_recharge_array):
+        """equation [8] from the user's guide"""
         local_recharge_threshold = local_recharge_array * gamma
         local_recharge_threshold[local_recharge_threshold < 0] = 0.0
         return numpy.where(
             local_recharge_array != local_recharge_nodata,
             local_recharge_threshold, local_recharge_nodata)
-
-    #calc local_recharge avail
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [output_file_registry['local_recharge_aligned_path']],
+        [output_file_registry['local_recharge_path']],
         calc_local_recharge_avail,
         output_file_registry['local_recharge_avail_path'],
         gdal.GDT_Float32, local_recharge_nodata, pixel_size,
         'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
 
-    #calc r_sum_avail with flux accumulation
+    LOGGER.info('sum upstream local recharge avail')
     pygeoprocessing.make_constant_raster_from_base_uri(
         temporary_file_registry['dem_aligned_path'], 0.0,
         temporary_file_registry['zero_absorption_source_path'])
-
     pygeoprocessing.routing.route_flux(
         output_file_registry['flow_dir_path'],
         temporary_file_registry['dem_aligned_path'],
@@ -376,22 +404,6 @@ def execute(args):
         output_file_registry['outflow_direction_path'],
         output_file_registry['l_sum_avail_pour_path'])
 
-    LOGGER.info('*** calculating slow flow')
-
-    LOGGER.info('classifying kc')
-    kc_lookup = dict([
-        (lucode, biophysical_table[lucode]['kc']) for lucode in
-        biophysical_table])
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        temporary_file_registry['lulc_aligned_path'], kc_lookup,
-        output_file_registry['kc_path'], gdal.GDT_Float32, -1)
-
-    LOGGER.info('flow weights')
-    seasonal_water_yield_core.calculate_flow_weights(
-        output_file_registry['flow_dir_path'],
-        output_file_registry['outflow_weights_path'],
-        output_file_registry['outflow_direction_path'])
-
     LOGGER.info('route slow flow')
     seasonal_water_yield_core.route_sf(
         temporary_file_registry['dem_aligned_path'],
@@ -419,10 +431,8 @@ def _calculate_monthly_quick_flow(
     """Calculates quick flow for a month
 
     Parameters:
-        precip_path_list (list of string): list of paths to files that
-            correspond to precipitation per month.  Files should be in order of
-            increasing month, although the final calculation is not affected if
-            not.
+        precip_path (string): path to file that correspond to monthly
+            precipitation
         lulc_path (string): path to landcover raster
         cn_path (string): path to curve number raster
         n_events (dict of int -> int): maps the number of rain events per month
