@@ -165,6 +165,7 @@ def compute_NV_across_timesteps(d, r):
     offset = d.border_year_list[r] - d.border_year_list[0]
     diff = d.border_year_list[r+1] - d.border_year_list[r]
     for j in xrange(0, diff):
+        LOGGER.info("Computing NV for year %i..." % (d.border_year_list[r] + j))
         compute_timestep_AENV(d, r, j+offset)
 
 
