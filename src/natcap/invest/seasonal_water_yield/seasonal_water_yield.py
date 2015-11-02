@@ -1,4 +1,6 @@
 """InVEST Seasonal Water Yield Model"""
+import warnings
+warnings.filterwarnings('error')
 
 import os
 import logging
@@ -455,7 +457,7 @@ def _calculate_monthly_quick_flow(
     p_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(precip_path)
 
     def qf_op(p_im, s_i, stream_array):
-        """Calculate quick flow as in equation 1a in user's guide
+        """Calculate quick flow as in Eq [1] in user's guide
 
         Parameters:
             p_im (numpy.array): precipitation at pixel i on month m
@@ -467,29 +469,25 @@ def _calculate_monthly_quick_flow(
         Returns:
             quick flow (numpy.array)"""
 
-        nodata_mask = (p_im == p_nodata) | (s_i == si_nodata)
-
+        valid_mask = (
+            (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
+            (stream_array != 1))
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
-        a_im = p_im / n_events / 25.4
+        a_im = p_im[valid_mask] / n_events / 25.4
+        qf_im = numpy.empty(p_im.shape)
+        qf_im[:] = qf_nodata
 
-        # qf_im is the quickflow at pixel i on month m (Equation 1 in the
-        # user's guide)
-        qf_im = (25.4 * n_events * (
-            (a_im - s_i) * numpy.exp(-0.2 * s_i / a_im) +
-            s_i ** 2 / a_im * numpy.exp((0.8 * s_i) / a_im) *
-            scipy.special.expn(1, s_i / a_im)))
+        # qf_im is the quickflow at pixel i on month m Eq. [1]
+        qf_im[valid_mask] = (25.4 * n_events * (
+            (a_im - s_i[valid_mask]) *
+            numpy.exp(-0.2 * s_i[valid_mask] / a_im) +
+            s_i[valid_mask] ** 2 / a_im *
+            numpy.exp((0.8 * s_i[valid_mask]) / a_im) *
+            scipy.special.expn(1, s_i[valid_mask] / a_im)))
 
-        # in cases where precipitation is small, a_im will be small and
-        # the quickflow can get into an inf / 0.0 state.  This zeros the
-        # result so at least we don't get a block of nodata pixels out
-        qf_im[numpy.isnan(qf_im)] = 0.0
-
-        # if a_im == 0, then QF should be zero
-        qf_im[a_im == 0] = 0.0
-        # mask out nodata
-        qf_im[nodata_mask] = qf_nodata
-
+        # if precip is 0, then QF should be zero
+        qf_im[p_im == 0] = 0.0
         # if we're on a stream, set quickflow to the precipitation
         qf_im[stream_array == 1] = p_im[stream_array == 1]
         return qf_im
