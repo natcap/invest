@@ -475,16 +475,15 @@ def _calculate_monthly_quick_flow(
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
         a_im = p_im[valid_mask] / n_events / 25.4
+        valid_si = s_i[valid_mask]
         qf_im = numpy.empty(p_im.shape)
         qf_im[:] = qf_nodata
 
         # qf_im is the quickflow at pixel i on month m Eq. [1]
         qf_im[valid_mask] = (25.4 * n_events * (
-            (a_im - s_i[valid_mask]) *
-            numpy.exp(-0.2 * s_i[valid_mask] / a_im) +
-            s_i[valid_mask] ** 2 / a_im *
-            numpy.exp((0.8 * s_i[valid_mask]) / a_im) *
-            scipy.special.expn(1, s_i[valid_mask] / a_im)))
+            (a_im - valid_si) * numpy.exp(-0.2 * valid_si / a_im) +
+            valid_si ** 2 / a_im * numpy.exp((0.8 * valid_si) / a_im) *
+            scipy.special.expn(1, valid_si / a_im)))
 
         # if precip is 0, then QF should be zero
         qf_im[p_im == 0] = 0.0
