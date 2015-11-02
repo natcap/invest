@@ -464,14 +464,17 @@ cdef route_local_recharge(
         for month_index in xrange(N_MONTHS):
             p_m = precip_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
             p_i += p_m
+            # Eq [6]
             pet_m = (
                 kc_block[row_index, col_index, row_block_offset, col_block_offset] *
                 et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
             qfi_m = qfi_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
             qf_i += qfi_m
+            # Eq [5]
             aet_m = min(
                 pet_m, p_m - qfi_m + alpha_m * beta_i * current_l_sum_avail)
             aet_sum += aet_m
+        # Eq [3]
         l_i = p_i - qf_i - aet_sum
 
         #if it's a stream, set all recharge to 0 and aet to nodata
@@ -480,9 +483,10 @@ cdef route_local_recharge(
             current_l_sum_avail = 0
             aet_sum = aet_nodata
 
+        # Eq [8]
         li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma * l_i, 0)
 
-        # also add in r_avail from the current pixel
+        # also add in r_avail from the current pixel from Eq [7]
         current_l_sum_avail += li_avail_block[
             row_index, col_index, row_block_offset, col_block_offset]
 

@@ -339,38 +339,7 @@ def execute(args):
             output_file_registry['l_sum_avail_path'],
             output_file_registry['aet_path'], output_file_registry['kc_path'])
 
-    sys.exit(1)
-
-    LOGGER.info('local recharge avail')
-
-    def calc_local_recharge_avail(local_recharge_array):
-        """equation [8] from the user's guide"""
-        local_recharge_threshold = local_recharge_array * gamma
-        local_recharge_threshold[local_recharge_threshold < 0] = 0.0
-        return numpy.where(
-            local_recharge_array != local_recharge_nodata,
-            local_recharge_threshold, local_recharge_nodata)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
-        [output_file_registry['local_recharge_path']],
-        calc_local_recharge_avail,
-        output_file_registry['local_recharge_avail_path'],
-        gdal.GDT_Float32, local_recharge_nodata, pixel_size,
-        'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
-
-    LOGGER.info('sum upstream local recharge avail')
-    pygeoprocessing.make_constant_raster_from_base_uri(
-        temporary_file_registry['dem_aligned_path'], 0.0,
-        temporary_file_registry['zero_absorption_source_path'])
-    pygeoprocessing.routing.route_flux(
-        output_file_registry['flow_dir_path'],
-        temporary_file_registry['dem_aligned_path'],
-        output_file_registry['local_recharge_avail_path'],
-        temporary_file_registry['zero_absorption_source_path'],
-        temporary_file_registry['loss_path'],
-        output_file_registry['l_sum_avail_path'], 'flux_only',
-        include_source=False)
-
-    #calculate Qb as the sum of local_recharge_avail over the aoi
+    #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
         output_file_registry['local_recharge_path'], args['aoi_path'])
     qb_result = qb_results.total[9999] / qb_results.n_pixels[9999]
@@ -386,16 +355,17 @@ def execute(args):
         output_file_registry['local_recharge_path'])
 
     def vri_op(ri_array):
-        """calc vri index"""
+        """calc vri index Eq 10"""
         return numpy.where(
             ri_array != ri_nodata,
             ri_array / qb_result / qb_results.n_pixels[9999], ri_nodata)
-
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [output_file_registry['local_recharge_path']], vri_op,
         output_file_registry['vri_path'], gdal.GDT_Float32, ri_nodata,
         pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
+
+    sys.exit(1)
 
     LOGGER.info('calculating l_sum_avail_pour')
     seasonal_water_yield_core.calculate_r_sum_avail_pour(
