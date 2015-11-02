@@ -1,15 +1,14 @@
 """Coastal Blue Carbon Preprocessor."""
-
-import logging
 import os
 import csv
 from itertools import product
 import pprint as pp
+import logging
 
 import gdal
-import pygeoprocessing
+from pygeoprocessing.geoprocessing import get_lookup_from_csv
 
-from natcap.invest.coastal_blue_carbon.global_variables import *
+from natcap.invest.coastal_blue_carbon import NODATA_INT, NODATA_FLOAT, HA_PER_M2
 from natcap.invest.coastal_blue_carbon.classes.raster import Raster
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -21,7 +20,7 @@ LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
 def execute(args):
     """Execute preprocessor.
 
-    Args:
+    Parameters:
         workspace_dir (string): desc
         results_suffix (string): desc
         lulc_lookup_uri (string): desc
@@ -71,8 +70,7 @@ def _get_derivative_inputs(vars_dict):
         output_dir
     """
     # ...
-    lulc_lookup_dict = pygeoprocessing.geoprocessing.get_lookup_from_csv(
-        vars_dict['lulc_lookup_uri'], 'code')
+    lulc_lookup_dict = get_lookup_from_csv(vars_dict['lulc_lookup_uri'], 'code')
 
     for code in lulc_lookup_dict.keys():
         sub_dict = lulc_lookup_dict[code]
@@ -221,7 +219,7 @@ def _validate_transitions(transition_set):
     """Asserts that transitions between rasters are nodata to nodata
     and lulc-code to lulc-code.
 
-    Args:
+    Parameters:
         transition_set (set): a set of tuples
 
     Raises:

@@ -8,7 +8,7 @@ try:
     import gdal
     import ogr
     import osr
-except:
+except ImportError:
     from osgeo import gdal
     from osgeo import ogr
     from osgeo import osr
@@ -17,24 +17,27 @@ import numpy as np
 from shapely.geometry import Polygon
 import shapely
 import pygeoprocessing as pygeo
+import pygeoprocessing.geoprocessing as geoprocess
 
-from natcap.invest.coastal_blue_carbon.classes.vector import Vector
 from natcap.invest.coastal_blue_carbon.classes.affine import Affine
 
-LOGGER = logging.getLogger('Raster Class')
+LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.classes.raster')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H/%M/%S')
 
 
 class Raster(object):
-    # any global variables here
-    def __init__(self, uri, driver):
+
+    """A class for interacting with gdal raster files."""
+
+    def __init__(self, uri, driver, resample_method=None):
         self.uri = uri
         self.driver = driver
         self.dataset = None
+        self.resample_method = resample_method
 
     @staticmethod
-    def from_array(array, affine, proj, datatype, nodata_val, driver='GTiff', filepath=None):
+    def from_array(array, affine, proj, datatype, nodata_val, resample_method=None, driver='GTiff', filepath=None):
         if len(array.shape) is 2:
             num_bands = 1
         elif len(array.shape) is 3:
@@ -45,7 +48,7 @@ class Raster(object):
         if filepath:
             dataset_uri = filepath
         else:
-            dataset_uri = pygeo.geoprocessing.temporary_filename()
+            dataset_uri = geoprocess.temporary_filename()
         rows = array.shape[0]
         cols = array.shape[1]
 
@@ -71,26 +74,36 @@ class Raster(object):
         driver = None
 
         if not filepath:
-            return Raster(dataset_uri, driver=driver)
+            return Raster(
+                dataset_uri, resample_method=resample_method, driver=driver)
 
-    @classmethod
-    def from_file(self, uri, driver='GTiff'):
-        dataset_uri = pygeo.geoprocessing.temporary_filename()
+    @staticmethod
+    def from_file(uri, resample_method=None, driver='GTiff'):
+        dataset_uri = geoprocess.temporary_filename()
         if not os.path.isabs(uri):
             uri = os.path.join(os.getcwd(), uri)
         # assert existence
         shutil.copyfile(uri, dataset_uri)
-        return Raster(dataset_uri, driver)
+        return Raster(dataset_uri, driver, resample_method=resample_method)
 
-    @classmethod
-    def from_tempfile(self, uri, driver='GTiff'):
+    @staticmethod
+    def from_tempfile(uri, driver='GTiff'):
         if not os.path.isabs(uri):
             uri = os.path.join(os.getcwd(), uri)
         return Raster(uri, driver)
 
-    @classmethod
-    def create_simple_affine(self, top_left_x, top_left_y, pix_width, pix_height):
+    @staticmethod
+    def create_simple_affine(top_left_x, top_left_y, pix_width, pix_height):
         return Affine(pix_width, 0, top_left_x, 0, -(pix_height), top_left_y)
+
+    def _open_dataset(self):
+        self.dataset = gdal.Open(self.uri)
+
+    def _close_dataset(self):
+        self.dataset = None
+
+    def __del__(self):
+        self._delete()
 
     def __exit__(self):
         self._delete()
@@ -99,7 +112,7 @@ class Raster(object):
         os.remove(self.uri)
 
     def __str__(self):
-        string = '\nRASTER'
+        string = '\nRASTER___'
         string += '\nNumber of Bands: ' + str(self.band_count())
         string += '\nBand 1:\n' + self.get_band(1).__repr__()
         string += self.get_affine().__repr__()
@@ -353,11 +366,6 @@ class Raster(object):
     def get_heatmap_image(self):
         raise NotImplementedError
 
-    def sum(self):
-        vector = Vector.from_shapely(self.get_aoi(), self.get_projection())
-        t = pygeo.aggregate_raster_values_uri(self.uri, vector.uri)
-        return t.total[9999]
-
     def min(self):
         pygeo.calculate_raster_stats_uri(self.uri)
         mini, _, _, _ = pygeo.get_statistics_from_uri(self.uri)
@@ -439,6 +447,13 @@ class Raster(object):
         self._close_dataset()
         return a
 
+    def get_resample_method(self):
+        if not self.resample_method:
+            raise AttributeError(
+                'Raster object has no assigned resample_method attribute')
+        else:
+            return self.resample_method
+
     def get_nodata(self, band_num):
         nodata_val = None
         self._open_dataset()
@@ -480,9 +495,7 @@ class Raster(object):
         return cols
 
     def get_pixel_value_at_pixel_indices(self, px, py):
-        '''
-        Position relative to origin regardless of affine transform
-        '''
+        """Position relative to origin regardless of affine transform."""
         pix = None
         self._open_dataset()
 
@@ -496,30 +509,26 @@ class Raster(object):
         return pix
 
     def get_georef_point_at_pixel_indices(self, px, py):
-        '''
-        Georeferenced point of pixel center
-        '''
+        """Georeferenced point of pixel center."""
         a = self.get_affine()
         gx = (a.a * (px + 0.5)) + (a.b * (py + 0.5)) + a.c
         gy = (a.e * (py + 0.5)) + (a.d * (px + 0.5)) + a.f
         return (gx, gy)
 
     def get_shapely_point_at_pixel_indices(self, px, py):
-        '''
-        Georeferenced point of pixel center
-        '''
+        """Georeferenced point of pixel center."""
         gx, gy = self.get_georef_point_at_pixel_indices(px, py)
         return shapely.geometry.point.Point(gx, gy)
 
     def get_pixel_indices_at_georef_point(self, gx, gy):
-        '''this may only apply to non-rotated rasters'''
+        """note: this may only apply to non-rotated rasters."""
         gt = self.get_geotransform()
         px = int((gx - gt[0]) / gt[1])
         py = int((gy - gt[3]) / gt[5])
         return (px, py)
 
     def get_pixel_indices_at_shapely_point(self, shapely_point):
-        '''this may only apply to non-rotated rasters'''
+        """note: this may only apply to non-rotated rasters."""
         return self.get_pixel_indices_at_georef_point(
             shapely_point.x, shapely_point.y)
 
@@ -567,10 +576,10 @@ class Raster(object):
         return Affine.from_gdal(*geotransform)
 
     def get_bounding_box(self):
-        return pygeo.geoprocessing.get_bounding_box(self.uri)
+        return geoprocess.get_bounding_box(self.uri)
 
     def get_aoi(self):
-        '''May only be suited for non-rotated rasters'''
+        """May only be suited for non-rotated rasters."""
         bb = self.get_bounding_box()
         u_x = max(bb[0::2])
         l_x = min(bb[0::2])
@@ -579,7 +588,7 @@ class Raster(object):
         return Polygon([(l_x, l_y), (l_x, u_y), (u_x, u_y), (u_x, l_y)])
 
     def get_aoi_as_shapefile(self, uri):
-        '''May only be suited for non-rotated rasters'''
+        """May only be suited for non-rotated rasters."""
         raise NotImplementedError
 
     def get_cell_area(self):
@@ -617,12 +626,12 @@ class Raster(object):
 
         nodata = self.get_nodata(1)
         pixel_op = pixel_op_closure(nodata)
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
+        dataset_out_uri = geoprocess.temporary_filename()
         datatype_out = datatype
         nodata_out = nodata
-        pixel_size_out = pygeo.geoprocessing.get_cell_size_from_uri(self.uri)
+        pixel_size_out = geoprocess.get_cell_size_from_uri(self.uri)
 
-        pygeo.geoprocessing.vectorize_datasets(
+        geoprocess.vectorize_datasets(
             dataset_uri_list,
             pixel_op,
             dataset_out_uri,
@@ -653,12 +662,12 @@ class Raster(object):
 
         old_nodata = self.get_nodata(1)
         pixel_op = pixel_op_closure(old_nodata, nodata_val)
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
-        datatype_out = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
+        dataset_out_uri = geoprocess.temporary_filename()
+        datatype_out = geoprocess.get_datatype_from_uri(self.uri)
         nodata_out = nodata_val
-        pixel_size_out = pygeo.geoprocessing.get_cell_size_from_uri(self.uri)
+        pixel_size_out = geoprocess.get_cell_size_from_uri(self.uri)
 
-        pygeo.geoprocessing.vectorize_datasets(
+        geoprocess.vectorize_datasets(
             dataset_uri_list,
             pixel_op,
             dataset_out_uri,
@@ -689,12 +698,12 @@ class Raster(object):
 
         old_nodata = self.get_nodata(1)
         pixel_op = pixel_op_closure(old_nodata, nodata_val)
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
+        dataset_out_uri = geoprocess.temporary_filename()
         datatype_out = datatype
         nodata_out = nodata_val
-        pixel_size_out = pygeo.geoprocessing.get_cell_size_from_uri(self.uri)
+        pixel_size_out = geoprocess.get_cell_size_from_uri(self.uri)
 
-        pygeo.geoprocessing.vectorize_datasets(
+        geoprocess.vectorize_datasets(
             dataset_uri_list,
             pixel_op,
             dataset_out_uri,
@@ -712,7 +721,7 @@ class Raster(object):
 
     def copy(self, uri=None):
         if not uri:
-            uri = pygeo.geoprocessing.temporary_filename()
+            uri = geoprocess.temporary_filename()
         if not os.path.isabs(uri):
             uri = os.path.join(os.getcwd(), uri)
         shutil.copyfile(self.uri, uri)
@@ -727,19 +736,19 @@ class Raster(object):
             raise TypeError
 
     def align(self, raster, resample_method):
-        '''Currently aligns other raster to this raster - later: union/intersection
-        '''
-        assert(self.get_projection() == raster.get_projection())
+        """Currently aligns other raster to this raster - later: union/intersection."""
+        if not self.get_projection() == raster.get_projection():
+            raise AssertionError("Different Projections")
 
         def dataset_pixel_op(x, y): return y
         dataset_uri_list = [self.uri, raster.uri]
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
-        datatype_out = pygeo.geoprocessing.get_datatype_from_uri(raster.uri)
-        nodata_out = pygeo.geoprocessing.get_nodata_from_uri(raster.uri)
-        pixel_size_out = pygeo.geoprocessing.get_cell_size_from_uri(self.uri)
+        dataset_out_uri = geoprocess.temporary_filename()
+        datatype_out = geoprocess.get_datatype_from_uri(raster.uri)
+        nodata_out = geoprocess.get_nodata_from_uri(raster.uri)
+        pixel_size_out = geoprocess.get_cell_size_from_uri(self.uri)
         bounding_box_mode = "dataset"
 
-        pygeo.geoprocessing.vectorize_datasets(
+        geoprocess.vectorize_datasets(
             dataset_uri_list,
             dataset_pixel_op,
             dataset_out_uri,
@@ -756,20 +765,20 @@ class Raster(object):
         return Raster.from_tempfile(dataset_out_uri)
 
     def align_to(self, raster, resample_method):
-        '''Currently aligns self to provided raster - later: union/intersection
-        '''
-        assert(self.get_projection() == raster.get_projection())
+        """Currently aligns self to provided raster - later: union/intersection"""
+        if not self.get_projection() == raster.get_projection():
+            raise AssertionError("Different Projections")
 
         def dataset_pixel_op(x, y): return y
 
         dataset_uri_list = [raster.uri, self.uri]
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
-        datatype_out = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
-        nodata_out = pygeo.geoprocessing.get_nodata_from_uri(self.uri)
-        pixel_size_out = pygeo.geoprocessing.get_cell_size_from_uri(raster.uri)
+        dataset_out_uri = geoprocess.temporary_filename()
+        datatype_out = geoprocess.get_datatype_from_uri(self.uri)
+        nodata_out = geoprocess.get_nodata_from_uri(self.uri)
+        pixel_size_out = geoprocess.get_cell_size_from_uri(raster.uri)
         bounding_box_mode = "dataset"
 
-        pygeo.geoprocessing.vectorize_datasets(
+        geoprocess.vectorize_datasets(
             dataset_uri_list,
             dataset_pixel_op,
             dataset_out_uri,
@@ -787,13 +796,13 @@ class Raster(object):
 
     def clip(self, aoi_uri):
         r = None
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
+        dataset_out_uri = geoprocess.temporary_filename()
         datatype = self.get_datatype(1)
         nodata = self.get_nodata(1)
         pixel_size = self.get_affine().a
 
         try:
-            pygeo.geoprocessing.clip_dataset_uri(
+            geoprocess.clip_dataset_uri(
                 self.uri,
                 aoi_uri,
                 dataset_out_uri,
@@ -820,8 +829,8 @@ class Raster(object):
             my1 = src_af.f
             sign_x = np.sign(src_af.a)
             sign_y = np.sign(src_af.e)
-            mx2 = (sign_x * px) + mx1
-            my2 = (sign_y * py) + my1
+            mx2 = (src_af.a * px) + mx1
+            my2 = (src_af.e * py) + my1
             affine = Affine(
                 src_af.a,
                 src_af.b,
@@ -842,21 +851,21 @@ class Raster(object):
         if pixel_size is None:
             pixel_size = self.get_affine().a
 
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
+        dataset_out_uri = geoprocess.temporary_filename()
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(proj)
         wkt = srs.ExportToWkt()
 
-        pygeo.geoprocessing.reproject_dataset_uri(
+        geoprocess.reproject_dataset_uri(
             self.uri, pixel_size, wkt, resample_method, dataset_out_uri)
 
         return Raster.from_tempfile(dataset_out_uri)
 
     def resize_pixels(self, pixel_size, resample_method):
         bounding_box = self.get_bounding_box()
-        output_uri = pygeo.geoprocessing.temporary_filename()
+        output_uri = geoprocess.temporary_filename()
 
-        pygeo.geoprocessing.resize_and_resample_dataset_uri(
+        geoprocess.resize_and_resample_dataset_uri(
             self.uri,
             bounding_box,
             pixel_size,
@@ -895,12 +904,12 @@ class Raster(object):
 
     def reclass(self, reclass_table, out_nodata=None, out_datatype=None):
         if out_nodata is None:
-            out_nodata = pygeo.geoprocessing.get_nodata_from_uri(self.uri)
+            out_nodata = geoprocess.get_nodata_from_uri(self.uri)
         if out_datatype is None:
-            out_datatype = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
+            out_datatype = geoprocess.get_datatype_from_uri(self.uri)
+        dataset_out_uri = geoprocess.temporary_filename()
 
-        pygeo.geoprocessing.reclassify_dataset_uri(
+        geoprocess.reclassify_dataset_uri(
             self.uri,
             reclass_table,
             dataset_out_uri,
@@ -913,23 +922,25 @@ class Raster(object):
     def overlay(self, raster):
         raise NotImplementedError
 
-    def to_vector(self):
-        aoi_shapely = self.get_aoi()
-        proj = self.get_projection()
-        return Vector.from_shapely(aoi_shapely, proj)
+    def to_binary_raster(self, val):
+        values_list = list(set(self.get_band(1).data.flatten()))
+        reclass_list = [(v, 0) for v in values_list]
+        reclass_dict = dict(reclass_list)
+        if val in values_list:
+            print val
+            reclass_dict[val] = 1
+        return self.reclass(reclass_dict)
 
     def local_op(self, raster, pixel_op_closure, broadcast=False):
         bounding_box_mode = "dataset"
         resample_method = "nearest"
 
         if not broadcast:
-            assert(self.is_aligned(raster))
-            try:
-                assert(self.get_nodata(1) == raster.get_nodata(1))
-            except AssertionError:
-                LOGGER.error("Rasters have different nodata values: %f, %f" % (
+            if not self.is_aligned(raster):
+                raise AssertionError("Not Aligned")
+            if not self.get_nodata(1) == raster.get_nodata(1):
+                raise AssertionError("Rasters have different nodata values: %f, %f" % (
                     self.get_nodata(1), raster.get_nodata(1)))
-                raise AssertionError
             dataset_uri_list = [self.uri, raster.uri]
             resample_list = [resample_method]*2
         else:
@@ -938,12 +949,12 @@ class Raster(object):
 
         nodata = self.get_nodata(1)
         pixel_op = pixel_op_closure(nodata)
-        dataset_out_uri = pygeo.geoprocessing.temporary_filename()
-        datatype_out = pygeo.geoprocessing.get_datatype_from_uri(self.uri)
-        nodata_out = pygeo.geoprocessing.get_nodata_from_uri(self.uri)
-        pixel_size_out = pygeo.geoprocessing.get_cell_size_from_uri(self.uri)
+        dataset_out_uri = geoprocess.temporary_filename()
+        datatype_out = geoprocess.get_datatype_from_uri(self.uri)
+        nodata_out = geoprocess.get_nodata_from_uri(self.uri)
+        pixel_size_out = geoprocess.get_cell_size_from_uri(self.uri)
 
-        pygeo.geoprocessing.vectorize_datasets(
+        geoprocess.vectorize_datasets(
             dataset_uri_list,
             pixel_op,
             dataset_out_uri,
@@ -958,9 +969,3 @@ class Raster(object):
             vectorize_op=False)
 
         return Raster.from_tempfile(dataset_out_uri)
-
-    def _open_dataset(self):
-        self.dataset = gdal.Open(self.uri)
-
-    def _close_dataset(self):
-        self.dataset = None

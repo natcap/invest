@@ -121,7 +121,6 @@ setup(
         'natcap.invest.crop_production',
         'natcap.invest.coastal_blue_carbon',
         'natcap.invest.coastal_blue_carbon.classes',
-        'natcap.invest.coastal_blue_carbon.utilities',
         'natcap.invest.carbon',
         'natcap.invest.coastal_vulnerability',
         'natcap.invest.dbfpy',

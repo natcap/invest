@@ -28,7 +28,7 @@
           "label": "Results Suffix (Optional)",
           "defaultValue": "",
           "required": false,
-          "helpText": "(help text)"
+          "helpText": "This text will be appended to the end of the yield function output folders to help seperate outputs from multiple runs."
         },
         {
           "id": "lulc_lookup_uri",
@@ -36,7 +36,7 @@
           "type": "file",
           "label": "LULC Lookup Table (CSV)",
           "defaultValue": "../CoastalBlueCarbon/inputs/lulc_lookup.csv",
-          "helpText": "(help text)",
+          "helpText": "A CSV table used to map lulc classes to their values in a raster, as well as to indicate whether or not the lulc class is a coastal blue carbon habitat.",
           "required": true
         }
       ]
@@ -60,7 +60,7 @@
         "../CoastalBlueCarbon/inputs/GBJC_2100_mean_Resample.tif"
       ],
       "linkText": "Add Another",
-      "helpText": "LULC snapshot maps must be entered in chronological order."
+      "helpText": "A set of GDAL-supported rasters representing the land/seascape at particular points in time. Provided in chronological order."
     }
   ]
 }
