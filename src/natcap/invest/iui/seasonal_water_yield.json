@@ -195,10 +195,10 @@
           "type": "list",
           "elements": [
             {
-              "id": "local_recharge_path",
-              "args_id": "local_recharge_path",
+              "id": "l_path",
+              "args_id": "l_path",
               "type": "file",
-              "label": "(Raster)",
+              "label": "Local Recharge (Raster)",
               "defaultValue": "",
               "required": false,
               "validateAs": {

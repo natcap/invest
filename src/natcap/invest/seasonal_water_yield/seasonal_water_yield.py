@@ -29,7 +29,7 @@ def execute(args):
     "Resources Research")
 
     Parameters:
-        args['workspace_dir'] (string): output directory for intermediate,
+        output_dir (string): output directory for intermediate,
         temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
             output files
@@ -74,7 +74,7 @@ def execute(args):
             recharge that is available to downgradient pixels.
         args['user_defined_local_recharge'] (boolean): if True, indicates user
             will provide pre-defined local recharge raster layer
-        args['local_recharge_path'] (string): required if
+        args['l_path'] (string): required if
             args['user_defined_local_recharge'] is True.  If provided pixels
             indicate the amount of local recharge; units in mm.
     """
@@ -104,29 +104,33 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
+    intermediate_output_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_outputs')
+    output_dir = args['workspace_dir']
+    pygeoprocessing.geoprocessing.create_directories(
+        [intermediate_output_dir, output_dir])
 
     #TODO: Change all the output file tags to be called the variables in the UG
     output_file_registry = {
-        'aet_path': os.path.join(args['workspace_dir'], 'aet.tif'),
+        'aet_path': os.path.join(intermediate_output_dir, 'aet.tif'),
         'aetm_path_list': [None] * N_MONTHS,
-        'cn_path': os.path.join(args['workspace_dir'], 'cn.tif'),
-        'flow_dir_path': os.path.join(args['workspace_dir'], 'flow_dir.tif'),
-        'kc_path': os.path.join(args['workspace_dir'], 'kc.tif'),
-        'l_avail_path': os.path.join(args['workspace_dir'], 'L_avail.tif'),
-        'l_path': os.path.join(args['workspace_dir'], 'L.tif'),
-        'l_sum_avail_path': os.path.join(args['workspace_dir'], 'L_sum_avail.tif'),
-        'outflow_direction_path': os.path.join(args['workspace_dir'], 'outflow_direction.tif'),
-        'outflow_weights_path': os.path.join(args['workspace_dir'], 'outflow_weights.tif'),
-        'qb_out_path': os.path.join(args['workspace_dir'], 'qb.txt'),
-        'qf_path': os.path.join(args['workspace_dir'], 'qf.tif'),
+        'cn_path': os.path.join(output_dir, 'CN.tif'),
+        'flow_dir_path': os.path.join(intermediate_output_dir, 'flow_dir.tif'),
+        'kc_path': os.path.join(intermediate_output_dir, 'kc.tif'),
+        'l_avail_path': os.path.join(output_dir, 'L_avail.tif'),
+        'l_path': None,  # might be predefined, use as placeholder
+        'l_sum_path': os.path.join(output_dir, 'L_sum.tif'),
+        'l_sum_avail_path': os.path.join(output_dir, 'L_sum_avail.tif'),
+        'outflow_direction_path': os.path.join(intermediate_output_dir, 'outflow_direction.tif'),
+        'outflow_weights_path': os.path.join(intermediate_output_dir, 'outflow_weights.tif'),
+        'qb_out_path': os.path.join(output_dir, 'Qb.txt'),
+        'qf_path': os.path.join(output_dir, 'QF.tif'),
         'qfm_path_list': [None] * N_MONTHS,
-        'l_sum_avail_pour_path': os.path.join(args['workspace_dir'], 'L_sum_avail_pour.tif'),
-        'b_sum_path': os.path.join(args['workspace_dir'], 'B_sum.tif'),
-        'b_path': os.path.join(args['workspace_dir'], 'B.tif'),
-        'si_path': os.path.join(args['workspace_dir'], 'si.tif'),
-        'stream_path': os.path.join(args['workspace_dir'], 'stream.tif'),
-        'vri_path': os.path.join(args['workspace_dir'], 'vri.tif'),
+        'b_sum_path': os.path.join(output_dir, 'B_sum.tif'),
+        'b_path': os.path.join(output_dir, 'B.tif'),
+        'si_path': os.path.join(intermediate_output_dir, 'si.tif'),
+        'stream_path': os.path.join(intermediate_output_dir, 'stream.tif'),
+        'vri_path': os.path.join(output_dir, 'Vri.tif'),
         }
 
     # add a suffix to all the output files
@@ -138,20 +142,20 @@ def execute(args):
     # add the monthly quick flow rasters
     for m_index in range(N_MONTHS):
         output_file_registry['qfm_path_list'][m_index] = (
-            os.path.join(args['workspace_dir'], 'qf_%d%s.tif' % (
+            os.path.join(intermediate_output_dir, 'qf_%d%s.tif' % (
                 m_index+1, file_suffix)))
         output_file_registry['aetm_path_list'][m_index] = (
-            os.path.join(args['workspace_dir'], 'aetm_%d%s.tif' % (
+            os.path.join(intermediate_output_dir, 'aetm_%d%s.tif' % (
                 m_index+1, file_suffix)))
 
     # this variable is only needed if there is not a predefined recharge file
     if not args['user_defined_local_recharge']:
-        output_file_registry['local_recharge_path'] = os.path.join(
-            args['workspace_dir'], 'L_i%s.tif' % file_suffix)
-        output_file_registry['local_recharge_avail_path'] = os.path.join(
-            args['workspace_dir'], 'L_avail_i%s.tif' % file_suffix)
+        output_file_registry['l_path'] = os.path.join(
+            output_dir, 'L%s.tif' % file_suffix)
+        output_file_registry['l_avail_path'] = os.path.join(
+            output_dir, 'L_avail%s.tif' % file_suffix)
         output_file_registry['annual_precip_path'] = os.path.join(
-            args['workspace_dir'], 'P_i%s.tif' % file_suffix)
+            output_dir, 'P_i%s.tif' % file_suffix)
 
     temporary_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
@@ -170,6 +174,7 @@ def execute(args):
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         args['lulc_path'])
 
+    #TODO: put align into helper function
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_path'], args['dem_path']]
     output_align_list = [
@@ -223,7 +228,7 @@ def execute(args):
     interpolate_list = ['nearest'] * len(input_align_list)
     align_index = 0
     if args['user_defined_local_recharge']:
-        input_align_list.append(args['local_recharge_path'])
+        input_align_list.append(args['l_path'])
         output_align_list.append(
             temporary_file_registry['local_recharge_aligned_path'])
         interpolate_list.append('nearest')
@@ -253,11 +258,8 @@ def execute(args):
 
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
-        output_file_registry['local_recharge_path'] = (
+        output_file_registry['l_path'] = (
             temporary_file_registry['local_recharge_aligned_path'])
-        local_recharge_nodata = (
-            pygeoprocessing.geoprocessing.get_nodata_from_uri(
-                output_file_registry['local_recharge_path']))
     else:
         # user didn't predefine local recharge, calculate it
         LOGGER.info('loading number of monthly events')
@@ -334,14 +336,14 @@ def execute(args):
             temporary_file_registry['dem_aligned_path'],
             temporary_file_registry['lulc_aligned_path'], kc_lookup, alpha_m,
             beta_i, gamma, output_file_registry['stream_path'],
-            output_file_registry['local_recharge_path'],
-            output_file_registry['local_recharge_avail_path'],
+            output_file_registry['l_path'],
+            output_file_registry['l_avail_path'],
             output_file_registry['l_sum_avail_path'],
             output_file_registry['aet_path'], output_file_registry['kc_path'])
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
-        output_file_registry['local_recharge_path'], args['aoi_path'])
+        output_file_registry['l_path'], args['aoi_path'])
     qb_result = qb_results.total[9999] / qb_results.n_pixels[9999]
     #9999 is the value used to index fields if no shapefile ID is provided
     qb_file = open(output_file_registry['qb_out_path'], 'w')
@@ -350,9 +352,9 @@ def execute(args):
     LOGGER.info("Qb = %f", qb_result)
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
-        output_file_registry['local_recharge_path'])
+        output_file_registry['l_path'])
     ri_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-        output_file_registry['local_recharge_path'])
+        output_file_registry['l_path'])
 
     def vri_op(ri_array):
         """calc vri index Eq 10"""
@@ -360,10 +362,26 @@ def execute(args):
             ri_array != ri_nodata,
             ri_array / qb_result / qb_results.n_pixels[9999], ri_nodata)
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [output_file_registry['local_recharge_path']], vri_op,
+        [output_file_registry['l_path']], vri_op,
         output_file_registry['vri_path'], gdal.GDT_Float32, ri_nodata,
         pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
+
+    LOGGER.info('calculate L_sum')  # Eq. [12]
+    temporary_file_registry['zero_absorption_source_path'] = (
+        pygeoprocessing.temporary_filename())
+    temporary_file_registry['loss_path'] = pygeoprocessing.temporary_filename()
+    pygeoprocessing.make_constant_raster_from_base_uri(
+        temporary_file_registry['dem_aligned_path'], 0.0,
+        temporary_file_registry['zero_absorption_source_path'])
+    pygeoprocessing.routing.route_flux(
+        output_file_registry['flow_dir_path'],
+        temporary_file_registry['dem_aligned_path'],
+        output_file_registry['l_path'],
+        temporary_file_registry['zero_absorption_source_path'],
+        temporary_file_registry['loss_path'],
+        output_file_registry['l_sum_path'], 'flux_only',
+        aoi_uri=args['aoi_path'])
 
     sys.exit(1)
 
@@ -374,10 +392,11 @@ def execute(args):
         output_file_registry['outflow_direction_path'],
         output_file_registry['l_sum_avail_pour_path'])
 
+
     LOGGER.info('route slow flow')
     seasonal_water_yield_core.route_sf(
         temporary_file_registry['dem_aligned_path'],
-        output_file_registry['local_recharge_avail_path'],
+        output_file_registry['l_avail_path'],
         output_file_registry['l_sum_avail_path'],
         output_file_registry['l_sum_avail_pour_path'],
         output_file_registry['outflow_direction_path'],
@@ -425,7 +444,6 @@ def _calculate_monthly_quick_flow(
         si_array[stream_array == 1] = 0
         return si_array
 
-    LOGGER.info('calculating Si')
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         lulc_path)
     pygeoprocessing.geoprocessing.vectorize_datasets(
