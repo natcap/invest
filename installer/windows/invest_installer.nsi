@@ -252,7 +252,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${HRA}\(2) Habitat Risk Assessment (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Nutrient Retention (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_nutrient.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenario Generator: Rule Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator_proximity_based.bat" "" "${INVEST_ICON}"
 
   CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
 
@@ -406,6 +407,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 728
     !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
     !insertmacro downloadData "Timber (optional)" "Timber.zip" 644
-    !insertmacro downloadData "Scenario Generator (optional)" "ScenarioGenerator.zip" 0
+    !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 0
+    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd
 SectionGroupEnd
