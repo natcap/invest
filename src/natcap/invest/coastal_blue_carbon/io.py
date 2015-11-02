@@ -76,25 +76,28 @@ def get_inputs(args):
     lulc_lookup_dict = geoprocess.get_lookup_from_csv(
         args['lulc_lookup_uri'], 'lulc-class')
     lulc_to_code_dict = \
-        dict([(k, v['code']) for k, v in lulc_lookup_dict.items()])
+        dict([(k.lower(), v['code']) for k, v in lulc_lookup_dict.items()])
     initial_dict = geoprocess.get_lookup_from_csv(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
-    d.lulc_to_Sb = dict([(lulc_to_code_dict[key], sub['biomass']) for key, sub in initial_dict.items()])
-    d.lulc_to_Ss = dict([(lulc_to_code_dict[key], sub['soil']) for key, sub in initial_dict.items()])
-    d.lulc_to_L =  dict([(lulc_to_code_dict[key], sub['litter']) for key, sub in initial_dict.items()])
+    d.lulc_to_Sb = dict([(lulc_to_code_dict[key.lower()], sub['biomass']) \
+        for key, sub in initial_dict.items()])
+    d.lulc_to_Ss = dict([(lulc_to_code_dict[key.lower()], sub['soil']) \
+        for key, sub in initial_dict.items()])
+    d.lulc_to_L =  dict([(lulc_to_code_dict[key.lower()], sub['litter']) \
+        for key, sub in initial_dict.items()])
 
     # Transition Dictionaries
     biomass_transient_dict, soil_transient_dict = \
         _create_transient_dict(args['carbon_pool_transient_uri'])
 
-    d.lulc_to_Yb = dict([(lulc_to_code_dict[key], sub['yearly_accumulation']) \
+    d.lulc_to_Yb = dict([(lulc_to_code_dict[key.lower()], sub['yearly_accumulation']) \
         for key, sub in biomass_transient_dict.items()])
-    d.lulc_to_Ys = dict([(lulc_to_code_dict[key], sub['yearly_accumulation']) \
+    d.lulc_to_Ys = dict([(lulc_to_code_dict[key.lower()], sub['yearly_accumulation']) \
         for key, sub in soil_transient_dict.items()])
-    d.lulc_to_Hb = dict([(lulc_to_code_dict[key], sub['half-life']) \
+    d.lulc_to_Hb = dict([(lulc_to_code_dict[key.lower()], sub['half-life']) \
         for key, sub in biomass_transient_dict.items()])
-    d.lulc_to_Hs = dict([(lulc_to_code_dict[key], sub['half-life']) \
+    d.lulc_to_Hs = dict([(lulc_to_code_dict[key.lower()], sub['half-life']) \
         for key, sub in soil_transient_dict.items()])
 
     # Parse LULC Transition CSV (Carbon Direction and Relative Magnitude)
