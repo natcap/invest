@@ -2847,6 +2847,322 @@ def calculate_r_sum_avail_pour(
 
 @cython.wraparound(False)
 @cython.cdivision(True)
+def route_baseflow(
+    dem_path, l_path, l_avail_path, l_sum_avail_path,
+    outflow_direction_path, outflow_weights_path, stream_path, b_path):
+
+    #Pass transport
+    cdef time_t start
+    time(&start)
+
+    cdef deque[int] cells_to_process
+    find_outlets(dem_path, outflow_direction_path, cells_to_process)
+
+    cdef c_set[int] cells_in_queue
+    for cell in cells_to_process:
+        cells_in_queue.insert(cell)
+
+    cdef float pixel_area = (
+        pygeoprocessing.geoprocessing.get_cell_size_from_path(dem_path) ** 2)
+
+    #load a base raster so we can determine the n_rows/cols
+    outflow_direction_raster = gdal.Open(outflow_direction_path, gdal.GA_ReadOnly)
+    cdef int n_cols = outflow_direction_raster.RasterXSize
+    cdef int n_rows = outflow_direction_raster.RasterYSize
+    outflow_direction_band = outflow_direction_raster.GetRasterBand(1)
+
+    cdef int block_col_size, block_row_size
+    block_col_size, block_row_size = outflow_direction_band.GetBlockSize()
+
+    #center point of global index
+    cdef int global_row, global_col #index into the overall raster
+    cdef int row_index, col_index #the index of the cache block
+    cdef int row_block_offset, col_block_offset #index into the cache block
+    cdef int global_block_row, global_block_col #used to walk the global blocks
+
+    #neighbor sections of global index
+    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
+    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
+    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+
+    #define all the single caches
+    cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] r_avail_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] l_sum_avail_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] l_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] b_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_int8, ndim=4] stream_block = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
+
+    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
+        (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.int8)
+
+    cdef int outflow_direction_nodata = pygeoprocessing.get_nodata_from_uri(
+        outflow_direction_path)
+
+    outflow_weights_raster = gdal.Open(outflow_weights_path)
+    outflow_weights_band = outflow_weights_raster.GetRasterBand(1)
+    cdef float outflow_weights_nodata = pygeoprocessing.get_nodata_from_uri(
+        outflow_weights_path)
+
+    #Create output arrays qfi and local_recharge and local_recharge_avail
+    l_avail_raster = gdal.Open(l_avail_path)
+    l_avail_band = l_avail_raster.GetRasterBand(1)
+    l_sum_avail_raster = gdal.Open(l_sum_avail_path)
+    l_sum_avail_band = l_sum_avail_raster.GetRasterBand(1)
+    cdef float r_sum_nodata = l_sum_avail_band.GetNoDataValue()
+
+    l_raster = gdal.Open(l_path)
+    l_band = l_raster.GetRasterBand(1)
+
+    stream_raster = gdal.Open(stream_path, gdal.GA_ReadOnly)
+    stream_band = stream_raster.GetRasterBand(1)
+
+    cdef float b_nodata = -9999.0
+    pygeoprocessing.new_raster_from_base_uri(
+        outflow_direction_path, b_path, 'GTiff', b_nodata,
+        gdal.GDT_Float32, fill_value=b_nodata)
+    b_raster = gdal.Open(b_path, gdal.GA_Update)
+    b_band = b_raster.GetRasterBand(1)
+
+    band_list = [
+        outflow_direction_band, outflow_weights_band, l_avail_band,
+        l_sum_avail_band, l_band, stream_band, b_band]
+    block_list = [
+        outflow_direction_block, outflow_weights_block, r_avail_block,
+        l_sum_avail_block, l_block, stream_block, b_block]
+    update_list = [False] * 6 + [True] * 2
+    cache_dirty[:] = 0
+
+    cdef BlockCache_SWY block_cache = BlockCache_SWY(
+        N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
+        block_row_size, block_col_size,
+        band_list, block_list, update_list, cache_dirty)
+
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *neighbor_row_offset = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *neighbor_col_offset = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
+
+    cdef int flat_index
+    cdef float outflow_weight
+    cdef float neighbor_r_sum_avail_pour
+    cdef float neighbor_b
+    cdef float b
+    cdef float l
+    cdef float l_avail
+    cdef float l_sum_avail
+    cdef int neighbor_direction
+
+    cdef time_t last_time, current_time
+    time(&last_time)
+    LOGGER.info(
+                'START cells_to_process on SF route size: %d',
+                cells_to_process.size())
+    while cells_to_process.size() > 0:
+        flat_index = cells_to_process.front()
+        cells_to_process.pop_front()
+        cells_in_queue.erase(flat_index)
+        global_row = flat_index / n_cols
+        global_col = flat_index % n_cols
+
+        block_cache.update_cache(
+            global_row, global_col, &row_index, &col_index,
+            &row_block_offset, &col_block_offset)
+
+        outflow_weight = outflow_weights_block[
+            row_index, col_index, row_block_offset, col_block_offset]
+        outflow_direction = outflow_direction_block[
+            row_index, col_index, row_block_offset, col_block_offset]
+
+        time(&current_time)
+        if current_time - last_time > 5.0:
+            last_time = current_time
+            LOGGER.info(
+                'cells_to_process on B route size: %d',
+                cells_to_process.size())
+
+        #if cell is processed, then skip
+        if b_block[row_index, col_index, row_block_offset, col_block_offset] != b_nodata:
+            continue
+
+        # if current cell doesn't outflow, base case is B == L_avail
+        if outflow_direction == outflow_direction_nodata:
+            l_avail = l_avail_block[
+                row_index, col_index, row_block_offset, col_block_offset]
+            if l_avail == l_nodata:
+                b_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            else:
+                b_block[row_index, col_index, row_block_offset, col_block_offset] = l_avail
+            cache_dirty[row_index, col_index] = 1
+        elif stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
+            b_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            cache_dirty[row_index, col_index] = 1
+        else:
+            downstream_calculated = 1
+            sf_down_sum = 0.0
+            for neighbor_index in xrange(2):
+                if neighbor_index == 1:
+                    outflow_direction = (outflow_direction + 1) % 8
+                    outflow_weight = 1.0 - outflow_weight
+
+                if outflow_weight <= 0.0:
+                    #doesn't flow here, so skip
+                    continue
+
+                neighbor_row = global_row + row_offsets[outflow_direction]
+                neighbor_col = global_col + col_offsets[outflow_direction]
+                if (neighbor_row < 0 or neighbor_row >= n_rows or
+                        neighbor_col < 0 or neighbor_col >= n_cols):
+                    #out of bounds
+                    continue
+
+                block_cache.update_cache(
+                    neighbor_row, neighbor_col, &neighbor_row_index,
+                    &neighbor_col_index, &neighbor_row_block_offset,
+                    &neighbor_col_block_offset)
+
+                if stream_block[
+                        neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] == 1:
+                    #calc base case
+                    r_sum_avail = l_sum_avail_block[
+                        row_index, col_index, row_block_offset, col_block_offset]
+                    sf_down_sum += outflow_weight * r_sum_avail
+                else:
+                    if sf_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] == sf_nodata:
+                        #push neighbor on stack
+                        downstream_calculated = 0
+                        neighbor_flat_index = neighbor_row * n_cols + neighbor_col
+                        #push original on the end of the deque
+                        if (cells_in_queue.find(flat_index) ==
+                            cells_in_queue.end()):
+                            cells_to_process.push_back(flat_index)
+                            cells_in_queue.insert(flat_index)
+
+                        #push neighbor on front of deque
+                        if (cells_in_queue.find(neighbor_flat_index) ==
+                            cells_in_queue.end()):
+                            cells_to_process.push_front(neighbor_flat_index)
+                            cells_in_queue.insert(neighbor_flat_index)
+
+                    else:
+                        #calculate downstream contribution
+                        neighbor_r_sum_avail_pour = l_sum_avail_pour_block[
+                            neighbor_row_index, neighbor_col_index,
+                            neighbor_row_block_offset, neighbor_col_block_offset]
+                        if neighbor_r_sum_avail_pour != 0:
+                            neighbor_sf_down = sf_down_block[
+                                neighbor_row_index, neighbor_col_index,
+                                neighbor_row_block_offset, neighbor_col_block_offset]
+                            neighbor_sf = sf_block[
+                                neighbor_row_index, neighbor_col_index,
+                                neighbor_row_block_offset, neighbor_col_block_offset]
+                            block_cache.update_cache(
+                                global_row, global_col, &row_index, &col_index,
+                                &row_block_offset, &col_block_offset)
+                            r_sum_avail = l_sum_avail_block[
+                                row_index, col_index, row_block_offset, col_block_offset]
+                            if neighbor_sf > neighbor_sf_down:
+                                LOGGER.error('%f, %f, %f, %f, %f', neighbor_sf,
+                                    neighbor_sf_down, r_sum_avail, neighbor_r_sum_avail_pour,
+                                    outflow_weight)
+                            sf_down_frac = outflow_weight * r_sum_avail / neighbor_r_sum_avail_pour
+                            if sf_down_frac > 1.0: #can happen because of roundoff error
+                                sf_down_frac = 1.0
+                            sf_down_sum +=  outflow_weight * (neighbor_sf_down - neighbor_sf) * sf_down_frac
+                            if sf_down_sum < 0:
+                                pass#LOGGER.error(sf_down_sum)
+
+            if downstream_calculated:
+                block_cache.update_cache(
+                    global_row, global_col, &row_index, &col_index,
+                    &row_block_offset, &col_block_offset)
+                #add contribution of neighbors to calculate si_down and si on current pixel
+                r_avail = r_avail_block[row_index, col_index, row_block_offset, col_block_offset]
+                r_sum_avail = l_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset]
+                sf_down_block[row_index, col_index, row_block_offset, col_block_offset] = sf_down_sum
+                if r_sum_avail == 0:
+                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+                else:
+                    #could r_sum_avail be < than l_i in this case?
+                    sf_block[row_index, col_index, row_block_offset, col_block_offset] = max(sf_down_sum * r_avail / (r_avail+r_sum_avail), 0)
+                cache_dirty[row_index, col_index] = 1
+
+        #put upstream neighbors on stack for processing
+        for neighbor_index in xrange(8):
+            neighbor_row = neighbor_row_offset[neighbor_index] + global_row
+            neighbor_col = neighbor_col_offset[neighbor_index] + global_col
+
+            if (neighbor_row >= n_rows or neighbor_row < 0 or
+                    neighbor_col >= n_cols or neighbor_col < 0):
+                continue
+
+            block_cache.update_cache(
+                neighbor_row, neighbor_col,
+                &neighbor_row_index, &neighbor_col_index,
+                &neighbor_row_block_offset,
+                &neighbor_col_block_offset)
+
+            neighbor_direction = outflow_direction_block[
+                neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset]
+            if neighbor_direction == outflow_direction_nodata:
+                continue
+
+            #check if the cell flows directly, or is one index off
+            if (inflow_offsets[neighbor_index] != neighbor_direction and
+                    ((inflow_offsets[neighbor_index] - 1) % 8) != neighbor_direction):
+                #then neighbor doesn't inflow into current cell
+                continue
+
+            #Calculate the outflow weight
+            outflow_weight = outflow_weights_block[
+                neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset]
+
+            if ((inflow_offsets[neighbor_index] - 1) % 8) == neighbor_direction:
+                outflow_weight = 1.0 - outflow_weight
+
+            if outflow_weight <= 0.0:
+                continue
+
+            #already processed, no need to loop on it again
+            if sf_block[neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset] != sf_nodata:
+                continue
+
+            neighbor_flat_index = neighbor_row * n_cols + neighbor_col
+            if cells_in_queue.find(neighbor_flat_index) == cells_in_queue.end():
+                cells_to_process.push_back(neighbor_flat_index)
+                cells_in_queue.insert(neighbor_flat_index)
+
+        #if downstream aren't processed; skip and process those
+        #calc current pixel
+            #for each downstream neighbor
+                #if downstream pixel is a stream, then base case
+                #otherwise downstream case
+        #push upstream neighbors on for processing
+
+    block_cache.flush_cache()
+
+
+@cython.wraparound(False)
+@cython.cdivision(True)
 def route_sf(
     dem_path, l_avail_path, l_sum_avail_path, l_sum_avail_pour_path,
     outflow_direction_path, outflow_weights_path, stream_path, sf_path,

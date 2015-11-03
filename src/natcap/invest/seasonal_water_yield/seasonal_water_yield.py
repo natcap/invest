@@ -385,8 +385,18 @@ def execute(args):
         output_file_registry['l_sum_path'], 'flux_only',
         aoi_uri=args['aoi_path'])
 
-    sys.exit(1)
+    LOGGER.info('calculating base flow')
+    seasonal_water_yield_core.route_baseflow(
+        temporary_file_registry['dem_aligned_path'],
+        output_file_registry['l_path'],
+        output_file_registry['l_avail_path'],
+        output_file_registry['l_sum_avail_path'],
+        output_file_registry['outflow_direction_path'],
+        output_file_registry['outflow_weights_path'],
+        output_file_registry['stream_path'],
+        output_file_registry['b_path'])
 
+    sys.exit(1)
     LOGGER.info('calculating l_sum_avail_pour')
     seasonal_water_yield_core.calculate_r_sum_avail_pour(
         output_file_registry['l_sum_avail_path'],
