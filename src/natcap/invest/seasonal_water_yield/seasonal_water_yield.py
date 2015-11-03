@@ -396,27 +396,6 @@ def execute(args):
         output_file_registry['stream_path'],
         output_file_registry['b_path'])
 
-    sys.exit(1)
-    LOGGER.info('calculating l_sum_avail_pour')
-    seasonal_water_yield_core.calculate_r_sum_avail_pour(
-        output_file_registry['l_sum_avail_path'],
-        output_file_registry['outflow_weights_path'],
-        output_file_registry['outflow_direction_path'],
-        output_file_registry['l_sum_avail_pour_path'])
-
-
-    LOGGER.info('route slow flow')
-    seasonal_water_yield_core.route_sf(
-        temporary_file_registry['dem_aligned_path'],
-        output_file_registry['l_avail_path'],
-        output_file_registry['l_sum_avail_path'],
-        output_file_registry['l_sum_avail_pour_path'],
-        output_file_registry['outflow_direction_path'],
-        output_file_registry['outflow_weights_path'],
-        output_file_registry['stream_path'],
-        output_file_registry['b_path'],
-        output_file_registry['b_sum_path'])
-
     LOGGER.info('  (\\w/)  SWY Complete!')
     LOGGER.info('  (..  \\ ')
     LOGGER.info(' _/  )  \\______')
