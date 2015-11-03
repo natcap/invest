@@ -383,7 +383,8 @@ def execute(args):
         temporary_file_registry['zero_absorption_source_path'],
         temporary_file_registry['loss_path'],
         output_file_registry['l_sum_path'], 'flux_only',
-        aoi_uri=args['aoi_path'])
+        aoi_uri=args['aoi_path'],
+        stream_uri=output_file_registry['stream_path'])
 
     LOGGER.info('calculating base flow')
     seasonal_water_yield_core.route_baseflow(
@@ -395,6 +396,17 @@ def execute(args):
         output_file_registry['outflow_weights_path'],
         output_file_registry['stream_path'],
         output_file_registry['b_path'])
+
+    LOGGER.info('calculate B_sum')  # Eq. [12]
+    pygeoprocessing.routing.route_flux(
+        output_file_registry['flow_dir_path'],
+        temporary_file_registry['dem_aligned_path'],
+        output_file_registry['b_path'],
+        temporary_file_registry['zero_absorption_source_path'],
+        temporary_file_registry['loss_path'],
+        output_file_registry['b_sum_path'], 'flux_only',
+        aoi_uri=args['aoi_path'],
+        stream_uri=output_file_registry['stream_path'])
 
     LOGGER.info('  (\\w/)  SWY Complete!')
     LOGGER.info('  (..  \\ ')
