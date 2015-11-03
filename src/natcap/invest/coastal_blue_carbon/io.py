@@ -1,4 +1,4 @@
-"""CBC Model IO Utilities."""
+"""CBC Model IO Functions."""
 
 import csv
 import os
@@ -123,12 +123,13 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri, biomass_tra
 
     Paramters:
         lulc_transition_uri (str)
+        lulc_lookup_uri (str)
+        biomass_transient_dict (dict)
+        soil_transient_dict (dict)
 
     Returns:
         lulc_trans_to_Db (dict)
         lulc_trans_to_Ds (dict)
-        biomass_transient_dict (dict)
-        soil_transient_dict (dict)
 
     Example Returns:
         lulc_trans_to_Db = {
@@ -156,15 +157,14 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri, biomass_tra
 
     lulc_trans_to_Db = dict(biomass_item_list)
     lulc_trans_to_Db = dict(soil_item_list)
+
     return lulc_trans_to_Db, lulc_trans_to_Db
 
 
 def _get_snapshot_rasters(lulc_snapshot_list):
     """Get valid snapshot rasters.
 
-    - Assert same projection
-    - Align
-    - Set same nodata value
+    Assert same projection, align, and set same nodata value.
 
     Parameters:
         lulc_snapshot_list (list): filepaths to lulc rasters
@@ -173,19 +173,23 @@ def _get_snapshot_rasters(lulc_snapshot_list):
         C_s (list): list of aligned rasters with standard nodata value
     """
     stack = RasterStack([Raster.from_file(i) for i in lulc_snapshot_list])
+
     for r in stack.raster_list:
         r.resample_method = 'nearest'
     if not stack.all_same_projection():
         raise ValueError('LULC snapshot rasters must be in same projection.')
     if not stack.all_aligned():
         stack = stack.align()
+
     stack = stack.set_standard_nodata(NODATA_INT)
     stack_filepath_list = stack.get_raster_uri_list()
+
     C_s = []
     for i in stack_filepath_list:
         temp = geoprocess.temporary_filename()
         shutil.copy(i, temp)
         C_s.append(temp)
+
     return C_s
 
 

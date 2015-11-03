@@ -21,10 +21,10 @@ def execute(args):
     """Execute preprocessor.
 
     Parameters:
-        workspace_dir (string): desc
-        results_suffix (string): desc
-        lulc_lookup_uri (string): desc
-        lulc_snapshot_list (list): desc
+        workspace_dir (string)
+        results_suffix (string)
+        lulc_lookup_uri (string)
+        lulc_snapshot_list (list)
 
     Example Args::
 

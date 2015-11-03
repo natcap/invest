@@ -33,8 +33,6 @@ def execute(args):
         correspond to transition years and final analysis year of the rasters.
         Provided in chronological order.
 
-    # :param int args['analysis_year']:
-
     :param str args['carbon_pool_initial_uri']: rhe provided CSV table contains
         information related to the initial conditions of the carbon stock within
         each of the three pools of a habitat. Biomass includes carbon stored
