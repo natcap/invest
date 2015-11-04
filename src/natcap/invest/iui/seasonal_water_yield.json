@@ -63,8 +63,8 @@
           "helpText": "The selected folder has a list of monthly precipitation files with a specified format."
         },
         {
-          "id": "dem_path",
-          "args_id": "dem_path",
+          "id": "dem_raster_path",
+          "args_id": "dem_raster_path",
           "type": "file",
           "label": "Digital Elevation Model (Raster)",
           "defaultValue": "../seasonal_water_yield/dem.tif",
@@ -75,8 +75,8 @@
           "helpText": "A GDAL-supported raster file with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when unusual streams are observed.) See the 'Working with the DEM' section of the InVEST User's Guide for more information."
         },
         {
-          "id": "lulc_path",
-          "args_id": "lulc_path",
+          "id": "lulc_raster_path",
+          "args_id": "lulc_raster_path",
           "type": "file",
           "label": "Land-Use/Land-Cover (Raster)",
           "defaultValue": "../seasonal_water_yield/lulc.tif",
@@ -155,7 +155,7 @@
               "events"
             ]
           },
-          "disabledBy": "user_defined_local_recharge_container"
+          "disabledBy": "climate_zone_container"
         },
         {
           "id": "alpha_m",
@@ -180,6 +180,48 @@
           "label": "gamma Parameter",
           "defaultValue": "1.0",
           "required": true
+        }
+      ]
+    },
+    {
+      "id": "climate_zone_container",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "user_defined_climate_zones",
+      "label": "Climate Zones (Advanced)",
+      "elements": [
+        {
+          "id": "climate_zone_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "climate_zone_table_path",
+              "args_id": "climate_zone_table_path",
+              "type": "file",
+              "label": "Climate Zone Table (CSV)",
+              "defaultValue": "../seasonal_water_yield/climate_zone_events.csv",
+              "required": true,
+              "validateAs": {
+                "type": "CSV",
+                "fieldsExist": [
+                  "cz_id", "jan", "feb", "mar", "apr", "may", "jun", "jul",
+                  "aug", "sep", "oct", "nov", "dec"
+                ]
+              }
+            },
+            {
+              "id": "climate_zone_raster_path",
+              "args_id": "climate_zone_raster_path",
+              "type": "file",
+              "label": "Climate Zone (Raster)",
+              "defaultValue": "../seasonal_water_yield/climate_zones.tif",
+              "required": true,
+              "validateAs": {
+                "type": "GDAL"
+              },
+              "helpText": "Map of climate zones that are found in the Climate Zone Table input.  Pixel values correspond to cz_id."
+            }
+          ]
         }
       ]
     },

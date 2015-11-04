@@ -48,9 +48,9 @@ def execute(args):
         args['precip_dir'] (string): required if
             args['user_defined_local_recharge'] is False. A path to a directory
             that contains rasters of monthly precipitation; units in mm.
-        args['dem_path'] (string): a path to a digital elevation raster
-        args['lulc_path'] (string): a path to a land cover raster used to
-            classify biophysical properties of pixels.
+        args['dem_raster_path'] (string): a path to a digital elevation raster
+        args['lulc_raster_path'] (string): a path to a land cover raster used
+            to classify biophysical properties of pixels.
         args['soil_group_path'] (string): required if
             args['user_defined_local_recharge'] is  False. A path to a raster
             indicating SCS soil groups where integer values are mapped to soil
@@ -66,8 +66,9 @@ def execute(args):
             landcover codes paired with soil group types to curve numbers as
             well as Kc values.  Headers must be 'lucode', 'CN_A', 'CN_B',
             'CN_C', 'CN_D', and 'Kc'.
-        args['rain_events_table_path'] (string): Required if
-            args['user_defined_local_recharge'] is  False. Path to a CSV table
+        args['rain_events_table_path'] (string): Not required if
+            args['user_defined_local_recharge'] is True or
+            args['user_defined_climate_zones'] is True.  Path to a CSV table
             that has headers 'month' (1-12) and 'events' (int >= 0) that
             indicates the number of rain events per month
         args['alpha_m'] (float or string): proportion of upslope annual
@@ -81,6 +82,17 @@ def execute(args):
         args['l_path'] (string): required if
             args['user_defined_local_recharge'] is True.  If provided pixels
             indicate the amount of local recharge; units in mm.
+        args['user_defined_climate_zones'] (boolean): if True, user provides
+            a climate zone rain events table and a climate zone raster map in
+            lieu of a global rain events table.
+        args['climate_zone_table_path'] (string): required if
+            args['user_defined_climate_zones'] is True. Contains monthly
+            precipitation events per climate zone.  Fields must be:
+            "cz_id", "jan", "feb", "mar", "apr", "may", "jun", "jul",
+            "aug", "sep", "oct", "nov", "dec".
+        args['climate_zone_raster_path'] (string): required if
+            args['user_defined_climate_zones'] is True, pixel values correspond
+            to the "cz_id" values defined in args['climate_zone_table_path']
     """
 
     # prepare and test inputs for common errors
@@ -186,11 +198,11 @@ def execute(args):
             pygeoprocessing.geoprocessing.temporary_filename())
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
-        args['lulc_path'])
+        args['lulc_raster_path'])
 
     #TODO: put align into helper function
     LOGGER.info('Aligning and clipping dataset list')
-    input_align_list = [args['lulc_path'], args['dem_path']]
+    input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
     output_align_list = [
         temporary_file_registry['lulc_aligned_path'],
         temporary_file_registry['dem_aligned_path'],
@@ -433,14 +445,14 @@ def execute(args):
 
 
 def _calculate_monthly_quick_flow(
-        precip_path, lulc_path, cn_path, n_events, stream_path,
+        precip_path, lulc_raster_path, cn_path, n_events, stream_path,
         qf_monthly_path, si_path):
     """Calculates quick flow for a month
 
     Parameters:
         precip_path (string): path to file that correspond to monthly
             precipitation
-        lulc_path (string): path to landcover raster
+        lulc_raster_path (string): path to landcover raster
         cn_path (string): path to curve number raster
         n_events (dict of int -> int): maps the number of rain events per month
             where the index to n_events is the calendar month starting at 1.
@@ -463,7 +475,7 @@ def _calculate_monthly_quick_flow(
         return si_array
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
-        lulc_path)
+        lulc_raster_path)
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [cn_path, stream_path], si_op, si_path, gdal.GDT_Float32,
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
@@ -514,7 +526,8 @@ def _calculate_monthly_quick_flow(
 
 
 def _calculate_curve_number_raster(
-        lulc_path, soil_group_path, biophysical_table, pixel_size, cn_path):
+        lulc_raster_path, soil_group_path, biophysical_table, pixel_size,
+        cn_path):
     """Calculate the CN raster from the landcover and soil group rasters"""
 
     soil_nodata = pygeoprocessing.get_nodata_from_uri(soil_group_path)
@@ -526,7 +539,7 @@ def _calculate_curve_number_raster(
     }
     cn_nodata = -1
     lulc_to_soil = {}
-    lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_path)
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_raster_path)
     for soil_id, soil_column in map_soil_type_to_header.iteritems():
         lulc_to_soil[soil_id] = {
             'lulc_values': [],
@@ -569,7 +582,7 @@ def _calculate_curve_number_raster(
 
     cn_nodata = -1
     pygeoprocessing.vectorize_datasets(
-        [lulc_path, soil_group_path], cn_op, cn_path, gdal.GDT_Float32,
+        [lulc_raster_path, soil_group_path], cn_op, cn_path, gdal.GDT_Float32,
         cn_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
 
@@ -580,7 +593,7 @@ def _calculate_si_raster(cn_path, si_path, stream_path):
 
     Parameters:
         cn_path (string): path to curve number raster
-        lulc_path (string): path to landcover raster
+        lulc_raster_path (string): path to landcover raster
         si_path (string): path to output s_i raster
 
     Returns:
