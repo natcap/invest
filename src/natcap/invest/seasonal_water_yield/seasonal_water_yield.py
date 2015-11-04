@@ -6,10 +6,12 @@ import os
 import logging
 import re
 import fractions
+import uuid
 
 import scipy.special
 import numpy
-import gdal
+from osgeo import gdal
+from osgeo import ogr
 import pygeoprocessing
 import pygeoprocessing.routing
 
@@ -116,6 +118,8 @@ def execute(args):
     output_file_registry = {
         'aet_path': os.path.join(intermediate_output_dir, 'aet.tif'),
         'aetm_path_list': [None] * N_MONTHS,
+        'aggregate_vector_path': os.path.join(
+            output_dir, 'aggregated_results.shp'),
         'cn_path': os.path.join(output_dir, 'CN.tif'),
         'flow_dir_path': os.path.join(intermediate_output_dir, 'flow_dir.tif'),
         'kc_path': os.path.join(intermediate_output_dir, 'kc.tif'),
@@ -123,9 +127,10 @@ def execute(args):
         'l_path': None,  # might be predefined, use as placeholder
         'l_sum_path': os.path.join(output_dir, 'L_sum.tif'),
         'l_sum_avail_path': os.path.join(output_dir, 'L_sum_avail.tif'),
-        'outflow_direction_path': os.path.join(intermediate_output_dir, 'outflow_direction.tif'),
-        'outflow_weights_path': os.path.join(intermediate_output_dir, 'outflow_weights.tif'),
-        'qb_out_path': os.path.join(output_dir, 'Qb.txt'),
+        'outflow_direction_path': os.path.join(
+            intermediate_output_dir, 'outflow_direction.tif'),
+        'outflow_weights_path': os.path.join(
+            intermediate_output_dir, 'outflow_weights.tif'),
         'qf_path': os.path.join(output_dir, 'QF.tif'),
         'qfm_path_list': [None] * N_MONTHS,
         'b_sum_path': os.path.join(output_dir, 'B_sum.tif'),
@@ -134,6 +139,13 @@ def execute(args):
         'stream_path': os.path.join(intermediate_output_dir, 'stream.tif'),
         'vri_path': os.path.join(output_dir, 'Vri.tif'),
         }
+
+    # if aggregate output exists, delete it first
+    if os.path.exists(output_file_registry['aggregate_vector_path']):
+        LOGGER.warn(
+            '%s exists, deleting and writing new output',
+            output_file_registry['aggregate_vector_path'])
+        os.remove(output_file_registry['aggregate_vector_path'])
 
     # add a suffix to all the output files
     for file_id in output_file_registry:
@@ -343,15 +355,13 @@ def execute(args):
             output_file_registry['l_sum_avail_path'],
             output_file_registry['aet_path'], output_file_registry['kc_path'])
 
+    # create an output shapefile
+
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
         output_file_registry['l_path'], args['aoi_path'])
     qb_result = qb_results.total[9999] / qb_results.n_pixels[9999]
     #9999 is the value used to index fields if no shapefile ID is provided
-    qb_file = open(output_file_registry['qb_out_path'], 'w')
-    qb_file.write("%f\n" % qb_result)
-    qb_file.close()
-    LOGGER.info("Qb = %f", qb_result)
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         output_file_registry['l_path'])
@@ -368,6 +378,11 @@ def execute(args):
         output_file_registry['vri_path'], gdal.GDT_Float32, ri_nodata,
         pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
+
+    _aggregate_recharge(
+        args['aoi_path'], output_file_registry['l_path'],
+        output_file_registry['vri_path'],
+        output_file_registry['aggregate_vector_path'])
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
     temporary_file_registry['zero_absorption_source_path'] = (
@@ -592,3 +607,74 @@ def _calculate_si_raster(cn_path, si_path, stream_path):
         [cn_path, stream_path], si_op, si_path, gdal.GDT_Float32,
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
+
+
+def _aggregate_recharge(
+        aoi_path, l_path, vri_path, aggregate_vector_path):
+    """Aggregate recharge values for the provided watersheds/AOIs. Generates a
+    new shapefile that's a copy of 'aoi_path' in sum values from L and Vri.
+
+    Parameters:
+        aoi_path (string): path to shapefile that will be used to
+            aggregate rasters
+        l_path (string): path to (L) local recharge raster
+        vri_path (string): path to Vri raster
+        aggregate_vector_path (string): path to shapefile that will be created
+            by this function as the aggregating output.  will contain fields
+            'l_sum' and 'vri_sum' per original feature in `aoi_path`
+
+    Returns:
+        None"""
+
+    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+    original_aoi_vector = ogr.Open(aoi_path)
+    if (os.path.normpath(aoi_path) ==
+            os.path.normpath(aggregate_vector_path)):
+        raise ValueError(
+            "The input and output vector filenames are the same, "
+            "please choose a different workspace or move the aoi file "
+            "out of the current workspace %s" % aggregate_vector_path)
+
+    if os.path.exists(aggregate_vector_path):
+        os.remove(aggregate_vector_path)
+    aggregate_vector = esri_driver.CopyDataSource(
+        original_aoi_vector, aggregate_vector_path)
+    original_aoi_vector = None
+    aggregate_layer = aggregate_vector.GetLayer()
+
+    # make an identifying id per polygon that can be used for aggregation
+    while True:
+        serviceshed_defn = aggregate_layer.GetLayerDefn()
+        poly_id_field = str(uuid.uuid4())[-8:]
+        if serviceshed_defn.GetFieldIndex(poly_id_field) == -1:
+            break
+    layer_id_field = ogr.FieldDefn(poly_id_field, ogr.OFTInteger)
+    aggregate_layer.CreateField(layer_id_field)
+    for poly_index, poly_feat in enumerate(aggregate_layer):
+        poly_feat.SetField(poly_id_field, poly_index)
+        aggregate_layer.SetFeature(poly_feat)
+    aggregate_layer.SyncToDisk()
+
+    for raster_path, aggregate_field_id in [
+            (l_path, 'qb'), (vri_path, 'vri_sum')]:
+
+        # aggregate carbon stocks by the new ID field
+        aggregate_stats = pygeoprocessing.aggregate_raster_values_uri(
+            raster_path, aggregate_vector_path,
+            shapefile_field=poly_id_field, ignore_nodata=True,
+            threshold_amount_lookup=None, ignore_value_list=[],
+            process_pool=None, all_touched=False)
+
+        aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
+        aggregate_layer.CreateField(aggregate_field)
+
+        aggregate_layer.ResetReading()
+        for poly_index, poly_feat in enumerate(aggregate_layer):
+            poly_feat.SetField(
+                aggregate_field_id, aggregate_stats.total[poly_index] /
+                aggregate_stats.n_pixels[poly_index])
+            aggregate_layer.SetFeature(poly_feat)
+
+    # don't need a random poly id anymore
+    aggregate_layer.DeleteField(
+        serviceshed_defn.GetFieldIndex(poly_id_field))
