@@ -47,7 +47,7 @@
           "args_id": "et0_dir",
           "type": "folder",
           "label": "ET0 Directory",
-          "defaultValue": "../seasonal_water_yield/et0_dir",
+          "defaultValue": "../seasonal_water_yield/eto_dir",
           "required": true,
           "disabledBy": "user_defined_local_recharge_container",
           "helpText": "The selected folder has a list of ET0 files with a specified format."
