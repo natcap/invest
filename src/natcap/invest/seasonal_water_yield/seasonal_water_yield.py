@@ -711,8 +711,8 @@ def _aggregate_recharge(
         aggregate_layer.SetFeature(poly_feat)
     aggregate_layer.SyncToDisk()
 
-    for raster_path, aggregate_field_id in [
-            (l_path, 'qb'), (vri_path, 'vri_sum')]:
+    for raster_path, aggregate_field_id, op_type in [
+            (l_path, 'qb', 'mean'), (vri_path, 'vri_sum', 'sum')]:
 
         # aggregate carbon stocks by the new ID field
         aggregate_stats = pygeoprocessing.aggregate_raster_values_uri(
@@ -726,9 +726,12 @@ def _aggregate_recharge(
 
         aggregate_layer.ResetReading()
         for poly_index, poly_feat in enumerate(aggregate_layer):
-            poly_feat.SetField(
-                aggregate_field_id, aggregate_stats.total[poly_index] /
-                aggregate_stats.n_pixels[poly_index])
+            if op_type == 'mean':
+                value = (aggregate_stats.total[poly_index] /
+                         aggregate_stats.n_pixels[poly_index])
+            elif op_type == 'sum':
+                value = aggregate_stats.total[poly_index]
+            poly_feat.SetField(aggregate_field_id, value)
             aggregate_layer.SetFeature(poly_feat)
 
     # don't need a random poly id anymore
