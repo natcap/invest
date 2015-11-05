@@ -24,6 +24,9 @@ LOGGER = logging.getLogger(
     'natcap.invest.seasonal_water_yield.seasonal_water_yield')
 
 N_MONTHS = 12
+MONTH_ID_TO_LABEL = [
+    'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
+    'nov', 'dec']
 
 
 def execute(args):
@@ -294,14 +297,29 @@ def execute(args):
     else:
         # user didn't predefine local recharge, calculate it
         LOGGER.info('loading number of monthly events')
-        rain_events_lookup = (
-            pygeoprocessing.geoprocessing.get_lookup_from_table(
-                args['rain_events_table_path'], 'month'))
         for month_id in xrange(N_MONTHS):
-            n_events = rain_events_lookup[month_id+1]['events']
-            pygeoprocessing.make_constant_raster_from_base_uri(
-                temporary_file_registry['dem_aligned_path'], n_events,
-                temporary_file_registry['n_events_path_list'][month_id])
+            if args['user_defined_climate_zones']:
+                cz_rain_events_lookup = (
+                    pygeoprocessing.geoprocessing.get_lookup_from_table(
+                        args['climate_zone_table_path'], 'cz_id'))
+                month_label = MONTH_ID_TO_LABEL[month_id]
+                climate_zone_rain_events_month = dict([
+                    (cz_id, cz_rain_events_lookup[cz_id][month_label]) for
+                    cz_id in cz_rain_events_lookup])
+                n_events_nodata = -1
+                pygeoprocessing.reclassify_dataset_uri(
+                    args['climate_zone_raster_path'],
+                    climate_zone_rain_events_month,
+                    temporary_file_registry['n_events_path_list'][month_id],
+                    gdal.GDT_Float32, n_events_nodata)
+            else:
+                rain_events_lookup = (
+                    pygeoprocessing.geoprocessing.get_lookup_from_table(
+                        args['rain_events_table_path'], 'month'))
+                n_events = rain_events_lookup[month_id+1]['events']
+                pygeoprocessing.make_constant_raster_from_base_uri(
+                    temporary_file_registry['dem_aligned_path'], n_events,
+                    temporary_file_registry['n_events_path_list'][month_id])
 
         LOGGER.info('curve number')
         _calculate_curve_number_raster(
@@ -325,6 +343,7 @@ def execute(args):
                 output_file_registry['stream_path'],
                 output_file_registry['qfm_path_list'][month_index],
                 output_file_registry['si_path'])
+            sys.exit(-1)
 
         qf_nodata = -1
         LOGGER.info('calculating QFi')
@@ -508,7 +527,7 @@ def _calculate_monthly_quick_flow(
 
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (stream_array != 1))
+            (stream_array != 1) & (n_events >= 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
@@ -517,7 +536,12 @@ def _calculate_monthly_quick_flow(
 
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
-        a_im = p_im[valid_mask] / valid_n_events / 25.4
+        n_events_positive = valid_n_events > 0
+        a_im = numpy.empty(valid_n_events.shape)
+        a_im[n_events_positive] = (
+            p_im[valid_mask][n_events_positive] /
+            valid_n_events[n_events_positive] / 25.4)
+        a_im[~n_events_positive] = 0.0
         qf_im = numpy.empty(p_im.shape)
         qf_im[:] = qf_nodata
 
@@ -531,6 +555,9 @@ def _calculate_monthly_quick_flow(
         qf_im[p_im == 0] = 0.0
         # if we're on a stream, set quickflow to the precipitation
         qf_im[stream_array == 1] = p_im[stream_array == 1]
+
+        #TODO: remove debugging
+        qf_im = n_events
         return qf_im
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
