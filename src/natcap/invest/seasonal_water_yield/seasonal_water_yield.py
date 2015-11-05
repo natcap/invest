@@ -199,6 +199,7 @@ def execute(args):
             os.path.join(intermediate_output_dir, 'n_events%d.tif' % x) for x in xrange(12)],
             #pygeoprocessing.temporary_filename() for _ in xrange(12)],
         'local_recharge_aligned_path': None,  # might be defined later
+        'cz_aligned_raster_path': None,  # might be defined later
     }
 
     if args['user_defined_local_recharge']:
@@ -259,6 +260,13 @@ def execute(args):
             [temporary_file_registry['soil_group_aligned_path']] +
             et0_path_aligned_list + output_align_list)
 
+    if args['user_defined_climate_zones']:
+        input_align_list.append(args['climate_zone_raster_path'])
+        temporary_file_registry['cz_aligned_raster_path'] = (
+            pygeoprocessing.geoprocessing.temporary_filename())
+        output_align_list.append(
+            temporary_file_registry['cz_aligned_raster_path'])
+
     interpolate_list = ['nearest'] * len(input_align_list)
     align_index = 0
     if args['user_defined_local_recharge']:
@@ -308,7 +316,7 @@ def execute(args):
                     cz_id in cz_rain_events_lookup])
                 n_events_nodata = -1
                 pygeoprocessing.reclassify_dataset_uri(
-                    args['climate_zone_raster_path'],
+                    temporary_file_registry['cz_aligned_raster_path'],
                     climate_zone_rain_events_month,
                     temporary_file_registry['n_events_path_list'][month_id],
                     gdal.GDT_Float32, n_events_nodata)
@@ -343,7 +351,6 @@ def execute(args):
                 output_file_registry['stream_path'],
                 output_file_registry['qfm_path_list'][month_index],
                 output_file_registry['si_path'])
-            sys.exit(-1)
 
         qf_nodata = -1
         LOGGER.info('calculating QFi')
@@ -509,7 +516,8 @@ def _calculate_monthly_quick_flow(
         datasets_are_pre_aligned=True)
 
     qf_nodata = -1
-    p_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(precip_path)
+    p_nodata = pygeoprocessing.get_nodata_from_uri(precip_path)
+    n_events_nodata = pygeoprocessing.get_nodata_from_uri(n_events_raster_path)
 
     def qf_op(p_im, s_i, n_events, stream_array):
         """Calculate quick flow as in Eq [1] in user's guide
@@ -527,7 +535,8 @@ def _calculate_monthly_quick_flow(
 
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (stream_array != 1) & (n_events >= 0))
+            (stream_array != 1) & (n_events != n_events_nodata) &
+            (n_events > 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
@@ -536,12 +545,8 @@ def _calculate_monthly_quick_flow(
 
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
-        n_events_positive = valid_n_events > 0
         a_im = numpy.empty(valid_n_events.shape)
-        a_im[n_events_positive] = (
-            p_im[valid_mask][n_events_positive] /
-            valid_n_events[n_events_positive] / 25.4)
-        a_im[~n_events_positive] = 0.0
+        a_im = p_im[valid_mask] / valid_n_events / 25.4
         qf_im = numpy.empty(p_im.shape)
         qf_im[:] = qf_nodata
 
@@ -552,12 +557,9 @@ def _calculate_monthly_quick_flow(
             scipy.special.expn(1, valid_si / a_im)))
 
         # if precip is 0, then QF should be zero
-        qf_im[p_im == 0] = 0.0
+        qf_im[(p_im == 0) | (n_events == 0)] = 0.0
         # if we're on a stream, set quickflow to the precipitation
         qf_im[stream_array == 1] = p_im[stream_array == 1]
-
-        #TODO: remove debugging
-        qf_im = n_events
         return qf_im
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
