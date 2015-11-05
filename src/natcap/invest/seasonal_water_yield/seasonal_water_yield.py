@@ -183,6 +183,7 @@ def execute(args):
         output_file_registry['annual_precip_path'] = os.path.join(
             output_dir, 'P_i%s.tif' % file_suffix)
 
+    #TODO: delete all the temporary files on model completion
     temporary_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
         'dem_aligned_path': pygeoprocessing.temporary_filename(),
@@ -191,6 +192,10 @@ def execute(args):
             pygeoprocessing.geoprocessing.temporary_filename()),
         'soil_group_aligned_path': pygeoprocessing.temporary_filename(),
         'flow_accum_path': pygeoprocessing.temporary_filename(),
+        'n_events_path_list': [
+            os.path.join(intermediate_output_dir, 'n_events%d.tif' % x) for x in xrange(12)],
+            #pygeoprocessing.temporary_filename() for _ in xrange(12)],
+        'local_recharge_aligned_path': None,  # might be defined later
     }
 
     if args['user_defined_local_recharge']:
@@ -292,9 +297,11 @@ def execute(args):
         rain_events_lookup = (
             pygeoprocessing.geoprocessing.get_lookup_from_table(
                 args['rain_events_table_path'], 'month'))
-        n_events = dict([
-            (month, rain_events_lookup[month]['events'])
-            for month in rain_events_lookup])
+        for month_id in xrange(N_MONTHS):
+            n_events = rain_events_lookup[month_id+1]['events']
+            pygeoprocessing.make_constant_raster_from_base_uri(
+                temporary_file_registry['dem_aligned_path'], n_events,
+                temporary_file_registry['n_events_path_list'][month_id])
 
         LOGGER.info('curve number')
         _calculate_curve_number_raster(
@@ -313,7 +320,8 @@ def execute(args):
             _calculate_monthly_quick_flow(
                 precip_path_aligned_list[month_index],
                 temporary_file_registry['lulc_aligned_path'],
-                output_file_registry['cn_path'], n_events[month_index+1],
+                output_file_registry['cn_path'],
+                temporary_file_registry['n_events_path_list'][month_index],
                 output_file_registry['stream_path'],
                 output_file_registry['qfm_path_list'][month_index],
                 output_file_registry['si_path'])
@@ -445,8 +453,8 @@ def execute(args):
 
 
 def _calculate_monthly_quick_flow(
-        precip_path, lulc_raster_path, cn_path, n_events, stream_path,
-        qf_monthly_path, si_path):
+        precip_path, lulc_raster_path, cn_path, n_events_raster_path,
+        stream_path, qf_monthly_path, si_path):
     """Calculates quick flow for a month
 
     Parameters:
@@ -454,8 +462,8 @@ def _calculate_monthly_quick_flow(
             precipitation
         lulc_raster_path (string): path to landcover raster
         cn_path (string): path to curve number raster
-        n_events (dict of int -> int): maps the number of rain events per month
-            where the index to n_events is the calendar month starting at 1.
+        n_events_raster_path (string): a path to a raster where each pixel
+            indicates the number of rain events.
         stream_path (string): path to stream mask raster where 1 indicates a
             stream pixel, 0 is a non-stream but otherwise valid area from the
             original DEM, and nodata indicates areas outside the valid DEM.
@@ -484,13 +492,14 @@ def _calculate_monthly_quick_flow(
     qf_nodata = -1
     p_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(precip_path)
 
-    def qf_op(p_im, s_i, stream_array):
+    def qf_op(p_im, s_i, n_events, stream_array):
         """Calculate quick flow as in Eq [1] in user's guide
 
         Parameters:
             p_im (numpy.array): precipitation at pixel i on month m
             s_i (numpy.array): factor that is 1000/CN_i - 10
                 (Equation 1b from user's guide)
+            n_events (numpy.array): number of rain events on the pixel
             stream_mask (numpy.array): 1 if stream, otherwise not a stream
                 pixel.
 
@@ -500,15 +509,20 @@ def _calculate_monthly_quick_flow(
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
             (stream_array != 1))
+        valid_n_events = n_events[valid_mask]
+        valid_si = s_i[valid_mask]
+
+        if numpy.any(valid_n_events <= 0):
+            LOGGER.warn(valid_n_events)
+
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
-        a_im = p_im[valid_mask] / n_events / 25.4
-        valid_si = s_i[valid_mask]
+        a_im = p_im[valid_mask] / valid_n_events / 25.4
         qf_im = numpy.empty(p_im.shape)
         qf_im[:] = qf_nodata
 
         # qf_im is the quickflow at pixel i on month m Eq. [1]
-        qf_im[valid_mask] = (25.4 * n_events * (
+        qf_im[valid_mask] = (25.4 * valid_n_events * (
             (a_im - valid_si) * numpy.exp(-0.2 * valid_si / a_im) +
             valid_si ** 2 / a_im * numpy.exp((0.8 * valid_si) / a_im) *
             scipy.special.expn(1, valid_si / a_im)))
@@ -520,9 +534,9 @@ def _calculate_monthly_quick_flow(
         return qf_im
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [precip_path, si_path, stream_path], qf_op, qf_monthly_path,
-        gdal.GDT_Float32, qf_nodata, pixel_size, 'intersection',
-        vectorize_op=False, datasets_are_pre_aligned=True)
+        [precip_path, si_path, n_events_raster_path, stream_path], qf_op,
+        qf_monthly_path, gdal.GDT_Float32, qf_nodata, pixel_size,
+        'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
 
 
 def _calculate_curve_number_raster(
