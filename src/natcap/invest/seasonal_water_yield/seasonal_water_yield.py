@@ -448,7 +448,7 @@ def execute(args):
         aoi_uri=args['aoi_path'],
         stream_uri=output_file_registry['stream_path'])
 
-    LOGGER.info('calculating base flow')
+    LOGGER.info('calculating B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
         temporary_file_registry['dem_aligned_path'],
         output_file_registry['l_path'],
@@ -458,18 +458,29 @@ def execute(args):
         output_file_registry['outflow_weights_path'],
         output_file_registry['stream_path'],
         output_file_registry['b_sum_path'])
-    """
-    LOGGER.info('calculate B_sum')  # Eq. [12]
-    pygeoprocessing.routing.route_flux(
-        output_file_registry['flow_dir_path'],
-        temporary_file_registry['dem_aligned_path'],
+
+    LOGGER.info('calculating B')
+
+    b_sum_nodata = ri_nodata = pygeoprocessing.get_nodata_from_uri(
+        output_file_registry['b_sum_path'])
+
+    def op_b(b_sum, l_avail, l_sum):
+        """Calculates B=B_sum*Lavail/L_sum"""
+        valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
+        result = numpy.empty(b_sum.shape)
+        result[:] = b_sum_nodata
+        result[valid_mask] = (
+            b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
+        return result
+
+    pygeoprocessing.vectorize_datasets(
+        [output_file_registry['b_sum_path'],
+         output_file_registry['l_avail_path'],
+         output_file_registry['l_sum_path']], op_b,
         output_file_registry['b_path'],
-        temporary_file_registry['zero_absorption_source_path'],
-        temporary_file_registry['loss_path'],
-        output_file_registry['b_sum_path'], 'flux_only',
-        aoi_uri=args['aoi_path'],
-        stream_uri=output_file_registry['stream_path'])
-    """
+        gdal.GDT_Float32, b_sum_nodata, pixel_size, 'intersection',
+        vectorize_op=False, datasets_are_pre_aligned=True)
+
     LOGGER.info('  (\\w/)  SWY Complete!')
     LOGGER.info('  (..  \\ ')
     LOGGER.info(' _/  )  \\______')
