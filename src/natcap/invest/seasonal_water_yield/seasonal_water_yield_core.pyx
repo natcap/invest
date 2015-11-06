@@ -2847,9 +2847,9 @@ def calculate_r_sum_avail_pour(
 
 @cython.wraparound(False)
 @cython.cdivision(True)
-def route_baseflow(
+def route_baseflow_sum(
     dem_path, l_path, l_avail_path, l_sum_path,
-    outflow_direction_path, outflow_weights_path, stream_path, b_path):
+    outflow_direction_path, outflow_weights_path, stream_path, b_sum_path):
 
     #Pass transport
     cdef time_t start
@@ -2896,7 +2896,7 @@ def route_baseflow(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_float32, ndim=4] l_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] b_block = numpy.zeros(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=4] b_sum_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
     cdef numpy.ndarray[numpy.npy_int8, ndim=4] stream_block = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
@@ -2919,24 +2919,24 @@ def route_baseflow(
     l_avail_band = l_avail_raster.GetRasterBand(1)
     l_sum_raster = gdal.Open(l_sum_path)
     l_sum_band = l_sum_raster.GetRasterBand(1)
-    cdef float l_avail_nodata = l_avail_band.GetNoDataValue()
+    cdef float l_sum_nodata = l_sum_band.GetNoDataValue()
 
     stream_raster = gdal.Open(stream_path)
     stream_band = stream_raster.GetRasterBand(1)
 
-    cdef float b_nodata = -9999.0
+    cdef float b_sum_nodata = -9999.0
     pygeoprocessing.new_raster_from_base_uri(
-        outflow_direction_path, b_path, 'GTiff', b_nodata,
-        gdal.GDT_Float32, fill_value=b_nodata)
-    b_raster = gdal.Open(b_path, gdal.GA_Update)
-    b_band = b_raster.GetRasterBand(1)
+        outflow_direction_path, b_sum_path, 'GTiff', b_sum_nodata,
+        gdal.GDT_Float32, fill_value=b_sum_nodata)
+    b_sum_raster = gdal.Open(b_sum_path, gdal.GA_Update)
+    b_sum_band = b_sum_raster.GetRasterBand(1)
 
     band_list = [
         outflow_direction_band, outflow_weights_band, l_avail_band,
-        l_sum_band, l_band, stream_band, b_band]
+        l_sum_band, l_band, stream_band, b_sum_band]
     block_list = [
         outflow_direction_block, outflow_weights_block, l_avail_block,
-        l_sum_block, l_block, stream_block, b_block]
+        l_sum_block, l_block, stream_block, b_sum_block]
     update_list = [False] * 6 + [True]
     cache_dirty[:] = 0
 
@@ -2959,14 +2959,14 @@ def route_baseflow(
     cdef int flat_index
     cdef float outflow_weight
     cdef int outflow_direction
-    cdef float neighbor_b_i
+    cdef float neighbor_b_sum_i
     cdef float neighbor_l_i
     cdef float neighbor_l_avail_i
     cdef float neighbor_l_sum_i
-    cdef float b_i
+    cdef float b_sum_i
     cdef float l_i
     cdef float l_avail_i
-    cdef float l_sum_avail_i
+    cdef float l_sum_i
     cdef int neighbor_direction
 
     cdef time_t last_time, current_time
@@ -2998,25 +2998,25 @@ def route_baseflow(
                 cells_to_process.size())
 
         #if cell is processed, then skip
-        if b_block[row_index, col_index, row_block_offset, col_block_offset] != b_nodata:
+        if b_sum_block[row_index, col_index, row_block_offset, col_block_offset] != b_sum_nodata:
             continue
 
-        l_avail_i = l_avail_block[
+        l_sum_i = l_sum_block[
             row_index, col_index, row_block_offset, col_block_offset]
 
-        # if current cell doesn't outflow, base case is B == L_avail
+        # if current cell doesn't outflow, base case is B == l_sum
         if outflow_direction == outflow_direction_nodata:
-            if l_avail_i == l_avail_nodata:
-                b_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            if l_sum_i == l_sum_nodata:
+                b_sum_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             else:
-                b_block[row_index, col_index, row_block_offset, col_block_offset] = l_avail_i
+                b_sum_block[row_index, col_index, row_block_offset, col_block_offset] = l_sum_i
             cache_dirty[row_index, col_index] = 1
         elif stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
-            b_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
+            b_sum_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
             cache_dirty[row_index, col_index] = 1
         else:
             downstream_calculated = 1
-            b_i = 0.0
+            b_sum_i = 0.0
             for neighbor_index in xrange(2):
                 if neighbor_index == 1:
                     outflow_direction = (outflow_direction + 1) % 8
@@ -3042,10 +3042,10 @@ def route_baseflow(
                         neighbor_row_index, neighbor_col_index,
                         neighbor_row_block_offset, neighbor_col_block_offset] == 1:
                     #calc base case
-                    b_i += outflow_weight
+                    b_sum_i += outflow_weight
                 else:
-                    if b_block[neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset] == b_nodata:
+                    if b_sum_block[neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] == b_sum_nodata:
                         #push neighbor on stack
                         downstream_calculated = 0
                         neighbor_flat_index = neighbor_row * n_cols + neighbor_col
@@ -3071,19 +3071,19 @@ def route_baseflow(
                         neighbor_l_avail_i = l_avail_block[
                             neighbor_row_index, neighbor_col_index,
                             neighbor_row_block_offset, neighbor_col_block_offset]
-                        neighbor_b_i = b_block[
+                        neighbor_b_sum_i = b_sum_block[
                             neighbor_row_index, neighbor_col_index,
                             neighbor_row_block_offset, neighbor_col_block_offset]
-                        b_i += (outflow_weight * (
-                            neighbor_l_sum_i / neighbor_l_avail_i - 1) *
-                            neighbor_b_i / (neighbor_l_sum_i - neighbor_l_i))
+                        b_sum_i += (outflow_weight * (
+                            1- neighbor_l_avail_i / neighbor_l_sum_i) *
+                            neighbor_b_sum_i / (neighbor_l_sum_i - neighbor_l_i))
 
             if downstream_calculated:
-                b_i *= l_avail_i
+                b_sum_i *= l_sum_i
                 block_cache.update_cache(
                     global_row, global_col, &row_index, &col_index,
                     &row_block_offset, &col_block_offset)
-                b_block[row_index, col_index, row_block_offset, col_block_offset] = b_i
+                b_sum_block[row_index, col_index, row_block_offset, col_block_offset] = b_sum_i
                 cache_dirty[row_index, col_index] = 1
 
         #put upstream neighbors on stack for processing
@@ -3125,9 +3125,9 @@ def route_baseflow(
                 continue
 
             #already processed, no need to loop on it again
-            if b_block[
+            if b_sum_block[
                     neighbor_row_index, neighbor_col_index,
-                    neighbor_row_block_offset, neighbor_col_block_offset] != b_nodata:
+                    neighbor_row_block_offset, neighbor_col_block_offset] != b_sum_nodata:
                 continue
 
             neighbor_flat_index = neighbor_row * n_cols + neighbor_col

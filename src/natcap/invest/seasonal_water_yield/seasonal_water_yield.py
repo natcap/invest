@@ -103,7 +103,7 @@ def execute(args):
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
     threshold_flow_accumulation = float(args['threshold_flow_accumulation'])
-    biophysical_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
+    biophysical_table = pygeoprocessing.get_lookup_from_table(
         args['biophysical_table_path'], 'lucode')
     LOGGER.debug(biophysical_table)
     missing_headers = []
@@ -126,7 +126,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = args['workspace_dir']
-    pygeoprocessing.geoprocessing.create_directories(
+    pygeoprocessing.create_directories(
         [intermediate_output_dir, output_dir])
 
     #TODO: Change all the output file tags to be called the variables in the UG
@@ -190,9 +190,9 @@ def execute(args):
     temporary_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
         'dem_aligned_path': pygeoprocessing.temporary_filename(),
-        'loss_path': pygeoprocessing.geoprocessing.temporary_filename(),
+        'loss_path': pygeoprocessing.temporary_filename(),
         'zero_absorption_source_path': (
-            pygeoprocessing.geoprocessing.temporary_filename()),
+            pygeoprocessing.temporary_filename()),
         'soil_group_aligned_path': pygeoprocessing.temporary_filename(),
         'flow_accum_path': pygeoprocessing.temporary_filename(),
         'n_events_path_list': [
@@ -204,9 +204,9 @@ def execute(args):
 
     if args['user_defined_local_recharge']:
         temporary_file_registry['local_recharge_aligned_path'] = (
-            pygeoprocessing.geoprocessing.temporary_filename())
+            pygeoprocessing.temporary_filename())
 
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_raster_path'])
 
     #TODO: put align into helper function
@@ -247,10 +247,10 @@ def execute(args):
 
         #pre align all the datasets
         precip_path_aligned_list = [
-            pygeoprocessing.geoprocessing.temporary_filename() for _ in
+            pygeoprocessing.temporary_filename() for _ in
             range(len(precip_path_list))]
         et0_path_aligned_list = [
-            pygeoprocessing.geoprocessing.temporary_filename() for _ in
+            pygeoprocessing.temporary_filename() for _ in
             range(len(precip_path_list))]
         input_align_list = (
             precip_path_list + [args['soil_group_path']] + et0_path_list +
@@ -263,7 +263,7 @@ def execute(args):
     if args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
         temporary_file_registry['cz_aligned_raster_path'] = (
-            pygeoprocessing.geoprocessing.temporary_filename())
+            pygeoprocessing.temporary_filename())
         output_align_list.append(
             temporary_file_registry['cz_aligned_raster_path'])
 
@@ -276,7 +276,7 @@ def execute(args):
         interpolate_list.append('nearest')
         align_index = len(interpolate_list) - 1
 
-    pygeoprocessing.geoprocessing.align_dataset_list(
+    pygeoprocessing.align_dataset_list(
         input_align_list, output_align_list, interpolate_list, pixel_size,
         'intersection', align_index, aoi_uri=args['aoi_path'],
         assert_datasets_projected=True)
@@ -308,7 +308,7 @@ def execute(args):
         for month_id in xrange(N_MONTHS):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
-                    pygeoprocessing.geoprocessing.get_lookup_from_table(
+                    pygeoprocessing.get_lookup_from_table(
                         args['climate_zone_table_path'], 'cz_id'))
                 month_label = MONTH_ID_TO_LABEL[month_id]
                 climate_zone_rain_events_month = dict([
@@ -322,7 +322,7 @@ def execute(args):
                     gdal.GDT_Float32, n_events_nodata)
             else:
                 rain_events_lookup = (
-                    pygeoprocessing.geoprocessing.get_lookup_from_table(
+                    pygeoprocessing.get_lookup_from_table(
                         args['rain_events_table_path'], 'month'))
                 n_events = rain_events_lookup[month_id+1]['events']
                 pygeoprocessing.make_constant_raster_from_base_uri(
@@ -358,12 +358,13 @@ def execute(args):
         def qfi_sum_op(*qf_values):
             """sum the monthly qfis"""
             qf_sum = numpy.empty(qf_values[0].shape)
+            qf_sum[:] = qf_nodata
             valid_mask = qf_values[0] != qf_nodata
             for index in range(len(qf_values)):
                 qf_sum[valid_mask] += qf_values[index][valid_mask]
-            qf_sum[~valid_mask] = qf_nodata
             return qf_sum
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+
+        pygeoprocessing.vectorize_datasets(
             output_file_registry['qfm_path_list'], qfi_sum_op,
             output_file_registry['qf_path'], gdal.GDT_Float32, qf_nodata,
             pixel_size, 'intersection', vectorize_op=False,
@@ -381,7 +382,7 @@ def execute(args):
             output_file_registry['outflow_direction_path'])
 
         LOGGER.info('classifying kc')
-        pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        pygeoprocessing.reclassify_dataset_uri(
             temporary_file_registry['lulc_aligned_path'], kc_lookup,
             output_file_registry['kc_path'], gdal.GDT_Float32, -1)
 
@@ -404,14 +405,14 @@ def execute(args):
     # create an output shapefile
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
-    qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
+    qb_results = pygeoprocessing.aggregate_raster_values_uri(
         output_file_registry['l_path'], args['aoi_path'])
     qb_result = qb_results.total[9999] / qb_results.n_pixels[9999]
     #9999 is the value used to index fields if no shapefile ID is provided
 
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(
         output_file_registry['l_path'])
-    ri_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    ri_nodata = pygeoprocessing.get_nodata_from_uri(
         output_file_registry['l_path'])
 
     def vri_op(ri_array):
@@ -419,7 +420,7 @@ def execute(args):
         return numpy.where(
             ri_array != ri_nodata,
             ri_array / qb_result / qb_results.n_pixels[9999], ri_nodata)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         [output_file_registry['l_path']], vri_op,
         output_file_registry['vri_path'], gdal.GDT_Float32, ri_nodata,
         pixel_size, 'intersection', vectorize_op=False,
@@ -448,16 +449,16 @@ def execute(args):
         stream_uri=output_file_registry['stream_path'])
 
     LOGGER.info('calculating base flow')
-    seasonal_water_yield_core.route_baseflow(
+    seasonal_water_yield_core.route_baseflow_sum(
         temporary_file_registry['dem_aligned_path'],
         output_file_registry['l_path'],
         output_file_registry['l_avail_path'],
-        output_file_registry['l_sum_avail_path'],
+        output_file_registry['l_sum_path'],
         output_file_registry['outflow_direction_path'],
         output_file_registry['outflow_weights_path'],
         output_file_registry['stream_path'],
-        output_file_registry['b_path'])
-
+        output_file_registry['b_sum_path'])
+    """
     LOGGER.info('calculate B_sum')  # Eq. [12]
     pygeoprocessing.routing.route_flux(
         output_file_registry['flow_dir_path'],
@@ -468,7 +469,7 @@ def execute(args):
         output_file_registry['b_sum_path'], 'flux_only',
         aoi_uri=args['aoi_path'],
         stream_uri=output_file_registry['stream_path'])
-
+    """
     LOGGER.info('  (\\w/)  SWY Complete!')
     LOGGER.info('  (..  \\ ')
     LOGGER.info(' _/  )  \\______')
@@ -499,7 +500,7 @@ def _calculate_monthly_quick_flow(
         """
 
     si_nodata = -1
-    cn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(cn_path)
+    cn_nodata = pygeoprocessing.get_nodata_from_uri(cn_path)
 
     def si_op(ci_array, stream_array):
         """potential maximum retention"""
@@ -508,9 +509,9 @@ def _calculate_monthly_quick_flow(
         si_array[stream_array == 1] = 0
         return si_array
 
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(
         lulc_raster_path)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         [cn_path, stream_path], si_op, si_path, gdal.GDT_Float32,
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
@@ -562,7 +563,7 @@ def _calculate_monthly_quick_flow(
         qf_im[stream_array == 1] = p_im[stream_array == 1]
         return qf_im
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         [precip_path, si_path, n_events_raster_path, stream_path], qf_op,
         qf_monthly_path, gdal.GDT_Float32, qf_nodata, pixel_size,
         'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
@@ -644,7 +645,7 @@ def _calculate_si_raster(cn_path, si_path, stream_path):
     """
 
     si_nodata = -1
-    cn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(cn_path)
+    cn_nodata = pygeoprocessing.get_nodata_from_uri(cn_path)
 
     def si_op(ci_factor, stream_mask):
         """calculate si factor"""
@@ -658,8 +659,8 @@ def _calculate_si_raster(cn_path, si_path, stream_path):
                 stream_mask[valid_mask] != 1))
         return si_array
 
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(cn_path)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(cn_path)
+    pygeoprocessing.vectorize_datasets(
         [cn_path, stream_path], si_op, si_path, gdal.GDT_Float32,
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
