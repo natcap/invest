@@ -13,12 +13,55 @@ from natcap.invest.coastal_blue_carbon.classes.raster import Raster
 from natcap.invest.coastal_blue_carbon.classes.raster_stack import RasterStack
 
 class AttrDict(dict):
+    """Create a subclass of dictionary where keys can be accessed as attributes.
+    """
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
 
 def get_inputs(args):
+    """Get Inputs.
+
+    Parameters:
+        args (dict): user args dictionary.
+
+    Returns:
+        d (dict): data dictionary.
+
+    Example Returns:
+        d = {
+            'workspace_dir': <string>,
+            'outputs_dir': <string>,
+            'border_year_list': <list>,
+            'do_economic_analysis': <bool>,
+            'price_t': <dict>,
+            'discount_rate': None,
+            'lulc_to_Sb': <dict>,
+            'lulc_to_Ss': <dict>,
+            'lulc_to_L': <dict>,
+            'lulc_to_Yb': <dict>,
+            'lulc_to_Ys': <dict>,
+            'lulc_to_Hb': <dict>,
+            'lulc_to_Hs': <dict>,
+            'lulc_trans_to_Db': <dict>,
+            'lulc_trans_to_Ds': <dict>,
+            'C_s': <list>,
+            'Y_pr': <dict>,
+            'D_pr': <dict>,
+            'H_pr': <dict>,
+            'L_s': <list>,
+            'A_pr': <dict>,
+            'E_pr': <dict>,
+            'S_pb': <dict>,
+            'T_b': <list>,
+            'N_pr': <dict>,
+            'N_r': <list>,
+            'N': <string>,
+            'V': <string>
+        }
+
+    """
     d = AttrDict({
         'workspace_dir': None,
         'outputs_dir': None,
@@ -68,7 +111,8 @@ def get_inputs(args):
     for i in range(0, len(d.border_year_list)-1):
         if d.border_year_list[i] >= d.border_year_list[i+1]:
             raise ValueError(
-                'LULC snapshot years must be provided in chronological order.')
+                'LULC snapshot years must be provided in chronological order.'
+                ' and in the same order as the LULC snapshot rasters.')
 
     d.C_s = _get_snapshot_rasters(args['lulc_snapshot_list'])
 
@@ -232,6 +276,9 @@ def _create_transient_dict(carbon_pool_transient_uri):
             biomass_transient_dict[lulc] = dict(zip(header, line))
         elif pool == 'soil':
             soil_transient_dict[lulc] = dict(zip(header, line))
+        else:
+            raise ValueError('Pools in transient value table must only be \
+                \'biomass\' or \'soil\'.')
 
     return biomass_transient_dict, soil_transient_dict
 
@@ -269,15 +316,15 @@ def _get_yearly_carbon_price_dict(vars_dict):
         for (year, d) in price_dict.items():
             t = year - start_year
             yearly_carbon_price_dict[int(year)] = d['price']/(
-                (1 + discount_rate/100)**t)
+                (1 + discount_rate/100.0)**t)
     else:
         price_0 = float(vars_dict['price'])
         interest_rate = float(vars_dict['interest_rate'])
 
         for year in range(start_year, end_year):
             t = year - start_year
-            price_t = price_0 * (1 + interest_rate/100)**t
-            discounted_price = (price_t/((1 + discount_rate/100)**t))
+            price_t = price_0 * (1 + interest_rate/100.0)**t
+            discounted_price = (price_t/((1 + discount_rate/100.0)**t))
             yearly_carbon_price_dict[year] = discounted_price
 
     return yearly_carbon_price_dict

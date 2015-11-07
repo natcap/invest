@@ -208,8 +208,6 @@ def save_TAENV(d):
         shutil.copyfile(N_r, dst_filepath)
 
     # Net Sequestration from Base Year to Analysis Year
-    # TODO: d.N or sum d.N_r?
-
     if d.do_economic_analysis:
         fn = 'net_carbon_sequestration_between_%s_and_%s.tif' % (
             d.border_year_list[0], d.border_year_list[-1])

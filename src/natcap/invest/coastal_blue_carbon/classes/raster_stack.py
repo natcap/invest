@@ -48,19 +48,9 @@ class RasterStack(object):
         """Get Raster URI List."""
         return [r.uri for r in self.raster_list]
 
-    def assert_same_projection(self):
-        """Assert Rasters in Same Projection."""
-        return all(self.raster_list[0].get_projection() == r.get_projection() \
-            for r in self.raster_list)
-
     def all_same_projection(self):
         """Check if Rasters in Same Projection."""
         return all(self.raster_list[0].get_projection() == r.get_projection() \
-            for r in self.raster_list)
-
-    def assert_same_alignment(self):
-        """Assert Rasters in Same Alignment."""
-        return all(self.raster_list[0].get_affine() == r.get_affine() \
             for r in self.raster_list)
 
     def all_aligned(self):
