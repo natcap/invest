@@ -196,6 +196,7 @@ def execute(args):
         'zero_absorption_source_path': (
             pygeoprocessing.temporary_filename()),
         'soil_group_aligned_path': pygeoprocessing.temporary_filename(),
+        'soil_group_valid_path': pygeoprocessing.temporary_filename(),
         'flow_accum_path': pygeoprocessing.temporary_filename(),
         'n_events_path_list': [
             os.path.join(intermediate_output_dir, 'n_events%d.tif' % x) for x in xrange(12)],
@@ -288,30 +289,33 @@ def execute(args):
     # sometimes users input data where the DEM is defined in places where the
     # land cover isn't, mask those out
     LOGGER.info("masking out invalid lulc and dem overlap")
-    value_a_nodata = None
-    value_b_nodata = None
-    for value_a_key, value_b_key, out_key in [
-            ('dem_aligned_path', 'lulc_aligned_path', 'dem_valid_path'),
-            ('lulc_aligned_path', 'dem_aligned_path', 'lulc_valid_path')]:
+    nodata_list = None
+    for input_keys, out_key in [
+            (('dem_aligned_path', 'lulc_aligned_path',
+              'soil_group_aligned_path'), 'dem_valid_path'),
+            (('lulc_aligned_path', 'dem_aligned_path',
+              'soil_group_aligned_path'), 'lulc_valid_path'),
+            (('soil_group_aligned_path', 'lulc_aligned_path',
+              'dem_aligned_path'), 'soil_group_valid_path')]:
+        nodata_list = [pygeoprocessing.get_nodata_from_uri(
+            temporary_file_registry[key]) for key in input_keys]
 
-        value_a_nodata = pygeoprocessing.get_nodata_from_uri(
-            temporary_file_registry[value_a_key])
-        value_b_nodata = pygeoprocessing.get_nodata_from_uri(
-            temporary_file_registry[value_b_key])
+        def mask_if_not_both_valid(*value_list):
+            """returns values from value[0] if all input values are not nodata
+            else nodata_list[0]"""
+            valid_mask = numpy.empty(value_list[0].shape, dtype=numpy.bool)
+            valid_mask[:] = True
+            for value_index in xrange(len(value_list)):
+                valid_mask &= (
+                    value_list[value_index] != nodata_list[value_index])
 
-        def mask_if_not_both_valid(value_a, value_b):
-            """returns values from value_a if both value_a and value_b are
-            nodata, else nodata"""
-            return numpy.where(
-                (value_a != value_a_nodata) & (value_b != value_b_nodata),
-                value_a, value_a_nodata)
+            return numpy.where(valid_mask, value_list[0], nodata_list[0])
 
         pygeoprocessing.vectorize_datasets(
-            [temporary_file_registry[value_a_key],
-             temporary_file_registry[value_b_key]], mask_if_not_both_valid,
-            temporary_file_registry[out_key], gdal.GDT_Float32, value_a_nodata,
-            pixel_size, 'intersection', vectorize_op=False,
-            datasets_are_pre_aligned=True)
+            [temporary_file_registry[key] for key in input_keys],
+            mask_if_not_both_valid, temporary_file_registry[out_key],
+            gdal.GDT_Float32, nodata_list[0], pixel_size, 'intersection',
+            vectorize_op=False, datasets_are_pre_aligned=True)
 
     LOGGER.info('flow direction')
     pygeoprocessing.routing.flow_direction_d_inf(
