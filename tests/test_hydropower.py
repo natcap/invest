@@ -3,12 +3,9 @@ import unittest
 import tempfile
 import shutil
 import os
-import numpy
 
-from osgeo import gdal
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
-from pygeoprocessing import geoprocessing
 
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'hydropower')
