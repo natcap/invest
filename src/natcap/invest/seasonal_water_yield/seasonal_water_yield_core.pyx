@@ -448,8 +448,11 @@ cdef route_local_recharge(
                 break
             else:
                 #'calculate l_avail_i and l_i'
-                #add the contribution of the upstream to l_avail and l_i
+                #add the contribution of the upstream to l_avail and l_i eq [7]
                 current_l_sum_avail += (
+                    li_avail_block[
+                        neighbor_row_index, neighbor_col_index,
+                        neighbor_row_block_offset, neighbor_col_block_offset] +
                     l_sum_avail_block[neighbor_row_index, neighbor_col_index,
                         neighbor_row_block_offset, neighbor_col_block_offset]) * outflow_weight
 
@@ -485,10 +488,6 @@ cdef route_local_recharge(
 
         # Eq [8]
         li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma * l_i, 0)
-
-        # also add in r_avail from the current pixel from Eq [7]
-        current_l_sum_avail += li_avail_block[
-            row_index, col_index, row_block_offset, col_block_offset]
 
         l_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_l_sum_avail
         li_block[row_index, col_index, row_block_offset, col_block_offset] = l_i
@@ -3074,9 +3073,12 @@ def route_baseflow_sum(
                         neighbor_b_sum_i = b_sum_block[
                             neighbor_row_index, neighbor_col_index,
                             neighbor_row_block_offset, neighbor_col_block_offset]
-                        b_sum_i += (outflow_weight * (
-                            1- neighbor_l_avail_i / neighbor_l_sum_i) *
-                            neighbor_b_sum_i / (neighbor_l_sum_i - neighbor_l_i))
+                        # make sure there's no zero in the denominator; if so
+                        # result would be zero so don't add anything in
+                        if (neighbor_l_sum_i - neighbor_l_i > 0) and neighbor_l_sum_i > 0:
+                            b_sum_i += (outflow_weight * (
+                                1 - neighbor_l_avail_i / neighbor_l_sum_i) *
+                                neighbor_b_sum_i / (neighbor_l_sum_i - neighbor_l_i))
 
             if downstream_calculated:
                 b_sum_i *= l_sum_i

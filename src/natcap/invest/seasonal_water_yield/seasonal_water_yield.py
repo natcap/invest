@@ -466,11 +466,19 @@ def execute(args):
 
     def op_b(b_sum, l_avail, l_sum):
         """Calculates B=B_sum*Lavail/L_sum"""
-        valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
-        result = numpy.empty(b_sum.shape)
-        result[:] = b_sum_nodata
-        result[valid_mask] = (
-            b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
+        try:
+            valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
+            result = numpy.empty(b_sum.shape)
+            result[:] = b_sum_nodata
+            result[valid_mask] = (
+                b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
+        except RuntimeWarning:
+            numpy.set_printoptions(threshold=numpy.nan)
+            LOGGER.error(b_sum[valid_mask])
+            LOGGER.error(l_avail[valid_mask])
+            LOGGER.error(l_sum[valid_mask])
+            raise
+
         return result
 
     pygeoprocessing.vectorize_datasets(
