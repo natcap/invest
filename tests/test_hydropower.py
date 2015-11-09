@@ -3,9 +3,12 @@ import unittest
 import tempfile
 import shutil
 import os
+import numpy
 
+from osgeo import gdal
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
+from pygeoprocessing import geoprocessing
 
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'hydropower')
@@ -182,7 +185,7 @@ class WaterYieldSubwatershedTest(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'water_yield', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
-                         'subwatersheds_results_wyield.csv']
+                         'subwatershed_results_wyield.csv']
         for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
@@ -304,7 +307,7 @@ class ScarcitySubwatershedTest(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'scarcity', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
-                         'subwatersheds_results_wyield.csv']
+                         'subwatershed_results_wyield.csv']
         for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
@@ -370,7 +373,7 @@ class ValuationSubwatershedTest(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'valuation', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
-                         'subwatersheds_results_wyield.csv']
+                         'subwatershed_results_wyield.csv']
         for table_path in table_results:
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
@@ -435,7 +438,7 @@ class SuffixTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path)))
 
         table_results = ['watershed_results_wyield_test.csv',
-                         'subwatersheds_results_wyield_test.csv']
+                         'subwatershed_results_wyield_test.csv']
         for table_path in table_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', table_path)))
@@ -500,7 +503,7 @@ class SuffixUnderscoreTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path)))
 
         table_results = ['watershed_results_wyield_test.csv',
-                         'subwatersheds_results_wyield_test.csv']
+                         'subwatershed_results_wyield_test.csv']
         for table_path in table_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', table_path)))
