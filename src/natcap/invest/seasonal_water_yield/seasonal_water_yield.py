@@ -190,6 +190,8 @@ def execute(args):
     temporary_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
         'dem_aligned_path': pygeoprocessing.temporary_filename(),
+        'lulc_valid_path': pygeoprocessing.temporary_filename(),
+        'dem_valid_path': pygeoprocessing.temporary_filename(),
         'loss_path': pygeoprocessing.temporary_filename(),
         'zero_absorption_source_path': (
             pygeoprocessing.temporary_filename()),
@@ -247,8 +249,10 @@ def execute(args):
 
         #pre align all the datasets
         precip_path_aligned_list = [
-            pygeoprocessing.temporary_filename() for _ in
-            range(len(precip_path_list))]
+            os.path.join(intermediate_output_dir, 'precip%d.tif' % x) for x in range(len(precip_path_list))]
+
+            #pygeoprocessing.temporary_filename() for _ in
+            #range(len(precip_path_list))]
         et0_path_aligned_list = [
             pygeoprocessing.temporary_filename() for _ in
             range(len(precip_path_list))]
@@ -281,15 +285,43 @@ def execute(args):
         'intersection', align_index, aoi_uri=args['aoi_path'],
         assert_datasets_projected=True)
 
+    # sometimes users input data where the DEM is defined in places where the
+    # land cover isn't, mask those out
+    LOGGER.info("masking out invalid lulc and dem overlap")
+    value_a_nodata = None
+    value_b_nodata = None
+    for value_a_key, value_b_key, out_key in [
+            ('dem_aligned_path', 'lulc_aligned_path', 'dem_valid_path'),
+            ('lulc_aligned_path', 'dem_aligned_path', 'lulc_valid_path')]:
+
+        value_a_nodata = pygeoprocessing.get_nodata_from_uri(
+            temporary_file_registry[value_a_key])
+        value_b_nodata = pygeoprocessing.get_nodata_from_uri(
+            temporary_file_registry[value_b_key])
+
+        def mask_if_not_both_valid(value_a, value_b):
+            """returns values from value_a if both value_a and value_b are
+            nodata, else nodata"""
+            return numpy.where(
+                (value_a != value_a_nodata) & (value_b != value_b_nodata),
+                value_a, value_a_nodata)
+
+        pygeoprocessing.vectorize_datasets(
+            [temporary_file_registry[value_a_key],
+             temporary_file_registry[value_b_key]], mask_if_not_both_valid,
+            temporary_file_registry[out_key], gdal.GDT_Float32, value_a_nodata,
+            pixel_size, 'intersection', vectorize_op=False,
+            datasets_are_pre_aligned=True)
+
     LOGGER.info('flow direction')
     pygeoprocessing.routing.flow_direction_d_inf(
-        temporary_file_registry['dem_aligned_path'],
+        temporary_file_registry['dem_valid_path'],
         output_file_registry['flow_dir_path'])
 
     LOGGER.info('flow accumulation')
     pygeoprocessing.routing.flow_accumulation(
         output_file_registry['flow_dir_path'],
-        temporary_file_registry['dem_aligned_path'],
+        temporary_file_registry['dem_valid_path'],
         temporary_file_registry['flow_accum_path'])
 
     LOGGER.info('stream thresholding')
@@ -326,12 +358,12 @@ def execute(args):
                         args['rain_events_table_path'], 'month'))
                 n_events = rain_events_lookup[month_id+1]['events']
                 pygeoprocessing.make_constant_raster_from_base_uri(
-                    temporary_file_registry['dem_aligned_path'], n_events,
+                    temporary_file_registry['dem_valid_path'], n_events,
                     temporary_file_registry['n_events_path_list'][month_id])
 
         LOGGER.info('curve number')
         _calculate_curve_number_raster(
-            temporary_file_registry['lulc_aligned_path'],
+            temporary_file_registry['lulc_valid_path'],
             temporary_file_registry['soil_group_aligned_path'],
             biophysical_table, pixel_size, output_file_registry['cn_path'])
 
@@ -345,7 +377,7 @@ def execute(args):
             LOGGER.info('calculate quick flow for month %d', month_index+1)
             _calculate_monthly_quick_flow(
                 precip_path_aligned_list[month_index],
-                temporary_file_registry['lulc_aligned_path'],
+                temporary_file_registry['lulc_valid_path'],
                 output_file_registry['cn_path'],
                 temporary_file_registry['n_events_path_list'][month_index],
                 output_file_registry['stream_path'],
@@ -357,11 +389,13 @@ def execute(args):
 
         def qfi_sum_op(*qf_values):
             """sum the monthly qfis"""
-            qf_sum = numpy.empty(qf_values[0].shape)
-            qf_sum[:] = qf_nodata
+            qf_sum = numpy.zeros(qf_values[0].shape)
             valid_mask = qf_values[0] != qf_nodata
+            valid_qf_sum = qf_sum[valid_mask]
             for index in range(len(qf_values)):
-                qf_sum[valid_mask] += qf_values[index][valid_mask]
+                valid_qf_sum += qf_values[index][valid_mask]
+            qf_sum[:] = qf_nodata
+            qf_sum[valid_mask] = valid_qf_sum
             return qf_sum
 
         pygeoprocessing.vectorize_datasets(
@@ -383,7 +417,7 @@ def execute(args):
 
         LOGGER.info('classifying kc')
         pygeoprocessing.reclassify_dataset_uri(
-            temporary_file_registry['lulc_aligned_path'], kc_lookup,
+            temporary_file_registry['lulc_valid_path'], kc_lookup,
             output_file_registry['kc_path'], gdal.GDT_Float32, -1)
 
         # call through to a cython function that does the necessary routing
@@ -394,8 +428,8 @@ def execute(args):
             output_file_registry['flow_dir_path'],
             output_file_registry['outflow_weights_path'],
             output_file_registry['outflow_direction_path'],
-            temporary_file_registry['dem_aligned_path'],
-            temporary_file_registry['lulc_aligned_path'], kc_lookup, alpha_m,
+            temporary_file_registry['dem_valid_path'],
+            temporary_file_registry['lulc_valid_path'], kc_lookup, alpha_m,
             beta_i, gamma, output_file_registry['stream_path'],
             output_file_registry['l_path'],
             output_file_registry['l_avail_path'],
@@ -436,11 +470,11 @@ def execute(args):
         pygeoprocessing.temporary_filename())
     temporary_file_registry['loss_path'] = pygeoprocessing.temporary_filename()
     pygeoprocessing.make_constant_raster_from_base_uri(
-        temporary_file_registry['dem_aligned_path'], 0.0,
+        temporary_file_registry['dem_valid_path'], 0.0,
         temporary_file_registry['zero_absorption_source_path'])
     pygeoprocessing.routing.route_flux(
         output_file_registry['flow_dir_path'],
-        temporary_file_registry['dem_aligned_path'],
+        temporary_file_registry['dem_valid_path'],
         output_file_registry['l_path'],
         temporary_file_registry['zero_absorption_source_path'],
         temporary_file_registry['loss_path'],
@@ -450,7 +484,7 @@ def execute(args):
 
     LOGGER.info('calculating B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
-        temporary_file_registry['dem_aligned_path'],
+        temporary_file_registry['dem_valid_path'],
         output_file_registry['l_path'],
         output_file_registry['l_avail_path'],
         output_file_registry['l_sum_path'],
