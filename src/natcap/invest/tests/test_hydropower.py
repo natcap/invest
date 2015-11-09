@@ -229,14 +229,14 @@ def _create_result_watersheds(component, sub_shed=False):
         scarcity_values = [500, 125, 65213.459, 1630.336475]
         for field, value in zip(scarcity_fields, scarcity_values):
             res_fields[field] = 'real'
-            res_attr[field] = value
+            res_attr[0][field] = value
 
         if component == "valuation":
             valuation_fields = ['hp_energy', 'hp_val']
             valuation_values = [212.856730176, 67.73453119]
             for field, value in zip(valuation_fields, valuation_values):
                 res_fields[field] = 'real'
-                res_attr[field] = value
+                res_attr[0][field] = value
             return _create_watershed(
                 fields=res_fields, attributes=res_attr, subshed=False,
                 execute=True)
@@ -396,7 +396,7 @@ class HydropowerUnitTests(unittest.TestCase):
             [0.12628238, 0.32773667]], numpy.float32)
         fractp_path = _create_raster(fractp_res, gdal.GDT_Float32)
         aet_res = numpy.array([
-            [270.0, 548.05124],
+            [270.0, 548.0512289],
             [505.12952, 655.47334]], numpy.float32)
         aet_path = _create_raster(aet_res, gdal.GDT_Float32)
 
@@ -429,7 +429,7 @@ class HydropowerUnitTests(unittest.TestCase):
         for comp_res, exp_res in zip(csv_paths, res_csv_paths):
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', comp_res),
-                exp_res, tolerance=4)
+                exp_res)
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -504,7 +504,7 @@ class HydropowerUnitTests(unittest.TestCase):
             [0.12628238, 0.32773667]], numpy.float32)
         fractp_path = _create_raster(fractp_res, gdal.GDT_Float32)
         aet_res = numpy.array([
-            [270.0, 548.05124],
+            [270.0, 548.0512289],
             [505.12952, 655.47334]], numpy.float32)
         aet_path = _create_raster(aet_res, gdal.GDT_Float32)
 
@@ -588,7 +588,7 @@ class HydropowerUnitTests(unittest.TestCase):
         csv_path = 'watershed_results_wyield.csv'
         pygeoprocessing.testing.assert_csv_equal(
             os.path.join(args['workspace_dir'], 'output', csv_path),
-            res_ws_csv, tolerance=4)
+            res_ws_csv)
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -665,7 +665,7 @@ class HydropowerUnitTests(unittest.TestCase):
         csv_path = 'watershed_results_wyield.csv'
         pygeoprocessing.testing.assert_csv_equal(
             os.path.join(args['workspace_dir'], 'output', csv_path),
-            res_ws_csv, tolerance=4)
+            res_ws_csv)
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -869,7 +869,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 for key in ['hp_energy', 'hp_val']:
                     try:
                         key_val = feat.GetField(key)
-                        pygeoprocessing.testing.assert_almost_equal(
+                        pygeoprocessing.testing.assert_close(
                             results[ws_id][key], key_val)
                     except ValueError:
                         raise AssertionError('Could not find field %s' % key)
@@ -918,7 +918,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 for key in ['rsupply_vl', 'rsupply_mn']:
                     try:
                         key_val = feat.GetField(key)
-                        pygeoprocessing.testing.assert_almost_equal(
+                        pygeoprocessing.testing.assert_close(
                             results[ws_id][key], key_val)
                     except ValueError:
                         raise AssertionError('Could not find field %s' % key)
@@ -964,7 +964,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 if sub_key not in expected_res[res_key].keys():
                     raise AssertionError(
                         'Extra key %s found in returned results' % sub_key)
-                pygeoprocessing.testing.assert_almost_equal(
+                pygeoprocessing.testing.assert_close(
                     expected_res[res_key][sub_key], results[res_key][sub_key])
 
         os.remove(watershed_uri)
@@ -973,7 +973,8 @@ class HydropowerUnitTests(unittest.TestCase):
         """Testing 'write_new_table' function, which produces a CSV file."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        filename = tempfile.mkstemp()[1]
+        tmp, filename = tempfile.mkstemp()
+        os.close(tmp)
 
         fields = ['id', 'precip', 'volume']
 
@@ -991,7 +992,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 if sub_key not in row:
                     raise AssertionError(
                         'Key %s not found in CSV table' % sub_key)
-                pygeoprocessing.testing.assert_almost_equal(
+                pygeoprocessing.testing.assert_close(
                     float(data[key][sub_key]), float(row[sub_key]))
 
         csv_file.close()
@@ -1031,7 +1032,7 @@ class HydropowerUnitTests(unittest.TestCase):
 
                 try:
                     key_val = feat.GetField('wyield_vol')
-                    pygeoprocessing.testing.assert_almost_equal(
+                    pygeoprocessing.testing.assert_close(
                         results[ws_id]['wyield_vol'], key_val)
                 except ValueError:
                     raise AssertionError(
@@ -1078,7 +1079,7 @@ class HydropowerUnitTests(unittest.TestCase):
 
                 try:
                     field_val = feat.GetField(field_name)
-                    pygeoprocessing.testing.assert_almost_equal(
+                    pygeoprocessing.testing.assert_close(
                         results[ws_id][field_name], field_val)
                 except ValueError:
                     raise AssertionError(
