@@ -118,7 +118,7 @@ def execute(args):
         'carbon_map': os.path.join(
             output_dir, 'carbon_map%s.tif' % file_suffix),
         'aoi_datasource': os.path.join(
-            output_dir, 'aggregated_carbon_stocks.shp')
+            output_dir, 'aggregated_carbon_stocks%s.shp' % file_suffix)
     }
 
     if args['pools_to_calculate'] == 'all':

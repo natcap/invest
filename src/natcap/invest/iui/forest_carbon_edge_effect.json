@@ -60,7 +60,7 @@
               "c_above"
             ]
           },
-          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode''usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'is_tropical_forest', 'c_above'.  If the user selects 'all carbon pools' the table must also contain entries for 'c_below', 'c_soil', and 'c_dead'.  See the InVEST Forest Carbon User's Guide for more information about these fields."
         },
         {
           "id": "pools_to_calculate",
