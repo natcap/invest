@@ -32,10 +32,11 @@ def init_SLT(d):
     d.T_b[0] = add_inplace(d.T_b[0], d.S_pb.soil[0])
     d.N = zeros(d.C_s[0], dtype=np.float32)
     d.V = zeros(d.C_s[0], dtype=np.float32)
+    return d
 
 
 def reclass_C_to_YDH(d, r):
-    """Reclass C to Y_pr, D_pr, H_pr.
+    """Reclass C to Y_pr, D_pr, H_pr for given transition.
 
     Parameters:
         d (dict): data dictionary
@@ -57,10 +58,11 @@ def reclass_C_to_YDH(d, r):
         reclass(d.C_s[r], d.lulc_to_Hb, out_dtype=np.float32))
     d.H_pr.soil.append(
         reclass(d.C_s[r], d.lulc_to_Hs, out_dtype=np.float32))
+    return d
 
 
 def compute_AENSLT(d, r):
-    """Compute A_pr, E_pr, N_pr; Save A_r, E_r, N_r, T_b.
+    """Compute A_pr, E_pr, N_pr; Save A_r, E_r, N_r, T_b for given transition.
 
     Parameters:
         d (dict): data dictionary
@@ -103,9 +105,11 @@ def compute_AENSLT(d, r):
     # Compute T_b
     d.T_b.append(compute_T_b(d.T_b[r], d.N_r[-1], d.L_s[-2], d.L_s[-1]))
 
+    return d
+
 
 def compute_transition(d, r):
-    """Compute transition.
+    """Compute change in carbon over transition period.
 
     Parameters:
         d (dict): data dictionary
@@ -114,10 +118,11 @@ def compute_transition(d, r):
     LOGGER.info("Computing transition %i..." % r)
     reclass_C_to_YDH(d, r)
     compute_AENSLT(d, r)
+    return d
 
 
 def compute_timestep_AENV(d, r, t):
-    """Compute A_pt, E_pt, N_t, V_t, V.
+    """Compute A_pt, E_pt, N_t, V_t, V over previous transitions for a timestep.
 
     Parameters:
         d (dict): data dictionary
@@ -153,6 +158,8 @@ def compute_timestep_AENV(d, r, t):
     del N_t
     del V_t
 
+    return d
+
 
 def compute_NV_across_timesteps(d, r):
     """Compute N, V across timesteps of transition.
@@ -167,10 +174,11 @@ def compute_NV_across_timesteps(d, r):
     for j in xrange(0, diff):
         LOGGER.info("Computing NV for year %i..." % (d.border_year_list[r] + j))
         compute_timestep_AENV(d, r, j+offset)
+    return d
 
 
 def save_TAENV(d):
-    """Save T_b, A_r, E_r, N_r, V.
+    """Save T_b, A_r, E_r, N_r, V rasters to output directory.
 
     Parameters:
         d (dict): data dictionary
@@ -228,11 +236,11 @@ def run(d):
     Parameters:
         d (dict): data dictionary
     """
-    init_SLT(d)
+    d = init_SLT(d)
     LOGGER.info("Running Transient Analysis...")
     for r in range(0, len(d.C_s)-1):
-        compute_transition(d, r)
+        d = compute_transition(d, r)
         if d.do_economic_analysis:
-            compute_NV_across_timesteps(d, r)
+            d = compute_NV_across_timesteps(d, r)
     save_TAENV(d)
     return d
