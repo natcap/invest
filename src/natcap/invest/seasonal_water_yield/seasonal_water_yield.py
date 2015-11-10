@@ -17,6 +17,7 @@ from osgeo import gdal
 from osgeo import ogr
 import pygeoprocessing
 import pygeoprocessing.routing
+import natcap.invest.utils
 
 import seasonal_water_yield_core
 
@@ -159,29 +160,32 @@ def execute(args):
             output_file_registry['aggregate_vector_path'])
         os.remove(output_file_registry['aggregate_vector_path'])
 
+    # add the monthly quick flow rasters
+    for m_index in range(N_MONTHS):
+        output_file_registry['qfm_path_list'][m_index] = (
+            os.path.join(intermediate_output_dir, 'qf_%d.tif' % (
+                m_index+1)))
+        output_file_registry['aetm_path_list'][m_index] = (
+            os.path.join(intermediate_output_dir, 'aetm_%d.tif' % (
+                m_index+1)))
+
+    # this variable is only needed if there is not a predefined recharge file
+    if not args['user_defined_local_recharge']:
+        output_file_registry['l_path'] = os.path.join(output_dir, 'L.tif')
+        output_file_registry['l_avail_path'] = os.path.join(
+            output_dir, 'L_avail.tif')
+        output_file_registry['annual_precip_path'] = os.path.join(
+            output_dir, 'P_i.tif')
+
     # add a suffix to all the output files
     for file_id in output_file_registry:
         if isinstance(output_file_registry[file_id], basestring):
             output_file_registry[file_id] = file_suffix.join(
                 os.path.splitext(output_file_registry[file_id]))
-
-    # add the monthly quick flow rasters
-    for m_index in range(N_MONTHS):
-        output_file_registry['qfm_path_list'][m_index] = (
-            os.path.join(intermediate_output_dir, 'qf_%d%s.tif' % (
-                m_index+1, file_suffix)))
-        output_file_registry['aetm_path_list'][m_index] = (
-            os.path.join(intermediate_output_dir, 'aetm_%d%s.tif' % (
-                m_index+1, file_suffix)))
-
-    # this variable is only needed if there is not a predefined recharge file
-    if not args['user_defined_local_recharge']:
-        output_file_registry['l_path'] = os.path.join(
-            output_dir, 'L%s.tif' % file_suffix)
-        output_file_registry['l_avail_path'] = os.path.join(
-            output_dir, 'L_avail%s.tif' % file_suffix)
-        output_file_registry['annual_precip_path'] = os.path.join(
-            output_dir, 'P_i%s.tif' % file_suffix)
+        elif isinstance(output_file_registry[file_id], list):
+            for index in xrange(len(output_file_registry[file_id])):
+                output_file_registry[file_id][index] = file_suffix.join(
+                    os.path.splitext(output_file_registry[file_id][index]))
 
     #TODO: delete all the temporary files on model completion
     temporary_file_registry = {
@@ -523,6 +527,14 @@ def execute(args):
         output_file_registry['b_path'],
         gdal.GDT_Float32, b_sum_nodata, pixel_size, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
+
+    LOGGER.info('deleting temporary files')
+    for file_id in temporary_file_registry:
+        if isinstance(temporary_file_registry[file_id], basestring):
+            os.remove(temporary_file_registry[file_id])
+        elif isinstance(temporary_file_registry[file_id], list):
+            for index in xrange(len(temporary_file_registry[file_id])):
+                os.remove(temporary_file_registry[file_id][index])
 
     LOGGER.info('  (\\w/)  SWY Complete!')
     LOGGER.info('  (..  \\ ')
