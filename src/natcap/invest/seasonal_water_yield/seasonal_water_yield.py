@@ -1,4 +1,7 @@
 """InVEST Seasonal Water Yield Model"""
+
+# I found this useful to catch all kinds of weird inputs to the model during
+# debugging and think it makes sense to have in production too.
 import warnings
 warnings.filterwarnings('error')
 
@@ -98,14 +101,13 @@ def execute(args):
             to the "cz_id" values defined in args['climate_zone_table_path']
     """
 
-    # prepare and test inputs for common errors
+    LOGGER.info('prepare and test inputs for common errors')
     alpha_m = float(fractions.Fraction(args['alpha_m']))
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
     threshold_flow_accumulation = float(args['threshold_flow_accumulation'])
     biophysical_table = pygeoprocessing.get_lookup_from_table(
         args['biophysical_table_path'], 'lucode')
-    LOGGER.debug(biophysical_table)
     missing_headers = []
     for header_id in ['kc', 'cn_a', 'cn_b', 'cn_c', 'cn_d']:
         field = biophysical_table.itervalues().next()
@@ -116,12 +118,8 @@ def execute(args):
             "biophysical table missing the following headers: %s" %
             str(missing_headers))
 
-    try:
-        file_suffix = args['results_suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
+    file_suffix = natcap.invest.utils.make_suffix_string(
+        args, 'results_suffix')
 
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
@@ -129,7 +127,6 @@ def execute(args):
     pygeoprocessing.create_directories(
         [intermediate_output_dir, output_dir])
 
-    #TODO: Change all the output file tags to be called the variables in the UG
     output_file_registry = {
         'aet_path': os.path.join(intermediate_output_dir, 'aet.tif'),
         'aetm_path_list': [None] * N_MONTHS,
