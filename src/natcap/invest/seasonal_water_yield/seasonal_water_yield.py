@@ -249,39 +249,29 @@ def execute(args):
 
     # sometimes users input data where the DEM is defined in places where the
     # land cover isn't, mask those out
-    LOGGER.info("masking out invalid lulc and dem overlap")
-    nodata_list = None
-    for input_keys, out_key in [
-            (('dem_aligned_path', 'lulc_aligned_path',
-              'soil_group_aligned_path'), 'dem_valid_path'),
-            (('lulc_aligned_path', 'dem_aligned_path',
-              'soil_group_aligned_path'), 'lulc_valid_path'),
-            (('soil_group_aligned_path', 'lulc_aligned_path',
-              'dem_aligned_path'), 'soil_group_valid_path')]:
-        nodata_list = [pygeoprocessing.get_nodata_from_uri(
-            file_registry[key]) for key in input_keys]
-
-        def mask_if_not_both_valid(*value_list):
-            """returns values from value[0] if all input values are not nodata
-            else nodata_list[0]"""
-            valid_mask = numpy.empty(value_list[0].shape, dtype=numpy.bool)
-            valid_mask[:] = True
-            for value_index in xrange(len(value_list)):
-                valid_mask &= (
-                    value_list[value_index] != nodata_list[value_index])
-
-            return numpy.where(valid_mask, value_list[0], nodata_list[0])
-
-        pygeoprocessing.vectorize_datasets(
-            [file_registry[key] for key in input_keys],
-            mask_if_not_both_valid, file_registry[out_key],
-            gdal.GDT_Float32, nodata_list[0], pixel_size, 'intersection',
-            vectorize_op=False, datasets_are_pre_aligned=True)
+    LOGGER.info("Masking invalid lulc, dem, and possible soil group overlap")
+    input_raster_path_list = [
+        file_registry['dem_aligned_path'],
+        file_registry['lulc_aligned_path']]
+    output_valid_raster_path_list = [
+        file_registry['dem_valid_path'],
+        file_registry['lulc_valid_path']]
+    if not args['user_defined_local_recharge']:
+        input_raster_path_list.append(file_registry['soil_group_aligned_path'])
+        output_valid_raster_path_list.append(
+            file_registry['soil_group_valid_path'])
+    _mask_any_nodata(input_raster_path_list, output_valid_raster_path_list)
 
     LOGGER.info('flow direction')
     pygeoprocessing.routing.flow_direction_d_inf(
         file_registry['dem_valid_path'],
         file_registry['flow_dir_path'])
+
+    LOGGER.info('flow weights')
+    seasonal_water_yield_core.calculate_flow_weights(
+        file_registry['flow_dir_path'],
+        file_registry['outflow_weights_path'],
+        file_registry['outflow_direction_path'])
 
     LOGGER.info('flow accumulation')
     pygeoprocessing.routing.flow_accumulation(
@@ -298,7 +288,23 @@ def execute(args):
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
         file_registry['l_path'] = (
-            file_registry['local_recharge_aligned_path'])
+            file_registry['l_aligned_path'])
+        l_nodata = pygeoprocessing.get_nodata_from_uri(file_registry['l_path'])
+
+        def l_avail_op(l_array):
+            """calculate equation [8] L_avail = max(gamma*L, 0)"""
+            result = numpy.empty(l_array.shape)
+            result[:] = l_nodata
+            valid_mask = (l_array != l_nodata)
+            valid_l_array = l_array[valid_mask]
+            valid_l_array[valid_l_array < 0.0] = 0.0
+            result[valid_mask] = valid_l_array * gamma
+            return result
+        pygeoprocessing.vectorize_datasets(
+            [file_registry['l_path']], l_avail_op,
+            file_registry['l_avail_path'], gdal.GDT_Float32, l_nodata,
+            pixel_size, 'intersection', vectorize_op=False,
+            datasets_are_pre_aligned=True)
     else:
         # user didn't predefine local recharge, calculate it
         LOGGER.info('loading number of monthly events')
@@ -374,12 +380,6 @@ def execute(args):
             (lucode, biophysical_table[lucode]['kc']) for lucode in
             biophysical_table])
 
-        LOGGER.info('flow weights')
-        seasonal_water_yield_core.calculate_flow_weights(
-            file_registry['flow_dir_path'],
-            file_registry['outflow_weights_path'],
-            file_registry['outflow_direction_path'])
-
         LOGGER.info('classifying kc')
         pygeoprocessing.reclassify_dataset_uri(
             file_registry['lulc_valid_path'], kc_lookup,
@@ -428,9 +428,6 @@ def execute(args):
         file_registry['aggregate_vector_path'])
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
-    file_registry['zero_absorption_source_path'] = (
-        pygeoprocessing.temporary_filename())
-    file_registry['loss_path'] = pygeoprocessing.temporary_filename()
     pygeoprocessing.make_constant_raster_from_base_uri(
         file_registry['dem_valid_path'], 0.0,
         file_registry['zero_absorption_source_path'])
@@ -849,3 +846,42 @@ def _build_file_registry(base_file_path_list, file_suffix):
                 str(duplicate_keys), str(duplicate_paths)))
 
     return file_registry
+
+
+def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
+    """Mask input raster stack such that any local pixel stacks that include
+    nodata are set to all nodata on the output.
+
+    Parameters:
+        input_raster_path_list (list): list of input raster paths, all rasters
+            are of the same projection, shape, and cell pixel_size
+        output_raster_path_list (list): a parallel list to
+            `input_raster_path_list` to hold the masked results of each input
+            file
+
+    Returns:
+        None"""
+
+    base_nodata_list = [pygeoprocessing.get_nodata_from_uri(
+        path) for path in input_raster_path_list]
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(
+        input_raster_path_list[0])
+    nodata_list = None
+    for index in xrange(len(input_raster_path_list)):
+        nodata_list = base_nodata_list[index:] + base_nodata_list[:index]
+
+        def mask_if_not_both_valid(*value_list):
+            """returns values from value[0] if all input values are not nodata
+            else nodata_list[0]"""
+            valid_mask = numpy.empty(value_list[0].shape, dtype=numpy.bool)
+            valid_mask[:] = True
+            for value_index in xrange(len(value_list)):
+                valid_mask &= (
+                    value_list[value_index] != nodata_list[value_index])
+            return numpy.where(valid_mask, value_list[0], nodata_list[0])
+
+        pygeoprocessing.vectorize_datasets(
+            input_raster_path_list[index:]+input_raster_path_list[:index],
+            mask_if_not_both_valid, output_raster_path_list[index],
+            gdal.GDT_Float32, nodata_list[0], pixel_size, 'intersection',
+            vectorize_op=False, datasets_are_pre_aligned=True)
