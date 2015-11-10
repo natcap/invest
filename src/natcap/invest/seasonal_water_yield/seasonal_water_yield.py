@@ -187,8 +187,7 @@ def execute(args):
                 output_file_registry[file_id][index] = file_suffix.join(
                     os.path.splitext(output_file_registry[file_id][index]))
 
-    #TODO: delete all the temporary files on model completion
-    temporary_file_registry = {
+    tmp_file_registry = {
         'lulc_aligned_path': pygeoprocessing.temporary_filename(),
         'dem_aligned_path': pygeoprocessing.temporary_filename(),
         'lulc_valid_path': pygeoprocessing.temporary_filename(),
@@ -199,15 +198,18 @@ def execute(args):
         'soil_group_aligned_path': pygeoprocessing.temporary_filename(),
         'soil_group_valid_path': pygeoprocessing.temporary_filename(),
         'flow_accum_path': pygeoprocessing.temporary_filename(),
+        'precip_path_aligned_list': [
+            pygeoprocessing.temporary_filename() for _ in xrange(N_MONTHS)],
         'n_events_path_list': [
-            os.path.join(intermediate_output_dir, 'n_events%d.tif' % x) for x in xrange(12)],
-            #pygeoprocessing.temporary_filename() for _ in xrange(12)],
-        'local_recharge_aligned_path': None,  # might be defined later
-        'cz_aligned_raster_path': None,  # might be defined later
+            pygeoprocessing.temporary_filename() for _ in xrange(N_MONTHS)],
+        'et0_path_aligned_list': [
+            pygeoprocessing.temporary_filename() for _ in xrange(N_MONTHS)],
     }
-
     if args['user_defined_local_recharge']:
-        temporary_file_registry['local_recharge_aligned_path'] = (
+        tmp_file_registry['local_recharge_aligned_path'] = (
+            pygeoprocessing.temporary_filename())
+    if args['user_defined_climate_zones']:
+        tmp_file_registry['cz_aligned_raster_path'] = (
             pygeoprocessing.temporary_filename())
 
     pixel_size = pygeoprocessing.get_cell_size_from_uri(
@@ -217,8 +219,8 @@ def execute(args):
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
     output_align_list = [
-        temporary_file_registry['lulc_aligned_path'],
-        temporary_file_registry['dem_aligned_path'],
+        tmp_file_registry['lulc_aligned_path'],
+        tmp_file_registry['dem_aligned_path'],
         ]
 
     if not args['user_defined_local_recharge']:
@@ -249,36 +251,25 @@ def execute(args):
                         (month_index, file_list))
                 path_list.append(file_list[0])
 
-        #pre align all the datasets
-        precip_path_aligned_list = [
-            os.path.join(intermediate_output_dir, 'precip%d.tif' % x) for x in range(len(precip_path_list))]
-
-            #pygeoprocessing.temporary_filename() for _ in
-            #range(len(precip_path_list))]
-        et0_path_aligned_list = [
-            pygeoprocessing.temporary_filename() for _ in
-            range(len(precip_path_list))]
         input_align_list = (
             precip_path_list + [args['soil_group_path']] + et0_path_list +
             input_align_list)
         output_align_list = (
-            precip_path_aligned_list +
-            [temporary_file_registry['soil_group_aligned_path']] +
-            et0_path_aligned_list + output_align_list)
+            tmp_file_registry['precip_path_aligned_list'] +
+            [tmp_file_registry['soil_group_aligned_path']] +
+            tmp_file_registry['et0_path_aligned_list'] + output_align_list)
 
     if args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
-        temporary_file_registry['cz_aligned_raster_path'] = (
-            pygeoprocessing.temporary_filename())
         output_align_list.append(
-            temporary_file_registry['cz_aligned_raster_path'])
+            tmp_file_registry['cz_aligned_raster_path'])
 
     interpolate_list = ['nearest'] * len(input_align_list)
     align_index = 0
     if args['user_defined_local_recharge']:
         input_align_list.append(args['l_path'])
         output_align_list.append(
-            temporary_file_registry['local_recharge_aligned_path'])
+            tmp_file_registry['local_recharge_aligned_path'])
         interpolate_list.append('nearest')
         align_index = len(interpolate_list) - 1
 
@@ -299,7 +290,7 @@ def execute(args):
             (('soil_group_aligned_path', 'lulc_aligned_path',
               'dem_aligned_path'), 'soil_group_valid_path')]:
         nodata_list = [pygeoprocessing.get_nodata_from_uri(
-            temporary_file_registry[key]) for key in input_keys]
+            tmp_file_registry[key]) for key in input_keys]
 
         def mask_if_not_both_valid(*value_list):
             """returns values from value[0] if all input values are not nodata
@@ -313,32 +304,32 @@ def execute(args):
             return numpy.where(valid_mask, value_list[0], nodata_list[0])
 
         pygeoprocessing.vectorize_datasets(
-            [temporary_file_registry[key] for key in input_keys],
-            mask_if_not_both_valid, temporary_file_registry[out_key],
+            [tmp_file_registry[key] for key in input_keys],
+            mask_if_not_both_valid, tmp_file_registry[out_key],
             gdal.GDT_Float32, nodata_list[0], pixel_size, 'intersection',
             vectorize_op=False, datasets_are_pre_aligned=True)
 
     LOGGER.info('flow direction')
     pygeoprocessing.routing.flow_direction_d_inf(
-        temporary_file_registry['dem_valid_path'],
+        tmp_file_registry['dem_valid_path'],
         output_file_registry['flow_dir_path'])
 
     LOGGER.info('flow accumulation')
     pygeoprocessing.routing.flow_accumulation(
         output_file_registry['flow_dir_path'],
-        temporary_file_registry['dem_valid_path'],
-        temporary_file_registry['flow_accum_path'])
+        tmp_file_registry['dem_valid_path'],
+        tmp_file_registry['flow_accum_path'])
 
     LOGGER.info('stream thresholding')
     pygeoprocessing.routing.stream_threshold(
-        temporary_file_registry['flow_accum_path'],
+        tmp_file_registry['flow_accum_path'],
         threshold_flow_accumulation,
         output_file_registry['stream_path'])
 
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
         output_file_registry['l_path'] = (
-            temporary_file_registry['local_recharge_aligned_path'])
+            tmp_file_registry['local_recharge_aligned_path'])
     else:
         # user didn't predefine local recharge, calculate it
         LOGGER.info('loading number of monthly events')
@@ -353,9 +344,9 @@ def execute(args):
                     cz_id in cz_rain_events_lookup])
                 n_events_nodata = -1
                 pygeoprocessing.reclassify_dataset_uri(
-                    temporary_file_registry['cz_aligned_raster_path'],
+                    tmp_file_registry['cz_aligned_raster_path'],
                     climate_zone_rain_events_month,
-                    temporary_file_registry['n_events_path_list'][month_id],
+                    tmp_file_registry['n_events_path_list'][month_id],
                     gdal.GDT_Float32, n_events_nodata)
             else:
                 rain_events_lookup = (
@@ -363,13 +354,13 @@ def execute(args):
                         args['rain_events_table_path'], 'month'))
                 n_events = rain_events_lookup[month_id+1]['events']
                 pygeoprocessing.make_constant_raster_from_base_uri(
-                    temporary_file_registry['dem_valid_path'], n_events,
-                    temporary_file_registry['n_events_path_list'][month_id])
+                    tmp_file_registry['dem_valid_path'], n_events,
+                    tmp_file_registry['n_events_path_list'][month_id])
 
         LOGGER.info('curve number')
         _calculate_curve_number_raster(
-            temporary_file_registry['lulc_valid_path'],
-            temporary_file_registry['soil_group_aligned_path'],
+            tmp_file_registry['lulc_valid_path'],
+            tmp_file_registry['soil_group_aligned_path'],
             biophysical_table, pixel_size, output_file_registry['cn_path'])
 
         LOGGER.info('Si raster')
@@ -381,10 +372,10 @@ def execute(args):
         for month_index in xrange(N_MONTHS):
             LOGGER.info('calculate quick flow for month %d', month_index+1)
             _calculate_monthly_quick_flow(
-                precip_path_aligned_list[month_index],
-                temporary_file_registry['lulc_valid_path'],
+                tmp_file_registry['precip_path_aligned_list'][month_index],
+                tmp_file_registry['lulc_valid_path'],
                 output_file_registry['cn_path'],
-                temporary_file_registry['n_events_path_list'][month_index],
+                tmp_file_registry['n_events_path_list'][month_index],
                 output_file_registry['stream_path'],
                 output_file_registry['qfm_path_list'][month_index],
                 output_file_registry['si_path'])
@@ -422,19 +413,20 @@ def execute(args):
 
         LOGGER.info('classifying kc')
         pygeoprocessing.reclassify_dataset_uri(
-            temporary_file_registry['lulc_valid_path'], kc_lookup,
+            tmp_file_registry['lulc_valid_path'], kc_lookup,
             output_file_registry['kc_path'], gdal.GDT_Float32, -1)
 
         # call through to a cython function that does the necessary routing
         # between AET and L.sum.avail in equation [7], [4], and [3]
         seasonal_water_yield_core.calculate_local_recharge(
-            precip_path_aligned_list, et0_path_aligned_list,
+            tmp_file_registry['precip_path_aligned_list'],
+            tmp_file_registry['et0_path_aligned_list'],
             output_file_registry['qfm_path_list'],
             output_file_registry['flow_dir_path'],
             output_file_registry['outflow_weights_path'],
             output_file_registry['outflow_direction_path'],
-            temporary_file_registry['dem_valid_path'],
-            temporary_file_registry['lulc_valid_path'], kc_lookup, alpha_m,
+            tmp_file_registry['dem_valid_path'],
+            tmp_file_registry['lulc_valid_path'], kc_lookup, alpha_m,
             beta_i, gamma, output_file_registry['stream_path'],
             output_file_registry['l_path'],
             output_file_registry['l_avail_path'],
@@ -471,25 +463,25 @@ def execute(args):
         output_file_registry['aggregate_vector_path'])
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
-    temporary_file_registry['zero_absorption_source_path'] = (
+    tmp_file_registry['zero_absorption_source_path'] = (
         pygeoprocessing.temporary_filename())
-    temporary_file_registry['loss_path'] = pygeoprocessing.temporary_filename()
+    tmp_file_registry['loss_path'] = pygeoprocessing.temporary_filename()
     pygeoprocessing.make_constant_raster_from_base_uri(
-        temporary_file_registry['dem_valid_path'], 0.0,
-        temporary_file_registry['zero_absorption_source_path'])
+        tmp_file_registry['dem_valid_path'], 0.0,
+        tmp_file_registry['zero_absorption_source_path'])
     pygeoprocessing.routing.route_flux(
         output_file_registry['flow_dir_path'],
-        temporary_file_registry['dem_valid_path'],
+        tmp_file_registry['dem_valid_path'],
         output_file_registry['l_path'],
-        temporary_file_registry['zero_absorption_source_path'],
-        temporary_file_registry['loss_path'],
+        tmp_file_registry['zero_absorption_source_path'],
+        tmp_file_registry['loss_path'],
         output_file_registry['l_sum_path'], 'flux_only',
         aoi_uri=args['aoi_path'],
         stream_uri=output_file_registry['stream_path'])
 
     LOGGER.info('calculating B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
-        temporary_file_registry['dem_valid_path'],
+        tmp_file_registry['dem_valid_path'],
         output_file_registry['l_path'],
         output_file_registry['l_avail_path'],
         output_file_registry['l_sum_path'],
@@ -529,12 +521,12 @@ def execute(args):
         vectorize_op=False, datasets_are_pre_aligned=True)
 
     LOGGER.info('deleting temporary files')
-    for file_id in temporary_file_registry:
-        if isinstance(temporary_file_registry[file_id], basestring):
-            os.remove(temporary_file_registry[file_id])
-        elif isinstance(temporary_file_registry[file_id], list):
-            for index in xrange(len(temporary_file_registry[file_id])):
-                os.remove(temporary_file_registry[file_id][index])
+    for file_id in tmp_file_registry:
+        if isinstance(tmp_file_registry[file_id], basestring):
+            os.remove(tmp_file_registry[file_id])
+        elif isinstance(tmp_file_registry[file_id], list):
+            for index in xrange(len(tmp_file_registry[file_id])):
+                os.remove(tmp_file_registry[file_id][index])
 
     LOGGER.info('  (\\w/)  SWY Complete!')
     LOGGER.info('  (..  \\ ')
