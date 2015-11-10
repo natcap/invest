@@ -121,7 +121,6 @@ def execute(args):
 
     file_suffix = natcap.invest.utils.make_suffix_string(
         args, 'results_suffix')
-
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = args['workspace_dir']
@@ -433,13 +432,9 @@ def execute(args):
             output_file_registry['l_sum_avail_path'],
             output_file_registry['aet_path'], output_file_registry['kc_path'])
 
-    # create an output shapefile
-
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
-    qb_results = pygeoprocessing.aggregate_raster_values_uri(
-        output_file_registry['l_path'], args['aoi_path'])
-    qb_result = qb_results.total[9999] / qb_results.n_pixels[9999]
-    #9999 is the value used to index fields if no shapefile ID is provided
+    qb_sum, qb_valid_count = _sum_valid(output_file_registry['l_path'])
+    qb_result = qb_sum / qb_valid_count
 
     pixel_size = pygeoprocessing.get_cell_size_from_uri(
         output_file_registry['l_path'])
@@ -450,7 +445,7 @@ def execute(args):
         """calc vri index Eq 10"""
         return numpy.where(
             ri_array != ri_nodata,
-            ri_array / qb_result / qb_results.n_pixels[9999], ri_nodata)
+            ri_array / qb_result / qb_valid_count, ri_nodata)
     pygeoprocessing.vectorize_datasets(
         [output_file_registry['l_path']], vri_op,
         output_file_registry['vri_path'], gdal.GDT_Float32, ri_nodata,
@@ -796,3 +791,25 @@ def _aggregate_recharge(
     # don't need a random poly id anymore
     aggregate_layer.DeleteField(
         serviceshed_defn.GetFieldIndex(poly_id_field))
+
+
+def _sum_valid(raster_path):
+    """Calculates the sum of the non-nodata pixels in the raster.
+
+    Parameters:
+        raster_path (string): Path to raster on SyncToDisk
+
+    Returns:
+        (sum, n_pixels) tuple where sum is the sum of the non-nodata pixels
+        and n_pixels is the count of them"""
+
+    raster_sum = 0
+    raster_count = 0
+    raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
+
+    for _, block in pygeoprocessing.iterblocks(
+            raster_path, band_list=[1]):
+        valid_mask = block != raster_nodata
+        raster_sum += numpy.sum(block[valid_mask])
+        raster_count += numpy.count_nonzero(valid_mask)
+    return raster_sum, raster_count
