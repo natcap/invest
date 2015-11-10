@@ -289,7 +289,7 @@ cdef route_local_recharge(
     li_avail_band = li_avail_raster.GetRasterBand(1)
     pygeoprocessing.new_raster_from_base_uri(
        outflow_direction_path, l_sum_avail_path, 'GTiff', local_recharge_nodata,
-        gdal.GDT_Float32)
+       gdal.GDT_Float32)
     l_sum_avail_raster = gdal.Open(l_sum_avail_path, gdal.GA_Update)
     l_sum_avail_band = l_sum_avail_raster.GetRasterBand(1)
 
