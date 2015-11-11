@@ -233,18 +233,16 @@ def execute(args):
             [file_registry['soil_group_aligned_path']] +
             file_registry['et0_path_aligned_list'] + output_align_list)
 
-    if args['user_defined_climate_zones']:
-        input_align_list.append(args['climate_zone_raster_path'])
-        output_align_list.append(
-            file_registry['cz_aligned_raster_path'])
-
-    interpolate_list = ['nearest'] * len(input_align_list)
     align_index = 0
     if args['user_defined_local_recharge']:
         input_align_list.append(args['l_path'])
         output_align_list.append(file_registry['l_aligned_path'])
-        interpolate_list.append('nearest')
-        align_index = len(interpolate_list) - 1
+        align_index = len(input_align_list) - 1
+    elif args['user_defined_climate_zones']:
+        input_align_list.append(args['climate_zone_raster_path'])
+        output_align_list.append(
+            file_registry['cz_aligned_raster_path'])
+    interpolate_list = ['nearest'] * len(input_align_list)
 
     pygeoprocessing.align_dataset_list(
         input_align_list, output_align_list, interpolate_list, pixel_size,
