@@ -147,7 +147,7 @@
           "type": "file",
           "label": "Rain Events Table (CSV)",
           "defaultValue": "../seasonal_water_yield/rain_events_table.csv",
-          "required": true,
+          "required": false,
           "validateAs": {
             "type": "CSV",
             "fieldsExist": [
@@ -155,7 +155,7 @@
               "events"
             ]
           },
-          "disabledBy": "climate_zone_container"
+          "disabledBy": "user_defined_local_recharge_container"
         },
         {
           "id": "alpha_m",
