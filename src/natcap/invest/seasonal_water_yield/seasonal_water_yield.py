@@ -193,21 +193,10 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    # if aggregate output shapefile exists, delete it first so we can overwrite
-    if os.path.exists(file_registry['aggregate_vector_path']):
-        LOGGER.warn(
-            '%s exists, deleting and writing new output',
-            file_registry['aggregate_vector_path'])
-        os.remove(file_registry['aggregate_vector_path'])
-
-    #TODO: put align into helper function
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
     output_align_list = [
-        file_registry['lulc_aligned_path'],
-        file_registry['dem_aligned_path'],
-        ]
-
+        file_registry['lulc_aligned_path'], file_registry['dem_aligned_path']]
     if not args['user_defined_local_recharge']:
         precip_path_list = []
         et0_path_list = []
@@ -302,8 +291,7 @@ def execute(args):
 
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
-        file_registry['l_path'] = (
-            file_registry['l_aligned_path'])
+        file_registry['l_path'] = file_registry['l_aligned_path']
         l_nodata = pygeoprocessing.get_nodata_from_uri(file_registry['l_path'])
 
         def l_avail_op(l_array):
@@ -321,7 +309,7 @@ def execute(args):
             pixel_size, 'intersection', vectorize_op=False,
             datasets_are_pre_aligned=True)
     else:
-        # user didn't predefine local recharge, calculate it
+        # user didn't predefine local recharge so calculate it
         LOGGER.info('loading number of monthly events')
         for month_id in xrange(N_MONTHS):
             if args['user_defined_climate_zones']:
@@ -345,31 +333,29 @@ def execute(args):
                     file_registry['dem_valid_path'], n_events,
                     file_registry['n_events_path_list'][month_id])
 
-        LOGGER.info('curve number')
+        LOGGER.info('calculate curve number')
         _calculate_curve_number_raster(
             file_registry['lulc_valid_path'],
             file_registry['soil_group_aligned_path'],
             biophysical_table, pixel_size, file_registry['cn_path'])
 
-        LOGGER.info('Si raster')
+        LOGGER.info('calculate Si raster')
         _calculate_si_raster(
-            file_registry['cn_path'],
-            file_registry['si_path'],
-            file_registry['stream_path'])
+            file_registry['cn_path'], file_registry['stream_path'],
+            file_registry['si_path'])
 
         for month_index in xrange(N_MONTHS):
             LOGGER.info('calculate quick flow for month %d', month_index+1)
             _calculate_monthly_quick_flow(
                 file_registry['precip_path_aligned_list'][month_index],
-                file_registry['lulc_valid_path'],
-                file_registry['cn_path'],
+                file_registry['lulc_valid_path'], file_registry['cn_path'],
                 file_registry['n_events_path_list'][month_index],
                 file_registry['stream_path'],
                 file_registry['qfm_path_list'][month_index],
                 file_registry['si_path'])
 
         qf_nodata = -1
-        LOGGER.info('calculating QFi')
+        LOGGER.info('calculate QFi')
 
         def qfi_sum_op(*qf_values):
             """sum the monthly qfis"""
@@ -393,7 +379,7 @@ def execute(args):
             (lucode, biophysical_table[lucode]['kc']) for lucode in
             biophysical_table])
 
-        LOGGER.info('classifying kc')
+        LOGGER.info('classify kc')
         pygeoprocessing.reclassify_dataset_uri(
             file_registry['lulc_valid_path'], kc_lookup,
             file_registry['kc_path'], gdal.GDT_Float32, -1)
@@ -435,6 +421,13 @@ def execute(args):
         pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
 
+    # if aggregate output shapefile exists, delete it first so we can overwrite
+    if os.path.exists(file_registry['aggregate_vector_path']):
+        LOGGER.warn(
+            '%s exists, deleting and writing new output',
+            file_registry['aggregate_vector_path'])
+        os.remove(file_registry['aggregate_vector_path'])
+
     _aggregate_recharge(
         args['aoi_path'], file_registry['l_path'],
         file_registry['vri_path'],
@@ -454,7 +447,7 @@ def execute(args):
         aoi_uri=args['aoi_path'],
         stream_uri=file_registry['stream_path'])
 
-    LOGGER.info('calculating B_sum')
+    LOGGER.info('calculate B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
         file_registry['dem_valid_path'],
         file_registry['l_path'],
@@ -465,7 +458,7 @@ def execute(args):
         file_registry['stream_path'],
         file_registry['b_sum_path'])
 
-    LOGGER.info('calculating B')
+    LOGGER.info('calculate B')
 
     b_sum_nodata = ri_nodata = pygeoprocessing.get_nodata_from_uri(
         file_registry['b_sum_path'])
@@ -668,13 +661,12 @@ def _calculate_curve_number_raster(
         datasets_are_pre_aligned=True)
 
 
-def _calculate_si_raster(cn_path, si_path, stream_path):
-    """Calculates the S factor of the SCS Runoff equation also known as the
-    potential maximum retention.
+def _calculate_si_raster(cn_path, stream_path, si_path):
+    """Calculates the S factor of the quickflow equation [1].
 
     Parameters:
         cn_path (string): path to curve number raster
-        lulc_raster_path (string): path to landcover raster
+        stream_path (string): path to a stream raster (0, 1)
         si_path (string): path to output s_i raster
 
     Returns:
@@ -715,10 +707,18 @@ def _aggregate_recharge(
         vri_path (string): path to Vri raster
         aggregate_vector_path (string): path to shapefile that will be created
             by this function as the aggregating output.  will contain fields
-            'l_sum' and 'vri_sum' per original feature in `aoi_path`
+            'l_sum' and 'vri_sum' per original feature in `aoi_path`.  If this
+            file exists on disk prior to the call it is overwritten with
+            the result of this call.
 
     Returns:
         None"""
+
+    if os.path.exists(aggregate_vector_path):
+        LOGGER.warn(
+            '%s exists, deleting and writing new output',
+            aggregate_vector_path)
+        os.remove(aggregate_vector_path)
 
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_aoi_vector = ogr.Open(aoi_path)

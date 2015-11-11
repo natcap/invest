@@ -309,13 +309,12 @@ cdef route_local_recharge(
         qfi_band_list.append(qfi_raster_list[index].GetRasterBand(1))
 
     band_list = ([
-            outflow_direction_band,
-            outflow_weights_band,
-            kc_band,            stream_band,
-        ] + precip_band_list + et0_band_list + qfi_band_list +
+            outflow_direction_band, outflow_weights_band, kc_band,
+            stream_band] + precip_band_list + et0_band_list + qfi_band_list +
         [li_band, li_avail_band, l_sum_avail_band, aet_band])
 
-    block_list = [outflow_direction_block, outflow_weights_block, kc_block, stream_block]
+    block_list = [
+        outflow_direction_block, outflow_weights_block, kc_block, stream_block]
     block_list.extend([precip_block_list[i] for i in xrange(N_MONTHS)])
     block_list.extend([et0_block_list[i] for i in xrange(N_MONTHS)])
     block_list.extend([qfi_block_list[i] for i in xrange(N_MONTHS)])
@@ -352,7 +351,6 @@ cdef route_local_recharge(
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int neighbor_direction
@@ -362,7 +360,8 @@ cdef route_local_recharge(
     cdef int current_neighbor_index
     cdef int current_index
     cdef float current_l_sum_avail
-    cdef float qf_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(qfi_path_list[0])
+    cdef float qf_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        qfi_path_list[0])
     cdef int month_index
     cdef float aet_sum
     cdef float pet_m
@@ -379,7 +378,8 @@ cdef route_local_recharge(
     while not cells_to_process.empty():
         time(&current_time)
         if current_time - last_time > 5.0:
-            LOGGER.info('route_local_recharge work queue size = %d' % (cells_to_process.size()))
+            LOGGER.info('route_local_recharge work queue size = %d' % (
+                cells_to_process.size()))
             last_time = current_time
 
         current_index = cells_to_process.top()
@@ -395,7 +395,9 @@ cdef route_local_recharge(
         r_sum_stack.pop()
         neighbors_calculated = 1
 
-        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
+        block_cache.update_cache(
+            global_row, global_col, &row_index, &col_index, &row_block_offset,
+            &col_block_offset)
 
         #Ensure we are working on a valid pixel, if not set everything to 0
         #check quickflow nodata? month 0? qfi_nodata
@@ -415,9 +417,14 @@ cdef route_local_recharge(
             if (neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols):
                 continue
 
-            block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+            block_cache.update_cache(
+                neighbor_row, neighbor_col, &neighbor_row_index,
+                &neighbor_col_index, &neighbor_row_block_offset,
+                &neighbor_col_block_offset)
             #if neighbor inflows
-            neighbor_direction = outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+            neighbor_direction = outflow_direction_block[
+                neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset]
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
@@ -428,7 +435,9 @@ cdef route_local_recharge(
                 continue
 
             #Calculate the outflow weight
-            outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+            outflow_weight = outflow_weights_block[
+                neighbor_row_index, neighbor_col_index,
+                neighbor_row_block_offset, neighbor_col_block_offset]
 
             if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
                 outflow_weight = 1.0 - outflow_weight
