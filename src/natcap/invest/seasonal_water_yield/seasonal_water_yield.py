@@ -146,6 +146,21 @@ def execute(args):
     """
 
     LOGGER.info('prepare and test inputs for common errors')
+
+    # fail early on a missing required rain events table
+    if (not args['user_defined_local_recharge'] and
+            not args['user_defined_climate_zones']):
+        try:
+            rain_events_lookup = (
+                pygeoprocessing.get_lookup_from_table(
+                    args['rain_events_table_path'], 'month'))
+        except IOError:
+            raise ValueError(
+                'Unable to load rain events table: "%s"' %
+                args['rain_events_table_path'])
+        except KeyError:
+            raise ValueError("Can't load rain events table")
+
     biophysical_table = pygeoprocessing.get_lookup_from_table(
         args['biophysical_table_path'], 'lucode')
     missing_headers = []
@@ -324,9 +339,7 @@ def execute(args):
                     file_registry['n_events_path_list'][month_id],
                     gdal.GDT_Float32, n_events_nodata)
             else:
-                rain_events_lookup = (
-                    pygeoprocessing.get_lookup_from_table(
-                        args['rain_events_table_path'], 'month'))
+                # rain_events_lookup defined near entry point of execute
                 n_events = rain_events_lookup[month_id+1]['events']
                 pygeoprocessing.make_constant_raster_from_base_uri(
                     file_registry['dem_valid_path'], n_events,
