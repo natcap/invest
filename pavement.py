@@ -46,6 +46,19 @@ except pkg_resources.VersionConflict:
     NO_WHEEL_SH = '--no-use-wheel'
 
 
+def is_exe(fpath):
+    """
+    Check whether a file is executable and that it exists.
+
+    Parameters:
+        fpath (string): The filepath to check.
+
+    Returns:
+        A boolean.
+    """
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+
 def user_os_installer():
     """
     Determine the operating system installer.
@@ -59,11 +72,18 @@ def user_os_installer():
 
     """
     if platform.system() == 'Linux':
-        # check if we're running an RPM system approach taken from
-        # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
-        exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm'])
-        if exit_code == 0:
-            return 'rpm'
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            rpm_path = os.path.join(path, 'rpm')
+            if is_exe(rpm_path):
+                # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
+                # -q -f /path/to/rpm checks to see if RPM owns RPM.
+                # If it's not owned by RPM, we can assume it's owned by apt/dpkg.
+                exit_code = subprocess.call([rpm_path, '-q', '-f', rpm_path])
+                if exit_code == 0:
+                    return 'rpm'
+                else:
+                    break
         return 'deb'
 
     if platform.system() == 'Darwin':
@@ -1284,15 +1304,6 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
-    def is_exe(fpath):
-        """
-        Check whether a file is executable and that it exists.
-        """
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    class FoundEXE(Exception):
-        pass
-
     # verify required programs exist
     errors_found = False
     programs = [
@@ -1319,16 +1330,16 @@ def check(options):
                     error=ERROR, program=program)
                 errors_found = True
         else:
-            try:
-                for path in os.environ["PATH"].split(os.pathsep):
-                    path = path.strip('"')
-                    exe_file = os.path.join(path, program)
-                    if is_exe(exe_file):
-                        raise FoundEXE
-            except FoundEXE:
-                print "Found %-14s: %s" % (program, exe_file)
-                continue
-            else:
+            found_exe = False
+            for path in os.environ["PATH"].split(os.pathsep):
+                path = path.strip('"')
+                exe_file = os.path.join(path, program)
+                if is_exe(exe_file):
+                    found_exe = True
+                    print "Found %-14s: %s" % (program, exe_file)
+                    break
+
+            if not found_exe:
                 print "{error} {exe} not found. Required for {step}".format(
                     error=ERROR, exe=program, step=build_steps)
                 errors_found = True
@@ -1437,10 +1448,10 @@ def check(options):
 
             if severity == required:
                 if install_msg is None:
-                    install_msg = ''
+                    fmt_install_msg = ''
                 else:
-                    fmt_install_msg = 'Install this package via:\n    ' + install_msg
-                print '{error} {report} \n{msg}'.format(error=ERROR,
+                    fmt_install_msg = '\nInstall this package via:\n    ' + install_msg
+                print 'Python package {error} {report} {msg}'.format(error=ERROR,
                                                       report=conflict.report(),
                                                       msg=fmt_install_msg)
                 errors_found = True
@@ -2546,9 +2557,19 @@ def compress_raster(args):
 @task
 @consume_args
 def test(args):
-    """
-    Run all tests in the two test suites.  Currently implemented with
-    nosetests.
+    """Run the suite of InVEST tests within a virtualenv.
+
+    When run, paver will determine whether InVEST needs to be installed into
+    the active virtualenv, creating the env if needed.  InVEST will be
+    installed into the virtualenv if:
+
+        * InVEST is not already installed into the virtualenv.
+        * The version of InVEST installed into the virtualenv is older than
+          what is currently available to be installed from the source tree.
+        * There are uncommitted changes in the source tree.
+
+    Default behavior is to run all tests contained in tests/*.py and
+    src/natcap/invest/tests/*.py.
 
     If --jenkins is provided, xunit reports and extra logging will be produced.
     If --with-data is provided, test data repos will be cloned.
@@ -2560,11 +2581,16 @@ def test(args):
             help='Use options that are useful for Jenkins reports')
     parser.add_argument('--with-data', default=False, action='store_true',
             help='Clone/update the data repo if needed')
+    parser.add_argument('nose_args', nargs='*',
+                        help=('Nosetests-compatible strings indicating '
+                              'filename[:classname[.testname]]'),
+                        metavar='TEST')
     parsed_args = parser.parse_args(args)
+    print 'parsed args: ', parsed_args
 
     if parsed_args.with_data:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
-        call_task('fetch', args=[REPOS_DICT['sample-data'].local_path])
+        call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _run_tests():
@@ -2592,10 +2618,23 @@ def test(args):
         else:
             jenkins_flags = ''
 
-        sh(('nosetests -vs {jenkins_opts} '
-            'tests/*.py '
-            'src/natcap/invest/tests/*.py').format(
-                jenkins_opts=jenkins_flags))
+        if len(parsed_args.nose_args) == 0:
+            # Specifying all tests by hand here because Windows doesn't like the *
+            # wildcard operator like Linux/Mac does.
+            regression_tests = glob.glob(os.path.join('tests', '*.py'))
+            _unit_glob = glob.glob(os.path.join('src', 'natcap', 'invest',
+                                                'tests', '*.py'))
+            unit_tests = [t for t in _unit_glob
+                        if os.path.basename(t) != '__init__.py']
+            tests = regression_tests + unit_tests
+        else:
+            # If the user gave us some test names to run, run those instead!
+            tests = parsed_args.nose_args
+
+        sh(('nosetests -vs {jenkins_opts} {tests}').format(
+                jenkins_opts=jenkins_flags,
+                tests=' '.join(tests)
+            ))
 
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _update_invest():
