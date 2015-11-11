@@ -808,7 +808,7 @@ def fetch(args, options):
                                    '{repo}').format(repo=repo_path))
 
         if options.dry_run:
-            print 'Fetching {parh}'.format(user_requested_repo.local_path)
+            print 'Fetching {path}'.format(user_requested_repo.local_path)
             continue
         else:
             user_requested_repo.get(target_rev)
