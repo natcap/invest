@@ -189,6 +189,7 @@
       "collapsible": true,
       "args_id": "user_defined_climate_zones",
       "label": "Climate Zones (Advanced)",
+      "disabledBy": "user_defined_local_recharge_container",
       "elements": [
         {
           "id": "climate_zone_list",
