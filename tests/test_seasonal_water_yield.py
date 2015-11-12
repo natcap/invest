@@ -34,8 +34,8 @@ def _test_same_files(base_list_path, path):
     missing_files = []
     with open(base_list_path, 'r') as file_list:
         for file_path in file_list:
-            if not os.path.isfile(os.path.join(path), file_path):
-                missing_files.append(file_path)
+            if not os.path.isfile(os.path.join(path, file_path)):
+                missing_files.append(os.path.join(path, file_path))
     if len(missing_files) > 0:
         raise AssertionError(
             "The following files were expected but not found: " +
@@ -74,9 +74,12 @@ class ExampleTest(unittest.TestCase):
 
         seasonal_water_yield.execute(args)
 
+        # Test that the workspace has the same files as we expect
         _test_same_files(
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             args['workspace_dir'])
+
+        # The output baseflow is equal to the regression baseflow raster
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(args['workspace_dir'], 'B.tif'),
             os.path.join(REGRESSION_DATA, 'B.tif'))
