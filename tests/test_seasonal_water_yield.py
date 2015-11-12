@@ -14,6 +14,34 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), 'data', 'seasonal_water_yield')
 
 
+def _test_same_files(base_list_path, path):
+    """Assert that the files listed in `base_list_file` are also in the
+    directory pointed to by `path`.
+
+    Parameters:
+        base_list_file (string): a path to a file that has one relative file
+            path per line.
+        path (string): a path to a directory whose contents will be checked
+            against the files listed in `base_list_file`
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError when there are files listed in `base_list_file` that
+            don't exist in the directory indicated by `path`"""
+
+    missing_files = []
+    with open(base_list_path, 'r') as file_list:
+        for file_path in file_list:
+            if not os.path.isfile(os.path.join(path), file_path):
+                missing_files.append(file_path)
+    if len(missing_files) > 0:
+        raise AssertionError(
+            "The following files were expected but not found: " +
+            '\n'.join(missing_files))
+
+
 class ExampleTest(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -46,8 +74,11 @@ class ExampleTest(unittest.TestCase):
 
         seasonal_water_yield.execute(args)
 
+        _test_same_files(
+            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
+            args['workspace_dir'])
         pygeoprocessing.testing.assert_rasters_equal(
-            os.path.join(args['workspace_dir'], 'L.tif'),
-            os.path.join(REGRESSION_DATA, 'base_swy_output', 'L.tif'))
+            os.path.join(args['workspace_dir'], 'B.tif'),
+            os.path.join(REGRESSION_DATA, 'B.tif'))
 
         shutil.rmtree(args['workspace_dir'])
