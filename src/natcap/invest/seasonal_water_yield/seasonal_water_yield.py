@@ -823,8 +823,11 @@ def _build_file_registry(base_file_path_list, file_suffix):
         # Check for duplicate keys or paths
         if full_path in all_paths:
             duplicate_paths.add(full_path)
+        else:
+            all_paths.add(full_path)
         return full_path
 
+    # foo
     for base_file_dict, path in base_file_path_list:
         for file_key, file_payload in base_file_dict.iteritems():
             # check for duplicate keys

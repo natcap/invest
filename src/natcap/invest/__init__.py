@@ -8,10 +8,8 @@ import logging
 import pygeoprocessing
 import natcap.versioner
 
-from natcap.invest.tests import test
 
-
-__all__ = ['is_release', 'local_dir', 'test', 'PYGEOPROCESSING_REQUIRED']
+__all__ = ['is_release', 'local_dir', 'PYGEOPROCESSING_REQUIRED']
 
 
 # Verify that the installed pygeoprocessing meets the minimum requirements.

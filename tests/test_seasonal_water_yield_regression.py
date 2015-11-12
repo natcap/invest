@@ -10,13 +10,78 @@ from osgeo import ogr
 from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'seasonal_water_yield')
+    os.path.dirname(__file__), '..', 'data', 'invest-data',
+    'seasonal_water_yield')
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), 'data', 'seasonal_water_yield')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'seasonal_water_yield')
+
+print SAMPLE_DATA
+print REGRESSION_DATA
+
+class SeasonalWaterYieldUnitTests(unittest.TestCase):
+    """Unit tests for InVEST Seasonal Water Yield model"""
+
+    def test_build_file_registry_duplicate_paths(self):
+        """Test a that file registry recognizes duplicate paths"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        with self.assertRaises(ValueError):
+            seasonal_water_yield._build_file_registry(
+                [({'a': 'a.tif'}, ''), ({'b': 'a.tif'}, '')], '')
+
+    def test_build_file_registry_duplicate_keys(self):
+        """Test a that file registry recognizes duplicate keys"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        with self.assertRaises(ValueError):
+            seasonal_water_yield._build_file_registry(
+                [({'a': 'a.tif'}, ''), ({'a': 'b.tif'}, '')], '')
+
+    def test_build_file_registry(self):
+        """Test a complicated file registry creation"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        dict_a = {
+            'a': 'aggregated_results.shp',
+            'b': 'P.tif',
+            '': 'CN.tif',
+            'l_avail_path': ''}
+
+        dict_b = {
+            'apple': '.shp',
+            'bear': 'tif',
+            'cat': 'CN.tif'}
+
+        dict_c = {}
+
+        result = seasonal_water_yield._build_file_registry(
+            [(dict_a, ''), (dict_b, 'foo'), (dict_c, 'garbage')], '')
+
+        expected_dict = {
+            'a': 'aggregated_results.shp',
+            'b': 'P.tif',
+            '': 'CN.tif',
+            'l_avail_path': '',
+            'apple': 'foo\\.shp',
+            'bear': 'foo\\tif',
+            'cat': 'foo\\CN.tif'}
+
+        unexpected_paths = []
+        for key, result_path in expected_dict.iteritems():
+            expected_path = os.path.normpath(result[key])
+            if os.path.normpath(result_path) != expected_path:
+                unexpected_paths.append(
+                    (key, expected_path, os.path.normpath(result_path)))
+
+        extra_keys = set(result.keys()).difference(set(expected_dict.keys()))
+
+        if len(unexpected_paths) > 0 or len(extra_keys) > 0:
+            raise AssertionError(
+                "Unexpected paths or keys: %s %s" % (
+                    str(unexpected_paths), str(extra_keys)))
 
 
 class SeasonalWaterYieldRegressionTests(unittest.TestCase):
-    """Regression tests for the InVEST Seasonal Water Yield model"""
+    """Regression tests for InVEST Seasonal Water Yield model"""
 
     def setUp(self):
         # this lets us delete the workspace after its done no matter the
@@ -76,6 +141,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_climate_zones_regression(self):
         """SWY climate zone regression test
 
@@ -105,6 +172,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                 args['workspace_dir'], 'aggregated_results_cz.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_cz.csv'))
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_user_recharge(self):
         """SWY user recharge regression test.
 
