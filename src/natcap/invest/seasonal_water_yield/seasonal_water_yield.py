@@ -419,13 +419,6 @@ def execute(args):
         pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
 
-    # if aggregate output shapefile exists, delete it first so we can overwrite
-    if os.path.exists(file_registry['aggregate_vector_path']):
-        LOGGER.warn(
-            '%s exists, deleting and writing new output',
-            file_registry['aggregate_vector_path'])
-        os.remove(file_registry['aggregate_vector_path'])
-
     _aggregate_recharge(
         args['aoi_path'], file_registry['l_path'],
         file_registry['vri_path'],
@@ -727,8 +720,6 @@ def _aggregate_recharge(
             "please choose a different workspace or move the aoi file "
             "out of the current workspace %s" % aggregate_vector_path)
 
-    if os.path.exists(aggregate_vector_path):
-        os.remove(aggregate_vector_path)
     aggregate_vector = esri_driver.CopyDataSource(
         original_aoi_vector, aggregate_vector_path)
     original_aoi_vector = None

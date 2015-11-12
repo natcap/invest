@@ -15,104 +15,125 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), 'data', 'seasonal_water_yield')
 
 
-class SeasonalWaterYieldTests(unittest.TestCase):
+class SeasonalWaterYieldRegressionTests(unittest.TestCase):
     """Regression tests for the InVEST Seasonal Water Yield model"""
 
     def setUp(self):
-        self.args = {
-            u'alpha_m': u'1/12',
-            u'aoi_path': os.path.join(SAMPLE_DATA, 'watershed.shp'),
-            u'beta_i': u'1.0',
-            u'biophysical_table_path': os.path.join(
-                SAMPLE_DATA, 'biophysical_table.csv'),
-            u'dem_raster_path': os.path.join(SAMPLE_DATA, 'dem.tif'),
-            u'et0_dir': os.path.join(SAMPLE_DATA, 'eto_dir'),
-            u'gamma': u'1.0',
-            u'lulc_raster_path': os.path.join(SAMPLE_DATA, 'lulc.tif'),
-            u'precip_dir': os.path.join(SAMPLE_DATA, 'precip_dir'),
-            u'rain_events_table_path': os.path.join(
-                SAMPLE_DATA, 'rain_events_table.csv'),
-            u'results_suffix': '',
-            u'soil_group_path': os.path.join(SAMPLE_DATA, 'soil_group.tif'),
-            u'threshold_flow_accumulation': u'1000',
-            u'workspace_dir': tempfile.mkdtemp(),
-        }
-
-        # The tolerance of 3 digits after the decimal was determined by
-        # experimentation on the application with the given range of numbers.
-        # This is an apparently reasonable approach as described by ChrisF:
-        # http://stackoverflow.com/a/3281371/42897
-        # and even more reading about picking numerical tolerance (it's hard):
-        # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-        self.tolerance_places = 3
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        pass
-        #shutil.rmtree(self.args['workspace_dir'])
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def generate_base_args(workspace_dir):
+        """Generate an args list that is consistent across all three regression
+        tests"""
+        args = {
+            'alpha_m': '1/12',
+            'aoi_path': os.path.join(SAMPLE_DATA, 'watershed.shp'),
+            'beta_i': '1.0',
+            'biophysical_table_path': os.path.join(
+                SAMPLE_DATA, 'biophysical_table.csv'),
+            'dem_raster_path': os.path.join(SAMPLE_DATA, 'dem.tif'),
+            'et0_dir': os.path.join(SAMPLE_DATA, 'eto_dir'),
+            'gamma': '1.0',
+            'lulc_raster_path': os.path.join(SAMPLE_DATA, 'lulc.tif'),
+            'precip_dir': os.path.join(SAMPLE_DATA, 'precip_dir'),
+            'rain_events_table_path': os.path.join(
+                SAMPLE_DATA, 'rain_events_table.csv'),
+            'results_suffix': '',
+            'soil_group_path': os.path.join(SAMPLE_DATA, 'soil_group.tif'),
+            'threshold_flow_accumulation': '1000',
+            'workspace_dir': workspace_dir,
+        }
+        return args
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_regression(self):
-        """SWY base regression test"""
+        """SWY base regression test
+
+        Executes SWY in default mode and checks that the output files are
+        generated and that the aggregate shapefile fields are the same as the
+        regression case."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
-        self.args['user_defined_climate_zones'] = False
-        self.args['user_defined_local_recharge'] = False
-        self.args['results_suffix'] = ''
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['results_suffix'] = ''
 
-        seasonal_water_yield.execute(self.args)
+        seasonal_water_yield.execute(args)
 
-        SeasonalWaterYieldTests._test_results(
-            self.args['workspace_dir'],
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
-            os.path.join(self.args['workspace_dir'], 'aggregated_results.shp'),
-            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'),
-            self.tolerance_places)
+            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
-    def test_climate_zones(self):
-        """SWY climate zone regression test"""
+    def test_climate_zones_regression(self):
+        """SWY climate zone regression test
+
+        Executes SWY in climate zones mode and checks that the output files are
+        generated and that the aggregate shapefile fields are the same as the
+        regression case."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
-        self.args['climate_zone_raster_path'] = os.path.join(
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        # modify args to account for climate zones defined
+        args['climate_zone_raster_path'] = os.path.join(
             SAMPLE_DATA, 'climate_zones.tif')
-        self.args['climate_zone_table_path'] = os.path.join(
+        args['climate_zone_table_path'] = os.path.join(
             SAMPLE_DATA, 'climate_zone_events.csv')
-        self.args['user_defined_climate_zones'] = True
-        self.args['user_defined_local_recharge'] = False
-        self.args['results_suffix'] = 'cz'
+        args['user_defined_climate_zones'] = True
+        args['user_defined_local_recharge'] = False
+        args['results_suffix'] = 'cz'
 
-        seasonal_water_yield.execute(self.args)
+        seasonal_water_yield.execute(args)
 
-        SeasonalWaterYieldTests._test_results(
-            self.args['workspace_dir'],
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_cz.txt'),
             os.path.join(
-                self.args['workspace_dir'], 'aggregated_results_cz.shp'),
-            os.path.join(REGRESSION_DATA, 'agg_results_cz.csv'),
-            self.tolerance_places)
+                args['workspace_dir'], 'aggregated_results_cz.shp'),
+            os.path.join(REGRESSION_DATA, 'agg_results_cz.csv'))
 
     def test_user_recharge(self):
-        """SWY user recharge regression test"""
+        """SWY user recharge regression test.
+
+        Executes SWY in user defined local recharge mode and checks that the
+        output files are generated and that the aggregate shapefile fields
+        are the same as the regression case."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
-        self.args['user_defined_climate_zones'] = False
-        self.args['user_defined_local_recharge'] = True
-        self.args['results_suffix'] = ''
-        self.args['l_path'] = os.path.join(REGRESSION_DATA, 'L.tif')
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        # modify args to account for user recharge
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = True
+        args['results_suffix'] = ''
+        args['l_path'] = os.path.join(REGRESSION_DATA, 'L.tif')
 
-        seasonal_water_yield.execute(self.args)
+        seasonal_water_yield.execute(args)
 
-        SeasonalWaterYieldTests._test_results(
-            self.args['workspace_dir'],
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_user_recharge.txt'),
-            os.path.join(self.args['workspace_dir'], 'aggregated_results.shp'),
-            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'),
-            self.tolerance_places)
+            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
     @staticmethod
-    def _test_results(
+    def _assert_regression_results_equal(
             workspace_dir, file_list_path, result_vector_path,
-            agg_results_path, tolerance_places):
+            agg_results_path):
         """Test the state of the workspace against the expected list of files
         and aggregated results.
 
@@ -125,8 +146,6 @@ class SeasonalWaterYieldTests(unittest.TestCase):
             agg_results_path (string): path to a csv file that has the
                 expected aggregated_results.shp table in the form of
                 fid,vri_sum,qb_val per line
-            tolerance_places (int): number of places after the decimal in which
-                to round results when testing floating point equality
 
         Returns:
             None
@@ -137,11 +156,20 @@ class SeasonalWaterYieldTests(unittest.TestCase):
         """
 
          # Test that the workspace has the same files as we expect
-        SeasonalWaterYieldTests._test_same_files(file_list_path, workspace_dir)
+        SeasonalWaterYieldRegressionTests._test_same_files(
+            file_list_path, workspace_dir)
 
         # we expect a file called 'aggregated_results.shp'
         result_vector = ogr.Open(result_vector_path)
         result_layer = result_vector.GetLayer()
+
+        # The tolerance of 3 digits after the decimal was determined by
+        # experimentation on the application with the given range of numbers.
+        # This is an apparently reasonable approach as described by ChrisF:
+        # http://stackoverflow.com/a/3281371/42897
+        # and even more reading about picking numerical tolerance (it's hard):
+        # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+        tolerance_places = 3
 
         with open(agg_results_path, 'rb') as agg_result_file:
             for line in agg_result_file:
