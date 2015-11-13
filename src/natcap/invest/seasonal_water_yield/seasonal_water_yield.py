@@ -595,13 +595,14 @@ def _calculate_curve_number_raster(
             'cn_values': []
         }
         for lucode in sorted(biophysical_table.keys() + [lulc_nodata]):
-            lulc_to_soil[soil_id]['cn_values'].append(
-                biophysical_table[lucode][soil_column])
-            lulc_to_soil[soil_id]['lulc_values'].append(lucode)
-
-        #handle the lulc nodata with cn nodata
-        lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
-        lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
+            if lucode != lulc_nodata:
+                lulc_to_soil[soil_id]['cn_values'].append(
+                    biophysical_table[lucode][soil_column])
+                lulc_to_soil[soil_id]['lulc_values'].append(lucode)
+            else:
+                #handle the lulc nodata with cn nodata
+                lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
+                lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
 
         lulc_to_soil[soil_id]['lulc_values'] = (
             numpy.array(lulc_to_soil[soil_id]['lulc_values'],
