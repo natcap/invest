@@ -33,7 +33,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_ambiguous_precip_data(self):
-        """Test case where there are more than 12 precipitation files"""
+        """SWY test case where there are more than 12 precipitation files"""
 
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
@@ -72,7 +72,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_precip_data_missing(self):
-        """Test case where there is a missing precipitation file"""
+        """SWY test case where there is a missing precipitation file"""
 
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
@@ -109,7 +109,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_aggregate_vector_preexists(self):
-
+        """SWY test that model deletes a preexisting aggregate output result"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # Set up data so there is enough code to do an aggregate over the
@@ -139,7 +139,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_duplicate_aoi_assertion(self):
-        """Ensure model halts when AOI path identical to output vector"""
+        """SWY ensure model halts when AOI path identical to output vector"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # A placeholder args that has the property that the aoi_path will be
@@ -174,21 +174,21 @@ class SeasonalWaterYieldFileRegistryTests(unittest.TestCase):
     """Tests for the InVEST Seasonal Water Yield file registry functionality"""
 
     def test_build_file_registry_duplicate_paths(self):
-        """Test a that file registry recognizes duplicate paths"""
+        """SWY test a that file registry recognizes duplicate paths"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
         with self.assertRaises(ValueError):
             seasonal_water_yield._build_file_registry(
                 [({'a': 'a.tif'}, ''), ({'b': 'a.tif'}, '')], '')
 
     def test_build_file_registry_duplicate_keys(self):
-        """Test a that file registry recognizes duplicate keys"""
+        """SWY test a that file registry recognizes duplicate keys"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
         with self.assertRaises(ValueError):
             seasonal_water_yield._build_file_registry(
                 [({'a': 'a.tif'}, ''), ({'a': 'b.tif'}, '')], '')
 
     def test_build_file_registry(self):
-        """Test a complicated file registry creation"""
+        """SWY test a complicated file registry creation"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         dict_a = {
@@ -269,7 +269,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_regression(self):
-        """SWY base regression test
+        """SWY base regression test on sample data
 
         Executes SWY in default mode and checks that the output files are
         generated and that the aggregate shapefile fields are the same as the
@@ -295,7 +295,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_climate_zones_regression(self):
-        """SWY climate zone regression test
+        """SWY climate zone regression test on sample data
 
         Executes SWY in climate zones mode and checks that the output files are
         generated and that the aggregate shapefile fields are the same as the
@@ -326,7 +326,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_user_recharge(self):
-        """SWY user recharge regression test.
+        """SWY user recharge regression test on sample data
 
         Executes SWY in user defined local recharge mode and checks that the
         output files are generated and that the aggregate shapefile fields
