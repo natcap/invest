@@ -761,9 +761,6 @@ def execute(args):
         else:
             land_exists = False
 
-        LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
-        LOGGER.debug('Land_Points_Dict : %s', land_dict)
-
         grid_ds_uri = os.path.join(inter_dir, 'val_grid_points%s.shp' % suffix)
 
         # Create a point shapefile from the grid point dictionary.
