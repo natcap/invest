@@ -2528,11 +2528,7 @@ def compress_raster(args):
     Call `paver compress_raster --help` for full details.
     """
     parser = argparse.ArgumentParser(description=(
-        'Compress and tile a GDAL-compatible raster.'))
-    parser.add_argument('-x', '--blockxsize', nargs='?', default=256, type=int, help=(
-        'The block size along the X axis.  Default=256'))
-    parser.add_argument('-y', '--blockysize', nargs='?', default=256, type=int, help=(
-        'The block size along the Y axis.  Default=256'))
+        'Compress a GDAL-compatible raster.'))
     parser.add_argument('inraster', type=str, help=(
         'The raster to compress'))
     parser.add_argument('outraster', type=str, help=(
@@ -2543,15 +2539,50 @@ def compress_raster(args):
     sh(('gdal_translate '
         '-of "GTiff" '
         '-co "COMPRESS=LZW" '
+        '{in_raster} {out_raster}').format(
+            in_raster=os.path.abspath(parsed_args.inraster),
+            out_raster=os.path.abspath(parsed_args.outraster),
+        ))
+
+
+@task
+@consume_args
+def tile_raster(args):
+    """
+    Tile a raster.
+
+    Call `paver tile_raster --help` for full details.
+    """
+    parser = argparse.ArgumentParser(description=(
+        'Tile a GDAL-compatible raster.'))
+    parser.add_argument('-x', '--blockxsize', nargs='?', default=256, type=int, help=(
+        'The block size along the X axis.  Default=256'))
+    parser.add_argument('-y', '--blockysize', nargs='?', default=256, type=int, help=(
+        'The block size along the Y axis.  Default=256'))
+    parser.add_argument('--compress', action='store_true', help=(
+        'Compress the raster as well as tile'))
+    parser.add_argument('inraster', type=str, help=(
+        'The raster to tile'))
+    parser.add_argument('outraster', type=str, help=(
+        'The path to the output raster'))
+
+    parsed_args = parser.parse_args(args)
+    print parsed_args
+
+    sh(('gdal_translate '
+        '-of "GTiff" '
         '-co "TILED=YES" '
+        '-co "COMPRESS={compress}" '
         '-co "BLOCKXSIZE={blockx}" '
         '-co "BLOCKYSIZE={blocky}" '
         '{in_raster} {out_raster}').format(
+            compress='LZW' if parsed_args.compress else 'NONE',
             blockx=parsed_args.blockxsize,
             blocky=parsed_args.blockysize,
             in_raster=os.path.abspath(parsed_args.inraster),
             out_raster=os.path.abspath(parsed_args.outraster),
         ))
+
 
 
 @task
