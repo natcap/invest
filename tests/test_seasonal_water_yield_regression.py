@@ -18,8 +18,9 @@ REGRESSION_DATA = os.path.join(
     'seasonal_water_yield')
 
 
-class SeasonalWaterYieldUnitTests(unittest.TestCase):
-    """Unit tests for InVEST Seasonal Water Yield model"""
+class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
+    """Tests for InVEST Seasonal Water Yield model that cover cases where
+    input data are in an unusual corner case"""
 
     def setUp(self):
         # this lets us delete the workspace after its done no matter the
@@ -28,6 +29,42 @@ class SeasonalWaterYieldUnitTests(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_precip_data_missing(self):
+
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        test_precip_dir = os.path.join(self.workspace_dir, 'test_precip_dir')
+        shutil.copytree(
+            os.path.join(SAMPLE_DATA, 'precip_dir'), test_precip_dir)
+        os.remove(os.path.join(test_precip_dir, 'precip_mm_3.tif'))
+
+        # A placeholder args that has the property that the aoi_path will be
+        # the same name as the output aggregate vector
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'aoi_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
+            'alpha_m': '1/12',
+            'beta_i': '1.0',
+            'biophysical_table_path': os.path.join(
+                SAMPLE_DATA, 'biophysical_table.csv'),
+            'dem_raster_path': os.path.join(SAMPLE_DATA, 'dem.tif'),
+            'et0_dir': os.path.join(SAMPLE_DATA, 'eto_dir'),
+            'gamma': '1.0',
+            'lulc_raster_path': os.path.join(SAMPLE_DATA, 'lulc.tif'),
+            'precip_dir': test_precip_dir,  # test constructed one
+            'rain_events_table_path': os.path.join(
+                SAMPLE_DATA, 'rain_events_table.csv'),
+            'soil_group_path': os.path.join(SAMPLE_DATA, 'soil_group.tif'),
+            'threshold_flow_accumulation': '1000',
+            'user_defined_climate_zones': False,
+            'user_defined_local_recharge': False,
+        }
+
+        with self.assertRaises(ValueError):
+            seasonal_water_yield.execute(args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -92,6 +129,9 @@ class SeasonalWaterYieldUnitTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             seasonal_water_yield.execute(args)
 
+
+class SeasonalWaterYieldFileRegistryTests(unittest.TestCase):
+    """Tests for the InVEST Seasonal Water Yield file registry functionality"""
 
     def test_build_file_registry_duplicate_paths(self):
         """Test a that file registry recognizes duplicate paths"""

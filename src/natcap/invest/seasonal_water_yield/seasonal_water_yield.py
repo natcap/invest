@@ -207,8 +207,9 @@ def execute(args):
             for data_type, dir_list, path_list in [
                     ('et0', et0_dir_list, et0_path_list),
                     ('Precip', precip_dir_list, precip_path_list)]:
-
-                file_list = [x for x in dir_list if month_file_match.match(x)]
+                file_list = [
+                    month_file_path for month_file_path in dir_list
+                    if month_file_match.match(month_file_path)]
                 if len(file_list) == 0:
                     raise ValueError(
                         "No %s found for month %d" % (data_type, month_index))
@@ -449,18 +450,11 @@ def execute(args):
 
     def op_b(b_sum, l_avail, l_sum):
         """Calculates B=B_sum*Lavail/L_sum"""
-        try:
-            valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
-            result = numpy.empty(b_sum.shape)
-            result[:] = b_sum_nodata
-            result[valid_mask] = (
-                b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
-        except RuntimeWarning:
-            numpy.set_printoptions(threshold=numpy.nan)
-            LOGGER.error(b_sum[valid_mask])
-            LOGGER.error(l_avail[valid_mask])
-            LOGGER.error(l_sum[valid_mask])
-            raise
+        valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
+        result = numpy.empty(b_sum.shape)
+        result[:] = b_sum_nodata
+        result[valid_mask] = (
+            b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
 
         return result
 
@@ -555,9 +549,6 @@ def _calculate_monthly_quick_flow(
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
-        if numpy.any(valid_n_events <= 0):
-            LOGGER.warn(valid_n_events)
-
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
         a_im = numpy.empty(valid_n_events.shape)
@@ -604,16 +595,14 @@ def _calculate_curve_number_raster(
             'cn_values': []
         }
         for lucode in sorted(biophysical_table.keys() + [lulc_nodata]):
-            try:
-                lulc_to_soil[soil_id]['cn_values'].append(
-                    biophysical_table[lucode][soil_column])
-                lulc_to_soil[soil_id]['lulc_values'].append(lucode)
-            except KeyError:
-                if lucode == lulc_nodata:
-                    lulc_to_soil[soil_id]['lulc_values'].append(lucode)
-                    lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
-                else:
-                    raise
+            lulc_to_soil[soil_id]['cn_values'].append(
+                biophysical_table[lucode][soil_column])
+            lulc_to_soil[soil_id]['lulc_values'].append(lucode)
+
+        #handle the lulc nodata with cn nodata
+        lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
+        lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
+
         lulc_to_soil[soil_id]['lulc_values'] = (
             numpy.array(lulc_to_soil[soil_id]['lulc_values'],
                         dtype=numpy.int32))
