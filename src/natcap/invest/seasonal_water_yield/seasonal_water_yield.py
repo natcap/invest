@@ -156,15 +156,6 @@ def execute(args):
 
     biophysical_table = pygeoprocessing.get_lookup_from_table(
         args['biophysical_table_path'], 'lucode')
-    missing_headers = []
-    for header_id in ['kc', 'cn_a', 'cn_b', 'cn_c', 'cn_d']:
-        field = biophysical_table.itervalues().next()
-        if header_id not in field:
-            missing_headers.append(header_id)
-    if len(missing_headers) > 0:
-        raise ValueError(
-            "biophysical table missing the following headers: %s" %
-            str(missing_headers))
 
     alpha_m = float(fractions.Fraction(args['alpha_m']))
     beta_i = float(fractions.Fraction(args['beta_i']))

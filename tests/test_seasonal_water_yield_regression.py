@@ -29,7 +29,6 @@ class SeasonalWaterYieldUnitTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
 
-
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_aggregate_vector_preexists(self):
@@ -151,7 +150,6 @@ class SeasonalWaterYieldUnitTests(unittest.TestCase):
                 "Unexpected paths or keys: %s %s" % (
                     str(unexpected_paths), str(extra_keys)))
 
-#@unittest.skip("skipping regression tests")
 class SeasonalWaterYieldRegressionTests(unittest.TestCase):
     """Regression tests for InVEST Seasonal Water Yield model"""
 
