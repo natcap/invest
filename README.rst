@@ -33,7 +33,11 @@ but have almost all been ported over to a purely open-source python environment.
 Contributing to Development
 ===========================
 
-Issues, including ongoing work, are tracked in our issue tracker on this bitbucket project.  If you encounter a bug, please let us know!
+The best way to participate is to contribute a fix to a bug you are 
+experiencing or to implement a pet feature!
+
+Issues, including ongoing work, are tracked in our issue tracker on this 
+bitbucket project.  If you encounter a bug, please let us know!
 
 If you have something you'd like to contribute, please fork the repository
 and submit a pull request.  Since mercurial tracks branch names in the metadata
@@ -449,7 +453,17 @@ To run the full suite of tests:
 
     $ paver test
 
-Or if you're looking for some extra verbosity (or you're building on jenkins):
+To specify a test (or multiple tests) to run via `paver test`, use the nosetests 
+format to specify test files, classes, and/or test methods to run.  For example:
+
+::
+
+    $ paver test tests/test_example.py:ExampleTest.test_regression
+
+This will only run this one test, ignoring all other tests that would normally be 
+run.
+
+If you're looking for some extra verbosity (or you're building on jenkins):
 
 ::
 
