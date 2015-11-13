@@ -978,10 +978,11 @@ class CSVChecker(TableChecker):
         try:
             #The best we can do is try to open the file as a CSV dictionary
             #and if it fails as an IOError kick that out as an error
-            #we used to try to use sniffer to see if it was valid but had
-            #big issues about it.  See the following for details:
-            #http://code.google.com/p/invest-natcap/issues/detail?id=1076
             csv_file = open(self.uri, 'rbU')
+
+            #using csv Sniffer not to see if it's a valid file, but to
+            #determine the dialect, the 1024 and example comes from its docpage
+            # https://docs.python.org/2/library/csv.html#csv.Sniffer
             dialect = csv.Sniffer().sniff(
                 csv_file.read(1024), delimiters=";,")
             csv_file.seek(0)
