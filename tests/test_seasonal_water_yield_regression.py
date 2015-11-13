@@ -174,14 +174,14 @@ class SeasonalWaterYieldFileRegistryTests(unittest.TestCase):
     """Tests for the InVEST Seasonal Water Yield file registry functionality"""
 
     def test_build_file_registry_duplicate_paths(self):
-        """SWY test a that file registry recognizes duplicate paths"""
+        """SWY test that file registry recognizes duplicate paths"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
         with self.assertRaises(ValueError):
             seasonal_water_yield._build_file_registry(
                 [({'a': 'a.tif'}, ''), ({'b': 'a.tif'}, '')], '')
 
     def test_build_file_registry_duplicate_keys(self):
-        """SWY test a that file registry recognizes duplicate keys"""
+        """SWY test that file registry recognizes duplicate keys"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
         with self.assertRaises(ValueError):
             seasonal_water_yield._build_file_registry(

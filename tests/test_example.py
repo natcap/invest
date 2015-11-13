@@ -6,8 +6,11 @@ import os
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
-SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
-REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', '_example_model')
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data')
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    '_example_model')
 
 
 class ExampleTest(unittest.TestCase):
@@ -15,7 +18,7 @@ class ExampleTest(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_regression(self):
         """
-        Regression test for basic functionality.
+        ExampleTest Regression test for basic functionality
         """
         from natcap.invest import _example_model
         args = {
@@ -30,4 +33,3 @@ class ExampleTest(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'regression_sum.tif'))
 
         shutil.rmtree(args['workspace_dir'])
-
