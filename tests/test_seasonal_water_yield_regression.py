@@ -1,5 +1,6 @@
 """InVEST Seasonal water yield model tests that use the InVEST sample data"""
 
+import glob
 import unittest
 import tempfile
 import shutil
@@ -20,6 +21,47 @@ REGRESSION_DATA = os.path.join(
 class SeasonalWaterYieldUnitTests(unittest.TestCase):
     """Unit tests for InVEST Seasonal Water Yield model"""
 
+    def setUp(self):
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_aggregate_vector_preexists(self):
+
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # Set up data so there is enough code to do an aggregate over the
+        # rasters but the output vector already exists
+        for file_path in glob.glob(os.path.join(SAMPLE_DATA, "watershed.*")):
+            shutil.copy(file_path, self.workspace_dir)
+        aoi_path = os.path.join(SAMPLE_DATA, 'watershed.shp')
+        l_path = os.path.join(REGRESSION_DATA, 'L.tif')
+        aggregate_vector_path = os.path.join(
+            self.workspace_dir, 'watershed.shp')
+        seasonal_water_yield._aggregate_recharge(
+            aoi_path, l_path, l_path, aggregate_vector_path)
+
+        # test if aggregate is expected
+        tolerance_places = 1  # this was an experimentally acceptable value
+        agg_results_base_path = os.path.join(REGRESSION_DATA, 'l_agg_results.csv')
+        result_vector = ogr.Open(aggregate_vector_path)
+        result_layer = result_vector.GetLayer()
+        with open(agg_results_base_path, 'rb') as agg_result_file:
+            for line in agg_result_file:
+                fid, vri_sum, qb_val = [float(x) for x in line.split(',')]
+                feature = result_layer.GetFeature(int(fid))
+                for field, value in [('vri_sum', vri_sum), ('qb', qb_val)]:
+                    numpy.testing.assert_almost_equal(
+                        feature.GetField(field), value,
+                        decimal=tolerance_places)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_duplicate_aoi_assertion(self):
         """Ensure model halts when AOI path identical to output vector"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
@@ -27,8 +69,9 @@ class SeasonalWaterYieldUnitTests(unittest.TestCase):
         # A placeholder args that has the property that the aoi_path will be
         # the same name as the output aggregate vector
         args = {
-            'workspace_dir': 'workspace_dir',
-            'aoi_path': 'workspace_dir/aggregated_results_foo.shp',
+            'workspace_dir': self.workspace_dir,
+            'aoi_path': os.path.join(
+                self.workspace_dir, 'aggregated_results_foo.shp'),
             'results_suffix': 'foo',
 
             'alpha_m': '1/12',
@@ -108,6 +151,7 @@ class SeasonalWaterYieldUnitTests(unittest.TestCase):
                 "Unexpected paths or keys: %s %s" % (
                     str(unexpected_paths), str(extra_keys)))
 
+#@unittest.skip("skipping regression tests")
 class SeasonalWaterYieldRegressionTests(unittest.TestCase):
     """Regression tests for InVEST Seasonal Water Yield model"""
 

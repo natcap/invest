@@ -150,16 +150,9 @@ def execute(args):
     # fail early on a missing required rain events table
     if (not args['user_defined_local_recharge'] and
             not args['user_defined_climate_zones']):
-        try:
-            rain_events_lookup = (
-                pygeoprocessing.get_lookup_from_table(
-                    args['rain_events_table_path'], 'month'))
-        except IOError:
-            raise ValueError(
-                'Unable to load rain events table: "%s"' %
-                args['rain_events_table_path'])
-        except KeyError:
-            raise ValueError("Can't load rain events table")
+        rain_events_lookup = (
+            pygeoprocessing.get_lookup_from_table(
+                args['rain_events_table_path'], 'month'))
 
     biophysical_table = pygeoprocessing.get_lookup_from_table(
         args['biophysical_table_path'], 'lucode')
