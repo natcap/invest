@@ -16,11 +16,40 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
 
-print SAMPLE_DATA
-print REGRESSION_DATA
 
 class SeasonalWaterYieldUnitTests(unittest.TestCase):
     """Unit tests for InVEST Seasonal Water Yield model"""
+
+    def test_duplicate_aoi_assertion(self):
+        """Ensure model halts when AOI path identical to output vector"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # A placeholder args that has the property that the aoi_path will be
+        # the same name as the output aggregate vector
+        args = {
+            'workspace_dir': 'workspace_dir',
+            'aoi_path': 'workspace_dir/aggregated_results_foo.shp',
+            'results_suffix': 'foo',
+
+            'alpha_m': '1/12',
+            'beta_i': '1.0',
+            'biophysical_table_path': os.path.join(
+                SAMPLE_DATA, 'biophysical_table.csv'),
+            'dem_raster_path': os.path.join(SAMPLE_DATA, 'dem.tif'),
+            'et0_dir': os.path.join(SAMPLE_DATA, 'eto_dir'),
+            'gamma': '1.0',
+            'lulc_raster_path': os.path.join(SAMPLE_DATA, 'lulc.tif'),
+            'precip_dir': os.path.join(SAMPLE_DATA, 'precip_dir'),
+            'rain_events_table_path': os.path.join(
+                SAMPLE_DATA, 'rain_events_table.csv'),
+            'soil_group_path': os.path.join(SAMPLE_DATA, 'soil_group.tif'),
+            'threshold_flow_accumulation': '1000',
+            'user_defined_climate_zones': False,
+            'user_defined_local_recharge': False,
+        }
+        with self.assertRaises(ValueError):
+            seasonal_water_yield.execute(args)
+
 
     def test_build_file_registry_duplicate_paths(self):
         """Test a that file registry recognizes duplicate paths"""
@@ -78,7 +107,6 @@ class SeasonalWaterYieldUnitTests(unittest.TestCase):
             raise AssertionError(
                 "Unexpected paths or keys: %s %s" % (
                     str(unexpected_paths), str(extra_keys)))
-
 
 class SeasonalWaterYieldRegressionTests(unittest.TestCase):
     """Regression tests for InVEST Seasonal Water Yield model"""

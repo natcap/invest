@@ -193,6 +193,15 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
+    LOGGER.info('Checking that the AOI is not the output aggregate vector')
+    if (os.path.normpath(args['aoi_path']) ==
+            os.path.normpath(file_registry['aggregate_vector_path'])):
+        raise ValueError(
+            "The input AOI is the same as the output aggregate vector, "
+            "please choose a different workspace or move the AOI file "
+            "out of the current workspace %s" %
+            file_registry['aggregate_vector_path'])
+
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
     output_align_list = [
@@ -713,12 +722,6 @@ def _aggregate_recharge(
 
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_aoi_vector = ogr.Open(aoi_path)
-    if (os.path.normpath(aoi_path) ==
-            os.path.normpath(aggregate_vector_path)):
-        raise ValueError(
-            "The input and output vector filenames are the same, "
-            "please choose a different workspace or move the aoi file "
-            "out of the current workspace %s" % aggregate_vector_path)
 
     aggregate_vector = esri_driver.CopyDataSource(
         original_aoi_vector, aggregate_vector_path)
