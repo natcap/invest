@@ -5,7 +5,7 @@ natcap.versioner>=0.2.4
 numpy
 poster
 pyamg>=2.2.1
-pygeoprocessing>=0.3.0a9
+pygeoprocessing>=0.3.0a12
 pyyaml
 Pyro4
 scipy>=0.14.0

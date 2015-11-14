@@ -23,10 +23,10 @@ import registrar
 
 def get_fields(feature):
     """Return a dict with all fields in the given feature.
-        
+
         feature - an OGR feature.
-        
-        Returns an assembled python dict with a mapping of 
+
+        Returns an assembled python dict with a mapping of
         fieldname -> fieldvalue"""
 
     fields = {}
@@ -929,7 +929,7 @@ class PrimitiveChecker(Checker):
             # If the user has not provided a regular expression, we should use
             # the default regular expression instead.
             user_pattern = self.default_regexp
-        
+
         pattern = re.compile(user_pattern, flag)
         value = valid_dict['value']  # the value to compare against our regex
         if pattern.match(str(value)) == None:
@@ -978,10 +978,15 @@ class CSVChecker(TableChecker):
         try:
             #The best we can do is try to open the file as a CSV dictionary
             #and if it fails as an IOError kick that out as an error
-            #we used to try to use sniffer to see if it was valid but had
-            #big issues about it.  See the following for details:
-            #http://code.google.com/p/invest-natcap/issues/detail?id=1076
-            self.file = csv.DictReader(open(self.uri, 'rU'))
+            csv_file = open(self.uri, 'rbU')
+
+            #using csv Sniffer not to see if it's a valid file, but to
+            #determine the dialect, the 1024 and example comes from its docpage
+            # https://docs.python.org/2/library/csv.html#csv.Sniffer
+            dialect = csv.Sniffer().sniff(
+                csv_file.read(1024), delimiters=";,")
+            csv_file.seek(0)
+            self.file = csv.DictReader(csv_file, dialect=dialect)
         except IOError as e:
             return str("IOError: %s" % str(e))
         except (csv.Error, ValueError) as e:
@@ -1047,7 +1052,7 @@ class FlexibleTableChecker(TableChecker):
         except IOError as e:
             return str("IOError: %s" % str(e))
         except (csv.Error, ValueError) as e:
-            return str(e)            
+            return str(e)
 
     def _build_table(self):
         # Forward the call to the checker for the particular table type.
