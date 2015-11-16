@@ -205,13 +205,10 @@ class Repository(object):
         return os.path.exists(os.path.join(self.local_path, self.statedir))
 
     def clone(self, rev=None):
-        raise Exception
-
-    def pull(self):
-        raise Exception
+        raise NotImplementedError
 
     def update(self, rev=None):
-        raise Exception
+        raise NotImplementedError
 
     def tracked_version(self):
         tracked_rev = json.load(open('versions.json'))[self.local_path]
@@ -228,6 +225,11 @@ class Repository(object):
         return self.current_rev() == tracked_version
 
     def format_rev(self, rev):
+        raise NotImplementedError
+
+    def current_rev(self, convert=True):
+        raise NotImplementedError
+
         raise Exception
 
     def current_rev(self, convert=True):
