@@ -11,19 +11,24 @@ SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'hydropower')
 
 
-class ValuationTest(unittest.TestCase):
-    """
-    Regression Test for Hydropower running Scarcity and Valuation components,
-    """
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Valuation component with no subwatershed.
-        """
-        from natcap.invest.hydropower import hydropower_water_yield
+class HydropowerRegressionTests(unittest.TestCase):
+    """Regression Test for Hydropower running Scarcity and Valuation."""
+
+    def setUp(self):
+        """Overriding setUp function to create temporary workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Overriding tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def generate_base_args(workspace_dir):
+        """Generate an args list that is consistent across regression tests."""
         args = {
-            'workspace_dir': tempfile.mkdtemp(),
+            'workspace_dir': workspace_dir,
             'lulc_uri': os.path.join(
                 SAMPLE_DATA, 'Base_Data', 'Freshwater', 'landuse_90'),
             'depth_to_root_rest_layer_uri': os.path.join(
@@ -39,15 +44,25 @@ class ValuationTest(unittest.TestCase):
                 SAMPLE_DATA, 'Base_Data', 'Freshwater', 'watersheds.shp'),
             'biophysical_table_uri': os.path.join(
                 SAMPLE_DATA, 'Hydropower', 'input', 'biophysical_table.csv'),
-            'seasonality_constant': 5,
-            'water_scarcity_container': True,
-            'demand_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv'),
-            'valuation_container': True,
-            'valuation_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input',
-                'hydropower_valuation_table.csv'),
+            'seasonality_constant': 5
         }
+        return args
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_valuation(self):
+        """Regression test for Valuation component with no subwatershed."""
+        from natcap.invest.hydropower import hydropower_water_yield
+
+        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+        args['water_scarcity_container'] = True
+        args['demand_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
+        args['valuation_container'] = True
+        args['valuation_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input',
+            'hydropower_valuation_table.csv')
+
         hydropower_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
@@ -69,42 +84,17 @@ class ValuationTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'valuation', table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class WaterYieldTest(unittest.TestCase):
-    """
-    Regression Test for Hydropower running Water Yield component.
-    """
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Biophysical component, Water Yield only,
-            no subwatershed.
+    def test_water_yield(self):
+        """Regression test for Biophysical component, Water Yield only.
+
+        No subwatershed is used.
         """
         from natcap.invest.hydropower import hydropower_water_yield
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'landuse_90'),
-            'depth_to_root_rest_layer_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater',
-                'depth_to_root_rest_layer'),
-            'precipitation_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'precip'),
-            'pawc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'pawc'),
-            'eto_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'eto'),
-            'watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'watersheds.shp'),
-            'biophysical_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'biophysical_table.csv'),
-            'seasonality_constant': 5,
-            'results_suffix': '',
-            'water_scarcity_container': False,
-            'valuation_container': False
-        }
+
+        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+
         hydropower_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
@@ -126,45 +116,21 @@ class WaterYieldTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'water_yield', table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class WaterYieldSubwatershedTest(unittest.TestCase):
-    """
-    Regression Test for Hydropower running Water Yield component with
-        subwatershed.
-    """
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
+    def test_water_yield_subshed(self):
         """
-        Regression test for Biophysical component, Water Yield,
-            subwatershed included.
+        Regression test for Biophysical component, Water Yield.
+
+        Subwatershed is included.
         """
         from natcap.invest.hydropower import hydropower_water_yield
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'landuse_90'),
-            'depth_to_root_rest_layer_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater',
-                'depth_to_root_rest_layer'),
-            'precipitation_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'precip'),
-            'pawc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'pawc'),
-            'eto_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'eto'),
-            'watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'watersheds.shp'),
-            'sub_watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp'),
-            'biophysical_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'biophysical_table.csv'),
-            'seasonality_constant': 5,
-            'results_suffix': '',
-            'water_scarcity_container': False,
-            'valuation_container': False
-        }
+
+        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['sub_watersheds_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
+
         hydropower_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
@@ -188,43 +154,22 @@ class WaterYieldSubwatershedTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'water_yield', table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class ScarcityTest(unittest.TestCase):
-    """
-    Regression Test for Hydropower running Scarcity component.
-    """
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
+    def test_scarcity(self):
         """
-        Regression test for Biophysical component, Scarcity, no subwatershed.
+        Regression test for Biophysical component, Scarcity.
+
+        No subwatershed is used.
         """
         from natcap.invest.hydropower import hydropower_water_yield
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'landuse_90'),
-            'depth_to_root_rest_layer_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater',
-                'depth_to_root_rest_layer'),
-            'precipitation_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'precip'),
-            'pawc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'pawc'),
-            'eto_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'eto'),
-            'watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'watersheds.shp'),
-            'biophysical_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'biophysical_table.csv'),
-            'seasonality_constant': 5,
-            'results_suffix': '',
-            'water_scarcity_container': True,
-            'demand_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv'),
-            'valuation_container': False
-        }
+
+        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['water_scarcity_container'] = True
+        args['demand_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
+
         hydropower_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
@@ -246,47 +191,24 @@ class ScarcityTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'scarcity', table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class ScarcitySubwatershedTest(unittest.TestCase):
-    """
-    Regression Test for Hydropower running Scarcity components with
-        subwatershed.
-    """
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
+    def test_scarcity_subshed(self):
         """
-        Regression test for Biophysical component, Scarcity,
-            subwatershed included.
+        Regression test for Biophysical component, Scarcity.
+
+        Subwatershed is included.
         """
         from natcap.invest.hydropower import hydropower_water_yield
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'landuse_90'),
-            'depth_to_root_rest_layer_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater',
-                'depth_to_root_rest_layer'),
-            'precipitation_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'precip'),
-            'pawc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'pawc'),
-            'eto_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'eto'),
-            'watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'watersheds.shp'),
-            'sub_watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp'),
-            'biophysical_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'biophysical_table.csv'),
-            'seasonality_constant': 5,
-            'results_suffix': '',
-            'water_scarcity_container': True,
-            'demand_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv'),
-            'valuation_container': False
-        }
+
+        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['water_scarcity_container'] = True
+        args['demand_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
+        args['sub_watersheds_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
+
         hydropower_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
@@ -310,49 +232,24 @@ class ScarcitySubwatershedTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'scarcity', table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class ValuationSubwatershedTest(unittest.TestCase):
-    """
-    Regression Test for Hydropower running Scarcity and Valuation components
-        with subwatershed.
-    """
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Valuation component, subwatershed included.
-        """
+    def test_valuation_subshed(self):
+        """Regression test for Valuation component, subwatershed included."""
         from natcap.invest.hydropower import hydropower_water_yield
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'landuse_90'),
-            'depth_to_root_rest_layer_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater',
-                'depth_to_root_rest_layer'),
-            'precipitation_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'precip'),
-            'pawc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'pawc'),
-            'eto_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'eto'),
-            'watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'watersheds.shp'),
-            'sub_watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp'),
-            'biophysical_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'biophysical_table.csv'),
-            'seasonality_constant': 5,
-            'results_suffix': '',
-            'water_scarcity_container': True,
-            'demand_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv'),
-            'valuation_container': True,
-            'valuation_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input',
-                'hydropower_valuation_table.csv'),
-        }
+
+        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['water_scarcity_container'] = True
+        args['demand_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
+        args['valuation_container'] = True
+        args['valuation_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input',
+            'hydropower_valuation_table.csv')
+        args['sub_watersheds_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
+
         hydropower_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
@@ -376,49 +273,70 @@ class ValuationSubwatershedTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'valuation', table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class SuffixTest(unittest.TestCase):
-    """
-    Regression Test for Hydropower running Scarcity and Valuation components
-        testing presence of a suffix in the filenames.
-    """
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
+    def test_suffix(self):
+        """Regression test for checking that the suffix is handled correctly."""
+        from natcap.invest.hydropower import hydropower_water_yield
+
+        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['water_scarcity_container'] = True
+        args['demand_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
+        args['valuation_container'] = True
+        args['valuation_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input',
+            'hydropower_valuation_table.csv')
+        args['sub_watersheds_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
+        args['results_suffix'] = 'test'
+
+        hydropower_water_yield.execute(args)
+
+        raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
+        for raster_path in raster_results:
+            self.assertTrue(os.path.exists(
+                os.path.join(
+                    args['workspace_dir'], 'output', 'per_pixel',
+                    raster_path)))
+
+        vector_results = ['watershed_results_wyield_test.shp',
+                          'subwatershed_results_wyield_test.shp']
+        for vector_path in vector_results:
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace_dir'], 'output', vector_path)))
+
+        table_results = ['watershed_results_wyield_test.csv',
+                         'subwatershed_results_wyield_test.csv']
+        for table_path in table_results:
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace_dir'], 'output', table_path)))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_suffix_underscore(self):
         """
         Regression test for checking that the suffix is handled correctly.
+
+        Given an underscore in the suffix input, check that it is not
+            duplicated in the file output.
         """
         from natcap.invest.hydropower import hydropower_water_yield
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'landuse_90'),
-            'depth_to_root_rest_layer_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater',
-                'depth_to_root_rest_layer'),
-            'precipitation_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'precip'),
-            'pawc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'pawc'),
-            'eto_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'eto'),
-            'watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'watersheds.shp'),
-            'sub_watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp'),
-            'biophysical_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'biophysical_table.csv'),
-            'seasonality_constant': 5,
-            'results_suffix': 'test',
-            'water_scarcity_container': True,
-            'demand_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv'),
-            'valuation_container': True,
-            'valuation_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input',
-                'hydropower_valuation_table.csv')
-        }
+
+        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['water_scarcity_container'] = True
+        args['demand_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
+        args['valuation_container'] = True
+        args['valuation_table_uri'] = os.path.join(
+            SAMPLE_DATA, 'Hydropower', 'input',
+            'hydropower_valuation_table.csv')
+        args['sub_watersheds_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
+        args['results_suffix'] = '_test'
+
         hydropower_water_yield.execute(args)
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
@@ -439,70 +357,3 @@ class SuffixTest(unittest.TestCase):
         for table_path in table_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', table_path)))
-
-        shutil.rmtree(args['workspace_dir'])
-
-class SuffixUnderscoreTest(unittest.TestCase):
-    """
-    Regression Test for Hydropower running Scarcity and Valuation components
-        testing presence of a suffix in the filenames.
-    """
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for checking that the suffix is handled correctly when
-            given extra underscore.
-        """
-        from natcap.invest.hydropower import hydropower_water_yield
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'landuse_90'),
-            'depth_to_root_rest_layer_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater',
-                'depth_to_root_rest_layer'),
-            'precipitation_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'precip'),
-            'pawc_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'pawc'),
-            'eto_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'eto'),
-            'watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'watersheds.shp'),
-            'sub_watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp'),
-            'biophysical_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'biophysical_table.csv'),
-            'seasonality_constant': 5,
-            'results_suffix': '_test',
-            'water_scarcity_container': True,
-            'demand_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv'),
-            'valuation_container': True,
-            'valuation_table_uri': os.path.join(
-                SAMPLE_DATA, 'Hydropower', 'input',
-                'hydropower_valuation_table.csv'),
-        }
-        hydropower_water_yield.execute(args)
-
-        raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
-        for raster_path in raster_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(
-                    args['workspace_dir'], 'output', 'per_pixel',
-                    raster_path)))
-
-        vector_results = ['watershed_results_wyield_test.shp',
-                          'subwatershed_results_wyield_test.shp']
-        for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-        table_results = ['watershed_results_wyield_test.csv',
-                         'subwatershed_results_wyield_test.csv']
-        for table_path in table_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', table_path)))
-
-        shutil.rmtree(args['workspace_dir'])
