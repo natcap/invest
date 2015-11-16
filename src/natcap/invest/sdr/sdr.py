@@ -67,21 +67,8 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri'], 'rU'))
-    biophysical_table = {}
-    for row in csv_dict_reader:
-        try:
-            biophysical_table[int(row['lucode'])] = row
-        except ValueError:
-            if row['lucode'] == '':
-                # this can happen in some CSV files where there are a bunch
-                # of blank lines.  This pass lets us tolerate that and
-                # ultimately the model will crash later if there's missing
-                # lucodes or something like that
-                pass
-            else:
-                # it's something other than a blank line, best to crash
-                raise
+    biophysical_table = pygeoprocessing.get_lookup_from_csv(
+        args['biophysical_table_uri'], 'lucode')
 
     #Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
@@ -93,7 +80,7 @@ def execute(args):
                         'Value should be within range 0..1 offending value '
                         'table %s, lulc_code %s, value %s' % (
                             table_key, str(lulc_code), str(float_value)))
-            except ValueError as e:
+            except ValueError:
                 raise Exception(
                     'Value is not a floating point value within range 0..1 '
                     'offending value table %s, lulc_code %s, value %s' % (
