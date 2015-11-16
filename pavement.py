@@ -230,13 +230,28 @@ class Repository(object):
     def current_rev(self, convert=True):
         raise NotImplementedError
 
+
+class DVCSRepository(Repository):
+    tip = ''
+    statedir = ''
+    cmd = ''
+
+    def pull(self):
         raise Exception
 
-    def current_rev(self, convert=True):
-        raise Exception
+    def pull_and_retry(self, shell_string, cwd=None):
+        for check_again in [True, False]:
+            try:
+                return sh(shell_string, cwd=cwd, capture=True).rstrip()
+            except BuildFailure as failure:
+                if check_again is True:
+                    # Pull and try to format again
+                    self.pull()
+                else:
+                    raise failure
 
 
-class HgRepository(Repository):
+class HgRepository(DVCSRepository):
     tip = 'tip'
     statedir = '.hg'
     cmd = 'hg'
@@ -253,22 +268,14 @@ class HgRepository(Repository):
                                             'url': self.remote_url})
 
     def update(self, rev):
-        sh('hg update -R %(dest)s -r %(rev)s' % {'dest': self.local_path,
-                                                 'rev': rev})
+        update_string = 'hg update -R {dest} -r {rev}'.format(
+            dest=self.local_path, rev=rev)
+        return self.pull_and_retry(update_string)
 
     def _format_log(self, template='', rev='.'):
-        for check_again in [True, False]:
-            try:
-                return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
-                    'dest': self.local_path, 'rev': rev, 'template': template},
-                    capture=True).rstrip()
-            except BuildFailure as failure:
-                if check_again is True:
-                    # Pull and try to format again
-                    self.pull()
-                else:
-                    raise failure
-
+        log_string = 'hg log -R {dest} -r {rev} --template="{template}"'.format(
+            dest=self.local_path, rev=rev, template=template)
+        return self.pull_and_retry(log_string, capture=True).rstrip()
 
     def format_rev(self, rev):
         return self._format_log('{node}', rev=rev)
@@ -292,10 +299,6 @@ class SVNRepository(Repository):
         if rev is None:
             rev = self.tracked_version()
         paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
-
-    def pull(self):
-        # svn is centralized, so there's no concept of pull without a checkout.
-        return
 
     def update(self, rev):
         # check that the repository URL hasn't changed.  If it has, update to
@@ -323,7 +326,7 @@ class SVNRepository(Repository):
         return rev
 
 
-class GitRepository(Repository):
+class GitRepository(DVCSRepository):
     tip = 'master'
     statedir = '.git'
     cmd = 'git'
@@ -339,23 +342,17 @@ class GitRepository(Repository):
         sh('git fetch %(url)s' % {'url': self.remote_url}, cwd=self.local_path)
 
     def update(self, rev):
-        sh('git checkout %(rev)s' % {'rev': rev}, cwd=self.local_path)
+        update_string = 'git checkout {rev}'.format(rev=rev)
+        self.pull_and_retry(update_string, cwd=self.local_path)
 
     def current_rev(self):
-        return sh('git rev-parse --verify HEAD', cwd=self.local_path,
-                  capture=True).rstrip()
+        rev_cmd_string = 'git rev-parse --verify HEAD'
+        return self.pull_and_retry(rev_cmd_string, cwd=self.local_path)
 
     def format_rev(self, rev):
-        for check_again in [True, False]:
-            try:
-                return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
-                          capture=True, cwd=self.local_path)
-            except BuildFailure as failure:
-                if check_again is True:
-                    # Pull and try to format again
-                    self.pull()
-                else:
-                    raise failure
+        log_string = 'git log --format=format:%H -1 {rev}'.format(rev=rev)
+        return self.pull_and_retry(log_string, cwd=self.local_path)
+
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
@@ -630,10 +627,7 @@ def after_install(options, home_dir):
     # Always install natcap.versioner to the env over whatever else is there.
     pkg_pip_params = {
         'natcap.versioner': ['-I'],
-        # Pygeoprocessing wheels are compiled against specific versions of
-        # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
-        # installed numpy.  Force compilation from source to avoid this issue.
-        'pygeoprocessing': [NO_WHEEL_SH],
+        'pygeoprocessing': ['--no-use-wheel', '--no-deps'],  # force recompilation
     }
     if options.env.dev:
         # I only want to install natcap namespace packages as flat wheels if
