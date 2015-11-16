@@ -2532,6 +2532,14 @@ def compress_raster(args):
     """
     parser = argparse.ArgumentParser(description=(
         'Compress a GDAL-compatible raster.'))
+    parser.add_argument
+    parser.add_argument('-x', '--blockxsize', default=0, type=int, help=(
+        'The block size along the X axis.  Default=inraster block'))
+    parser.add_argument('-y', '--blockysize', default=0, type=int, help=(
+        'The block size along the Y axis.  Default=inraster block'))
+    parser.add_argument('-c', '--compression', default='LZW', type=str, help=(
+        'Compress the raster.  Valid options: NONE, LZW, DEFLATE, PACKBITS. '
+        'Default: LZW'))
     parser.add_argument('inraster', type=str, help=(
         'The raster to compress'))
     parser.add_argument('outraster', type=str, help=(
@@ -2539,53 +2547,38 @@ def compress_raster(args):
 
     parsed_args = parser.parse_args(args)
 
+    # import GDAL here because I don't want it to be a requirement to be able
+    # to run all paver functions.
+    from osgeo import gdal
+    in_raster = gdal.Open(parsed_args.inraster)
+    in_band = in_raster.GetRasterBand(1)
+    block_x, block_y = in_band.GetBlockSize()
+    if parsed_args.blockxsize == 0:
+        parsed_args.blockxsize = block_x
+    block_x_opt = '-co "BLOCKXSIZE=%s"' % parsed_args.blockxsize
+
+    if parsed_args.blockysize == 0:
+        parsed_args.blockysize = block_y
+    block_y_opt = '-co "BLOCKYSIZE=%s"' % parsed_args.blockysize
+
+    if parsed_args.blockysize % 2 == 0 and parsed_args.blockysize % 2 == 0:
+        tile_cmd = '-co "TILED=YES"'
+    else:
+        tile_cmd = ''
+
     sh(('gdal_translate '
         '-of "GTiff" '
+        '{tile} '
+        '{block_x} '
+        '{block_y} '
         '-co "COMPRESS=LZW" '
         '{in_raster} {out_raster}').format(
+            tile=tile_cmd,
+            block_x=block_x_opt,
+            block_y=block_y_opt,
             in_raster=os.path.abspath(parsed_args.inraster),
             out_raster=os.path.abspath(parsed_args.outraster),
         ))
-
-
-@task
-@consume_args
-def tile_raster(args):
-    """
-    Tile a raster.
-
-    Call `paver tile_raster --help` for full details.
-    """
-    parser = argparse.ArgumentParser(description=(
-        'Tile a GDAL-compatible raster.'))
-    parser.add_argument('-x', '--blockxsize', nargs='?', default=256, type=int, help=(
-        'The block size along the X axis.  Default=256'))
-    parser.add_argument('-y', '--blockysize', nargs='?', default=256, type=int, help=(
-        'The block size along the Y axis.  Default=256'))
-    parser.add_argument('--compress', action='store_true', help=(
-        'Compress the raster as well as tile'))
-    parser.add_argument('inraster', type=str, help=(
-        'The raster to tile'))
-    parser.add_argument('outraster', type=str, help=(
-        'The path to the output raster'))
-
-    parsed_args = parser.parse_args(args)
-    print parsed_args
-
-    sh(('gdal_translate '
-        '-of "GTiff" '
-        '-co "TILED=YES" '
-        '-co "COMPRESS={compress}" '
-        '-co "BLOCKXSIZE={blockx}" '
-        '-co "BLOCKYSIZE={blocky}" '
-        '{in_raster} {out_raster}').format(
-            compress='LZW' if parsed_args.compress else 'NONE',
-            blockx=parsed_args.blockxsize,
-            blocky=parsed_args.blockysize,
-            in_raster=os.path.abspath(parsed_args.inraster),
-            out_raster=os.path.abspath(parsed_args.outraster),
-        ))
-
 
 
 @task
