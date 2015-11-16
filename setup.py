@@ -88,9 +88,14 @@ CMDCLASS['build_ext'] = ExtraCompilerFlagsBuilder
 
 EXTENSION_LIST = ([
     Extension(
+        name="natcap.invest.recreation.out_of_core_quadtree",
+        sources=[
+            'src/natcap/invest/recreation/out_of_core_quadtree.pyx'],
+        include_dirs=[numpy.get_include()]),
+    Extension(
         name="scenic_quality_cython_core",
         sources=[
-        'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
+            'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
         include_dirs=[numpy.get_include()]),
     Extension(
         name="ndr_core",

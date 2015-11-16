@@ -128,7 +128,6 @@ class OutOfCoreQuadTree(object):
         self.blob_id = None
         return userday_tuples
 
-
     def _split_node(self):
         """This splits a node into 4 quads and adds those points to the
             subquads
@@ -145,22 +144,22 @@ class OutOfCoreQuadTree(object):
         #[x_min, y_min x_max, y_max]
 
         bounding_quads = [
-            [self.bounding_box[0], #xmin
-             mid_y_coord, #ymin
-             mid_x_coord, #xmax
+            [self.bounding_box[0],  # xmin
+             mid_y_coord,  # ymin
+             mid_x_coord,  # xmax
              self.bounding_box[3]],
-            [mid_x_coord, #xmin
-             mid_y_coord, #ymin
-             self.bounding_box[2], #xmax
+            [mid_x_coord,  # xmin
+             mid_y_coord,  # ymin
+             self.bounding_box[2],  # xmax
              self.bounding_box[3]],
-            [self.bounding_box[0], #xmin
-             self.bounding_box[1], #ymin
-             mid_x_coord, #xmax
-             mid_y_coord], #ymax
-            [mid_x_coord, #xmin
-             self.bounding_box[1], #ymin
-             self.bounding_box[2], #xmax
-             mid_y_coord], #ymax
+            [self.bounding_box[0],  # xmin
+             self.bounding_box[1],  # ymin
+             mid_x_coord,  # xmax
+             mid_y_coord],  # ymax
+            [mid_x_coord,  # xmin
+             self.bounding_box[1],  # ymin
+             self.bounding_box[2],  # xmax
+             mid_y_coord],  # ymax
         ]
         self.nodes = []
         for bounding_box in bounding_quads:
@@ -172,12 +171,11 @@ class OutOfCoreQuadTree(object):
                 node_depth=self.node_depth+1,
                 file_manager=self.file_manager))
 
-        self.n_points_in_node = 0 #points are drained out of this node
+        self.n_points_in_node = 0  # points are drained out of this node
         self.is_leaf = False
         #now when we add these points to the node they'll be sorted and passed
         #to the subquads
         self.add_points(point_list)
-
 
     def add_points(self, point_list, list_bounds=None):
         """Add a list of points to the current node, this function will split

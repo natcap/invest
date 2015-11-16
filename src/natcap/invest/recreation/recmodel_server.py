@@ -1,7 +1,6 @@
-"""recmodel server demo"""
+"""InVEST Recreation Server"""
 
 import Queue
-import sys
 import os
 import multiprocessing
 import uuid
@@ -16,6 +15,7 @@ import threading
 import traceback
 import collections
 import file_hash
+import logging
 
 import Pyro4
 from osgeo import ogr
@@ -27,20 +27,26 @@ import shapely.prepared
 import natcap.versioner
 import numpy
 
-__version__ = natcap.versioner.get_version('recmodel_server')
+__version__ = natcap.versioner.get_version('natcap.invest.recmodel_server')
 
 import pyximport
 pyximport.install(setup_args={'include_dirs': numpy.get_include()})
-import out_of_core_quadtree
+import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree
 
-GLOBAL_MAX_POINTS_PER_NODE = 10000 #Default max points in quadtree to split
+GLOBAL_MAX_POINTS_PER_NODE = 10000  # Default max points in quadtree to split
 POINTS_TO_ADD_PER_STEP = GLOBAL_MAX_POINTS_PER_NODE / 2
 GLOBAL_DEPTH = 10
 LOCAL_MAX_POINTS_PER_NODE = 50
 LOCAL_DEPTH = 8
 CSV_ROWS_PER_PARSE = 2 ** 8
 
-Pyro4.config.SERIALIZER = 'marshal' #lets us pass null bytes in strings
+Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('natcap.invest.recmodel_server')
+
 
 def _read_file(filename, file_buffer_queue, blocksize):
     """Reads one blocksize at a time and adds to the file buffer queue"""
@@ -51,6 +57,7 @@ def _read_file(filename, file_buffer_queue, blocksize):
             buf = file_to_hash.read(blocksize)
     file_buffer_queue.put('STOP')
 
+
 def _hash_blocks(file_buffer_queue):
     """Processes the file_buffer_queue one buf at a time and adds to current
         hash"""
@@ -58,6 +65,7 @@ def _hash_blocks(file_buffer_queue):
     for row_buffer in iter(file_buffer_queue.get, "STOP"):
         hasher.update(row_buffer)
     file_buffer_queue.put(hasher.hexdigest()[:16])
+
 
 def hashfile(filename, blocksize=2**20):
     """Memory efficient and threaded function to return a hash since this
@@ -74,6 +82,7 @@ def hashfile(filename, blocksize=2**20):
     hash_blocks_process.join()
     return file_buffer_queue.get()
 
+
 class RecModel(object):
     """Class that manages RPCs for calculating photo user days"""
 
@@ -89,7 +98,7 @@ class RecModel(object):
             traceback.print_exc()
             raise
 
-    def get_version(self):
+    def get_version(self):  # not static so it can register in Pyro object
         """Returns the rec model server version"""
         return __version__
 
@@ -104,7 +113,6 @@ class RecModel(object):
             traceback.print_exc()
             print '-' * 60
             raise
-
 
     def _calc_user_days_binary(self, zip_file_binary):
         """Takes an AOI passed in via a binary stream zipped shapefile and
@@ -157,7 +165,7 @@ class RecModel(object):
         return open(aoi_pud_archive_uri, 'rb').read()
 
     def calc_user_days(self, aoi_filename, workspace_uri):
-        """Function to caculate the photo user days given an AOI
+        """Function to calculate the photo user days given an AOI
 
             aoi_filename - ogr.Datasource of polygons of interest.
             workspace_uri - a directory in which to write temporary files
@@ -185,7 +193,7 @@ class RecModel(object):
 
         # coordinate transformation to convert AOI points to and from lat/lng
         lat_lng_ref = osr.SpatialReference()
-        lat_lng_ref.ImportFromEPSG(4326) #EPSG 4326 is lat/lng
+        lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
 
         to_lat_trans = osr.CoordinateTransformation(aoi_ref, lat_lng_ref)
         from_lat_trans = osr.CoordinateTransformation(lat_lng_ref, aoi_ref)
@@ -223,9 +231,10 @@ class RecModel(object):
                 0, len(local_points), POINTS_TO_ADD_PER_STEP):
             time_elapsed = time.time() - last_time
             if time_elapsed > 5.0:
-                print '%d out of %d points added to local_qt so far, and n_nodes in qt %d in %.2fs' % (
-                    local_qt.n_points(), len(local_points), local_qt.n_nodes(),
-                    time_elapsed)
+                LOGGER.info(
+                    '%d out of %d points added to local_qt so far, and n_nodes'
+                    ' in qt %d in %.2fs', local_qt.n_points(),
+                    len(local_points), local_qt.n_nodes(), time_elapsed)
                 last_time = time.time()
             projected_point_list = local_points[
                 point_list_slice_index:
@@ -439,7 +448,7 @@ def construct_userday_quadtree(
         last_time = time.time()
         while True:
             userday_tuple_list = user_day_tuple_queue.get()
-            if userday_tuple_list == 'STOP': #count 'n cpu' STOPs
+            if userday_tuple_list == 'STOP':  # count 'n cpu' STOPs
                 n_parse_processes -= 1
                 if n_parse_processes == 0:
                     break
@@ -448,21 +457,24 @@ def construct_userday_quadtree(
             n_points += len(userday_tuple_list)
             time_elapsed = time.time() - last_time
             if time_elapsed > 5.0:
-                print '%d points added to ooc_qt so far, %d points in qt, and n_nodes in qt %d in %.2fs' % (
-                    n_points, ooc_qt.n_points(), ooc_qt.n_nodes(), time_elapsed)
+                LOGGER.info(
+                    '%d points added to ooc_qt so far, %d points in qt, and '
+                    'n_nodes in qt %d in %.2fs', n_points, ooc_qt.n_points(),
+                    ooc_qt.n_nodes(), time_elapsed)
                 last_time = time.time()
             ooc_qt.add_points(userday_tuple_list)
 
         #save it to disk
-        print '%d points added to ooc_qt final, %d points in qt, and n_nodes in qt %d' % (
-            n_points, ooc_qt.n_points(), ooc_qt.n_nodes())
+        LOGGER.info(
+            '%d points added to ooc_qt final, %d points in qt, and n_nodes in '
+            'qt %d', n_points, ooc_qt.n_points(), ooc_qt.n_nodes())
         ooc_qt.flush()
 
         quad_tree_shapefile_name = os.path.join(
             cache_dir, 'quad_tree_shape.shp')
 
         lat_lng_ref = osr.SpatialReference()
-        lat_lng_ref.ImportFromEPSG(4326) #EPSG 4326 is lat/lng
+        lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
         build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
 
     print 'took %f seconds' % (time.time() - start_time)
@@ -493,6 +505,7 @@ def build_quadtree_shape(quad_tree_shapefile_name, quadtree, spatial_reference):
     polygon_layer.CreateField(ogr.FieldDefn('bb_box', ogr.OFTString))
     quadtree.build_node_shapes(polygon_layer)
 
+
 def _calc_poly_pud(
         local_qt_pickle_filename, aoi_filename, poly_test_queue,
         pud_poly_feature_queue):
@@ -519,8 +532,9 @@ def _calc_poly_pud(
         poly_wkt = poly_geom.ExportToWkt()
         try:
             shapely_polygon = shapely.wkt.loads(poly_wkt)
-        except:
-            print 'error parsing poly, skipping'
+        except Exception:
+            # We often get weird corrupt data, this lets us tolerate it
+            LOGGER.warn('error parsing poly, skipping')
             continue
 
         poly_points = local_qt.get_intersecting_points_in_polygon(
@@ -531,17 +545,24 @@ def _calc_poly_pud(
         pud_poly_feature_queue.put((poly_id, len(pud_set)))
     pud_poly_feature_queue.put('STOP')
 
-def main():
-    """entry point"""
-    hostname = sys.argv[2]
-    port = int(sys.argv[3])
-    daemon = Pyro4.Daemon(hostname, port)
-    uri = daemon.register(RecModel(sys.argv[1]), 'natcap.invest.recreation')
-    print "natcap.invest.recreation ready. Object uri =", uri
-    daemon.requestLoop()
 
-if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print 'usage: %s raw_csv_filename hostname port' % sys.argv[0]
-        sys.exit(-1)
-    main()
+def execute(args):
+    """Launch recreation server and parse/generate point lookup structure if
+    necessary.  Function registers a Pyro RPC RecModel entry point given the
+    configuration input parameters described below.
+
+    Parameters:
+        args['raw_csv_point_data_path'] (string): path to a csv file of the
+            format
+        args['hostname'] (string): hostname to host Pyro server.
+        args['port'] (int/or string representation of int): port number to host
+            Pyro entry point.
+
+    Returns:
+        Never returns"""
+
+    daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
+    uri = daemon.register(
+        RecModel(args['raw_csv_point_data_path']), 'natcap.invest.recreation')
+    LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
+    daemon.requestLoop()
