@@ -12,52 +12,68 @@ SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'wind_energy')
 
 
-class ValuationAvgGridDistWindSchedTest(unittest.TestCase):
-    """Regression test for Valuation component."""
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Valuation run through using an
-            average grid distance and wind schedule for pricing.
-        """
-        from natcap.invest.wind_energy import wind_energy
+class WindEnergyRegressionTests(unittest.TestCase):
+    """Regression tests for the Wind Energy module."""
 
+    def setUp(self):
+        """Overriding setUp function to create temporary workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Overriding tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def generate_base_args(workspace_dir):
+        """Generate an args list that is consistent across regression tests."""
         args = {
-            'workspace_dir': tempfile.mkdtemp(),
+            'workspace_dir': workspace_dir,
             'wind_data_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
             'bathymetry_uri': os.path.join(
                 SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
                 'global_dem'),
-            'land_polygon_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'Land',
-                'global_polygon.shp'),
             'global_wind_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 'global_wind_energy_parameters.csv'),
-            'suffix': '',
             'turbine_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
-            'max_depth': 60,
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'price_table_example.csv')
-        }
+            'max_depth': 60
+            }
+        return args
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
+    def test_val_avggrid_dist_windsched(self):
+        """
+        Regression test for Valuation.
+
+        This test uses average grid distance and wind schedule for pricing.
+        """
+        from natcap.invest.wind_energy import wind_energy
+
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        args['avg_grid_distance'] = 4
+        args['price_table'] = True
+        args['wind_schedule'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv')
 
         wind_energy.execute(args)
 
@@ -79,39 +95,13 @@ class ValuationAvgGridDistWindSchedTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'pricetable', vector_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class NoAoiTest(unittest.TestCase):
-    """Regression test for the Biophysical component."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
-    def test_regression(self):
-        """
-        Regression test for Biophysical run through NOT using an AOI.
-        """
+    def test_no_aoi(self):
+        """Regression test for Biophysical run through NOT using an AOI."""
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': '',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'valuation_container': False
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         wind_energy.execute(args)
 
@@ -132,43 +122,21 @@ class NoAoiTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class NoLandPolyTest(unittest.TestCase):
-    "Regression test for the Biophysical component."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_regression(self):
+    def test_no_land_polygon(self):
         """
-        Regression test for Biophysical run through using AOI but NOT
-            using a Land Polygon and distances.
+        Regression test for Wind Energy Biophysical.
+
+        This test uses an AOI but does Not use a Land Polygon and distances.
         """
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': '',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'valuation_container': False
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
 
         wind_energy.execute(args)
 
@@ -189,46 +157,24 @@ class NoLandPolyTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class NoDistancesTest(unittest.TestCase):
-    "Regression test for the Biophysical component."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_regression(self):
+    def test_no_distances(self):
         """
-        Regression test for Biophysical run through not using distances
+        Regression test for Wind Energy Biophysical.
+
+        This test uses an AOI and Land Polygon but does not use distances
             for masking.
         """
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'land_polygon_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'Land',
-                'global_polygon.shp'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': '',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'valuation_container': False
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
 
         wind_energy.execute(args)
 
@@ -249,48 +195,25 @@ class NoDistancesTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'nodistances', vector_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class NoValuationTest(unittest.TestCase):
-    """Regression test for the Biophysical component."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_regression(self):
+    def test_no_valuation(self):
         """
-        Regression test for Biophysical run through using AOI, depth, and
-            distance.
+        Regression test for Wind Energy Biophysical.
+
+        This test uses an AOI, Land Polygon, and distances.
         """
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'land_polygon_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'Land',
-                'global_polygon.shp'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': '',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': False
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
 
         wind_energy.execute(args)
 
@@ -311,58 +234,33 @@ class NoValuationTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'novaluation', vector_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class ValuationGridPtsWindSchedTest(unittest.TestCase):
-    """Regression test for the Valuation component."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_regression(self):
+    def test_val_gridpts_windsched(self):
         """
-        Regression test for Valuation run through using grid points
-            and wind schedule pricing.
+        Regression test for Wind Energy Valuation.
+
+        This test uses grid points and wind schedule pricing for Valuation.
         """
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'land_polygon_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'Land',
-                'global_polygon.shp'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': '',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'grid_points_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'NE_sub_pts.csv'),
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'price_table_example.csv')
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        args['grid_points_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
+        args['price_table'] = True
+        args['wind_schedule'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv')
 
         wind_energy.execute(args)
 
@@ -384,54 +282,32 @@ class ValuationGridPtsWindSchedTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'pricetablegridpts', vector_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class ValuationAvgGridDistWindPriceTest(unittest.TestCase):
-    """Regression test for the Valuation component."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_regression(self):
+    def test_val_avggriddist_windprice(self):
         """
-        Regression test for Valuation run through using
-            grid distance and wind price.
+        Regression test for Wind Energy Valuation.
+
+        This test uses average grid distance and wind price.
         """
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'land_polygon_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'Land',
-                'global_polygon.shp'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': '',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': False,
-            'wind_price': 0.187,
-            'rate_change': 0.2
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        args['avg_grid_distance'] = 4
+        args['price_table'] = False
+        args['wind_price'] = 0.187
+        args['rate_change'] = 0.2
 
         wind_energy.execute(args)
 
@@ -453,57 +329,33 @@ class ValuationAvgGridDistWindPriceTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'priceval', vector_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class ValuationGridPtsWindPriceTest(unittest.TestCase):
-    """Regression test for the Valuation component."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_regression(self):
+    def test_val_gridpts_windprice(self):
         """
-        Regression test for Valuation run through using grid points
-            and wind price.
+        Regression test for Wind Energy Valuation.
+
+        This test uses grid points and wind price.
         """
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'land_polygon_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'Land',
-                'global_polygon.shp'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': '',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'grid_points_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'NE_sub_pts.csv'),
-            'avg_grid_distance': 4,
-            'price_table': False,
-            'wind_price': 0.187,
-            'rate_change': 0.2
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        args['grid_points_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
+        args['price_table'] = False
+        args['wind_price'] = 0.187
+        args['rate_change'] = 0.2
 
         wind_energy.execute(args)
 
@@ -525,54 +377,29 @@ class ValuationGridPtsWindPriceTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class SuffixTest(unittest.TestCase):
-    """Regression test for suffix handling, running through Valuation."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_regression(self):
-        """
-        Regression test for using Suffix through entirety of Valuation.
-        """
+    def test_suffix(self):
+        """Regression test for suffix handling, running Valuation."""
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'land_polygon_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'Land',
-                'global_polygon.shp'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': 'test',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'price_table_example.csv')
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        args['avg_grid_distance'] = 4
+        args['price_table'] = True
+        args['wind_schedule'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv')
+        args['suffix'] = 'test'
 
         wind_energy.execute(args)
 
@@ -593,55 +420,29 @@ class SuffixTest(unittest.TestCase):
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', vector_path)))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class SuffixUnderscoreTest(unittest.TestCase):
-    """Regression test for suffix handling given an extra underscore."""
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_regression(self):
-        """
-        Regression test for using Suffix with an extra underscore
-            through entirety of Valuation.
-        """
+    def test_suffix_underscore(self):
+        """Regression test for suffix handling given an underscore."""
         from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'New_England_US_Aoi.shp'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'land_polygon_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'Land',
-                'global_polygon.shp'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'suffix': '_test',
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60,
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'price_table_example.csv')
-        }
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        args['avg_grid_distance'] = 4
+        args['price_table'] = True
+        args['wind_schedule'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv')
+        args['suffix'] = '_test'
 
         wind_energy.execute(args)
 
@@ -661,5 +462,3 @@ class SuffixUnderscoreTest(unittest.TestCase):
         for vector_path in vector_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-        shutil.rmtree(args['workspace_dir'])
