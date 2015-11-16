@@ -627,7 +627,10 @@ def after_install(options, home_dir):
     # Always install natcap.versioner to the env over whatever else is there.
     pkg_pip_params = {
         'natcap.versioner': ['-I'],
-        'pygeoprocessing': ['--no-use-wheel', '--no-deps'],  # force recompilation
+        # Pygeoprocessing wheels are compiled against specific versions of
+        # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
+        # installed numpy.  Force compilation from source to avoid this issue.
+        'pygeoprocessing': [NO_WHEEL_SH],
     }
     if options.env.dev:
         # I only want to install natcap namespace packages as flat wheels if
