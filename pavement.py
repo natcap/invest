@@ -275,7 +275,7 @@ class HgRepository(DVCSRepository):
     def _format_log(self, template='', rev='.'):
         log_string = 'hg log -R {dest} -r {rev} --template="{template}"'.format(
             dest=self.local_path, rev=rev, template=template)
-        return self.pull_and_retry(log_string, capture=True).rstrip()
+        return self.pull_and_retry(log_string)
 
     def format_rev(self, rev):
         return self._format_log('{node}', rev=rev)
