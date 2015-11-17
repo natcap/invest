@@ -2743,7 +2743,7 @@ def test(args):
                 'fetch': True,
             })
             call_task('check_repo', options={
-                'repo': REPOS_DICT['sample-data'].local_path,
+                'repo': REPOS_DICT['invest-data'].local_path,
                 'fetch': True,
             })
             jenkins_flags = (
