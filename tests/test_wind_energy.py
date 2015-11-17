@@ -97,6 +97,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_aoi(self):
         """Regression test for Biophysical run through NOT using an AOI."""
         from natcap.invest.wind_energy import wind_energy
@@ -379,28 +380,40 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_suffix(self):
         """Regression test for suffix handling, running Valuation."""
         from natcap.invest.wind_energy import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
-        args['min_distance'] = 0
-        args['max_distance'] = 200000
-        args['valuation_container'] = True
-        args['foundation_cost'] = 2
-        args['discount_rate'] = 0.07
-        args['avg_grid_distance'] = 4
-        args['price_table'] = True
-        args['wind_schedule'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv')
-        args['suffix'] = 'test'
-
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'wind_data_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+            'bathymetry_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'global_wind_parameters_uri': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input',
+                'global_wind_energy_parameters.csv'),
+            'turbine_parameters_uri': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input',
+                '3_6_turbine.csv'),
+            'number_of_turbines': 80,
+            'min_depth': 3,
+            'max_depth': 200,
+            'aoi_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance': 0,
+            'max_distance': 200000,
+            'valuation_container': True,
+            'foundation_cost': 2,
+            'discount_rate': 0.07,
+            'avg_grid_distance': 4,
+            'price_table': True,
+            'wind_schedule': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
+            'suffix': 'test'
+        }
         wind_energy.execute(args)
 
         raster_results = [
@@ -422,28 +435,40 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_suffix_underscore(self):
         """Regression test for suffix handling given an underscore."""
         from natcap.invest.wind_energy import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
-        args['min_distance'] = 0
-        args['max_distance'] = 200000
-        args['valuation_container'] = True
-        args['foundation_cost'] = 2
-        args['discount_rate'] = 0.07
-        args['avg_grid_distance'] = 4
-        args['price_table'] = True
-        args['wind_schedule'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv')
-        args['suffix'] = '_test'
-
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'wind_data_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+            'bathymetry_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'global_wind_parameters_uri': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input',
+                'global_wind_energy_parameters.csv'),
+            'turbine_parameters_uri': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input',
+                '3_6_turbine.csv'),
+            'number_of_turbines': 80,
+            'min_depth': 3,
+            'max_depth': 200,
+            'aoi_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance': 0,
+            'max_distance': 200000,
+            'valuation_container': True,
+            'foundation_cost': 2,
+            'discount_rate': 0.07,
+            'avg_grid_distance': 4,
+            'price_table': True,
+            'wind_schedule': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
+            'suffix': '_test'
+        }
         wind_energy.execute(args)
 
         raster_results = [
