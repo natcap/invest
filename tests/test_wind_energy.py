@@ -6,7 +6,6 @@ import os
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
-from nose.tools import nottest
 
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'wind_energy')
@@ -50,13 +49,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_avggrid_dist_windsched(self):
-        """
-        Regression test for Valuation.
-
-        This test uses average grid distance and wind schedule for pricing.
-        """
+        """WindEnergy: testing Valuation using avg grid distance and wind sched."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -97,9 +91,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_aoi(self):
-        """Regression test for Biophysical run through NOT using an AOI."""
+        """WindEnergy: testing base case w/ no AOI, distances, or valuation."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -125,13 +118,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_land_polygon(self):
-        """
-        Regression test for Wind Energy Biophysical.
-
-        This test uses an AOI but does Not use a Land Polygon and distances.
-        """
+        """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -160,14 +148,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_distances(self):
-        """
-        Regression test for Wind Energy Biophysical.
-
-        This test uses an AOI and Land Polygon but does not use distances
-            for masking.
-        """
+        """WindEnergy: testing case w/ AOI, land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -198,13 +180,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_valuation(self):
-        """
-        Regression test for Wind Energy Biophysical.
-
-        This test uses an AOI, Land Polygon, and distances.
-        """
+        """WindEnergy: testing case w/ AOI, land poly, and distances."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -237,13 +214,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_gridpts_windsched(self):
-        """
-        Regression test for Wind Energy Valuation.
-
-        This test uses grid points and wind schedule pricing for Valuation.
-        """
+        """WindEnergy: testing Valuation w/ grid points and wind sched."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -285,13 +257,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_avggriddist_windprice(self):
-        """
-        Regression test for Wind Energy Valuation.
-
-        This test uses average grid distance and wind price.
-        """
+        """WindEnergy: testing Valuation w/ avg grid distances and wind price."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -332,13 +299,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_gridpts_windprice(self):
-        """
-        Regression test for Wind Energy Valuation.
-
-        This test uses grid points and wind price.
-        """
+        """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -381,7 +343,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_suffix(self):
-        """Regression test for suffix handling, running Valuation."""
+        """WindEnergy: testing suffix handling."""
         from natcap.invest.wind_energy import wind_energy
 
         args = {
@@ -436,7 +398,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_suffix_underscore(self):
-        """Regression test for suffix handling given an underscore."""
+        """WindEnergy: testing that suffix w/ underscore is handled correctly."""
         from natcap.invest.wind_energy import wind_energy
 
         args = {
