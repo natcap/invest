@@ -350,7 +350,9 @@ class DVCSRepository(Repository):
                 return sh(shell_string, cwd=cwd, capture=True).rstrip()
             except BuildFailure as failure:
                 if check_again is True:
-                    # Pull and try to format again
+                    # Pull and try to run again
+                    # Assumes that self.pull is implemented in the DVCS
+                    # subclass.
                     self.pull()
                 else:
                     raise failure
