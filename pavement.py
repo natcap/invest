@@ -1954,7 +1954,8 @@ def build_bin(options):
 
             cwd = os.getcwd()
             # Unzip the tar.gz and run bdist_egg on it.
-            versioner_tgz = os.path.abspath(glob.glob('dist/natcap.versioner-*.tar.gz')[0])
+            versioner_tgz = os.path.abspath(
+                glob.glob('dist/natcap.versioner-*.tar.gz')[0])
             os.chdir('dist')
             dry('unzip %s' % versioner_tgz,
                 lambda tgz: tarfile.open(tgz, 'r:gz').extractall('.'),
@@ -1966,8 +1967,13 @@ def build_bin(options):
 
             # Copy the new egg to the built distribution with the eggs in it.
             # Both these folders should already be absolute paths.
-            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist', 'natcap.versioner-*'))[0]
-            versioner_egg_dest = os.path.join(invest_dist, 'eggs', os.path.basename(versioner_egg))
+            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist',
+                                                   'natcap.versioner-*'))[0]
+            egg_dirname = os.path.join(invest_dist, 'eggs')
+            versioner_egg_dest = os.path.join(egg_dirname,
+                                              os.path.basename(versioner_egg))
+            if not os.path.exists(egg_dirname):
+                os.makedirs(egg_dirname)
             dry('cp %s %s' % (versioner_egg, versioner_egg_dest),
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
