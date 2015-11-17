@@ -2637,7 +2637,6 @@ def compress_raster(args):
     """
     parser = argparse.ArgumentParser(description=(
         'Compress a GDAL-compatible raster.'))
-    parser.add_argument
     parser.add_argument('-x', '--blockxsize', default=0, type=int, help=(
         'The block size along the X axis.  Default=inraster block'))
     parser.add_argument('-y', '--blockysize', default=0, type=int, help=(
