@@ -167,18 +167,34 @@ paver.easy.options(
 
 
 class Repository(object):
-    tip = ''
-    statedir = ''
-    cmd = ''
+    """Abstract class representing a version-controlled repository."""
+    tip = ''  # The string representing the latest revision
+    statedir = ''  # Where the SCM stores its data, relative to repo root
+    cmd = ''  # The command-line exe to call.
 
     def __init__(self, local_path, remote_url):
+        """Initialize the Repository instance
+
+        Parameters:
+            local_path (string): The filepath on disk to the repo
+                (relative to pavement.py)
+            remote_url (string): The string URL to use to identify the repo.
+                Used for clones, updates.
+
+        Returns:
+            An instance of Repository.
+        """
         self.local_path = local_path
         self.remote_url = remote_url
 
     def get(self, rev):
-        """
-        Given whatever state the repo might be in right now, update to the
-        target revision.
+        """Update to the target revision.
+
+        Parameters:
+            rev (string): The revision to update the repo to.ºw
+
+        Returns:
+            None
         """
         if not self.ischeckedout():
             self.clone()
@@ -202,15 +218,53 @@ class Repository(object):
             self.update(rev)
 
     def ischeckedout(self):
+        """Identify whether the repository is checked out on disk."""
         return os.path.exists(os.path.join(self.local_path, self.statedir))
 
     def clone(self, rev=None):
+        """Clone the repository from the remote URL.
+
+        This method is to be overridden in a subclass with the SCM-specific
+        commands.
+
+        Parameters:
+            rev=None (string or None): The revision to update to.  If None,
+                the revision will be fetched from versions.json.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
         raise NotImplementedError
 
     def update(self, rev=None):
+        """Update the repository to a revision.
+
+        This method is to be overridden in a subclass with the SCM-specific
+        commands.
+
+        Parameters:
+            rev=None (string or None): The revision to update to.  If None,
+                the revision will be fetched from versions.json.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
         raise NotImplementedError
 
     def tracked_version(self):
+        """Get this repository's expected version from versions.json.
+
+        Returns:
+            A string representation of the tracked version.
+        """
         tracked_rev = json.load(open('versions.json'))[self.local_path]
         if type(tracked_rev) is DictType:
             user_os = platform.system()
@@ -218,6 +272,11 @@ class Repository(object):
         return tracked_rev
 
     def at_known_rev(self):
+        """Identify whether the Repository is at the expected revision.
+
+        Returns:
+            A boolean.
+        """
         if not self.ischeckedout():
             return False
 
@@ -225,21 +284,67 @@ class Repository(object):
         return self.current_rev() == tracked_version
 
     def format_rev(self, rev):
+        """Get the uniquely-identifiable commit ID of `rev`.
+
+        This is particularly useful for SCMs that have multiple ways of
+        identifying commits.
+
+        Parameters:
+            rev (string): The revision to identify.
+
+        Returns:
+            The string id of the commit.
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
         raise NotImplementedError
 
-    def current_rev(self, convert=True):
+    def current_rev(self):
+        """Fetch the current revision of the repository on disk.
+
+        This method should be overridden in a subclass with the SCM-specific
+        command(s).
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
         raise NotImplementedError
 
 
 class DVCSRepository(Repository):
+    """Abstract class for distributed revision control system repositories."""
     tip = ''
     statedir = ''
     cmd = ''
 
     def pull(self):
-        raise Exception
+        """Pull new changes from the remote.
+
+        This should be overridden in SCM-specific subclasses.
+
+        Returns:
+            None
+        """
+        raise NotImplementedError
 
     def pull_and_retry(self, shell_string, cwd=None):
+        """Run a command, pulling new changes if needed.
+
+        Parameters:
+            shell_string (string): The formatted command to run.
+            cwd=None(string or None): The directory from which to execute
+                the command.  If None, the current working directory will be
+                used.
+
+        Returns:
+            None
+
+        Raises:
+            BuildFailure: Raised when the shell command fails after pulling.
+        """
         for check_again in [True, False]:
             try:
                 return sh(shell_string, cwd=cwd, capture=True).rstrip()
