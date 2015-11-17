@@ -6,13 +6,14 @@ import os
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
+from nose.tools import nottest
 
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'hydropower')
 
 
 class HydropowerRegressionTests(unittest.TestCase):
-    """Regression Test for Hydropower running Scarcity and Valuation."""
+    """Regression Tests for Annual Water Yield Hydropower Model."""
 
     def setUp(self):
         """Overriding setUp function to create temporary workspace directory."""
@@ -51,7 +52,7 @@ class HydropowerRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_valuation(self):
-        """Regression test for Valuation component with no subwatershed."""
+        """Hydro: testing valuation component with no subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
@@ -87,10 +88,7 @@ class HydropowerRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_water_yield(self):
-        """Regression test for Biophysical component, Water Yield only.
-
-        No subwatershed is used.
-        """
+        """Hydro: testing water yield component only."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
@@ -118,12 +116,9 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_water_yield_subshed(self):
-        """
-        Regression test for Biophysical component, Water Yield.
-
-        Subwatershed is included.
-        """
+        """Hydro: testing water yield component only w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
@@ -157,11 +152,7 @@ class HydropowerRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_scarcity(self):
-        """
-        Regression test for Biophysical component, Scarcity.
-
-        No subwatershed is used.
-        """
+        """Hydro: testing Scarcity component."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
@@ -194,11 +185,7 @@ class HydropowerRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_scarcity_subshed(self):
-        """
-        Regression test for Biophysical component, Scarcity.
-
-        Subwatershed is included.
-        """
+        """Hydro: testing Scarcity component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
@@ -235,7 +222,7 @@ class HydropowerRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_valuation_subshed(self):
-        """Regression test for Valuation component, subwatershed included."""
+        """Hydro: testing Valuation component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
@@ -276,21 +263,36 @@ class HydropowerRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_suffix(self):
-        """Regression test for checking that the suffix is handled correctly."""
+        """Hydro: testing that the suffix is handled correctly."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['water_scarcity_container'] = True
-        args['demand_table_uri'] = os.path.join(
-            SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
-        args['valuation_container'] = True
-        args['valuation_table_uri'] = os.path.join(
-            SAMPLE_DATA, 'Hydropower', 'input',
-            'hydropower_valuation_table.csv')
-        args['sub_watersheds_uri'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
-        args['results_suffix'] = 'test'
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'lulc_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'lulc_smoke.tif'),
+            'depth_to_root_rest_layer_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'dtr_smoke.tif'),
+            'precipitation_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'precip_smoke.tif'),
+            'pawc_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'pawc_smoke.tif'),
+            'eto_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'eto_smoke.tif'),
+            'watersheds_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'watershed_smoke.shp'),
+            'biophysical_table_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'biophysical_smoke.csv'),
+            'seasonality_constant': 5,
+            'water_scarcity_container': True,
+            'demand_table_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'demand_smoke.csv'),
+            'valuation_container': True,
+            'valuation_table_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'valuation_params_smoke.csv'),
+            'sub_watersheds_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'subwatershed_smoke.shp'),
+            'results_suffix': 'test'
+        }
 
         hydropower_water_yield.execute(args)
 
@@ -316,26 +318,36 @@ class HydropowerRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_suffix_underscore(self):
-        """
-        Regression test for checking that the suffix is handled correctly.
-
-        Given an underscore in the suffix input, check that it is not
-            duplicated in the file output.
-        """
+        """Hydro: testing that a suffix w/ underscore is handled correctly."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['water_scarcity_container'] = True
-        args['demand_table_uri'] = os.path.join(
-            SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
-        args['valuation_container'] = True
-        args['valuation_table_uri'] = os.path.join(
-            SAMPLE_DATA, 'Hydropower', 'input',
-            'hydropower_valuation_table.csv')
-        args['sub_watersheds_uri'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
-        args['results_suffix'] = '_test'
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'lulc_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'lulc_smoke.tif'),
+            'depth_to_root_rest_layer_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'dtr_smoke.tif'),
+            'precipitation_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'precip_smoke.tif'),
+            'pawc_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'pawc_smoke.tif'),
+            'eto_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'eto_smoke.tif'),
+            'watersheds_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'watershed_smoke.shp'),
+            'biophysical_table_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'biophysical_smoke.csv'),
+            'seasonality_constant': 5,
+            'water_scarcity_container': True,
+            'demand_table_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'demand_smoke.csv'),
+            'valuation_container': True,
+            'valuation_table_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'valuation_params_smoke.csv'),
+            'sub_watersheds_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'subwatershed_smoke.shp'),
+            'results_suffix': '_test'
+        }
 
         hydropower_water_yield.execute(args)
 
