@@ -14,13 +14,15 @@ import traceback
 import bisect
 import operator
 import shapely.geometry
+import numpy
 
 from osgeo import ogr
 from osgeo import osr
 
-MAX_BYTES_TO_BUFFER = 2**27 #buffer a little over 128 megabytes
+MAX_BYTES_TO_BUFFER = 2**27  # buffer a little over 128 megabytes
 
 import buffered_file_manager
+
 
 class OutOfCoreQuadTree(object):
     """An out of core quad tree spatial indexing structure.  Define with an
@@ -39,13 +41,13 @@ class OutOfCoreQuadTree(object):
             pickle_filename - name of file on disk which to pickle the tree to
                 during a flush"""
 
-        self.bounding_box = list(bounding_box) #make a copy to avoid aliasing
+        self.bounding_box = list(bounding_box)  # make a copy to avoid aliasing
         self.max_points_per_node = max_points_per_node
         self.max_node_depth = max_node_depth
         self.node_depth = node_depth
         self.n_points_in_node = 0
-        self.is_leaf = True #boolean to determine if this node stores data
-        self.nodes = None #on an internal node, this will be a list of children
+        self.is_leaf = True  # boolean to determine if this node stores data
+        self.nodes = None  # a list of children on an internal node
         self.quad_tree_storage_dir = quad_tree_storage_dir
         if file_manager is None:
             self.file_manager = buffered_file_manager.BufferedFileManager(
@@ -58,13 +60,11 @@ class OutOfCoreQuadTree(object):
         #This section makes a random filename that doesn't exist
         self.blob_id = str(uuid.uuid4())
 
-
     def flush(self):
         """Flushes the file manager in anticipation of a pickle"""
         self.file_manager.flush()
         if self.pickle_filename is not None:
             pickle.dump(self, open(self.pickle_filename, 'wb'))
-
 
     def build_node_shapes(self, ogr_polygon_layer):
         """a helper function to visualize the quad tree
@@ -91,28 +91,13 @@ class OutOfCoreQuadTree(object):
             for node_index in xrange(4):
                 self.nodes[node_index].build_node_shapes(ogr_polygon_layer)
 
-
     def _get_points_from_node(self):
         """Internal function to get the points in a node as a list of
             tuples.
 
-            retuns a list of the form [(data, x_coord, y_coord), ...]
+            returns a numpy array of the form [(data, x_coord, y_coord), ...]
             """
-        binary_string = self.file_manager.read(self.blob_id)
-
-        #needs a native byte alignment character (=) otherwise the size
-        #doesn't calculate correctly
-        userday_list = struct.unpack(
-            '=' + '4sdd' * self.n_points_in_node, binary_string)
-        #collect the userday list into a list of tuples
-        userday_tuple_list = []
-        userday_iterator = iter(userday_list)
-        userday_tuple_list.extend(
-            itertools.izip(
-                userday_iterator, userday_iterator, userday_iterator))
-
-        return userday_tuple_list
-
+        return self.file_manager.read(self.blob_id)
 
     def _drain_node(self):
         """Internal function called when the current node needs to split, it
@@ -180,9 +165,10 @@ class OutOfCoreQuadTree(object):
     def add_points(self, point_list, list_bounds=None):
         """Add a list of points to the current node, this function will split
             the current node if necessary, and split the point list to
-            chilren nodes if necessary.
+            children nodes if necessary.
 
-            point_list - a list of (user_day_hash, x_coord, y_coord) tuples
+            point_list - a numpy array of (user_day_hash, x_coord, y_coord)
+                tuples
             list_bounds - if list bounds is a tuple, the first value indicates
                 the valid index in the point list an the second value indicates
                 the right non-inclusive bound.
@@ -203,17 +189,10 @@ class OutOfCoreQuadTree(object):
                     self.max_points_per_node or
                     self.node_depth == self.max_node_depth):
                 #if it's a leaf and the points fit, append to file end
-                out_line = ''
-                for user_day_hash, x_coord, y_coord in point_list[
-                        list_bounds[0]:list_bounds[1]]:
-                    out_line += (
-                        struct.pack('4c', *user_day_hash) +
-                        struct.pack('dd', x_coord, y_coord))
-
-                    self.n_points_in_node += 1
-
-                self.file_manager.append(self.blob_id, out_line)
-                return #this lets us pass through the two cases below
+                self.n_points_in_node += point_list_len
+                self.file_manager.append(
+                    self.blob_id, point_list[list_bounds[0]:list_bounds[1]])
+                return  # this lets us pass through the two cases below
             else:
                 #this cases handles a leaf node that needs to be split
                 self._split_node()
@@ -226,13 +205,9 @@ class OutOfCoreQuadTree(object):
             _sort_list_to_quads(
                 point_list, list_bounds, mid_x_coord, mid_y_coord))
 
+        # quads organized like this:
         #01
         #23
-        #print 'split a level'
-        #print 'add to quad 2', list_bounds[0], left_y_split_index
-        #print 'add to quad 0', left_y_split_index, x_split_index
-        #print 'add to quad 3', x_split_index, right_y_split_index
-        #print 'add to quad 1', right_y_split_index, list_bounds[1]
 
         self.nodes[2].add_points(
             point_list, (list_bounds[0], left_y_split_index))
@@ -242,9 +217,6 @@ class OutOfCoreQuadTree(object):
             point_list, (x_split_index, right_y_split_index))
         self.nodes[1].add_points(
             point_list, (right_y_split_index, list_bounds[1]))
-
-
-
 
     def _bounding_box_intersect(self, bb):
         """Function that tests if this node's bounding intersects another.
@@ -260,7 +232,6 @@ class OutOfCoreQuadTree(object):
             self.bounding_box[1] > bb[3] or
             self.bounding_box[3] < bb[1])
 
-
     def n_nodes(self):
         """Returns the number of nodes in the quadtree"""
 
@@ -274,8 +245,6 @@ class OutOfCoreQuadTree(object):
         if self.is_leaf:
             return self.n_points_in_node
         return sum([self.nodes[index].n_points() for index in xrange(4)])
-
-
 
     def get_intersecting_points_in_polygon(self, shapely_polygon):
         """This function is a high performance test routine to return the points
@@ -315,22 +284,17 @@ class OutOfCoreQuadTree(object):
                         shapely_polygon))
             return result_deque
 
-        return collections.deque() #empty
+        return collections.deque()  # empty
 
-
-    def get_intersecting_points_in_bounding_box(
-            self, bounding_box, on_the_fly_subdivide=True):
+    def get_intersecting_points_in_bounding_box(self, bounding_box):
         """This function takes in a bounding box and returns a list of
             (data, lat, lng) tuples that are contained in the leaf nodes that
             intersect that bounding box.
 
             bounding_box - list of the form [xmin, ymin, xmax, ymax]
-            on_the_fly_subdivide - if True the quadtree will continue to
-                subdivide on this query if the number of points is greater
-                than the max points per node
 
-            returns list of (data, x_coord, lng) of nodes that intersect the
-                bounding box"""
+            returns numpy array of (data, x_coord, lng) of nodes that intersect
+                the bounding box"""
 
         if not self._bounding_box_intersect(bounding_box):
             return []
@@ -339,8 +303,8 @@ class OutOfCoreQuadTree(object):
         if (self.n_points_in_node > self.max_points_per_node and
                 self.node_depth < self.max_node_depth):
             print ('dynamic splitting node on intersect node points for query '
-                'at level %d, %d points' % (
-                    self.node_depth, self.n_points_in_node))
+                   'at level %d, %d points' % (
+                        self.node_depth, self.n_points_in_node))
             self._split_node(False)
             self.flush()
 
@@ -358,6 +322,7 @@ class OutOfCoreQuadTree(object):
                         bounding_box))
             return point_list
 
+
 def _sort_list_to_quads(point_list, list_bounds, mid_x_coord, mid_y_coord):
     """Sorts the points in point_list to be 4 sublists where each sublists's
         points lie within the
@@ -367,44 +332,37 @@ def _sort_list_to_quads(point_list, list_bounds, mid_x_coord, mid_y_coord):
 
         quads.
 
-        point_list - list of (data, x_coord, y_coord) points.  this parameter
-            will be modified to have sorted points
+        point_list - structured numpy array of (data, x_coord, y_coord) points.
+            This parameter will be modified to have sorted points
         list_bounds - (left, right) tuple of valid points in point_list
         mid_x_coord - x coord to split the quad
         mid_y_coord - y coord to split the quad
 
         returns left_y_split_index, x_split_index, right_y_split_index"""
 
-    point_list[list_bounds[0]:list_bounds[1]] = sorted(
-        point_list[list_bounds[0]:list_bounds[1]],
-        key=operator.itemgetter(1))
-
-    x_vals = [
-        point[1] for point in point_list[list_bounds[0]:list_bounds[1]]]
-    #everything left of x_split_index is in quad 0 or 2, right is 1 or 3
+    #sort by x coordinates
+    idx = point_list[list_bounds[0]:list_bounds[1]]['f1'].argsort()
+    point_list[list_bounds[0]:list_bounds[1]] = (
+        point_list[list_bounds[0]:list_bounds[1]][idx])
     x_split_index = (
-        bisect.bisect_left(x_vals, mid_x_coord) + list_bounds[0])
-    x_vals = None
+        point_list[list_bounds[0]:list_bounds[1]]['f1'].searchsorted(
+            mid_x_coord) + list_bounds[0])
 
     #sort the left y coordinates
-    point_list[list_bounds[0]:x_split_index] = sorted(
-        point_list[list_bounds[0]:x_split_index],
-        key=operator.itemgetter(2))
-    left_y_vals = [
-        point[2] for point in point_list[list_bounds[0]:x_split_index]]
+    idx = point_list[list_bounds[0]:x_split_index]['f2'].argsort()
+    point_list[list_bounds[0]:x_split_index] = (
+        point_list[list_bounds[0]:x_split_index][idx])
     left_y_split_index = (
-        bisect.bisect_left(left_y_vals, mid_y_coord) + list_bounds[0])
-    left_y_vals = None
+        point_list[list_bounds[0]:x_split_index]['f2'].searchsorted(
+            mid_y_coord) + list_bounds[0])
 
     #sort the right y coordinates
-    point_list[x_split_index:list_bounds[1]] = sorted(
-        point_list[x_split_index:list_bounds[1]],
-        key=operator.itemgetter(2))
-    right_y_vals = [
-        point[2] for point in point_list[x_split_index:list_bounds[1]]]
+    idx = point_list[x_split_index:list_bounds[1]]['f2'].argsort()
+    point_list[x_split_index:list_bounds[1]] = (
+        point_list[x_split_index:list_bounds[1]][idx])
     right_y_split_index = (
-        bisect.bisect_left(right_y_vals, mid_y_coord) + x_split_index)
-    right_y_vals = None
+        point_list[x_split_index:list_bounds[1]]['f2'].searchsorted(
+            mid_y_coord) + x_split_index)
 
     return left_y_split_index, x_split_index, right_y_split_index
 
@@ -420,7 +378,7 @@ def _in_box(bounding_box, x_coord, y_coord):
 
         """
     return (
-        x_coord >= bounding_box[0] and #xmin
-        y_coord >= bounding_box[1] and #ymin
-        x_coord < bounding_box[2] and #xmax
-        y_coord < bounding_box[3]) #ymax
+        x_coord >= bounding_box[0] and  # xmin
+        y_coord >= bounding_box[1] and  # ymin
+        x_coord < bounding_box[2] and  # xmax
+        y_coord < bounding_box[3])  # ymax

@@ -239,7 +239,7 @@ class RecModel(object):
             projected_point_list = local_points[
                 point_list_slice_index:
                 point_list_slice_index+POINTS_TO_ADD_PER_STEP]
-            for point_index in xrange(len(projected_point_list)):
+            for point_index in xrange(len(POINTS_TO_ADD_PER_STEP)):
                 current_point = projected_point_list[point_index]
                 lng_coord = current_point[1]
                 lat_coord = current_point[2]
@@ -358,6 +358,7 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
         raw_file_lines_queue.put(row_deque)
     for _ in xrange(n_readers):
         raw_file_lines_queue.put('STOP')
+    LOGGER.info('done reading csv from disk')
 
 
 def _parse_input_csv(raw_file_lines_queue, user_day_tuple_queue):
@@ -369,7 +370,8 @@ def _parse_input_csv(raw_file_lines_queue, user_day_tuple_queue):
 
         returns nothing"""
 
-    result_list = []
+    result_list = numpy.empty(POINTS_TO_ADD_PER_STEP, dtype='a4, f4, f4')
+    valid_index = 0
     while True:
         row_deque = raw_file_lines_queue.get()
         if row_deque == 'STOP':
@@ -395,12 +397,13 @@ def _parse_input_csv(raw_file_lines_queue, user_day_tuple_queue):
             lat = float(row[3])
             lng = float(row[4])
 
-            result_list.append((user_day_hash, lng, lat))
-            if len(result_list) > POINTS_TO_ADD_PER_STEP:
-                user_day_tuple_queue.put(result_list)
-                result_list = []
+            result_list[valid_index] = (user_day_hash, lng, lat)
+            valid_index += 1
+            if valid_index >= POINTS_TO_ADD_PER_STEP:
+                user_day_tuple_queue.put(result_list.copy())
+                valid_index = 0
 
-    user_day_tuple_queue.put(result_list)
+    user_day_tuple_queue.put(result_list[0:valid_index].copy())
     user_day_tuple_queue.put('STOP')
 
 
@@ -409,8 +412,9 @@ def construct_userday_quadtree(
         max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
 
     #see if we've already created the quadtree
-    print 'hashing input file'
+    LOGGER.info('hashing input file')
     start_time = time.time()
+    LOGGER.info(raw_photo_csv_table)
     csv_hash = file_hash.hashfile(raw_photo_csv_table, fast_hash=True)
 
     ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
@@ -448,7 +452,8 @@ def construct_userday_quadtree(
         last_time = time.time()
         while True:
             userday_tuple_list = user_day_tuple_queue.get()
-            if userday_tuple_list == 'STOP':  # count 'n cpu' STOPs
+            if (isinstance(userday_tuple_list, basestring) and
+                    userday_tuple_list == 'STOP'):  # count 'n cpu' STOPs
                 n_parse_processes -= 1
                 if n_parse_processes == 0:
                     break
