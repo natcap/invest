@@ -191,7 +191,7 @@ class Repository(object):
         """Update to the target revision.
 
         Parameters:
-            rev (string): The revision to update the repo to.ºw
+            rev (string): The revision to update the repo to.
 
         Returns:
             None
@@ -269,6 +269,16 @@ class Repository(object):
         if type(tracked_rev) is DictType:
             user_os = platform.system()
             return tracked_rev[user_os]
+        elif tracked_rev.startswith('REQUIREMENTS_TXT'):
+            pkgname = tracked_rev.split(':')[1]
+            version =_parse_version_requirement(pkgname)
+            if version is None:
+                raise ValueError((
+                    'Versions.json requirement string must have the '
+                    'format "REQUIREMENTS_TXT:<pkgname>".  Example: '
+                    '"REQUIREMENTS_TXT:pygeoprocessing".  %s found.'
+                    ) % tracked_rev)
+            tracked_rev = version
         return tracked_rev
 
     def at_known_rev(self):
@@ -660,6 +670,28 @@ def dev_env(options):
         'dev': True,
     })
 
+
+def _parse_version_requirement(pkg_name):
+    """Parse a version requirement from requirements.txt.
+
+    Returns the first parsed version that meets the >= requirement.
+
+    Parameters:
+        pkg_name (string): The string package name to search for.
+
+    Returns:
+        The string version or None if no >= version requirement can be parsed.
+
+    """
+    for line in open('requirements.txt'):
+        if line.startswith(pkg_name):
+            # Assume that we only have one version spec to deal with.
+            version_specs = pkg_resources.Requirement.parse(line).specs
+            for requirement_type, version in version_specs:
+                if requirement_type == '>=':
+                    return version
+
+
 @task
 @cmdopts([
     ('system-site-packages', '', ('Give the virtual environment access '
@@ -715,6 +747,9 @@ def after_install(options, home_dir):
         "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
     ).format(src_distutils_cfg=source_file)
 
+    # Track preinstalled packages so we don't install them twice.
+    preinstalled_pkgs = set([])
+
     if options.env.with_pygeoprocessing:
         # install with --no-deps (will otherwise try to install numpy, gdal,
         # etc.), and -I to ignore any existing pygeoprocessing install (as
@@ -723,6 +758,7 @@ def after_install(options, home_dir):
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
             "'--no-deps', '-I', './src/pygeoprocessing'])\n"
         )
+        preinstalled_pkgs.add('pygeoprocessing')
     else:
         print 'Skipping the installation of pygeoprocessing per user input.'
 
@@ -737,7 +773,7 @@ def after_install(options, home_dir):
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
         # installed numpy.  Force compilation from source to avoid this issue.
-        'pygeoprocessing': [NO_WHEEL_SH],
+        'pygeoprocessing': NO_WHEEL_SH.split(),
     }
     if options.env.dev:
         # I only want to install natcap namespace packages as flat wheels if
@@ -763,6 +799,10 @@ def after_install(options, home_dir):
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
             projectname = requirement.project_name  # project name w/o version req
+            if projectname in preinstalled_pkgs:
+                print ('Requirement %s from requirements.txt already '
+                       'installed') % projectname
+                continue
             try:
                 install_params = pkg_pip_params[projectname]
                 extra_params = _format_params(install_params)
@@ -1954,7 +1994,8 @@ def build_bin(options):
 
             cwd = os.getcwd()
             # Unzip the tar.gz and run bdist_egg on it.
-            versioner_tgz = os.path.abspath(glob.glob('dist/natcap.versioner-*.tar.gz')[0])
+            versioner_tgz = os.path.abspath(
+                glob.glob('dist/natcap.versioner-*.tar.gz')[0])
             os.chdir('dist')
             dry('unzip %s' % versioner_tgz,
                 lambda tgz: tarfile.open(tgz, 'r:gz').extractall('.'),
@@ -1966,8 +2007,13 @@ def build_bin(options):
 
             # Copy the new egg to the built distribution with the eggs in it.
             # Both these folders should already be absolute paths.
-            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist', 'natcap.versioner-*'))[0]
-            versioner_egg_dest = os.path.join(invest_dist, 'eggs', os.path.basename(versioner_egg))
+            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist',
+                                                   'natcap.versioner-*'))[0]
+            egg_dirname = os.path.join(invest_dist, 'eggs')
+            versioner_egg_dest = os.path.join(egg_dirname,
+                                              os.path.basename(versioner_egg))
+            if not os.path.exists(egg_dirname):
+                os.makedirs(egg_dirname)
             dry('cp %s %s' % (versioner_egg, versioner_egg_dest),
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
@@ -2737,7 +2783,7 @@ def test(args):
                 'fetch': True,
             })
             call_task('check_repo', options={
-                'repo': REPOS_DICT['sample-data'].local_path,
+                'repo': REPOS_DICT['invest-data'].local_path,
                 'fetch': True,
             })
             jenkins_flags = (
