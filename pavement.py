@@ -769,7 +769,7 @@ def after_install(options, home_dir):
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
         # installed numpy.  Force compilation from source to avoid this issue.
-        'pygeoprocessing': [NO_WHEEL_SH],
+        'pygeoprocessing': NO_WHEEL_SH.split(),
     }
     if options.env.dev:
         # I only want to install natcap namespace packages as flat wheels if
