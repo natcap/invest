@@ -112,6 +112,16 @@
           "disabledBy": "predefined_globio"
         },
         {
+          "id": "primary_threshold",
+          "args_id": "primary_threshold",
+          "type": "text",
+          "label": "Primary Threshold",
+          "defaultValue": "0.66",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
+        },
+        {
           "id": "pasture_threshold",
           "args_id": "pasture_threshold",
           "type": "text",
@@ -125,21 +135,11 @@
           "id": "intensification_fraction",
           "args_id": "intensification_fraction",
           "type": "text",
-          "label": "Fraction of Intensification across Land Use/Cover Raster",
+          "label": "Proportion of of Agriculture Intensified",
           "defaultValue": "0.46",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
-          "helpText": "This parameter linearly interpolates the MSA_LU values between GLOBIO landcover types 8 and 9 to generate a single landcover type 12 that's evaluated across the entire raster."
-        },
-        {
-          "id": "primary_threshold",
-          "args_id": "primary_threshold",
-          "type": "text",
-          "label": "Primary Threshold",
-          "defaultValue": "0.66",
-          "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$",
-          "disabledBy": "predefined_globio"
+          "helpText": "A value between 0 and 1 denoting proportion of total agriculture that should be classified as 'high input'."
         },
         {
           "id": "msa_parameters_uri",

@@ -204,27 +204,20 @@ def execute(args):
 
     # Get out_nodata values so that we can avoid any issues when running
     # operations
-    Kc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_Kc_raster_uri)
-    if Kc_nodata is None:
-        Kc_nodata = -9999
-    root_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_root_raster_uri)
-    if root_nodata is None:
-        root_nodata = -9999
-    veg_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_veg_raster_uri)
-    if veg_nodata is None:
-        veg_nodata = -9999
-    precip_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(precip_uri)
-    if precip_nodata is None:
-        precip_nodata = -9999
-    eto_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(eto_uri)
-    if eto_nodata is None:
-        eto_nodata = -9999
-    root_rest_layer_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(depth_to_root_rest_layer_uri)
-    if root_rest_layer_nodata is None:
-        root_rest_layer_nodata = -9999
-    pawc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(pawc_uri)
-    if pawc_nodata is None:
-        pawc_nodata = -9999
+    Kc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        tmp_Kc_raster_uri)
+    root_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        tmp_root_raster_uri)
+    veg_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        tmp_veg_raster_uri)
+    precip_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        precip_uri)
+    eto_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        eto_uri)
+    root_rest_layer_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        depth_to_root_rest_layer_uri)
+    pawc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        pawc_uri)
 
     def pet_op(eto_pix, Kc_pix):
         """Vectorize operation for calculating the plant potential

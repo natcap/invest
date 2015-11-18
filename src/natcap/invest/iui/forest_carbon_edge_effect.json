@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.forest_carbon_edge_effect",
   "modelName": "forest_carbon_edge_effect",
   "localDocURI": "../documentation/forest_carbon_edge_effect.html",
-  "height": 500,
+  "height": 600,
   "width": 850,
   "elements": [
     {
@@ -60,7 +60,34 @@
               "c_above"
             ]
           },
-          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'is_tropical_forest', 'c_above'.  If the user selects 'all carbon pools' the table must also contain entries for 'c_below', 'c_soil', and 'c_dead'.  See the InVEST Forest Carbon User's Guide for more information about these fields."
+        },
+        {
+          "id": "pools_to_calculate",
+          "args_id": "pools_to_calculate",
+          "type": "dropdown",
+          "label": "Carbon Pools to Calculate",
+          "options": [
+            "all carbon pools",
+            "above ground only"
+          ],
+          "returns": {
+            "mapValues": {
+              "all carbon pools": "all",
+              "above ground only": "above_ground"
+            }
+          },
+          "defaultValue": "all",
+          "required": true,
+          "helpText": "If 'all carbon pools' is selected then the headers 'c_above', 'c_below', 'c_dead', 'c_soil' are used in the carbon pool calculation.  Otherwise only 'c_above' is considered."
+        },
+        {
+            "id" : "compute_forest_edge_effects",
+            "args_id": "compute_forest_edge_effects",
+            "type": "checkbox",
+            "label": "Compute forest edge effects",
+            "defaultValue": true,
+            "helpText": "If selected, will use the Chaplin-Kramer, et. al method to account for above ground carbon stocks in tropical forest types indicated by a '1' in the 'is_tropical_forest' field in the biophysical table."
         },
         {
           "id": "tropical_forest_edge_carbon_model_shape_uri",
@@ -68,6 +95,7 @@
           "type": "file",
           "label": "Global forest carbon edge regression models (vector)",
           "defaultValue": "../forest_carbon_edge_effect/core_data/forest_carbon_edge_regression_model_parameters.shp",
+          "enabledBy": "compute_forest_edge_effects",
           "required": true,
           "validateAs": {
             "type": "OGR",
@@ -91,6 +119,7 @@
           "label": "Number of nearest model points to average",
           "defaultValue": "10",
           "required": true,
+          "enabledBy": "compute_forest_edge_effects",
           "validText": "^[0-9]*$",
           "helpText": "Used when calculating the biomass in a pixel.  This number determines the number of closest regression models that are used when calculating the total biomass.  Each local model is linearly weighted by distance such that the biomass in the pixel is a function of each of these points with the closest point having the highest effect."
         },
@@ -98,11 +127,12 @@
           "id": "biomass_to_carbon_conversion_factor",
           "args_id": "biomass_to_carbon_conversion_factor",
           "type": "text",
-          "label": "Biomass to Carbon Conversion Factor",
+          "label": "Forest Edge Biomass to Carbon Conversion Factor",
           "defaultValue": "0.47",
           "required": true,
+          "enabledBy": "compute_forest_edge_effects",
           "validText": "([0-9]+)?\\.[0-9]+",
-          "helpText": "Number by which to multiply forest biomass to convert to carbon. Default value is 0.47 (according to IPCC 2006). This pertains to forest classes only; values in the biophysical table for non-forest classes should already be in terms of carbon, not biomass."
+          "helpText": "Number by which to scale forest edge biomass to convert to carbon. Default value is 0.47 (according to IPCC 2006). This pertains to forest classes only; values in the biophysical table for non-forest classes should already be in terms of carbon, not biomass."
         },
         {
           "id": "aoi_uri",
