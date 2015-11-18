@@ -1,10 +1,32 @@
 InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs 
 ================================================================
 
-|build_image|
++-----------------------+------------------------------+----------------------------+
+| Build type            | Windows                      | Linux (Debian 7)           |
++=======================+==============================+============================+
+| Nightly Binary builds | |nightly_binary_build_badge|                              |
++-----------------------+------------------------------+----------------------------+
+| Dev builds            | |dev_windows_build_badge|    | |dev_linux_build_badge|    |
++-----------------------+------------------------------+----------------------------+
+| Tests                 | |windows_test_badge|         | |linux_test_badge|         |
++-----------------------+------------------------------+----------------------------+
 
-.. |build_image| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=invest-nightly-develop
+
+
+.. |nightly_binary_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=invest-nightly-develop
   :target: http://builds.naturalcapitalproject.org/job/invest-nightly-develop
+
+.. |dev_windows_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=natcap.invest/label=GCE-windows-1
+  :target: http://builds.naturalcapitalproject.org/job/natcap.invest/label=GCE-windows-1
+
+.. |dev_linux_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=natcap.invest/label=GCE-debian-2
+  :target: http://builds.naturalcapitalproject.org/job/natcap.invest/label=GCE-debian-2
+
+.. |windows_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=GCE-windows-1
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
+
+.. |linux_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=GCE-debian-2
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2
 
 About  InVEST
 =============
