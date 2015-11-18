@@ -747,6 +747,9 @@ def after_install(options, home_dir):
         "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
     ).format(src_distutils_cfg=source_file)
 
+    # Track preinstalled packages so we don't install them twice.
+    preinstalled_pkgs = set([])
+
     if options.env.with_pygeoprocessing:
         # install with --no-deps (will otherwise try to install numpy, gdal,
         # etc.), and -I to ignore any existing pygeoprocessing install (as
@@ -755,6 +758,7 @@ def after_install(options, home_dir):
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
             "'--no-deps', '-I', './src/pygeoprocessing'])\n"
         )
+        preinstalled_pkgs.add('pygeoprocessing')
     else:
         print 'Skipping the installation of pygeoprocessing per user input.'
 
@@ -795,6 +799,10 @@ def after_install(options, home_dir):
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
             projectname = requirement.project_name  # project name w/o version req
+            if projectname in preinstalled_pkgs:
+                print ('Requirement %s from requirements.txt already '
+                       'installed') % projectname
+                continue
             try:
                 install_params = pkg_pip_params[projectname]
                 extra_params = _format_params(install_params)
