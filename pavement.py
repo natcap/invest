@@ -269,6 +269,16 @@ class Repository(object):
         if type(tracked_rev) is DictType:
             user_os = platform.system()
             return tracked_rev[user_os]
+        elif tracked_rev.startswith('REQUIREMENTS_TXT'):
+            pkgname = tracked_rev.split(':')[1]
+            version =_parse_version_requirement(pkgname)
+            if version is None:
+                raise ValueError((
+                    'Versions.json requirement string must have the '
+                    'format "REQUIREMENTS_TXT:<pkgname>".  Example: '
+                    '"REQUIREMENTS_TXT:pygeoprocessing".  %s found.'
+                    ) % tracked_rev)
+            tracked_rev = version
         return tracked_rev
 
     def at_known_rev(self):
