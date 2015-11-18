@@ -191,7 +191,7 @@ class Repository(object):
         """Update to the target revision.
 
         Parameters:
-            rev (string): The revision to update the repo to.ºw
+            rev (string): The revision to update the repo to.
 
         Returns:
             None
@@ -659,6 +659,28 @@ def dev_env(options):
         'envname': options.dev_env.envname,
         'dev': True,
     })
+
+
+def _parse_version_requirement(pkg_name):
+    """Parse a version requirement from requirements.txt.
+
+    Returns the first parsed version that meets the >= requirement.
+
+    Parameters:
+        pkg_name (string): The string package name to search for.
+
+    Returns:
+        The string version or None if no >= version requirement can be parsed.
+
+    """
+    for line in open('requirements.txt'):
+        if line.startswith(pkg_name):
+            # Assume that we only have one version spec to deal with.
+            version_specs = pkg_resources.Requirement.parse(line).specs
+            for requirement_type, version in version_specs:
+                if requirement_type == '>=':
+                    return version
+
 
 @task
 @cmdopts([
