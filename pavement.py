@@ -167,18 +167,34 @@ paver.easy.options(
 
 
 class Repository(object):
-    tip = ''
-    statedir = ''
-    cmd = ''
+    """Abstract class representing a version-controlled repository."""
+    tip = ''  # The string representing the latest revision
+    statedir = ''  # Where the SCM stores its data, relative to repo root
+    cmd = ''  # The command-line exe to call.
 
     def __init__(self, local_path, remote_url):
+        """Initialize the Repository instance
+
+        Parameters:
+            local_path (string): The filepath on disk to the repo
+                (relative to pavement.py)
+            remote_url (string): The string URL to use to identify the repo.
+                Used for clones, updates.
+
+        Returns:
+            An instance of Repository.
+        """
         self.local_path = local_path
         self.remote_url = remote_url
 
     def get(self, rev):
-        """
-        Given whatever state the repo might be in right now, update to the
-        target revision.
+        """Update to the target revision.
+
+        Parameters:
+            rev (string): The revision to update the repo to.ºw
+
+        Returns:
+            None
         """
         if not self.ischeckedout():
             self.clone()
@@ -202,18 +218,53 @@ class Repository(object):
             self.update(rev)
 
     def ischeckedout(self):
+        """Identify whether the repository is checked out on disk."""
         return os.path.exists(os.path.join(self.local_path, self.statedir))
 
     def clone(self, rev=None):
-        raise Exception
+        """Clone the repository from the remote URL.
 
-    def pull(self):
-        raise Exception
+        This method is to be overridden in a subclass with the SCM-specific
+        commands.
+
+        Parameters:
+            rev=None (string or None): The revision to update to.  If None,
+                the revision will be fetched from versions.json.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
     def update(self, rev=None):
-        raise Exception
+        """Update the repository to a revision.
+
+        This method is to be overridden in a subclass with the SCM-specific
+        commands.
+
+        Parameters:
+            rev=None (string or None): The revision to update to.  If None,
+                the revision will be fetched from versions.json.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
     def tracked_version(self):
+        """Get this repository's expected version from versions.json.
+
+        Returns:
+            A string representation of the tracked version.
+        """
         tracked_rev = json.load(open('versions.json'))[self.local_path]
         if type(tracked_rev) is DictType:
             user_os = platform.system()
@@ -221,6 +272,11 @@ class Repository(object):
         return tracked_rev
 
     def at_known_rev(self):
+        """Identify whether the Repository is at the expected revision.
+
+        Returns:
+            A boolean.
+        """
         if not self.ischeckedout():
             return False
 
@@ -228,13 +284,81 @@ class Repository(object):
         return self.current_rev() == tracked_version
 
     def format_rev(self, rev):
-        raise Exception
+        """Get the uniquely-identifiable commit ID of `rev`.
 
-    def current_rev(self, convert=True):
-        raise Exception
+        This is particularly useful for SCMs that have multiple ways of
+        identifying commits.
+
+        Parameters:
+            rev (string): The revision to identify.
+
+        Returns:
+            The string id of the commit.
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
+
+    def current_rev(self):
+        """Fetch the current revision of the repository on disk.
+
+        This method should be overridden in a subclass with the SCM-specific
+        command(s).
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
 
-class HgRepository(Repository):
+class DVCSRepository(Repository):
+    """Abstract class for distributed revision control system repositories."""
+    tip = ''
+    statedir = ''
+    cmd = ''
+
+    def pull(self):
+        """Pull new changes from the remote.
+
+        This should be overridden in SCM-specific subclasses.
+
+        Returns:
+            None
+        """
+        raise NotImplementedError
+
+    def pull_and_retry(self, shell_string, cwd=None):
+        """Run a command, pulling new changes if needed.
+
+        Parameters:
+            shell_string (string): The formatted command to run.
+            cwd=None(string or None): The directory from which to execute
+                the command.  If None, the current working directory will be
+                used.
+
+        Returns:
+            None
+
+        Raises:
+            BuildFailure: Raised when the shell command fails after pulling.
+        """
+        for check_again in [True, False]:
+            try:
+                return sh(shell_string, cwd=cwd, capture=True).rstrip()
+            except BuildFailure as failure:
+                if check_again is True:
+                    # Pull and try to run again
+                    # Assumes that self.pull is implemented in the DVCS
+                    # subclass.
+                    self.pull()
+                else:
+                    raise failure
+
+
+class HgRepository(DVCSRepository):
     tip = 'tip'
     statedir = '.hg'
     cmd = 'hg'
@@ -251,22 +375,14 @@ class HgRepository(Repository):
                                             'url': self.remote_url})
 
     def update(self, rev):
-        sh('hg update -R %(dest)s -r %(rev)s' % {'dest': self.local_path,
-                                                 'rev': rev})
+        update_string = 'hg update -R {dest} -r {rev}'.format(
+            dest=self.local_path, rev=rev)
+        return self.pull_and_retry(update_string)
 
     def _format_log(self, template='', rev='.'):
-        for check_again in [True, False]:
-            try:
-                return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
-                    'dest': self.local_path, 'rev': rev, 'template': template},
-                    capture=True).rstrip()
-            except BuildFailure as failure:
-                if check_again is True:
-                    # Pull and try to format again
-                    self.pull()
-                else:
-                    raise failure
-
+        log_string = 'hg log -R {dest} -r {rev} --template="{template}"'.format(
+            dest=self.local_path, rev=rev, template=template)
+        return self.pull_and_retry(log_string)
 
     def format_rev(self, rev):
         return self._format_log('{node}', rev=rev)
@@ -290,10 +406,6 @@ class SVNRepository(Repository):
         if rev is None:
             rev = self.tracked_version()
         paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
-
-    def pull(self):
-        # svn is centralized, so there's no concept of pull without a checkout.
-        return
 
     def update(self, rev):
         # check that the repository URL hasn't changed.  If it has, update to
@@ -321,7 +433,7 @@ class SVNRepository(Repository):
         return rev
 
 
-class GitRepository(Repository):
+class GitRepository(DVCSRepository):
     tip = 'master'
     statedir = '.git'
     cmd = 'git'
@@ -337,23 +449,17 @@ class GitRepository(Repository):
         sh('git fetch %(url)s' % {'url': self.remote_url}, cwd=self.local_path)
 
     def update(self, rev):
-        sh('git checkout %(rev)s' % {'rev': rev}, cwd=self.local_path)
+        update_string = 'git checkout {rev}'.format(rev=rev)
+        self.pull_and_retry(update_string, cwd=self.local_path)
 
     def current_rev(self):
-        return sh('git rev-parse --verify HEAD', cwd=self.local_path,
-                  capture=True).rstrip()
+        rev_cmd_string = 'git rev-parse --verify HEAD'
+        return self.pull_and_retry(rev_cmd_string, cwd=self.local_path)
 
     def format_rev(self, rev):
-        for check_again in [True, False]:
-            try:
-                return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
-                          capture=True, cwd=self.local_path)
-            except BuildFailure as failure:
-                if check_again is True:
-                    # Pull and try to format again
-                    self.pull()
-                else:
-                    raise failure
+        log_string = 'git log --format=format:%H -1 {rev}'.format(rev=rev)
+        return self.pull_and_retry(log_string, cwd=self.local_path)
+
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
@@ -627,7 +733,11 @@ def after_install(options, home_dir):
     # extra parameter strings needed for installing certain packages
     # Always install natcap.versioner to the env over whatever else is there.
     pkg_pip_params = {
-        'natcap.versioner': ['-I']
+        'natcap.versioner': ['-I'],
+        # Pygeoprocessing wheels are compiled against specific versions of
+        # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
+        # installed numpy.  Force compilation from source to avoid this issue.
+        'pygeoprocessing': [NO_WHEEL_SH],
     }
     if options.env.dev:
         # I only want to install natcap namespace packages as flat wheels if
@@ -2528,11 +2638,14 @@ def compress_raster(args):
     Call `paver compress_raster --help` for full details.
     """
     parser = argparse.ArgumentParser(description=(
-        'Compress and tile a GDAL-compatible raster.'))
-    parser.add_argument('-x', '--blockxsize', nargs='?', default=256, type=int, help=(
-        'The block size along the X axis.  Default=256'))
-    parser.add_argument('-y', '--blockysize', nargs='?', default=256, type=int, help=(
-        'The block size along the Y axis.  Default=256'))
+        'Compress a GDAL-compatible raster.'))
+    parser.add_argument('-x', '--blockxsize', default=0, type=int, help=(
+        'The block size along the X axis.  Default=inraster block'))
+    parser.add_argument('-y', '--blockysize', default=0, type=int, help=(
+        'The block size along the Y axis.  Default=inraster block'))
+    parser.add_argument('-c', '--compression', default='LZW', type=str, help=(
+        'Compress the raster.  Valid options: NONE, LZW, DEFLATE, PACKBITS. '
+        'Default: LZW'))
     parser.add_argument('inraster', type=str, help=(
         'The raster to compress'))
     parser.add_argument('outraster', type=str, help=(
@@ -2540,15 +2653,35 @@ def compress_raster(args):
 
     parsed_args = parser.parse_args(args)
 
+    # import GDAL here because I don't want it to be a requirement to be able
+    # to run all paver functions.
+    from osgeo import gdal
+    in_raster = gdal.Open(parsed_args.inraster)
+    in_band = in_raster.GetRasterBand(1)
+    block_x, block_y = in_band.GetBlockSize()
+    if parsed_args.blockxsize == 0:
+        parsed_args.blockxsize = block_x
+    block_x_opt = '-co "BLOCKXSIZE=%s"' % parsed_args.blockxsize
+
+    if parsed_args.blockysize == 0:
+        parsed_args.blockysize = block_y
+    block_y_opt = '-co "BLOCKYSIZE=%s"' % parsed_args.blockysize
+
+    if parsed_args.blockysize % 2 == 0 and parsed_args.blockysize % 2 == 0:
+        tile_cmd = '-co "TILED=YES"'
+    else:
+        tile_cmd = ''
+
     sh(('gdal_translate '
         '-of "GTiff" '
+        '{tile} '
+        '{block_x} '
+        '{block_y} '
         '-co "COMPRESS=LZW" '
-        '-co "TILED=YES" '
-        '-co "BLOCKXSIZE={blockx}" '
-        '-co "BLOCKYSIZE={blocky}" '
         '{in_raster} {out_raster}').format(
-            blockx=parsed_args.blockxsize,
-            blocky=parsed_args.blockysize,
+            tile=tile_cmd,
+            block_x=block_x_opt,
+            block_y=block_y_opt,
             in_raster=os.path.abspath(parsed_args.inraster),
             out_raster=os.path.abspath(parsed_args.outraster),
         ))
