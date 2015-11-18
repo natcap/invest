@@ -3,9 +3,7 @@ import unittest
 import tempfile
 import shutil
 import os
-import csv
 
-from osgeo import ogr
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
@@ -15,6 +13,7 @@ REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'hydropower')
 
 class HydropowerUnitTests(unittest.TestCase):
     """Unit tests for Annual Water Yield Hydropower Model."""
+
     def setUp(self):
         """Overriding setUp function to create temporary workspace directory."""
         # this lets us delete the workspace after its done no matter the
@@ -50,6 +49,8 @@ class HydropowerUnitTests(unittest.TestCase):
 
     def test_write_new_table(self):
         """Hydro: testing 'write_new_table' function."""
+        import csv
+
         from natcap.invest.hydropower import hydropower_water_yield
 
         temp_dir = self.workspace_dir
@@ -90,8 +91,9 @@ class HydropowerUnitTests(unittest.TestCase):
 
     def test_add_dict_to_shape(self):
         """Hydro: testing 'add_dict_to_shape' function."""
-
+        from osgeo import ogr
         from natcap.invest.hydropower import hydropower_water_yield
+
         # 'two_poly_shape.shp was created with fields:
         # ['ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real']
         # and with values of:
