@@ -8,7 +8,6 @@ import csv
 from osgeo import ogr
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
-from nose.tools import nottest
 
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'hydropower')
@@ -29,6 +28,7 @@ class HydropowerUnitTests(unittest.TestCase):
     def test_extract_datasource_table(self):
         """Hydro: testing 'extract_datasource_table_by_key' function."""
         from natcap.invest.hydropower import hydropower_water_yield
+
         # this 2 polygon shapefile was created with fields:
         # ['ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real']
         # and with values of:
@@ -51,6 +51,7 @@ class HydropowerUnitTests(unittest.TestCase):
     def test_write_new_table(self):
         """Hydro: testing 'write_new_table' function."""
         from natcap.invest.hydropower import hydropower_water_yield
+
         temp_dir = self.workspace_dir
         tmp, filename = tempfile.mkstemp(suffix='.csv', dir=temp_dir)
         os.close(tmp)
@@ -89,6 +90,7 @@ class HydropowerUnitTests(unittest.TestCase):
 
     def test_add_dict_to_shape(self):
         """Hydro: testing 'add_dict_to_shape' function."""
+
         from natcap.invest.hydropower import hydropower_water_yield
         # 'two_poly_shape.shp was created with fields:
         # ['ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real']
@@ -176,7 +178,6 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_valuation(self):
         """Hydro: testing valuation component with no subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -213,7 +214,6 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_water_yield(self):
         """Hydro: testing water yield component only."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -243,7 +243,6 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_water_yield_subshed(self):
         """Hydro: testing water yield component only w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -278,7 +277,6 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_scarcity(self):
         """Hydro: testing Scarcity component."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -312,7 +310,6 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_scarcity_subshed(self):
         """Hydro: testing Scarcity component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -350,7 +347,6 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_valuation_subshed(self):
         """Hydro: testing Valuation component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -392,7 +388,6 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_suffix(self):
         """Hydro: testing that the suffix is handled correctly."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -448,7 +443,6 @@ class HydropowerRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_suffix_underscore(self):
         """Hydro: testing that a suffix w/ underscore is handled correctly."""
         from natcap.invest.hydropower import hydropower_water_yield
