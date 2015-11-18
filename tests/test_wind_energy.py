@@ -6,6 +6,7 @@ import os
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
+from nose.tools import nottest
 
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'wind_energy')
@@ -49,6 +50,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_avggrid_dist_windsched(self):
         """WindEnergy: testing Valuation using avg grid distance and wind sched."""
         from natcap.invest.wind_energy import wind_energy
@@ -91,6 +93,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_aoi(self):
         """WindEnergy: testing base case w/ no AOI, distances, or valuation."""
         from natcap.invest.wind_energy import wind_energy
@@ -118,6 +121,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -148,6 +152,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI, land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -180,6 +185,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_valuation(self):
         """WindEnergy: testing case w/ AOI, land poly, and distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -214,6 +220,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_gridpts_windsched(self):
         """WindEnergy: testing Valuation w/ grid points and wind sched."""
         from natcap.invest.wind_energy import wind_energy
@@ -257,6 +264,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_avggriddist_windprice(self):
         """WindEnergy: testing Valuation w/ avg grid distances and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -299,6 +307,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -342,6 +351,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_suffix(self):
         """WindEnergy: testing suffix handling."""
         from natcap.invest.wind_energy import wind_energy
@@ -397,6 +407,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_suffix_underscore(self):
         """WindEnergy: testing that suffix w/ underscore is handled correctly."""
         from natcap.invest.wind_energy import wind_energy
@@ -449,3 +460,33 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', vector_path)))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_bioparams_missing(self):
+        """WindEnergy: testing that a FieldError is raised on bad bio params."""
+        from natcap.invest.wind_energy import wind_energy
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'wind_data_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+            'bathymetry_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'global_wind_parameters_uri': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input',
+                'global_wind_energy_parameters.csv'),
+            'turbine_parameters_uri': os.path.join(
+                REGRESSION_DATA, 'turbine_params_missing.csv'),
+            'number_of_turbines': 80,
+            'min_depth': 3,
+            'max_depth': 200,
+            'aoi_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri': os.path.join(
+                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance': 0,
+            'max_distance': 200000
+        }
+
+        self.assertRaises(wind_energy.FieldError, wind_energy.execute, args)
