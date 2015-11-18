@@ -8,16 +8,16 @@ from osgeo import gdal
 def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     """Create a blank raster based on a vector file extent.  This code is
         adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
-    
-        xRes - the x size of a pixel in the output dataset must be a positive 
+
+        xRes - the x size of a pixel in the output dataset must be a positive
             value
-        yRes - the y size of a pixel in the output dataset must be a positive 
+        yRes - the y size of a pixel in the output dataset must be a positive
             value
         format - gdal GDT pixel type
         nodata - the output nodata value
         rasterFile - URI to file location for raster
         shp - vector shapefile to base extent of output raster on
-        
+
         returns a blank raster whose bounds fit within `shp`s bounding box
             and features are equivalent to the passed in data"""
 
@@ -47,60 +47,61 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
 
     return raster
 
-try:
-    land_poly_file = sys.argv[1]
-    aoi_poly_file = sys.argv[2]
-    cell_size = int(sys.argv[3])
-    outfile_name = sys.argv[4]
+if __name__ == '__main__':
+    try:
+        land_poly_file = sys.argv[1]
+        aoi_poly_file = sys.argv[2]
+        cell_size = int(sys.argv[3])
+        outfile_name = sys.argv[4]
 
-except:
-    print "Usage create_grid.py land_poly_file aoi_poly_file cell_size"
+    except:
+        print "Usage create_grid.py land_poly_file aoi_poly_file cell_size"
 
 
-land_ds = ogr.Open(land_poly_file)
-aoi_ds = ogr.Open(aoi_poly_file)
+    land_ds = ogr.Open(land_poly_file)
+    aoi_ds = ogr.Open(aoi_poly_file)
 
-    #format of aoi_extent [xleft, xright, ybot, ytop]
-aoi_extent = aoi_ds.GetLayer(0).GetExtent()
-xleft,xright,ybot,ytop = aoi_extent
+        #format of aoi_extent [xleft, xright, ybot, ytop]
+    aoi_extent = aoi_ds.GetLayer(0).GetExtent()
+    xleft,xright,ybot,ytop = aoi_extent
 
-srs = osr.SpatialReference()
-srs.ImportFromWkt(land_ds.GetLayer(0).GetSpatialRef().__str__())
-linear_units = srs.GetLinearUnits()
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(land_ds.GetLayer(0).GetSpatialRef().__str__())
+    linear_units = srs.GetLinearUnits()
 
-print xright-xleft
+    print xright-xleft
 
-print linear_units
+    print linear_units
 
-x_ticks = int((xright-xleft)/float(cell_size))
-y_ticks = int((ytop-ybot)/float(cell_size))
-    
-print aoi_extent
-print x_ticks, y_ticks
+    x_ticks = int((xright-xleft)/float(cell_size))
+    y_ticks = int((ytop-ybot)/float(cell_size))
 
-    #Get the land layer
-land_layer = land_ds.GetLayer(0)
+    print aoi_extent
+    print x_ticks, y_ticks
 
-output_dataset = createRasterFromVectorExtents(cell_size, cell_size, gdal.GDT_Byte, 255, 'grid.tif', aoi_ds)
-output_band = output_dataset.GetRasterBand(1)
+        #Get the land layer
+    land_layer = land_ds.GetLayer(0)
 
-#First fill it up with water (bit == 1)
-output_dataset.GetRasterBand(1).Fill(1)
+    output_dataset = createRasterFromVectorExtents(cell_size, cell_size, gdal.GDT_Byte, 255, 'grid.tif', aoi_ds)
+    output_band = output_dataset.GetRasterBand(1)
 
-#Then fill it up with land (bit == 0)
-gdal.RasterizeLayer(output_dataset, [1], land_layer, burn_values=[0])
+    #First fill it up with water (bit == 1)
+    output_dataset.GetRasterBand(1).Fill(1)
 
-land_array = output_dataset.GetRasterBand(1).ReadAsArray()
+    #Then fill it up with land (bit == 0)
+    gdal.RasterizeLayer(output_dataset, [1], land_layer, burn_values=[0])
 
-f=open(outfile_name,'w')
+    land_array = output_dataset.GetRasterBand(1).ReadAsArray()
 
-for y in range(land_array.shape[0]):
-    for x in range(land_array.shape[1]):
-        f.write(str(land_array[land_array.shape[0]-y-1][x]))
-    f.write('\n')
+    f=open(outfile_name,'w')
 
-#    for x_index in range(x_ticks):
-#        for y_index in range(y_ticks):
-#            x_coord = xleft+x_index*cell_size
-#            y_coord = ytop-y_index*cell_size
+    for y in range(land_array.shape[0]):
+        for x in range(land_array.shape[1]):
+            f.write(str(land_array[land_array.shape[0]-y-1][x]))
+        f.write('\n')
+
+    #    for x_index in range(x_ticks):
+    #        for y_index in range(y_ticks):
+    #            x_coord = xleft+x_index*cell_size
+    #            y_coord = ytop-y_index*cell_size
 
