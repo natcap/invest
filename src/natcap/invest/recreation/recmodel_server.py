@@ -445,7 +445,7 @@ def construct_userday_quadtree(
         n_parse_processes = (multiprocessing.cpu_count() - 2)
         if n_parse_processes < 1:
             n_parse_processes = 1
-        n_parse_processes = 1
+        #n_parse_processes = 1
 
         block_offset_size_queue = multiprocessing.Queue(1000)
         numpy_filepath_queue = multiprocessing.Queue(1000)
@@ -469,16 +469,16 @@ def construct_userday_quadtree(
 
         for _ in xrange(n_parse_processes):
             block_offset_size_queue.put('STOP')
-        _parse_input_csv(
+        """_parse_input_csv(
             block_offset_size_queue, raw_photo_csv_table, temp_dir,
-            numpy_filepath_queue)
+            numpy_filepath_queue)"""
 
-        """for _ in xrange(n_parse_processes):
+        for _ in xrange(n_parse_processes):
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_input_csv, args=(
                     block_offset_size_queue, raw_photo_csv_table, temp_dir,
                     numpy_filepath_queue))
-            parse_input_csv_process.start()"""
+            parse_input_csv_process.start()
 
         #add deques of points to the quadtree as they are ready
         n_points = 0
