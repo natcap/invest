@@ -19,6 +19,7 @@ import logging
 import StringIO
 import tempfile
 import shutil
+import re
 
 import Pyro4
 from osgeo import ogr
@@ -363,7 +364,7 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
         raw_file_lines_queue.put('STOP')
     LOGGER.info('done reading csv from disk')
 
-@profile
+
 def _parse_input_csv(
         block_offset_size_queue, csv_filepath, temp_dir, numpy_filepath_queue):
     """Takes a CSV file lines and dump lists of (userdayhash, lat, lng) tuples
@@ -381,61 +382,42 @@ def _parse_input_csv(
 
         returns nothing"""
 
-    result_list = numpy.empty(POINTS_TO_ADD_PER_STEP, dtype='a4, f4, f4')
-    valid_index = 0
-
     for file_offset, chunk_size in iter(block_offset_size_queue.get, 'STOP'):
         csv_file = open(csv_filepath, 'rb')
         csv_file.seek(file_offset, 0)
         chunk_string = csv_file.read(chunk_size)
         csv_file.close()
+
         # sample line:
         # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
-        regexp = r"[^,]+,([^,]+),(\d+)-(\d\d)-(\d\d) [^,]+,([^,]+),([^,]+),"
+        # this pattern matches the above style of line and only parses valid
+        # dates to handle some cases where there are weird dates in the input
+        pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"
         result = numpy.fromregex(
-            StringIO.StringIO(chunk_string), regexp,
-            [('user', 'S40'), ('year', numpy.int32), ('month', numpy.int32),
-             ('day', numpy.int32), ('lat', numpy.float32),
-             ('lng', numpy.float32)])
-        print result['lat']
+            StringIO.StringIO(chunk_string), pattern,
+            [('user', 'S40'), ('date', 'datetime64[D]'),
+             ('lat', numpy.float32), ('lng', numpy.float32)])
 
-        csv_reader = csv.reader(StringIO.StringIO(chunk_string))
-        for row in csv_reader:
-            user_string = row[1]
+        #year_day = result['date'].astype(int)
+        def md5hash(user_string, date):
+            """md5hash userid and yearday"""
+            return hashlib.md5(
+                user_string+str(date.timetuple().tm_yday)).digest()[-4:]
 
-            #determine the day of the year from the 2006-05-21 00:05:58 format
-            try:
-                date = datetime.date(
-                    int(row[2][:4]), int(row[2][5:7]), int(row[2][8:10]))
-                year_day = date.timetuple().tm_yday
-            except ValueError:
-                # there are malformed dates, which are okay to skip
-                continue
+        md5hash_v = numpy.vectorize(md5hash, otypes=['S4'])
+        hashes = md5hash_v(result['user'], result['date'])
 
-            #creates a 4 bit hash of user id and year day.  this identifies a
-            #unique user day point in space with only 4 bytes
-            user_day_hash = hashlib.md5(user_string+str(year_day)).digest()[-4:]
+        user_day_lat_lng = numpy.empty(hashes.size, dtype='S4,f4,f4')
+        user_day_lat_lng['f0'] = hashes
+        user_day_lat_lng['f1'] = result['lat']
+        user_day_lat_lng['f2'] = result['lng']
 
-            #Get the lat/lng
-            lat = float(row[3])
-            lng = float(row[4])
-
-            result_list[valid_index] = (user_day_hash, lng, lat)
-            valid_index += 1
-            if valid_index >= POINTS_TO_ADD_PER_STEP:
-                temp_handle, temp_file_path = tempfile.mkstemp(dir=temp_dir)
-                temp_file = os.fdopen(temp_handle, 'w')
-                numpy.save(temp_file, result_list)
-                temp_file.close()
-                numpy_filepath_queue.put(temp_file_path)
-                valid_index = 0
-
-    if valid_index > 0:
         temp_handle, temp_file_path = tempfile.mkstemp(dir=temp_dir)
         temp_file = os.fdopen(temp_handle, 'w')
-        numpy.save(temp_file, result_list[0:valid_index])
+        numpy.save(temp_file, user_day_lat_lng)
         temp_file.close()
         numpy_filepath_queue.put(temp_file_path)
+
     numpy_filepath_queue.put('STOP')
 
 
