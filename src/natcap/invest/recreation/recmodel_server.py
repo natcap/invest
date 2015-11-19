@@ -363,7 +363,7 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
         raw_file_lines_queue.put('STOP')
     LOGGER.info('done reading csv from disk')
 
-
+@profile
 def _parse_input_csv(
         block_offset_size_queue, csv_filepath, temp_dir, numpy_filepath_queue):
     """Takes a CSV file lines and dump lists of (userdayhash, lat, lng) tuples
@@ -389,6 +389,16 @@ def _parse_input_csv(
         csv_file.seek(file_offset, 0)
         chunk_string = csv_file.read(chunk_size)
         csv_file.close()
+        # sample line:
+        # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
+        regexp = r"[^,]+,([^,]+),(\d+)-(\d\d)-(\d\d) [^,]+,([^,]+),([^,]+),"
+        result = numpy.fromregex(
+            StringIO.StringIO(chunk_string), regexp,
+            [('user', 'S40'), ('year', numpy.int32), ('month', numpy.int32),
+             ('day', numpy.int32), ('lat', numpy.float32),
+             ('lng', numpy.float32)])
+        print result['lat']
+
         csv_reader = csv.reader(StringIO.StringIO(chunk_string))
         for row in csv_reader:
             user_string = row[1]
@@ -461,13 +471,6 @@ def construct_userday_quadtree(
         #TODO should i make a known location for temp?
         temp_dir = tempfile.mkdtemp(dir='.')
 
-        """for _ in xrange(n_parse_processes):
-            parse_input_csv_process = multiprocessing.Process(
-                target=_parse_input_csv, args=(
-                    block_offset_size_queue, raw_photo_csv_table, temp_dir,
-                    numpy_filepath_queue))
-            parse_input_csv_process.start()"""
-
         # rush through file and determine reasonable offsets and blocks
         csv_file = open(raw_photo_csv_table, 'rb')
         csv_file.readline()  # skip the csv header
@@ -488,6 +491,12 @@ def construct_userday_quadtree(
             block_offset_size_queue, raw_photo_csv_table, temp_dir,
             numpy_filepath_queue)
 
+        """for _ in xrange(n_parse_processes):
+            parse_input_csv_process = multiprocessing.Process(
+                target=_parse_input_csv, args=(
+                    block_offset_size_queue, raw_photo_csv_table, temp_dir,
+                    numpy_filepath_queue))
+            parse_input_csv_process.start()"""
 
         #add deques of points to the quadtree as they are ready
         n_points = 0
