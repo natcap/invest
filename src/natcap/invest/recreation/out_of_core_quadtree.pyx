@@ -341,28 +341,24 @@ def _sort_list_to_quads(point_list, list_bounds, mid_x_coord, mid_y_coord):
         returns left_y_split_index, x_split_index, right_y_split_index"""
 
     #sort by x coordinates
-    idx = point_list[list_bounds[0]:list_bounds[1]]['f1'].argsort()
-    point_list[list_bounds[0]:list_bounds[1]] = (
-        point_list[list_bounds[0]:list_bounds[1]][idx])
-    x_split_index = (
-        point_list[list_bounds[0]:list_bounds[1]]['f1'].searchsorted(
-            mid_x_coord) + list_bounds[0])
+    sub_array = point_list[list_bounds[0]:list_bounds[1]]
+    idx = sub_array['f1'].argsort()
+    sub_array[:] = sub_array[idx]
+    x_split_index = sub_array['f1'].searchsorted(mid_x_coord) + list_bounds[0]
 
     #sort the left y coordinates
-    idx = point_list[list_bounds[0]:x_split_index]['f2'].argsort()
-    point_list[list_bounds[0]:x_split_index] = (
-        point_list[list_bounds[0]:x_split_index][idx])
-    left_y_split_index = (
-        point_list[list_bounds[0]:x_split_index]['f2'].searchsorted(
-            mid_y_coord) + list_bounds[0])
+    sub_array = point_list[list_bounds[0]:x_split_index]
+    idx = sub_array['f2'].argsort()
+    sub_array[:] = sub_array[idx]
+    left_y_split_index = sub_array['f2'].searchsorted(
+        mid_y_coord) + list_bounds[0]
 
     #sort the right y coordinates
-    idx = point_list[x_split_index:list_bounds[1]]['f2'].argsort()
-    point_list[x_split_index:list_bounds[1]] = (
-        point_list[x_split_index:list_bounds[1]][idx])
-    right_y_split_index = (
-        point_list[x_split_index:list_bounds[1]]['f2'].searchsorted(
-            mid_y_coord) + x_split_index)
+    sub_array = point_list[x_split_index:list_bounds[1]]
+    idx = sub_array['f2'].argsort()
+    sub_array[:] = sub_array[idx]
+    right_y_split_index = sub_array['f2'].searchsorted(
+        mid_y_coord) + x_split_index
 
     return left_y_split_index, x_split_index, right_y_split_index
 

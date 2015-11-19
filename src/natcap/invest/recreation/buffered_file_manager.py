@@ -5,6 +5,12 @@ import os
 import numpy
 import io
 import sqlite3
+import logging
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('natcap.invest.recmodel_server.buffered_file_manager')
 
 
 def _adapt_array(array):
@@ -115,8 +121,9 @@ class BufferedFileManager(object):
         else:
             array_data = numpy.empty(0, dtype='a4, f4, f4')
 
-        array_data = numpy.concatenate(
-            (array_data, numpy.concatenate(self.array_cache[array_id])))
+        if len(self.array_cache[array_id]) > 0:
+            array_data = numpy.concatenate(
+                (array_data, numpy.concatenate(self.array_cache[array_id])))
         return array_data
 
     def delete(self, array_id):

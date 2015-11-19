@@ -16,6 +16,9 @@ import traceback
 import collections
 import file_hash
 import logging
+import StringIO
+import tempfile
+import shutil
 
 import Pyro4
 from osgeo import ogr
@@ -361,23 +364,33 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
     LOGGER.info('done reading csv from disk')
 
 
-def _parse_input_csv(raw_file_lines_queue, user_day_tuple_queue):
+def _parse_input_csv(
+        block_offset_size_queue, csv_filepath, temp_dir, numpy_filepath_queue):
     """Takes a CSV file lines and dump lists of (userdayhash, lat, lng) tuples
 
-        raw_file_lines_queue - contains lines from the raw CSV file
-        user_day_tuple_queue - will have deques of lines from the raw CSV file
-            put in it
+        block_offset_size_queue (multiprocessing.Queue): contains tuples of the
+            form (offset, chunk size) to direct where the file should be read
+            from
+        numpy_filepath_queue (multiprocessing.Queue): output queue will have
+            paths to files that can be opened with numpy.load and contain
+            structured arrays of (hash, lat, lng) 'a4 f4 f4' parsed from the
+            raw CSV file
+        temp_dir (string): path to a directory where files can be created
+            and not deleted until the interpreter exits
+        csv_filepath (string): path to csv file to parse from
 
         returns nothing"""
 
     result_list = numpy.empty(POINTS_TO_ADD_PER_STEP, dtype='a4, f4, f4')
     valid_index = 0
-    while True:
-        row_deque = raw_file_lines_queue.get()
-        if row_deque == 'STOP':
-            break
 
-        for row in row_deque:
+    for file_offset, chunk_size in iter(block_offset_size_queue.get, 'STOP'):
+        csv_file = open(csv_filepath, 'rb')
+        csv_file.seek(file_offset, 0)
+        chunk_string = csv_file.read(chunk_size)
+        csv_file.close()
+        csv_reader = csv.reader(StringIO.StringIO(chunk_string))
+        for row in csv_reader:
             user_string = row[1]
 
             #determine the day of the year from the 2006-05-21 00:05:58 format
@@ -400,11 +413,20 @@ def _parse_input_csv(raw_file_lines_queue, user_day_tuple_queue):
             result_list[valid_index] = (user_day_hash, lng, lat)
             valid_index += 1
             if valid_index >= POINTS_TO_ADD_PER_STEP:
-                user_day_tuple_queue.put(result_list.copy())
+                temp_handle, temp_file_path = tempfile.mkstemp(dir=temp_dir)
+                temp_file = os.fdopen(temp_handle, 'w')
+                numpy.save(temp_file, result_list)
+                temp_file.close()
+                numpy_filepath_queue.put(temp_file_path)
                 valid_index = 0
 
-    user_day_tuple_queue.put(result_list[0:valid_index].copy())
-    user_day_tuple_queue.put('STOP')
+    if valid_index > 0:
+        temp_handle, temp_file_path = tempfile.mkstemp(dir=temp_dir)
+        temp_file = os.fdopen(temp_handle, 'w')
+        numpy.save(temp_file, result_list[0:valid_index])
+        temp_file.close()
+        numpy_filepath_queue.put(temp_file_path)
+    numpy_filepath_queue.put('STOP')
 
 
 def construct_userday_quadtree(
@@ -431,35 +453,57 @@ def construct_userday_quadtree(
         n_parse_processes = (multiprocessing.cpu_count() - 2)
         if n_parse_processes < 1:
             n_parse_processes = 1
+        n_parse_processes = 1
 
-        raw_file_lines_queue = multiprocessing.Queue(1000)
-        read_from_disk_csv_process = multiprocessing.Process(
-            target=_read_from_disk_csv, args=(
-                raw_photo_csv_table, raw_file_lines_queue,
-                n_parse_processes))
-        read_from_disk_csv_process.start()
+        block_offset_size_queue = multiprocessing.Queue(1000)
+        numpy_filepath_queue = multiprocessing.Queue(1000)
 
-        user_day_tuple_queue = multiprocessing.Queue(4)
+        #TODO should i make a known location for temp?
+        temp_dir = tempfile.mkdtemp(dir='.')
 
-        for _ in xrange(n_parse_processes):
+        """for _ in xrange(n_parse_processes):
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_input_csv, args=(
-                    raw_file_lines_queue, user_day_tuple_queue))
-            parse_input_csv_process.start()
+                    block_offset_size_queue, raw_photo_csv_table, temp_dir,
+                    numpy_filepath_queue))
+            parse_input_csv_process.start()"""
+
+        # rush through file and determine reasonable offsets and blocks
+        csv_file = open(raw_photo_csv_table, 'rb')
+        csv_file.readline()  # skip the csv header
+        blocksize = 2 ** 20
+        while True:
+            start = csv_file.tell()
+            csv_file.seek(blocksize, 1)
+            line = csv_file.readline()  # skip to end of line
+            bounds = (start, csv_file.tell() - start)
+            block_offset_size_queue.put(bounds)
+            if not line:
+                break
+        csv_file.close()
+
+        for _ in xrange(n_parse_processes):
+            block_offset_size_queue.put('STOP')
+        _parse_input_csv(
+            block_offset_size_queue, raw_photo_csv_table, temp_dir,
+            numpy_filepath_queue)
+
 
         #add deques of points to the quadtree as they are ready
         n_points = 0
         last_time = time.time()
+
         while True:
-            userday_tuple_list = user_day_tuple_queue.get()
-            if (isinstance(userday_tuple_list, basestring) and
-                    userday_tuple_list == 'STOP'):  # count 'n cpu' STOPs
+            array_filepath = numpy_filepath_queue.get()
+            if array_filepath == 'STOP':  # count 'n cpu' STOPs
                 n_parse_processes -= 1
                 if n_parse_processes == 0:
                     break
                 continue
+            userday_tuple_array = numpy.load(array_filepath)
+            os.remove(array_filepath)
 
-            n_points += len(userday_tuple_list)
+            n_points += len(userday_tuple_array)
             time_elapsed = time.time() - last_time
             if time_elapsed > 5.0:
                 LOGGER.info(
@@ -467,8 +511,9 @@ def construct_userday_quadtree(
                     'n_nodes in qt %d in %.2fs', n_points, ooc_qt.n_points(),
                     ooc_qt.n_nodes(), time_elapsed)
                 last_time = time.time()
-            ooc_qt.add_points(userday_tuple_list)
+            ooc_qt.add_points(userday_tuple_array)
 
+        shutil.rmtree(temp_dir)
         #save it to disk
         LOGGER.info(
             '%d points added to ooc_qt final, %d points in qt, and n_nodes in '
