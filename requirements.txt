@@ -12,3 +12,5 @@ scipy>=0.14.0
 setuptools>=8.0
 shapely
 six>=1.3
+virtualenv>=12.0.1
+pip>=6.0.0

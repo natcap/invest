@@ -671,6 +671,24 @@ def dev_env(options):
     })
 
 
+def _read_requirements_dict():
+    """Read requirments.txt into a dict.
+
+    Returns:
+        A dict mapping {projectname: requirement}.
+
+    Example:
+        >>> _read_requirements_dict()
+        {'pygeoprocessing': 'pygeoprocessing>=0.3.0a12', ...}
+    """
+    reqs = {}
+    for line in open('requirements.txt'):
+        line = line.strip()
+        parsed_req = pkg_resources.Requirement.parse(line)
+        reqs[parsed_req.project_name] = line
+    return reqs
+
+
 def _parse_version_requirement(pkg_name):
     """Parse a version requirement from requirements.txt.
 
@@ -1497,6 +1515,7 @@ def check(options):
     required = 'required'
     suggested = 'suggested'
     lib_needed = 'lib_needed'
+    install_managed = 'install_managed'
 
     # (requirement, level, version_getter, special_install_message)
     # requirement: This is the setuptools package requirement string.
@@ -1506,12 +1525,16 @@ def check(options):
     # special_install_message: A special installation message if needed.
     #    If None, no special message will be shown after the conflict report.
     #    This is only for use by required packages.
+    #
+    # NOTE: This list is for tracking packages with special notes, warnings or
+    # import conditions ONLY.  Version requirements should be tracked in
+    # versions.json ONLY.
     print bold("\nChecking python packages")
     requirements = [
         # requirement, level, version_getter, special_install_message
-        ('setuptools>=8.0', required, None, None),  # 8.0 implements pep440
-        ('virtualenv>=12.0.1', required, None, None),
-        ('pip>=6.0.0', required, None, None),
+        ('setuptools', required, None, None),  # 8.0 implements pep440
+        ('virtualenv', required, None, None),
+        ('pip', required, None, None),
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
         ('paramiko', suggested, None, None),
@@ -1519,7 +1542,17 @@ def check(options):
         ('h5py', lib_needed,  None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
+        ('poster', lib_needed,  None, None),
+        ('pyyaml', required, 'yaml', None),
+        ('pygeoprocessing', install_managed, None, None),
     ]
+
+    try:
+        # poster stores its version in a triple of ints
+        import poster
+        poster.__version__ = '.'.join([str(i) for i in poster.version])
+    except ImportError:
+        pass
 
     # pywin32 is required for pyinstaller builds
     if platform.system() == 'Windows':
@@ -1571,8 +1604,28 @@ def check(options):
         # of it.
         requirements.append(('wheel', required, None, None))
 
+    # Compare the above-defined requirements with those in requirements.txt
+    # The resulting set should be the union of the two.  Package verison
+    # requirements should be stored in requirements.txt.
+    existing_reqs = set([pkg_resources.Requirement.parse(r[0]).project_name
+                         for r in requirements])
+    requirements_txt_dict = _read_requirements_dict()
+    for reqname, req in requirements_txt_dict.iteritems():
+        if reqname not in existing_reqs:
+            requirements.append((req, required, None, None))
+
     warnings_found = False
-    for requirement, severity, import_name, install_msg in requirements:
+    for requirement, severity, import_name, install_msg in sorted(
+        requirements, key=lambda x: x[0].lower()):
+        # We handle natcap namespace packages specially below.
+        if requirement.startswith('natcap'):
+            continue
+
+        try:
+            requirement = requirements_txt_dict[requirement]
+        except KeyError:
+            pass
+
         try:
             pkg_resources.require(requirement)
             pkg_req = pkg_resources.Requirement.parse(requirement)
@@ -1586,6 +1639,9 @@ def check(options):
                 pkg=pkg_req.project_name,
                 ver=pkg.__version__,
                 req=requirement)
+        except AttributeError as error:
+            print 'Could not define module ', pkg
+            raise error
         except (pkg_resources.VersionConflict,
                 pkg_resources.DistributionNotFound) as conflict:
             if not hasattr(conflict, 'report'):
@@ -1618,6 +1674,11 @@ def check(options):
                            'package.').format(warning=WARNING,
                                               report=conflict.report())
                 warnings_found = True
+            elif severity == 'install_managed':
+                print ('{warning} {pkg} is required, but will be '
+                       'installed automatically if needed for paver.').format(
+                            warning=WARNING,
+                            pkg=requirement)
             else:  # severity is 'suggested'
                 print '{warning} {report}'.format(warning=WARNING,
                                                   report=conflict.report())
