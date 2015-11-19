@@ -342,7 +342,11 @@ def _sort_list_to_quads(point_list, list_bounds, mid_x_coord, mid_y_coord):
 
     #sort by x coordinates
     sub_array = point_list[list_bounds[0]:list_bounds[1]]
-    idx = sub_array['f1'].argsort()
+    try:
+        idx = sub_array['f1'].argsort()
+    except TypeError:
+        print sub_array
+        raise
     sub_array[:] = sub_array[idx]
     x_split_index = sub_array['f1'].searchsorted(mid_x_coord) + list_bounds[0]
 

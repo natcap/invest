@@ -37,6 +37,7 @@ import pyximport
 pyximport.install(setup_args={'include_dirs': numpy.get_include()})
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree
 
+BLOCKSIZE = 2 ** 20
 GLOBAL_MAX_POINTS_PER_NODE = 10000  # Default max points in quadtree to split
 POINTS_TO_ADD_PER_STEP = GLOBAL_MAX_POINTS_PER_NODE / 2
 GLOBAL_DEPTH = 10
@@ -442,37 +443,33 @@ def construct_userday_quadtree(
             initial_bounding_box, max_points_per_node, GLOBAL_DEPTH,
             cache_dir, pickle_filename=ooc_qt_picklefilename)
 
-        n_parse_processes = (multiprocessing.cpu_count() - 2)
+        n_parse_processes = multiprocessing.cpu_count() - 1
         if n_parse_processes < 1:
             n_parse_processes = 1
         #n_parse_processes = 1
 
-        block_offset_size_queue = multiprocessing.Queue(1000)
+        block_offset_size_queue = multiprocessing.Queue()
         numpy_filepath_queue = multiprocessing.Queue(1000)
-
-        #TODO should i make a known location for temp?
-        temp_dir = tempfile.mkdtemp(dir='.')
 
         # rush through file and determine reasonable offsets and blocks
         csv_file = open(raw_photo_csv_table, 'rb')
         csv_file.readline()  # skip the csv header
-        blocksize = 2 ** 20
         while True:
             start = csv_file.tell()
-            csv_file.seek(blocksize, 1)
+            csv_file.seek(BLOCKSIZE, 1)
             line = csv_file.readline()  # skip to end of line
             bounds = (start, csv_file.tell() - start)
+            LOGGER.debug(bounds)
             block_offset_size_queue.put(bounds)
             if not line:
                 break
         csv_file.close()
-
         for _ in xrange(n_parse_processes):
             block_offset_size_queue.put('STOP')
-        """_parse_input_csv(
-            block_offset_size_queue, raw_photo_csv_table, temp_dir,
-            numpy_filepath_queue)"""
 
+        LOGGER.debug('starting parsing')
+        #TODO should i make a known location for temp?
+        temp_dir = tempfile.mkdtemp(dir='.')
         for _ in xrange(n_parse_processes):
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_input_csv, args=(
@@ -480,7 +477,8 @@ def construct_userday_quadtree(
                     numpy_filepath_queue))
             parse_input_csv_process.start()
 
-        #add deques of points to the quadtree as they are ready
+
+        #add points to the quadtree as they are ready
         n_points = 0
         last_time = time.time()
 
@@ -604,6 +602,7 @@ def execute(args):
 
     daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
     uri = daemon.register(
-        RecModel(args['raw_csv_point_data_path']), 'natcap.invest.recreation')
+        RecModel(args['raw_csv_point_data_path'], args['cache_workspace']),
+        'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
     #daemon.requestLoop()

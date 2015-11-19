@@ -122,8 +122,16 @@ class BufferedFileManager(object):
             array_data = numpy.empty(0, dtype='a4, f4, f4')
 
         if len(self.array_cache[array_id]) > 0:
-            array_data = numpy.concatenate(
-                (array_data, numpy.concatenate(self.array_cache[array_id])))
+            try:
+                array_data = numpy.concatenate(
+                    (array_data, numpy.concatenate(self.array_cache[array_id])))
+            except ValueError:
+                LOGGER.debug(array_data)
+                for x in self.array_cache[array_id]:
+                    LOGGER.debug(x)
+                LOGGER.debug(array_id)
+                raise
+
         return array_data
 
     def delete(self, array_id):
