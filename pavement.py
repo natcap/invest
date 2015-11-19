@@ -754,7 +754,6 @@ def after_install(options, home_dir):
         # install with --no-deps (will otherwise try to install numpy, gdal,
         # etc.), and -I to ignore any existing pygeoprocessing install (as
         # might exist in system-site-packages).
-        # TODO: Allow pygeoprocessing to be installed to virtualenv as wheel
         # Installing as egg grants pygeoprocessing greater precendence in the
         # import order.  If I install as a wheel, the system install of
         # pygeoprocessing takes precedence.  I believe this to be a bug in
