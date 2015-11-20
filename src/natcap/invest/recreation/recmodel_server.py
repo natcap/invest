@@ -410,7 +410,6 @@ def _parse_input_csv(
         user_day_lat_lng['f0'] = hashes
         user_day_lat_lng['f1'] = result['lat']
         user_day_lat_lng['f2'] = result['lng']
-        LOGGER.debug(user_day_lat_lng)
         numpy_array_queue.put(user_day_lat_lng)
 
     numpy_array_queue.put('STOP')
@@ -443,9 +442,10 @@ def construct_userday_quadtree(
         #n_parse_processes = 1
 
         block_offset_size_queue = multiprocessing.Queue()
-        numpy_array_queue = multiprocessing.Queue(1000)
+        numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
 
         # rush through file and determine reasonable offsets and blocks
+        LOGGER.info('populating offset queue')
         csv_file = open(raw_photo_csv_table, 'rb')
         csv_file.readline()  # skip the csv header
         while True:
@@ -453,7 +453,6 @@ def construct_userday_quadtree(
             csv_file.seek(BLOCKSIZE, 1)
             line = csv_file.readline()  # skip to end of line
             bounds = (start, csv_file.tell() - start)
-            LOGGER.debug(bounds)
             block_offset_size_queue.put(bounds)
             if not line:
                 break
@@ -461,15 +460,14 @@ def construct_userday_quadtree(
         for _ in xrange(n_parse_processes):
             block_offset_size_queue.put('STOP')
 
-        LOGGER.debug('starting parsing')
-        #TODO should i make a known location for temp?
-        temp_dir = tempfile.mkdtemp(dir='.')
+        LOGGER.info('starting parsing')
         for _ in xrange(n_parse_processes):
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_input_csv, args=(
-                    block_offset_size_queue, raw_photo_csv_table, temp_dir,
+                    block_offset_size_queue, raw_photo_csv_table,
                     numpy_array_queue))
             parse_input_csv_process.start()
+
 
         #add points to the quadtree as they are ready
         n_points = 0
@@ -494,7 +492,6 @@ def construct_userday_quadtree(
                 last_time = time.time()
             ooc_qt.add_points(userday_tuple_array)
 
-        shutil.rmtree(temp_dir)
         #save it to disk
         LOGGER.info(
             '%d points added to ooc_qt final, %d points in qt, and n_nodes in '
