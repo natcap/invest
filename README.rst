@@ -1,15 +1,17 @@
 InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs 
 ================================================================
 
-+-----------------------+------------------------------+----------------------------+
-| Build type            | Windows                      | Linux (Debian 7)           |
-+=======================+==============================+============================+
-| Nightly Binary builds | |nightly_binary_build_badge|                              |
-+-----------------------+------------------------------+----------------------------+
-| Dev builds            | |dev_windows_build_badge|    | |dev_linux_build_badge|    |
-+-----------------------+------------------------------+----------------------------+
-| Tests                 | |windows_test_badge|         | |linux_test_badge|         |
-+-----------------------+------------------------------+----------------------------+
++-----------------------+-------------------------------+-----------------------------+
+| Build type            | Windows                       | Linux (Debian 7)            |
++=======================+===============================+=============================+
+| Nightly Binary builds | |nightly_binary_build_badge|                                |
++-----------------------+-------------------------------+-----------------------------+
+| Dev builds            | |dev_windows_build_badge|     | |dev_linux_build_badge|     |
++-----------------------+-------------------------------+-----------------------------+
+| Tests                 | |windows_test_badge|          | |linux_test_badge|          |
++-----------------------+-------------------------------+-----------------------------+
+| Test coverage         | |windows_test_coverage_badge| | |linux_test_coverage_badge| |
++-----------------------+-------------------------------+-----------------------------+
 
 
 
@@ -26,6 +28,12 @@ InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
   :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
 
 .. |linux_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=GCE-debian-2
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2
+
+.. |windows_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1/
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
+
+.. |linux_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2/
   :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2
 
 About  InVEST
