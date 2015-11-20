@@ -33,7 +33,8 @@ class HydropowerUnitTests(unittest.TestCase):
         # and with values of:
         # {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000},
         # {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 800}
-        # using the script 'create_polygon_shapefile.py'
+        # using the script 'create_polygon_shapefile.py', which lives
+        # in the test data SVN repo under /svn/invest-test-data/hydropower/
         shape_uri = os.path.join(
             REGRESSION_DATA, 'two_polygon_shape.shp')
 
@@ -54,8 +55,7 @@ class HydropowerUnitTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         temp_dir = self.workspace_dir
-        tmp, filename = tempfile.mkstemp(suffix='.csv', dir=temp_dir)
-        os.close(tmp)
+        filename = os.path.join(temp_dir, 'test_csv.csv')
 
         fields = ['id', 'precip', 'volume']
 
@@ -81,6 +81,9 @@ class HydropowerUnitTests(unittest.TestCase):
 
         data_row = 0
         for row in reader:
+            # we expect there to only be 3 rows, as indicated by the dict
+            # keys 0,1,2. If we come across more than 3 rows give assertion
+            # error, instead of letting it error on 'keyerror'
             if data_row > 2:
                 raise AssertionError(
                     "There are more rows returned than expected.")
