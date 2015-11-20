@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import os
 import collections
+import csv
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -18,6 +19,32 @@ from osgeo import osr
 
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'wind_energy')
+
+def _create_vertical_csv(data, fname):
+        """Create a new CSV table where the fields are in the left column.
+
+        This CSV table is created with fields / keys running vertically
+            down the first column. The second column has the corresponding
+            values.
+
+        Parameters:
+            data (Dictionary): a Dictionary where each key is the name
+                of a field and set in the first column. The second
+                column is set with the value of that key.
+
+            fname (string): a file path for the new table to be written to disk
+
+        Returns:
+            Nothing
+        """
+
+        csv_file = open(fname, 'wb')
+
+        writer = csv.writer(csv_file)
+        for key, val in data.iteritems():
+            writer.writerow([key, val])
+
+        csv_file.close()
 
 class WindEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
@@ -305,31 +332,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         csv_file.close()
 
-    def _create_vertical_csv(data, fname):
-        """Create a new CSV table where the fields are in the left column.
 
-        This CSV table is created with fields / keys running vertically
-            down the first column. The second column has the corresponding
-            values.
-
-        Parameters:
-            data (Dictionary): a Dictionary where each key is the name
-                of a field and set in the first column. The second
-                column is set with the value of that key.
-
-            fname (string): a file path for the new table to be written to disk
-
-        Returns:
-            Nothing
-        """
-
-        csv_file = open(fname, 'wb')
-
-        writer = csv.writer(csv_file)
-        for key, val in data.iteritems():
-            writer.writerow([key, val])
-
-        csv_file.close()
 
     def _create_latlong_raster(matrix, dtype=gdal.GDT_Int32, nodata=-1):
         """
@@ -919,7 +922,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
+    #@nottest
     def test_field_error_missing_bio_param(self):
         """WindEnergy: testing that FieldError raised when missing bio param."""
         from natcap.invest.wind_energy import wind_energy
@@ -953,15 +956,18 @@ class WindEnergyRegressionTests(unittest.TestCase):
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
             'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0,
-            'turbines_per_circuit': 8}
+            'turbines_per_circuit': 8
+        }
 
-        args['turbine_parameters_uri'] = _create_vertical_csv(data, fname)
+        _create_vertical_csv(data, fname)
+
+        args['turbine_parameters_uri'] = fname
 
         self.assertRaises(wind_energy.FieldError, wind_energy.execute, args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
+    #@nottest
     def test_non_divisible_by_ten_hub_height_error(self):
         """WindEnergy: raise HubHeightError when value not divisible by 10."""
         from natcap.invest.wind_energy import wind_energy
@@ -978,8 +984,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'global_wind_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
-                REGRESSION_DATA, 'turbine_params_hubheight.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
@@ -998,39 +1002,15 @@ class WindEnergyRegressionTests(unittest.TestCase):
         data = {
             'hub_height': 83, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
             'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0,
-            'turbines_per_circuit': 8, 'rotator_diameter': 40}
+            'turbines_per_circuit': 8, 'rotor_diameter': 40
+        }
+
+        _create_vertical_csv(data, fname)
+
+        args['turbine_parameters_uri'] = fname
 
         self.assertRaises(wind_energy.HubHeightError, wind_energy.execute, args)
-#???????????
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
-    def test_hubheight_100(self):
-        """WindEnergy: testing that a HubHeightError is raised on bad bio params."""
-        from natcap.invest.wind_energy import wind_energy
 
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
-                REGRESSION_DATA, 'turbine_params_hubheight.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000
-        }
-#??????????????????
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     #@nottest
@@ -1077,19 +1057,20 @@ class WindEnergyRegressionTests(unittest.TestCase):
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
             'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
-            'turbines_per_circuit': 8, 'rotor_diamater': 40}
+            'turbines_per_circuit': 8, 'rotor_diamater': 40
+        }
 
-        args['turbine_parameters_uri'] = _create_vertical_csv(data, fname)
+        _create_vertical_csv(data, fname)
 
+        args['turbine_parameters_uri'] = fname
 
         self.assertRaises(wind_energy.FieldError, wind_energy.execute, args)
-
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     #@nottest
-    def test_time_loss(self):
-        """WindEnergy: testing that FieldError is thrown when val params miss."""
+    def test_time_period_exceptoin(self):
+        """WindEnergy: raised TimePeriodError if 'time' and 'wind_sched' differ."""
         from natcap.invest.wind_energy import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
@@ -1101,8 +1082,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                REGRESSION_DATA, 'global_params_time_loss.csv'),
             'turbine_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 '3_6_turbine.csv'),
@@ -1124,6 +1103,26 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
             'suffix': '_test'
         }
+        # creating a stand in global wind params table that has a different
+        # 'time' value than what is given in the wind schedule table.
+        # This should raise the exception
+        tmp, fname = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
+        os.close(tmp)
+        data = {
+            'air_density': 1.225, 'exponent_power_curve': 2,
+            'decommission_cost': .037, 'operation_maintenance_cost': .035,
+            'miscellaneous_capex_cost': .05, 'installation_cost': .20,
+            'infield_cable_length': 0.91, 'infield_cable_cost': 0.26,
+            'mw_coef_ac': .81, 'mw_coef_dc': 1.09, 'cable_coef_ac': 1.36,
+            'cable_coef_dc': .89, 'ac_dc_distance_break': 60,
+            'time_period': 10, 'rotor_diameter_factor': 7,
+            'carbon_coefficient': 6.8956e-4,
+            'air_density_coefficient': 1.194e-4, 'loss_parameter': .05
+        }
+
+        _create_vertical_csv(data, fname)
+
+        args['global_wind_parameters_uri'] = fname
 
         self.assertRaises(wind_energy.TimePeriodError, wind_energy.execute, args)
 

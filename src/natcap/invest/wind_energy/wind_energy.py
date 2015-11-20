@@ -208,14 +208,10 @@ def execute(args):
                 'Please make sure the Hub Height is between the ranges of 10 '
                 'and 150 meters and is a multiple of 10. ex: 10,20,...70,80...')
 
+
     # The scale_key is used in getting the right wind energy arguments that are
-    # dependent on the hub height. The scale_key has a specific signature and we
-    # need to build up that signature from the hub_height given by the user
-    scale_key = str(hub_height)
-    if len(scale_key) <= 2:
-        scale_key = 'Ram-0' + scale_key + 'm'
-    else:
-        scale_key = 'Ram-' + scale_key + 'm'
+    # dependent on the hub height.
+    scale_key = format_scale_key(hub_height)
 
     LOGGER.debug('hub_height : %s', hub_height)
     LOGGER.debug('SCALE_key : %s', scale_key)
@@ -2062,3 +2058,23 @@ def pixel_size_based_on_coordinate_transform_uri(
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
     return (pixel_diff_x, pixel_diff_y)
+
+def format_scale_key(hub_height):
+    """Constructs a string based on the hub height.
+
+    The scale_key has a specific signature that is created from the hub
+        height. The scale_key is used to lookup certain wind parameters.
+
+    Parameters:
+        hub_height (int): the hub height for the wind turbines
+
+    Returns:
+        a String representing the scale key
+    """
+    scale_key = str(hub_height)
+    if len(scale_key) <= 2:
+        scale_key = 'Ram-0' + scale_key + 'm'
+    else:
+        scale_key = 'Ram-' + scale_key + 'm'
+
+    return scale_key
