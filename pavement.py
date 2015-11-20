@@ -2916,13 +2916,14 @@ def jenkins_push_artifacts(options):
     pkey = None
     if getattr(options.jenkins_push_artifacts, 'private_key', False):
         pkey = options.jenkins_push_artifacts.private_key
-    elif platform.system() == 'Windows':
-        # Assume a default private key location for jenkins builds on
-        # Windows
+    elif platform.system() in ['Windows', 'Darwin', 'Linux']:
+        # Assume a default private key location for jenkins builds
+        # On Windows, this assumes that the key is in .ssh (might be the cygwin
+        # home directory).
         pkey = os.path.join(os.path.expanduser('~'),
                             '.ssh', 'dataportal-id_rsa')
     else:
-        print ('No private key provided, and not on Windows, so not '
+        print ('No private key provided, and not on a known system, so not '
                'assuming a default private key file')
 
     push_args = {
