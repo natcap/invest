@@ -670,9 +670,6 @@ def execute(args):
     farm_poly_uri = os.path.join(out_dir,
         'example_size_and_orientation_of_a_possible_wind_farm%s.shp' % suffix)
 
-    if os.path.isfile(farm_poly_uri):
-        os.remove(farm_poly_uri)
-
     # Create the actual polygon
     LOGGER.info('Creating Example Farm Polygon')
     create_wind_farm_box(spat_ref, start_point, width, length, farm_poly_uri)
@@ -1378,6 +1375,9 @@ def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri):
 
         return - nothing"""
     LOGGER.debug('Entering create_wind_farm_box')
+
+    if os.path.isfile(out_uri):
+        os.remove(out_uri)
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
     datasource = driver.CreateDataSource(out_uri)
