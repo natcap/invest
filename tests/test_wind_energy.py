@@ -8,6 +8,7 @@ import csv
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
+from pygeoprocessing.testing import sampledata
 import numpy
 import numpy.testing
 from shapely.geometry import Polygon
@@ -21,30 +22,30 @@ SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'wind_energy')
 
 def _create_vertical_csv(data, fname):
-        """Create a new CSV table where the fields are in the left column.
+    """Create a new CSV table where the fields are in the left column.
 
-        This CSV table is created with fields / keys running vertically
-            down the first column. The second column has the corresponding
-            values.
+    This CSV table is created with fields / keys running vertically
+        down the first column. The second column has the corresponding
+        values.
 
-        Parameters:
-            data (Dictionary): a Dictionary where each key is the name
-                of a field and set in the first column. The second
-                column is set with the value of that key.
+    Parameters:
+        data (Dictionary): a Dictionary where each key is the name
+            of a field and set in the first column. The second
+            column is set with the value of that key.
 
-            fname (string): a file path for the new table to be written to disk
+        fname (string): a file path for the new table to be written to disk
 
-        Returns:
-            Nothing
-        """
+    Returns:
+        Nothing
+    """
 
-        csv_file = open(fname, 'wb')
+    csv_file = open(fname, 'wb')
 
-        writer = csv.writer(csv_file)
-        for key, val in data.iteritems():
-            writer.writerow([key, val])
+    writer = csv.writer(csv_file)
+    for key, val in data.iteritems():
+        writer.writerow([key, val])
 
-        csv_file.close()
+    csv_file.close()
 
 class WindEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
@@ -380,9 +381,9 @@ class WindEnergyUnitTests(unittest.TestCase):
             [lulc_matrix], srs.origin, srs.projection, lulc_nodata,
             srs.pixel_size(100), datatype=dtype, filename=fpath)
 
-    @nottest
+    #@nottest
     def test_calculate_distances_land_grid(self):
-        """Testing 'calculate_distances_land_grid' function"""
+        """WindEnergy: testing 'calculate_distances_land_grid' function."""
         from natcap.invest.wind_energy import wind_energy
 
         fields = {'id': 'real', 'L2G': 'real'}
@@ -390,38 +391,82 @@ class WindEnergyUnitTests(unittest.TestCase):
         srs = sampledata.SRS_WILLAMETTE
         pos_x = srs.origin[0]
         pos_y = srs.origin[1]
-        geometries = [Point(pos_x + 50, pos_y - 50), Point(pos_x + 50, pos_y - 150)]
+        geometries = [
+            Point(pos_x + 50, pos_y - 50), Point(pos_x + 50, pos_y - 150)]
 
         temp_dir = self.workspace_dir
-        tmp, temp_shape = tempfile.mkstemp(suffix='.shp', dir=temp_dir)
-        os.close(tmp)
+        shape_path = os.path.join(temp_dir, 'temp_shape.shp')
         land_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
-                geometries, srs.projection, fields, attrs,
-                vector_format='ESRI Shapefile', filename=temp_shape)
-
-        #land_shape_uri = _create_ptm(fields, attrs)
+            geometries, srs.projection, fields, attrs,
+            vector_format='ESRI Shapefile', filename=shape_path)
 
         matrix = numpy.array([[1,1,1,1],[1,1,1,1]])
-        raster_path = tempfile.mkstemp(suffix='.tif', dir=temp_dir)
-        #harvested_masked_uri = _create_raster(matrix, raster_path)
-        srs = sampledata.SRS_WILLAMETTE
-        harvested_masked_uri = pygeoprocessing.testing.create_raster_on_disk(
-            [lulc_matrix], srs.origin, srs.projection, -1,
-            srs.pixel_size(100), datatype=gdal.GDT_Int32, filename=raster_path)
+        raster_path = os.path.join(temp_dir, 'temp_raster.tif')
 
-        tmp, tmp_dist_final_uri = tempfile.mkstemp(suffix='.tif', dir=temp_dir)
-        os.close(tmp)
+        harvested_masked_uri = pygeoprocessing.testing.create_raster_on_disk(
+            [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
+            datatype=gdal.GDT_Int32, filename=raster_path)
+
+        tmp_dist_final_uri = os.path.join(temp_dir, 'dist_final.tif')
 
         wind_energy.calculate_distances_land_grid(
             land_shape_uri, harvested_masked_uri, tmp_dist_final_uri)
 
         #Compare
-        result = gdal.open(tmp_dist_final_uri)
-        res_band = gdal.GetRasterBand(1)
+        result = gdal.Open(tmp_dist_final_uri)
+        res_band = result.GetRasterBand(1)
         res_array = res_band.ReadAsArray()
         exp_array = numpy.array([[10, 110, 210, 310],[20, 120, 220, 320]])
         numpy.testing.assert_array_equal(res_array, exp_array)
+        res_band = None
+        result = None
 
+    #@nottest
+    def test_point_to_polygon_distance(self):
+        """WindEnergy: testing 'point_to_polygon_distance' function."""
+        from natcap.invest.wind_energy import wind_energy
+
+        fields = {'vec_id': 'int'}
+        attr_pt= [{'vec_id': 1}, {'vec_id': 2}, {'vec_id': 3}, {'vec_id': 4}]
+        attr_poly= [{'vec_id': 1}, {'vec_id': 2}]
+
+        srs = sampledata.SRS_WILLAMETTE
+
+        pos_x = srs.origin[0]
+        pos_y = srs.origin[1]
+
+        poly_geoms = {
+            'poly_1': [(pos_x + 200, pos_y), (pos_x + 250, pos_y),
+                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y -100),
+                       (pos_x + 200, pos_y)],
+            'poly_2': [(pos_x, pos_y - 150), (pos_x + 100, pos_y - 150),
+                       (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200),
+                       (pos_x, pos_y - 150)]}
+
+        poly_geometries = [
+            Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
+        temp_dir = self.workspace_dir
+        poly_file = os.path.join(temp_dir, 'poly_shape.shp')
+        poly_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+            poly_geometries, srs.projection, fields, attr_poly,
+            vector_format='ESRI Shapefile', filename=poly_file)
+
+        point_geometries = [
+            Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
+            Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
+        point_file = os.path.join(temp_dir, 'point_shape.shp')
+
+        point_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+            point_geometries, srs.projection, fields, attr_pt,
+            vector_format='ESRI Shapefile', filename=point_file)
+
+        results = wind_energy.point_to_polygon_distance(
+            poly_ds_uri, point_ds_uri)
+
+        exp_results = [.15, .1, .05, .05]
+
+        for dist_a, dist_b in zip(results, exp_results):
+            pygeoprocessing.testing.assert_close(dist_a, dist_b)
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
@@ -922,7 +967,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    #@nottest
+    @nottest
     def test_field_error_missing_bio_param(self):
         """WindEnergy: testing that FieldError raised when missing bio param."""
         from natcap.invest.wind_energy import wind_energy
@@ -967,7 +1012,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    #@nottest
+    @nottest
     def test_non_divisible_by_ten_hub_height_error(self):
         """WindEnergy: raise HubHeightError when value not divisible by 10."""
         from natcap.invest.wind_energy import wind_energy
@@ -1013,7 +1058,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    #@nottest
+    @nottest
     def test_missing_valuation_params(self):
         """WindEnergy: testing that FieldError is thrown when val params miss."""
         from natcap.invest.wind_energy import wind_energy
@@ -1068,7 +1113,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    #@nottest
+    @nottest
     def test_time_period_exceptoin(self):
         """WindEnergy: raised TimePeriodError if 'time' and 'wind_sched' differ."""
         from natcap.invest.wind_energy import wind_energy
