@@ -24,29 +24,25 @@ class HydropowerUnitTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_extract_datasource_table(self):
-        """Hydro: testing 'extract_datasource_table_by_key' function."""
+    def test_filter_dictionary(self):
+        """Hydro: testing 'filter_dictionary' function."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        # this 2 polygon shapefile was created with fields:
-        # ['ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real']
-        # and with values of:
-        # {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000},
-        # {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 800}
-        # using the script 'create_polygon_shapefile.py', which lives
-        # in the test data SVN repo under /svn/invest-test-data/hydropower/
-        shape_uri = os.path.join(
-            REGRESSION_DATA, 'two_polygon_shape.shp')
+        test_dict = {
+            0: {'field_1': 'hi', 'field_2': 'bye', 'field_3': 0},
+            1: {'field_1': 'aloha', 'field_2': 'aloha', 'field_3': 1},
+            2: {'field_1': 'hola', 'field_2': 'adios', 'field_3': 2}}
 
-        key_field = 'ws_id'
-        wanted_list = ['wyield_vol']
+        keep_fields = ['field_1', 'field_3']
 
-        results = hydropower_water_yield.extract_datasource_table_by_key(
-            shape_uri, key_field, wanted_list)
+        results = hydropower_water_yield.filter_dictionary(test_dict, keep_fields)
 
-        expected_res = {1: {'wyield_vol': 1000}, 2: {'wyield_vol': 800}}
+        exp_results = {
+            0: {'field_1': 'hi', 'field_3': 0},
+            1: {'field_1': 'aloha', 'field_3': 1},
+            2: {'field_1': 'hola', 'field_3': 2}}
 
-        self.assertDictEqual(expected_res, results)
+        self.assertDictEqual(results, exp_results)
 
     def test_write_new_table(self):
         """Hydro: testing 'write_new_table' function."""
