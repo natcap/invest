@@ -367,18 +367,16 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
 
 
 def _parse_input_csv(
-        block_offset_size_queue, csv_filepath, temp_dir, numpy_filepath_queue):
+        block_offset_size_queue, csv_filepath, numpy_array_queue):
     """Takes a CSV file lines and dump lists of (userdayhash, lat, lng) tuples
 
         block_offset_size_queue (multiprocessing.Queue): contains tuples of the
             form (offset, chunk size) to direct where the file should be read
             from
-        numpy_filepath_queue (multiprocessing.Queue): output queue will have
+        numpy_array_queue (multiprocessing.Queue): output queue will have
             paths to files that can be opened with numpy.load and contain
             structured arrays of (hash, lat, lng) 'a4 f4 f4' parsed from the
             raw CSV file
-        temp_dir (string): path to a directory where files can be created
-            and not deleted until the interpreter exits
         csv_filepath (string): path to csv file to parse from
 
         returns nothing"""
@@ -412,14 +410,10 @@ def _parse_input_csv(
         user_day_lat_lng['f0'] = hashes
         user_day_lat_lng['f1'] = result['lat']
         user_day_lat_lng['f2'] = result['lng']
+        LOGGER.debug(user_day_lat_lng)
+        numpy_array_queue.put(user_day_lat_lng)
 
-        temp_handle, temp_file_path = tempfile.mkstemp(dir=temp_dir)
-        temp_file = os.fdopen(temp_handle, 'w')
-        numpy.save(temp_file, user_day_lat_lng)
-        temp_file.close()
-        numpy_filepath_queue.put(temp_file_path)
-
-    numpy_filepath_queue.put('STOP')
+    numpy_array_queue.put('STOP')
 
 
 def construct_userday_quadtree(
@@ -449,7 +443,7 @@ def construct_userday_quadtree(
         #n_parse_processes = 1
 
         block_offset_size_queue = multiprocessing.Queue()
-        numpy_filepath_queue = multiprocessing.Queue(1000)
+        numpy_array_queue = multiprocessing.Queue(1000)
 
         # rush through file and determine reasonable offsets and blocks
         csv_file = open(raw_photo_csv_table, 'rb')
@@ -474,23 +468,21 @@ def construct_userday_quadtree(
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_input_csv, args=(
                     block_offset_size_queue, raw_photo_csv_table, temp_dir,
-                    numpy_filepath_queue))
+                    numpy_array_queue))
             parse_input_csv_process.start()
-
 
         #add points to the quadtree as they are ready
         n_points = 0
         last_time = time.time()
 
         while True:
-            array_filepath = numpy_filepath_queue.get()
-            if array_filepath == 'STOP':  # count 'n cpu' STOPs
+            userday_tuple_array = numpy_array_queue.get()
+            if (isinstance(userday_tuple_array, basestring) and
+                    userday_tuple_array == 'STOP'):  # count 'n cpu' STOPs
                 n_parse_processes -= 1
                 if n_parse_processes == 0:
                     break
                 continue
-            userday_tuple_array = numpy.load(array_filepath)
-            os.remove(array_filepath)
 
             n_points += len(userday_tuple_array)
             time_elapsed = time.time() - last_time
