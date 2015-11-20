@@ -3,7 +3,9 @@ import unittest
 import tempfile
 import shutil
 import os
+import csv
 
+from osgeo import ogr
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
@@ -46,8 +48,6 @@ class HydropowerUnitTests(unittest.TestCase):
 
     def test_write_new_table(self):
         """Hydro: testing 'write_new_table' function."""
-        import csv
-
         from natcap.invest.hydropower import hydropower_water_yield
 
         temp_dir = self.workspace_dir
@@ -82,7 +82,8 @@ class HydropowerUnitTests(unittest.TestCase):
             # error, instead of letting it error on 'keyerror'
             if data_row > 2:
                 raise AssertionError(
-                    "There are more rows returned than expected.")
+                    "Expected 3 rows, got at least 4 returned. "
+                    "4th row found is the following: %s", row)
             self.assertDictEqual(row, exp_data[data_row])
             data_row += 1
 
@@ -90,7 +91,6 @@ class HydropowerUnitTests(unittest.TestCase):
 
     def test_add_dict_to_shape(self):
         """Hydro: testing 'add_dict_to_shape' function."""
-        from osgeo import ogr
         from natcap.invest.hydropower import hydropower_water_yield
 
         # 'two_poly_shape.shp was created with fields:
@@ -135,10 +135,7 @@ class HydropowerUnitTests(unittest.TestCase):
                     raise AssertionError(
                         'Could not find field %s' % field_name)
 
-                feat = None
                 feat = layer.GetNextFeature()
-
-        shape = None
 
 class HydropowerRegressionTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Hydropower Model."""
