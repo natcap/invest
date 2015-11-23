@@ -2,7 +2,7 @@ gdal
 h5py
 matplotlib
 natcap.versioner>=0.2.4
-numpy
+numpy>=1.10.2rc1
 poster
 pyamg>=2.2.1
 pygeoprocessing>=0.3.0a12
