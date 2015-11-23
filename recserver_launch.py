@@ -2,6 +2,8 @@
 import cProfile
 import pstats
 import shutil
+import os
+
 
 import natcap.invest.recreation.recmodel_server
 
@@ -16,6 +18,8 @@ def main():
     }
 
     prof = True
+    if os.path.exists(args['cache_workspace']):
+        shutil.rmtree(args['cache_workspace'])
     if prof:
         cProfile.runctx('natcap.invest.recreation.recmodel_server.execute(args)', locals(), globals(), 'rec_stats')
         profile = pstats.Stats('rec_stats')

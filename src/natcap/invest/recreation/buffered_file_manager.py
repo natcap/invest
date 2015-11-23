@@ -86,7 +86,7 @@ class BufferedFileManager(object):
             if array_data is not None:
                 #append if so
                 array_data = numpy.concatenate(
-                    (array_data, numpy.concatenate(array_deque)))
+                    (array_data[0], numpy.concatenate(array_deque)))
             else:
                 #otherwise directly write
                 array_data = numpy.concatenate(array_deque)
@@ -117,7 +117,7 @@ class BufferedFileManager(object):
         db_connection.close()
         if query_result is not None:
             #append if so
-            array_data = query_result
+            array_data = query_result[0]
         else:
             array_data = numpy.empty(0, dtype='a4, f4, f4')
 

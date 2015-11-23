@@ -15,6 +15,7 @@ import bisect
 import operator
 import shapely.geometry
 import numpy
+import logging
 
 from osgeo import ogr
 from osgeo import osr
@@ -23,6 +24,11 @@ MAX_BYTES_TO_BUFFER = 2**27  # buffer a little over 128 megabytes
 
 import buffered_file_manager
 
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger(
+    'natcap.invest.recmodel_server.out_of_core_quadtree')
 
 class OutOfCoreQuadTree(object):
     """An out of core quad tree spatial indexing structure.  Define with an
@@ -345,7 +351,10 @@ def _sort_list_to_quads(point_list, list_bounds, mid_x_coord, mid_y_coord):
     try:
         idx = sub_array['f1'].argsort()
     except TypeError:
-        print sub_array
+        LOGGER.debug(sub_array)
+        LOGGER.debug(type(sub_array))
+        LOGGER.debug(sub_array.dtype)
+        LOGGER.debug(sub_array['f1'])
         raise
     sub_array[:] = sub_array[idx]
     x_split_index = sub_array['f1'].searchsorted(mid_x_coord) + list_bounds[0]
