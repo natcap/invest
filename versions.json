@@ -1,6 +1,6 @@
 {
     "data/invest-data": "68",
-    "tests/data": "13",
+    "tests/data": "15",
     "doc/users-guide": "a24fe291fda5e6e59fa7c0a5125ef8be3052be3b",
     "src/invest-natcap.default": "f18244edcff0f68871b9f839a904bc98b5a50b82",
     "src/pygeoprocessing": "REQUIREMENTS_TXT:pygeoprocessing",
