@@ -17,9 +17,6 @@ import collections
 import file_hash
 import logging
 import StringIO
-import tempfile
-import shutil
-import re
 
 import Pyro4
 from osgeo import ogr
