@@ -1,5 +1,6 @@
 """Buffered file manager module"""
 
+import itertools
 import collections
 import os
 import numpy
@@ -78,11 +79,16 @@ class BufferedFileManager(object):
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
         db_cursor.execute("PRAGMA synchronous = OFF")
+        db_cursor.execute("PRAGMA journal_mode = OFF")
+
+        #get all the array data to append at once
+        insert_list = []
 
         for array_id, array_deque in self.array_cache.iteritems():
             #Try to get data if it's there
             db_cursor.execute(
-                "SELECT (array_data) FROM array_table where array_id=?", [array_id])
+                "SELECT (array_data) FROM array_table where array_id=?",
+                [array_id])
             array_data = db_cursor.fetchone()
             if array_data is not None:
                 #append if so
@@ -91,12 +97,14 @@ class BufferedFileManager(object):
             else:
                 #otherwise directly write
                 array_data = numpy.concatenate(array_deque)
+            insert_list.append((array_id, array_data))
 
-            #query handles both cases of an existing ID or a non-existant one
-            db_cursor.execute(
-                '''INSERT OR REPLACE INTO array_table
-                    (array_id, array_data)
-                VALUES (?,?)''', [array_id, array_data])
+        array_data = db_cursor.fetchall()
+
+        db_cursor.executemany(
+            '''INSERT OR REPLACE INTO array_table
+                (array_id, array_data)
+            VALUES (?,?)''', insert_list)
 
         db_connection.commit()
         db_connection.close()
@@ -115,7 +123,6 @@ class BufferedFileManager(object):
         db_cursor.execute(
             "SELECT (array_data) FROM array_table where array_id=?", [array_id])
         query_result = db_cursor.fetchone()
-        db_connection.close()
         if query_result is not None:
             #append if so
             array_data = query_result[0]
