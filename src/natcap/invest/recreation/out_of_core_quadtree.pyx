@@ -34,6 +34,8 @@ class OutOfCoreQuadTree(object):
     """An out of core quad tree spatial indexing structure.  Define with an
         initial range and continously add new points."""
 
+    next_available_blob_id = 0
+
     def __init__(
             self, bounding_box, max_points_per_node, max_node_depth,
             quad_tree_storage_dir, node_depth=0, file_manager=None,
@@ -63,8 +65,9 @@ class OutOfCoreQuadTree(object):
 
         self.pickle_filename = pickle_filename
 
-        #This section makes a random filename that doesn't exist
-        self.blob_id = str(uuid.uuid4())
+        #Unique blob_id
+        self.blob_id = OutOfCoreQuadTree.next_available_blob_id
+        OutOfCoreQuadTree.next_available_blob_id += 1
 
     def flush(self):
         """Flushes the file manager in anticipation of a pickle"""

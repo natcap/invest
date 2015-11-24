@@ -50,7 +50,7 @@ class BufferedFileManager(object):
             manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
         db_cursor.execute('''CREATE TABLE IF NOT EXISTS array_table
-            (array_id text PRIMARY KEY, array_data array)''')
+            (array_id INTEGER PRIMARY KEY, array_data array)''')
         db_connection.commit()
         db_connection.close()
 
@@ -77,6 +77,7 @@ class BufferedFileManager(object):
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
+        db_cursor.execute("PRAGMA synchronous = OFF")
 
         for array_id, array_deque in self.array_cache.iteritems():
             #Try to get data if it's there
