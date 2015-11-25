@@ -52,6 +52,11 @@ class BufferedFileManager(object):
         db_cursor = db_connection.cursor()
         db_cursor.execute('''CREATE TABLE IF NOT EXISTS array_table
             (array_id INTEGER PRIMARY KEY, array_data array)''')
+        db_cursor.execute('PRAGMA page_size=4096')
+        db_cursor.execute('PRAGMA cache_size=10000')
+        db_cursor.execute('PRAGMA locking_mode=EXCLUSIVE')
+        db_cursor.execute('PRAGMA synchronous=NORMAL')
+
         db_connection.commit()
         db_connection.close()
 
@@ -80,6 +85,7 @@ class BufferedFileManager(object):
         db_cursor = db_connection.cursor()
         db_cursor.execute("PRAGMA synchronous = OFF")
         db_cursor.execute("PRAGMA journal_mode = OFF")
+        db_cursor.execute("PRAGMA cache_size = 131072")
 
         #get all the array data to append at once
         insert_list = []
@@ -87,8 +93,8 @@ class BufferedFileManager(object):
         for array_id, array_deque in self.array_cache.iteritems():
             #Try to get data if it's there
             db_cursor.execute(
-                "SELECT (array_data) FROM array_table where array_id=?",
-                [array_id])
+                """SELECT (array_data) FROM array_table
+                    where array_id=? LIMIT 1""", [array_id])
             array_data = db_cursor.fetchone()
             if array_data is not None:
                 #append if so
@@ -98,13 +104,29 @@ class BufferedFileManager(object):
                 #otherwise directly write
                 array_data = numpy.concatenate(array_deque)
             insert_list.append((array_id, array_data))
+            if len(insert_list) > 1000:
+                try:
+                    db_cursor.executemany(
+                        '''INSERT OR REPLACE INTO array_table
+                            (array_id, array_data)
+                        VALUES (?,?)''', insert_list)
+                    insert_list = []
+                except sqlite3.InterfaceError:
+                    LOGGER.debug([x[0] for x in insert_list])
+                    #LOGGER.debug(insert_list)
+                    raise
 
-        array_data = db_cursor.fetchall()
-
-        db_cursor.executemany(
-            '''INSERT OR REPLACE INTO array_table
-                (array_id, array_data)
-            VALUES (?,?)''', insert_list)
+        if len(insert_list) > 100:
+            try:
+                db_cursor.executemany(
+                    '''INSERT OR REPLACE INTO array_table
+                        (array_id, array_data)
+                    VALUES (?,?)''', insert_list)
+                insert_list = []
+            except sqlite3.InterfaceError:
+                for x in insert_list:
+                    LOGGER.debug(x.dtype)
+                raise
 
         db_connection.commit()
         db_connection.close()
@@ -120,8 +142,10 @@ class BufferedFileManager(object):
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
+        db_cursor.execute("PRAGMA cache_size = 131072")
         db_cursor.execute(
-            "SELECT (array_data) FROM array_table where array_id=?", [array_id])
+            "SELECT (array_data) FROM array_table where array_id=? LIMIT 1",
+            [array_id])
         query_result = db_cursor.fetchone()
         if query_result is not None:
             #append if so
@@ -148,6 +172,7 @@ class BufferedFileManager(object):
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
+        db_cursor.execute("PRAGMA cache_size = 131072")
         db_cursor.execute(
             "DELETE FROM array_table where array_id=?", [array_id])
         db_connection.close()
