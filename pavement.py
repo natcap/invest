@@ -214,8 +214,7 @@ class Repository(object):
             print 'Repo %s not found, falling back to fresh clone and update' % self.local_path
             # When the current repo can't be updated because it doesn't know
             # the change we want to update to
-            self.pull()
-            self.update(rev)
+            self.clone(rev)
 
     def ischeckedout(self):
         """Identify whether the repository is checked out on disk."""
@@ -789,8 +788,10 @@ def after_install(options, home_dir):
         requirements_files.append(options.env.requirements)
 
     # extra parameter strings needed for installing certain packages
-    # Always install natcap.versioner to the env over whatever else is there.
+    # Always install nose, natcap.versioner to the env over whatever else
+    # is there.
     pkg_pip_params = {
+        'nose': ['-I'],
         'natcap.versioner': ['-I'],
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
@@ -980,7 +981,7 @@ def fetch(args, options):
                                    '{repo}').format(repo=repo_path))
 
         if options.dry_run:
-            print 'Fetching {parh}'.format(user_requested_repo.local_path)
+            print 'Fetching {path}'.format(user_requested_repo.local_path)
             continue
         else:
             user_requested_repo.get(target_rev)
