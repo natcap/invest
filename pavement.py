@@ -789,8 +789,10 @@ def after_install(options, home_dir):
         requirements_files.append(options.env.requirements)
 
     # extra parameter strings needed for installing certain packages
-    # Always install natcap.versioner to the env over whatever else is there.
+    # Always install nose, natcap.versioner to the env over whatever else
+    # is there.
     pkg_pip_params = {
+        'nose': ['-I'],
         'natcap.versioner': ['-I'],
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
