@@ -1130,7 +1130,15 @@ def push(args):
 
         target_filename = _fix_path(target_filename)  # convert windows to linux paths
         print 'Transferring %s -> %s ' % (os.path.basename(transfer_file), target_filename)
-        sftp.put(transfer_file, target_filename, callback=_sftp_callback)
+        for repeat in [True, True, False]:
+            try:
+                sftp.put(transfer_file, target_filename, callback=_sftp_callback)
+            except IOError as filesize_inconsistency:
+                # IOError raised when the file on the other end reports a
+                # different filesize than what we sent.
+                if not repeat:
+                    raise filesize_inconsistency
+
 
     print 'Closing down SCP'
     sftp.close()
