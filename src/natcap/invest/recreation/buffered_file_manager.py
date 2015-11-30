@@ -112,9 +112,16 @@ class BufferedFileManager(object):
                         VALUES (?,?)''', insert_list)
                     insert_list = []
                 except sqlite3.InterfaceError:
-                    LOGGER.debug([x[0] for x in insert_list])
+                    try:
+                        for array_id, array_data in insert_list:
+                            db_cursor.execute(
+                                '''INSERT OR REPLACE INTO array_table
+                                    (array_id, array_data)
+                                VALUES (?,?)''', (array_id, array_data))
+                    except sqlite3.InterfaceError:
+                        LOGGER.debug((array_id, array_data, array_data.shape))
                     #LOGGER.debug(insert_list)
-                    raise
+                        raise
 
         if len(insert_list) > 100:
             try:
