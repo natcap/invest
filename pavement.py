@@ -411,10 +411,42 @@ class SVNRepository(Repository):
     statedir = '.svn'
     cmd = 'svn'
 
+    def at_known_rev(self):
+        """Determine repo status from `svn status`
+
+        Overridden from Repository.at_known_rev(...).  SVN info does not
+        correctly report the status of the repository in the version number,
+        so we must parse the output of `svn status` to see if a checkout or
+        update was interrupted.
+
+        Returns True if the repository is up-to-date.  False if not."""
+        # Parse the output of SVN status.
+        repo_status = sh('svn status', cwd=self.local_path, capture=True)
+        for line in repo_status:
+            if line.split()[0] in ['!', 'L']:
+                print 'Checkout or update incomplete!  Repo NOT at known rev.'
+                return False
+
+        print 'Status ok.'
+        return Repository.at_known_rev(self)
+
+    def _cleanup_and_retry(self, cmd, *args, **kwargs):
+        """Run SVN cleanup."""
+        for retry in [True, False]:
+            try:
+                cmd(*args, **kwargs)
+            except BuildFailure as failure:
+                if retry:
+                    print 'Cleaning up SVN repository %s' % self.local_path
+                    sh('svn cleanup', cwd=self.local_path)
+                else:
+                    raise failure
+
     def clone(self, rev=None):
         if rev is None:
             rev = self.tracked_version()
-        paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
+        self._cleanup_and_retry(paver.svn.checkout, self.remote_url,
+                                self.local_path, revision=rev)
 
     def update(self, rev):
         # check that the repository URL hasn't changed.  If it has, update to
@@ -425,7 +457,7 @@ class SVNRepository(Repository):
                 orig_url=local_copy_info.repository_root,
                 new_url=self.remote_url), cwd=self.local_path)
 
-        paver.svn.update(self.local_path, rev)
+        self._cleanup_and_retry(paver.svn.update, self.local_path, rev)
 
     def current_rev(self):
         try:
