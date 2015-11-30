@@ -19,6 +19,7 @@ import logging
 
 from osgeo import ogr
 from osgeo import osr
+cimport numpy
 
 MAX_BYTES_TO_BUFFER = 2**27  # buffer a little over 128 megabytes
 
@@ -29,7 +30,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger(
     'natcap.invest.recmodel_server.out_of_core_quadtree')
-
 
 class OutOfCoreQuadTree(object):
     """An out of core quad tree spatial indexing structure.  Define with an
@@ -170,30 +170,29 @@ class OutOfCoreQuadTree(object):
         self.is_leaf = False
         #now when we add these points to the node they'll be sorted and passed
         #to the subquads
-        self.add_points(point_list)
+        self.add_points(point_list, 0, point_list.size)
 
-    def add_points(self, point_list, list_bounds=None):
+    def add_points(
+            self, numpy.ndarray point_list, int left_bound, int right_bound):
         """Add a list of points to the current node, this function will split
             the current node if necessary, and split the point list to
             children nodes if necessary.
 
             point_list - a numpy array of (user_day_hash, x_coord, y_coord)
                 tuples
-            list_bounds - if list bounds is a tuple, the first value indicates
-                the valid index in the point list an the second value indicates
-                the right non-inclusive bound.
+            left_bound (int): left index inclusive of points to consider under
+                `point_list`
+            right_bound (int): right index non-inclusive of points to consider
+                under `point_list`
 
             returns nothing"""
         cdef float x_coord, y_coord, mid_x_coord, mid_y_coord
         cdef int point_list_len
 
-        if list_bounds is None:
-            list_bounds = (0, len(point_list))
-        if list_bounds[1] - list_bounds[0] == 0:
+        if right_bound - left_bound == 0:
             return
-        assert list_bounds[0] < list_bounds[1]
 
-        point_list_len = list_bounds[1] - list_bounds[0]
+        point_list_len = right_bound - left_bound
         if self.is_leaf:
             if ((point_list_len + self.n_points_in_node) <=
                     self.max_points_per_node or
@@ -201,7 +200,7 @@ class OutOfCoreQuadTree(object):
                 #if it's a leaf and the points fit, append to file end
                 self.n_points_in_node += point_list_len
                 self.file_manager.append(
-                    self.blob_id, point_list[list_bounds[0]:list_bounds[1]])
+                    self.blob_id, point_list[left_bound:right_bound])
                 return  # this lets us pass through the two cases below
             else:
                 #this cases handles a leaf node that needs to be split
@@ -211,22 +210,24 @@ class OutOfCoreQuadTree(object):
         mid_x_coord = self.nodes[0].bounding_box[2]
         mid_y_coord = self.nodes[0].bounding_box[1]
 
-        left_y_split_index, x_split_index, right_y_split_index = (
-            _sort_list_to_quads(
-                point_list, list_bounds, mid_x_coord, mid_y_coord))
+        cdef int left_y_split_index, x_split_index, right_y_split_index
+        _sort_list_to_quads(
+            point_list, left_bound, right_bound, mid_x_coord,
+            mid_y_coord, &left_y_split_index, &x_split_index,
+            &right_y_split_index)
 
         # quads organized like this:
         #01
         #23
 
         self.nodes[2].add_points(
-            point_list, (list_bounds[0], left_y_split_index))
+            point_list, left_bound, left_y_split_index)
         self.nodes[0].add_points(
-            point_list, (left_y_split_index, x_split_index))
+            point_list, left_y_split_index, x_split_index)
         self.nodes[3].add_points(
-            point_list, (x_split_index, right_y_split_index))
+            point_list, x_split_index, right_y_split_index)
         self.nodes[1].add_points(
-            point_list, (right_y_split_index, list_bounds[1]))
+            point_list, right_y_split_index, right_bound)
 
     def _bounding_box_intersect(self, bb):
         """Function that tests if this node's bounding intersects another.
@@ -333,7 +334,10 @@ class OutOfCoreQuadTree(object):
             return point_list
 
 
-def _sort_list_to_quads(point_list, list_bounds, mid_x_coord, mid_y_coord):
+cdef _sort_list_to_quads(
+        numpy.ndarray point_list, int left_bound, int right_bound,
+        float mid_x_coord, float mid_y_coord, int *left_y_split_index,
+        int *x_split_index, int *right_y_split_index):
     """Sorts the points in point_list to be 4 sublists where each sublists's
         points lie within the
 
@@ -344,40 +348,36 @@ def _sort_list_to_quads(point_list, list_bounds, mid_x_coord, mid_y_coord):
 
         point_list - structured numpy array of (data, x_coord, y_coord) points.
             This parameter will be modified to have sorted points
+        left_bound (int): left inclusive index in `point_list` to sort
+        right_bound (int): right non-inclusive index in `point_list` to sort
         list_bounds - (left, right) tuple of valid points in point_list
         mid_x_coord - x coord to split the quad
         mid_y_coord - y coord to split the quad
 
-        returns left_y_split_index, x_split_index, right_y_split_index"""
+
+        modifies left_y_split_index, x_split_index, right_y_split_index to
+        report split"""
 
     #sort by x coordinates
-    sub_array = point_list[list_bounds[0]:list_bounds[1]]
-    try:
-        idx = sub_array['f1'].argsort()
-    except TypeError:
-        LOGGER.debug(sub_array)
-        LOGGER.debug(type(sub_array))
-        LOGGER.debug(sub_array.dtype)
-        LOGGER.debug(sub_array['f1'])
-        raise
+    cdef numpy.ndarray sub_array = point_list[left_bound:right_bound]
+    cdef numpy.ndarray idx = sub_array['f1'].argsort()
+
     sub_array[:] = sub_array[idx]
-    x_split_index = sub_array['f1'].searchsorted(mid_x_coord) + list_bounds[0]
+    x_split_index[0] = sub_array['f1'].searchsorted(mid_x_coord) + left_bound
 
     #sort the left y coordinates
-    sub_array = point_list[list_bounds[0]:x_split_index]
+    sub_array = point_list[left_bound:x_split_index[0]]
     idx = sub_array['f2'].argsort()
     sub_array[:] = sub_array[idx]
-    left_y_split_index = sub_array['f2'].searchsorted(
-        mid_y_coord) + list_bounds[0]
+    left_y_split_index[0] = sub_array['f2'].searchsorted(
+        mid_y_coord) + left_bound
 
     #sort the right y coordinates
-    sub_array = point_list[x_split_index:list_bounds[1]]
+    sub_array = point_list[x_split_index[0]:right_bound]
     idx = sub_array['f2'].argsort()
     sub_array[:] = sub_array[idx]
-    right_y_split_index = sub_array['f2'].searchsorted(
-        mid_y_coord) + x_split_index
-
-    return left_y_split_index, x_split_index, right_y_split_index
+    right_y_split_index[0] = sub_array['f2'].searchsorted(
+        mid_y_coord) + x_split_index[0]
 
 
 def _in_box(bounding_box, x_coord, y_coord):

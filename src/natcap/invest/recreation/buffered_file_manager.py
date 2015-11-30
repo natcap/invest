@@ -5,7 +5,6 @@ import time
 import collections
 import os
 import numpy
-import io
 import sqlite3
 import logging
 
@@ -13,41 +12,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_server.buffered_file_manager')
-
-
-def _adapt_array(array):
-    """Convert numpy array to sqlite3 binary type.
-    http://stackoverflow.com/a/31312102/190597 (SoulNibbler)
-    """
-    out = io.BytesIO()
-    numpy.save(out, array)
-    out.seek(0)
-    return sqlite3.Binary(out.read())
-
-
-def _convert_array(text):
-    """Adapter to convert an SQL blob to a numpy array"""
-    out = io.BytesIO(text)
-    out.seek(0)
-    return numpy.load(out)
-
-# Converts np.array to TEXT when inserting
-sqlite3.register_adapter(numpy.ndarray, _adapt_array)
-
-# Converts TEXT to np.array when selecting
-sqlite3.register_converter("array", _convert_array)
-
-
-def _deque_to_array(numpy_deque):
-    """concatenate a deque of 'a4,f4,f4' numpy arrays"""
-    n_elements = sum([x.size for x in numpy_deque])
-    result = numpy.empty(n_elements, dtype='a4, f4, f4')
-    valid_pos = 0
-    while len(numpy_deque) > 0:
-        array = numpy_deque.pop()
-        result[valid_pos:valid_pos+array.size] = array
-        valid_pos += array.size
-    return result
 
 
 class BufferedFileManager(object):
@@ -64,11 +28,6 @@ class BufferedFileManager(object):
         db_connection = sqlite3.connect(
             manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
-        db_cursor.execute('PRAGMA page_size=4096')
-        db_cursor.execute('PRAGMA cache_size=10000')
-        db_cursor.execute('PRAGMA locking_mode=EXCLUSIVE')
-        db_cursor.execute('PRAGMA synchronous=NORMAL')
-        db_cursor.execute('PRAGMA auto_vacuum=NONE')
         db_cursor.execute('''CREATE TABLE IF NOT EXISTS array_table
             (array_id INTEGER PRIMARY KEY, array_path TEXT)''')
 
@@ -93,15 +52,13 @@ class BufferedFileManager(object):
             otherwise we write directly."""
 
         start_time = time.time()
-        LOGGER.debug('Flushing %d bytes in %d arrays' % (
-            self.current_bytes_in_system, len(self.array_cache)))
+        LOGGER.debug(
+            'Flushing %d bytes in %d arrays', self.current_bytes_in_system,
+            len(self.array_cache))
 
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
-        db_cursor.execute("PRAGMA synchronous = OFF")
-        db_cursor.execute("PRAGMA journal_mode = OFF")
-        db_cursor.execute("PRAGMA cache_size = 131072")
 
         #get all the array data to append at once
         insert_list = []
@@ -142,7 +99,7 @@ class BufferedFileManager(object):
 
         self.array_cache.clear()
         self.current_bytes_in_system = 0
-        LOGGER.debug('Completed flush in %.2fs' % (time.time() - start_time))
+        LOGGER.debug('Completed flush in %.2fs', time.time() - start_time)
 
     def read(self, array_id):
         """Read the entirety of the file.  Internally this might mean that
@@ -152,7 +109,6 @@ class BufferedFileManager(object):
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
-        db_cursor.execute("PRAGMA cache_size = 131072")
         db_cursor.execute(
             "SELECT (array_path) FROM array_table where array_id=? LIMIT 1",
             [array_id])

@@ -34,13 +34,13 @@ import pyximport
 pyximport.install(setup_args={'include_dirs': numpy.get_include()})
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree
 
-BLOCKSIZE = 2 ** 20
+BLOCKSIZE = 2 ** 21
 GLOBAL_MAX_POINTS_PER_NODE = 10000  # Default max points in quadtree to split
-POINTS_TO_ADD_PER_STEP = GLOBAL_MAX_POINTS_PER_NODE / 2
+POINTS_TO_ADD_PER_STEP = 2 ** 8
 GLOBAL_DEPTH = 10
 LOCAL_MAX_POINTS_PER_NODE = 50
 LOCAL_DEPTH = 8
-CSV_ROWS_PER_PARSE = 2 ** 8
+CSV_ROWS_PER_PARSE = 2 ** 10
 
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
@@ -250,7 +250,8 @@ class RecModel(object):
                 projected_point_list[point_index] = (
                     current_point[0], x_coord, y_coord)
 
-            local_qt.add_points(projected_point_list)
+            local_qt.add_points(
+                projected_point_list, 0, projected_point_list.size)
         print 'saving local qt to %s' % local_qt_pickle_filename
         local_qt.flush()
 
@@ -339,7 +340,7 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
 
     with open(infile_name, 'rb') as infile:
         csvfile_reader = csv.reader(infile)
-        csvfile_reader.next() #skip the header
+        csvfile_reader.next()  # skip the header
 
         row_deque = collections.deque()
         for row in csvfile_reader:
@@ -485,7 +486,7 @@ def construct_userday_quadtree(
                 continue
 
             n_points += len(userday_tuple_array)
-            ooc_qt.add_points(userday_tuple_array)
+            ooc_qt.add_points(userday_tuple_array, 0, userday_tuple_array.size)
             current_time = time.time()
             time_elapsed = current_time - last_time
             if time_elapsed > 5.0:
