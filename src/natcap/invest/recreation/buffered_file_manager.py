@@ -42,7 +42,7 @@ class BufferedFileManager(object):
         """Appends data to the file, this may be the buffer in memory or a
             file on disk"""
 
-        self.array_cache[array_id].append(array_data)
+        self.array_cache[array_id].append(array_data.copy())
         self.current_bytes_in_system += array_data.size * 12  # a4 f4 f4
         if self.current_bytes_in_system > self.max_bytes_to_buffer:
             self.flush()
@@ -52,7 +52,7 @@ class BufferedFileManager(object):
             otherwise we write directly."""
 
         start_time = time.time()
-        LOGGER.debug(
+        LOGGER.info(
             'Flushing %d bytes in %d arrays', self.current_bytes_in_system,
             len(self.array_cache))
 
@@ -70,7 +70,7 @@ class BufferedFileManager(object):
                     where array_id=? LIMIT 1""", [array_id])
             array_path = db_cursor.fetchone()
             if array_path is not None:
-                #append if so
+                # cache gets wiped at end so okay to use same deque
                 array_deque.append(numpy.load(array_path[0]))
                 array_data = numpy.concatenate(array_deque)
                 numpy.save(array_path[0], array_data)
@@ -99,7 +99,7 @@ class BufferedFileManager(object):
 
         self.array_cache.clear()
         self.current_bytes_in_system = 0
-        LOGGER.debug('Completed flush in %.2fs', time.time() - start_time)
+        LOGGER.info('Completed flush in %.2fs', time.time() - start_time)
 
     def read(self, array_id):
         """Read the entirety of the file.  Internally this might mean that
@@ -121,7 +121,7 @@ class BufferedFileManager(object):
         if len(self.array_cache[array_id]) > 0:
             local_deque = collections.deque(self.array_cache[array_id])
             local_deque.append(array_data)
-            array_data = numpy.concatenate(self.array_cache[array_id])
+            array_data = numpy.concatenate(local_deque)
 
         return array_data
 

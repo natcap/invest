@@ -189,7 +189,7 @@ class OutOfCoreQuadTree(object):
         cdef float x_coord, y_coord, mid_x_coord, mid_y_coord
         cdef int point_list_len
 
-        if right_bound - left_bound == 0:
+        if right_bound == left_bound:
             return
 
         point_list_len = right_bound - left_bound
@@ -220,14 +220,18 @@ class OutOfCoreQuadTree(object):
         #01
         #23
 
-        self.nodes[2].add_points(
-            point_list, left_bound, left_y_split_index)
-        self.nodes[0].add_points(
-            point_list, left_y_split_index, x_split_index)
-        self.nodes[3].add_points(
-            point_list, x_split_index, right_y_split_index)
-        self.nodes[1].add_points(
-            point_list, right_y_split_index, right_bound)
+        if left_bound != left_y_split_index:
+            self.nodes[2].add_points(
+                point_list, left_bound, left_y_split_index)
+        if left_y_split_index != x_split_index:
+            self.nodes[0].add_points(
+                point_list, left_y_split_index, x_split_index)
+        if x_split_index != right_y_split_index:
+            self.nodes[3].add_points(
+                point_list, x_split_index, right_y_split_index)
+        if right_y_split_index != right_bound:
+            self.nodes[1].add_points(
+                point_list, right_y_split_index, right_bound)
 
     def _bounding_box_intersect(self, bb):
         """Function that tests if this node's bounding intersects another.

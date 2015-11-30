@@ -498,10 +498,10 @@ def construct_userday_quadtree(
                 last_time = time.time()
 
         #save it to disk
+        ooc_qt.flush()
         LOGGER.info(
             '%d points added to ooc_qt final, %d points in qt, and n_nodes in '
             'qt %d', n_points, ooc_qt.n_points(), ooc_qt.n_nodes())
-        ooc_qt.flush()
 
         quad_tree_shapefile_name = os.path.join(
             cache_dir, 'quad_tree_shape.shp')
