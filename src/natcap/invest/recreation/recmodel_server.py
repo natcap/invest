@@ -438,7 +438,7 @@ def construct_userday_quadtree(
             n_parse_processes = 1
         #n_parse_processes = 1
 
-        block_offset_size_queue = multiprocessing.Queue()
+        block_offset_size_queue = multiprocessing.Queue(n_parse_processes * 2)
         numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
 
         LOGGER.info('starting parsing processes')
@@ -472,6 +472,7 @@ def construct_userday_quadtree(
 
         LOGGER.info("add points to the quadtree as they are ready")
         last_time = time.time()
+        start_time = last_time
         n_points = 0
 
         while True:
@@ -484,14 +485,16 @@ def construct_userday_quadtree(
                 continue
 
             n_points += len(userday_tuple_array)
-            time_elapsed = time.time() - last_time
+            ooc_qt.add_points(userday_tuple_array)
+            current_time = time.time()
+            time_elapsed = current_time - last_time
             if time_elapsed > 5.0:
                 LOGGER.info(
                     '%d points added to ooc_qt so far, %d points in qt, '
                     'and n_nodes in qt %d in %.2fs', n_points,
-                    ooc_qt.n_points(), ooc_qt.n_nodes(), time_elapsed)
+                    ooc_qt.n_points(), ooc_qt.n_nodes(),
+                    current_time-start_time)
                 last_time = time.time()
-            ooc_qt.add_points(userday_tuple_array)
 
         #save it to disk
         LOGGER.info(
@@ -504,6 +507,7 @@ def construct_userday_quadtree(
 
         lat_lng_ref = osr.SpatialReference()
         lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
+        LOGGER.info("building quadtree shapefile overview")
         build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
 
     print 'took %f seconds' % (time.time() - start_time)
