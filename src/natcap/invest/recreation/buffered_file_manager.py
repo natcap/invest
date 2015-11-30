@@ -1,6 +1,5 @@
 """Buffered file manager module"""
 
-import itertools
 import collections
 import os
 import numpy
@@ -50,12 +49,13 @@ class BufferedFileManager(object):
         db_connection = sqlite3.connect(
             manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
-        db_cursor.execute('''CREATE TABLE IF NOT EXISTS array_table
-            (array_id INTEGER PRIMARY KEY, array_data array)''')
         db_cursor.execute('PRAGMA page_size=4096')
         db_cursor.execute('PRAGMA cache_size=10000')
         db_cursor.execute('PRAGMA locking_mode=EXCLUSIVE')
         db_cursor.execute('PRAGMA synchronous=NORMAL')
+        db_cursor.execute('PRAGMA auto_vacuum=NONE')
+        db_cursor.execute('''CREATE TABLE IF NOT EXISTS array_table
+            (array_id INTEGER PRIMARY KEY, array_data array)''')
 
         db_connection.commit()
         db_connection.close()
@@ -113,13 +113,18 @@ class BufferedFileManager(object):
                     insert_list = []
                 except sqlite3.InterfaceError:
                     try:
+                        last_array_data = None
+                        last_array_id = None
                         for array_id, array_data in insert_list:
                             db_cursor.execute(
                                 '''INSERT OR REPLACE INTO array_table
                                     (array_id, array_data)
                                 VALUES (?,?)''', (array_id, array_data))
+                            last_array_id = array_id
+                            last_array_data = array_data
                     except sqlite3.InterfaceError:
                         LOGGER.debug((array_id, array_data, array_data.shape))
+                        LOGGER.debug((last_array_id, last_array_data, last_array_data.shape))
                     #LOGGER.debug(insert_list)
                         raise
 

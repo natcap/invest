@@ -441,23 +441,7 @@ def construct_userday_quadtree(
         block_offset_size_queue = multiprocessing.Queue()
         numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
 
-        # rush through file and determine reasonable offsets and blocks
-        LOGGER.info('populating offset queue')
-        csv_file = open(raw_photo_csv_table, 'rb')
-        csv_file.readline()  # skip the csv header
-        while True:
-            start = csv_file.tell()
-            csv_file.seek(BLOCKSIZE, 1)
-            line = csv_file.readline()  # skip to end of line
-            bounds = (start, csv_file.tell() - start)
-            block_offset_size_queue.put(bounds)
-            if not line:
-                break
-        csv_file.close()
-        for _ in xrange(n_parse_processes):
-            block_offset_size_queue.put('STOP')
-
-        LOGGER.info('starting parsing')
+        LOGGER.info('starting parsing processes')
         for _ in xrange(n_parse_processes):
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_input_csv, args=(
@@ -465,10 +449,30 @@ def construct_userday_quadtree(
                     numpy_array_queue))
             parse_input_csv_process.start()
 
+        # rush through file and determine reasonable offsets and blocks
+        def _populate_offset_queue(block_offset_size_queue):
+            csv_file = open(raw_photo_csv_table, 'rb')
+            csv_file.readline()  # skip the csv header
+            while True:
+                start = csv_file.tell()
+                csv_file.seek(BLOCKSIZE, 1)
+                line = csv_file.readline()  # skip to end of line
+                bounds = (start, csv_file.tell() - start)
+                block_offset_size_queue.put(bounds)
+                if not line:
+                    break
+            csv_file.close()
+            for _ in xrange(n_parse_processes):
+                block_offset_size_queue.put('STOP')
 
-        #add points to the quadtree as they are ready
-        n_points = 0
+        LOGGER.info('starting offset queue population thread')
+        populate_thread = threading.Thread(
+            target=_populate_offset_queue, args=(block_offset_size_queue,))
+        populate_thread.start()
+
+        LOGGER.info("add points to the quadtree as they are ready")
         last_time = time.time()
+        n_points = 0
 
         while True:
             userday_tuple_array = numpy_array_queue.get()
@@ -483,9 +487,9 @@ def construct_userday_quadtree(
             time_elapsed = time.time() - last_time
             if time_elapsed > 5.0:
                 LOGGER.info(
-                    '%d points added to ooc_qt so far, %d points in qt, and '
-                    'n_nodes in qt %d in %.2fs', n_points, ooc_qt.n_points(),
-                    ooc_qt.n_nodes(), time_elapsed)
+                    '%d points added to ooc_qt so far, %d points in qt, '
+                    'and n_nodes in qt %d in %.2fs', n_points,
+                    ooc_qt.n_points(), ooc_qt.n_nodes(), time_elapsed)
                 last_time = time.time()
             ooc_qt.add_points(userday_tuple_array)
 
