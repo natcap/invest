@@ -34,7 +34,7 @@ import pyximport
 pyximport.install(setup_args={'include_dirs': numpy.get_include()})
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree
 
-BLOCKSIZE = 2 ** 21
+BLOCKSIZE = 2 ** 20
 GLOBAL_MAX_POINTS_PER_NODE = 10000  # Default max points in quadtree to split
 POINTS_TO_ADD_PER_STEP = 2 ** 8
 GLOBAL_DEPTH = 10
