@@ -1,6 +1,5 @@
 """Buffered file manager module"""
 
-import multiprocessing
 import uuid
 import time
 import collections
@@ -13,18 +12,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_server.buffered_file_manager')
-
-
-def _flush_to_numpy_file_worker(flush_queue):
-    """Flush numpy file, numpy array pairs to file. Append if file exists."""
-    for file_path, numpy_array in iter(flush_queue.get, 'STOP'):
-        if os.path.exists(file_path):
-            numpy_array = numpy.concatenate((
-                numpy.load(file_path), numpy_array))
-
-        numpy.save(file_path, numpy_array)
-        flush_queue.task_done()
-    flush_queue.task_done()
 
 
 class BufferedFileManager(object):
@@ -51,12 +38,6 @@ class BufferedFileManager(object):
         self.max_bytes_to_buffer = max_bytes_to_buffer
         self.current_bytes_in_system = 0
 
-        self.flush_queue = multiprocessing.JoinableQueue()
-        self.flush_queue_worker = multiprocessing.Process(
-            target=_flush_to_numpy_file_worker, args=(
-                self.flush_queue,))
-        self.flush_queue_worker.start()
-
     def append(self, array_id, array_data):
         """Appends data to the file, this may be the buffer in memory or a
             file on disk"""
@@ -75,14 +56,13 @@ class BufferedFileManager(object):
             'Flushing %d bytes in %d arrays', self.current_bytes_in_system,
             len(self.array_cache))
 
-        self.flush_queue.join()
-
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
 
         #get all the array data to append at once
         insert_list = []
+
         for array_id, array_deque in self.array_cache.iteritems():
             #Try to get data if it's there
             db_cursor.execute(
@@ -91,11 +71,9 @@ class BufferedFileManager(object):
             array_path = db_cursor.fetchone()
             if array_path is not None:
                 # cache gets wiped at end so okay to use same deque
-                self.flush_queue.put(
-                    (array_path[0], numpy.concatenate(array_deque)))
-                #array_deque.append(numpy.load(array_path[0]))
-                #array_data = numpy.concatenate(array_deque)
-                #numpy.save(array_path[0], array_data)
+                array_deque.append(numpy.load(array_path[0]))
+                array_data = numpy.concatenate(array_deque)
+                numpy.save(array_path[0], array_data)
             else:
                 #otherwise directly write
                 #make a random filename and put it one directory deep named
@@ -108,10 +86,8 @@ class BufferedFileManager(object):
                     os.mkdir(array_directory)
                 array_path = os.path.join(array_directory, array_filename)
                 #save the file
-                self.flush_queue.put(
-                    (array_path, numpy.concatenate(array_deque)))
-                #array_data = numpy.concatenate(array_deque)
-                #numpy.save(array_path, array_data)
+                array_data = numpy.concatenate(array_deque)
+                numpy.save(array_path, array_data)
                 insert_list.append((array_id, array_path))
         db_cursor.executemany(
             '''INSERT INTO array_table
@@ -129,7 +105,6 @@ class BufferedFileManager(object):
         """Read the entirety of the file.  Internally this might mean that
             part of the file is read from disk and the end from the buffer
             or any combination of those."""
-        self.flush_queue.join()
 
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -153,8 +128,6 @@ class BufferedFileManager(object):
     def delete(self, array_id):
         """Deletes the file on disk if it exists and also purges from the
             cache"""
-        self.flush_queue.join()
-
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()

@@ -1,5 +1,6 @@
 """InVEST Recreation Server"""
 
+import subprocess
 import Queue
 import os
 import multiprocessing
@@ -34,7 +35,7 @@ import pyximport
 pyximport.install(setup_args={'include_dirs': numpy.get_include()})
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree
 
-BLOCKSIZE = 2 ** 20
+BLOCKSIZE = 2 ** 21
 GLOBAL_MAX_POINTS_PER_NODE = 10000  # Default max points in quadtree to split
 POINTS_TO_ADD_PER_STEP = 2 ** 8
 GLOBAL_DEPTH = 10
@@ -413,6 +414,18 @@ def _parse_input_csv(
     numpy_array_queue.put('STOP')
 
 
+def file_len(file_path):
+    """Count lines in file, return -1 if not supported"""
+    wc_process = subprocess.Popen(
+        ['wc', '-l', file_path], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+    result, err = wc_process.communicate()
+    if wc_process.returncode != 0:
+        LOGGER.warn(err)
+        return -1
+    return int(result.strip().split()[0])
+
+
 def construct_userday_quadtree(
         initial_bounding_box, raw_photo_csv_table, cache_dir,
         max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
@@ -428,7 +441,11 @@ def construct_userday_quadtree(
         #that's an out of core quadtree
         return ooc_qt_picklefilename
     else:
-        print '%s not found, constructing quadtree' % ooc_qt_picklefilename
+        LOGGER.info('%s not found, constructing quadtree', ooc_qt_picklefilename)
+
+        LOGGER.info('counting lines in input file')
+        total_lines = file_len(raw_photo_csv_table)
+        LOGGER.info('%d lines', total_lines)
         #construct a new quadtree
         ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
             initial_bounding_box, max_points_per_node, GLOBAL_DEPTH,
@@ -491,17 +508,18 @@ def construct_userday_quadtree(
             time_elapsed = current_time - last_time
             if time_elapsed > 5.0:
                 LOGGER.info(
-                    '%d points added to ooc_qt so far, %d points in qt, '
-                    'and n_nodes in qt %d in %.2fs', n_points,
-                    ooc_qt.n_points(), ooc_qt.n_nodes(),
+                    '%.2f%% complete, %d points skipped, %d nodes in qt in only %.2fs',
+                    n_points * 100.0 / total_lines,
+                    n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
                     current_time-start_time)
                 last_time = time.time()
 
-        #save it to disk
+        #save quadtree to disk
         ooc_qt.flush()
         LOGGER.info(
-            '%d points added to ooc_qt final, %d points in qt, and n_nodes in '
-            'qt %d', n_points, ooc_qt.n_points(), ooc_qt.n_nodes())
+            '100.00%% complete, %d points skipped, %d nodes in qt in only %.2fs',
+            n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
+            time.time()-start_time)
 
         quad_tree_shapefile_name = os.path.join(
             cache_dir, 'quad_tree_shape.shp')

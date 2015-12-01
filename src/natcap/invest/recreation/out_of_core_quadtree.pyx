@@ -31,7 +31,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger(
     'natcap.invest.recmodel_server.out_of_core_quadtree')
 
-
 class OutOfCoreQuadTree(object):
     """An out of core quad tree spatial indexing structure.  Define with an
         initial range and continously add new points."""
