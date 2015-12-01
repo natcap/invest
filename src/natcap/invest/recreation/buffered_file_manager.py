@@ -1,7 +1,6 @@
 """Buffered file manager module"""
 
-import threading
-import Queue
+import multiprocessing
 import uuid
 import time
 import collections
@@ -52,8 +51,8 @@ class BufferedFileManager(object):
         self.max_bytes_to_buffer = max_bytes_to_buffer
         self.current_bytes_in_system = 0
 
-        self.flush_queue = Queue.Queue()
-        self.flush_queue_worker = threading.Thread(
+        self.flush_queue = multiprocessing.JoinableQueue()
+        self.flush_queue_worker = multiprocessing.Process(
             target=_flush_to_numpy_file_worker, args=(
                 self.flush_queue,))
         self.flush_queue_worker.start()
