@@ -31,8 +31,6 @@ import numpy
 
 __version__ = natcap.versioner.get_version('natcap.invest.recmodel_server')
 
-import pyximport
-pyximport.install(setup_args={'include_dirs': numpy.get_include()})
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree
 
 BLOCKSIZE = 2 ** 21
@@ -618,4 +616,4 @@ def execute(args):
         RecModel(args['raw_csv_point_data_path'], args['cache_workspace']),
         'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
-    #daemon.requestLoop()
+    daemon.requestLoop()
