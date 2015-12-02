@@ -122,8 +122,9 @@ def execute(args):
             args['user_defined_climate_zones'] is True.  Path to a CSV table
             that has headers 'month' (1-12) and 'events' (int >= 0) that
             indicates the number of rain events per month
-        args['alpha_m'] (float or string): proportion of upslope annual
-            available local recharge that is available in month m.
+        args['alpha_m'] (float or string): required if args['monthly_alpha'] is
+            false.  Is the proportion of upslope annual available local
+            recharge that is available in month m.
         args['beta_i'] (float or string): is the fraction of the upgradient
             subsidy that is available for downgradient evapotranspiration.
         args['gamma'] (float or string): is the fraction of pixel local
@@ -144,6 +145,9 @@ def execute(args):
         args['climate_zone_raster_path'] (string): required if
             args['user_defined_climate_zones'] is True, pixel values correspond
             to the "cz_id" values defined in args['climate_zone_table_path']
+        args['monthly_alpha'] (boolean): if True, use the alpha
+        args['monthly_alpha_path'] (string): required if args['monthly_alpha']
+            is True.
     """
 
     LOGGER.info('prepare and test inputs for common errors')
@@ -158,7 +162,18 @@ def execute(args):
     biophysical_table = pygeoprocessing.get_lookup_from_table(
         args['biophysical_table_path'], 'lucode')
 
-    alpha_m = float(fractions.Fraction(args['alpha_m']))
+    if args['monthly_alpha']:
+        # parse out the alpha lookup table of the form (month_id: alpha_val)
+        alpha_month = dict([
+            (key, val['alpha']) for key, val in
+            pygeoprocessing.get_lookup_from_table(
+                args['monthly_alpha_path'], 'month').iteritems()])
+    else:
+        # make all 12 entries equal to args['alpha_m']
+        alpha_m = float(fractions.Fraction(args['alpha_m']))
+        alpha_month = dict([
+            (month_index+1, alpha_m) for month_index in xrange(12)])
+
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
     threshold_flow_accumulation = float(args['threshold_flow_accumulation'])
@@ -390,7 +405,7 @@ def execute(args):
             file_registry['outflow_weights_path'],
             file_registry['outflow_direction_path'],
             file_registry['dem_valid_path'],
-            file_registry['lulc_valid_path'], alpha_m,
+            file_registry['lulc_valid_path'], alpha_month,
             beta_i, gamma, file_registry['stream_path'],
             file_registry['l_path'],
             file_registry['l_avail_path'],
