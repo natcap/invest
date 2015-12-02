@@ -60,7 +60,7 @@ class ExampleUnitTests(unittest.TestCase):
     """Tests for natcap.invest._example_model."""
 
     def test_execute(self):
-        """ExampleUnitTests example to test postconditions on 'execute'"""
+        """EXAMPLE: ensure correctness when called via execute."""
         from natcap.invest import _example_model
 
         args = {
@@ -84,7 +84,7 @@ class ExampleUnitTests(unittest.TestCase):
             os.remove(filename)
 
     def test_execute_with_suffix(self):
-        """ExampleUnitTests verify suffix is added to output files"""
+        """EXAMPLE: Verify suffix is added correctly."""
         from natcap.invest import _example_model
         args = {
             'workspace_dir': tempfile.mkdtemp(),
@@ -97,7 +97,7 @@ class ExampleUnitTests(unittest.TestCase):
                                                     'sum_foo.tif')))
 
     def test_execute_with_suffix_and_underscore(self):
-        """ExampleUnitTests ensure existing suffix '_' isn't duplicated"""
+        """EXAMPLE: Single-underscore suffix."""
         from natcap.invest import _example_model
         args = {
             'workspace_dir': tempfile.mkdtemp(),
