@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.seasonal_water_yield.seasonal_water_yield",
   "modelName": "seasonal_water_yield",
   "localDocURI": "../documentation/seasonalwateryield.html",
-  "height": 700,
+  "height": 740,
   "width": 900,
   "elements": [
     {
@@ -174,7 +174,8 @@
           "type": "text",
           "label": "alpha_m Parameter",
           "defaultValue": "1/12",
-          "required": true
+          "required": true,
+          "disabledBy": "monthly_alpha_container"
         },
         {
           "id": "beta_i",
@@ -257,6 +258,36 @@
               "required": false,
               "validateAs": {
                 "type": "GDAL"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "monthly_alpha_container",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "monthly_alpha",
+      "label": "Monthly Alpha Table (Advanced)",
+      "elements": [
+        {
+          "id": "monthly_alpha_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "monthly_alpha_path",
+              "args_id": "monthly_alpha_path",
+              "type": "file",
+              "label": "Monthly Alpha Table (csv)",
+              "defaultValue": "../seasonal_water_yield/monthly_alpha.csv",
+              "required": false,
+              "validateAs": {
+                "type": "CSV",
+                "fieldsExist": [
+                  "month",
+                  "alpha"
+                ]
               }
             }
           ]
