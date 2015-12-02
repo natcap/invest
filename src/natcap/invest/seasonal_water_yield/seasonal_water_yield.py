@@ -71,6 +71,7 @@ _TMP_BASE_FILES = {
     'precip_path_aligned_list': ['prcp_a%d.tif' % x for x in xrange(N_MONTHS)],
     'n_events_path_list': ['n_events%d.tif' % x for x in xrange(N_MONTHS)],
     'et0_path_aligned_list': ['et0_a%d.tif' % x for x in xrange(N_MONTHS)],
+    'kc_path_list': ['kc_%d.tif' % x for x in xrange(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
     }
@@ -367,14 +368,17 @@ def execute(args):
             datasets_are_pre_aligned=True)
 
         LOGGER.info('calculate local recharge')
-        kc_lookup = dict([
-            (lucode, biophysical_table[lucode]['kc']) for lucode in
-            biophysical_table])
-
+        kc_lookup = {}
         LOGGER.info('classify kc')
-        pygeoprocessing.reclassify_dataset_uri(
-            file_registry['lulc_valid_path'], kc_lookup,
-            file_registry['kc_path'], gdal.GDT_Float32, -1)
+        for month_index in xrange(12):
+            kc_lookup = dict([
+                (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
+                for lucode in biophysical_table])
+            kc_nodata = -1  # a reasonable nodata value
+            pygeoprocessing.reclassify_dataset_uri(
+                file_registry['lulc_valid_path'], kc_lookup,
+                file_registry['kc_path_list'][month_index], gdal.GDT_Float32,
+                kc_nodata)
 
         # call through to a cython function that does the necessary routing
         # between AET and L.sum.avail in equation [7], [4], and [3]
@@ -386,12 +390,12 @@ def execute(args):
             file_registry['outflow_weights_path'],
             file_registry['outflow_direction_path'],
             file_registry['dem_valid_path'],
-            file_registry['lulc_valid_path'], kc_lookup, alpha_m,
+            file_registry['lulc_valid_path'], alpha_m,
             beta_i, gamma, file_registry['stream_path'],
             file_registry['l_path'],
             file_registry['l_avail_path'],
             file_registry['l_sum_avail_path'],
-            file_registry['aet_path'], file_registry['kc_path'])
+            file_registry['aet_path'], file_registry['kc_path_list'])
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
     qb_sum, qb_valid_count = _sum_valid(file_registry['l_path'])
