@@ -21,7 +21,7 @@ from osgeo import ogr
 from osgeo import osr
 cimport numpy
 
-MAX_BYTES_TO_BUFFER = 2**26  # buffer a little over 64 megabytes
+MAX_BYTES_TO_BUFFER = 2**27  # buffer a little over 128 megabytes
 
 import buffered_file_manager
 

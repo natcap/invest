@@ -63,7 +63,9 @@ class BufferedFileManager(object):
         #get all the array data to append at once
         insert_list = []
 
-        for array_id, array_deque in self.array_cache.iteritems():
+        while len(self.array_cache) > 0:
+            array_id = self.array_cache.iterkeys().next()
+            array_deque = self.array_cache.pop(array_id)
             #Try to get data if it's there
             db_cursor.execute(
                 """SELECT (array_path) FROM array_table
@@ -73,6 +75,7 @@ class BufferedFileManager(object):
                 # cache gets wiped at end so okay to use same deque
                 array_deque.append(numpy.load(array_path[0]))
                 array_data = numpy.concatenate(array_deque)
+                array_deque = None
                 numpy.save(array_path[0], array_data)
             else:
                 #otherwise directly write
@@ -87,6 +90,7 @@ class BufferedFileManager(object):
                 array_path = os.path.join(array_directory, array_filename)
                 #save the file
                 array_data = numpy.concatenate(array_deque)
+                array_deque = None
                 numpy.save(array_path, array_data)
                 insert_list.append((array_id, array_path))
         db_cursor.executemany(
@@ -97,7 +101,6 @@ class BufferedFileManager(object):
         db_connection.commit()
         db_connection.close()
 
-        self.array_cache.clear()
         self.current_bytes_in_system = 0
         LOGGER.info('Completed flush in %.2fs', time.time() - start_time)
 
