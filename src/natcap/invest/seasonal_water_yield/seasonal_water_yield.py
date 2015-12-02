@@ -50,15 +50,15 @@ _INTERMEDIATE_BASE_FILES = {
     'aet_path': 'aet.tif',
     'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in xrange(N_MONTHS)],
     'flow_dir_path': 'flow_dir.tif',
-    'kc_path': 'kc.tif',
-    'outflow_direction_path': 'outflow_direction.tif',
-    'outflow_weights_path': 'outflow_weights.tif',
     'qfm_path_list': ['qf_%d.tif' % (x+1) for x in xrange(N_MONTHS)],
-    'si_path': 'Si.tif',
     'stream_path': 'stream.tif',
 }
 
 _TMP_BASE_FILES = {
+    'outflow_direction_path': 'outflow_direction.tif',
+    'outflow_weights_path': 'outflow_weights.tif',
+    'kc_path': 'kc.tif',
+    'si_path': 'Si.tif',
     'lulc_aligned_path': 'lulc_aligned.tif',
     'dem_aligned_path': 'dem_aligned.tif',
     'lulc_valid_path': 'lulc_valid.tif',
