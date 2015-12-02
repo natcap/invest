@@ -403,11 +403,11 @@ def _parse_input_csv(
         md5hash_v = numpy.vectorize(md5hash, otypes=['S4'])
         hashes = md5hash_v(result['user'], result['date'])
 
-        user_day_lat_lng = numpy.empty(hashes.size, dtype='S4,f4,f4')
-        user_day_lat_lng['f0'] = hashes
-        user_day_lat_lng['f1'] = result['lat']
-        user_day_lat_lng['f2'] = result['lng']
-        numpy_array_queue.put(user_day_lat_lng)
+        user_day_lng_lat = numpy.empty(hashes.size, dtype='S4,f4,f4')
+        user_day_lng_lat['f0'] = hashes
+        user_day_lng_lat['f1'] = result['lng']
+        user_day_lng_lat['f2'] = result['lat']
+        numpy_array_queue.put(user_day_lng_lat)
 
     numpy_array_queue.put('STOP')
 
@@ -616,4 +616,4 @@ def execute(args):
         RecModel(args['raw_csv_point_data_path'], args['cache_workspace']),
         'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
-    daemon.requestLoop()
+    #daemon.requestLoop()
