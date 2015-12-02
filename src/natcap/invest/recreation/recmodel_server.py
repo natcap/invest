@@ -616,4 +616,4 @@ def execute(args):
         RecModel(args['raw_csv_point_data_path'], args['cache_workspace']),
         'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
-    #daemon.requestLoop()
+    daemon.requestLoop()
