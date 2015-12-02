@@ -21,7 +21,7 @@ from osgeo import ogr
 from osgeo import osr
 cimport numpy
 
-MAX_BYTES_TO_BUFFER = 2**27  # buffer a little over 128 megabytes
+MAX_BYTES_TO_BUFFER = 2**26  # buffer a little over 64 megabytes
 
 import buffered_file_manager
 
@@ -30,6 +30,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger(
     'natcap.invest.recmodel_server.out_of_core_quadtree')
+
 
 class OutOfCoreQuadTree(object):
     """An out of core quad tree spatial indexing structure.  Define with an
