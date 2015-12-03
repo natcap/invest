@@ -167,18 +167,34 @@ paver.easy.options(
 
 
 class Repository(object):
-    tip = ''
-    statedir = ''
-    cmd = ''
+    """Abstract class representing a version-controlled repository."""
+    tip = ''  # The string representing the latest revision
+    statedir = ''  # Where the SCM stores its data, relative to repo root
+    cmd = ''  # The command-line exe to call.
 
     def __init__(self, local_path, remote_url):
+        """Initialize the Repository instance
+
+        Parameters:
+            local_path (string): The filepath on disk to the repo
+                (relative to pavement.py)
+            remote_url (string): The string URL to use to identify the repo.
+                Used for clones, updates.
+
+        Returns:
+            An instance of Repository.
+        """
         self.local_path = local_path
         self.remote_url = remote_url
 
     def get(self, rev):
-        """
-        Given whatever state the repo might be in right now, update to the
-        target revision.
+        """Update to the target revision.
+
+        Parameters:
+            rev (string): The revision to update the repo to.
+
+        Returns:
+            None
         """
         if not self.ischeckedout():
             self.clone()
@@ -198,29 +214,78 @@ class Repository(object):
             print 'Repo %s not found, falling back to fresh clone and update' % self.local_path
             # When the current repo can't be updated because it doesn't know
             # the change we want to update to
-            self.pull()
-            self.update(rev)
+            self.clone(rev)
 
     def ischeckedout(self):
+        """Identify whether the repository is checked out on disk."""
         return os.path.exists(os.path.join(self.local_path, self.statedir))
 
     def clone(self, rev=None):
-        raise Exception
+        """Clone the repository from the remote URL.
 
-    def pull(self):
-        raise Exception
+        This method is to be overridden in a subclass with the SCM-specific
+        commands.
+
+        Parameters:
+            rev=None (string or None): The revision to update to.  If None,
+                the revision will be fetched from versions.json.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
     def update(self, rev=None):
-        raise Exception
+        """Update the repository to a revision.
+
+        This method is to be overridden in a subclass with the SCM-specific
+        commands.
+
+        Parameters:
+            rev=None (string or None): The revision to update to.  If None,
+                the revision will be fetched from versions.json.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
     def tracked_version(self):
+        """Get this repository's expected version from versions.json.
+
+        Returns:
+            A string representation of the tracked version.
+        """
         tracked_rev = json.load(open('versions.json'))[self.local_path]
         if type(tracked_rev) is DictType:
             user_os = platform.system()
             return tracked_rev[user_os]
+        elif tracked_rev.startswith('REQUIREMENTS_TXT'):
+            pkgname = tracked_rev.split(':')[1]
+            version =_parse_version_requirement(pkgname)
+            if version is None:
+                raise ValueError((
+                    'Versions.json requirement string must have the '
+                    'format "REQUIREMENTS_TXT:<pkgname>".  Example: '
+                    '"REQUIREMENTS_TXT:pygeoprocessing".  %s found.'
+                    ) % tracked_rev)
+            tracked_rev = version
         return tracked_rev
 
     def at_known_rev(self):
+        """Identify whether the Repository is at the expected revision.
+
+        Returns:
+            A boolean.
+        """
         if not self.ischeckedout():
             return False
 
@@ -228,13 +293,81 @@ class Repository(object):
         return self.current_rev() == tracked_version
 
     def format_rev(self, rev):
-        raise Exception
+        """Get the uniquely-identifiable commit ID of `rev`.
 
-    def current_rev(self, convert=True):
-        raise Exception
+        This is particularly useful for SCMs that have multiple ways of
+        identifying commits.
+
+        Parameters:
+            rev (string): The revision to identify.
+
+        Returns:
+            The string id of the commit.
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
+
+    def current_rev(self):
+        """Fetch the current revision of the repository on disk.
+
+        This method should be overridden in a subclass with the SCM-specific
+        command(s).
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
 
-class HgRepository(Repository):
+class DVCSRepository(Repository):
+    """Abstract class for distributed revision control system repositories."""
+    tip = ''
+    statedir = ''
+    cmd = ''
+
+    def pull(self):
+        """Pull new changes from the remote.
+
+        This should be overridden in SCM-specific subclasses.
+
+        Returns:
+            None
+        """
+        raise NotImplementedError
+
+    def pull_and_retry(self, shell_string, cwd=None):
+        """Run a command, pulling new changes if needed.
+
+        Parameters:
+            shell_string (string): The formatted command to run.
+            cwd=None(string or None): The directory from which to execute
+                the command.  If None, the current working directory will be
+                used.
+
+        Returns:
+            None
+
+        Raises:
+            BuildFailure: Raised when the shell command fails after pulling.
+        """
+        for check_again in [True, False]:
+            try:
+                return sh(shell_string, cwd=cwd, capture=True).rstrip()
+            except BuildFailure as failure:
+                if check_again is True:
+                    # Pull and try to run again
+                    # Assumes that self.pull is implemented in the DVCS
+                    # subclass.
+                    self.pull()
+                else:
+                    raise failure
+
+
+class HgRepository(DVCSRepository):
     tip = 'tip'
     statedir = '.hg'
     cmd = 'hg'
@@ -251,22 +384,14 @@ class HgRepository(Repository):
                                             'url': self.remote_url})
 
     def update(self, rev):
-        sh('hg update -R %(dest)s -r %(rev)s' % {'dest': self.local_path,
-                                                 'rev': rev})
+        update_string = 'hg update -R {dest} -r {rev}'.format(
+            dest=self.local_path, rev=rev)
+        return self.pull_and_retry(update_string)
 
     def _format_log(self, template='', rev='.'):
-        for check_again in [True, False]:
-            try:
-                return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
-                    'dest': self.local_path, 'rev': rev, 'template': template},
-                    capture=True).rstrip()
-            except BuildFailure as failure:
-                if check_again is True:
-                    # Pull and try to format again
-                    self.pull()
-                else:
-                    raise failure
-
+        log_string = 'hg log -R {dest} -r {rev} --template="{template}"'.format(
+            dest=self.local_path, rev=rev, template=template)
+        return self.pull_and_retry(log_string)
 
     def format_rev(self, rev):
         return self._format_log('{node}', rev=rev)
@@ -286,14 +411,42 @@ class SVNRepository(Repository):
     statedir = '.svn'
     cmd = 'svn'
 
+    def at_known_rev(self):
+        """Determine repo status from `svn status`
+
+        Overridden from Repository.at_known_rev(...).  SVN info does not
+        correctly report the status of the repository in the version number,
+        so we must parse the output of `svn status` to see if a checkout or
+        update was interrupted.
+
+        Returns True if the repository is up-to-date.  False if not."""
+        # Parse the output of SVN status.
+        repo_status = sh('svn status', cwd=self.local_path, capture=True)
+        for line in repo_status:
+            if line.split()[0] in ['!', 'L']:
+                print 'Checkout or update incomplete!  Repo NOT at known rev.'
+                return False
+
+        print 'Status ok.'
+        return Repository.at_known_rev(self)
+
+    def _cleanup_and_retry(self, cmd, *args, **kwargs):
+        """Run SVN cleanup."""
+        for retry in [True, False]:
+            try:
+                cmd(*args, **kwargs)
+            except BuildFailure as failure:
+                if retry:
+                    print 'Cleaning up SVN repository %s' % self.local_path
+                    sh('svn cleanup', cwd=self.local_path)
+                else:
+                    raise failure
+
     def clone(self, rev=None):
         if rev is None:
             rev = self.tracked_version()
-        paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
-
-    def pull(self):
-        # svn is centralized, so there's no concept of pull without a checkout.
-        return
+        self._cleanup_and_retry(paver.svn.checkout, self.remote_url,
+                                self.local_path, revision=rev)
 
     def update(self, rev):
         # check that the repository URL hasn't changed.  If it has, update to
@@ -304,7 +457,7 @@ class SVNRepository(Repository):
                 orig_url=local_copy_info.repository_root,
                 new_url=self.remote_url), cwd=self.local_path)
 
-        paver.svn.update(self.local_path, rev)
+        self._cleanup_and_retry(paver.svn.update, self.local_path, rev)
 
     def current_rev(self):
         try:
@@ -321,7 +474,7 @@ class SVNRepository(Repository):
         return rev
 
 
-class GitRepository(Repository):
+class GitRepository(DVCSRepository):
     tip = 'master'
     statedir = '.git'
     cmd = 'git'
@@ -337,23 +490,17 @@ class GitRepository(Repository):
         sh('git fetch %(url)s' % {'url': self.remote_url}, cwd=self.local_path)
 
     def update(self, rev):
-        sh('git checkout %(rev)s' % {'rev': rev}, cwd=self.local_path)
+        update_string = 'git checkout {rev}'.format(rev=rev)
+        self.pull_and_retry(update_string, cwd=self.local_path)
 
     def current_rev(self):
-        return sh('git rev-parse --verify HEAD', cwd=self.local_path,
-                  capture=True).rstrip()
+        rev_cmd_string = 'git rev-parse --verify HEAD'
+        return self.pull_and_retry(rev_cmd_string, cwd=self.local_path)
 
     def format_rev(self, rev):
-        for check_again in [True, False]:
-            try:
-                return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
-                          capture=True, cwd=self.local_path)
-            except BuildFailure as failure:
-                if check_again is True:
-                    # Pull and try to format again
-                    self.pull()
-                else:
-                    raise failure
+        log_string = 'git log --format=format:%H -1 {rev}'.format(rev=rev)
+        return self.pull_and_retry(log_string, cwd=self.local_path)
+
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
@@ -554,6 +701,46 @@ def dev_env(options):
         'dev': True,
     })
 
+
+def _read_requirements_dict():
+    """Read requirments.txt into a dict.
+
+    Returns:
+        A dict mapping {projectname: requirement}.
+
+    Example:
+        >>> _read_requirements_dict()
+        {'pygeoprocessing': 'pygeoprocessing>=0.3.0a12', ...}
+    """
+    reqs = {}
+    for line in open('requirements.txt'):
+        line = line.strip()
+        parsed_req = pkg_resources.Requirement.parse(line)
+        reqs[parsed_req.project_name] = line
+    return reqs
+
+
+def _parse_version_requirement(pkg_name):
+    """Parse a version requirement from requirements.txt.
+
+    Returns the first parsed version that meets the >= requirement.
+
+    Parameters:
+        pkg_name (string): The string package name to search for.
+
+    Returns:
+        The string version or None if no >= version requirement can be parsed.
+
+    """
+    for line in open('requirements.txt'):
+        if line.startswith(pkg_name):
+            # Assume that we only have one version spec to deal with.
+            version_specs = pkg_resources.Requirement.parse(line).specs
+            for requirement_type, version in version_specs:
+                if requirement_type == '>=':
+                    return version
+
+
 @task
 @cmdopts([
     ('system-site-packages', '', ('Give the virtual environment access '
@@ -609,14 +796,22 @@ def after_install(options, home_dir):
         "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
     ).format(src_distutils_cfg=source_file)
 
+    # Track preinstalled packages so we don't install them twice.
+    preinstalled_pkgs = set([])
+
     if options.env.with_pygeoprocessing:
         # install with --no-deps (will otherwise try to install numpy, gdal,
         # etc.), and -I to ignore any existing pygeoprocessing install (as
         # might exist in system-site-packages).
+        # Installing as egg grants pygeoprocessing greater precendence in the
+        # import order.  If I install as a wheel, the system install of
+        # pygeoprocessing takes precedence.  I believe this to be a bug in
+        # pygeoprocessing (poster, for example, does not have this issue!).
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
-            "'--no-deps', '-I', './src/pygeoprocessing'])\n"
+            "'--no-deps', '-I', '--egg', './src/pygeoprocessing'])\n"
         )
+        preinstalled_pkgs.add('pygeoprocessing')
     else:
         print 'Skipping the installation of pygeoprocessing per user input.'
 
@@ -625,9 +820,15 @@ def after_install(options, home_dir):
         requirements_files.append(options.env.requirements)
 
     # extra parameter strings needed for installing certain packages
-    # Always install natcap.versioner to the env over whatever else is there.
+    # Always install nose, natcap.versioner to the env over whatever else
+    # is there.
     pkg_pip_params = {
-        'natcap.versioner': ['-I']
+        'nose': ['-I'],
+        'natcap.versioner': ['-I'],
+        # Pygeoprocessing wheels are compiled against specific versions of
+        # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
+        # installed numpy.  Force compilation from source to avoid this issue.
+        'pygeoprocessing': NO_WHEEL_SH.split(),
     }
     if options.env.dev:
         # I only want to install natcap namespace packages as flat wheels if
@@ -653,6 +854,10 @@ def after_install(options, home_dir):
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
             projectname = requirement.project_name  # project name w/o version req
+            if projectname in preinstalled_pkgs:
+                print ('Requirement %s from requirements.txt already '
+                       'installed') % projectname
+                continue
             try:
                 install_params = pkg_pip_params[projectname]
                 extra_params = _format_params(install_params)
@@ -808,7 +1013,7 @@ def fetch(args, options):
                                    '{repo}').format(repo=repo_path))
 
         if options.dry_run:
-            print 'Fetching {parh}'.format(user_requested_repo.local_path)
+            print 'Fetching {path}'.format(user_requested_repo.local_path)
             continue
         else:
             user_requested_repo.get(target_rev)
@@ -957,7 +1162,15 @@ def push(args):
 
         target_filename = _fix_path(target_filename)  # convert windows to linux paths
         print 'Transferring %s -> %s ' % (os.path.basename(transfer_file), target_filename)
-        sftp.put(transfer_file, target_filename, callback=_sftp_callback)
+        for repeat in [True, True, False]:
+            try:
+                sftp.put(transfer_file, target_filename, callback=_sftp_callback)
+            except IOError as filesize_inconsistency:
+                # IOError raised when the file on the other end reports a
+                # different filesize than what we sent.
+                if not repeat:
+                    raise filesize_inconsistency
+
 
     print 'Closing down SCP'
     sftp.close()
@@ -1347,6 +1560,7 @@ def check(options):
     required = 'required'
     suggested = 'suggested'
     lib_needed = 'lib_needed'
+    install_managed = 'install_managed'
 
     # (requirement, level, version_getter, special_install_message)
     # requirement: This is the setuptools package requirement string.
@@ -1356,12 +1570,16 @@ def check(options):
     # special_install_message: A special installation message if needed.
     #    If None, no special message will be shown after the conflict report.
     #    This is only for use by required packages.
+    #
+    # NOTE: This list is for tracking packages with special notes, warnings or
+    # import conditions ONLY.  Version requirements should be tracked in
+    # versions.json ONLY.
     print bold("\nChecking python packages")
     requirements = [
         # requirement, level, version_getter, special_install_message
-        ('setuptools>=8.0', required, None, None),  # 8.0 implements pep440
-        ('virtualenv>=12.0.1', required, None, None),
-        ('pip>=6.0.0', required, None, None),
+        ('setuptools', required, None, None),  # 8.0 implements pep440
+        ('virtualenv', required, None, None),
+        ('pip', required, None, None),
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
         ('paramiko', suggested, None, None),
@@ -1369,7 +1587,17 @@ def check(options):
         ('h5py', lib_needed,  None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
+        ('poster', lib_needed,  None, None),
+        ('pyyaml', required, 'yaml', None),
+        ('pygeoprocessing', install_managed, None, None),
     ]
+
+    try:
+        # poster stores its version in a triple of ints
+        import poster
+        poster.__version__ = '.'.join([str(i) for i in poster.version])
+    except ImportError:
+        pass
 
     # pywin32 is required for pyinstaller builds
     if platform.system() == 'Windows':
@@ -1421,8 +1649,28 @@ def check(options):
         # of it.
         requirements.append(('wheel', required, None, None))
 
+    # Compare the above-defined requirements with those in requirements.txt
+    # The resulting set should be the union of the two.  Package verison
+    # requirements should be stored in requirements.txt.
+    existing_reqs = set([pkg_resources.Requirement.parse(r[0]).project_name
+                         for r in requirements])
+    requirements_txt_dict = _read_requirements_dict()
+    for reqname, req in requirements_txt_dict.iteritems():
+        if reqname not in existing_reqs:
+            requirements.append((req, required, None, None))
+
     warnings_found = False
-    for requirement, severity, import_name, install_msg in requirements:
+    for requirement, severity, import_name, install_msg in sorted(
+        requirements, key=lambda x: x[0].lower()):
+        # We handle natcap namespace packages specially below.
+        if requirement.startswith('natcap'):
+            continue
+
+        try:
+            requirement = requirements_txt_dict[requirement]
+        except KeyError:
+            pass
+
         try:
             pkg_resources.require(requirement)
             pkg_req = pkg_resources.Requirement.parse(requirement)
@@ -1436,6 +1684,9 @@ def check(options):
                 pkg=pkg_req.project_name,
                 ver=pkg.__version__,
                 req=requirement)
+        except AttributeError as error:
+            print 'Could not define module ', pkg
+            raise error
         except (pkg_resources.VersionConflict,
                 pkg_resources.DistributionNotFound) as conflict:
             if not hasattr(conflict, 'report'):
@@ -1468,6 +1719,11 @@ def check(options):
                            'package.').format(warning=WARNING,
                                               report=conflict.report())
                 warnings_found = True
+            elif severity == 'install_managed':
+                print ('{warning} {pkg} is required, but will be '
+                       'installed automatically if needed for paver.').format(
+                            warning=WARNING,
+                            pkg=requirement)
             else:  # severity is 'suggested'
                 print '{warning} {report}'.format(warning=WARNING,
                                                   report=conflict.report())
@@ -1844,7 +2100,8 @@ def build_bin(options):
 
             cwd = os.getcwd()
             # Unzip the tar.gz and run bdist_egg on it.
-            versioner_tgz = os.path.abspath(glob.glob('dist/natcap.versioner-*.tar.gz')[0])
+            versioner_tgz = os.path.abspath(
+                glob.glob('dist/natcap.versioner-*.tar.gz')[0])
             os.chdir('dist')
             dry('unzip %s' % versioner_tgz,
                 lambda tgz: tarfile.open(tgz, 'r:gz').extractall('.'),
@@ -1856,8 +2113,13 @@ def build_bin(options):
 
             # Copy the new egg to the built distribution with the eggs in it.
             # Both these folders should already be absolute paths.
-            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist', 'natcap.versioner-*'))[0]
-            versioner_egg_dest = os.path.join(invest_dist, 'eggs', os.path.basename(versioner_egg))
+            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist',
+                                                   'natcap.versioner-*'))[0]
+            egg_dirname = os.path.join(invest_dist, 'eggs')
+            versioner_egg_dest = os.path.join(egg_dirname,
+                                              os.path.basename(versioner_egg))
+            if not os.path.exists(egg_dirname):
+                os.makedirs(egg_dirname)
             dry('cp %s %s' % (versioner_egg, versioner_egg_dest),
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
@@ -2529,6 +2791,13 @@ def compress_raster(args):
     """
     parser = argparse.ArgumentParser(description=(
         'Compress a GDAL-compatible raster.'))
+    parser.add_argument('-x', '--blockxsize', default=0, type=int, help=(
+        'The block size along the X axis.  Default=inraster block'))
+    parser.add_argument('-y', '--blockysize', default=0, type=int, help=(
+        'The block size along the Y axis.  Default=inraster block'))
+    parser.add_argument('-c', '--compression', default='LZW', type=str, help=(
+        'Compress the raster.  Valid options: NONE, LZW, DEFLATE, PACKBITS. '
+        'Default: LZW'))
     parser.add_argument('inraster', type=str, help=(
         'The raster to compress'))
     parser.add_argument('outraster', type=str, help=(
@@ -2536,53 +2805,38 @@ def compress_raster(args):
 
     parsed_args = parser.parse_args(args)
 
+    # import GDAL here because I don't want it to be a requirement to be able
+    # to run all paver functions.
+    from osgeo import gdal
+    in_raster = gdal.Open(parsed_args.inraster)
+    in_band = in_raster.GetRasterBand(1)
+    block_x, block_y = in_band.GetBlockSize()
+    if parsed_args.blockxsize == 0:
+        parsed_args.blockxsize = block_x
+    block_x_opt = '-co "BLOCKXSIZE=%s"' % parsed_args.blockxsize
+
+    if parsed_args.blockysize == 0:
+        parsed_args.blockysize = block_y
+    block_y_opt = '-co "BLOCKYSIZE=%s"' % parsed_args.blockysize
+
+    if parsed_args.blockysize % 2 == 0 and parsed_args.blockysize % 2 == 0:
+        tile_cmd = '-co "TILED=YES"'
+    else:
+        tile_cmd = ''
+
     sh(('gdal_translate '
         '-of "GTiff" '
+        '{tile} '
+        '{block_x} '
+        '{block_y} '
         '-co "COMPRESS=LZW" '
         '{in_raster} {out_raster}').format(
+            tile=tile_cmd,
+            block_x=block_x_opt,
+            block_y=block_y_opt,
             in_raster=os.path.abspath(parsed_args.inraster),
             out_raster=os.path.abspath(parsed_args.outraster),
         ))
-
-
-@task
-@consume_args
-def tile_raster(args):
-    """
-    Tile a raster.
-
-    Call `paver tile_raster --help` for full details.
-    """
-    parser = argparse.ArgumentParser(description=(
-        'Tile a GDAL-compatible raster.'))
-    parser.add_argument('-x', '--blockxsize', nargs='?', default=256, type=int, help=(
-        'The block size along the X axis.  Default=256'))
-    parser.add_argument('-y', '--blockysize', nargs='?', default=256, type=int, help=(
-        'The block size along the Y axis.  Default=256'))
-    parser.add_argument('--compress', action='store_true', help=(
-        'Compress the raster as well as tile'))
-    parser.add_argument('inraster', type=str, help=(
-        'The raster to tile'))
-    parser.add_argument('outraster', type=str, help=(
-        'The path to the output raster'))
-
-    parsed_args = parser.parse_args(args)
-    print parsed_args
-
-    sh(('gdal_translate '
-        '-of "GTiff" '
-        '-co "TILED=YES" '
-        '-co "COMPRESS={compress}" '
-        '-co "BLOCKXSIZE={blockx}" '
-        '-co "BLOCKYSIZE={blocky}" '
-        '{in_raster} {out_raster}').format(
-            compress='LZW' if parsed_args.compress else 'NONE',
-            blockx=parsed_args.blockxsize,
-            blocky=parsed_args.blockysize,
-            in_raster=os.path.abspath(parsed_args.inraster),
-            out_raster=os.path.abspath(parsed_args.outraster),
-        ))
-
 
 
 @task
@@ -2635,7 +2889,7 @@ def test(args):
                 'fetch': True,
             })
             call_task('check_repo', options={
-                'repo': REPOS_DICT['sample-data'].local_path,
+                'repo': REPOS_DICT['invest-data'].local_path,
                 'fetch': True,
             })
             jenkins_flags = (
@@ -2768,13 +3022,14 @@ def jenkins_push_artifacts(options):
     pkey = None
     if getattr(options.jenkins_push_artifacts, 'private_key', False):
         pkey = options.jenkins_push_artifacts.private_key
-    elif platform.system() == 'Windows':
-        # Assume a default private key location for jenkins builds on
-        # Windows
+    elif platform.system() in ['Windows', 'Darwin', 'Linux']:
+        # Assume a default private key location for jenkins builds
+        # On Windows, this assumes that the key is in .ssh (might be the cygwin
+        # home directory).
         pkey = os.path.join(os.path.expanduser('~'),
                             '.ssh', 'dataportal-id_rsa')
     else:
-        print ('No private key provided, and not on Windows, so not '
+        print ('No private key provided, and not on a known system, so not '
                'assuming a default private key file')
 
     push_args = {
