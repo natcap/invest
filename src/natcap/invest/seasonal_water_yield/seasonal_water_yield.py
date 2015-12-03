@@ -718,6 +718,7 @@ def _aggregate_recharge(
 
     aggregate_vector = esri_driver.CopyDataSource(
         original_aoi_vector, aggregate_vector_path)
+    ogr.DataSource.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
     aggregate_layer = aggregate_vector.GetLayer()
 
@@ -760,6 +761,10 @@ def _aggregate_recharge(
     # don't need a random poly id anymore
     aggregate_layer.DeleteField(
         serviceshed_defn.GetFieldIndex(poly_id_field))
+
+    aggregate_layer = None
+    ogr.DataSource.__swig_destroy__(aggregate_vector)
+    aggregate_vector = None
 
 
 def _sum_valid(raster_path):

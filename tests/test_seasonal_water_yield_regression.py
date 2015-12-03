@@ -64,6 +64,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'threshold_flow_accumulation': '1000',
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
+            'monthly_alpha': False,
         }
 
         with self.assertRaises(ValueError):
@@ -101,6 +102,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'threshold_flow_accumulation': '1000',
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
+            'monthly_alpha': False,
         }
 
         with self.assertRaises(ValueError):
@@ -136,6 +138,12 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
                     numpy.testing.assert_almost_equal(
                         feature.GetField(field), value,
                         decimal=tolerance_places)
+                ogr.Feature.__swig_destroy__(feature)
+                feature = None
+
+        result_layer = None
+        ogr.DataSource.__swig_destroy__(result_vector)
+        result_vector = None
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_duplicate_aoi_assertion(self):
@@ -165,6 +173,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'threshold_flow_accumulation': '1000',
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
+            'monthly_alpha': False,
         }
         with self.assertRaises(ValueError):
             seasonal_water_yield.execute(args)
@@ -282,6 +291,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         # make args explicit that this is a base run of SWY
         args['user_defined_climate_zones'] = False
         args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
         args['results_suffix'] = ''
 
         seasonal_water_yield.execute(args)
@@ -312,6 +322,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             SAMPLE_DATA, 'climate_zone_events.csv')
         args['user_defined_climate_zones'] = True
         args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
         args['results_suffix'] = 'cz'
 
         seasonal_water_yield.execute(args)
@@ -339,6 +350,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         # modify args to account for user recharge
         args['user_defined_climate_zones'] = False
         args['user_defined_local_recharge'] = True
+        args['monthly_alpha'] = False
         args['results_suffix'] = ''
         args['l_path'] = os.path.join(REGRESSION_DATA, 'L.tif')
 
@@ -399,6 +411,12 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                     numpy.testing.assert_almost_equal(
                         feature.GetField(field), value,
                         decimal=tolerance_places)
+                ogr.Feature.__swig_destroy__(feature)
+                feature = None
+
+        result_layer = None
+        ogr.DataSource.__swig_destroy__(result_vector)
+        result_vector = None
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
