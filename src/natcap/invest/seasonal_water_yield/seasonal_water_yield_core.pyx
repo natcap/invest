@@ -29,6 +29,7 @@ cdef extern from "time.h" nogil:
 
 import pygeoprocessing
 cimport pygeoprocessing.routing.routing_core
+from pygeoprocessing.routing.routing_core cimport BlockCache
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -42,144 +43,6 @@ cdef double INF = numpy.inf
 cdef int N_BLOCK_ROWS = 6
 cdef int N_BLOCK_COLS = 6
 
-cdef class BlockCache_SWY:
-    cdef numpy.int32_t[:,:] row_tag_cache
-    cdef numpy.int32_t[:,:] col_tag_cache
-    cdef numpy.int8_t[:,:] cache_dirty
-    cdef int n_block_rows
-    cdef int n_block_cols
-    cdef int block_col_size
-    cdef int block_row_size
-    cdef int n_rows
-    cdef int n_cols
-    band_list = []
-    block_list = []
-    update_list = []
-
-    def __cinit__(
-            self, int n_block_rows, int n_block_cols, int n_rows, int n_cols,
-            int block_row_size, int block_col_size, band_list, block_list,
-            update_list, numpy.int8_t[:,:] cache_dirty):
-        self.n_block_rows = n_block_rows
-        self.n_block_cols = n_block_cols
-        self.block_col_size = block_col_size
-        self.block_row_size = block_row_size
-        self.n_rows = n_rows
-        self.n_cols = n_cols
-        self.row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
-        self.col_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
-        self.cache_dirty = cache_dirty
-        self.row_tag_cache[:] = -1
-        self.col_tag_cache[:] = -1
-        self.band_list[:] = band_list
-        self.block_list[:] = block_list
-        self.update_list[:] = update_list
-        list_lengths = [len(x) for x in [band_list, block_list, update_list]]
-        if len(set(list_lengths)) > 1:
-            raise ValueError(
-                "lengths of band_list, block_list, update_list should be equal."
-                " instead they are %s", list_lengths)
-        raster_dimensions_list = [(b.YSize, b.XSize) for b in band_list]
-        for raster_n_rows, raster_n_cols in raster_dimensions_list:
-            if raster_n_rows != n_rows or raster_n_cols != n_cols:
-                raise ValueError(
-                    "a band was passed in that has a different dimension than"
-                    "the memory block was specified as")
-
-        for band in band_list:
-            block_col_size, block_row_size = band.GetBlockSize()
-            if block_col_size == 1 or block_row_size == 1:
-                LOGGER.warn(
-                    'a band in BlockCache is not memory blocked, this might '
-                    'make the runtime slow for other algorithms. %s',
-                    band.GetDescription())
-
-    def __dealloc__(self):
-        self.band_list[:] = []
-        self.block_list[:] = []
-        self.update_list[:] = []
-
-    #@cython.boundscheck(False)
-    @cython.wraparound(False)
-    #@cython.cdivision(True)
-    cdef void update_cache(self, int global_row, int global_col, int *row_index, int *col_index, int *row_block_offset, int *col_block_offset):
-        cdef int cache_row_size, cache_col_size
-        cdef int global_row_offset, global_col_offset
-        cdef int row_tag, col_tag
-
-        row_block_offset[0] = global_row % self.block_row_size
-        row_index[0] = (global_row // self.block_row_size) % self.n_block_rows
-        row_tag = (global_row // self.block_row_size) // self.n_block_rows
-
-        col_block_offset[0] = global_col % self.block_col_size
-        col_index[0] = (global_col // self.block_col_size) % self.n_block_cols
-        col_tag = (global_col // self.block_col_size) // self.n_block_cols
-
-        cdef int current_row_tag = self.row_tag_cache[row_index[0], col_index[0]]
-        cdef int current_col_tag = self.col_tag_cache[row_index[0], col_index[0]]
-
-        if current_row_tag != row_tag or current_col_tag != col_tag:
-            if self.cache_dirty[row_index[0], col_index[0]]:
-                global_col_offset = (current_col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
-                cache_col_size = self.n_cols - global_col_offset
-                if cache_col_size > self.block_col_size:
-                    cache_col_size = self.block_col_size
-
-                global_row_offset = (current_row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
-                cache_row_size = self.n_rows - global_row_offset
-                if cache_row_size > self.block_row_size:
-                    cache_row_size = self.block_row_size
-
-                for band, block, update in zip(self.band_list, self.block_list, self.update_list):
-                    if update:
-                        band.WriteArray(block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size],
-                            yoff=global_row_offset, xoff=global_col_offset)
-                self.cache_dirty[row_index[0], col_index[0]] = 0
-            self.row_tag_cache[row_index[0], col_index[0]] = row_tag
-            self.col_tag_cache[row_index[0], col_index[0]] = col_tag
-
-            global_col_offset = (col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
-            global_row_offset = (row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
-
-            cache_col_size = self.n_cols - global_col_offset
-            if cache_col_size > self.block_col_size:
-                cache_col_size = self.block_col_size
-            cache_row_size = self.n_rows - global_row_offset
-            if cache_row_size > self.block_row_size:
-                cache_row_size = self.block_row_size
-
-            for band_index, (band, block) in enumerate(zip(self.band_list, self.block_list)):
-                band.ReadAsArray(
-                    xoff=global_col_offset, yoff=global_row_offset,
-                    win_xsize=cache_col_size, win_ysize=cache_row_size,
-                    buf_obj=block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size])
-
-    cdef void flush_cache(self):
-        cdef int global_row_offset, global_col_offset
-        cdef int cache_row_size, cache_col_size
-        cdef int row_index, col_index
-        for row_index in xrange(self.n_block_rows):
-            for col_index in xrange(self.n_block_cols):
-                row_tag = self.row_tag_cache[row_index, col_index]
-                col_tag = self.col_tag_cache[row_index, col_index]
-
-                if self.cache_dirty[row_index, col_index]:
-                    global_col_offset = (col_tag * self.n_block_cols + col_index) * self.block_col_size
-                    cache_col_size = self.n_cols - global_col_offset
-                    if cache_col_size > self.block_col_size:
-                        cache_col_size = self.block_col_size
-
-                    global_row_offset = (row_tag * self.n_block_rows + row_index) * self.block_row_size
-                    cache_row_size = self.n_rows - global_row_offset
-                    if cache_row_size > self.block_row_size:
-                        cache_row_size = self.block_row_size
-
-                    for band, block, update in zip(self.band_list, self.block_list, self.update_list):
-                        if update:
-                            band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
-                                yoff=global_row_offset, xoff=global_col_offset)
-        for band in self.band_list:
-            band.FlushCache()
 
 #@cython.boundscheck(False)
 @cython.wraparound(False)
@@ -332,7 +195,7 @@ cdef route_local_recharge(
 
     cache_dirty[:] = 0
 
-    cdef BlockCache_SWY block_cache = BlockCache_SWY(
+    cdef BlockCache block_cache = BlockCache(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
         block_row_size, block_col_size,
         band_list, block_list, update_list, cache_dirty)
@@ -584,7 +447,7 @@ def calculate_r_sum_avail_pour(
     update_list = [False, False, False, True]
     cache_dirty[:] = 0
 
-    cdef BlockCache_SWY block_cache = BlockCache_SWY(
+    cdef BlockCache block_cache = BlockCache(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
         block_row_size, block_col_size,
         band_list, block_list, update_list, cache_dirty)
@@ -756,7 +619,7 @@ def route_baseflow_sum(
     update_list = [False] * 6 + [True]
     cache_dirty[:] = 0
 
-    cdef BlockCache_SWY block_cache = BlockCache_SWY(
+    cdef BlockCache block_cache = BlockCache(
         N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
         block_row_size, block_col_size,
         band_list, block_list, update_list, cache_dirty)
