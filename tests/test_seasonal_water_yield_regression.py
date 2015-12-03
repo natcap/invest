@@ -302,6 +302,33 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
+    def test_monthly_alpha_regression(self):
+        """SWY monthly alpha values regression test on sample data
+
+        Executes SWY using the monthly alpha table and checks that the output
+        files are generated and that the aggregate shapefile fields are the
+        same as theregression case."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = True
+        args['monthly_alpha_path'] = os.path.join(
+            SAMPLE_DATA, 'monthly_alpha.csv')
+        args['results_suffix'] = ''
+
+        seasonal_water_yield.execute(args)
+
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            args['workspace_dir'],
+            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
+            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_climate_zones_regression(self):
