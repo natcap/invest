@@ -427,8 +427,10 @@ def execute(args):
 
         # Get a dictionary from the sub-watershed shapefiles attributes based
         # on the fields to be outputted to the CSV table
-        wyield_value_dict_sws = extract_datasource_table_by_key(
-                subwatershed_results_uri, 'subws_id', field_list_sws)
+        wyield_values_sws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+                subwatershed_results_uri, 'subws_id')
+
+        wyield_value_dict_sws = filter_dictionary(wyield_values_sws, field_list_sws)
 
         LOGGER.debug('wyield_value_dict_sws : %s', wyield_value_dict_sws)
 
@@ -473,8 +475,10 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    wyield_value_dict_ws = extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id', field_list_ws)
+    wyield_values_ws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+            watershed_results_uri, 'ws_id')
+
+    wyield_value_dict_ws = filter_dictionary(wyield_values_ws, field_list_ws)
 
     LOGGER.debug('wyield_value_dict_ws : %s', wyield_value_dict_ws)
 
@@ -548,8 +552,10 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    watershed_dict = extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id', field_list_ws)
+    watershed_values = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+            watershed_results_uri, 'ws_id')
+
+    watershed_dict = filter_dictionary(watershed_values, field_list_ws)
 
     #Don't need this anymore
     os.remove(tmp_demand_uri)
@@ -604,8 +610,10 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    watershed_dict_ws = extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id', field_list_ws)
+    watershed_values_ws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+            watershed_results_uri, 'ws_id')
+
+    watershed_dict_ws = filter_dictionary(watershed_values_ws, field_list_ws)
 
     # Write out the CSV Table
     write_new_table(
@@ -724,44 +732,33 @@ def compute_rsupply_volume(watershed_results_uri):
 
         ws_layer.SetFeature(ws_feat)
 
-def extract_datasource_table_by_key(
-        datasource_uri, key_field, wanted_list):
-    """Create a dictionary lookup table of the features in the attribute table
-        of the datasource referenced by datasource_uri.
+def filter_dictionary(dict_data, values):
+    """
+    Create a subset of a dictionary given keys found in a list.
 
-        datasource_uri - a uri to an OGR datasource
-        key_field - a field in datasource_uri that refers to a key (unique) value
-            for each row; for example, a polygon id.
-        wanted_list - a list of field names to add to the dictionary. This is
-            helpful if there are fields that are not wanted to be returned
+    The incoming dictionary should have keys that point to dictionary's.
+        Create a subset of that dictionary by using the same outer keys
+        but only using the inner key:val pair if that inner key is found
+        in the values list.
 
-        returns a dictionary of the form {key_field_0:
-            {field_0: value0, field_1: value1}...}"""
+    Parameters:
+        dict_data (dictionary): a dictionary that has keys which point to
+            dictionary's.
+        values (list): a list of keys to keep from the inner dictionary's
+            of 'dict_data'
 
-    # Pull apart the datasource
-    datasource = ogr.Open(datasource_uri)
-    layer = datasource.GetLayer()
-    layer_def = layer.GetLayerDefn()
+    Returns:
+        a dictionary
+    """
+    new_dict = {}
 
-    # Build up a list of field names for the datasource table
-    field_names = []
-    for field_id in xrange(layer_def.GetFieldCount()):
-        field_def = layer_def.GetFieldDefn(field_id)
-        field_names.append(field_def.GetName())
+    for key, val in dict_data.iteritems():
+        new_dict[key] = {}
+        for sub_key, sub_val in val.iteritems():
+            if sub_key in values:
+                new_dict[key][sub_key] = sub_val
 
-    # Loop through each feature and build up the dictionary representing the
-    # attribute table
-    attribute_dictionary = {}
-    for feature_index in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_index)
-        feature_fields = {}
-        for field_name in field_names:
-            if field_name in wanted_list:
-                feature_fields[field_name] = feature.GetField(field_name)
-        key_value = feature.GetField(key_field)
-        attribute_dictionary[key_value] = feature_fields
-
-    return attribute_dictionary
+    return new_dict
 
 def write_new_table(filename, fields, data):
     """Create a new csv table from a dictionary
