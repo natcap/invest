@@ -44,7 +44,7 @@ cdef int N_BLOCK_ROWS = 6
 cdef int N_BLOCK_COLS = 6
 
 
-#@cython.boundscheck(False)
+@cython.boundscheck(False)
 @cython.wraparound(False)
 cdef route_local_recharge(
         precip_path_list, et0_path_list, kc_path_list, li_path,
@@ -391,7 +391,8 @@ def calculate_local_recharge(
         gamma, qfm_path_list, outflow_direction_path, outflow_weights_path,
         stream_path, outlet_cell_deque)
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def calculate_r_sum_avail_pour(
         l_sum_avail_path, outflow_weights_path, outflow_direction_path,
         l_sum_avail_pour_path):
@@ -526,6 +527,7 @@ def calculate_r_sum_avail_pour(
 
 @cython.wraparound(False)
 @cython.cdivision(True)
+@cython.boundscheck(False)
 def route_baseflow_sum(
     dem_path, l_path, l_avail_path, l_sum_path,
     outflow_direction_path, outflow_weights_path, stream_path, b_sum_path):
