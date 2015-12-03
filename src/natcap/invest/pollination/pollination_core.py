@@ -3,6 +3,7 @@
 import shutil
 import os
 import logging
+import math
 
 import gdal
 import osr
@@ -612,32 +613,65 @@ def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
 
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
-        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
-        options=['BIGTIFF=IF_SAFER'])
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=['BIGTIFF=IF_SAFER'])
 
-    #Make some kind of geotransform, it doesn't matter what but
-    #will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
     srs = osr.SpatialReference()
-    srs.SetUTM( 11, 1 )
-    srs.SetWellKnownGeogCS( 'NAD27' )
-    kernel_dataset.SetProjection( srs.ExportToWkt() )
+    srs.SetUTM(11, 1)
+    srs.SetWellKnownGeogCS('NAD27')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
 
     kernel_band = kernel_dataset.GetRasterBand(1)
     kernel_band.SetNoDataValue(-9999)
 
-    col_index = numpy.array(xrange(kernel_size))
-    integration = 0.0
-    for row_index in xrange(kernel_size):
-        distance_kernel_row = numpy.sqrt(
-            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
-        kernel = numpy.where(
-            distance_kernel_row > max_distance, 0.0, numpy.exp(-distance_kernel_row / expected_distance))
-        integration += numpy.sum(kernel)
-        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+    cols_per_block, rows_per_block = kernel_band.GetBlockSize()
 
-    for row_index in xrange(kernel_size):
-        kernel_row = kernel_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
-        kernel_row /= integration
-        kernel_band.WriteArray(kernel_row, 0, row_index)
+    n_cols = kernel_dataset.RasterXSize
+    n_rows = kernel_dataset.RasterYSize
+
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+
+    indices = []
+    for row_block_index in xrange(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
+
+        for col_block_index in xrange(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
+
+            indices.append((row_offset, col_offset,
+                            row_block_width, col_block_width))
+
+    integration = 0.0
+    for row_offset, col_offset, row_block_width, col_block_width in indices:
+        row_indices, col_indices = numpy.indices((row_block_width,
+                                                  col_block_width))
+        row_indices += row_offset - max_distance
+        col_indices += col_offset - max_distance
+
+        kernel_index_distances = numpy.sqrt(
+            numpy.add(row_indices ** 2,
+                      col_indices ** 2))
+        kernel = numpy.where(
+            kernel_index_distances > max_distance, 0.0,
+            numpy.exp(-kernel_index_distances / expected_distance))
+        integration += numpy.sum(kernel)
+
+        kernel_band.WriteArray(kernel, xoff=col_offset,
+                               yoff=row_offset)
+
+    for row_offset, col_offset, row_block_width, col_block_width in indices:
+        kernel_block = kernel_band.ReadAsArray(
+            xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
+            win_ysize=row_block_width)
+        kernel_block /= integration
+        kernel_band.WriteArray(kernel_block, xoff=col_offset, yoff=row_offset)
