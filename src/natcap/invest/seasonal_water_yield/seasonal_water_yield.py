@@ -17,6 +17,7 @@ from osgeo import gdal
 from osgeo import ogr
 import pygeoprocessing
 import pygeoprocessing.routing
+import pygeoprocessing.routing.routing_core
 import natcap.invest.utils
 
 import seasonal_water_yield_core
@@ -280,7 +281,7 @@ def execute(args):
         file_registry['flow_dir_path'])
 
     LOGGER.info('flow weights')
-    seasonal_water_yield_core.calculate_flow_weights(
+    pygeoprocessing.routing.routing_core.calculate_flow_weights(
         file_registry['flow_dir_path'],
         file_registry['outflow_weights_path'],
         file_registry['outflow_direction_path'])
