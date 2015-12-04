@@ -313,29 +313,20 @@ class OutOfCoreQuadTree(object):
                 the bounding box"""
 
         if not self._bounding_box_intersect(bounding_box):
-            return []
-
-        #this dynamically subdivides the quadtree
-        if (self.n_points_in_node > self.max_points_per_node and
-                self.node_depth < self.max_node_depth):
-            print ('dynamic splitting node on intersect node points for query '
-                   'at level %d, %d points' % (
-                        self.node_depth, self.n_points_in_node))
-            self._split_node(False)
-            self.flush()
+            return numpy.empty(0, dtype='a4,f4,f4')
 
         if self.is_leaf:
             #drain the node into a list, filter to current bounding box
-            point_list = [
+            point_list = numpy.array([
                 point for point in self._get_points_from_node() if _in_box(
-                    bounding_box, point[1], point[2])]
+                    bounding_box, point[1], point[2])], dtype='a4,f4,f4')
             return point_list
         else:
-            point_list = []
+            point_list = numpy.empty(0, dtype='a4,f4,f4')
             for node_index in xrange(4):
-                point_list += (
+                point_list = numpy.concatenate((
                     self.nodes[node_index].get_intersecting_points_in_bounding_box(
-                        bounding_box))
+                        bounding_box), point_list))
             return point_list
 
 

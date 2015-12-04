@@ -240,17 +240,19 @@ class RecModel(object):
             projected_point_list = local_points[
                 point_list_slice_index:
                 point_list_slice_index+POINTS_TO_ADD_PER_STEP]
-            for point_index in xrange(len(POINTS_TO_ADD_PER_STEP)):
+            for point_index in xrange(
+                    min(len(projected_point_list), POINTS_TO_ADD_PER_STEP)):
                 current_point = projected_point_list[point_index]
-                lng_coord = current_point[1]
-                lat_coord = current_point[2]
+                # convert to python float types rather than numpy.float32
+                lng_coord = float(current_point[1])
+                lat_coord = float(current_point[2])
                 x_coord, y_coord, _ = from_lat_trans.TransformPoint(
                     lng_coord, lat_coord)
                 projected_point_list[point_index] = (
                     current_point[0], x_coord, y_coord)
 
             local_qt.add_points(
-                projected_point_list, 0, projected_point_list.size)
+                projected_point_list, 0, len(projected_point_list))
         print 'saving local qt to %s' % local_qt_pickle_filename
         local_qt.flush()
 
