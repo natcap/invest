@@ -85,7 +85,7 @@ def execute(args):
     "Resources Research")
 
     Parameters:
-        output_dir (string): output directory for intermediate,
+        args['workspace_dir'] (string): output directory for intermediate,
         temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
             output files
