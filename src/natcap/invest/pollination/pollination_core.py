@@ -614,7 +614,9 @@ def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
         kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=['BIGTIFF=IF_SAFER'])
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
 
     # Make some kind of geotransform, it doesn't matter what but
     # will make GIS libraries behave better if it's all defined
