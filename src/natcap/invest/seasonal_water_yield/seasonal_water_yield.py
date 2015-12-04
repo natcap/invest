@@ -1,7 +1,8 @@
 """InVEST Seasonal Water Yield Model"""
 
+# This upgrades warnings to exceptions across this model.
 # I found this useful to catch all kinds of weird inputs to the model during
-# debugging and think it makes sense to have in production too.
+# debugging and think it makes sense to have in production of this model too.
 import warnings
 warnings.filterwarnings('error')
 
