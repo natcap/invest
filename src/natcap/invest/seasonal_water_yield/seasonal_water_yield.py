@@ -165,10 +165,10 @@ def execute(args):
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
-        alpha_month = dict([
+        alpha_month = dict(
             (key, val['alpha']) for key, val in
             pygeoprocessing.get_lookup_from_table(
-                args['monthly_alpha_path'], 'month').iteritems()])
+                args['monthly_alpha_path'], 'month').iteritems())
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
