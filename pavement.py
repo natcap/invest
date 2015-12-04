@@ -3088,7 +3088,8 @@ def jenkins_push_artifacts(options):
     if len(release_files) > 0:
         call_task('push', args=_push(release_dir) + release_files)
 
-    if len(data_files) > 0 and options.jenkins_push_artifacts.include_data:
+    if len(data_files) > 0 and getattr(options.jenkins_push_artifacts,
+                                       'include_data', False):
         call_task('push', args=_push(data_dir) + data_files)
 
     def _archive_present(substring):
