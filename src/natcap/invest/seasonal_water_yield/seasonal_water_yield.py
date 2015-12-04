@@ -172,8 +172,8 @@ def execute(args):
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
-        alpha_month = dict([
-            (month_index+1, alpha_m) for month_index in xrange(12)])
+        alpha_month = dict(
+            (month_index+1, alpha_m) for month_index in xrange(12))
 
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
