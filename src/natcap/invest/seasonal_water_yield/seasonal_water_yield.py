@@ -91,7 +91,7 @@ def execute(args):
             output files
         args['threshold_flow_accumulation'] (number): used when classifying
             stream pixels from the DEM by thresholding the number of upstream
-            cells that must flow int a cell before it's considered
+            cells that must flow into a cell before it's considered
             part of a stream.
         args['et0_dir'] (string): required if
             args['user_defined_local_recharge'] is False.  Path to a directory
