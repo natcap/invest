@@ -45,3 +45,8 @@ class InVESTImportTest(unittest.TestCase):
                 module = loader.find_module(name).load_module(name)
             except ImportError as exception:
                 LOGGER.exception(exception)
+            except AttributeError as attribute_exception:
+                # When a module cannot be imported, `loader` is None, so we get
+                # an AttributeError.
+                LOGGER.error('Module %s has no loader', name)
+                LOGGER.exception(attribute_exception)
