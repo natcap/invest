@@ -81,8 +81,8 @@ _TMP_BASE_FILES = {
 def execute(args):
     """This function invokes the InVEST seasonal water yield model described in
     "Spatial attribution of baseflow generation at the parcel level for
-    ecosystem-service valuation", Guswa, et. al (under review in Water
-    "Resources Research")
+    ecosystem-service valuation", Guswa, et. al (under review in "Water
+    Resources Research")
 
     Parameters:
         args['workspace_dir'] (string): output directory for intermediate,
