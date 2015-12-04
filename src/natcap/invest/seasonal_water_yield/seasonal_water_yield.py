@@ -116,8 +116,9 @@ def execute(args):
             aggregate over when calculating the output Qb.
         args['biophysical_table_path'] (string): path to a CSV table that maps
             landcover codes paired with soil group types to curve numbers as
-            well as Kc values.  Headers must be 'lucode', 'CN_A', 'CN_B',
-            'CN_C', 'CN_D', and 'Kc'.
+            well as Kc values.  Headers must include 'lucode', 'CN_A', 'CN_B',
+            'CN_C', 'CN_D', 'Kc_1', 'Kc_2', 'Kc_3', 'Kc_4', 'Kc_5', 'Kc_6',
+            'Kc_7', 'Kc_8', 'Kc_9', 'Kc_10', 'Kc_11', 'Kc_12'.
         args['rain_events_table_path'] (string): Not required if
             args['user_defined_local_recharge'] is True or
             args['user_defined_climate_zones'] is True.  Path to a CSV table
