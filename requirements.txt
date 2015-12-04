@@ -8,7 +8,7 @@ nose
 pip>=6.0.0
 poster
 pyamg>=2.2.1
-pygeoprocessing>=0.3.0a12
+pygeoprocessing>=0.3.0a13
 pyyaml
 scipy>=0.14.0
 setuptools>=8.0

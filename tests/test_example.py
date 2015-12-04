@@ -30,7 +30,8 @@ class ExampleTest(unittest.TestCase):
 
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(args['workspace_dir'], 'sum.tif'),
-            os.path.join(REGRESSION_DATA, 'regression_sum.tif'))
+            os.path.join(REGRESSION_DATA, 'regression_sum.tif'),
+            tolerance=1e-9)
 
         shutil.rmtree(args['workspace_dir'])
 
