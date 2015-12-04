@@ -5,6 +5,7 @@ matplotlib
 natcap.versioner>=0.2.4
 numpy
 nose
+coverage
 pip>=6.0.0
 poster
 pyamg>=2.2.1
