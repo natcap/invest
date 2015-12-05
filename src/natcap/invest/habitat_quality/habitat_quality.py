@@ -712,24 +712,23 @@ def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
 
-    indices = []
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
+    def indices():
+        for row_block_index in xrange(n_row_blocks):
+            row_offset = row_block_index * rows_per_block
+            row_block_width = n_rows - row_offset
+            if row_block_width > rows_per_block:
+                row_block_width = rows_per_block
 
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
+            for col_block_index in xrange(n_col_blocks):
+                col_offset = col_block_index * cols_per_block
+                col_block_width = n_cols - col_offset
+                if col_block_width > cols_per_block:
+                    col_block_width = cols_per_block
 
-            indices.append((row_offset, col_offset,
-                            row_block_width, col_block_width))
+                yield (row_offset, col_offset, row_block_width, col_block_width)
 
     integration = 0.0
-    for row_offset, col_offset, row_block_width, col_block_width in indices:
+    for row_offset, col_offset, row_block_width, col_block_width in indices():
         row_indices, col_indices = numpy.indices((row_block_width,
                                                   col_block_width))
         row_indices += row_offset - max_distance
@@ -746,7 +745,7 @@ def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
         kernel_band.WriteArray(kernel, xoff=col_offset,
                                yoff=row_offset)
 
-    for row_offset, col_offset, row_block_width, col_block_width in indices:
+    for row_offset, col_offset, row_block_width, col_block_width in indices():
         kernel_block = kernel_band.ReadAsArray(
             xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
             win_ysize=row_block_width)
