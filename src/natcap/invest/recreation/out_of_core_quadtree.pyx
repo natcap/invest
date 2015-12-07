@@ -22,8 +22,9 @@ from osgeo import osr
 cimport numpy
 
 MAX_BYTES_TO_BUFFER = 2**27  # buffer a little over 128 megabytes
-
 import buffered_file_manager
+_ARRAY_TUPLE_TYPE = (
+    buffered_file_manager.BufferedFileManager._ARRAY_TUPLE_TYPE)
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -179,7 +180,7 @@ class OutOfCoreQuadTree(object):
             the current node if necessary, and split the point list to
             children nodes if necessary.
 
-            point_list - a numpy array of (user_day_hash, x_coord, y_coord)
+            point_list - a numpy array of (date, userid, x_coord, y_coord)
                 tuples
             left_bound (int): left index inclusive of points to consider under
                 `point_list`
@@ -313,16 +314,17 @@ class OutOfCoreQuadTree(object):
                 the bounding box"""
 
         if not self._bounding_box_intersect(bounding_box):
-            return numpy.empty(0, dtype='a4,f4,f4')
+            return numpy.empty(0, dtype=_ARRAY_TUPLE_TYPE)
 
         if self.is_leaf:
             #drain the node into a list, filter to current bounding box
             point_list = numpy.array([
                 point for point in self._get_points_from_node() if _in_box(
-                    bounding_box, point[1], point[2])], dtype='a4,f4,f4')
+                    bounding_box, point[1], point[2])],
+                dtype=_ARRAY_TUPLE_TYPE)
             return point_list
         else:
-            point_list = numpy.empty(0, dtype='a4,f4,f4')
+            point_list = numpy.empty(0, dtype=_ARRAY_TUPLE_TYPE)
             for node_index in xrange(4):
                 point_list = numpy.concatenate((
                     self.nodes[node_index].get_intersecting_points_in_bounding_box(
@@ -342,8 +344,9 @@ cdef _sort_list_to_quads(
 
         quads.
 
-        point_list - structured numpy array of (data, x_coord, y_coord) points.
-            This parameter will be modified to have sorted points
+        point_list - structured numpy array of
+            (datetime, userid, x_coord, y_coord) points. This parameter will
+            be modified to have sorted points
         left_bound (int): left inclusive index in `point_list` to sort
         right_bound (int): right non-inclusive index in `point_list` to sort
         list_bounds - (left, right) tuple of valid points in point_list
@@ -356,23 +359,23 @@ cdef _sort_list_to_quads(
 
     #sort by x coordinates
     cdef numpy.ndarray sub_array = point_list[left_bound:right_bound]
-    cdef numpy.ndarray idx = sub_array['f1'].argsort()
+    cdef numpy.ndarray idx = sub_array['f2'].argsort()
 
     sub_array[:] = sub_array[idx]
-    x_split_index[0] = sub_array['f1'].searchsorted(mid_x_coord) + left_bound
+    x_split_index[0] = sub_array['f2'].searchsorted(mid_x_coord) + left_bound
 
     #sort the left y coordinates
     sub_array = point_list[left_bound:x_split_index[0]]
-    idx = sub_array['f2'].argsort()
+    idx = sub_array['f3'].argsort()
     sub_array[:] = sub_array[idx]
-    left_y_split_index[0] = sub_array['f2'].searchsorted(
+    left_y_split_index[0] = sub_array['f3'].searchsorted(
         mid_y_coord) + left_bound
 
     #sort the right y coordinates
     sub_array = point_list[x_split_index[0]:right_bound]
-    idx = sub_array['f2'].argsort()
+    idx = sub_array['f3'].argsort()
     sub_array[:] = sub_array[idx]
-    right_y_split_index[0] = sub_array['f2'].searchsorted(
+    right_y_split_index[0] = sub_array['f3'].searchsorted(
         mid_y_coord) + x_split_index[0]
 
 

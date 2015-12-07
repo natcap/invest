@@ -18,6 +18,8 @@ class BufferedFileManager(object):
     """A file manager that buffers many reads and writes in hopes that
         expensive file operations are mitigated."""
 
+    _ARRAY_TUPLE_TYPE = numpy.dtype('datetime64[D],a4,f4,f4')
+
     def __init__(self, manager_filename, max_bytes_to_buffer):
         """make a new BufferedFileManager object"""
 
@@ -43,7 +45,8 @@ class BufferedFileManager(object):
             file on disk"""
 
         self.array_cache[array_id].append(array_data.copy())
-        self.current_bytes_in_system += array_data.size * 12  # a4 f4 f4
+        self.current_bytes_in_system += (
+            array_data.size * BufferedFileManager._ARRAY_TUPLE_TYPE.itemsize)
         if self.current_bytes_in_system > self.max_bytes_to_buffer:
             self.flush()
 
@@ -119,7 +122,8 @@ class BufferedFileManager(object):
         if array_path is not None:
             array_data = numpy.load(array_path[0])
         else:
-            array_data = numpy.empty(0, dtype='a4,f4,f4')
+            array_data = numpy.empty(
+                0, dtype=BufferedFileManager._ARRAY_TUPLE_TYPE)
 
         if len(self.array_cache[array_id]) > 0:
             local_deque = collections.deque(self.array_cache[array_id])
@@ -154,6 +158,7 @@ class BufferedFileManager(object):
 
         #delete the cache and update cache size
         #The * 12 comes from the fact that the array is an 'a4 f4 f4'
-        self.current_bytes_in_system -= sum(
-            [x.size for x in self.array_cache[array_id]]) * 12
+        self.current_bytes_in_system -= (
+            sum([x.size for x in self.array_cache[array_id]]) *
+            BufferedFileManager._ARRAY_TUPLE_TYPE.itemsize)
         del self.array_cache[array_id]

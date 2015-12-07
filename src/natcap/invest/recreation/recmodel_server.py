@@ -334,7 +334,6 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
 
         returns nothing"""
 
-
     original_size = os.path.getsize(infile_name)
     bytes_left = original_size
     last_time = time.time()
@@ -367,18 +366,21 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
 
 def _parse_input_csv(
         block_offset_size_queue, csv_filepath, numpy_array_queue):
-    """Takes a CSV file lines and dump lists of (userdayhash, lat, lng) tuples
+    """Parse CSV file lines to (datetime64[d], userhash, lat, lng) tuples.
 
-        block_offset_size_queue (multiprocessing.Queue): contains tuples of the
-            form (offset, chunk size) to direct where the file should be read
-            from
+    Parameters:
+
+        block_offset_size_queue (multiprocessing.Queue): contains tuples of
+            the form (offset, chunk size) to direct where the file should be
+            read from
         numpy_array_queue (multiprocessing.Queue): output queue will have
             paths to files that can be opened with numpy.load and contain
-            structured arrays of (hash, lat, lng) 'a4 f4 f4' parsed from the
+            structured arrays of (datetime, userid, lat, lng) parsed from the
             raw CSV file
         csv_filepath (string): path to csv file to parse from
 
-        returns nothing"""
+    Returns:
+        None."""
 
     for file_offset, chunk_size in iter(block_offset_size_queue.get, 'STOP'):
         csv_file = open(csv_filepath, 'rb')
@@ -393,24 +395,24 @@ def _parse_input_csv(
         pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"
         result = numpy.fromregex(
             StringIO.StringIO(chunk_string), pattern,
-            [('user', 'S40'), ('date', 'datetime64[D]'),
-             ('lat', numpy.float32), ('lng', numpy.float32)])
+            [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
+             ('lng', 'f4')])
 
         #year_day = result['date'].astype(int)
-        def md5hash(user_string, date):
-            """md5hash userid and yearday"""
-            return hashlib.md5(
-                user_string+str(date.timetuple().tm_yday)).digest()[-4:]
+        def md5hash(user_string):
+            """md5hash userid"""
+            return hashlib.md5(user_string).digest()[-4:]
 
         md5hash_v = numpy.vectorize(md5hash, otypes=['S4'])
-        hashes = md5hash_v(result['user'], result['date'])
+        hashes = md5hash_v(result['user'])
 
-        user_day_lng_lat = numpy.empty(hashes.size, dtype='S4,f4,f4')
-        user_day_lng_lat['f0'] = hashes
-        user_day_lng_lat['f1'] = result['lng']
-        user_day_lng_lat['f2'] = result['lat']
+        user_day_lng_lat = numpy.empty(
+            hashes.size, dtype='datetime64[D],a4,f4,f4')
+        user_day_lng_lat['f0'] = result['date']
+        user_day_lng_lat['f1'] = hashes
+        user_day_lng_lat['f2'] = result['lng']
+        user_day_lng_lat['f3'] = result['lat']
         numpy_array_queue.put(user_day_lng_lat)
-
     numpy_array_queue.put('STOP')
 
 
@@ -494,22 +496,22 @@ def construct_userday_quadtree(
         n_points = 0
 
         while True:
-            userday_tuple_array = numpy_array_queue.get()
-            if (isinstance(userday_tuple_array, basestring) and
-                    userday_tuple_array == 'STOP'):  # count 'n cpu' STOPs
+            point_array = numpy_array_queue.get()
+            if (isinstance(point_array, basestring) and
+                    point_array == 'STOP'):  # count 'n cpu' STOPs
                 n_parse_processes -= 1
                 if n_parse_processes == 0:
                     break
                 continue
 
-            n_points += len(userday_tuple_array)
-            ooc_qt.add_points(userday_tuple_array, 0, userday_tuple_array.size)
+            n_points += len(point_array)
+            ooc_qt.add_points(point_array, 0, point_array.size)
             current_time = time.time()
             time_elapsed = current_time - last_time
             if time_elapsed > 5.0:
                 LOGGER.info(
-                    '%.2f%% complete, %d points skipped, %d nodes in qt in only %.2fs',
-                    n_points * 100.0 / total_lines,
+                    '%.2f%% complete, %d points skipped, %d nodes in qt in '
+                    'only %.2fs', n_points * 100.0 / total_lines,
                     n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
                     current_time-start_time)
                 last_time = time.time()
@@ -517,8 +519,8 @@ def construct_userday_quadtree(
         #save quadtree to disk
         ooc_qt.flush()
         LOGGER.info(
-            '100.00%% complete, %d points skipped, %d nodes in qt in only %.2fs',
-            n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
+            '100.00%% complete, %d points skipped, %d nodes in qt in '
+            'only %.2fs', n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
             time.time()-start_time)
 
         quad_tree_shapefile_name = os.path.join(
@@ -533,7 +535,8 @@ def construct_userday_quadtree(
     return ooc_qt_picklefilename
 
 
-def build_quadtree_shape(quad_tree_shapefile_name, quadtree, spatial_reference):
+def build_quadtree_shape(
+        quad_tree_shapefile_name, quadtree, spatial_reference):
     """make a shapefile that's some geometry of the quadtree in its cache dir
 
         quad_tree_shapefile_name - location to save the shapefile

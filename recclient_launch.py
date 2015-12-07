@@ -25,8 +25,8 @@ def main():
     }
 
     recmodel_object = natcap.invest.recreation.recmodel_server.RecModel(
-    recmodel_args['raw_csv_point_data_path'],
-    recmodel_args['cache_workspace'])
+        recmodel_args['raw_csv_point_data_path'],
+        recmodel_args['cache_workspace'])
 
     recclient_args = {
         'hostname': 'localhost',
