@@ -119,7 +119,7 @@ class BufferedFileManager(object):
         if array_path is not None:
             array_data = numpy.load(array_path[0])
         else:
-            array_data = numpy.empty(0, dtype='a4, f4, f4')
+            array_data = numpy.empty(0, dtype='a4,f4,f4')
 
         if len(self.array_cache[array_id]) > 0:
             local_deque = collections.deque(self.array_cache[array_id])

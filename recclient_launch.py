@@ -1,4 +1,5 @@
 """profile code for recclient"""
+import multiprocessing
 import time
 import cProfile
 import pstats
@@ -10,28 +11,28 @@ import glob
 import natcap.invest.recreation.recmodel_client
 import natcap.invest.recreation.recmodel_server
 
-RECMODEL_ARGS = {
-    'hostname': 'localhost',
-    'port': 42342,
-    'raw_csv_point_data_path': r"src\natcap\invest\recreation\photos_2005-2014_odlla.csv",
-    #'raw_csv_point_data_path': r"src\natcap\invest\recreation\photos_2013-2014_odlla.csv",
-    #'raw_csv_point_data_path': r"src\natcap\invest\recreation\foo.csv",
-    'cache_workspace': r"./recserver_cache",
-}
-
-RECMODEL = natcap.invest.recreation.recmodel_server.RecModel(
-    RECMODEL_ARGS['raw_csv_point_data_path'],
-    RECMODEL_ARGS['cache_workspace'])
-
 
 def main():
     """entry point"""
+
+    recmodel_args = {
+        'hostname': 'localhost',
+        'port': 42342,
+        #'raw_csv_point_data_path': r"src\natcap\invest\recreation\photos_2005-2014_odlla.csv",
+        #'raw_csv_point_data_path': r"src\natcap\invest\recreation\photos_2013-2014_odlla.csv",
+        'raw_csv_point_data_path': r"src\natcap\invest\recreation\foo.csv",
+        'cache_workspace': r"./recserver_cache",
+    }
+
+    recmodel_object = natcap.invest.recreation.recmodel_server.RecModel(
+    recmodel_args['raw_csv_point_data_path'],
+    recmodel_args['cache_workspace'])
 
     recclient_args = {
         'hostname': 'localhost',
         'port': 42342,
         #'aoi_path': r"C:\Users\Rich\Documents\svn_repos\invest-sample-data\Recreation\input\initial\predictors\parks.shp",
-        'aoi_path': r"C:\Users\Rich\Dropbox\globalrec_data\grid.shp",
+        'aoi_path': r"C:\Users\rpsharp\Dropbox\globalrec_data\grid.shp",
         'workspace_dir': r"./reclient_workspace",
     }
 
@@ -40,7 +41,7 @@ def main():
         shutil.rmtree(recclient_args['workspace_dir'])
 
     if prof:
-        cProfile.runctx('recmodel(recclient_args)', locals(), globals(), 'rec_client_stats')
+        cProfile.runctx('recmodel(recclient_args, recmodel_object)', locals(), globals(), 'rec_client_stats')
         profile = pstats.Stats('rec_client_stats')
         profile.sort_stats('cumulative').print_stats(10)
         profile.sort_stats('time').print_stats(10)
@@ -48,7 +49,7 @@ def main():
         natcap.invest.recreation.recmodel_client.execute(recclient_args)
 
 
-def recmodel(args):
+def recmodel(args, recmodel_object):
     #gather shapefile components and zip them
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
@@ -65,9 +66,9 @@ def recmodel(args):
 
     #transfer zipped file to server
     start_time = time.time()
-    print 'server version is ', RECMODEL.get_version()
+    print 'server version is ', recmodel_object.get_version()
     result_zip_file_binary = (
-        RECMODEL.calc_user_days_binary(zip_file_binary))
+        recmodel_object.calc_user_days_binary(zip_file_binary))
     print 'received result, took %f seconds' % (time.time() - start_time)
 
     #unpack result
@@ -77,4 +78,5 @@ def recmodel(args):
     os.remove(result_zip_path)
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     main()

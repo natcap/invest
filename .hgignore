@@ -36,3 +36,6 @@ doc/api-docs/build
 data/invest-data
 src/pyinstaller
 
+syntax: glob
+rec_server_workspaces/
+data/
