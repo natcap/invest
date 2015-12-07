@@ -287,7 +287,7 @@ class OutOfCoreQuadTree(object):
                 polygon_box = shapely.geometry.box(
                     *shapely_polygon.bounds)
                 for point in self._get_points_from_node():
-                    shapely_point = shapely.geometry.Point(point[1], point[2])
+                    shapely_point = shapely.geometry.Point(point[2], point[3])
                     if (polygon_box.contains(shapely_point) and
                             shapely_prepared_polygon.contains(shapely_point)):
                         result_deque.append(point)
@@ -320,7 +320,7 @@ class OutOfCoreQuadTree(object):
             #drain the node into a list, filter to current bounding box
             point_list = numpy.array([
                 point for point in self._get_points_from_node() if _in_box(
-                    bounding_box, point[1], point[2])],
+                    bounding_box, point[2], point[3])],
                 dtype=_ARRAY_TUPLE_TYPE)
             return point_list
         else:

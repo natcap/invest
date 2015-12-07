@@ -1,5 +1,7 @@
 """profile code for recclient"""
+
 import multiprocessing
+import numpy
 import time
 import cProfile
 import pstats
@@ -36,17 +38,13 @@ def main():
         'workspace_dir': r"./reclient_workspace",
     }
 
-    prof = True
     if os.path.exists(recclient_args['workspace_dir']):
         shutil.rmtree(recclient_args['workspace_dir'])
 
-    if prof:
-        cProfile.runctx('recmodel(recclient_args, recmodel_object)', locals(), globals(), 'rec_client_stats')
-        profile = pstats.Stats('rec_client_stats')
-        profile.sort_stats('cumulative').print_stats(10)
-        profile.sort_stats('time').print_stats(10)
-    else:
-        natcap.invest.recreation.recmodel_client.execute(recclient_args)
+    cProfile.runctx('recmodel(recclient_args, recmodel_object)', locals(), globals(), 'rec_client_stats')
+    profile = pstats.Stats('rec_client_stats')
+    profile.sort_stats('cumulative').print_stats(10)
+    profile.sort_stats('time').print_stats(10)
 
 
 def recmodel(args, recmodel_object):
@@ -67,8 +65,12 @@ def recmodel(args, recmodel_object):
     #transfer zipped file to server
     start_time = time.time()
     print 'server version is ', recmodel_object.get_version()
+    date_range = (
+        numpy.datetime64('2005-01-01'), numpy.datetime64('2007-12-31'))
+    aggregating_metric = 'daily'
     result_zip_file_binary = (
-        recmodel_object.calc_user_days_binary(zip_file_binary))
+        recmodel_object.calc_aggregated_points_in_aoi(
+            zip_file_binary, date_range, aggregating_metric))
     print 'received result, took %f seconds' % (time.time() - start_time)
 
     #unpack result

@@ -103,83 +103,99 @@ class RecModel(object):
         """Returns the rec model server version"""
         return __version__
 
-    def calc_user_days_binary(self, zip_file_binary):
-        """A try/execept wrapper for _calc_user_days_binary so that RPCs will
-            not only get the exception but the server will too"""
+    def calc_aggregated_points_in_aoi(
+            self, zip_file_binary, date_range, aggregate_metric):
+        """Aggregate the number of unique points in the AOI given a date range
+        and temporal metric.
+
+        Parameters:
+            zip_file_binary (string): a bytestring that is a zip file of an
+                OGR compatable vector.
+            date_range (datetime 2-tuple): a tuple that contains the inclusive
+                start and end date
+            aggregate_metric (string): one of "yearly", "monthly" or "daily"
+
+        Returns:
+            a bytestring of a zipped copy of `zip_file_binary` with a "PUD"
+            field which contains the metric per polygon."""
+
+        # try/except block so Pyro4 can recieve an exception if there is one
         try:
-            return self._calc_user_days_binary(zip_file_binary)
+            allowed_aggregate_metrics = ['yearly', 'monthly', 'daily']
+            if aggregate_metric not in allowed_aggregate_metrics:
+                raise ValueError(
+                    "Unknown aggregate type: '%s', expected one of %s",
+                    aggregate_metric, allowed_aggregate_metrics)
+
+            #make a random workspace name so we can work in parallel
+            while True:
+                workspace_path = os.path.join(
+                    'rec_server_workspaces', str(uuid.uuid4()))
+                if not os.path.exists(workspace_path):
+                    os.makedirs(workspace_path)
+                    break
+
+            #decompress zip
+            out_zip_file_filename = os.path.join(
+                workspace_path, str('server_in')+'.zip')
+
+            LOGGER.info('decompress zip file AOI')
+            with open(out_zip_file_filename, 'wb') as zip_file_disk:
+                zip_file_disk.write(zip_file_binary)
+            shapefile_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
+            shapefile_archive.extractall(workspace_path)
+            aoi_path = os.path.join(
+                workspace_path, os.path.splitext(
+                    shapefile_archive.namelist()[0])[0]+'.shp')
+
+            LOGGER.info('running calc user days on %s', workspace_path)
+            base_pud_aoi_path = self._calc_aggregated_points_in_aoi(
+                aoi_path, workspace_path, date_range, aggregate_metric)
+
+            #ZIP and stream the result back
+            print 'zipping result'
+            aoi_pud_archive_path = os.path.join(
+                workspace_path, 'aoi_pud_result.zip')
+            with zipfile.ZipFile(aoi_pud_archive_path, 'w') as myzip:
+                for filename in glob.glob(
+                        os.path.splitext(base_pud_aoi_path)[0] + '.*'):
+                    myzip.write(filename, os.path.basename(filename))
+            #return the binary stream
+            print (
+                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
+                ': calc user days complete sending binary back on ' +
+                workspace_path)
+            return open(aoi_pud_archive_path, 'rb').read()
         except:
-            print 'exception in calc_user_days_binary'
+            print 'exception in calc_aggregated_points_in_aoi'
             print '-' * 60
             traceback.print_exc()
             print '-' * 60
             raise
 
-    def _calc_user_days_binary(self, zip_file_binary):
-        """Takes an AOI passed in via a binary stream zipped shapefile and
-            annotates the file with photo user days per polygon.  Returns the
-            result as a binary stream zip with modified shapefile.
+    def _calc_aggregated_points_in_aoi(
+            self, aoi_path, workspace_path, date_range, aggregate_metric):
+        """Aggregate the number of unique points in the AOI given a date range
+        and temporal metric.
 
-            zip_file_binary - a bytestream that can be saved to disk and treated
-                as a zip of an AOI as a polygon ogr.Datasource.
+        Parameters:
+            aoi_path (string): a path to an OGR compatable vector.
+            workspace_path(string): path to a directory where working files
+                can be created
+            date_range (datetime 2-tuple): a tuple that contains the inclusive
+                start and end date
+            aggregate_metric (string): one of "yearly", "monthly" or "daily"
 
-            returns bytestring of zipped modified AOI file."""
+        Returns:
+            a path to an ESRI shapefile copy of `aoi_path` updated with a
+            "PUD" field which contains the metric per polygon."""
 
-        #make a random workspace name so we can work in parallel
-        while True:
-            workspace_uri = os.path.join(
-                'rec_server_workspaces', str(uuid.uuid4()))
-            if not os.path.exists(workspace_uri):
-                os.makedirs(workspace_uri)
-                break
-
-        #decompress zip
-        out_zip_file_filename = os.path.join(
-            workspace_uri, str('server_in')+'.zip')
-
-        print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-               'decompress zip')
-        with open(out_zip_file_filename, 'wb') as zip_file_disk:
-            zip_file_disk.write(zip_file_binary)
-        shapefile_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
-        shapefile_archive.extractall(workspace_uri)
-        aoi_uri = os.path.join(
-            workspace_uri, os.path.splitext(
-                shapefile_archive.namelist()[0])[0]+'.shp')
-
-        print (
-            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-            ': running calc user days on ' + workspace_uri)
-        base_pud_aoi_uri = self.calc_user_days(aoi_uri, workspace_uri)
-
-        #ZIP and stream the result back
-        print 'zipping result'
-        aoi_pud_archive_uri = os.path.join(workspace_uri, 'aoi_pud_result.zip')
-        with zipfile.ZipFile(aoi_pud_archive_uri, 'w') as myzip:
-            for filename in glob.glob(
-                    os.path.splitext(base_pud_aoi_uri)[0] + '.*'):
-                myzip.write(filename, os.path.basename(filename))
-        #return the binary stream
-        print (
-            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-            ': calc user days complete sending binary back on ' + workspace_uri)
-        return open(aoi_pud_archive_uri, 'rb').read()
-
-    def calc_user_days(self, aoi_filename, workspace_uri):
-        """Function to calculate the photo user days given an AOI
-
-            aoi_filename - ogr.Datasource of polygons of interest.
-            workspace_uri - a directory in which to write temporary files
-
-            returns a URI to a modified version of aoi_filename with a
-                photouserday_field appended to it"""
-
-        aoi_datasource = ogr.Open(aoi_filename)
+        aoi_vector = ogr.Open(aoi_path)
 
         #append a _pud to the aoi filename
-        out_aoi_pud_filename = os.path.join(
-            os.path.dirname(aoi_filename),
-            os.path.splitext(os.path.basename(aoi_filename))[0]+'_pud.shp')
+        out_aoi_pud_path = os.path.join(
+            os.path.dirname(aoi_path),
+            os.path.splitext(os.path.basename(aoi_path))[0]+'_pud.shp')
 
         #start the workers now, because they have to load a quadtree and
         #it will take some time
@@ -188,7 +204,7 @@ class RecModel(object):
         n_polytest_processes = multiprocessing.cpu_count()
 
         global_qt = pickle.load(open(self.qt_pickle_filename, 'rb'))
-        aoi_layer = aoi_datasource.GetLayer()
+        aoi_layer = aoi_vector.GetLayer()
         aoi_extent = aoi_layer.GetExtent()
         aoi_ref = aoi_layer.GetSpatialRef()
 
@@ -216,7 +232,7 @@ class RecModel(object):
             global_b_box)
         print 'found %d points' % len(local_points)
 
-        local_qt_cache_dir = os.path.join(workspace_uri, 'local_qt')
+        local_qt_cache_dir = os.path.join(workspace_path, 'local_qt')
         local_qt_pickle_filename = os.path.join(
             local_qt_cache_dir, 'local_qt.pickle')
         os.mkdir(local_qt_cache_dir)
@@ -244,12 +260,12 @@ class RecModel(object):
                     min(len(projected_point_list), POINTS_TO_ADD_PER_STEP)):
                 current_point = projected_point_list[point_index]
                 # convert to python float types rather than numpy.float32
-                lng_coord = float(current_point[1])
-                lat_coord = float(current_point[2])
+                lng_coord = float(current_point[2])
+                lat_coord = float(current_point[3])
                 x_coord, y_coord, _ = from_lat_trans.TransformPoint(
                     lng_coord, lat_coord)
                 projected_point_list[point_index] = (
-                    current_point[0], x_coord, y_coord)
+                    current_point[0], current_point[1], x_coord, y_coord)
 
             local_qt.add_points(
                 projected_point_list, 0, len(projected_point_list))
@@ -266,7 +282,8 @@ class RecModel(object):
         for _ in xrange(n_polytest_processes):
             polytest_process = multiprocessing.Process(
                 target=_calc_poly_pud, args=(
-                    local_qt_pickle_filename, aoi_filename, poly_test_queue,
+                    local_qt_pickle_filename, aoi_path, date_range,
+                    aggregate_metric, poly_test_queue,
                     pud_poly_feature_queue))
             polytest_process.start()
 
@@ -274,9 +291,9 @@ class RecModel(object):
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                'Creating a copy of the input shapefile')
         esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-        pud_aoi_datasource = esri_driver.CopyDataSource(
-            aoi_datasource, out_aoi_pud_filename)
-        pud_aoi_layer = pud_aoi_datasource.GetLayer()
+        pud_aoi_vector = esri_driver.CopyDataSource(
+            aoi_vector, out_aoi_pud_path)
+        pud_aoi_layer = pud_aoi_vector.GetLayer()
         photopud_field = ogr.FieldDefn('PUD', ogr.OFTInteger)
         pud_aoi_layer.CreateField(photopud_field)
 
@@ -305,8 +322,9 @@ class RecModel(object):
                 continue
             current_time = time.time()
             if current_time - last_time > 5.0:
-                print '%.2f%% of polygons tested' % (
-                    100 * float(n_poly_tested) / pud_aoi_layer.GetFeatureCount())
+                LOGGER.info(
+                    '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
+                    pud_aoi_layer.GetFeatureCount())
                 last_time = current_time
             poly_id, poly_pud = result_tuple
             poly_feat = pud_aoi_layer.GetFeature(poly_id)
@@ -316,11 +334,11 @@ class RecModel(object):
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                'done with polygon test, synching to disk')
         pud_aoi_layer = None
-        pud_aoi_datasource.SyncToDisk()
+        pud_aoi_vector.SyncToDisk()
 
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-               'returning out shapefile uri')
-        return out_aoi_pud_filename
+               'returning out shapefile path')
+        return out_aoi_pud_path
 
 
 def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
@@ -562,24 +580,32 @@ def build_quadtree_shape(
 
 
 def _calc_poly_pud(
-        local_qt_pickle_filename, aoi_filename, poly_test_queue,
-        pud_poly_feature_queue):
-    """Loads a pre-calculated quadtree and tests incoming polygons against it
-        updates those polygons with a PUD and sends back out on the queue
+        local_qt_pickle_path, aoi_path, date_range, aggregate_metric,
+        poly_test_queue, pud_poly_feature_queue):
+    """Load a pre-calculated quadtree and test incoming polygons against it.
+    Updates polygons with a PUD and send back out on the queue.
 
-        local_qt_pickle_filename - pickled local quadtree
-        poly_test_queue - queue with incoming ogr.Features
-        pud_poly_feature_queue - queue to put outgoing (fid, pud) tuple
+    Parameters:
+        local_qt_pickle_path (string): path to pickled local quadtree
+        aoi_path (string): path to AOI that contains polygon features
+        date_range (tuple): numpy.datetime64 tuple indicating inclusive start
+            and stop dates
+        aggregate_metric (string): one of 'yearly', 'monthly', or 'daily' to
+            aggregate multiple points against.
+        poly_test_queue (multiprocessing.Queue): queue with incoming
+            ogr.Features
+        pud_poly_feature_queue (multiprocessing.Queue): queue to put outgoing
+            (fid, pud) tuple
 
         returns nothing"""
 
     start_time = time.time()
-    print 'in a _calc_poly_process, loading %s' % local_qt_pickle_filename
-    local_qt = pickle.load(open(local_qt_pickle_filename, 'rb'))
+    print 'in a _calc_poly_process, loading %s' % local_qt_pickle_path
+    local_qt = pickle.load(open(local_qt_pickle_path, 'rb'))
     print 'local qt load took %.2fs' % (time.time() - start_time)
 
-    aoi_datasource = ogr.Open(aoi_filename)
-    aoi_layer = aoi_datasource.GetLayer()
+    aoi_vector = ogr.Open(aoi_path)
+    aoi_layer = aoi_vector.GetLayer()
 
     for poly_id in iter(poly_test_queue.get, 'STOP'):
         poly_feat = aoi_layer.GetFeature(poly_id)
@@ -595,8 +621,18 @@ def _calc_poly_pud(
         poly_points = local_qt.get_intersecting_points_in_polygon(
             shapely_polygon)
         pud_set = set()
-        for pud_hash, _, _ in poly_points:
-            pud_set.add(pud_hash)
+
+        if aggregate_metric == 'yearly':
+            agg_fn = lambda x: x.tolist().timetuple().tm_yday
+        elif aggregate_metric == 'monthly':
+            agg_fn = lambda x: x.tolist().timetuple().tm_mon
+        elif aggregate_metric == 'daily':
+            agg_fn = lambda x: x.tolist().timetuple().tm_mday
+
+        for point_datetime, user_hash, _, _ in poly_points:
+            if date_range[0] <= point_datetime <= date_range[1]:
+                pud_hash = user_hash + str(agg_fn(point_datetime))
+                pud_set.add(pud_hash)
         pud_poly_feature_queue.put((poly_id, len(pud_set)))
     pud_poly_feature_queue.put('STOP')
 
