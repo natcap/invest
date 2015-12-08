@@ -111,8 +111,8 @@ class RecModel(object):
         Parameters:
             zip_file_binary (string): a bytestring that is a zip file of an
                 OGR compatable vector.
-            date_range (datetime 2-tuple): a tuple that contains the inclusive
-                start and end date
+            date_range (string 2-tuple): a tuple that contains the inclusive
+                start and end date in text form as YYYY-MM-DD
             aggregate_metric (string): one of "yearly", "monthly" or "daily"
 
         Returns:
@@ -149,8 +149,11 @@ class RecModel(object):
                     shapefile_archive.namelist()[0])[0]+'.shp')
 
             LOGGER.info('running calc user days on %s', workspace_path)
+            numpy_date_range = (
+                numpy.datetime64(date_range[0]),
+                numpy.datetime64(date_range[1]))
             base_pud_aoi_path = self._calc_aggregated_points_in_aoi(
-                aoi_path, workspace_path, date_range, aggregate_metric)
+                aoi_path, workspace_path, numpy_date_range, aggregate_metric)
 
             #ZIP and stream the result back
             print 'zipping result'

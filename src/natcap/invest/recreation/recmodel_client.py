@@ -36,9 +36,7 @@ def execute(args):
     Returns:
         None."""
 
-    date_range = (
-        numpy.datetime64(args['start_date']),
-        numpy.datetime64(args['end_date']))
+    date_range = (args['start_date'], args['end_date'])
 
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
@@ -51,7 +49,7 @@ def execute(args):
     aoi_archive_path = os.path.join(args['workspace_dir'], 'aoi_zipped.zip')
     with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
         for filename in glob.glob(basename + '.*'):
-            print 'archiving ', filename
+            LOGGER.info('archiving %s', filename)
             myzip.write(filename, os.path.basename(filename))
 
     #convert shapefile to binary string for serialization

@@ -4,8 +4,8 @@
   "targetScript": "natcap.invest.recreation.recmodel_client",
   "modelName": "recreation",
   "localDocURI": "../documentation/recreation.html",
-  "height": 600,
-  "width": 700,
+  "height": 400,
+  "width": 500,
   "elements": [
     {
       "id": "workspace_list",
@@ -33,90 +33,36 @@
           "helpText": "An OGR-supported vector file representing the area of interest where the model will run the analysis."
         },
         {
-          "id": "make_grid",
-          "args_id": "make_grid",
-          "type": "checkbox",
-          "label": "Grid AOI",
-          "defaultValue": true,
-          "helpText": "Checked box indicates for the area of interest to be gridded. If unchecked, the AOI must contain multiple shapes."
-        },
-        {
-          "id": "grid_type",
-          "args_id": "grid_type",
-          "type": "dropdown",
-          "label": "Grid Type",
-          "options": [
-            "rectangular",
-            "hexagonal"
-          ],
-          "returns": {
-            "mapValues": {
-              "rectangular": 0,
-              "hexagonal": 1
-            }
-          },
-          "defaultValue": 1,
-          "required": true,
-          "enabledBy": "grid_type",
-          "helpText": "Select whether the grid should contain rectangular or hexagonal units."
-        },
-        {
-          "id": "cell_size",
-          "args_id": "cell_size",
+          "id": "hostname",
+          "args_id": "hostname",
           "type": "text",
-          "label": "Cell Size",
-          "validText": "[0-9]+(\\.[0-9][0-9])?",
-          "dataType": "float",
-          "required": true,
-          "enabledBy": "grid_type",
-          "defaultValue": "5000",
-          "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
-        }
-      ]
-    },
-    {
-      "id": "fit_regression",
-      "type": "container",
-      "collapsible": true,
-      "args_id": "fit_regression",
-      "label": "Fit Regression",
-      "defaultValue": false,
-      "elements": [
+          "label": "rec server hostname",
+          "defaultValue": "localhost",
+          "required": true
+        },
         {
-          "id": "fit_regression_list",
-          "type": "list",
-          "elements": [
-            {
-              "id": "predictor_dataset_path",
-              "args_id": "predictor_dataset_path",
-              "type": "folder",
-              "label": "Predictor Directory",
-              "required": true,
-              "enabledBy": "fit_regression_list",
-              "defaultValue": "../Recreation/input/initial/predictors",
-              "helpText": "A directory that contains any data to be included in the regression fit."
-            },
-            {
-              "id": "grid_type",
-              "args_id": "grid_type",
-              "type": "dropdown",
-              "label": "Grid Type",
-              "options": [
-                "Photo User Days",
-                "Photo Travel Distance"
-              ],
-              "returns": {
-                "mapValues": {
-                  "Photo User Days": "pud",
-                  "Photo Travel Distance": "ptd"
-                }
-              },
-              "defaultValue": "pud",
-              "required": true,
-              "enabledBy": "fit_regression_list",
-              "helpText": "Select whether the grid should contain rectangular or hexagonal units."
-            }
-          ]
+          "id": "port",
+          "args_id": "port",
+          "type": "text",
+          "label": "rec server port",
+          "defaultValue": "42342",
+          "required": true
+        },
+        {
+          "id": "start_date",
+          "args_id": "start_date",
+          "type": "text",
+          "label": "Start Date (inclusive)",
+          "defaultValue": "2005-01-01",
+          "required": true
+        },
+        {
+          "id": "end_date",
+          "args_id": "end_date",
+          "type": "text",
+          "label": "End Date (inclusive)",
+          "defaultValue": "2007-12-31",
+          "required": true
         }
       ]
     }
