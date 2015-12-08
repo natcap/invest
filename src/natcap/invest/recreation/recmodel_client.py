@@ -6,6 +6,7 @@ import zipfile
 import time
 import logging
 
+import numpy
 import Pyro4
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -25,9 +26,19 @@ def execute(args):
         args['aoi_path'] (string): path to AOI vector
         args['hostname'] (string): FQDN to recreation server
         args['port'] (string or int): port on hostname for recreation server
+        args['start_date'] (string): start date in form YYYY-MM-DD this date
+            is the inclusive lower bound to consider points in the PUD and
+            regression
+        args['end_date'] (string): end date in form YYYY-MM-DD this date
+            is the inclusive upper bound to consider points in the PUD and
+            regression
 
     Returns:
         None."""
+
+    date_range = (
+        numpy.datetime64(args['start_date']),
+        numpy.datetime64(args['end_date']))
 
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
@@ -36,7 +47,6 @@ def execute(args):
         "PYRO:natcap.invest.recreation@%s:%d" % (
             args['hostname'], int(args['port'])))
 
-    #gather shapefile components and zip them
     basename = os.path.splitext(args['aoi_path'])[0]
     aoi_archive_path = os.path.join(args['workspace_dir'], 'aoi_zipped.zip')
     with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
@@ -48,20 +58,17 @@ def execute(args):
     zip_file_binary = open(aoi_archive_path, 'rb').read()
 
     #transfer zipped file to server
-    try:
-        start_time = time.time()
-        print 'server version is ', recmodel_server.get_version()
-        result_zip_file_binary = (
-            recmodel_server.calc_user_days_binary(zip_file_binary))
-        print 'received result, took %f seconds' % (time.time() - start_time)
+    start_time = time.time()
+    LOGGER.info('server version is %s', recmodel_server.get_version())
 
-        #unpack result
-        result_zip_path = os.path.join(args['workspace_dir'], 'pud_result.zip')
-        open(result_zip_path, 'wb').write(result_zip_file_binary)
-        zipfile.ZipFile(result_zip_path, 'r').extractall(args['workspace_dir'])
-        os.remove(result_zip_path)
+    aggregating_metric = 'daily'
+    result_zip_file_binary = (
+        recmodel_server.calc_aggregated_points_in_aoi(
+            zip_file_binary, date_range, aggregating_metric))
+    LOGGER.info('received result, took %f seconds', time.time() - start_time)
 
-    except Exception:
-        #This catches and prints Pyro tracebacks.
-        print "Pyro traceback:"
-        print "".join(Pyro4.util.getPyroTraceback())
+    #unpack result
+    result_zip_path = os.path.join(args['workspace_dir'], 'pud_result.zip')
+    open(result_zip_path, 'wb').write(result_zip_file_binary)
+    zipfile.ZipFile(result_zip_path, 'r').extractall(args['workspace_dir'])
+    os.remove(result_zip_path)

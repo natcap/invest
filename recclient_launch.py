@@ -26,9 +26,9 @@ def main():
         'cache_workspace': r"./recserver_cache",
     }
 
-    recmodel_object = natcap.invest.recreation.recmodel_server.RecModel(
-        recmodel_args['raw_csv_point_data_path'],
-        recmodel_args['cache_workspace'])
+    #recmodel_object = natcap.invest.recreation.recmodel_server.RecModel(
+    #    recmodel_args['raw_csv_point_data_path'],
+    #    recmodel_args['cache_workspace'])
 
     recclient_args = {
         'hostname': 'localhost',
@@ -36,12 +36,15 @@ def main():
         #'aoi_path': r"C:\Users\Rich\Documents\svn_repos\invest-sample-data\Recreation\input\initial\predictors\parks.shp",
         'aoi_path': r"C:\Users\rpsharp\Dropbox\globalrec_data\grid.shp",
         'workspace_dir': r"./reclient_workspace",
+        'start_date': '2005-01-01',
+        'end_date': '2007-12-31',
     }
 
     if os.path.exists(recclient_args['workspace_dir']):
         shutil.rmtree(recclient_args['workspace_dir'])
 
-    cProfile.runctx('recmodel(recclient_args, recmodel_object)', locals(), globals(), 'rec_client_stats')
+    cProfile.runctx('natcap.invest.recreation.recmodel_client.execute(recclient_args)', locals(), globals(), 'rec_client_stats')
+    #cProfile.runctx('recmodel(recclient_args, recmodel_object)', locals(), globals(), 'rec_client_stats')
     profile = pstats.Stats('rec_client_stats')
     profile.sort_stats('cumulative').print_stats(10)
     profile.sort_stats('time').print_stats(10)
@@ -66,7 +69,8 @@ def recmodel(args, recmodel_object):
     start_time = time.time()
     print 'server version is ', recmodel_object.get_version()
     date_range = (
-        numpy.datetime64('2005-01-01'), numpy.datetime64('2007-12-31'))
+        numpy.datetime64(args['start_date']),
+        numpy.datetime64(args['end_date']))
     aggregating_metric = 'daily'
     result_zip_file_binary = (
         recmodel_object.calc_aggregated_points_in_aoi(

@@ -1,7 +1,7 @@
 {
   "id": "window",
   "label": "Recreation Model",
-  "targetScript": "natcap.invest.recreation.recreation",
+  "targetScript": "natcap.invest.recreation.recmodel_client",
   "modelName": "recreation",
   "localDocURI": "../documentation/recreation.html",
   "height": 600,
