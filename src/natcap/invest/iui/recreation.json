@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.recreation.recmodel_client",
   "modelName": "recreation",
   "localDocURI": "../documentation/recreation.html",
-  "height": 400,
+  "height": 500,
   "width": 500,
   "elements": [
     {
@@ -84,6 +84,50 @@
           "defaultValue": "all",
           "required": true,
           "helpText": "This is the temporal metric that is used to average a photo user across time.  If 'daily', points will be distinct per day, if 'yearly', the same point by the same user on different days, but the same year, will count as a single point."
+        }
+      ]
+    },
+    {
+      "id": "grid_container",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "grid_aoi",
+      "label": "Grid the AOI",
+      "elements": [
+        {
+          "id": "grid_element_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "grid_type",
+              "args_id": "grid_type",
+              "type": "dropdown",
+              "label": "Grid Type",
+              "options": [
+                "rectangular",
+                "hexagonal"
+              ],
+              "returns": {
+                "mapValues": {
+                  "rectangular": "rectangular",
+                  "hexagonal": "hexagonal"
+                }
+              },
+              "defaultValue": "rectangular",
+              "required": true
+            },
+            {
+              "id": "cell_size",
+              "args_id": "cell_size",
+              "type": "text",
+              "label": "Cell Size",
+              "validText": "[0-9]+(\\.[0-9][0-9])?",
+              "dataType": "float",
+              "required": true,
+              "defaultValue": "5000",
+              "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
+            }
+          ]
         }
       ]
     }
