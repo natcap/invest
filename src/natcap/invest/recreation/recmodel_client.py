@@ -32,6 +32,8 @@ def execute(args):
         args['end_date'] (string): end date in form YYYY-MM-DD this date
             is the inclusive upper bound to consider points in the PUD and
             regression
+        args['aggregating_metric'] (string): one of 'daily', 'monthly', or
+            'yearly'.
 
     Returns:
         None."""
@@ -59,10 +61,10 @@ def execute(args):
     start_time = time.time()
     LOGGER.info('server version is %s', recmodel_server.get_version())
 
-    aggregating_metric = 'daily'
+
     result_zip_file_binary = (
         recmodel_server.calc_aggregated_points_in_aoi(
-            zip_file_binary, date_range, aggregating_metric))
+            zip_file_binary, date_range, args['aggregating_metric']))
     LOGGER.info('received result, took %f seconds', time.time() - start_time)
 
     #unpack result
