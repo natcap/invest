@@ -214,8 +214,7 @@ class Repository(object):
             print 'Repo %s not found, falling back to fresh clone and update' % self.local_path
             # When the current repo can't be updated because it doesn't know
             # the change we want to update to
-            self.pull()
-            self.update(rev)
+            self.clone(rev)
 
     def ischeckedout(self):
         """Identify whether the repository is checked out on disk."""
@@ -412,10 +411,42 @@ class SVNRepository(Repository):
     statedir = '.svn'
     cmd = 'svn'
 
+    def at_known_rev(self):
+        """Determine repo status from `svn status`
+
+        Overridden from Repository.at_known_rev(...).  SVN info does not
+        correctly report the status of the repository in the version number,
+        so we must parse the output of `svn status` to see if a checkout or
+        update was interrupted.
+
+        Returns True if the repository is up-to-date.  False if not."""
+        # Parse the output of SVN status.
+        repo_status = sh('svn status', cwd=self.local_path, capture=True)
+        for line in repo_status:
+            if line.split()[0] in ['!', 'L']:
+                print 'Checkout or update incomplete!  Repo NOT at known rev.'
+                return False
+
+        print 'Status ok.'
+        return Repository.at_known_rev(self)
+
+    def _cleanup_and_retry(self, cmd, *args, **kwargs):
+        """Run SVN cleanup."""
+        for retry in [True, False]:
+            try:
+                cmd(*args, **kwargs)
+            except BuildFailure as failure:
+                if retry:
+                    print 'Cleaning up SVN repository %s' % self.local_path
+                    sh('svn cleanup', cwd=self.local_path)
+                else:
+                    raise failure
+
     def clone(self, rev=None):
         if rev is None:
             rev = self.tracked_version()
-        paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
+        self._cleanup_and_retry(paver.svn.checkout, self.remote_url,
+                                self.local_path, revision=rev)
 
     def update(self, rev):
         # check that the repository URL hasn't changed.  If it has, update to
@@ -426,7 +457,7 @@ class SVNRepository(Repository):
                 orig_url=local_copy_info.repository_root,
                 new_url=self.remote_url), cwd=self.local_path)
 
-        paver.svn.update(self.local_path, rev)
+        self._cleanup_and_retry(paver.svn.update, self.local_path, rev)
 
     def current_rev(self):
         try:
@@ -671,6 +702,24 @@ def dev_env(options):
     })
 
 
+def _read_requirements_dict():
+    """Read requirments.txt into a dict.
+
+    Returns:
+        A dict mapping {projectname: requirement}.
+
+    Example:
+        >>> _read_requirements_dict()
+        {'pygeoprocessing': 'pygeoprocessing>=0.3.0a12', ...}
+    """
+    reqs = {}
+    for line in open('requirements.txt'):
+        line = line.strip()
+        parsed_req = pkg_resources.Requirement.parse(line)
+        reqs[parsed_req.project_name] = line
+    return reqs
+
+
 def _parse_version_requirement(pkg_name):
     """Parse a version requirement from requirements.txt.
 
@@ -754,9 +803,13 @@ def after_install(options, home_dir):
         # install with --no-deps (will otherwise try to install numpy, gdal,
         # etc.), and -I to ignore any existing pygeoprocessing install (as
         # might exist in system-site-packages).
+        # Installing as egg grants pygeoprocessing greater precendence in the
+        # import order.  If I install as a wheel, the system install of
+        # pygeoprocessing takes precedence.  I believe this to be a bug in
+        # pygeoprocessing (poster, for example, does not have this issue!).
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
-            "'--no-deps', '-I', './src/pygeoprocessing'])\n"
+            "'--no-deps', '-I', '--egg', './src/pygeoprocessing'])\n"
         )
         preinstalled_pkgs.add('pygeoprocessing')
     else:
@@ -767,8 +820,10 @@ def after_install(options, home_dir):
         requirements_files.append(options.env.requirements)
 
     # extra parameter strings needed for installing certain packages
-    # Always install natcap.versioner to the env over whatever else is there.
+    # Always install nose, natcap.versioner to the env over whatever else
+    # is there.
     pkg_pip_params = {
+        'nose': ['-I'],
         'natcap.versioner': ['-I'],
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
@@ -958,7 +1013,7 @@ def fetch(args, options):
                                    '{repo}').format(repo=repo_path))
 
         if options.dry_run:
-            print 'Fetching {parh}'.format(user_requested_repo.local_path)
+            print 'Fetching {path}'.format(user_requested_repo.local_path)
             continue
         else:
             user_requested_repo.get(target_rev)
@@ -1107,7 +1162,15 @@ def push(args):
 
         target_filename = _fix_path(target_filename)  # convert windows to linux paths
         print 'Transferring %s -> %s ' % (os.path.basename(transfer_file), target_filename)
-        sftp.put(transfer_file, target_filename, callback=_sftp_callback)
+        for repeat in [True, True, False]:
+            try:
+                sftp.put(transfer_file, target_filename, callback=_sftp_callback)
+            except IOError as filesize_inconsistency:
+                # IOError raised when the file on the other end reports a
+                # different filesize than what we sent.
+                if not repeat:
+                    raise filesize_inconsistency
+
 
     print 'Closing down SCP'
     sftp.close()
@@ -1497,6 +1560,7 @@ def check(options):
     required = 'required'
     suggested = 'suggested'
     lib_needed = 'lib_needed'
+    install_managed = 'install_managed'
 
     # (requirement, level, version_getter, special_install_message)
     # requirement: This is the setuptools package requirement string.
@@ -1506,12 +1570,16 @@ def check(options):
     # special_install_message: A special installation message if needed.
     #    If None, no special message will be shown after the conflict report.
     #    This is only for use by required packages.
+    #
+    # NOTE: This list is for tracking packages with special notes, warnings or
+    # import conditions ONLY.  Version requirements should be tracked in
+    # versions.json ONLY.
     print bold("\nChecking python packages")
     requirements = [
         # requirement, level, version_getter, special_install_message
-        ('setuptools>=8.0', required, None, None),  # 8.0 implements pep440
-        ('virtualenv>=12.0.1', required, None, None),
-        ('pip>=6.0.0', required, None, None),
+        ('setuptools', required, None, None),  # 8.0 implements pep440
+        ('virtualenv', required, None, None),
+        ('pip', required, None, None),
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
         ('paramiko', suggested, None, None),
@@ -1519,7 +1587,30 @@ def check(options):
         ('h5py', lib_needed,  None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
+        ('poster', lib_needed,  None, None),
+        ('pyyaml', required, 'yaml', None),
+        ('pygeoprocessing', install_managed, None, None),
+        ('PyQt4', lib_needed, 'PyQt4', None),
     ]
+
+    try:
+        # poster stores its version in a triple of ints
+        import poster
+        poster.__version__ = '.'.join([str(i) for i in poster.version])
+    except ImportError:
+        # If the package can't be found, this will be caught by pkg_resources
+        # below, and the error message will be formatted there.
+        pass
+
+    try:
+        # PyQt version string is also stored in an awkward place.
+        import PyQt4
+        from PyQt4.Qt import PYQT_VERSION_STR
+        PyQt4.__version__ = PYQT_VERSION_STR
+    except ImportError:
+        # If the package can't be found, this will be caught by pkg_resources
+        # below, and the error message will be formatted there.
+        pass
 
     # pywin32 is required for pyinstaller builds
     if platform.system() == 'Windows':
@@ -1571,14 +1662,46 @@ def check(options):
         # of it.
         requirements.append(('wheel', required, None, None))
 
-    warnings_found = False
-    for requirement, severity, import_name, install_msg in requirements:
-        try:
-            pkg_resources.require(requirement)
-            pkg_req = pkg_resources.Requirement.parse(requirement)
+    # Compare the above-defined requirements with those in requirements.txt
+    # The resulting set should be the union of the two.  Package verison
+    # requirements should be stored in requirements.txt.
+    existing_reqs = set([pkg_resources.Requirement.parse(r[0]).project_name
+                         for r in requirements])
+    requirements_txt_dict = _read_requirements_dict()
+    for reqname, req in requirements_txt_dict.iteritems():
+        if reqname not in existing_reqs:
+            requirements.append((req, required, None, None))
 
+    warnings_found = False
+    for requirement, severity, import_name, install_msg in sorted(
+        requirements, key=lambda x: x[0].lower()):
+        # We handle natcap namespace packages specially below.
+        if requirement.startswith('natcap'):
+            continue
+
+        try:
+            # If we have a required package version (defined in
+            # requirements.txt), use that string.
+            requirement = requirements_txt_dict[requirement]
+        except KeyError:
+            pass
+
+        try:
+            pkg_req = pkg_resources.Requirement.parse(requirement)
             if import_name is None:
                 import_name = pkg_req.project_name
+
+            try:
+                pkg_resources.require(requirement)
+            except pkg_resources.DistributionNotFound as missing_req:
+                # Some packages (ahem ... PyQt4) are actually importable, but
+                # cannot be found by pkg_resources.  We handle this case here
+                # by attempting to import the 'missing' package, and raising
+                # the DistributionNotFound if we can't import it.
+                try:
+                    importlib.import_module(import_name)
+                except ImportError:
+                    raise missing_req
 
             pkg = __import__(import_name)
             print "Python package {ok}: {pkg} {ver} (meets {req})".format(
@@ -1586,6 +1709,9 @@ def check(options):
                 pkg=pkg_req.project_name,
                 ver=pkg.__version__,
                 req=requirement)
+        except AttributeError as error:
+            print 'Could not define module ', pkg
+            raise error
         except (pkg_resources.VersionConflict,
                 pkg_resources.DistributionNotFound) as conflict:
             if not hasattr(conflict, 'report'):
@@ -1618,6 +1744,11 @@ def check(options):
                            'package.').format(warning=WARNING,
                                               report=conflict.report())
                 warnings_found = True
+            elif severity == 'install_managed':
+                print ('{warning} {pkg} is required, but will be '
+                       'installed automatically if needed for paver.').format(
+                            warning=WARNING,
+                            pkg=requirement)
             else:  # severity is 'suggested'
                 print '{warning} {report}'.format(warning=WARNING,
                                                   report=conflict.report())
@@ -2613,6 +2744,10 @@ def jenkins_installer(options):
             'username': 'dataportal',
             'host': 'data.naturalcapitalproject.org',
             'dataportal': 'public_html',
+            # Only push data zipfiles if we're on Windows.
+            # Have to pick one, as we're having issues if all slaves are trying
+            # to push the same large files.
+            'include-data': platform.system() == 'Windows',
         })
 
 
@@ -2873,6 +3008,7 @@ def test(args):
     ('upstream=', '', 'The URL to the upstream REPO.  Use this when this repo is moved'),
     ('password', '', 'Prompt for a password'),
     ('private-key=', '', 'Use this private key to push'),
+    ('include-data', '', 'Include data zipfiles in the push'),
 ])
 def jenkins_push_artifacts(options):
     """
@@ -2916,13 +3052,14 @@ def jenkins_push_artifacts(options):
     pkey = None
     if getattr(options.jenkins_push_artifacts, 'private_key', False):
         pkey = options.jenkins_push_artifacts.private_key
-    elif platform.system() == 'Windows':
-        # Assume a default private key location for jenkins builds on
-        # Windows
+    elif platform.system() in ['Windows', 'Darwin', 'Linux']:
+        # Assume a default private key location for jenkins builds
+        # On Windows, this assumes that the key is in .ssh (might be the cygwin
+        # home directory).
         pkey = os.path.join(os.path.expanduser('~'),
                             '.ssh', 'dataportal-id_rsa')
     else:
-        print ('No private key provided, and not on Windows, so not '
+        print ('No private key provided, and not on a known system, so not '
                'assuming a default private key file')
 
     push_args = {
@@ -2951,7 +3088,8 @@ def jenkins_push_artifacts(options):
     if len(release_files) > 0:
         call_task('push', args=_push(release_dir) + release_files)
 
-    if len(data_files) > 0:
+    if len(data_files) > 0 and getattr(options.jenkins_push_artifacts,
+                                       'include_data', False):
         call_task('push', args=_push(data_dir) + data_files)
 
     def _archive_present(substring):

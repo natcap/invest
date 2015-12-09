@@ -60,7 +60,7 @@ class ExampleUnitTests(unittest.TestCase):
     """Tests for natcap.invest._example_model."""
 
     def test_execute(self):
-        """Example execution to ensure correctness when called via execute."""
+        """EXAMPLE: ensure correctness when called via execute."""
         from natcap.invest import _example_model
 
         args = {
@@ -77,14 +77,15 @@ class ExampleUnitTests(unittest.TestCase):
         expected_raster = _create_lulc(expected_matrix)
         sum_raster = os.path.join(args['workspace_dir'], 'sum.tif')
         pygeoprocessing.testing.assert_rasters_equal(sum_raster,
-                                                     expected_raster)
+                                                     expected_raster,
+                                                     tolerance=1e-9)
 
         shutil.rmtree(args['workspace_dir'])
         for filename in [args['example_lulc'], expected_raster]:
             os.remove(filename)
 
     def test_execute_with_suffix(self):
-        """When a suffix is added, verify it's added correctly."""
+        """EXAMPLE: Verify suffix is added correctly."""
         from natcap.invest import _example_model
         args = {
             'workspace_dir': tempfile.mkdtemp(),
@@ -97,7 +98,7 @@ class ExampleUnitTests(unittest.TestCase):
                                                     'sum_foo.tif')))
 
     def test_execute_with_suffix_and_underscore(self):
-        """When the user's suffix has an underscore, don't add another one."""
+        """EXAMPLE: Single-underscore suffix."""
         from natcap.invest import _example_model
         args = {
             'workspace_dir': tempfile.mkdtemp(),
