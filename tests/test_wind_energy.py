@@ -5,6 +5,7 @@ import shutil
 import os
 import collections
 import csv
+import struct
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -13,6 +14,8 @@ import numpy
 import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
+from shapely.geometry.polygon import LinearRing
+
 from nose.tools import nottest
 from osgeo import gdal
 from osgeo import ogr
@@ -20,6 +23,41 @@ from osgeo import osr
 
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'wind_energy')
+
+def _create_csv(fields, data, fname):
+    """Create a new CSV table from a dictionary.
+
+    Parameters:
+        fname (string): a file path for the new table to be written to disk
+
+        fields (list): a list of the column names. The order of the fields
+            in the list will be the order in how they are written. ex:
+            ['id', 'precip', 'total']
+
+        data (dictionary): a dictionary representing the table.
+            The dictionary should be constructed with unique numerical keys
+            that point to a dictionary which represents a row in the table:
+            data = {0 : {'id':1, 'precip':43, 'total': 65},
+                    1 : {'id':2, 'precip':65, 'total': 94}}
+
+    Returns:
+        Nothing
+    """
+    csv_file = open(fname, 'wb')
+
+    #  Sort the keys so that the rows are written in order
+    row_keys = data.keys()
+    row_keys.sort()
+
+    csv_writer = csv.DictWriter(csv_file, fields)
+    #  Write the columns as the first row in the table
+    csv_writer.writerow(dict((fn, fn) for fn in fields))
+
+    # Write the rows from the dictionary
+    for index in row_keys:
+        csv_writer.writerow(data[index])
+
+    csv_file.close()
 
 def _create_vertical_csv(data, fname):
     """Create a new CSV table where the fields are in the left column.
@@ -46,6 +84,54 @@ def _create_vertical_csv(data, fname):
         writer.writerow([key, val])
 
     csv_file.close()
+
+
+def _csv_wind_data_to_binary(wind_data_file_uri, binary_file_uri):
+    """Convert and compress the wind data into binary format,
+        packing in a specific manner such that the InVEST3.0 wind energy
+        model can properly unpack it
+
+        wind_data_file_uri - a URI to a CSV file with the formatted wind data
+            Data should have the following order of columns:
+            ["Latitude","Longitude","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
+            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
+            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K"]
+            (required)
+
+        binary_file_uri - a URI to write out the binary file (.bin) (required)
+
+        returns - Nothing"""
+
+    # Open the wave watch three files
+    wind_file = open(wind_data_file_uri,'rU')
+    # Open the binary output file as writeable
+    bin_file = open(binary_file_uri, 'wb')
+
+    # This is the expected column header list for the binary wind energy file.
+    # It is expected that the data will be in this order so that we can properly
+    # unpack the information into a dictionary
+    # ["LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
+    #  "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
+    #  "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
+
+    #burn header line
+    header_line = wind_file.readline()
+
+    while True:
+        # Read each line of the csv file for wind data
+        line = wind_file.readline()
+
+        # If end of file, break out
+        if len(line) == 0:
+            break
+
+        # Get the data values as floats
+        float_list = map(float,line.split(','))
+        # Swap long / lat values
+        float_list[0], float_list[1] = float_list[1], float_list[0]
+        # Pack up the data values as float types
+        s=struct.pack('f'*len(float_list), *float_list)
+        bin_file.write(s)
 
 class WindEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
@@ -92,53 +178,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         origin=(376749.5, 4706383.2),
         pixel_size=lambda x: (x, -1. * x)
     )
-
-    def _csv_wind_data_to_binary(wind_data_file_uri, binary_file_uri):
-        """Convert and compress the wind data into binary format,
-            packing in a specific manner such that the InVEST3.0 wind energy
-            model can properly unpack it
-
-            wind_data_file_uri - a URI to a CSV file with the formatted wind data
-                Data should have the following order of columns:
-                ["Latitude","Longitude","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-                "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-                "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K"]
-                (required)
-
-            binary_file_uri - a URI to write out the binary file (.bin) (required)
-
-            returns - Nothing"""
-
-        # Open the wave watch three files
-        wind_file = open(wind_data_file_uri,'rU')
-        # Open the binary output file as writeable
-        bin_file = open(binary_file_uri, 'wb')
-
-        # This is the expected column header list for the binary wind energy file.
-        # It is expected that the data will be in this order so that we can properly
-        # unpack the information into a dictionary
-        # ["LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-        #  "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-        #  "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
-
-        #burn header line
-        header_line = wind_file.readline()
-
-        while True:
-            # Read each line of the csv file for wind data
-            line = wind_file.readline()
-
-            # If end of file, break out
-            if len(line) == 0:
-                break
-
-            # Get the data values as floats
-            float_list = map(float,line.split(','))
-            # Swap long / lat values
-            float_list[0], float_list[1] = float_list[1], float_list[0]
-            # Pack up the data values as float types
-            s=struct.pack('f'*len(float_list), *float_list)
-            bin_file.write(s)
 
     def _create_ptm(fields, attributes):
         """
@@ -298,42 +337,6 @@ class WindEnergyUnitTests(unittest.TestCase):
                 geometries, srs.projection, fields, attributes,
                 vector_format='ESRI Shapefile')
 
-    def _create_csv(fields, data, fname):
-        """Create a new CSV table from a dictionary.
-
-        Parameters:
-            fname (string): a file path for the new table to be written to disk
-
-            fields (list): a list of the column names. The order of the fields
-                in the list will be the order in how they are written. ex:
-                ['id', 'precip', 'total']
-
-            data (dictionary): a dictionary representing the table.
-                The dictionary should be constructed with unique numerical keys
-                that point to a dictionary which represents a row in the table:
-                data = {0 : {'id':1, 'precip':43, 'total': 65},
-                        1 : {'id':2, 'precip':65, 'total': 94}}
-
-        Returns:
-            Nothing
-        """
-        csv_file = open(fname, 'wb')
-
-        #  Sort the keys so that the rows are written in order
-        row_keys = data.keys()
-        row_keys.sort()
-
-        csv_writer = csv.DictWriter(csv_file, fields)
-        #  Write the columns as the first row in the table
-        csv_writer.writerow(dict((fn, fn) for fn in fields))
-
-        # Write the rows from the dictionary
-        for index in row_keys:
-            csv_writer.writerow(data[index])
-
-        csv_file.close()
-
-
 
     def _create_latlong_raster(matrix, dtype=gdal.GDT_Int32, nodata=-1):
         """
@@ -466,7 +469,260 @@ class WindEnergyUnitTests(unittest.TestCase):
         exp_results = [.15, .1, .05, .05]
 
         for dist_a, dist_b in zip(results, exp_results):
-            pygeoprocessing.testing.assert_close(dist_a, dist_b)
+            pygeoprocessing.testing.assert_close(dist_a, dist_b, 1e-9)
+
+    #@nottest
+    def test_add_field_to_shape_given_list(self):
+        """WindEnergy: testing 'add_field_to_shape_given_list' function."""
+        from natcap.invest.wind_energy import wind_energy
+
+        fields = {'pt_id': 'int'}
+        attributes= [{'pt_id': 1}, {'pt_id': 2}, {'pt_id': 3}, {'pt_id': 4}]
+
+        srs = sampledata.SRS_WILLAMETTE
+
+        pos_x = srs.origin[0]
+        pos_y = srs.origin[1]
+
+        geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
+                      Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
+        temp_dir = self.workspace_dir
+        point_file = os.path.join(temp_dir, 'point_shape.shp')
+        shape_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+            geometries, srs.projection, fields, attributes,
+            vector_format='ESRI Shapefile', filename=point_file)
+
+        value_list = [10, 20, 30, 40]
+        field_name = "num_turb"
+
+        wind_energy.add_field_to_shape_given_list(
+            shape_ds_uri, value_list, field_name)
+
+        #compare
+        results = {1: {'num_turb': 10}, 2: {'num_turb': 20},
+                   3: {'num_turb': 30}, 4: {'num_turb': 40}}
+
+        shape = ogr.Open(shape_ds_uri)
+        layer_count = shape.GetLayerCount()
+
+        for layer_num in range(layer_count):
+            layer = shape.GetLayer(layer_num)
+
+            feat = layer.GetNextFeature()
+            while feat is not None:
+                pt_id = feat.GetField('pt_id')
+
+                try:
+                    field_val = feat.GetField(field_name)
+                    pygeoprocessing.testing.assert_close(
+                        results[pt_id][field_name], field_val, 1e-9)
+                except ValueError:
+                    raise AssertionError(
+                        'Could not find field %s' % field_name)
+
+                feat = layer.GetNextFeature()
+
+     #@nottest
+    def test_combine_dictionaries(self):
+        """WindEnergy: testing 'combine_dictionaries' function"""
+        from natcap.invest.wind_energy import wind_energy
+
+        dict_1 = {"name": "bob", "age": 3, "sex": "female"}
+        dict_2 = {"hobby": "crawling", "food": "milk"}
+
+        result = wind_energy.combine_dictionaries(dict_1, dict_2)
+
+        expected_result = {"name": "bob", "age": 3, "sex": "female",
+                           "hobby": "crawling", "food": "milk"}
+
+        self.assertDictEqual(expected_result, result)
+
+    #@nottest
+    def test_combine_dictionaries_duplicates(self):
+        """WindEnergy: testing 'combine_dictionaries' function w/ duplicates."""
+        from natcap.invest.wind_energy import wind_energy
+
+        dict_1 = {"name": "bob", "age": 3, "sex": "female"}
+        dict_2 = {"hobby": "crawling", "food": "milk", "age": 4}
+
+        result = wind_energy.combine_dictionaries(dict_1, dict_2)
+
+        expected_result = {"name": "bob", "age": 3, "sex": "female",
+                           "hobby": "crawling", "food": "milk"}
+
+        self.assertDictEqual(expected_result, result)
+
+    #@nottest
+    def test_read_csv_wind_parameters(self):
+        """WindEnergy: testing 'read_csv_wind_parameter' function"""
+        from natcap.invest.wind_energy import wind_energy
+
+        csv_uri = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input',
+            'global_wind_energy_parameters.csv')
+
+        parameter_list = [
+            'air_density', 'exponent_power_curve', 'decommission_cost',
+            'operation_maintenance_cost', 'miscellaneous_capex_cost']
+
+        result = wind_energy.read_csv_wind_parameters(csv_uri, parameter_list)
+
+        expected_result = {
+            'air_density': '1.225', 'exponent_power_curve': '2',
+            'decommission_cost': '.037', 'operation_maintenance_cost': '.035',
+            'miscellaneous_capex_cost': '.05'
+        }
+        self.assertDictEqual(expected_result, result)
+
+    #nottest
+    def test_create_wind_farm_box(self):
+        """WindEnergy: testing 'create_wind_farm_box' function."""
+        from natcap.invest.wind_energy import wind_energy
+
+        srs = sampledata.SRS_WILLAMETTE
+        spat_ref = osr.SpatialReference()
+        spat_ref.ImportFromWkt(srs.projection)
+
+        pos_x = srs.origin[0]
+        pos_y = srs.origin[1]
+
+        fields = {'id': 'real'}
+        attributes = [{'id': 1}]
+        geometries = [LinearRing([(pos_x + 100, pos_y), (pos_x + 100, pos_y + 150),
+                      (pos_x + 200, pos_y + 150), (pos_x + 200, pos_y),
+                      (pos_x + 100, pos_y)])]
+
+        temp_dir = self.workspace_dir
+        farm_1 = os.path.join(temp_dir, 'farm_1')
+        os.mkdir(farm_1)
+
+        farm_file = os.path.join(farm_1, 'vector.shp')
+        farm_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+            geometries, srs.projection, fields, attributes,
+            vector_format='ESRI Shapefile', filename=farm_file)
+
+        start_point = (pos_x + 100, pos_y)
+        x_len = 100
+        y_len = 150
+
+        farm_2 = os.path.join(temp_dir, 'farm_2')
+        os.mkdir(farm_2)
+        out_uri = os.path.join(farm_2, 'vector.shp')
+
+        wind_energy.create_wind_farm_box(
+            spat_ref, start_point, x_len, y_len, out_uri)
+        #compare
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_uri, farm_ds_uri, 1e-9)
+
+    #@nottest
+    def test_get_highest_harvested_geom(self):
+        """WindEnergy: testing 'get_highest_harvested_geom' function."""
+        from natcap.invest.wind_energy import wind_energy
+
+        srs = sampledata.SRS_WILLAMETTE
+
+        fields = {'pt_id': 'int', 'Harv_MWhr': 'real'}
+        attributes = [{'pt_id': 1, 'Harv_MWhr': 20.5},
+                      {'pt_id': 2, 'Harv_MWhr': 24.5},
+                      {'pt_id': 3, 'Harv_MWhr': 13},
+                      {'pt_id': 4, 'Harv_MWhr': 15}]
+
+        pos_x = srs.origin[0]
+        pos_y = srs.origin[1]
+
+        geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
+                      Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
+        temp_dir = self.workspace_dir
+        point_file = os.path.join(temp_dir, 'point_shape.shp')
+        shape_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+            geometries, srs.projection, fields, attributes,
+            vector_format='ESRI Shapefile', filename=point_file)
+
+        result = wind_energy.get_highest_harvested_geom(shape_ds_uri)
+
+        ogr_point = ogr.Geometry(ogr.wkbPoint)
+        ogr_point.AddPoint_2D(443823.12732787791, 4956546.9059804128)
+
+        if not ogr_point.Equals(result):
+            raise AssertionError(
+                'Expected geometry %s is not equal to the result %s' % (
+                ogr_point, result))
+
+    #@nottest
+    def test_read_binary_wind_data(self):
+        """WindEnergy: testing 'read_binary_wind_data' function."""
+        from natcap.invest.wind_energy import wind_energy
+
+        fields = ["LATI","LONG","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
+            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
+            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K"]
+        attributes = {0:
+            {"LATI": 31.794439, "LONG": 123.761261,
+             "Ram-010m": 6.355385, "Ram-020m": 6.858911, "Ram-030m": 7.171751,
+             "Ram-040m": 7.40233, "Ram-050m": 7.586274, "Ram-060m": 7.739956,
+             "Ram-070m": 7.872318, "Ram-080m": 7.988804, "Ram-090m": 8.092981,
+             "Ram-100m": 8.187322, "Ram-110m": 8.27361, "Ram-120m": 8.353179,
+             "Ram-130m": 8.427051, "Ram-140m": 8.496029, "Ram-150m": 8.560752,
+             "K": 1.905783},
+             1:
+            {"LATI": 32.795679,"LONG": 123.814537,
+             "Ram-010m": 6.430588, "Ram-020m": 6.940056, "Ram-030m": 7.256615,
+             "Ram-040m": 7.489923, "Ram-050m": 7.676043, "Ram-060m": 7.831544,
+             "Ram-070m": 7.965473, "Ram-080m": 8.083337, "Ram-090m": 8.188746,
+             "Ram-100m": 8.284203, "Ram-110m": 8.371511, "Ram-120m": 8.452021,
+             "Ram-130m": 8.526766, "Ram-140m": 8.596559, "Ram-150m": 8.662045,
+             "K": 0.999436},
+             2:
+            {"LATI": 33.796978, "LONG": 123.867828,
+             "Ram-010m": 6.53508, "Ram-020m": 7.05284, "Ram-030m": 7.374526,
+             "Ram-040m": 7.611625, "Ram-050m": 7.80077, "Ram-060m": 7.958797,
+             "Ram-070m": 8.094902, "Ram-080m": 8.214681, "Ram-090m": 8.321804,
+             "Ram-100m": 8.418812, "Ram-110m": 8.50754, "Ram-120m": 8.589359,
+             "Ram-130m": 8.665319, "Ram-140m": 8.736247, "Ram-150m": 8.8028,
+             "K": 2.087774}}
+
+
+        # Get the wave watch three uri from the first command line argument
+        temp_dir = self.workspace_dir
+        wind_data_file_uri = os.path.join(temp_dir, 'wind_data_csv.csv')
+        _create_csv(fields, attributes, wind_data_file_uri)
+        # Get the out binary uri from the second command line argument
+        binary_file_uri = os.path.join(temp_dir, 'binary_file.bin')
+        # Call the function to properly convert and compress data
+        _csv_wind_data_to_binary(wind_data_file_uri, binary_file_uri)
+
+        field_list = ['LATI', 'LONG', 'Ram-080m', 'K-010m']
+
+        results = wind_energy.read_binary_wind_data(binary_file_uri, field_list)
+
+        expected_results = {
+            (31.794439, 123.761261): {
+                'LONG': 123.761261, 'LATI': 31.794439, 'Ram-080m': 7.988804,
+                'K-010m': 1.905783},
+            (32.795679, 123.814537): {
+                'LONG': 123.814537, 'LATI': 32.795679, 'Ram-080m': 8.083337,
+                'K-010m': 0.999436},
+            (33.796978, 123.867828): {
+                'LONG': 123.867828, 'LATI': 33.7969, 'Ram-080m': 8.214681,
+                'K-010m': 2.087774}
+        }
+        #compare
+
+        result_keys = results.keys()
+        expected_keys = expected_results.keys()
+        result_keys.sort()
+        expected_keys.sort()
+        print result_keys
+        print expected_keys
+
+        for res_key, exp_key in zip(result_keys, expected_keys):
+            for a,b in zip(res_key, exp_key):
+                pygeoprocessing.testing.assert_close(a,b,1e-5)
+            for field in field_list:
+                pygeoprocessing.testing.assert_close(
+                    results[res_key][field], expected_results[exp_key][field], 1e-5)
+
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
