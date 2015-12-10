@@ -47,6 +47,8 @@ def execute(args):
         args['cell_size'] (string/float): optional, but must exist if
             `args['grid_aoi']` is True.  Indicates the long axis size of the
             grid cells.
+        args['results_suffix'] (string): optional, if exists is appended to
+            any output file paths.
 
     Returns:
         None."""
