@@ -104,16 +104,16 @@
               "type": "dropdown",
               "label": "Grid Type",
               "options": [
-                "rectangular",
-                "hexagonal"
+                "square",
+                "hexagon"
               ],
               "returns": {
                 "mapValues": {
-                  "rectangular": "rectangular",
-                  "hexagonal": "hexagonal"
+                  "square": "square",
+                  "hexagon": "hexagon"
                 }
               },
-              "defaultValue": "rectangular",
+              "defaultValue": "square",
               "required": true
             },
             {

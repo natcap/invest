@@ -9,7 +9,6 @@ import math
 
 import Pyro4
 from osgeo import ogr
-import numpy
 import shapely
 import shapely.wkt
 import shapely.prepared
@@ -24,7 +23,7 @@ Pyro4.config.SERIALIZER = 'marshal'
 
 
 def execute(args):
-    """Connect to remote recreation server and pass AOI
+    """Execute recreation client model on remote server.
 
     Parameters:
         args['workspace_dir'] (string): path to workspace directory
@@ -39,6 +38,15 @@ def execute(args):
             regression
         args['aggregating_metric'] (string): one of 'daily', 'monthly', or
             'yearly'.
+        args['grid_aoi'] (boolean): if true the polygon vector in
+            `args['aoi_path']` should be gridded into a new vector and the
+            recreation model should be executed on that
+        args['grid_type'] (string): optional, but must exist if
+            args['grid_aoi'] is True.  Is one of 'hexagon' or 'square' and
+            indicates the style of gridding.
+        args['cell_size'] (string/float): optional, but must exist if
+            `args['grid_aoi']` is True.  Indicates the long axis size of the
+            grid cells.
 
     Returns:
         None."""
@@ -52,7 +60,17 @@ def execute(args):
         "PYRO:natcap.invest.recreation@%s:%d" % (
             args['hostname'], int(args['port'])))
 
-    basename = os.path.splitext(args['aoi_path'])[0]
+    if args['grid_aoi']:
+        out_grid_vector_path = os.path.splitext(
+            args['aoi_path'])[0] + '_grid.shp'
+        grid_vector(
+            args['aoi_path'], args['grid_type'], args['cell_size'],
+            out_grid_vector_path)
+        aoi_path = out_grid_vector_path
+    else:
+        aoi_path = args['aoi_path']
+
+    basename = os.path.splitext(aoi_path)[0]
     aoi_archive_path = os.path.join(args['workspace_dir'], 'aoi_zipped.zip')
     with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
         for filename in glob.glob(basename + '.*'):
@@ -76,16 +94,6 @@ def execute(args):
     open(result_zip_path, 'wb').write(result_zip_file_binary)
     zipfile.ZipFile(result_zip_path, 'r').extractall(args['workspace_dir'])
     os.remove(result_zip_path)
-
-
-def hexagon_generator(edge_length, offset):
-    """Generator for coordinates in a hexagon."""
-    import math
-    x_offset, y_offset = offset
-    for angle in range(0, 360, 60) + [0]:
-        x_offset += math.cos(math.radians(angle)) * edge_length
-        y_offset += math.sin(math.radians(angle)) * edge_length
-        yield (x_offset, y_offset)
 
 
 def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
