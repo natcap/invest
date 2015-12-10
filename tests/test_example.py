@@ -30,7 +30,8 @@ class ExampleTest(unittest.TestCase):
 
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(args['workspace_dir'], 'sum.tif'),
-            os.path.join(REGRESSION_DATA, 'regression_sum.tif'))
+            os.path.join(REGRESSION_DATA, 'regression_sum.tif'),
+            tolerance=1e-9)
 
         shutil.rmtree(args['workspace_dir'])
 
@@ -44,3 +45,8 @@ class InVESTImportTest(unittest.TestCase):
                 module = loader.find_module(name).load_module(name)
             except ImportError as exception:
                 LOGGER.exception(exception)
+            except AttributeError as attribute_exception:
+                # When a module cannot be imported, `loader` is None, so we get
+                # an AttributeError.
+                LOGGER.error('Module %s has no loader', name)
+                LOGGER.exception(attribute_exception)

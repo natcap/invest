@@ -1590,6 +1590,7 @@ def check(options):
         ('poster', lib_needed,  None, None),
         ('pyyaml', required, 'yaml', None),
         ('pygeoprocessing', install_managed, None, None),
+        ('PyQt4', lib_needed, 'PyQt4', None),
     ]
 
     try:
@@ -1597,6 +1598,18 @@ def check(options):
         import poster
         poster.__version__ = '.'.join([str(i) for i in poster.version])
     except ImportError:
+        # If the package can't be found, this will be caught by pkg_resources
+        # below, and the error message will be formatted there.
+        pass
+
+    try:
+        # PyQt version string is also stored in an awkward place.
+        import PyQt4
+        from PyQt4.Qt import PYQT_VERSION_STR
+        PyQt4.__version__ = PYQT_VERSION_STR
+    except ImportError:
+        # If the package can't be found, this will be caught by pkg_resources
+        # below, and the error message will be formatted there.
         pass
 
     # pywin32 is required for pyinstaller builds
@@ -1667,16 +1680,28 @@ def check(options):
             continue
 
         try:
+            # If we have a required package version (defined in
+            # requirements.txt), use that string.
             requirement = requirements_txt_dict[requirement]
         except KeyError:
             pass
 
         try:
-            pkg_resources.require(requirement)
             pkg_req = pkg_resources.Requirement.parse(requirement)
-
             if import_name is None:
                 import_name = pkg_req.project_name
+
+            try:
+                pkg_resources.require(requirement)
+            except pkg_resources.DistributionNotFound as missing_req:
+                # Some packages (ahem ... PyQt4) are actually importable, but
+                # cannot be found by pkg_resources.  We handle this case here
+                # by attempting to import the 'missing' package, and raising
+                # the DistributionNotFound if we can't import it.
+                try:
+                    importlib.import_module(import_name)
+                except ImportError:
+                    raise missing_req
 
             pkg = __import__(import_name)
             print "Python package {ok}: {pkg} {ver} (meets {req})".format(
@@ -2719,6 +2744,10 @@ def jenkins_installer(options):
             'username': 'dataportal',
             'host': 'data.naturalcapitalproject.org',
             'dataportal': 'public_html',
+            # Only push data zipfiles if we're on Windows.
+            # Have to pick one, as we're having issues if all slaves are trying
+            # to push the same large files.
+            'include-data': platform.system() == 'Windows',
         })
 
 
@@ -2979,6 +3008,7 @@ def test(args):
     ('upstream=', '', 'The URL to the upstream REPO.  Use this when this repo is moved'),
     ('password', '', 'Prompt for a password'),
     ('private-key=', '', 'Use this private key to push'),
+    ('include-data', '', 'Include data zipfiles in the push'),
 ])
 def jenkins_push_artifacts(options):
     """
@@ -3058,7 +3088,8 @@ def jenkins_push_artifacts(options):
     if len(release_files) > 0:
         call_task('push', args=_push(release_dir) + release_files)
 
-    if len(data_files) > 0:
+    if len(data_files) > 0 and getattr(options.jenkins_push_artifacts,
+                                       'include_data', False):
         call_task('push', args=_push(data_dir) + data_files)
 
     def _archive_present(substring):
