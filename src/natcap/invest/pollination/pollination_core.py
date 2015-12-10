@@ -653,7 +653,7 @@ def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
                 yield (row_offset, col_offset, row_block_width, col_block_width)
 
     integration = 0.0
-    for row_offset, col_offset, row_block_width, col_block_width in indices:
+    for row_offset, col_offset, row_block_width, col_block_width in indices():
         row_indices, col_indices = numpy.indices((row_block_width,
                                                   col_block_width))
         row_indices += row_offset - max_distance
@@ -670,7 +670,7 @@ def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
         kernel_band.WriteArray(kernel, xoff=col_offset,
                                yoff=row_offset)
 
-    for row_offset, col_offset, row_block_width, col_block_width in indices:
+    for row_offset, col_offset, row_block_width, col_block_width in indices():
         kernel_block = kernel_band.ReadAsArray(
             xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
             win_ysize=row_block_width)
