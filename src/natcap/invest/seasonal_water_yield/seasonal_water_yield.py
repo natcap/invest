@@ -1,16 +1,11 @@
 """InVEST Seasonal Water Yield Model"""
 
-# This upgrades warnings to exceptions across this model.
-# I found this useful to catch all kinds of weird inputs to the model during
-# debugging and think it makes sense to have in production of this model too.
-import warnings
-warnings.filterwarnings('error')
-
 import os
 import logging
 import re
 import fractions
 import uuid
+import warnings
 
 import scipy.special
 import numpy
@@ -152,6 +147,12 @@ def execute(args):
         args['monthly_alpha_path'] (string): required if args['monthly_alpha']
             is True.
     """
+
+    # This upgrades warnings to exceptions across this model.
+    # I found this useful to catch all kinds of weird inputs to the model
+    # during debugging and think it makes sense to have in production of this
+    # model too.
+    warnings.filterwarnings('error')
 
     LOGGER.info('prepare and test inputs for common errors')
 
@@ -508,6 +509,7 @@ def execute(args):
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
 
+    warnings.resetwarnings()
 
 def _calculate_monthly_quick_flow(
         precip_path, lulc_raster_path, cn_path, n_events_raster_path,
