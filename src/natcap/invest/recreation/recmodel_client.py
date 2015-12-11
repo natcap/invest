@@ -308,3 +308,124 @@ def _build_file_registry(base_file_path_list, file_suffix):
                 str(duplicate_keys), str(duplicate_paths)))
 
     return file_registry
+
+def build_regression(
+        response_vector_path, response_field, response_table_path):
+    """Build a least squares fit for the polygons in the response vector
+    dataset and the spatial predictor datasets in `response_table_path`.
+
+    Parameters:
+        predictor_vector_path (string): path to a single layer polygon vector
+            file that has at least a field with the value of
+            `predictor_field`.  The values for this field per feature will be
+            used as the response values in the regression.
+        predictor_field (string): the field ID to use for the response in
+            the vector indicated by `predictor_vector_path`
+        response_table_path (string): path to a CSV file with three columns
+            'id', 'path' and 'type' where 'path' indicates the full or
+            relative path to the `response_table_path` table for the spatial
+            predictor dataset and 'type' is one of
+                'point_count': count # of points per response polygon
+                'point_nearest_distance': distance from nearest point to the
+                    centroid of the response polygon
+                'line_intersect_length': length of line segments intersecting
+                    each response polygon
+                'polygon_area': area of predictor polygon intersecting the
+                    response polygon
+                'raster_sum': sum of predictor raster under the response
+                    polygon
+                'raster_mean': average of predictor raster under the
+                    response polygon
+
+    Returns:
+        beta (numpy.ndarray): Least squares solution.  The shape of x is (1,K)
+            where K is the number of response variables defined in the
+            response table.
+        residues (numpy.ndarray): Sum of residues, shape is (K,) where K
+            is the number of response variables defined in the
+            response table.
+        """
+    response_vector = ogr.Open(response_vector_path)
+    response_layer = response_vector.GetLayer()
+    response_polygon_list = []
+    for response_feature in response_layer:
+        pud_value = response_feature.GetField(response_field)
+        feature_geometry = response_feature.GetGeometryRef()
+        feature_polygon = shapely.prepared.prep(
+            shapely.wkt.loads(feature_geometry.ExportToWkt()))
+        response_polygon_list.append((feature_polygon, pud_value))
+        feature_geometry = None
+    response_layer = None
+    ogr.DataSource.__swig_destroy__(response_vector)
+    response_vector = None
+
+    # lookup functions for response types
+    predictor_functions = {
+        'point_count': _point_count,
+        'point_nearest_distance': lambda x, y: None,
+        'line_intersect_length': lambda x, y: None,
+        'polygon_area': lambda x, y: None,
+        'raster_sum': lambda x, y: None,
+        'raster_mean': lambda x, y: None
+        }
+
+    response_table = pygeoprocessing.get_lookup_from_csv(
+        response_table_path, 'id')
+
+    LOGGER.debug(response_table)
+
+    for response_id in response_table:
+        raw_path = response_table[response_id]['path']
+        if os.path.isabs(raw_path):
+            response_path = raw_path
+        else:
+            # assume relative path w.r.t. the response table
+            response_path = os.path.join(os.path.dirname(response_table_path))
+
+        response_type = response_table[response_id]['type']
+        predictor_functions[response_type](
+            response_polygon_list, response_path)
+
+    return response_polygon_list, 0
+
+
+def _point_count(polygon_response_predictor_list, point_vector_path):
+    """Append number of points that intersect polygons on the
+    `polygon_response_predictor_list`.
+
+    Parameters:
+        polygon_response_predictor_list (list of tuples): each tuple is of the
+            form (shapely.Polygon, response_var, predictor_var1, ...)
+            This function modifies this list by appending another predictor
+            to the end of each tuple incidating the number of points in the
+            `point_vector_path` object are contained in each shapely.Polygon
+            per tuple.
+
+        point_vector_path (string): path to a single layer point vector
+            object.
+
+    Returns:
+        None."""
+
+    points = _ogr_to_geometry_list(point_vector_path)
+    for index in xrange(len(polygon_response_predictor_list)):
+        response_polygon = polygon_response_predictor_list[index][0]
+        point_count = len([
+            point for point in points if response_polygon.contains(point)])
+        polygon_response_predictor_list[index] += (point_count,)
+
+
+def _ogr_to_geometry_list(vector_path):
+    """Convert an OGR type with one layer to a list of shapely geometry"""
+
+    vector = ogr.Open(vector_path)
+    layer = vector.GetLayer()
+    geometry_list = []
+    for feature in layer:
+        feature_geometry = feature.GetGeometryRef()
+        shapely_polygon = shapely.wkt.loads(feature_geometry.ExportToWkt())
+        geometry_list.append(shapely_polygon)
+        feature_geometry = None
+    layer = None
+    ogr.DataSource.__swig_destroy__(vector)
+    return geometry_list
