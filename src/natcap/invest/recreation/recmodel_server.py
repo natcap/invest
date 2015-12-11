@@ -104,7 +104,8 @@ class RecModel(object):
         return __version__
 
     def calc_aggregated_points_in_aoi(
-            self, zip_file_binary, date_range, aggregate_metric):
+            self, zip_file_binary, date_range, aggregate_metric,
+            out_vector_filename):
         """Aggregate the number of unique points in the AOI given a date range
         and temporal metric.
 
@@ -114,6 +115,7 @@ class RecModel(object):
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date in text form as YYYY-MM-DD
             aggregate_metric (string): one of "yearly", "monthly" or "daily"
+            out_vector_filename (string): base filename of ouput vector
 
         Returns:
             a bytestring of a zipped copy of `zip_file_binary` with a "PUD"
@@ -153,7 +155,8 @@ class RecModel(object):
                 numpy.datetime64(date_range[0]),
                 numpy.datetime64(date_range[1]))
             base_pud_aoi_path = self._calc_aggregated_points_in_aoi(
-                aoi_path, workspace_path, numpy_date_range, aggregate_metric)
+                aoi_path, workspace_path, numpy_date_range, aggregate_metric,
+                out_vector_filename)
 
             #ZIP and stream the result back
             print 'zipping result'
@@ -177,7 +180,8 @@ class RecModel(object):
             raise
 
     def _calc_aggregated_points_in_aoi(
-            self, aoi_path, workspace_path, date_range, aggregate_metric):
+            self, aoi_path, workspace_path, date_range, aggregate_metric,
+            out_vector_filename):
         """Aggregate the number of unique points in the AOI given a date range
         and temporal metric.
 
@@ -188,17 +192,16 @@ class RecModel(object):
             date_range (datetime 2-tuple): a tuple that contains the inclusive
                 start and end date
             aggregate_metric (string): one of "yearly", "monthly" or "daily"
+            out_vector_filename (string): base filename of output vector
 
         Returns:
             a path to an ESRI shapefile copy of `aoi_path` updated with a
             "PUD" field which contains the metric per polygon."""
 
         aoi_vector = ogr.Open(aoi_path)
-
         #append a _pud to the aoi filename
         out_aoi_pud_path = os.path.join(
-            os.path.dirname(aoi_path),
-            os.path.splitext(os.path.basename(aoi_path))[0]+'_pud.shp')
+            os.path.dirname(aoi_path), out_vector_filename)
 
         #start the workers now, because they have to load a quadtree and
         #it will take some time

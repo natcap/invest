@@ -24,15 +24,22 @@ LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 #this serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
 
+# These are the expected extensions associated with an ESRI Shapefile
+# as part of the ESRI Shapefile driver standard, but some extensions
+# like .prj, .sbn, and .sbx, are optional depending on versions of the
+# format: http://www.gdal.org/drv_shapefile.html
+_ESRI_SHAPEFILE_EXTENSIONS =['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
+
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
     }
 
 _TMP_BASE_FILES = {
-    'grid_aoi_path': 'gridded_aoi.tif',
+    'local_aoi_path': 'aoi.shp',
     'compressed_aoi_path': 'aoi.zip',
     'compressed_pud_path': 'pud.zip',
     }
+
 
 def execute(args):
     """Execute recreation client model on remote server.
@@ -84,16 +91,19 @@ def execute(args):
     if args['grid_aoi']:
         grid_vector(
             args['aoi_path'], args['grid_type'], args['cell_size'],
-            file_registry['grid_aoi_path'])
-        aoi_path = file_registry['grid_aoi_path']
+            file_registry['local_aoi_path'])
     else:
-        aoi_path = args['aoi_path']
+        aoi_vector = ogr.Open(args['aoi_path'])
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.CopyDataSource(aoi_vector, file_registry['local_aoi_path'])
 
-    basename = os.path.splitext(aoi_path)[0]
-    with zipfile.ZipFile(file_registry['compressed_aoi_path'], 'w') as myzip:
-        for filename in glob.glob(basename + '.*'):
-            LOGGER.info('archiving %s', filename)
-            myzip.write(filename, os.path.basename(filename))
+    basename = os.path.splitext(file_registry['local_aoi_path'])[0]
+    with zipfile.ZipFile(file_registry['compressed_aoi_path'], 'w') as aoizip:
+        for suffix in _ESRI_SHAPEFILE_EXTENSIONS:
+            filename = basename + suffix
+            if os.path.exists(filename):
+                LOGGER.info('archiving %s', filename)
+                aoizip.write(filename, os.path.basename(filename))
 
     #convert shapefile to binary string for serialization
     zip_file_binary = open(file_registry['compressed_aoi_path'], 'rb').read()
@@ -104,7 +114,8 @@ def execute(args):
 
     result_zip_file_binary = (
         recmodel_server.calc_aggregated_points_in_aoi(
-            zip_file_binary, date_range, args['aggregating_metric']))
+            zip_file_binary, date_range, args['aggregating_metric'],
+            os.path.basename(file_registry['pud_results_path'])))
     LOGGER.info('received result, took %f seconds', time.time() - start_time)
 
     #unpack result
