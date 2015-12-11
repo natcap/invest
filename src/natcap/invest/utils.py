@@ -6,7 +6,7 @@ from osgeo import osr
 import pygeoprocessing
 
 
-def make_exponential_decay_kernel_filepath(expected_distance, kernel_filepath):
+def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     """Create a raster-based exponential decay kernel.
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
