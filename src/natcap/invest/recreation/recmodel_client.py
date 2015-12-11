@@ -1,7 +1,6 @@
 """InVEST Recreation Client"""
 
 import os
-import glob
 import zipfile
 import time
 import logging
@@ -96,6 +95,8 @@ def execute(args):
         aoi_vector = ogr.Open(args['aoi_path'])
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.CopyDataSource(aoi_vector, file_registry['local_aoi_path'])
+        ogr.DataSource.__swig_destroy__(aoi_vector)
+        aoi_vector = None
 
     basename = os.path.splitext(file_registry['local_aoi_path'])[0]
     with zipfile.ZipFile(file_registry['compressed_aoi_path'], 'w') as aoizip:
@@ -124,6 +125,19 @@ def execute(args):
     zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
         output_dir)
 
+    LOGGER.info('deleting temporary files')
+    for file_id in _TMP_BASE_FILES:
+        file_path = file_registry[file_id]
+        try:
+            if file_path.endswith('.shp'):
+                #delete like a vector
+                driver = ogr.GetDriverByName('ESRI Shapefile')
+                driver.DeleteDataSource(file_path)
+            else:
+                os.remove(file_path)
+        except OSError:
+            # Let it go.
+            pass
 
 
 def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
@@ -228,6 +242,7 @@ def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
                 poly_feature = ogr.Feature(grid_layer_defn)
                 poly_feature.SetGeometry(poly)
                 grid_layer.CreateFeature(poly_feature)
+    ogr.DataSource.__swig_destroy__(vector)
 
 
 def _build_file_registry(base_file_path_list, file_suffix):

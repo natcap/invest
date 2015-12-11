@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.recreation.recmodel_client",
   "modelName": "recreation",
   "localDocURI": "../documentation/recreation.html",
-  "height": 500,
+  "height": 550,
   "width": 500,
   "elements": [
     {
