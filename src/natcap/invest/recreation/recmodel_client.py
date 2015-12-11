@@ -13,6 +13,9 @@ import shapely
 import shapely.wkt
 import shapely.prepared
 
+import natcap.invest.utils
+import pygeoprocessing
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -21,6 +24,15 @@ LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 #this serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
 
+_OUTPUT_BASE_FILES = {
+    'pud_results_path': 'pud_results.shp',
+    }
+
+_TMP_BASE_FILES = {
+    'grid_aoi_path': 'gridded_aoi.tif',
+    'compressed_aoi_path': 'aoi.zip',
+    'compressed_pud_path': 'pud.zip',
+    }
 
 def execute(args):
     """Execute recreation client model on remote server.
@@ -55,32 +67,36 @@ def execute(args):
 
     date_range = (args['start_date'], args['end_date'])
 
-    if not os.path.exists(args['workspace_dir']):
-        os.makedirs(args['workspace_dir'])
+    file_suffix = natcap.invest.utils.make_suffix_string(
+        args, 'results_suffix')
+
+    output_dir = args['workspace_dir']
+    pygeoprocessing.create_directories([output_dir])
+
+    file_registry = _build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     recmodel_server = Pyro4.Proxy(
         "PYRO:natcap.invest.recreation@%s:%d" % (
             args['hostname'], int(args['port'])))
 
     if args['grid_aoi']:
-        out_grid_vector_path = os.path.splitext(
-            args['aoi_path'])[0] + '_grid.shp'
         grid_vector(
             args['aoi_path'], args['grid_type'], args['cell_size'],
-            out_grid_vector_path)
-        aoi_path = out_grid_vector_path
+            file_registry['grid_aoi_path'])
+        aoi_path = file_registry['grid_aoi_path']
     else:
         aoi_path = args['aoi_path']
 
     basename = os.path.splitext(aoi_path)[0]
-    aoi_archive_path = os.path.join(args['workspace_dir'], 'aoi_zipped.zip')
-    with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
+    with zipfile.ZipFile(file_registry['compressed_aoi_path'], 'w') as myzip:
         for filename in glob.glob(basename + '.*'):
             LOGGER.info('archiving %s', filename)
             myzip.write(filename, os.path.basename(filename))
 
     #convert shapefile to binary string for serialization
-    zip_file_binary = open(aoi_archive_path, 'rb').read()
+    zip_file_binary = open(file_registry['compressed_aoi_path'], 'rb').read()
 
     #transfer zipped file to server
     start_time = time.time()
@@ -92,10 +108,11 @@ def execute(args):
     LOGGER.info('received result, took %f seconds', time.time() - start_time)
 
     #unpack result
-    result_zip_path = os.path.join(args['workspace_dir'], 'pud_result.zip')
-    open(result_zip_path, 'wb').write(result_zip_file_binary)
-    zipfile.ZipFile(result_zip_path, 'r').extractall(args['workspace_dir'])
-    os.remove(result_zip_path)
+    open(file_registry['compressed_pud_path'], 'wb').write(
+        result_zip_file_binary)
+    zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
+        output_dir)
+
 
 
 def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
@@ -200,3 +217,68 @@ def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
                 poly_feature = ogr.Feature(grid_layer_defn)
                 poly_feature.SetGeometry(poly)
                 grid_layer.CreateFeature(poly_feature)
+
+
+def _build_file_registry(base_file_path_list, file_suffix):
+    """Construct a file registry by combining file suffixes with file key
+    names, base filenames, and directories.
+
+    Parameters:
+        base_file_tuple_list (list): a list of (dict, path) tuples where
+            the dictionaries have a 'file_key': 'basefilename' pair, or
+            'file_key': list of 'basefilename's.  'path'
+            indicates the file directory path to prepend to the basefile name.
+        file_suffix (string): a string to append to every filename, can be
+            empty string
+
+    Returns:
+        dictionary of 'file_keys' from the dictionaries in
+        `base_file_tuple_list` mapping to full file paths with suffixes or
+        lists of file paths with suffixes depending on the original type of
+        the 'basefilename' pair.
+
+    Raises:
+        ValueError if there are duplicate file keys or duplicate file paths.
+    """
+
+    all_paths = set()
+    duplicate_keys = set()
+    duplicate_paths = set()
+    file_registry = {}
+
+    def _build_path(base_filename, path):
+        """Internal helper to avoid code duplication"""
+        pre, post = os.path.splitext(base_filename)
+        full_path = os.path.join(path, pre+file_suffix+post)
+
+        # Check for duplicate keys or paths
+        if full_path in all_paths:
+            duplicate_paths.add(full_path)
+        else:
+            all_paths.add(full_path)
+        return full_path
+
+    # foo
+    for base_file_dict, path in base_file_path_list:
+        for file_key, file_payload in base_file_dict.iteritems():
+            # check for duplicate keys
+            if file_key in file_registry:
+                duplicate_keys.add(file_key)
+            else:
+                # handle the case whether it's a filename or a list of strings
+                if isinstance(file_payload, basestring):
+                    full_path = _build_path(file_payload, path)
+                    file_registry[file_key] = full_path
+                elif isinstance(file_payload, list):
+                    file_registry[file_key] = []
+                    for filename in file_payload:
+                        full_path = _build_path(filename, path)
+                        file_registry[file_key].append(full_path)
+
+    if len(duplicate_paths) > 0 or len(duplicate_keys):
+        raise ValueError(
+            "Cannot consolidate because of duplicate paths or keys: "
+            "duplicate_keys: %s duplicate_paths: %s" % (
+                str(duplicate_keys), str(duplicate_paths)))
+
+    return file_registry
