@@ -447,21 +447,21 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
-        """Assert that the files listed in `base_list_file` are also in the
-        directory pointed to by `path`.
+        """Assert that the files listed in `base_list_path` are also in the
+        directory pointed to by `directory_path`.
 
         Parameters:
-            base_list_file (string): a path to a file that has one relative file
-                path per line.
-            directory_path (string): a path to a directory whose contents will be
-                checked against the files listed in `base_list_file`
+            base_list_path (string): a path to a file that has one relative
+                file path per line.
+            directory_path (string): a path to a directory whose contents will
+                be checked against the files listed in `base_list_file`
 
         Returns:
             None
 
         Raises:
-            AssertionError when there are files listed in `base_list_file` that
-                don't exist in the directory indicated by `path`"""
+            AssertionError when there are files listed in `base_list_file`
+                that don't exist in the directory indicated by `path`"""
 
         missing_files = []
         with open(base_list_path, 'r') as file_list:
