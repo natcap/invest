@@ -3,13 +3,12 @@
 import shutil
 import os
 import logging
-import math
 
 import gdal
-import osr
 import numpy
-
 import pygeoprocessing.geoprocessing
+
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.pollination.core')
 
@@ -248,7 +247,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     lulc_ds = None
     expected_distance = guild['alpha'] / pixel_size
     kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
+    utils.exponential_decay_kernel_raster(expected_distance, kernel_uri)
     LOGGER.debug('expected distance: %s ', expected_distance)
 
     # Fetch the floral resources raster and matrix from the args dictionary
@@ -306,7 +305,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     expected_distance = alpha / pixel_size
 
     kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
+    utils.exponential_decay_kernel_raster(expected_distance, kernel_uri)
 
     LOGGER.debug('Calculating foraging/farm abundance index')
     pygeoprocessing.geoprocessing.convolve_2d_uri(species_abundance_uri, kernel_uri, farm_abundance_temp_uri)
@@ -456,7 +455,7 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
 
     expected_distance = alpha / min_pixel_size
     kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
+    utils.exponential_decay_kernel_raster(expected_distance, kernel_uri)
     LOGGER.debug('Exponetial decay on ratio raster')
     pygeoprocessing.geoprocessing.convolve_2d_uri(
         out_uris['species_value'], kernel_uri, out_uris['species_value_blurred'])
@@ -605,74 +604,3 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
 
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         base_raster, reclass_rules, out_uri, gdal.GDT_Float32, -1)
-
-
-def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
-    max_distance = expected_distance * 5
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
-    srs = osr.SpatialReference()
-    srs.SetUTM(11, 1)
-    srs.SetWellKnownGeogCS('NAD27')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
-
-    cols_per_block, rows_per_block = kernel_band.GetBlockSize()
-
-    n_cols = kernel_dataset.RasterXSize
-    n_rows = kernel_dataset.RasterYSize
-
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    def indices():
-        for row_block_index in xrange(n_row_blocks):
-            row_offset = row_block_index * rows_per_block
-            row_block_width = n_rows - row_offset
-            if row_block_width > rows_per_block:
-                row_block_width = rows_per_block
-
-            for col_block_index in xrange(n_col_blocks):
-                col_offset = col_block_index * cols_per_block
-                col_block_width = n_cols - col_offset
-                if col_block_width > cols_per_block:
-                    col_block_width = cols_per_block
-
-                yield (row_offset, col_offset, row_block_width, col_block_width)
-
-    integration = 0.0
-    for row_offset, col_offset, row_block_width, col_block_width in indices():
-        row_indices, col_indices = numpy.indices((row_block_width,
-                                                  col_block_width))
-        row_indices += row_offset - max_distance
-        col_indices += col_offset - max_distance
-
-        kernel_index_distances = numpy.sqrt(
-            numpy.add(row_indices ** 2,
-                      col_indices ** 2))
-        kernel = numpy.where(
-            kernel_index_distances > max_distance, 0.0,
-            numpy.exp(-kernel_index_distances / expected_distance))
-        integration += numpy.sum(kernel)
-
-        kernel_band.WriteArray(kernel, xoff=col_offset,
-                               yoff=row_offset)
-
-    for row_offset, col_offset, row_block_width, col_block_width in indices():
-        kernel_block = kernel_band.ReadAsArray(
-            xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
-            win_ysize=row_block_width)
-        kernel_block /= integration
-        kernel_band.WriteArray(kernel_block, xoff=col_offset, yoff=row_offset)
