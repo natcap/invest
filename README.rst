@@ -454,6 +454,24 @@ more information if you're interested.
 
 .. _The relevant issue: https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version#comment-19426088
 
+Matplotlib ImportError
+----------------------
+
+On Fedora systems, some users encounter this exception when trying to run an 
+InVEST model that uses matplotlib:
+
+::
+
+    ...
+    line 17, in <module>
+        from .backend_qt5agg import NavigationToolbar2QTAgg
+    ImportError: No module named backend_qt5agg
+
+This is a `known issue`_ with the RedHat build of ``python-matplotlib-qt4``.  The workaround
+is to ``yum install python-matplotlib-qt5``.
+
+.. _known issue: https://bugzilla.redhat.com/show_bug.cgi?id=1219556
+
 
 GDAL
 ----
