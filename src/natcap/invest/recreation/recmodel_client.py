@@ -11,9 +11,9 @@ from osgeo import ogr
 import shapely
 import shapely.wkt
 import shapely.prepared
-
-import natcap.invest.utils
 import pygeoprocessing
+
+from .. import utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -27,7 +27,7 @@ Pyro4.config.SERIALIZER = 'marshal'
 # as part of the ESRI Shapefile driver standard, but some extensions
 # like .prj, .sbn, and .sbx, are optional depending on versions of the
 # format: http://www.gdal.org/drv_shapefile.html
-_ESRI_SHAPEFILE_EXTENSIONS =['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
+_ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
@@ -73,7 +73,7 @@ def execute(args):
 
     date_range = (args['start_date'], args['end_date'])
 
-    file_suffix = natcap.invest.utils.make_suffix_string(
+    file_suffix = utils.make_suffix_string(
         args, 'results_suffix')
 
     output_dir = args['workspace_dir']
@@ -309,21 +309,18 @@ def _build_file_registry(base_file_path_list, file_suffix):
 
     return file_registry
 
-def build_regression(
-        response_vector_path, response_field, response_table_path):
+
+def build_regression_coefficients(
+        response_vector_path, predictor_table_path,
+        out_coefficient_vector_path):
     """Build a least squares fit for the polygons in the response vector
-    dataset and the spatial predictor datasets in `response_table_path`.
+    dataset and the spatial predictor datasets in `predictor_table_path`.
 
     Parameters:
-        predictor_vector_path (string): path to a single layer polygon vector
-            file that has at least a field with the value of
-            `predictor_field`.  The values for this field per feature will be
-            used as the response values in the regression.
-        predictor_field (string): the field ID to use for the response in
-            the vector indicated by `predictor_vector_path`
-        response_table_path (string): path to a CSV file with three columns
+        predictor_vector_path (string): path to a single layer polygon vector.
+        predictor_table_path (string): path to a CSV file with three columns
             'id', 'path' and 'type' where 'path' indicates the full or
-            relative path to the `response_table_path` table for the spatial
+            relative path to the `predictor_table_path` table for the spatial
             predictor dataset and 'type' is one of
                 'point_count': count # of points per response polygon
                 'point_nearest_distance': distance from nearest point to the
@@ -336,70 +333,75 @@ def build_regression(
                     polygon
                 'raster_mean': average of predictor raster under the
                     response polygon
+        out_coefficient_vector_path (string): path to a copy of
+            `response_vector_path` with the modified predictor variable
+            responses. Overwritten if exists.
 
     Returns:
-        beta (numpy.ndarray): Least squares solution.  The shape of x is (1,K)
-            where K is the number of response variables defined in the
-            response table.
-        residues (numpy.ndarray): Sum of residues, shape is (K,) where K
-            is the number of response variables defined in the
-            response table.
-        """
+        None."""
+
     response_vector = ogr.Open(response_vector_path)
     response_layer = response_vector.GetLayer()
-    response_polygon_list = []
+    response_polygons = {}  # maps FID to prepared geometry
     for response_feature in response_layer:
-        pud_value = response_feature.GetField(response_field)
         feature_geometry = response_feature.GetGeometryRef()
         feature_polygon = shapely.prepared.prep(
             shapely.wkt.loads(feature_geometry.ExportToWkt()))
-        response_polygon_list.append((feature_polygon, pud_value))
         feature_geometry = None
+        response_polygons[response_feature.GetFID()] = feature_polygon
     response_layer = None
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    if os.path.exists(out_coefficient_vector_path):
+        driver.DeleteDataSource(out_coefficient_vector_path)
+
+    out_coefficent_vector = driver.CopyDataSource(
+        response_vector, out_coefficient_vector_path)
     ogr.DataSource.__swig_destroy__(response_vector)
     response_vector = None
+
+    out_coefficent_layer = out_coefficent_vector.GetLayer()
 
     # lookup functions for response types
     predictor_functions = {
         'point_count': _point_count,
-        'point_nearest_distance': lambda x, y: None,
-        'line_intersect_length': lambda x, y: None,
-        'polygon_area': lambda x, y: None,
-        'raster_sum': lambda x, y: None,
-        'raster_mean': lambda x, y: None
+        'point_nearest_distance': lambda x, y: {},
+        'line_intersect_length': lambda x, y: {},
+        'polygon_area': lambda x, y: {},
+        'raster_sum': lambda x, y: {},
+        'raster_mean': lambda x, y: {}
         }
 
-    response_table = pygeoprocessing.get_lookup_from_csv(
-        response_table_path, 'id')
+    predictor_table = pygeoprocessing.get_lookup_from_csv(
+        predictor_table_path, 'id')
+    for predictor_id in predictor_table:
+        predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
+        out_coefficent_layer.CreateField(predictor_field)
 
-    LOGGER.debug(response_table)
-
-    for response_id in response_table:
-        raw_path = response_table[response_id]['path']
+        raw_path = predictor_table[predictor_id]['path']
         if os.path.isabs(raw_path):
-            response_path = raw_path
+            response_vector_path = raw_path
         else:
             # assume relative path w.r.t. the response table
-            response_path = os.path.join(os.path.dirname(response_table_path))
+            response_vector_path = os.path.join(
+                os.path.dirname(predictor_table_path))
 
-        response_type = response_table[response_id]['type']
-        predictor_functions[response_type](
-            response_polygon_list, response_path)
+        predictor_type = predictor_table[predictor_id]['type']
+        predictor_results = predictor_functions[predictor_type](
+            response_polygons, response_vector_path)
+        for feature_id, value in predictor_results.iteritems():
+            feature = out_coefficent_layer.GetFeature(feature_id)
+            feature.SetField(str(predictor_id), value)
+            out_coefficent_layer.SetFeature(feature)
 
-    return response_polygon_list, 0
 
-
-def _point_count(polygon_response_predictor_list, point_vector_path):
+def _point_count(polygon_response_predictor_lookup, point_vector_path):
     """Append number of points that intersect polygons on the
-    `polygon_response_predictor_list`.
+    `polygon_response_predictor_lookup`.
 
     Parameters:
-        polygon_response_predictor_list (list of tuples): each tuple is of the
-            form (shapely.Polygon, response_var, predictor_var1, ...)
-            This function modifies this list by appending another predictor
-            to the end of each tuple incidating the number of points in the
-            `point_vector_path` object are contained in each shapely.Polygon
-            per tuple.
+        polygon_response_predictor_lookup (dictionary): maps feature ID to
+            prepared shapely.Polygon.
 
         point_vector_path (string): path to a single layer point vector
             object.
@@ -408,11 +410,14 @@ def _point_count(polygon_response_predictor_list, point_vector_path):
         None."""
 
     points = _ogr_to_geometry_list(point_vector_path)
-    for index in xrange(len(polygon_response_predictor_list)):
-        response_polygon = polygon_response_predictor_list[index][0]
+    point_count_lookup = {}  # map FID to point count
+    for feature_id, geometry in polygon_response_predictor_lookup.iteritems():
         point_count = len([
-            point for point in points if response_polygon.contains(point)])
-        polygon_response_predictor_list[index] += (point_count,)
+            point for point in points if geometry.contains(point)])
+        if point_count > 0:
+            LOGGER.debug(point_count)
+        point_count_lookup[feature_id] = point_count
+    return point_count_lookup
 
 
 def _ogr_to_geometry_list(vector_path):
@@ -423,8 +428,8 @@ def _ogr_to_geometry_list(vector_path):
     geometry_list = []
     for feature in layer:
         feature_geometry = feature.GetGeometryRef()
-        shapely_polygon = shapely.wkt.loads(feature_geometry.ExportToWkt())
-        geometry_list.append(shapely_polygon)
+        shapely_geometry = shapely.wkt.loads(feature_geometry.ExportToWkt())
+        geometry_list.append(shapely_geometry)
         feature_geometry = None
     layer = None
     ogr.DataSource.__swig_destroy__(vector)
