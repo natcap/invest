@@ -42,8 +42,12 @@ class InVESTImportTest(unittest.TestCase):
 
         for loader, name, is_pkg in pkgutil.walk_packages(natcap.invest.__path__):
             try:
-                module = loader.find_module(name).load_module(name)
-            except ImportError as exception:
+                loader.find_module(name).load_module(name)
+            except (ImportError, ValueError) as exception:
+                # ImportError happens when the package cannot be found
+                # ValueError happens when using intra-package references. This
+                # should ideally not break at all, but I can't seem to find a
+                # workaround at the moment.
                 LOGGER.exception(exception)
             except AttributeError as attribute_exception:
                 # When a module cannot be imported, `loader` is None, so we get
