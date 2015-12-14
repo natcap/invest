@@ -15,7 +15,7 @@ import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry.polygon import LinearRing
-
+from nose.tools import nottest
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -513,6 +513,40 @@ class WindEnergyUnitTests(unittest.TestCase):
                     results[res_key][field], expected_results[exp_key][field],
                     1e-5)
 
+    def test_read_binary_wind_data_exception(self):
+        """WindEnergy: testing 'read_binary_wind_data' raises HubHeightError."""
+        from natcap.invest.wind_energy import wind_energy
+
+        temp_dir = self.workspace_dir
+        # Setup parameters for creating binary file to test against
+        fields = [
+            "LATI", "LONG", "Ram-010m", "Ram-020m", "Ram-030m",
+            "Ram-040m", "Ram-050m", "Ram-060m", "Ram-070m", "Ram-080m",
+            "Ram-090m", "Ram-100m", "Ram-110m", "Ram-120m", "Ram-130m",
+            "Ram-140m", "Ram-150m", "K"]
+        attributes = {
+            0:
+                {"LATI": 31.794439, "LONG": 123.761261,
+                 "Ram-010m": 6.355385, "Ram-020m": 6.858911, "Ram-030m": 7.171751,
+                 "Ram-040m": 7.40233, "Ram-050m": 7.586274, "Ram-060m": 7.739956,
+                 "Ram-070m": 7.872318, "Ram-080m": 7.988804, "Ram-090m": 8.092981,
+                 "Ram-100m": 8.187322, "Ram-110m": 8.27361, "Ram-120m": 8.353179,
+                 "Ram-130m": 8.427051, "Ram-140m": 8.496029, "Ram-150m": 8.560752,
+                 "K": 1.905783}}
+
+        wind_data_file_uri = os.path.join(temp_dir, 'wind_data_csv.csv')
+        # Create CSV file to create binary file from
+        _create_csv(fields, attributes, wind_data_file_uri)
+        binary_file_uri = os.path.join(temp_dir, 'binary_file.bin')
+        # Call the function to properly convert and compress data
+        _csv_wind_data_to_binary(wind_data_file_uri, binary_file_uri)
+
+        field_list = ['LATI', 'LONG', 'Ram-180m', 'K-010m']
+        # Call the function to test
+        self.assertRaises(
+            wind_energy.HubHeightError, wind_energy.read_binary_wind_data,
+            binary_file_uri, field_list)
+
     def test_pixel_size_transform(self):
         """WindEnergy: testing pixel size transform helper function.
 
@@ -599,6 +633,103 @@ class WindEnergyUnitTests(unittest.TestCase):
         res_array = res_band.ReadAsArray()
         numpy.testing.assert_array_equal(res_array, exp_array)
 
+    def test_wind_data_to_point_shape(self):
+        """WindEnergy: testing 'wind_data_to_point_shape' function."""
+        from natcap.invest.wind_energy import wind_energy
+
+        temp_dir = self.workspace_dir
+
+        dict_data = {
+            (31.79, 123.76): {
+                'LONG': 123.76, 'LATI': 31.79, 'Ram-080m': 7.98,
+                'K-010m': 1.90}
+        }
+
+        layer_name = "datatopoint"
+        out_uri = os.path.join(temp_dir, 'datatopoint.shp')
+
+        wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_uri)
+
+        field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
+        ogr_point = ogr.Geometry(ogr.wkbPoint)
+        ogr_point.AddPoint_2D(123.76, 31.79)
+
+        shape = ogr.Open(out_uri)
+        layer = shape.GetLayer()
+
+        feat = layer.GetNextFeature()
+        while feat is not None:
+
+            geom = feat.GetGeometryRef()
+            if bool(geom.Equals(ogr_point)) is False:
+                raise AssertionError(
+                    'Geometries are not equal. Expected is: %s, '
+                    'but current is %s' % (ogr_point, geom))
+
+            for field in field_names:
+                try:
+                    field_val = feat.GetField(field)
+                    self.assertEqual(
+                        dict_data[(31.79, 123.76)][field], field_val)
+                except ValueError:
+                    raise AssertionError(
+                        'Could not find field %s' % field)
+
+            feat = layer.GetNextFeature()
+
+    def test_wind_data_to_point_shape_360(self):
+        """WindEnergy: testing 'wind_data_to_point_shape' 360."""
+        from natcap.invest.wind_energy import wind_energy
+
+        temp_dir = self.workspace_dir
+    # -360 to 0 should be 160.00
+        dict_data = {
+            (31.79, -200.0): {
+                'LONG': -200.0, 'LATI': 31.79, 'Ram-080m': 7.98,
+                'K-010m': 1.90}
+        }
+
+        layer_name = "datatopoint"
+        out_uri = os.path.join(temp_dir, 'datatopoint.shp')
+
+        wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_uri)
+
+        field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
+        ogr_point = ogr.Geometry(ogr.wkbPoint)
+        ogr_point.AddPoint_2D(160.00, 31.79)
+
+        shape = ogr.Open(out_uri)
+        layer = shape.GetLayer()
+
+        feat = layer.GetNextFeature()
+        while feat is not None:
+
+            geom = feat.GetGeometryRef()
+            if bool(geom.Equals(ogr_point)) is False:
+                raise AssertionError(
+                    'Geometries are not equal. Expected is: %s, '
+                    'but current is %s' % (ogr_point, geom))
+
+            for field in field_names:
+                try:
+                    field_val = feat.GetField(field)
+                    self.assertEqual(
+                        dict_data[(31.79, -200.0)][field], field_val)
+                except ValueError:
+                    raise AssertionError(
+                        'Could not find field %s' % field)
+
+            feat = layer.GetNextFeature()
+
+    def test_format_scale_key(self):
+        """WindEnergy: testing 'format_scale_key' function."""
+        from natcap.invest.wind_energy import wind_energy
+
+        hub_height = '150'
+        result = wind_energy.format_scale_key(hub_height)
+        expected_res = 'Ram-150m'
+        self.assertEqual(result, expected_res)
+
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
 
@@ -637,6 +768,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_avggrid_dist_windsched(self):
         """WindEnergy: testing Valuation using avg grid distance and wind sched."""
         from natcap.invest.wind_energy import wind_energy
@@ -681,6 +813,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_aoi(self):
         """WindEnergy: testing base case w/ no AOI, distances, or valuation."""
         from natcap.invest.wind_energy import wind_energy
@@ -710,6 +843,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -742,6 +876,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI, land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -776,6 +911,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_no_valuation(self):
         """WindEnergy: testing case w/ AOI, land poly, and distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -812,6 +948,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_gridpts_windsched(self):
         """WindEnergy: testing Valuation w/ grid points and wind sched."""
         from natcap.invest.wind_energy import wind_energy
@@ -857,6 +994,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_avggriddist_windprice(self):
         """WindEnergy: testing Valuation w/ avg grid distances and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -901,6 +1039,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -946,6 +1085,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -995,6 +1135,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_suffix(self):
         """WindEnergy: testing suffix handling."""
         from natcap.invest.wind_energy import wind_energy
@@ -1050,6 +1191,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_suffix_underscore(self):
         """WindEnergy: testing that suffix w/ underscore is handled correctly."""
         from natcap.invest.wind_energy import wind_energy
@@ -1247,7 +1389,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_time_period_exceptoin(self):
-        """WindEnergy: raised TimePeriodError if 'time' and 'wind_sched' differ."""
+        """WindEnergy: raise TimePeriodError if 'time' and 'wind_sched' differ."""
         from natcap.invest.wind_energy import wind_energy
 
         # for testing raised exceptions, running on a set of data that was

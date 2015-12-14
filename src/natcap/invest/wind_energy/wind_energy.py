@@ -665,6 +665,8 @@ def execute(args):
 
     farm_poly_uri = os.path.join(out_dir,
         'example_size_and_orientation_of_a_possible_wind_farm%s.shp' % suffix)
+    # If the file path already exist, remove it.
+    remove_files([farm_poly_uri])
 
     # Create the actual polygon
     LOGGER.info('Creating Example Farm Polygon')
@@ -1300,9 +1302,6 @@ def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri):
         return - nothing"""
     LOGGER.debug('Entering create_wind_farm_box')
 
-    if os.path.isfile(out_uri):
-        os.remove(out_uri)
-
     driver = ogr.GetDriverByName('ESRI Shapefile')
     datasource = driver.CreateDataSource(out_uri)
 
@@ -1518,8 +1517,7 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     LOGGER.debug('Entering wind_data_to_point_shape')
 
     # If the output_uri exists delete it
-    if os.path.isfile(output_uri):
-        os.remove(output_uri)
+    remove_files([output_uri])
 
     LOGGER.debug('Creating new datasource')
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -1656,7 +1654,8 @@ def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
 
     # Temporary URI for an intermediate step
     clipped_uri = pygeoprocessing.geoprocessing.temporary_folder()
-
+    # If the file already exists remove it
+    remove_files([clipped_uri])
     # Clip the shapefile to the AOI
     LOGGER.debug('Clipping datasource')
     clip_datasource(aoi_reprojected_uri, shapefile_uri, clipped_uri)
@@ -1687,10 +1686,6 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
 
     orig_layer = orig_ds.GetLayer()
     aoi_layer = aoi_ds.GetLayer()
-
-    # If the file already exists remove it
-    if os.path.isfile(output_uri):
-        os.remove(output_uri)
 
     LOGGER.debug('Creating new datasource')
     # Create a new shapefile from the orginal_datasource
@@ -2006,3 +2001,16 @@ def format_scale_key(hub_height):
         scale_key = 'Ram-' + scale_key + 'm'
 
     return scale_key
+
+def remove_files(files):
+    """Remove file paths if they exist.
+
+    Parameters:
+        files (list) - a list of strings that are file paths on disk.
+
+    Returns:
+        Nothing
+    """
+
+    for file_path in files:
+        os.remove(file_path)
