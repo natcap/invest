@@ -1,5 +1,8 @@
 """InVEST Recreation Client"""
 
+import collections
+import uuid
+import tempfile
 import os
 import zipfile
 import time
@@ -8,10 +11,12 @@ import math
 
 import Pyro4
 from osgeo import ogr
+from osgeo import gdal
 import shapely
 import shapely.wkt
 import shapely.prepared
 import pygeoprocessing
+import numpy
 
 from .. import utils
 
@@ -317,7 +322,7 @@ def build_regression_coefficients(
     dataset and the spatial predictor datasets in `predictor_table_path`.
 
     Parameters:
-        predictor_vector_path (string): path to a single layer polygon vector.
+        response_vector_path (string): path to a single layer polygon vector.
         predictor_table_path (string): path to a CSV file with three columns
             'id', 'path' and 'type' where 'path' indicates the full or
             relative path to the `predictor_table_path` table for the spatial
@@ -367,12 +372,25 @@ def build_regression_coefficients(
         'point_nearest_distance': lambda x, y: {},
         'line_intersect_length': _line_intersect_length,
         'polygon_area': _polygon_area,
-        'raster_sum': lambda x, y: {},
         'raster_mean': lambda x, y: {}
         }
 
     predictor_table = pygeoprocessing.get_lookup_from_csv(
         predictor_table_path, 'id')
+    for predictor_id in predictor_table.keys():
+        if len(predictor_id) > 10:
+            short_predictor_id = predictor_id[:10]
+            LOGGER.warn(
+                '%s is too long for shapefile, truncating to %s',
+                predictor_id, short_predictor_id)
+            if short_predictor_id in predictor_table:
+                raise ValueError(
+                    "predictor_table id collision because we had to shorten "
+                    "a long id.")
+            predictor_table[short_predictor_id] = predictor_table[
+                predictor_id]
+            del predictor_table[predictor_id]
+
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
@@ -380,20 +398,129 @@ def build_regression_coefficients(
 
         raw_path = predictor_table[predictor_id]['path']
         if os.path.isabs(raw_path):
-            response_vector_path = raw_path
+            predictor_path = raw_path
         else:
             # assume relative path w.r.t. the response table
-            response_vector_path = os.path.join(
+            predictor_path = os.path.join(
                 os.path.dirname(predictor_table_path), raw_path)
 
-        predictor_type = predictor_table[predictor_id]['type']
         #TODO: worry about a difference in projection between the predictor data and the response polygons
-        predictor_results = predictor_functions[predictor_type](
-            response_polygons_lookup, response_vector_path)
+        predictor_type = predictor_table[predictor_id]['type']
+        if predictor_type == 'raster_sum':
+            predictor_results = _raster_sum(
+                response_vector_path, predictor_path)
+        elif predictor_type == 'raster_mean':
+            predictor_results = _raster_mean(
+                response_vector_path, predictor_path)
+        else:
+            predictor_results = predictor_functions[predictor_type](
+                response_polygons_lookup, predictor_path)
         for feature_id, value in predictor_results.iteritems():
             feature = out_coefficent_layer.GetFeature(feature_id)
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
+
+
+def _build_temporary_indexed_vector(vector_path):
+    """Make a copy of single layer vector and add a field that maps to feature
+    indexes.
+
+    Parameters:
+        vector_path (string): path to OGR vector
+
+    Returns:
+        fid_field (string): name of FID field added to output vector_path
+        fid_indexed_vector_path (string): path to copy of `vector_path` with
+            additional FID field added to it."""
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    vector = ogr.Open(vector_path)
+    tmp_dir = tempfile.mkdtemp()
+    fid_indexed_path = os.path.join(tmp_dir, 'copy.shp')
+    fid_indexed_vector = driver.CopyDataSource(
+        vector, fid_indexed_path)
+    fid_indexed_layer = fid_indexed_vector.GetLayer()
+
+    # make a random field name
+    fid_name = str(uuid.uuid4())[-8:]
+    fid_field = ogr.FieldDefn(str(fid_name), ogr.OFTInteger)
+    fid_indexed_layer.CreateField(fid_field)
+    for feature in fid_indexed_layer:
+        fid = feature.GetFID()
+        feature.SetField(fid_name, fid)
+        fid_indexed_layer.SetFeature(feature)
+    fid_indexed_vector.SyncToDisk()
+
+    return fid_name, fid_indexed_path
+
+
+def _raster_sum(response_vector_path, raster_path):
+    """Sum all non-nodata values in the raster under each polygon.
+
+    Parameters:
+        response_polygons_lookup (dictionary): maps feature ID to
+            prepared shapely.Polygon.
+
+        raster_path (string): path to a raster.
+
+    Returns:
+        A dictionary mapping feature IDs from `response_polygons_lookup`
+        to summation under raster."""
+
+    fid_field, fid_indexed_path = _build_temporary_indexed_vector(
+        response_vector_path)
+
+    raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(raster_path)
+    fid_raster_path = 'fid.tif'#pygeoprocessing.temporary_filename(suffix='.tif')
+    fid_nodata = -1
+    pygeoprocessing.vectorize_datasets(
+        [raster_path], lambda x: x*0+fid_nodata, fid_raster_path, gdal.GDT_Int32,
+        fid_nodata, out_pixel_size, "union",
+        dataset_to_align_index=0, aoi_uri=fid_indexed_path,
+        vectorize_op=False)
+
+    fid_vector = ogr.Open(fid_indexed_path)
+    fid_layer = fid_vector.GetLayer()
+    fid_raster = gdal.Open(fid_raster_path, gdal.GA_Update)
+    gdal.RasterizeLayer(
+        fid_raster, [1], fid_layer, options=['ATTRIBUTE=%s' % fid_field])
+    fid_raster.FlushCache()
+
+    raster = gdal.Open(raster_path)
+    band = raster.GetRasterBand(1)
+    fid_raster_values = collections.defaultdict(float)
+    for offset_dict, fid_block in pygeoprocessing.iterblocks(fid_raster_path):
+        raster_array = band.ReadAsArray(**offset_dict)
+
+        unique_ids = numpy.unique(fid_block)
+        for attribute_id in unique_ids:
+            # ignore masked values
+            if attribute_id == fid_nodata:
+                continue
+            masked_values = raster_array[fid_block == attribute_id]
+            if raster_nodata is not None:
+                fid_raster_values[attribute_id] += numpy.sum(
+                    masked_values[masked_values != raster_nodata])
+            else:
+                fid_raster_values[attribute_id] += numpy.sum(masked_values)
+
+    return fid_raster_values
+
+
+def _raster_mean(response_vector_path, raster_path):
+    """Average all non-nodata values in the raster under each polygon.
+
+    Parameters:
+        response_polygons_lookup (dictionary): maps feature ID to
+            prepared shapely.Polygon.
+
+        raster_path (string): path to a raster.
+
+    Returns:
+        A dictionary mapping feature IDs from `response_polygons_lookup`
+        to summation under raster."""
+    return {}
 
 
 def _polygon_area(response_polygons_lookup, polygon_vector_path):
