@@ -342,13 +342,13 @@ def build_regression_coefficients(
 
     response_vector = ogr.Open(response_vector_path)
     response_layer = response_vector.GetLayer()
-    response_polygons = {}  # maps FID to prepared geometry
+    response_polygons_lookup = {}  # maps FID to prepared geometry
     for response_feature in response_layer:
         feature_geometry = response_feature.GetGeometryRef()
         feature_polygon = shapely.prepared.prep(
             shapely.wkt.loads(feature_geometry.ExportToWkt()))
         feature_geometry = None
-        response_polygons[response_feature.GetFID()] = feature_polygon
+        response_polygons_lookup[response_feature.GetFID()] = feature_polygon
     response_layer = None
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -375,6 +375,7 @@ def build_regression_coefficients(
     predictor_table = pygeoprocessing.get_lookup_from_csv(
         predictor_table_path, 'id')
     for predictor_id in predictor_table:
+        LOGGER.info("Building predictor %s", predictor_id)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
         out_coefficent_layer.CreateField(predictor_field)
 
@@ -384,23 +385,24 @@ def build_regression_coefficients(
         else:
             # assume relative path w.r.t. the response table
             response_vector_path = os.path.join(
-                os.path.dirname(predictor_table_path))
+                os.path.dirname(predictor_table_path), raw_path)
 
         predictor_type = predictor_table[predictor_id]['type']
+        #TODO: worry about a difference in projection between the predictor data and the response polygons
         predictor_results = predictor_functions[predictor_type](
-            response_polygons, response_vector_path)
+            response_polygons_lookup, response_vector_path)
         for feature_id, value in predictor_results.iteritems():
             feature = out_coefficent_layer.GetFeature(feature_id)
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
 
 
-def _point_count(polygon_response_predictor_lookup, point_vector_path):
+def _point_count(response_polygons_lookup, point_vector_path):
     """Append number of points that intersect polygons on the
-    `polygon_response_predictor_lookup`.
+    `response_polygons_lookup`.
 
     Parameters:
-        polygon_response_predictor_lookup (dictionary): maps feature ID to
+        response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
 
         point_vector_path (string): path to a single layer point vector
@@ -411,11 +413,9 @@ def _point_count(polygon_response_predictor_lookup, point_vector_path):
 
     points = _ogr_to_geometry_list(point_vector_path)
     point_count_lookup = {}  # map FID to point count
-    for feature_id, geometry in polygon_response_predictor_lookup.iteritems():
+    for feature_id, geometry in response_polygons_lookup.iteritems():
         point_count = len([
             point for point in points if geometry.contains(point)])
-        if point_count > 0:
-            LOGGER.debug(point_count)
         point_count_lookup[feature_id] = point_count
     return point_count_lookup
 
