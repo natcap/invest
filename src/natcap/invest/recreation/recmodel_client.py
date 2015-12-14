@@ -366,7 +366,7 @@ def build_regression_coefficients(
         'point_count': _point_count,
         'point_nearest_distance': lambda x, y: {},
         'line_intersect_length': _line_intersect_length,
-        'polygon_area': lambda x, y: {},
+        'polygon_area': _polygon_area,
         'raster_sum': lambda x, y: {},
         'raster_mean': lambda x, y: {}
         }
@@ -396,6 +396,34 @@ def build_regression_coefficients(
             out_coefficent_layer.SetFeature(feature)
 
 
+def _polygon_area(response_polygons_lookup, polygon_vector_path):
+    """Append number of points that intersect polygons on the
+    `response_polygons_lookup`.
+
+    Parameters:
+        response_polygons_lookup (dictionary): maps feature ID to
+            prepared shapely.Polygon.
+
+        polygon_vector_path (string): path to a single layer polygon vector
+            object.
+
+    Returns:
+        A dictionary mapping feature IDs from `response_polygons_lookup`
+        to polygon area coverage."""
+
+    polygons = _ogr_to_geometry_list(polygon_vector_path)
+    prepared_polygons = [
+        shapely.prepared.prep(polygon) for polygon in polygons]
+    polygon_area_coverage_lookup = {}  # map FID to point count
+    for feature_id, geometry in response_polygons_lookup.iteritems():
+        polygon_area_coverage = sum([
+            (polygon.intersection(geometry)).area for polygon, prep_poly in
+            zip(polygons, prepared_polygons) if
+            prep_poly.intersects(geometry)])
+        polygon_area_coverage_lookup[feature_id] = polygon_area_coverage
+    return polygon_area_coverage_lookup
+
+
 def _line_intersect_length(response_polygons_lookup, line_vector_path):
     """Append the length of the intersecting lines on the
         `response_polygons_lookup` dictionary.
@@ -408,7 +436,8 @@ def _line_intersect_length(response_polygons_lookup, line_vector_path):
             object.
 
     Returns:
-        None."""
+        A dictionary mapping feature IDs from `response_polygons_lookup`
+        to line intersect length."""
 
     lines = _ogr_to_geometry_list(line_vector_path)
     line_length_lookup = {}  # map FID to intersecting line length
@@ -431,7 +460,8 @@ def _point_count(response_polygons_lookup, point_vector_path):
             object.
 
     Returns:
-        None."""
+        A dictionary mapping feature IDs from `response_polygons_lookup`
+        to number of points in that polygon."""
 
     points = _ogr_to_geometry_list(point_vector_path)
     point_count_lookup = {}  # map FID to point count
