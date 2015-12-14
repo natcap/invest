@@ -280,60 +280,35 @@ def execute(args):
     stress_names = listdir(hra_args['stressors_dir'])
     stress_list = fnmatch.filter(stress_names, '*.shp')
 
-    def merge_bounding_boxes(bb1, bb2, mode):
-        """Merge two bounding boxes through union or intersection.
-
-        Parameters:
-            bb1 (list) - a list with values for a geographic bounding box.
-            bb2 (list) - a list with values for a geographic bounding box.
-            mode (string) - either 'intersection' or 'union'.
-
-        Returns:
-            A list of the merged bounding boxes.
-        """
-        less_than_or_equal = lambda x, y: x if x <= y else y
-        greater_than = lambda x, y: x if x > y else y
-
-        if mode == "union":
-            comparison_ops = [
-                less_than_or_equal, greater_than, greater_than,
-                less_than_or_equal]
-        if mode == "intersection":
-            comparison_ops = [
-                greater_than, less_than_or_equal, less_than_or_equal,
-                greater_than]
-
-        bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
-        return bb_out
-
     # Get the unioned bounding box of all the incoming shapefiles which
     # will be used to define a raster to use for burning vectors onto.
     bounding_box = reduce(
         functools.partial(merge_bounding_boxes, mode="union"),
-        [pygeoprocessing.geoprocessing.get_datasource_bounding_box(vector_uri) for vector_uri in hab_list + stress_list])
+        [pygeoprocessing.geoprocessing.get_datasource_bounding_box(vector_uri)
+            for vector_uri in hab_list + stress_list])
 
     # If there is an AOI, we want to limit the bounding box to its extents.
     if 'aoi_tables' in args:
         bounding_box = merge_bounding_boxes(
-            bounding_box, pygeoprocessing.geoprocessing.get_datasource_bounding_box(args['aoi_tables']),
-            "intersection")
+            bounding_box,
+            pygeoprocessing.geoprocessing.get_datasource_bounding_box(
+                args['aoi_tables']), "intersection")
 
     # Determine what the maximum buffer is to use in deciding how much
     # a future rasters extents should be expanded below. This will allow for
     # adequate pixel space when running decay functions later.
-    max_buffer = 0.0
-    for key, val in hra_args['buffer_dict'].iteritems():
-        max_buffer = max(max_buffer, float(val))
+    max_buffer = reduce(lambda x, y: max(float(x), float(y)),
+        hra_args['buffer_dict'].itervalues())
 
-    def create_raster_from_bb(bbox, pixel_size, spat_ref, out_uri, buff):
+    def _create_raster_from_bb(bbox, pixel_size, wkt_str, out_uri, buff):
         """Create a raster given a bounding box and spatial reference.
 
         Parameters:
             bbox (list) - a list of values 4 numbers representing a geographic
                 bounding box.
             pixel_size (float) - a float value for the size of raster pixels.
-            spat_ref (ogr.SpatialReference) - a vector spatial reference to
-                use in setting the rasters projection.
+            wkt_str (string) - a Well Known Text format for a spatial reference
+                to use in setting the rasters projection.
             out_uri (string) - a path on disk for the output raster.
 
         Returns:
@@ -351,14 +326,14 @@ def execute(args):
         # These have to be expanded by 2 * buffer to account for both sides
         width = abs(extents[1] - extents[0]) + 2 * buff
         height = abs(extents[3] - extents[2]) + 2 * buff
-        tiff_width = int(np.ceil(width / pixel_size))
-        tiff_height = int(np.ceil(height / pixel_size))
+        tiff_width = int(math.ceil(width / pixel_size))
+        tiff_height = int(math.ceil(height / pixel_size))
 
         nodata = -1.0
         driver = gdal.GetDriverByName('GTiff')
         raster = driver.Create(
             grid_raster_path, tiff_width, tiff_height, 1, gdal.GDT_Float32,
-            options=['BIGTIFF=IF_SAFER'])
+            options=['BIGTIFF=IF_SAFER', 'TILED=YES'])
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         # Set the transform based on the upper left corner and given pixel
         # dimensions increasing everything by buffer size
@@ -368,24 +343,24 @@ def execute(args):
 
         raster.SetGeoTransform(raster_transform)
         # Use the same projection on the raster as one of the provided vectors
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(spat_ref.__str__())
-        raster.SetProjection(srs.ExportToWkt())
+        raster.SetProjection(wkt_str)
         # Initialize everything to nodata
         raster.GetRasterBand(1).Fill(nodata)
         raster.GetRasterBand(1).FlushCache()
         band = None
         raster = None
 
-    grid_raster_path = pygeoprocessing.geoprocessing.temporary_filename()
+    grid_raster_path = os.path.join(inter_dir, 'raster_grid_base.tif')
     # Use the first habitat shapefile to set the spatial reference / projection
     spat_ref = pygeoprocessing.geoprocessing.get_spatial_ref_uri(hab_list[0])
+    wkt_str = spat_ref.ExportToWkt()
+
     # Create a raster that has a bounding box which is the UNION of all
     # the incoming shapefiles to be vectorized. This will act as the base
     # base raster to burn all the shapefiles onto, so that they are
     # guaranteed to be aligned upfront.
-    create_raster_from_bb(
-        bounding_box, args['grid_size'], spat_ref, grid_raster_path,
+    _create_raster_from_bb(
+        bounding_box, args['grid_size'], wkt_str, grid_raster_path,
         max_buffer)
 
     LOGGER.info('Rasterizing shapefile layers.')
@@ -420,7 +395,7 @@ def execute(args):
 
         add_crit_rasters(
             crit_dir, c_shape_dict, hra_args['habitats'], hra_args['h_s_e'],
-            hra_args['h_s_c'], args['grid_size'], aligned_raster_uris)
+            hra_args['h_s_c'], args['grid_size'])
 
     # No reason to hold the directory paths in memory since all info is now
     # within dictionaries. Can remove them here before passing to core.
@@ -431,6 +406,28 @@ def execute(args):
 
     hra_core.execute(hra_args)
 
+
+def merge_bounding_boxes(bb1, bb2, mode):
+    """Merge two bounding boxes through union or intersection.
+
+    Parameters:
+        bb1 (list) - a list of values for a geographic bounding box set up as:
+            [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
+        bb2 (list) - a list of values for a geographic bounding box set up as:
+            [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
+        mode (string) - either 'intersection' or 'union'.
+
+    Returns:
+        A list of the merged bounding boxes.
+    """
+
+    if mode == "union":
+        comparison_ops = [min, max, max, min]
+    if mode == "intersection":
+        comparison_ops = [max, min, min, max]
+
+    bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
+    return bb_out
 
 def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
     '''
@@ -896,7 +893,7 @@ def listdir(path):
     return uris
 
 
-def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size, aligned_list):
+def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
     '''
     This will take in the dictionary of criteria shapefiles, rasterize them,
     and add the URI of that raster to the proper subdictionary within h/s/h-s.
