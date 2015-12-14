@@ -345,8 +345,7 @@ def build_regression_coefficients(
     response_polygons_lookup = {}  # maps FID to prepared geometry
     for response_feature in response_layer:
         feature_geometry = response_feature.GetGeometryRef()
-        feature_polygon = shapely.prepared.prep(
-            shapely.wkt.loads(feature_geometry.ExportToWkt()))
+        feature_polygon = shapely.wkt.loads(feature_geometry.ExportToWkt())
         feature_geometry = None
         response_polygons_lookup[response_feature.GetFID()] = feature_polygon
     response_layer = None
@@ -366,7 +365,7 @@ def build_regression_coefficients(
     predictor_functions = {
         'point_count': _point_count,
         'point_nearest_distance': lambda x, y: {},
-        'line_intersect_length': lambda x, y: {},
+        'line_intersect_length': _line_intersect_length,
         'polygon_area': lambda x, y: {},
         'raster_sum': lambda x, y: {},
         'raster_mean': lambda x, y: {}
@@ -395,6 +394,29 @@ def build_regression_coefficients(
             feature = out_coefficent_layer.GetFeature(feature_id)
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
+
+
+def _line_intersect_length(response_polygons_lookup, line_vector_path):
+    """Append the length of the intersecting lines on the
+        `response_polygons_lookup` dictionary.
+
+    Parameters:
+        response_polygons_lookup (dictionary): maps feature ID to
+            prepared shapely.Polygon.
+
+        line_vector_path (string): path to a single layer point vector
+            object.
+
+    Returns:
+        None."""
+
+    lines = _ogr_to_geometry_list(line_vector_path)
+    line_length_lookup = {}  # map FID to intersecting line length
+    for feature_id, geometry in response_polygons_lookup.iteritems():
+        line_length = sum([
+            (line.intersection(geometry)).length for line in lines])
+        line_length_lookup[feature_id] = line_length
+    return line_length_lookup
 
 
 def _point_count(response_polygons_lookup, point_vector_path):
