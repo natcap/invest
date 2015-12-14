@@ -13,6 +13,7 @@ import Pyro4
 from osgeo import ogr
 from osgeo import gdal
 import shapely
+import shapely.geometry
 import shapely.wkt
 import shapely.prepared
 import pygeoprocessing
@@ -369,10 +370,9 @@ def build_regression_coefficients(
     # lookup functions for response types
     predictor_functions = {
         'point_count': _point_count,
-        'point_nearest_distance': lambda x, y: {},
+        'point_nearest_distance': _point_nearest_distance,
         'line_intersect_length': _line_intersect_length,
         'polygon_area': _polygon_area,
-        'raster_mean': lambda x, y: {}
         }
 
     predictor_table = pygeoprocessing.get_lookup_from_csv(
@@ -595,6 +595,28 @@ def _line_intersect_length(response_polygons_lookup, line_vector_path):
             (line.intersection(geometry)).length for line in lines])
         line_length_lookup[feature_id] = line_length
     return line_length_lookup
+
+
+def _point_nearest_distance(response_polygons_lookup, point_vector_path):
+    """Calculate distance to nearest point for all polygons.
+
+    Parameters:
+        response_polygons_lookup (dictionary): maps feature ID to
+            prepared shapely.Polygon.
+
+        point_vector_path (string): path to a single layer point vector
+            object.
+
+    Returns:
+        A dictionary mapping feature IDs from `response_polygons_lookup`
+        to distance to nearest point."""
+
+    points = _ogr_to_geometry_list(point_vector_path)
+    point_distance_lookup = {}  # map FID to point count
+    for feature_id, geometry in response_polygons_lookup.iteritems():
+        point_distance_lookup[feature_id] = min([
+            geometry.distance(point) for point in points])
+    return point_distance_lookup
 
 
 def _point_count(response_polygons_lookup, point_vector_path):
