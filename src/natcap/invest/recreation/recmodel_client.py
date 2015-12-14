@@ -391,6 +391,8 @@ def build_regression_coefficients(
                 predictor_id]
             del predictor_table[predictor_id]
 
+    # see if we need to compute raster results, just do both at once
+
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
@@ -407,11 +409,13 @@ def build_regression_coefficients(
         #TODO: worry about a difference in projection between the predictor data and the response polygons
         predictor_type = predictor_table[predictor_id]['type']
         if predictor_type == 'raster_sum':
-            predictor_results = _raster_sum(
+            raster_sum_mean_results = _raster_sum_mean(
                 response_vector_path, predictor_path)
+            predictor_results = raster_sum_mean_results['sum']
         elif predictor_type == 'raster_mean':
-            predictor_results = _raster_mean(
+            raster_sum_mean_results = _raster_sum_mean(
                 response_vector_path, predictor_path)
+            predictor_results = raster_sum_mean_results['mean']
         else:
             predictor_results = predictor_functions[predictor_type](
                 response_polygons_lookup, predictor_path)
@@ -454,7 +458,7 @@ def _build_temporary_indexed_vector(vector_path):
     return fid_name, fid_indexed_path
 
 
-def _raster_sum(response_vector_path, raster_path):
+def _raster_sum_mean(response_vector_path, raster_path):
     """Sum all non-nodata values in the raster under each polygon.
 
     Parameters:
@@ -464,8 +468,9 @@ def _raster_sum(response_vector_path, raster_path):
         raster_path (string): path to a raster.
 
     Returns:
-        A dictionary mapping feature IDs from `response_polygons_lookup`
-        to summation under raster."""
+        A dictionary indexing 'sum', 'mean', and 'count', to dictionaries
+        mapping feature IDs from `response_polygons_lookup` to those values
+        of the raster under the polygon."""
 
     fid_field, fid_indexed_path = _build_temporary_indexed_vector(
         response_vector_path)
@@ -489,7 +494,11 @@ def _raster_sum(response_vector_path, raster_path):
 
     raster = gdal.Open(raster_path)
     band = raster.GetRasterBand(1)
-    fid_raster_values = collections.defaultdict(float)
+    fid_raster_values = {
+        'sum': collections.defaultdict(float),
+        'mean': collections.defaultdict(float),
+        'count': collections.defaultdict(int),
+        }
     for offset_dict, fid_block in pygeoprocessing.iterblocks(fid_raster_path):
         raster_array = band.ReadAsArray(**offset_dict)
 
@@ -500,10 +509,23 @@ def _raster_sum(response_vector_path, raster_path):
                 continue
             masked_values = raster_array[fid_block == attribute_id]
             if raster_nodata is not None:
-                fid_raster_values[attribute_id] += numpy.sum(
-                    masked_values[masked_values != raster_nodata])
+                valid_mask = masked_values != raster_nodata
             else:
-                fid_raster_values[attribute_id] += numpy.sum(masked_values)
+                valid_mask = numpy.empty(
+                    masked_values.shape, dtype=numpy.bool)
+                valid_mask[:] = True
+            fid_raster_values['sum'][attribute_id] += numpy.sum(
+                masked_values[valid_mask])
+            fid_raster_values['count'][attribute_id] += numpy.count_nonzero(
+                valid_mask)
+
+    for attribute_id in fid_raster_values['count']:
+        if fid_raster_values['count'][attribute_id] != 0.0:
+            fid_raster_values['mean'][attribute_id] = (
+                fid_raster_values['sum'][attribute_id] /
+                fid_raster_values['count'][attribute_id])
+        else:
+            fid_raster_values['mean'][attribute_id] = 0.0
 
     return fid_raster_values
 
