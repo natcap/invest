@@ -105,6 +105,18 @@
           },
           "required": true,
           "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
+        },
+        {
+          "id": "scenario_predictor_table_path",
+          "args_id": "scenario_predictor_table_path",
+          "type": "file",
+          "label": "Scenario Predictor Table",
+          "defaultValue": "../Recreation/input/initial/scenario_predictors.csv",
+          "validateAs": {
+            "type": "CSV"
+          },
+          "required": true,
+          "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
         }
       ]
     },

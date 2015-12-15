@@ -42,6 +42,7 @@ RESPONSE_ID = 'PUD'
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
     'coefficent_vector_path': 'regression_coeffiicents.shp',
+    'scenario_results_path': 'scenario_results.shp',
     }
 
 _TMP_BASE_FILES = {
@@ -98,7 +99,10 @@ def execute(args):
                         with the response polygon in projected units of AOI
                     'polygon_area': area of the polygon contained within
                         response polygon in projected units of AOI
-
+        args['scenario_predictor_table_path'] (string): path to a table that
+            describes a scenario to apply the regression to.  Field headers
+            are identical to `args['predictor_table_path']` and ids in the
+            table are required to be identical to the predictor list.
         args['results_suffix'] (string): optional, if exists is appended to
             any output file paths.
 
@@ -164,9 +168,14 @@ def execute(args):
         file_registry['pud_results_path'], args['predictor_table_path'],
         file_registry['coefficent_vector_path'], predictor_id_list)
 
-    coefficents, residual = build_regression(
+    coefficents = build_regression(
         file_registry['coefficent_vector_path'], RESPONSE_ID,
         predictor_id_list)
+
+    run_scenario(
+        file_registry['pud_results_path'], RESPONSE_ID, coefficents,
+        predictor_id_list, args['scenario_predictor_table_path'],
+        file_registry['scenario_results_path'])
 
     LOGGER.info('deleting temporary files')
     for file_id in _TMP_BASE_FILES:
@@ -465,6 +474,7 @@ def build_regression_coefficients(
             feature = out_coefficent_layer.GetFeature(feature_id)
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
+    out_coefficent_vector.SyncToDisk()
 
 
 def _build_temporary_indexed_vector(vector_path):
@@ -745,4 +755,83 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
         '\nRegression:\n%s = %s\nResidual: %s', response_id,
         regression_string, residual)
 
-    return coefficents, residual
+    return coefficents
+
+
+def run_scenario(
+        base_aoi_path, response_id, predictor_coefficents, predictor_id_list,
+        scenario_predictor_table_path, scenario_results_path):
+    """Calculate the PUD of a scenario given an existing regression.
+
+    Parameters:
+        base_aoi_path (string): path to the a polygon vector that was used
+            to build the original regresssion.  Geometry will be copied for
+            `scenario_results_path` output vector.
+        response_id (string): text ID of response variable to write to
+            the scenario result
+        predictor_coefficents (numpy.ndarray): 1D array of regression coefficents
+        predictor_id_list (list of string): list of text ID predictor
+            variables that correspond with `coefficients`
+        scenario_predictor_table_path (string): path to a CSV table of
+            regression predictors, their IDs and types.  Must contain the
+            fields 'id', 'path', and 'type' where:
+                'id': is a 10 character of less ID that is used to uniquely
+                    describe the predictor.  It will be added to the output
+                    result shapefile attribute table which is an ESRI
+                    Shapefile, thus limited to 10 characters.
+                'path': an absolute or relative (to this table) path to the
+                    predictor dataset, either a vector or raster type.
+                'type': one of the following,
+                    'raster_mean': mean of values in the raster under the
+                        response polygon
+                    'raster_sum': sum of values in the raster under the
+                        response polygon
+                    'point_count': count of the points contained in the
+                        response polygon
+                    'point_nearest_distance': distance to the nearest point
+                        from the response polygon
+                    'line_intersect_length': length of lines that intersect
+                        with the response polygon in projected units of AOI
+                    'polygon_area': area of the polygon contained within
+                        response polygon in projected units of AOI
+                Note also that each ID in the table must have a corresponding
+                entry in `response_id` else the input is invalid.
+        scenario_results_path (string): path to desired output scenario
+            vector result which will be geometrically a copy of the input
+            AOI but contain the base regression fields as well as the scenario
+            derived response.
+
+    Returns:
+        None"""
+
+    scenario_predictor_id_list = []
+    build_regression_coefficients(
+        base_aoi_path, scenario_predictor_table_path,
+        scenario_results_path, scenario_predictor_id_list)
+
+    id_to_coefficient = dict(
+        (p_id, coeff) for p_id, coeff in zip(
+            predictor_id_list, predictor_coefficents))
+
+    # Open for writing
+    scenario_coefficent_vector = ogr.Open(scenario_results_path, 1)
+    scenario_coefficent_layer = scenario_coefficent_vector.GetLayer()
+
+    # delete the response ID if it's already there because it must have been
+    # copied from the base layer
+    response_index = scenario_coefficent_layer.FindFieldIndex(response_id, 1)
+    if response_index >= 0:
+        scenario_coefficent_layer.DeleteField(response_index)
+
+    response_field = ogr.FieldDefn(response_id, ogr.OFTReal)
+    scenario_coefficent_layer.CreateField(response_field)
+
+    for feature_id in xrange(scenario_coefficent_layer.GetFeatureCount()):
+        feature = scenario_coefficent_layer.GetFeature(feature_id)
+        response_value = 0.0
+        for scenario_predictor_id in scenario_predictor_id_list:
+            response_value += (
+                id_to_coefficient[scenario_predictor_id] *
+                feature.GetField(str(scenario_predictor_id)))
+        feature.SetField(response_id, response_value)
+        scenario_coefficent_layer.SetFeature(feature)
