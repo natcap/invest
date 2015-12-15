@@ -9,40 +9,60 @@ from pygeoprocessing.testing import scm
 SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'wave-energy')
 
+class WaveEnergyRegressionTests(unittest.TestCase):
+    """Regression tests for the Wave Energy module."""
 
-class ValuationTest(unittest.TestCase):
+    def setUp(self):
+        """Overriding setUp function to create temporary workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Overriding tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def generate_base_args(workspace_dir):
+        """Generate an args list that is consistent across regression tests."""
+        args = {
+            'workspace_dir': workspace_dir,
+            'wave_base_data_uri': os.path.join(
+                SAMPLE_DATA, 'WaveEnergy', 'input', 'WaveData'),
+            'analysis_area_uri': 'West Coast of North America and Hawaii',
+            'machine_perf_uri': os.path.join(
+                SAMPLE_DATA, 'WaveEnergy', 'input',
+                'Machine_Pelamis_Performance.csv'),
+            'machine_param_uri': os.path.join(
+                SAMPLE_DATA, 'WaveEnergy', 'input',
+                'Machine_Pelamis_Parameters.csv'),
+            'dem_uri': os.path.join(
+                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs', 'global_dem')
+        }
+        return args
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Valuation run through.
-        """
+    def test_valuation(unittest.TestCase):
+        """WaveEnergy: testing valuation component."""
         from natcap.invest.wave_energy import wave_energy
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wave_base_data_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'WaveData'),
-            'analysis_area_uri': 'West Coast of North America and Hawaii',
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'AOI_WCVI.shp'),
-            'machine_perf_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Performance.csv'),
-            'machine_param_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Parameters.csv'),
-            'dem_uri': os.path.join(SAMPLE_DATA, 'Base_Data', 'Marine',
-                                         'DEMs', 'global_dem'),
-            'suffix': '',
-            'valuation_container': True,
-            'land_gridPts_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'LandGridPts_WCVI.csv'),
-            'machine_econ_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Economic.csv'),
-            'number_of_machine': 28
-        }
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'AOI_WCVI.shp')
+        args['valuation_container'] = True
+        args['land_gridPts_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'LandGridPts_WCVI.csv')
+        args['machine_econ_uri'] =  os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'Machine_Pelamis_Economic.csv')
+        args['number_of_machine'] = 28
+
         wave_energy.execute(args)
 
-        raster_results = ['wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif',
-			'capwe_mwh.tif', 'npv_rc.tif', 'npv_usd.tif']
+        raster_results = [
+            'wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif', 'capwe_mwh.tif',
+            'npv_rc.tif', 'npv_usd.tif']
 
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
@@ -63,36 +83,30 @@ class ValuationTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class AoiTest(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Biophysical run through using an AOI.
-        """
+    def test_aoi(unittest.TestCase):
+        """WaveEnergy: testing Biophysical component with an AOI."""
         from natcap.invest.wave_energy import wave_energy
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wave_base_data_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'WaveData'),
-            'analysis_area_uri': 'West Coast of North America and Hawaii',
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'AOI_WCVI.shp'),
-            'machine_perf_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Performance.csv'),
-            'machine_param_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Parameters.csv'),
-            'dem_uri': os.path.join(SAMPLE_DATA, 'Base_Data', 'Marine',
-                                         'DEMs', 'global_dem'),
-            'suffix': '',
-            'valuation_container': False
-        }
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'AOI_WCVI.shp')
+
+        args['machine_perf_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input',
+            'Machine_Pelamis_Performance.csv')
+        args['machine_param_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input',
+            'Machine_Pelamis_Parameters.csv')
+        args['dem_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs', 'global_dem')
+        args['valuation_container'] = False
+
         wave_energy.execute(args)
 
-        raster_results = ['wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif',
-			'capwe_mwh.tif']
+        raster_results = [
+            'wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif', 'capwe_mwh.tif']
 
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
@@ -106,34 +120,18 @@ class AoiTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class NoAoiTest(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Biophysical run through, NO AOI.
-        """
+    def test_no_aoi(unittest.TestCase):
+        """WaveEnergy: testing Biophysical component with no AOI."""
         from natcap.invest.wave_energy import wave_energy
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wave_base_data_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'WaveData'),
-            'analysis_area_uri': 'West Coast of North America and Hawaii',
-            'machine_perf_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Performance.csv'),
-            'machine_param_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Parameters.csv'),
-            'dem_uri': os.path.join(SAMPLE_DATA, 'Base_Data', 'Marine',
-                                         'DEMs', 'global_dem'),
-            'suffix': '',
-            'valuation_container': False
-        }
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
         wave_energy.execute(args)
 
-        raster_results = ['wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif',
-			'capwe_mwh.tif']
+        raster_results = [
+            'wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif', 'capwe_mwh.tif']
 
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
@@ -147,41 +145,29 @@ class NoAoiTest(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, table_path))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class ValuationSuffixTest(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Suffix handling running through Valuation.
-        """
+    def test_valuation_suffix(unittest.TestCase):
+        """WaveEnergy: testing suffix through Valuation."""
         from natcap.invest.wave_energy import wave_energy
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wave_base_data_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'WaveData'),
-            'analysis_area_uri': 'West Coast of North America and Hawaii',
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'AOI_WCVI.shp'),
-            'machine_perf_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Performance.csv'),
-            'machine_param_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Parameters.csv'),
-            'dem_uri': os.path.join(SAMPLE_DATA, 'Base_Data', 'Marine',
-                                         'DEMs', 'global_dem'),
-            'suffix': 'val',
-            'valuation_container': True,
-            'land_gridPts_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'LandGridPts_WCVI.csv'),
-            'machine_econ_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Economic.csv'),
-            'number_of_machine': 28
-        }
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'AOI_WCVI.shp')
+        args['valuation_container'] = True
+        args['land_gridPts_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'LandGridPts_WCVI.csv')
+        args['machine_econ_uri'] =  os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'Machine_Pelamis_Economic.csv')
+        args['number_of_machine'] = 28
+        args['suffix'] = 'val'
+
         wave_energy.execute(args)
 
-        raster_results = ['wp_rc_val.tif', 'wp_kw_val.tif', 'capwe_rc_val.tif',
-			'capwe_mwh_val.tif', 'npv_rc_val.tif', 'npv_usd_val.tif']
+        raster_results = [
+            'wp_rc_val.tif', 'wp_kw_val.tif', 'capwe_rc_val.tif',
+            'capwe_mwh_val.tif', 'npv_rc_val.tif', 'npv_usd_val.tif']
 
         for raster_path in raster_results:
             self.assertTrue(os.path.exists(
@@ -199,42 +185,29 @@ class ValuationSuffixTest(unittest.TestCase):
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', table_path)))
 
-        shutil.rmtree(args['workspace_dir'])
-
-class ValuationSuffixUnderscoreTest(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_regression(self):
-        """
-        Regression test for Suffix handling with extra underscore,
-            running through Valuation.
-        """
+    def test_valuation_suffix_underscore(unittest.TestCase):
+        """WaveEnergy: testing suffix with an underscore through Valuation."""
         from natcap.invest.wave_energy import wave_energy
-        args = {
-            'workspace_dir': tempfile.mkdtemp(),
-            'wave_base_data_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'WaveData'),
-            'analysis_area_uri': 'West Coast of North America and Hawaii',
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'AOI_WCVI.shp'),
-            'machine_perf_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Performance.csv'),
-            'machine_param_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Parameters.csv'),
-            'dem_uri': os.path.join(SAMPLE_DATA, 'Base_Data', 'Marine',
-                                         'DEMs', 'global_dem'),
-            'suffix': '_val',
-            'valuation_container': True,
-            'land_gridPts_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'LandGridPts_WCVI.csv'),
-            'machine_econ_uri': os.path.join(SAMPLE_DATA, 'WaveEnergy',
-                                         'input', 'Machine_Pelamis_Economic.csv'),
-            'number_of_machine': 28
-        }
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'AOI_WCVI.shp')
+        args['valuation_container'] = True
+        args['land_gridPts_uri'] = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'LandGridPts_WCVI.csv')
+        args['machine_econ_uri'] =  os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'Machine_Pelamis_Economic.csv')
+        args['number_of_machine'] = 28
+        args['suffix'] = '_val'
+
         wave_energy.execute(args)
 
-        raster_results = ['wp_rc_val.tif', 'wp_kw_val.tif', 'capwe_rc_val.tif',
-			'capwe_mwh_val.tif', 'npv_rc_val.tif', 'npv_usd_val.tif']
+        raster_results = [
+            'wp_rc_val.tif', 'wp_kw_val.tif', 'capwe_rc_val.tif',
+            'capwe_mwh_val.tif', 'npv_rc_val.tif', 'npv_usd_val.tif']
 
         for raster_path in raster_results:
             self.assertTrue(os.path.exists(
@@ -251,5 +224,3 @@ class ValuationSuffixUnderscoreTest(unittest.TestCase):
         for table_path in table_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', table_path)))
-
-        shutil.rmtree(args['workspace_dir'])
