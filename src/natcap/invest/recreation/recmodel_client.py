@@ -18,6 +18,7 @@ import shapely.wkt
 import shapely.prepared
 import pygeoprocessing
 import numpy
+import numpy.linalg
 
 from .. import utils
 
@@ -657,3 +658,40 @@ def _ogr_to_geometry_list(vector_path):
     layer = None
     ogr.DataSource.__swig_destroy__(vector)
     return geometry_list
+
+
+def build_regression(coefficient_vector_path, response_id, predictor_id_list):
+    """Build multiple regression off the shapefile attribute table given the
+    desired response and predictor field headings.
+
+    Parameters:
+        coefficient_vector_path (string): path to a shapefile that contains
+            at least the fields described in `response_id` and
+            `predictor_id_list`.
+        response_id (string): field ID in `coefficient_vector_path` whose
+            values correspond to the regression response variable.
+        predictor_id_list (list): a list of field IDs in
+            `coefficient_vector_path` that correspond to the predictor
+            variables in the regression.  The order of this list also
+            determines the order of the regression coefficients returned
+            by this function.
+
+    Returns:
+        X: A list of coefficents in the least-squares solution
+        residuals: sums of resisuals"""
+
+    # Pull apart the datasource
+    coefficent_vector = ogr.Open(coefficient_vector_path)
+    coefficent_layer = coefficent_vector.GetLayer()
+
+    # Loop through each feature and build up the dictionary representing the
+    # attribute table
+    coefficient_matrix = numpy.empty(
+        (coefficent_layer.GetFeatureCount(), len(predictor_id_list)+1))
+    for row_index, feature in enumerate(coefficent_layer):
+        coefficient_matrix[row_index, :] = numpy.array(
+            [feature.GetField(response_id)] + [
+                feature.GetField(key) for key in predictor_id_list])
+
+    return numpy.linalg.lstsq(
+        coefficient_matrix[:, 1:], coefficient_matrix[:, 0])
