@@ -693,5 +693,13 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
             [feature.GetField(response_id)] + [
                 feature.GetField(key) for key in predictor_id_list])
 
-    return numpy.linalg.lstsq(
+    coefficents, residual, _, _ = numpy.linalg.lstsq(
         coefficient_matrix[:, 1:], coefficient_matrix[:, 0])
+    regression_string = ' +\n      '.join(
+        '%+.2e * %s' % (coefficent, p_id)
+        for p_id, coefficent in zip(predictor_id_list, coefficents))
+    LOGGER.info(
+        '\nRegression:\n%s = %s\nResidual: %s', response_id, regression_string,
+        residual[0])
+
+    return coefficents, residual
