@@ -36,8 +36,12 @@ Pyro4.config.SERIALIZER = 'marshal'
 # format: http://www.gdal.org/drv_shapefile.html
 _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 
+# For now, this is the field name we use to mark the photo user "days"
+RESPONSE_ID = 'PUD'
+
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
+    'coefficent_vector_path': 'regression_coeffiicents.shp',
     }
 
 _TMP_BASE_FILES = {
@@ -72,6 +76,29 @@ def execute(args):
         args['cell_size'] (string/float): optional, but must exist if
             `args['grid_aoi']` is True.  Indicates the long axis size of the
             grid cells.
+        args['predictor_table_path'] (string): path to a table that describes
+            the regression predictors, their IDs and types.  Must contain the
+            fields 'id', 'path', and 'type' where:
+                'id': is a 10 character of less ID that is used to uniquely
+                    describe the predictor.  It will be added to the output
+                    result shapefile attribute table which is an ESRI
+                    Shapefile, thus limited to 10 characters.
+                'path': an absolute or relative (to this table) path to the
+                    predictor dataset, either a vector or raster type.
+                'type': one of the following,
+                    'raster_mean': mean of values in the raster under the
+                        response polygon
+                    'raster_sum': sum of values in the raster under the
+                        response polygon
+                    'point_count': count of the points contained in the
+                        response polygon
+                    'point_nearest_distance': distance to the nearest point
+                        from the response polygon
+                    'line_intersect_length': length of lines that intersect
+                        with the response polygon in projected units of AOI
+                    'polygon_area': area of the polygon contained within
+                        response polygon in projected units of AOI
+
         args['results_suffix'] (string): optional, if exists is appended to
             any output file paths.
 
@@ -131,6 +158,15 @@ def execute(args):
         result_zip_file_binary)
     zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
         output_dir)
+
+    predictor_id_list = []
+    build_regression_coefficients(
+        file_registry['pud_results_path'], args['predictor_table_path'],
+        file_registry['coefficent_vector_path'], predictor_id_list)
+
+    coefficents, residual = build_regression(
+        file_registry['coefficent_vector_path'], RESPONSE_ID,
+        predictor_id_list)
 
     LOGGER.info('deleting temporary files')
     for file_id in _TMP_BASE_FILES:
@@ -319,7 +355,7 @@ def _build_file_registry(base_file_path_list, file_suffix):
 
 def build_regression_coefficients(
         response_vector_path, predictor_table_path,
-        out_coefficient_vector_path):
+        out_coefficient_vector_path, out_predictor_id_list):
     """Build a least squares fit for the polygons in the response vector
     dataset and the spatial predictor datasets in `predictor_table_path`.
 
@@ -343,6 +379,9 @@ def build_regression_coefficients(
         out_coefficient_vector_path (string): path to a copy of
             `response_vector_path` with the modified predictor variable
             responses. Overwritten if exists.
+        out_predictor_id_list (list): a list that is overwritten with the
+            predictor ids that are added to the coefficient vector attribute
+            table.
 
     Returns:
         None."""
@@ -378,7 +417,9 @@ def build_regression_coefficients(
 
     predictor_table = pygeoprocessing.get_lookup_from_csv(
         predictor_table_path, 'id')
+    del out_predictor_id_list[:]  # prepare for appending
     for predictor_id in predictor_table.keys():
+        out_predictor_id_list.append(predictor_id)
         if len(predictor_id) > 10:
             short_predictor_id = predictor_id[:10]
             LOGGER.warn(
@@ -680,6 +721,8 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
         X: A list of coefficents in the least-squares solution
         residuals: sums of resisuals"""
 
+    LOGGER.info("building regression for %s", predictor_id_list)
+
     # Pull apart the datasource
     coefficent_vector = ogr.Open(coefficient_vector_path)
     coefficent_layer = coefficent_vector.GetLayer()
@@ -690,8 +733,8 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
         (coefficent_layer.GetFeatureCount(), len(predictor_id_list)+1))
     for row_index, feature in enumerate(coefficent_layer):
         coefficient_matrix[row_index, :] = numpy.array(
-            [feature.GetField(response_id)] + [
-                feature.GetField(key) for key in predictor_id_list])
+            [feature.GetField(str(response_id))] + [
+                feature.GetField(str(key)) for key in predictor_id_list])
 
     coefficents, residual, _, _ = numpy.linalg.lstsq(
         coefficient_matrix[:, 1:], coefficient_matrix[:, 0])
@@ -699,7 +742,7 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
         '%+.2e * %s' % (coefficent, p_id)
         for p_id, coefficent in zip(predictor_id_list, coefficents))
     LOGGER.info(
-        '\nRegression:\n%s = %s\nResidual: %s', response_id, regression_string,
-        residual[0])
+        '\nRegression:\n%s = %s\nResidual: %s', response_id,
+        regression_string, residual)
 
     return coefficents, residual

@@ -4,8 +4,8 @@
   "targetScript": "natcap.invest.recreation.recmodel_client",
   "modelName": "recreation",
   "localDocURI": "../documentation/recreation.html",
-  "height": 550,
-  "width": 500,
+  "height": 650,
+  "width": 600,
   "elements": [
     {
       "id": "workspace_list",
@@ -93,6 +93,18 @@
           "defaultValue": "all",
           "required": true,
           "helpText": "This is the temporal metric that is used to average a photo user across time.  If 'daily', points will be distinct per day, if 'yearly', the same point by the same user on different days, but the same year, will count as a single point."
+        },
+        {
+          "id": "predictor_table_path",
+          "args_id": "predictor_table_path",
+          "type": "file",
+          "label": "Predictor Table",
+          "defaultValue": "../Recreation/input/initial/predictors.csv",
+          "validateAs": {
+            "type": "CSV"
+          },
+          "required": true,
+          "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
         }
       ]
     },
