@@ -603,8 +603,7 @@ def _calculate_monthly_quick_flow(
 
 
 def _calculate_curve_number_raster(
-        lulc_raster_path, soil_group_path, biophysical_table, pixel_size,
-        cn_path):
+        lulc_raster_path, soil_group_path, biophysical_table, cn_path):
     """Calculate the CN raster from the landcover and soil group rasters.
 
     Parameters:
@@ -614,8 +613,10 @@ def _calculate_curve_number_raster(
         biophysical_table (dict): maps landcover IDs to dictionaries that
             contain at least the keys 'cn_a', 'cn_b', 'cn_c', 'cn_d', that
             map to the curve numbers for that landcover and soil type.
-        pixel_size (float): desired projected units pixel size for output
         cn_path (string): path to output curve number raster to be output
+            which will be the dimensions of the intersection of
+            `lulc_raster_path` and `soil_group_path` the cell size of
+            `lulc_raster_path`.
 
     Returns:
         None
@@ -671,6 +672,7 @@ def _calculate_curve_number_raster(
         return cn_result
 
     cn_nodata = -1
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(lulc_raster_path)
     pygeoprocessing.vectorize_datasets(
         [lulc_raster_path, soil_group_path], cn_op, cn_path, gdal.GDT_Float32,
         cn_nodata, pixel_size, 'intersection', vectorize_op=False,
