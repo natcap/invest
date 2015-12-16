@@ -605,7 +605,21 @@ def _calculate_monthly_quick_flow(
 def _calculate_curve_number_raster(
         lulc_raster_path, soil_group_path, biophysical_table, pixel_size,
         cn_path):
-    """Calculate the CN raster from the landcover and soil group rasters."""
+    """Calculate the CN raster from the landcover and soil group rasters.
+
+    Parameters:
+        lulc_raster_path (string): path to landcover raster
+        soil_group_path (string): path to raster indicating soil group where
+            pixel values are in [1,2,3,4]
+        biophysical_table (dict): maps landcover IDs to dictionaries that
+            contain at least the keys 'cn_a', 'cn_b', 'cn_c', 'cn_d', that
+            map to the curve numbers for that landcover and soil type.
+        pixel_size (float): desired projected units pixel size for output
+        cn_path (string): path to output curve number raster to be output
+
+    Returns:
+        None
+    """
     soil_nodata = pygeoprocessing.get_nodata_from_uri(soil_group_path)
     map_soil_type_to_header = {
         1: 'cn_a',
