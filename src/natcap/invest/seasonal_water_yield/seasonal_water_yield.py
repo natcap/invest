@@ -786,8 +786,7 @@ def _sum_valid(raster_path):
     raster_count = 0
     raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
 
-    for _, block in pygeoprocessing.iterblocks(
-            raster_path, band_list=[1]):
+    for _, block in pygeoprocessing.iterblocks(raster_path, band_list=[1]):
         valid_mask = block != raster_nodata
         raster_sum += numpy.sum(block[valid_mask])
         raster_count += numpy.count_nonzero(valid_mask)
