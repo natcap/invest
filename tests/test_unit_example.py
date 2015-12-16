@@ -77,7 +77,8 @@ class ExampleUnitTests(unittest.TestCase):
         expected_raster = _create_lulc(expected_matrix)
         sum_raster = os.path.join(args['workspace_dir'], 'sum.tif')
         pygeoprocessing.testing.assert_rasters_equal(sum_raster,
-                                                     expected_raster)
+                                                     expected_raster,
+                                                     tolerance=1e-9)
 
         shutil.rmtree(args['workspace_dir'])
         for filename in [args['example_lulc'], expected_raster]:

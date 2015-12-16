@@ -1,19 +1,17 @@
 InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs 
 ================================================================
 
-+-----------------------+-------------------------------+-----------------------------+
-| Build type            | Windows                       | Linux (Debian 7)            |
-+=======================+===============================+=============================+
-| Nightly Binary builds | |nightly_binary_build_badge|                                |
-+-----------------------+-------------------------------+-----------------------------+
-| Dev builds            | |dev_windows_build_badge|     | |dev_linux_build_badge|     |
-+-----------------------+-------------------------------+-----------------------------+
-| Tests                 | |windows_test_badge|          | |linux_test_badge|          |
-+-----------------------+-------------------------------+-----------------------------+
-| Test coverage         | |windows_test_coverage_badge| | |linux_test_coverage_badge| |
-+-----------------------+-------------------------------+-----------------------------+
-
-
++-----------------------+-------------------------------+-----------------------------+---------------------------+
+| Build type            | Windows                       | Linux (Debian 7)            | Mac OSX 10.10             |
++=======================+===============================+=============================+===========================+
+| Nightly Binary builds | |nightly_binary_build_badge|                                                            |
++-----------------------+-------------------------------+-----------------------------+---------------------------+
+| Dev builds            | |dev_windows_build_badge|     | |dev_linux_build_badge|     | |dev_mac_build_badge|     |
++-----------------------+-------------------------------+-----------------------------+---------------------------+
+| Tests                 | |windows_test_badge|          | |linux_test_badge|          | |mac_test_badge|          |
++-----------------------+-------------------------------+-----------------------------+---------------------------+
+| Test coverage         | |windows_test_coverage_badge| | |linux_test_coverage_badge| | |mac_test_coverage_badge| |
++-----------------------+-------------------------------+-----------------------------+---------------------------+
 
 .. |nightly_binary_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=invest-nightly-develop
   :target: http://builds.naturalcapitalproject.org/job/invest-nightly-develop
@@ -24,17 +22,26 @@ InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
 .. |dev_linux_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=natcap.invest/label=GCE-debian-2
   :target: http://builds.naturalcapitalproject.org/job/natcap.invest/label=GCE-debian-2
 
+.. |dev_mac_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=natcap.invest/label=Stanford-osx-1
+  :target: http://builds.naturalcapitalproject.org/job/natcap.invest/label=Stanford-osx-1
+
 .. |windows_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=GCE-windows-1
   :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
 
 .. |linux_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=GCE-debian-2
   :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2
 
+.. |mac_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=Stanford-osx-1
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=Stanford-osx-1
+
 .. |windows_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1/
   :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
 
 .. |linux_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2/
   :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2
+
+.. |mac_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=Stanford-osx-1/
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=Stanford-osx-1
 
 About  InVEST
 =============
@@ -446,6 +453,24 @@ before you can import natcap.invest, do this: ::
 more information if you're interested.
 
 .. _The relevant issue: https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version#comment-19426088
+
+Matplotlib ImportError
+----------------------
+
+On Fedora systems, some users encounter this exception when trying to run an 
+InVEST model that uses matplotlib:
+
+::
+
+    ...
+    line 17, in <module>
+        from .backend_qt5agg import NavigationToolbar2QTAgg
+    ImportError: No module named backend_qt5agg
+
+This is a `known issue`_ with the RedHat build of ``python-matplotlib-qt4``.  The workaround
+is to ``yum install python-matplotlib-qt5``.
+
+.. _known issue: https://bugzilla.redhat.com/show_bug.cgi?id=1219556
 
 
 GDAL
