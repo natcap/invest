@@ -613,6 +613,7 @@ def _calculate_curve_number_raster(
         3: 'cn_c',
         4: 'cn_d',
     }
+    # curve numbers are always positive so -1 a good nodata choice
     cn_nodata = -1
     lulc_to_soil = {}
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_raster_path)
