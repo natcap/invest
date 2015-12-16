@@ -854,7 +854,7 @@ def _build_file_registry(base_file_path_list, file_suffix):
         raise ValueError(
             "Cannot consolidate because of duplicate paths or keys: "
             "duplicate_keys: %s duplicate_paths: %s" % (
-                str(duplicate_keys), str(duplicate_paths)))
+                duplicate_keys, duplicate_paths))
 
     return file_registry
 
