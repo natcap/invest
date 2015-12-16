@@ -1,4 +1,4 @@
-"""InVEST Seasonal Water Yield Model"""
+"""InVEST Seasonal Water Yield Model."""
 
 import os
 import logging
@@ -75,7 +75,9 @@ _TMP_BASE_FILES = {
 
 
 def execute(args):
-    """This function invokes the InVEST seasonal water yield model described in
+    """InVEST seasonal water yield model.
+
+    This function invokes the InVEST seasonal water yield model described in
     "Spatial attribution of baseflow generation at the parcel level for
     ecosystem-service valuation", Guswa, et. al (under review in "Water
     Resources Research")
@@ -147,7 +149,6 @@ def execute(args):
         args['monthly_alpha_path'] (string): required if args['monthly_alpha']
             is True.
     """
-
     # This upgrades warnings to exceptions across this model.
     # I found this useful to catch all kinds of weird inputs to the model
     # during debugging and think it makes sense to have in production of this
@@ -307,7 +308,7 @@ def execute(args):
         l_nodata = pygeoprocessing.get_nodata_from_uri(file_registry['l_path'])
 
         def l_avail_op(l_array):
-            """calculate equation [8] L_avail = max(gamma*L, 0)"""
+            """Calculate equation [8] L_avail = max(gamma*L, 0)."""
             result = numpy.empty(l_array.shape)
             result[:] = l_nodata
             valid_mask = (l_array != l_nodata)
@@ -370,7 +371,7 @@ def execute(args):
         LOGGER.info('calculate QFi')
 
         def qfi_sum_op(*qf_values):
-            """sum the monthly qfis"""
+            """Sum the monthly qfis."""
             qf_sum = numpy.zeros(qf_values[0].shape)
             valid_mask = qf_values[0] != qf_nodata
             valid_qf_sum = qf_sum[valid_mask]
@@ -426,7 +427,7 @@ def execute(args):
         file_registry['l_path'])
 
     def vri_op(ri_array):
-        """calc vri index Eq 10"""
+        """Calculate vri index [Eq 10]."""
         return numpy.where(
             ri_array != ri_nodata,
             ri_array / qb_result / qb_valid_count, ri_nodata)
@@ -472,7 +473,7 @@ def execute(args):
         file_registry['b_sum_path'])
 
     def op_b(b_sum, l_avail, l_sum):
-        """Calculates B=B_sum*Lavail/L_sum"""
+        """Calculate B=B_sum*Lavail/L_sum."""
         valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
         result = numpy.empty(b_sum.shape)
         result[:] = b_sum_nodata
@@ -511,10 +512,11 @@ def execute(args):
 
     warnings.resetwarnings()
 
+
 def _calculate_monthly_quick_flow(
         precip_path, lulc_raster_path, cn_path, n_events_raster_path,
         stream_path, qf_monthly_path, si_path):
-    """Calculates quick flow for a month
+    """Calculate quick flow for a month.
 
     Parameters:
         precip_path (string): path to file that correspond to monthly
@@ -529,13 +531,15 @@ def _calculate_monthly_quick_flow(
         qf_monthly_path_list (list of string): list of paths to output monthly
             rasters.
         si_path (string): list to output raster for potential maximum retention
-        """
 
+    Returns:
+        None
+    """
     si_nodata = -1
     cn_nodata = pygeoprocessing.get_nodata_from_uri(cn_path)
 
     def si_op(ci_array, stream_array):
-        """potential maximum retention"""
+        """Potential maximum retention."""
         si_array = 1000.0 / ci_array - 10
         si_array = numpy.where(ci_array != cn_nodata, si_array, si_nodata)
         si_array[stream_array == 1] = 0
@@ -553,7 +557,7 @@ def _calculate_monthly_quick_flow(
     n_events_nodata = pygeoprocessing.get_nodata_from_uri(n_events_raster_path)
 
     def qf_op(p_im, s_i, n_events, stream_array):
-        """Calculate quick flow as in Eq [1] in user's guide
+        """Calculate quick flow as in Eq [1] in user's guide.
 
         Parameters:
             p_im (numpy.array): precipitation at pixel i on month m
@@ -564,8 +568,8 @@ def _calculate_monthly_quick_flow(
                 pixel.
 
         Returns:
-            quick flow (numpy.array)"""
-
+            quick flow (numpy.array)
+        """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
             (stream_array != 1) & (n_events != n_events_nodata) &
@@ -601,8 +605,7 @@ def _calculate_monthly_quick_flow(
 def _calculate_curve_number_raster(
         lulc_raster_path, soil_group_path, biophysical_table, pixel_size,
         cn_path):
-    """Calculate the CN raster from the landcover and soil group rasters"""
-
+    """Calculate the CN raster from the landcover and soil group rasters."""
     soil_nodata = pygeoprocessing.get_nodata_from_uri(soil_group_path)
     map_soil_type_to_header = {
         1: 'cn_a',
@@ -636,7 +639,7 @@ def _calculate_curve_number_raster(
                         dtype=numpy.float32))
 
     def cn_op(lulc_array, soil_group_array):
-        """map lulc code and soil to a curve number"""
+        """Map lulc code and soil to a curve number."""
         cn_result = numpy.empty(lulc_array.shape)
         cn_result[:] = cn_nodata
         for soil_group_id in numpy.unique(soil_group_array):
@@ -660,7 +663,7 @@ def _calculate_curve_number_raster(
 
 
 def _calculate_si_raster(cn_path, stream_path, si_path):
-    """Calculates the S factor of the quickflow equation [1].
+    """Calculate the S factor of the quickflow equation [1].
 
     Parameters:
         cn_path (string): path to curve number raster
@@ -670,12 +673,11 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
     Returns:
         None
     """
-
     si_nodata = -1
     cn_nodata = pygeoprocessing.get_nodata_from_uri(cn_path)
 
     def si_op(ci_factor, stream_mask):
-        """calculate si factor"""
+        """Calculate si factor."""
         valid_mask = (ci_factor != cn_nodata) & (ci_factor > 0)
         si_array = numpy.empty(ci_factor.shape)
         si_array[:] = si_nodata
@@ -695,8 +697,10 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
 
 def _aggregate_recharge(
         aoi_path, l_path, vri_path, aggregate_vector_path):
-    """Aggregate recharge values for the provided watersheds/AOIs. Generates a
-    new shapefile that's a copy of 'aoi_path' in sum values from L and Vri.
+    """Aggregate recharge values for the provided watersheds/AOIs.
+
+    Generates a new shapefile that's a copy of 'aoi_path' in sum values from L
+    and Vri.
 
     Parameters:
         aoi_path (string): path to shapefile that will be used to
@@ -710,8 +714,8 @@ def _aggregate_recharge(
             the result of this call.
 
     Returns:
-        None"""
-
+        None
+    """
     if os.path.exists(aggregate_vector_path):
         LOGGER.warn(
             '%s exists, deleting and writing new output',
@@ -773,15 +777,15 @@ def _aggregate_recharge(
 
 
 def _sum_valid(raster_path):
-    """Calculates the sum of the non-nodata pixels in the raster.
+    """Calculate the sum of the non-nodata pixels in the raster.
 
     Parameters:
         raster_path (string): path to raster on disk
 
     Returns:
         (sum, n_pixels) tuple where sum is the sum of the non-nodata pixels
-        and n_pixels is the count of them"""
-
+        and n_pixels is the count of them
+    """
     raster_sum = 0
     raster_count = 0
     raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
@@ -794,8 +798,7 @@ def _sum_valid(raster_path):
 
 
 def _build_file_registry(base_file_path_list, file_suffix):
-    """Constructs a file registry by combining file suffixes with file key
-    names, base filenames, and directories.
+    """Combine file suffixes with key names, base filenames, and directories.
 
     Parameters:
         base_file_tuple_list (list): a list of (dict, path) tuples where
@@ -814,14 +817,13 @@ def _build_file_registry(base_file_path_list, file_suffix):
     Raises:
         ValueError if there are duplicate file keys or duplicate file paths.
     """
-
     all_paths = set()
     duplicate_keys = set()
     duplicate_paths = set()
     file_registry = {}
 
     def _build_path(base_filename, path):
-        """Internal helper to avoid code duplication"""
+        """Internal helper to avoid code duplication."""
         pre, post = os.path.splitext(base_filename)
         full_path = os.path.join(path, pre+file_suffix+post)
 
@@ -868,8 +870,8 @@ def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
             file
 
     Returns:
-        None"""
-
+        None
+    """
     base_nodata_list = [pygeoprocessing.get_nodata_from_uri(
         path) for path in input_raster_path_list]
     pixel_size = pygeoprocessing.get_cell_size_from_uri(
@@ -879,8 +881,7 @@ def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
         nodata_list = base_nodata_list[index:] + base_nodata_list[:index]
 
         def mask_if_not_both_valid(*value_list):
-            """returns values from value[0] if all input values are not nodata
-            else nodata_list[0]"""
+            """If values are nodata, nodata_list[0], else `value_list[0]`."""
             valid_mask = numpy.empty(value_list[0].shape, dtype=numpy.bool)
             valid_mask[:] = True
             for value_index in xrange(len(value_list)):
