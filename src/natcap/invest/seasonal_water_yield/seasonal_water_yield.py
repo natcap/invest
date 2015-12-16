@@ -776,7 +776,7 @@ def _sum_valid(raster_path):
     """Calculates the sum of the non-nodata pixels in the raster.
 
     Parameters:
-        raster_path (string): Path to raster on SyncToDisk
+        raster_path (string): path to raster on disk
 
     Returns:
         (sum, n_pixels) tuple where sum is the sum of the non-nodata pixels
