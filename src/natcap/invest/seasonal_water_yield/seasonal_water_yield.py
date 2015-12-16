@@ -860,8 +860,7 @@ def _build_file_registry(base_file_path_list, file_suffix):
 
 
 def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
-    """Mask input raster stack such that any local pixel stacks that include
-    nodata are set to all nodata on the output.
+    """Mask local pixel stacks that include nodata anywhere in the stack.
 
     Parameters:
         input_raster_path_list (list): list of input raster paths, all rasters
