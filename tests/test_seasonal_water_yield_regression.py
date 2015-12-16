@@ -307,7 +307,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         Executes SWY using the monthly alpha table and checks that the output
         files are generated and that the aggregate shapefile fields are the
-        same as theregression case."""
+        same as the regression case."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
