@@ -32,7 +32,7 @@ def _create_csv(fields, data, fname):
             in the list will be the order in how they are written. ex:
             ['id', 'precip', 'total']
 
-        data (dictionary): a dictionary representing the table.
+        data (dict): a dictionary representing the table.
             The dictionary should be constructed with unique numerical keys
             that point to a dictionary which represents a row in the table:
             data = {0 : {'id':1, 'precip':43, 'total': 65},
@@ -67,7 +67,7 @@ def _create_vertical_csv(data, fname):
         values. This is how Wind Energy csv inputs are expected.
 
     Parameters:
-        data (Dictionary): a Dictionary where each key is the name
+        data (dict): a Dictionary where each key is the name
             of a field and set in the first column. The second
             column is set with the value of that key.
         fname (string): a file path for the new table to be written to disk
@@ -83,14 +83,14 @@ def _create_vertical_csv(data, fname):
 
     csv_file.close()
 
-def _csv_wind_data_to_binary(wind_data_file_uri, binary_file_uri):
+def _csv_wind_data_to_binary(wind_data_file_path, binary_file_path):
     """Convert and compress the wind data into binary format.
 
-    Done by packing in a specific manner such that the InVEST wind energy
-    model can properly unpack it
+    The packing is done by splitting the CSV rows on commas and packing
+        them as floats and writing that string to the binary file.
 
     Parameters:
-        wind_data_file_uri (string) - a string to a CSV file on disk
+        wind_data_file_path (string) - a string to a CSV file on disk
             with the formatted wind data.
             Data should have the following order of columns:
             ["Latitude","Longitude","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
@@ -98,16 +98,16 @@ def _csv_wind_data_to_binary(wind_data_file_uri, binary_file_uri):
             "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K"]
             (required)
 
-        binary_file_uri (string) - a string to a path on disk  to write out the
+        binary_file_path (string) - a string to a path on disk  to write out the
             binary file (.bin) (required)
 
     Returns:
         Nothing
     """
     # Open the wave watch three files
-    wind_file = open(wind_data_file_uri, 'rU')
+    wind_file = open(wind_data_file_path, 'rU')
     # Open the binary output file as writeable
-    bin_file = open(binary_file_uri, 'wb')
+    bin_file = open(binary_file_path, 'wb')
 
     # This is the expected column header list for the binary wind energy file.
     # It is expected that the data will be in this order so that we can properly
@@ -164,7 +164,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             Point(pos_x + 50, pos_y - 50), Point(pos_x + 50, pos_y - 150)]
         shape_path = os.path.join(temp_dir, 'temp_shape.shp')
         # Create point shapefile to use for testing input
-        land_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
+        land_shape_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attrs,
             vector_format='ESRI Shapefile', filename=shape_path)
 
@@ -172,17 +172,17 @@ class WindEnergyUnitTests(unittest.TestCase):
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         raster_path = os.path.join(temp_dir, 'temp_raster.tif')
         # Create raster to use for testing input
-        harvested_masked_uri = pygeoprocessing.testing.create_raster_on_disk(
+        harvested_masked_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=raster_path)
 
-        tmp_dist_final_uri = os.path.join(temp_dir, 'dist_final.tif')
+        tmp_dist_final_path = os.path.join(temp_dir, 'dist_final.tif')
         # Call function to test given testing inputs
         wind_energy.calculate_distances_land_grid(
-            land_shape_uri, harvested_masked_uri, tmp_dist_final_uri)
+            land_shape_path, harvested_masked_path, tmp_dist_final_path)
 
         # Compare the results
-        result = gdal.Open(tmp_dist_final_uri)
+        result = gdal.Open(tmp_dist_final_path)
         res_band = result.GetRasterBand(1)
         res_array = res_band.ReadAsArray()
         exp_array = numpy.array([[10, 110, 210, 310], [20, 120, 220, 320]])
@@ -215,7 +215,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
         poly_file = os.path.join(temp_dir, 'poly_shape.shp')
         # Create polygon shapefile to use as testing input
-        poly_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+        poly_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             poly_geometries, srs.projection, fields, attr_poly,
             vector_format='ESRI Shapefile', filename=poly_file)
 
@@ -224,12 +224,12 @@ class WindEnergyUnitTests(unittest.TestCase):
             Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
         point_file = os.path.join(temp_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
-        point_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+        point_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             point_geometries, srs.projection, fields, attr_pt,
             vector_format='ESRI Shapefile', filename=point_file)
         # Call function to test
         results = wind_energy.point_to_polygon_distance(
-            poly_ds_uri, point_ds_uri)
+            poly_ds_path, point_ds_path)
 
         exp_results = [.15, .1, .05, .05]
 
@@ -253,7 +253,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                       Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
         point_file = os.path.join(temp_dir, 'point_shape.shp')
         # Create point shapefile for testing input
-        shape_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+        shape_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attributes,
             vector_format='ESRI Shapefile', filename=point_file)
 
@@ -261,13 +261,13 @@ class WindEnergyUnitTests(unittest.TestCase):
         field_name = "num_turb"
         # Call function to test
         wind_energy.add_field_to_shape_given_list(
-            shape_ds_uri, value_list, field_name)
+            shape_ds_path, value_list, field_name)
 
         # Compare results
         results = {1: {'num_turb': 10}, 2: {'num_turb': 20},
                    3: {'num_turb': 30}, 4: {'num_turb': 40}}
 
-        shape = ogr.Open(shape_ds_uri)
+        shape = ogr.Open(shape_ds_path)
         layer_count = shape.GetLayerCount()
 
         for layer_num in range(layer_count):
@@ -315,11 +315,12 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         self.assertDictEqual(expected_result, result)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_read_csv_wind_parameters(self):
         """WindEnergy: testing 'read_csv_wind_parameter' function."""
         from natcap.invest.wind_energy import wind_energy
 
-        csv_uri = os.path.join(
+        csv_path = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input',
             'global_wind_energy_parameters.csv')
 
@@ -327,7 +328,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             'air_density', 'exponent_power_curve', 'decommission_cost',
             'operation_maintenance_cost', 'miscellaneous_capex_cost']
 
-        result = wind_energy.read_csv_wind_parameters(csv_uri, parameter_list)
+        result = wind_energy.read_csv_wind_parameters(csv_path, parameter_list)
 
         expected_result = {
             'air_density': '1.225', 'exponent_power_curve': '2',
@@ -359,7 +360,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         os.mkdir(farm_1)
         farm_file = os.path.join(farm_1, 'vector.shp')
         # Create polyline shapefile to use to test against
-        farm_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+        farm_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attributes,
             vector_format='ESRI Shapefile', filename=farm_file)
 
@@ -369,13 +370,13 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         farm_2 = os.path.join(temp_dir, 'farm_2')
         os.mkdir(farm_2)
-        out_uri = os.path.join(farm_2, 'vector.shp')
+        out_path = os.path.join(farm_2, 'vector.shp')
         # Call the function to test
         wind_energy.create_wind_farm_box(
-            spat_ref, start_point, x_len, y_len, out_uri)
+            spat_ref, start_point, x_len, y_len, out_path)
         # Compare results
         pygeoprocessing.testing.assert_vectors_equal(
-            out_uri, farm_ds_uri, 1e-9)
+            out_path, farm_ds_path, 1e-9)
 
     def test_get_highest_harvested_geom(self):
         """WindEnergy: testing 'get_highest_harvested_geom' function."""
@@ -398,11 +399,11 @@ class WindEnergyUnitTests(unittest.TestCase):
                       Point(pos_x + 100, pos_y - 100)]
         point_file = os.path.join(temp_dir, 'point_shape.shp')
         # Create point shapefile to use for testing input
-        shape_ds_uri = pygeoprocessing.testing.create_vector_on_disk(
+        shape_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attributes,
             vector_format='ESRI Shapefile', filename=point_file)
         # Call function to test
-        result = wind_energy.get_highest_harvested_geom(shape_ds_uri)
+        result = wind_energy.get_highest_harvested_geom(shape_ds_path)
 
         ogr_point = ogr.Geometry(ogr.wkbPoint)
         ogr_point.AddPoint_2D(443823.12732787791, 4956546.9059804128)
@@ -449,16 +450,16 @@ class WindEnergyUnitTests(unittest.TestCase):
                  "Ram-130m": 8.665319, "Ram-140m": 8.736247, "Ram-150m": 8.8028,
                  "K": 2.087774}}
 
-        wind_data_file_uri = os.path.join(temp_dir, 'wind_data_csv.csv')
+        wind_data_file_path = os.path.join(temp_dir, 'wind_data_csv.csv')
         # Create CSV file to create binary file from
-        _create_csv(fields, attributes, wind_data_file_uri)
-        binary_file_uri = os.path.join(temp_dir, 'binary_file.bin')
+        _create_csv(fields, attributes, wind_data_file_path)
+        binary_file_path = os.path.join(temp_dir, 'binary_file.bin')
         # Call the function to properly convert and compress data
-        _csv_wind_data_to_binary(wind_data_file_uri, binary_file_uri)
+        _csv_wind_data_to_binary(wind_data_file_path, binary_file_path)
 
         field_list = ['LATI', 'LONG', 'Ram-080m', 'K-010m']
         # Call the function to test
-        results = wind_energy.read_binary_wind_data(binary_file_uri, field_list)
+        results = wind_energy.read_binary_wind_data(binary_file_path, field_list)
 
         expected_results = {
             (31.794439, 123.761261): {
@@ -508,18 +509,18 @@ class WindEnergyUnitTests(unittest.TestCase):
                  "Ram-130m": 8.427051, "Ram-140m": 8.496029, "Ram-150m": 8.560752,
                  "K": 1.905783}}
 
-        wind_data_file_uri = os.path.join(temp_dir, 'wind_data_csv.csv')
+        wind_data_file_path = os.path.join(temp_dir, 'wind_data_csv.csv')
         # Create CSV file to create binary file from
-        _create_csv(fields, attributes, wind_data_file_uri)
-        binary_file_uri = os.path.join(temp_dir, 'binary_file.bin')
+        _create_csv(fields, attributes, wind_data_file_path)
+        binary_file_path = os.path.join(temp_dir, 'binary_file.bin')
         # Call the function to properly convert and compress data
-        _csv_wind_data_to_binary(wind_data_file_uri, binary_file_uri)
+        _csv_wind_data_to_binary(wind_data_file_path, binary_file_path)
 
         field_list = ['LATI', 'LONG', 'Ram-180m', 'K-010m']
         # Call the function to test
         self.assertRaises(
             wind_energy.HubHeightError, wind_energy.read_binary_wind_data,
-            binary_file_uri, field_list)
+            binary_file_path, field_list)
 
     def test_pixel_size_transform(self):
         """WindEnergy: testing pixel size transform helper function.
@@ -553,12 +554,12 @@ class WindEnergyUnitTests(unittest.TestCase):
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         input_path = os.path.join(temp_dir, 'input_raster.tif')
         # Create raster to use as testing input
-        raster_uri = pygeoprocessing.testing.create_raster_on_disk(
+        raster_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix], latlong_origin, latlong_proj, -1.0,
             pixel_size(0.033333), filename=input_path)
 
         raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
-            raster_uri)
+            raster_path)
         point = (raster_gt[0], raster_gt[3])
         raster_wkt = latlong_proj
 
@@ -571,7 +572,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         coord_trans = osr.CoordinateTransformation(raster_sr, spat_ref)
         # Call the function to test
         result = wind_energy.pixel_size_based_on_coordinate_transform_uri(
-            raster_uri, coord_trans, point)
+            raster_path, coord_trans, point)
 
         expected_res = (5576.152641937137, 1166.6139341676608)
 
@@ -595,25 +596,25 @@ class WindEnergyUnitTests(unittest.TestCase):
                       Point(pos_x + 50, pos_y - 150)]
         point_file = os.path.join(temp_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
-        land_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
+        land_shape_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attrs,
             vector_format='ESRI Shapefile', filename=point_file)
 
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         raster_path = os.path.join(temp_dir, 'raster.tif')
         # Create raster to use as testing input
-        harvested_masked_uri = pygeoprocessing.testing.create_raster_on_disk(
+        harvested_masked_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=raster_path)
 
-        tmp_dist_final_uri = os.path.join(temp_dir, 'dist_final.tif')
+        tmp_dist_final_path = os.path.join(temp_dir, 'dist_final.tif')
         # Call function to test
         wind_energy.calculate_distances_grid(
-            land_shape_uri, harvested_masked_uri, tmp_dist_final_uri)
+            land_shape_path, harvested_masked_path, tmp_dist_final_path)
 
         # Compare
         exp_array = numpy.array([[0, 100, 200, 300], [0, 100, 200, 300]])
-        res_raster = gdal.Open(tmp_dist_final_uri)
+        res_raster = gdal.Open(tmp_dist_final_path)
         res_band = res_raster.GetRasterBand(1)
         res_array = res_band.ReadAsArray()
         numpy.testing.assert_array_equal(res_array, exp_array)
@@ -631,15 +632,15 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
 
         layer_name = "datatopoint"
-        out_uri = os.path.join(temp_dir, 'datatopoint.shp')
+        out_path = os.path.join(temp_dir, 'datatopoint.shp')
 
-        wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_uri)
+        wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
         ogr_point.AddPoint_2D(123.76, 31.79)
 
-        shape = ogr.Open(out_uri)
+        shape = ogr.Open(out_path)
         layer = shape.GetLayer()
 
         feat = layer.GetNextFeature()
@@ -679,9 +680,9 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
 
         layer_name = "datatopoint"
-        out_uri = os.path.join(temp_dir, 'datatopoint.shp')
+        out_path = os.path.join(temp_dir, 'datatopoint.shp')
 
-        wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_uri)
+        wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
@@ -689,7 +690,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         # -180 to 180
         ogr_point.AddPoint_2D(160.00, 31.79)
 
-        shape = ogr.Open(out_uri)
+        shape = ogr.Open(out_path)
         layer = shape.GetLayer()
 
         feat = layer.GetNextFeature()
@@ -726,6 +727,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
+    @scm.skip_if_data_missing(SAMPLE_DATA)
     def generate_base_args(workspace_dir):
         """Generate an args list that is consistent across regression tests."""
         args = {
@@ -792,7 +794,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'pricetable', vector_path),
                 1e-9)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_aoi(self):
         """WindEnergy: testing base case w/ no AOI, distances, or valuation."""
@@ -803,7 +804,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'density_W_per_m2.tif',	'harvested_energy_MWhr_per_yr.tif']
+            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
@@ -869,7 +870,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'density_W_per_m2.tif',	'harvested_energy_MWhr_per_yr.tif']
+            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
@@ -950,7 +951,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         raster_results = [
             'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
+            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
 
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
