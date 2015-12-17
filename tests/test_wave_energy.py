@@ -15,6 +15,7 @@ import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry.polygon import LinearRing
+from nose.tools import nottest
 
 from osgeo import gdal
 from osgeo import ogr
@@ -50,7 +51,7 @@ SRS_LATLONG = ReferenceData(
     origin=(-70.5, 42.5),
     pixel_size=lambda x: (x, -1. * x))
 
-class WindEnergyUnitTests(unittest.TestCase):
+class WaveEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wave Energy module."""
 
     def setUp(self):
@@ -66,9 +67,9 @@ class WindEnergyUnitTests(unittest.TestCase):
     def test_pixel_size_transform(self):
         """WaveEnergy: testing pixel size transform helper function.
 
-        Function name is : 'pixel_size_based_on_coordinate_transform_uri'.
+        Function name is : 'pixel_size_based_on_coordinate_transform'.
         """
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest.wave_energy import wave_energy
 
         temp_dir = self.workspace_dir
 
@@ -101,7 +102,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         # the reprojected raster
         coord_trans = osr.CoordinateTransformation(raster_sr, spat_ref)
         # Call the function to test
-        result = wind_energy.pixel_size_based_on_coordinate_transform_uri(
+        result = wave_energy.pixel_size_based_on_coordinate_transform(
             raster_uri, coord_trans, point)
 
         expected_res = (5576.152641937137, 1166.6139341676608)
@@ -177,6 +178,89 @@ class WindEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(result, exp_result):
             self.assertEqual(res, exp_res)
 
+    def test_calculate_distance(self):
+        """WaveEnergy: testing 'calculate_distance' function."""
+        from natcap.invest.wave_energy import wave_energy
+
+        srs = sampledata.SRS_WILLAMETTE
+        pos_x = srs.origin[0]
+        pos_y = srs.origin[1]
+
+        set_one = numpy.array([
+            [pos_x, pos_y], [pos_x, pos_y - 100], [pos_x, pos_y - 200]])
+        set_two = numpy.array([
+            [pos_x + 100, pos_y], [pos_x + 100, pos_y - 100],
+            [pos_x + 100, pos_y - 200]])
+
+        result_dist, result_id = wave_energy.calculate_distance(
+            set_one, set_two)
+
+        expected_result_dist = [100, 100, 100]
+        expected_result_id = [0, 1, 2]
+
+        for res, exp_res in zip(result_dist, expected_result_dist):
+            self.assertEqual(res, exp_res)
+        for res, exp_res in zip(result_id, expected_result_id):
+            self.assertEqual(res, exp_res)
+
+    def test_clip_shape_points(self):
+        """WaveEnergy: testing 'clip_shape' function, where the shape to clip has
+            Point geometries"""
+        from natcap.invest.wave_energy import wave_energy
+
+        temp_dir = self.workspace_dir
+        srs = sampledata.SRS_WILLAMETTE
+
+        pos_x = srs.origin[0]
+        pos_y = srs.origin[1]
+        fields_pt = {'id': 'int', 'myattr': 'string'}
+        attrs_one = [
+            {'id': 1, 'myattr': 'hello'}, {'id': 2, 'myattr': 'bye'},
+            {'id': 3, 'myattr': 'highbye'}]
+
+        fields_poly = {'id': 'int'}
+        attrs_poly = [{'id': 1}]
+
+        geom_one = [
+            Point(pos_x + 20, pos_y - 20), Point(pos_x + 40, pos_y -20),
+            Point(pos_x + 100, pos_y - 20)]
+
+        geom_two = [Polygon(
+            [(pos_x, pos_y), (pos_x + 60, pos_y), (pos_x + 60, pos_y - 60),
+             (pos_x, pos_y - 60), (pos_x, pos_y)])]
+
+        shape_to_clip_uri = os.path.join(temp_dir, 'shape_to_clip.shp')
+        shape_to_clip_uri = pygeoprocessing.testing.create_vector_on_disk(
+		    geom_one, srs.projection, fields_pt, attrs_one,
+		    vector_format='ESRI Shapefile', filename=shape_to_clip_uri)
+
+        binding_shape_uri = os.path.join(temp_dir, 'binding_shape.shp')
+        binding_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
+		    geom_two, srs.projection, fields_poly, attrs_poly,
+		    vector_format='ESRI Shapefile', filename=binding_shape_uri)
+
+        output_path = os.path.join(temp_dir, 'vector.shp')
+
+        wave_energy.clip_shape(shape_to_clip_uri, binding_shape_uri, output_path)
+
+        fields_pt = {'id': 'int', 'myattr': 'string'}
+        attrs_one = [{'id': 1, 'myattr': 'hello'}, {'id': 2, 'myattr': 'bye'}]
+
+        geom_three = [Point(pos_x + 20, pos_y - 20), Point(pos_x + 40, pos_y -20)]
+
+        expected_uri = os.path.join(temp_dir, 'shape)
+        expected_shape = pygeoprocessing.testing.create_vector_on_disk(
+		    geom_three, srs.projection, fields_pt, attrs_one,
+		    vector_format='ESRI Shapefile', filename=expected_uri)
+
+        pygeoprocessing.testing.assert_vectors_equal(output_path, expected_shape)
+
+        os.remove(expected_shape)
+        os.remove(shape_to_clip_uri)
+        os.remove(binding_shape_uri)
+        shutil.rmtree(temp_dir)
+
+
 class WaveEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wave Energy module."""
 
@@ -211,6 +295,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    #@nottest
     def test_valuation(self):
         """WaveEnergy: testing valuation component."""
         from natcap.invest.wave_energy import wave_energy
@@ -256,6 +341,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    @nottest
     def test_aoi(self):
         """WaveEnergy: testing Biophysical component with an AOI."""
         from natcap.invest.wave_energy import wave_energy
@@ -286,6 +372,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    #@nottest
     def test_no_aoi(self):
         """WaveEnergy: testing Biophysical component with no AOI."""
         from natcap.invest.wave_energy import wave_energy
@@ -313,6 +400,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    #@nottest
     def test_valuation_suffix(self):
         """WaveEnergy: testing suffix through Valuation."""
         from natcap.invest.wave_energy import wave_energy
@@ -353,6 +441,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    #@nottest
     def test_valuation_suffix_underscore(self):
         """WaveEnergy: testing suffix with an underscore through Valuation."""
         from natcap.invest.wave_energy import wave_energy
