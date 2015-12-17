@@ -15,7 +15,6 @@ import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry.polygon import LinearRing
-
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -24,31 +23,6 @@ SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), 'data', 'wind_energy')
-
-ReferenceData = collections.namedtuple(
-    'ReferenceData', 'projection origin pixel_size')
-
-def projection_wkt(epsg_id):
-    """
-    Import a projection from an EPSG code.
-
-    Parameters:
-        proj_id(int): If an int, it's an EPSG code
-
-    Returns:
-        A WKT projection string.
-    """
-    reference = osr.SpatialReference()
-    result = reference.ImportFromEPSG(epsg_id)
-    if result != 0:
-        raise RuntimeError('EPSG code %s not recognixed' % epsg_id)
-
-    return reference.ExportToWkt()
-
-SRS_LATLONG = ReferenceData(
-    projection=projection_wkt(4326),
-    origin=(-70.5, 42.5),
-    pixel_size=lambda x: (x, -1. * x))
 
 def _create_csv(fields, data, fname):
     """Create a new CSV table from a dictionary.
@@ -561,7 +535,18 @@ class WindEnergyUnitTests(unittest.TestCase):
         spat_ref = osr.SpatialReference()
         spat_ref.ImportFromWkt(srs_wkt)
 
-        srs_latlong = SRS_LATLONG
+        # Define a Lat/Long WGS84 projection
+        espg_id = 4326
+        reference = osr.SpatialReference()
+        proj_result = reference.ImportFromEPSG(epsg_id)
+        if proj_result != 0:
+            raise RuntimeError('EPSG code %s not recognized' % epsg_id)
+        # Get projection as WKT
+        latlong_proj = reference.ExportToWkt()
+        # Set origin to use for setting up geometries / geotransforms
+        latlong_origin = (-70.5, 42.5)
+        # Pixel size helper for defining lat/long pixel size
+        pixel_size = lambda x: (x, -1. * x)
 
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
@@ -569,13 +554,13 @@ class WindEnergyUnitTests(unittest.TestCase):
         input_path = os.path.join(temp_dir, 'input_raster.tif')
         # Create raster to use as testing input
         raster_uri = pygeoprocessing.testing.create_raster_on_disk(
-            [matrix], srs_latlong.origin, srs_latlong.projection, -1.0,
-            srs_latlong.pixel_size(0.033333), filename=input_path)
+            [matrix], latlong_origin, latlong_proj, -1.0,
+            pixel_size(0.033333), filename=input_path)
 
         raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
             raster_uri)
         point = (raster_gt[0], raster_gt[3])
-        raster_wkt = srs_latlong.projection
+        raster_wkt = latlong_proj
 
         # Create a Spatial Reference from the rasters WKT
         raster_sr = osr.SpatialReference()
@@ -726,33 +711,6 @@ class WindEnergyUnitTests(unittest.TestCase):
                         'Could not find field %s' % field)
 
             feat = layer.GetNextFeature()
-
-    def test_format_scale_key(self):
-        """WindEnergy: testing 'format_scale_key' function."""
-        from natcap.invest.wind_energy import wind_energy
-
-        hub_height = '150'
-        result = wind_energy.format_scale_key(hub_height)
-        expected_res = 'Ram-150m'
-        self.assertEqual(result, expected_res)
-
-    def test_remove_files(self):
-        """WindEnergy: testing 'remove_files' function."""
-        from natcap.invest.wind_energy import wind_energy
-
-        temp_dir = self.workspace_dir
-        foo_path = os.path.join(temp_dir, 'foo')
-        foo_file = open(foo_path, 'wb')
-        foo_file.write('footoyou')
-        foo_file.close()
-
-        bar_path = os.path.join(temp_dir, 'bar')
-
-        wind_energy.remove_files([foo_path, bar_path])
-
-        for file_path in [foo_path, bar_path]:
-            if os.path.isfile(file_path):
-                raise AssertionError('Files were not removed and still exist')
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""

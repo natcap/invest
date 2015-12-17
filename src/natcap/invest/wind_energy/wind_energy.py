@@ -211,7 +211,11 @@ def execute(args):
 
     # The scale_key is used in getting the right wind energy arguments that are
     # dependent on the hub height.
-    scale_key = format_scale_key(hub_height)
+    scale_key = str(hub_height)
+    if len(scale_key) <= 2:
+        scale_key = 'Ram-0' + scale_key + 'm'
+    else:
+        scale_key = 'Ram-' + scale_key + 'm'
 
     LOGGER.debug('hub_height : %s', hub_height)
     LOGGER.debug('SCALE_key : %s', scale_key)
@@ -666,7 +670,9 @@ def execute(args):
     farm_poly_uri = os.path.join(out_dir,
         'example_size_and_orientation_of_a_possible_wind_farm%s.shp' % suffix)
     # If the file path already exist, remove it.
-    remove_files([farm_poly_uri])
+    if os.path.isfile(farm_poly_uri):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(farm_poly_uri)
 
     # Create the actual polygon
     LOGGER.info('Creating Example Farm Polygon')
@@ -1517,7 +1523,9 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     LOGGER.debug('Entering wind_data_to_point_shape')
 
     # If the output_uri exists delete it
-    remove_files([output_uri])
+    if os.path.isfile(output_uri):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(output_uri)
 
     LOGGER.debug('Creating new datasource')
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -1654,8 +1662,7 @@ def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
 
     # Temporary URI for an intermediate step
     clipped_uri = pygeoprocessing.geoprocessing.temporary_folder()
-    # If the file already exists remove it
-    remove_files([clipped_uri])
+
     # Clip the shapefile to the AOI
     LOGGER.debug('Clipping datasource')
     clip_datasource(aoi_reprojected_uri, shapefile_uri, clipped_uri)
@@ -1981,37 +1988,3 @@ def pixel_size_based_on_coordinate_transform_uri(
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
     return (pixel_diff_x, pixel_diff_y)
-
-def format_scale_key(hub_height):
-    """Constructs a string based on the hub height.
-
-    The scale_key has a specific signature that is created from the hub
-        height. The scale_key is used to lookup certain wind parameters.
-
-    Parameters:
-        hub_height (int): the hub height for the wind turbines
-
-    Returns:
-        a String representing the scale key
-    """
-    scale_key = str(hub_height)
-    if len(scale_key) <= 2:
-        scale_key = 'Ram-0' + scale_key + 'm'
-    else:
-        scale_key = 'Ram-' + scale_key + 'm'
-
-    return scale_key
-
-def remove_files(files):
-    """Remove file paths if they exist.
-
-    Parameters:
-        files (list) - a list of strings that are file paths on disk.
-
-    Returns:
-        Nothing
-    """
-
-    for file_path in files:
-        if os.path.isfile(file_path):
-            os.remove(file_path)
