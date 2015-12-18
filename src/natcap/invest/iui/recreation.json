@@ -110,12 +110,12 @@
           "id": "scenario_predictor_table_path",
           "args_id": "scenario_predictor_table_path",
           "type": "file",
-          "label": "Scenario Predictor Table",
+          "label": "Scenario Predictor Table (optional)",
           "defaultValue": "../Recreation/input/initial/scenario_predictors.csv",
           "validateAs": {
             "type": "CSV"
           },
-          "required": true,
+          "required": false,
           "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
         }
       ]

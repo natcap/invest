@@ -99,8 +99,9 @@ def execute(args):
                         with the response polygon in projected units of AOI
                     'polygon_area': area of the polygon contained within
                         response polygon in projected units of AOI
-        args['scenario_predictor_table_path'] (string): path to a table that
-            describes a scenario to apply the regression to.  Field headers
+        args['scenario_predictor_table_path'] (string): (optional) if
+            present runs the scenario mode of the recreation model with the
+            datasets described in the table on this path.  Field headers
             are identical to `args['predictor_table_path']` and ids in the
             table are required to be identical to the predictor list.
         args['results_suffix'] (string): optional, if exists is appended to
@@ -172,10 +173,11 @@ def execute(args):
         file_registry['coefficent_vector_path'], RESPONSE_ID,
         predictor_id_list)
 
-    run_scenario(
-        file_registry['pud_results_path'], RESPONSE_ID, coefficents,
-        predictor_id_list, args['scenario_predictor_table_path'],
-        file_registry['scenario_results_path'])
+    if 'scenario_predictor_table_path' in args:
+        run_scenario(
+            file_registry['pud_results_path'], RESPONSE_ID, coefficents,
+            predictor_id_list, args['scenario_predictor_table_path'],
+            file_registry['scenario_results_path'])
 
     LOGGER.info('deleting temporary files')
     for file_id in _TMP_BASE_FILES:
