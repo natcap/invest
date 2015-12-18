@@ -18,7 +18,6 @@ from shapely.geometry.polygon import LinearRing
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-from nose.tools import nottest
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
@@ -728,7 +727,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
-    #@scm.skip_if_data_missing(SAMPLE_DATA)
     def generate_base_args(workspace_dir):
         """Generate an args list that is consistent across regression tests."""
         args = {
@@ -753,7 +751,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_avggrid_dist_windsched(self):
         """WindEnergy: testing Valuation using avg grid distance and wind sched."""
         from natcap.invest.wind_energy import wind_energy
@@ -796,8 +793,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'pricetable', vector_path),
                 1e-9)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_aoi(self):
         """WindEnergy: testing base case w/ no AOI, distances, or valuation."""
         from natcap.invest.wind_energy import wind_energy
@@ -827,7 +824,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -860,7 +856,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI, land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -895,7 +890,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_valuation(self):
         """WindEnergy: testing case w/ AOI, land poly, and distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -932,7 +926,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_gridpts_windsched(self):
         """WindEnergy: testing Valuation w/ grid points and wind sched."""
         from natcap.invest.wind_energy import wind_energy
@@ -978,7 +971,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_avggriddist_windprice(self):
         """WindEnergy: testing Valuation w/ avg grid distances and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -1023,7 +1015,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -1069,7 +1060,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -1119,7 +1109,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_suffix(self):
         """WindEnergy: testing suffix handling."""
         from natcap.invest.wind_energy import wind_energy
@@ -1175,7 +1164,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_suffix_underscore(self):
         """WindEnergy: testing that suffix w/ underscore is handled correctly."""
         from natcap.invest.wind_energy import wind_energy
@@ -1231,7 +1219,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_field_error_missing_bio_param(self):
         """WindEnergy: testing that FieldError raised when missing bio param."""
         from natcap.invest.wind_energy import wind_energy
@@ -1276,7 +1263,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_non_divisible_by_ten_hub_height_error(self):
         """WindEnergy: raise HubHeightError when value not divisible by 10."""
         from natcap.invest.wind_energy import wind_energy
@@ -1322,7 +1308,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_missing_valuation_params(self):
         """WindEnergy: testing that FieldError is thrown when val params miss."""
         from natcap.invest.wind_energy import wind_energy
@@ -1375,7 +1360,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_time_period_exceptoin(self):
         """WindEnergy: raise TimePeriodError if 'time' and 'wind_sched' differ."""
         from natcap.invest.wind_energy import wind_energy
@@ -1435,7 +1419,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_remove_datasources(self):
         """WindEnergy: testing datasources which already exist are removed."""
         from natcap.invest.wind_energy import wind_energy
@@ -1469,33 +1452,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'wind_schedule': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
         }
-        # Shapefile paths the model should check for deletion before
-        # creating new shapefiles.
-        #farm_poly_path = os.path.join(
-        #    args['workspace_dir'], 'output',
-        #    'example_size_and_orientation_of_a_possible_wind_farm.shp')
-        #wind_points_path = os.path.join(
-        #    args['workspace_dir'], 'intermediate',
-        #    'wind_energy_points_from_data.shp')
-        # Dumby fields / attributes to assign to shapefiles
-        #fields = {'id': 'real'}
-        #attrs = [{'id': 1}]
-        #srs = sampledata.SRS_WILLAMETTE
-        #pos_x = srs.origin[0]
-        #pos_y = srs.origin[1]
-        #geometries = [Point(pos_x, pos_y)]
-        # Create dumby shapefiles that the model should delete prior to
-        # making new ones with the same file paths
-        #for shape_path in [farm_poly_path, wind_points_path]:
-        #    _ = pygeoprocessing.testing.create_vector_on_disk(
-        #        geometries, srs.projection, fields, attrs,
-        #        vector_format='ESRI Shapefile', filename=shape_path)
 
         wind_energy.execute(args)
+
         # Run through the model again, which should mean deleting
         # shapefiles that have already been made, but which need
         # to be created again.
         wind_energy.execute(args)
+
         # For testing, just check to make sure the output files
         # were created.
         raster_results = [
@@ -1518,14 +1482,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_scale_key(self):
-        """WindEnergy: testing case w/ hub height >=100."""
+        """WindEnergy: testing case w/ hub height >=100m."""
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_uri'] = os.path.join(
             REGRESSION_DATA, 'small_aoi.shp')
-        args['bathymetry_uri'] =  os.path.join(
+        args['bathymetry_uri'] = os.path.join(
             REGRESSION_DATA, 'dem_139.tif')
         args['number_of_turbines'] = 80
         args['min_depth'] = 0
@@ -1537,6 +1501,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             "Ram-040m", "Ram-050m", "Ram-060m", "Ram-070m", "Ram-080m",
             "Ram-090m", "Ram-100m", "Ram-110m", "Ram-120m", "Ram-130m",
             "Ram-140m", "Ram-150m", "K"]
+
         attributes = {
             0:
                 {"LATI": 43.1334686, "LONG": -70.1998596,
@@ -1561,27 +1526,28 @@ class WindEnergyRegressionTests(unittest.TestCase):
                  "Ram-070m": 8.83891296, "Ram-080m": 7.988804, "Ram-090m": 8.092981,
                  "Ram-100m": 8.83891296, "Ram-110m": 8.83891296, "Ram-120m": 8.353179,
                  "Ram-130m": 8.83891296, "Ram-140m": 8.83891296, "Ram-150m": 8.560752,
-                 "K": 2.07857608}
-                 }
+                 "K": 2.07857608}}
 
-        wind_data_file_path = os.path.join(args['workspace_dir'], 'wind_data_csv.csv')
+        wind_data_file_path = os.path.join(
+            args['workspace_dir'], 'wind_data_csv.csv')
         # Create CSV file to create binary file from
         _create_csv(fields, attributes, wind_data_file_path)
         binary_file_path = os.path.join(args['workspace_dir'], 'tmp_bin.bin')
         # Call the function to properly convert and compress data
         _csv_wind_data_to_binary(wind_data_file_path, binary_file_path)
         args['wind_data_uri'] = binary_file_path
-        # creating a stand in turbine parameter csv file that is missing
-        # a biophysical field / value. This should raise the exception
-        tmp_turbine_path = os.path.join(args['workspace_dir'], 'temp_turbine_params.csv')
+        # creating a stand in turbine parameter csv file that has a hub
+        # height of 100m
+        tmp_turbine_path = os.path.join(
+            args['workspace_dir'], 'temp_turbine_params.csv')
         data = {
             'hub_height': 100, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0,
-            'turbines_per_circuit': 8, 'rotor_diameter': 107
+            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
+            'turbine_cost': 8.0, 'turbines_per_circuit': 8,
+            'rotor_diameter': 107
         }
 
         _create_vertical_csv(data, tmp_turbine_path)
-
         args['turbine_parameters_uri'] = tmp_turbine_path
 
         wind_energy.execute(args)
@@ -1589,17 +1555,35 @@ class WindEnergyRegressionTests(unittest.TestCase):
         raster_results = [
             'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
 
-        for raster_path, value in zip(raster_results, [536.498498, 899899.033]):
-            result = gdal.Open(raster_path)
+        # Expected raster output from hub height equal to 100m for depth of
+        # -139m, Ram-100m = 8.83891296, and K-10m - 2.07857608. This is based
+        # on knowing results for hub height equal to 80m with same above
+        # parameters. The only measurable difference is that hub height is
+        # used as a constant modifier in the equations. Thus one can defer
+        # the differences from 80m hub height to 100m all else equal.
+        exp_density = numpy.array(
+            [[-64329.0, -64329.0, -64329.0],
+             [-64329.0, -64329.0, 535.444458],
+             [-64329.0, 535.444458, 535.444458]], dtype=numpy.float32)
+        exp_harvested = numpy.array(
+            [[-64329.0, -64329.0, -64329.0],
+             [-64329.0, -64329.0, 898121.0],
+             [-64329.0, 898121.0, 898121.0]], dtype=numpy.float32)
+
+        exp_list = [exp_density, exp_harvested]
+        for raster_path, exp_array in zip(raster_results, exp_list):
+            result = gdal.Open(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
             res_band = result.GetRasterBand(1)
             res_array = res_band.ReadAsArray()
-            exp_array = numpy.array([[value]])
             numpy.testing.assert_array_equal(res_array, exp_array)
 
         vector_results = ['wind_energy_points.shp']
+        exp_vector_res = [535.444458, 898121.014168]
 
         for vector_path in vector_results:
-            shape = ogr.Open(vector_path)
+            shape = ogr.Open(
+                os.path.join(args['workspace_dir'], 'output', vector_path))
             layer = shape.GetLayer()
 
             feat = layer.GetNextFeature()
@@ -1607,8 +1591,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 density = feat.GetField('Dens_W/m2')
                 harvested = feat.GetField('Harv_MWhr')
 
-                for res, exp_res in zip([density, harvested], [536.498498, 899899.033]):
+                for res, exp_res in zip([density, harvested], exp_vector_res):
                     pygeoprocessing.testing.assert_close(
-                        res, exp_res, 1e-4)
+                        res, exp_res, 1e-7)
 
                 feat = layer.GetNextFeature()
