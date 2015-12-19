@@ -744,7 +744,6 @@ def _aggregate_recharge(
 
     esri_driver.CopyDataSource(
         original_aoi_vector, aggregate_vector_path)
-    esri_driver.Deregister()
     esri_driver = None
     ogr.DataSource.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
@@ -794,6 +793,7 @@ def _aggregate_recharge(
     aggregate_layer = None
     ogr.DataSource.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
+
 
 
 def _sum_valid(raster_path):
