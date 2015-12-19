@@ -121,13 +121,14 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         aoi_path = os.path.join(SAMPLE_DATA, 'watershed.shp')
         l_path = os.path.join(REGRESSION_DATA, 'L.tif')
         aggregate_vector_path = os.path.join(
-            self.workspace_dir, 'watershed.shp')
+            self.workspace_dir, 'watershed_agg.shp')
         seasonal_water_yield._aggregate_recharge(
             aoi_path, l_path, l_path, aggregate_vector_path)
 
         # test if aggregate is expected
         tolerance_places = 1  # this was an experimentally acceptable value
-        agg_results_base_path = os.path.join(REGRESSION_DATA, 'l_agg_results.csv')
+        agg_results_base_path = os.path.join(
+            REGRESSION_DATA, 'l_agg_results.csv')
         result_vector = ogr.Open(aggregate_vector_path)
         result_layer = result_vector.GetLayer()
         with open(agg_results_base_path, 'rb') as agg_result_file:

@@ -350,7 +350,7 @@ def execute(args):
         _calculate_curve_number_raster(
             file_registry['lulc_valid_path'],
             file_registry['soil_group_aligned_path'],
-            biophysical_table, pixel_size, file_registry['cn_path'])
+            biophysical_table, file_registry['cn_path'])
 
         LOGGER.info('calculate Si raster')
         _calculate_si_raster(
