@@ -302,6 +302,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_monthly_alpha_regression(self):
         """SWY monthly alpha values regression test on sample data
 
