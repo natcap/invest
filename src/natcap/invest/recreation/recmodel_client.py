@@ -127,6 +127,7 @@ def execute(args):
             args['hostname'], int(args['port'])))
 
     if args['grid_aoi']:
+        LOGGER.info("gridding aoi")
         grid_vector(
             args['aoi_path'], args['grid_type'], args['cell_size'],
             file_registry['local_aoi_path'])
@@ -173,7 +174,8 @@ def execute(args):
         file_registry['coefficent_vector_path'], RESPONSE_ID,
         predictor_id_list)
 
-    if 'scenario_predictor_table_path' in args:
+    if ('scenario_predictor_table_path' in args and
+            args['scenario_predictor_table_path'] != ''):
         run_scenario(
             file_registry['pud_results_path'], RESPONSE_ID, coefficents,
             predictor_id_list, args['scenario_predictor_table_path'],
@@ -231,7 +233,6 @@ def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     grid_layer_defn = grid_layer.GetLayerDefn()
 
     extent = vector_layer.GetExtent()  # minx maxx miny maxy
-
     if grid_type == 'hexagon':
         # calculate the inner domensions of the hexagons
         grid_width = extent[1] - extent[0]
@@ -614,16 +615,29 @@ def _polygon_area(response_polygons_lookup, polygon_vector_path):
         A dictionary mapping feature IDs from `response_polygons_lookup`
         to polygon area coverage."""
 
+    start_time = time.time()
     polygons = _ogr_to_geometry_list(polygon_vector_path)
     prepared_polygons = [
-        shapely.prepared.prep(polygon) for polygon in polygons]
+        shapely.prepared.prep(polygon) for polygon in polygons
+        if polygon.is_valid]
     polygon_area_coverage_lookup = {}  # map FID to point count
-    for feature_id, geometry in response_polygons_lookup.iteritems():
+    for index, (feature_id, geometry) in enumerate(
+            response_polygons_lookup.iteritems()):
+        if time.time() - start_time > 5.0:
+            LOGGER.info(
+                "%s polygon area: %.2f%% complete",
+                os.path.basename(polygon_vector_path),
+                (100.0*index)/len(response_polygons_lookup))
+            start_time = time.time()
+
         polygon_area_coverage = sum([
             (polygon.intersection(geometry)).area for polygon, prep_poly in
             zip(polygons, prepared_polygons) if
             prep_poly.intersects(geometry)])
         polygon_area_coverage_lookup[feature_id] = polygon_area_coverage
+    LOGGER.info(
+        "%s polygon area: 100.00%% complete",
+        os.path.basename(polygon_vector_path))
     return polygon_area_coverage_lookup
 
 
@@ -642,12 +656,25 @@ def _line_intersect_length(response_polygons_lookup, line_vector_path):
         A dictionary mapping feature IDs from `response_polygons_lookup`
         to line intersect length."""
 
+    start_time = time.time()
     lines = _ogr_to_geometry_list(line_vector_path)
     line_length_lookup = {}  # map FID to intersecting line length
-    for feature_id, geometry in response_polygons_lookup.iteritems():
+
+    for index, (feature_id, geometry) in enumerate(
+            response_polygons_lookup.iteritems()):
+        if time.time() - start_time > 5.0:
+            LOGGER.info(
+                "%s line intersect length: %.2f%% complete",
+                os.path.basename(line_vector_path),
+                (100.0*index)/len(response_polygons_lookup))
+            start_time = time.time()
+
         line_length = sum([
             (line.intersection(geometry)).length for line in lines])
         line_length_lookup[feature_id] = line_length
+    LOGGER.info(
+        "%s line intersect length: 100.00%% complete",
+        os.path.basename(line_vector_path))
     return line_length_lookup
 
 
@@ -665,11 +692,23 @@ def _point_nearest_distance(response_polygons_lookup, point_vector_path):
         A dictionary mapping feature IDs from `response_polygons_lookup`
         to distance to nearest point."""
 
+    start_time = time.time()
     points = _ogr_to_geometry_list(point_vector_path)
     point_distance_lookup = {}  # map FID to point count
-    for feature_id, geometry in response_polygons_lookup.iteritems():
+    for index, (feature_id, geometry) in enumerate(
+            response_polygons_lookup.iteritems()):
+        if time.time() - start_time > 5.0:
+            LOGGER.info(
+                "%s point distance: %.2f%% complete",
+                os.path.basename(point_vector_path),
+                (100.0*index)/len(response_polygons_lookup))
+            start_time = time.time()
+
         point_distance_lookup[feature_id] = min([
             geometry.distance(point) for point in points])
+    LOGGER.info(
+        "%s point distance: 100.00%% complete",
+        os.path.basename(point_vector_path))
     return point_distance_lookup
 
 
@@ -688,12 +727,24 @@ def _point_count(response_polygons_lookup, point_vector_path):
         A dictionary mapping feature IDs from `response_polygons_lookup`
         to number of points in that polygon."""
 
+    start_time = time.time()
     points = _ogr_to_geometry_list(point_vector_path)
     point_count_lookup = {}  # map FID to point count
-    for feature_id, geometry in response_polygons_lookup.iteritems():
+    for index, (feature_id, geometry) in enumerate(
+            response_polygons_lookup.iteritems()):
+        if time.time() - start_time > 5.0:
+            LOGGER.info(
+                "%s point count: %.2f%% complete",
+                os.path.basename(point_vector_path),
+                (100.0*index)/len(response_polygons_lookup))
+            start_time = time.time()
+
         point_count = len([
             point for point in points if geometry.contains(point)])
         point_count_lookup[feature_id] = point_count
+    LOGGER.info(
+        "%s point count: 100.00%% complete",
+        os.path.basename(point_vector_path))
     return point_count_lookup
 
 
@@ -706,7 +757,8 @@ def _ogr_to_geometry_list(vector_path):
     for feature in layer:
         feature_geometry = feature.GetGeometryRef()
         shapely_geometry = shapely.wkt.loads(feature_geometry.ExportToWkt())
-        geometry_list.append(shapely_geometry)
+        if shapely_geometry.is_valid:
+            geometry_list.append(shapely_geometry)
         feature_geometry = None
     layer = None
     ogr.DataSource.__swig_destroy__(vector)
