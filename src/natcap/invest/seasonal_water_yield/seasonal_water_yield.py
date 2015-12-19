@@ -742,10 +742,13 @@ def _aggregate_recharge(
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_aoi_vector = ogr.Open(aoi_path)
 
-    aggregate_vector = esri_driver.CopyDataSource(
+    esri_driver.CopyDataSource(
         original_aoi_vector, aggregate_vector_path)
+    esri_driver.Deregister()
+    esri_driver = None
     ogr.DataSource.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
+    aggregate_vector = ogr.Open(aggregate_vector_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
 
     # make an identifying id per polygon that can be used for aggregation
@@ -787,7 +790,7 @@ def _aggregate_recharge(
     # don't need a random poly id anymore
     aggregate_layer.DeleteField(
         serviceshed_defn.GetFieldIndex(poly_id_field))
-
+    aggregate_layer.SyncToDisk()
     aggregate_layer = None
     ogr.DataSource.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
