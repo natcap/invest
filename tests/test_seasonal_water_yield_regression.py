@@ -121,7 +121,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         aoi_path = os.path.join(SAMPLE_DATA, 'watershed.shp')
         l_path = os.path.join(REGRESSION_DATA, 'L.tif')
         aggregate_vector_path = os.path.join(
-            self.workspace_dir, 'watershed_agg.shp')
+            self.workspace_dir, 'watershed.shp')
         seasonal_water_yield._aggregate_recharge(
             aoi_path, l_path, l_path, aggregate_vector_path)
 
