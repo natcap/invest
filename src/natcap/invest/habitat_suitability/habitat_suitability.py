@@ -4,10 +4,9 @@ import os
 import logging
 import csv
 
-
-import osr
-import ogr
-import gdal
+from osgeo import gdal
+from osgeo import osr
+from osgeo import ogr
 import numpy
 import scipy
 

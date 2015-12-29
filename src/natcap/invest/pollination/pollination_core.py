@@ -1,16 +1,17 @@
-"""InVEST Pollination model core function  module"""
+"""InVEST Pollination model core module"""
 
 import shutil
 import os
 import logging
 
-import gdal
+from osgeo import gdal
 import numpy
 import pygeoprocessing.geoprocessing
 
 from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.pollination.core')
+
 
 def execute_model(args):
     """Execute the biophysical component of the pollination model.
