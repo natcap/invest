@@ -222,9 +222,10 @@ class SeasonalWaterYieldFileRegistryTests(unittest.TestCase):
             'b': 'P.tif',
             '': 'CN.tif',
             'l_avail_path': '',
-            'apple': 'foo\\.shp',
-            'bear': 'foo\\tif',
-            'cat': 'foo\\CN.tif'}
+            'apple': os.path.join('foo', '.shp'),
+            'bear': os.path.join('foo', 'tif'),
+            'cat': os.path.join('foo', 'CN.tif'),
+            }
 
         unexpected_paths = []
         for key, result_path in expected_dict.iteritems():
