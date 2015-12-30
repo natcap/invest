@@ -77,9 +77,12 @@ def execute(args):
         args['cell_size'] (string/float): optional, but must exist if
             `args['grid_aoi']` is True.  Indicates the long axis size of the
             grid cells.
-        args['predictor_table_path'] (string): path to a table that describes
-            the regression predictors, their IDs and types.  Must contain the
-            fields 'id', 'path', and 'type' where:
+        args['compute_regression'] (boolean): if True, then process the
+            predictor table and scenario table (if present).
+        args['predictor_table_path'] (string): required if
+            args['compute_regression'] is True.  Path to a table that
+            describes the regression predictors, their IDs and types.  Must
+            contain the fields 'id', 'path', and 'type' where:
                 'id': is a 10 character of less ID that is used to uniquely
                     describe the predictor.  It will be added to the output
                     result shapefile attribute table which is an ESRI
@@ -165,21 +168,24 @@ def execute(args):
     zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
         output_dir)
 
-    predictor_id_list = []
-    build_regression_coefficients(
-        file_registry['pud_results_path'], args['predictor_table_path'],
-        file_registry['coefficent_vector_path'], predictor_id_list)
+    if 'compute_regression' in args and args['compute_regression']:
+        LOGGER.info('Calculating regression')
+        predictor_id_list = []
+        build_regression_coefficients(
+            file_registry['pud_results_path'], args['predictor_table_path'],
+            file_registry['coefficent_vector_path'], predictor_id_list)
 
-    coefficents = build_regression(
-        file_registry['coefficent_vector_path'], RESPONSE_ID,
-        predictor_id_list)
+        coefficents = build_regression(
+            file_registry['coefficent_vector_path'], RESPONSE_ID,
+            predictor_id_list)
 
-    if ('scenario_predictor_table_path' in args and
-            args['scenario_predictor_table_path'] != ''):
-        run_scenario(
-            file_registry['pud_results_path'], RESPONSE_ID, coefficents,
-            predictor_id_list, args['scenario_predictor_table_path'],
-            file_registry['scenario_results_path'])
+        if ('scenario_predictor_table_path' in args and
+                args['scenario_predictor_table_path'] != ''):
+            LOGGER.info('Calculating scenario')
+            calculate_scenario(
+                file_registry['pud_results_path'], RESPONSE_ID, coefficents,
+                predictor_id_list, args['scenario_predictor_table_path'],
+                file_registry['scenario_results_path'])
 
     LOGGER.info('deleting temporary files')
     for file_id in _TMP_BASE_FILES:
@@ -812,7 +818,7 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
     return coefficents
 
 
-def run_scenario(
+def calculate_scenario(
         base_aoi_path, response_id, predictor_coefficents, predictor_id_list,
         scenario_predictor_table_path, scenario_results_path):
     """Calculate the PUD of a scenario given an existing regression.
