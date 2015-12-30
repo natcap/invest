@@ -93,30 +93,45 @@
           "defaultValue": "all",
           "required": true,
           "helpText": "This is the temporal metric that is used to average a photo user across time.  If 'daily', points will be distinct per day, if 'yearly', the same point by the same user on different days, but the same year, will count as a single point."
-        },
+        }
+      ]
+    },
+    {
+      "id": "regression_container",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "compute_regression",
+      "label": "Compute Regression",
+      "elements": [
         {
-          "id": "predictor_table_path",
-          "args_id": "predictor_table_path",
-          "type": "file",
-          "label": "Predictor Table",
-          "defaultValue": "../Recreation/input/initial/predictors.csv",
-          "validateAs": {
-            "type": "CSV"
-          },
-          "required": true,
-          "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
-        },
-        {
-          "id": "scenario_predictor_table_path",
-          "args_id": "scenario_predictor_table_path",
-          "type": "file",
-          "label": "Scenario Predictor Table (optional)",
-          "defaultValue": "../Recreation/input/initial/scenario_predictors.csv",
-          "validateAs": {
-            "type": "CSV"
-          },
-          "required": false,
-          "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
+          "id": "regression_element_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "predictor_table_path",
+              "args_id": "predictor_table_path",
+              "type": "file",
+              "label": "Predictor Table",
+              "defaultValue": "../Recreation/input/initial/predictors.csv",
+              "validateAs": {
+                "type": "CSV"
+              },
+              "required": true,
+              "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
+            },
+            {
+              "id": "scenario_predictor_table_path",
+              "args_id": "scenario_predictor_table_path",
+              "type": "file",
+              "label": "Scenario Predictor Table (optional)",
+              "defaultValue": "../Recreation/input/initial/scenario_predictors.csv",
+              "validateAs": {
+                "type": "CSV"
+              },
+              "required": false,
+              "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
+            }
+          ]
         }
       ]
     },
