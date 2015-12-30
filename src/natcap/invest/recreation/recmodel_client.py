@@ -1,4 +1,4 @@
-"""InVEST Recreation Client"""
+"""InVEST Recreation Client."""
 
 import collections
 import uuid
@@ -343,14 +343,13 @@ def _build_file_registry(base_file_path_list, file_suffix):
     Raises:
         ValueError if there are duplicate file keys or duplicate file paths.
     """
-
     all_paths = set()
     duplicate_keys = set()
     duplicate_paths = set()
     file_registry = {}
 
     def _build_path(base_filename, path):
-        """Internal helper to avoid code duplication"""
+        """Internal helper to avoid code duplication."""
         pre, post = os.path.splitext(base_filename)
         full_path = os.path.join(path, pre+file_suffix+post)
 
