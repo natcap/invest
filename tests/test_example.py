@@ -8,8 +8,11 @@ import logging
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
-SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
-REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', '_example_model')
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data')
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    '_example_model')
 
 LOGGER = logging.getLogger('test_example')
 
@@ -34,6 +37,7 @@ class ExampleTest(unittest.TestCase):
             tolerance=1e-9)
 
         shutil.rmtree(args['workspace_dir'])
+
 
 class InVESTImportTest(unittest.TestCase):
     def test_import_everything(self):
