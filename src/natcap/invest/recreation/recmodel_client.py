@@ -43,6 +43,7 @@ _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
     'coefficent_vector_path': 'regression_coeffiicents.shp',
     'scenario_results_path': 'scenario_results.shp',
+    'regression_coefficients': 'regression_coefficients.txt',
     }
 
 _TMP_BASE_FILES = {
@@ -175,9 +176,24 @@ def execute(args):
             file_registry['pud_results_path'], args['predictor_table_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
 
-        coefficents = build_regression(
+        coefficents, residual = build_regression(
             file_registry['coefficent_vector_path'], RESPONSE_ID,
             predictor_id_list)
+
+        # the last coefficient is the y intercept and has no id, thus
+        # the [:-1] on the coefficients list
+        regression_string = ' +\n      '.join(
+            '%+.2e * %s' % (coefficent, p_id)
+            for p_id, coefficent in zip(predictor_id_list, coefficents[:-1]))
+        regression_string += ' +\n      %+.2e' % coefficents[-1]  # y intercept
+
+        # generate a nice looking regression result and write to log and file
+        report_string = '\nRegression:\n%s = %s\nResidual: %s' % (
+            RESPONSE_ID, regression_string, residual)
+        LOGGER.info(report_string)
+        with open(file_registry['regression_coefficients'], 'w') as \
+                regression_log:
+            regression_log.write(report_string + '\n')
 
         if ('scenario_predictor_table_path' in args and
                 args['scenario_predictor_table_path'] != ''):
@@ -788,10 +804,9 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
             by this function.
 
     Returns:
-        X: A list of coefficents in the least-squares solution
+        X: A list of coefficents in the least-squares solution including
+            the y intercept as the last element
         residuals: sums of resisuals"""
-
-    LOGGER.info("building regression for %s", predictor_id_list)
 
     # Pull apart the datasource
     coefficent_vector = ogr.Open(coefficient_vector_path)
@@ -800,22 +815,17 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
     # Loop through each feature and build up the dictionary representing the
     # attribute table
     coefficient_matrix = numpy.empty(
-        (coefficent_layer.GetFeatureCount(), len(predictor_id_list)+1))
+        (coefficent_layer.GetFeatureCount(), len(predictor_id_list)+2))
     for row_index, feature in enumerate(coefficent_layer):
         coefficient_matrix[row_index, :] = numpy.array(
             [feature.GetField(str(response_id))] + [
-                feature.GetField(str(key)) for key in predictor_id_list])
+                feature.GetField(str(key)) for key in predictor_id_list] +
+            [1])  # add the 1s for the y intercept
 
     coefficents, residual, _, _ = numpy.linalg.lstsq(
         coefficient_matrix[:, 1:], coefficient_matrix[:, 0])
-    regression_string = ' +\n      '.join(
-        '%+.2e * %s' % (coefficent, p_id)
-        for p_id, coefficent in zip(predictor_id_list, coefficents))
-    LOGGER.info(
-        '\nRegression:\n%s = %s\nResidual: %s', response_id,
-        regression_string, residual)
 
-    return coefficents
+    return coefficents, residual
 
 
 def calculate_scenario(
