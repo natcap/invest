@@ -112,8 +112,8 @@ def execute(args):
             any output file paths.
 
     Returns:
-        None."""
-
+        None
+    """
     date_range = (args['start_date'], args['end_date'])
 
     file_suffix = utils.make_suffix_string(
@@ -219,8 +219,10 @@ def execute(args):
 
 
 def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
-    """Convert a vector to a regular grid where grids are contained within
-        the original vector.
+    """Convert vector to a regular grid.
+
+    Here the vector is gridded such that all cells are contained within the
+    original vector.
 
     Parameters:
         vector_path (string): path to an OGR compatable polygon vector type
@@ -231,8 +233,8 @@ def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
             vector that contains a gridded version of `vector_path`
 
     Returns:
-        None"""
-
+        None
+    """
     driver = ogr.GetDriverByName('ESRI Shapefile')
     if os.path.exists(out_grid_vector_path):
         driver.DeleteDataSource(out_grid_vector_path)
@@ -271,8 +273,7 @@ def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         n_rows = int(math.floor(grid_height/delta_y) + 1)
 
         def _generate_polygon(col_index, row_index):
-            """Generate a points for a closed hexagon given row and col
-            index."""
+            """Generate a points for a closed hexagon."""
             if (row_index + 1) % 2:
                 centroid = (
                     extent[0] + (delta_long_x * (1 + (3 * col_index))),
@@ -292,7 +293,7 @@ def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
             return hexagon
     elif grid_type == 'square':
         def _generate_polygon(col_index, row_index):
-            """Generate points for a closed square given row and col index."""
+            """Generate points for a closed square."""
             square = [
                 (extent[0] + col_index * cell_size + x,
                  extent[2] + row_index * cell_size + y)
@@ -323,8 +324,7 @@ def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
 
 def _build_file_registry(base_file_path_list, file_suffix):
-    """Construct a file registry by combining file suffixes with file key
-    names, base filenames, and directories.
+    """Combine file suffixes with base names and directories.
 
     Parameters:
         base_file_tuple_list (list): a list of (dict, path) tuples where
@@ -389,8 +389,11 @@ def _build_file_registry(base_file_path_list, file_suffix):
 def build_regression_coefficients(
         response_vector_path, predictor_table_path,
         out_coefficient_vector_path, out_predictor_id_list):
-    """Build a least squares fit for the polygons in the response vector
-    dataset and the spatial predictor datasets in `predictor_table_path`.
+    """Calculate least squares fit for the polygons in the response vector.
+
+    Build a least squares regression from the response vector, spatial
+    predictor datasets in `predictor_table_path`, and a column of 1s for the
+    y intercept.
 
     Parameters:
         response_vector_path (string): path to a single layer polygon vector.
@@ -417,8 +420,8 @@ def build_regression_coefficients(
             table.
 
     Returns:
-        None."""
-
+        None
+    """
     response_vector = ogr.Open(response_vector_path)
     response_layer = response_vector.GetLayer()
     response_polygons_lookup = {}  # maps FID to prepared geometry
@@ -502,8 +505,7 @@ def build_regression_coefficients(
 
 
 def _build_temporary_indexed_vector(vector_path):
-    """Make a copy of single layer vector and add a field that maps to feature
-    indexes.
+    """Copy single layer vector and add a field to map feature indexes.
 
     Parameters:
         vector_path (string): path to OGR vector
@@ -511,8 +513,8 @@ def _build_temporary_indexed_vector(vector_path):
     Returns:
         fid_field (string): name of FID field added to output vector_path
         fid_indexed_vector_path (string): path to copy of `vector_path` with
-            additional FID field added to it."""
-
+            additional FID field added to it.
+    """
     driver = ogr.GetDriverByName('ESRI Shapefile')
     vector = ogr.Open(vector_path)
     tmp_dir = tempfile.mkdtemp()
@@ -546,8 +548,8 @@ def _raster_sum_mean(response_vector_path, raster_path):
     Returns:
         A dictionary indexing 'sum', 'mean', and 'count', to dictionaries
         mapping feature IDs from `response_polygons_lookup` to those values
-        of the raster under the polygon."""
-
+        of the raster under the polygon.
+    """
     fid_field, fid_indexed_path = _build_temporary_indexed_vector(
         response_vector_path)
 
@@ -617,13 +619,16 @@ def _raster_mean(response_vector_path, raster_path):
 
     Returns:
         A dictionary mapping feature IDs from `response_polygons_lookup`
-        to summation under raster."""
+        to summation under raster.
+    """
     return {}
 
 
 def _polygon_area(response_polygons_lookup, polygon_vector_path):
-    """Append number of points that intersect polygons on the
-    `response_polygons_lookup`.
+    """Calculate polygon area overlap.
+
+    Calculates the amount of projected area overlap from `polygon_vector_path`
+    with `response_polygons_lookup`.
 
     Parameters:
         response_polygons_lookup (dictionary): maps feature ID to
@@ -634,8 +639,8 @@ def _polygon_area(response_polygons_lookup, polygon_vector_path):
 
     Returns:
         A dictionary mapping feature IDs from `response_polygons_lookup`
-        to polygon area coverage."""
-
+        to polygon area coverage.
+    """
     start_time = time.time()
     polygons = _ogr_to_geometry_list(polygon_vector_path)
     prepared_polygons = [
@@ -663,8 +668,7 @@ def _polygon_area(response_polygons_lookup, polygon_vector_path):
 
 
 def _line_intersect_length(response_polygons_lookup, line_vector_path):
-    """Append the length of the intersecting lines on the
-        `response_polygons_lookup` dictionary.
+    """Calculate the length of the intersecting lines on the response polygon.
 
     Parameters:
         response_polygons_lookup (dictionary): maps feature ID to
@@ -675,8 +679,8 @@ def _line_intersect_length(response_polygons_lookup, line_vector_path):
 
     Returns:
         A dictionary mapping feature IDs from `response_polygons_lookup`
-        to line intersect length."""
-
+        to line intersect length.
+    """
     start_time = time.time()
     lines = _ogr_to_geometry_list(line_vector_path)
     line_length_lookup = {}  # map FID to intersecting line length
@@ -711,8 +715,8 @@ def _point_nearest_distance(response_polygons_lookup, point_vector_path):
 
     Returns:
         A dictionary mapping feature IDs from `response_polygons_lookup`
-        to distance to nearest point."""
-
+        to distance to nearest point.
+    """
     start_time = time.time()
     points = _ogr_to_geometry_list(point_vector_path)
     point_distance_lookup = {}  # map FID to point count
@@ -734,8 +738,7 @@ def _point_nearest_distance(response_polygons_lookup, point_vector_path):
 
 
 def _point_count(response_polygons_lookup, point_vector_path):
-    """Append number of points that intersect polygons on the
-    `response_polygons_lookup`.
+    """Calculate number of points that intersect the response polygons.
 
     Parameters:
         response_polygons_lookup (dictionary): maps feature ID to
@@ -746,8 +749,8 @@ def _point_count(response_polygons_lookup, point_vector_path):
 
     Returns:
         A dictionary mapping feature IDs from `response_polygons_lookup`
-        to number of points in that polygon."""
-
+        to number of points in that polygon.
+    """
     start_time = time.time()
     points = _ogr_to_geometry_list(point_vector_path)
     point_count_lookup = {}  # map FID to point count
@@ -770,8 +773,7 @@ def _point_count(response_polygons_lookup, point_vector_path):
 
 
 def _ogr_to_geometry_list(vector_path):
-    """Convert an OGR type with one layer to a list of shapely geometry"""
-
+    """Convert an OGR type with one layer to a list of shapely geometry."""
     vector = ogr.Open(vector_path)
     layer = vector.GetLayer()
     geometry_list = []
@@ -787,8 +789,13 @@ def _ogr_to_geometry_list(vector_path):
 
 
 def build_regression(coefficient_vector_path, response_id, predictor_id_list):
-    """Build multiple regression off the shapefile attribute table given the
-    desired response and predictor field headings.
+    """Build multiple regression for response in the coefficient vector table.
+
+    The regression is built such that each feature in the single layer vector
+    pointed to by `coefficent_vector_path` corresponds to one data point.
+    The coefficients are defined in the vector's attribute table such that
+    `response_id` is the response coefficient, and `predictor_id_list` is a
+    list of the predictor ids.
 
     Parameters:
         coefficient_vector_path (string): path to a shapefile that contains
@@ -805,8 +812,8 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
     Returns:
         X: A list of coefficents in the least-squares solution including
             the y intercept as the last element
-        residuals: sums of resisuals"""
-
+        residuals: sums of resisuals
+    """
     # Pull apart the datasource
     coefficent_vector = ogr.Open(coefficient_vector_path)
     coefficent_layer = coefficent_vector.GetLayer()
@@ -838,7 +845,8 @@ def calculate_scenario(
             `scenario_results_path` output vector.
         response_id (string): text ID of response variable to write to
             the scenario result
-        predictor_coefficents (numpy.ndarray): 1D array of regression coefficents
+        predictor_coefficents (numpy.ndarray): 1D array of regression
+            coefficents
         predictor_id_list (list of string): list of text ID predictor
             variables that correspond with `coefficients`
         scenario_predictor_table_path (string): path to a CSV table of
@@ -871,8 +879,8 @@ def calculate_scenario(
             derived response.
 
     Returns:
-        None"""
-
+        None
+    """
     scenario_predictor_id_list = []
     build_regression_coefficients(
         base_aoi_path, scenario_predictor_table_path,
