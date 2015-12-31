@@ -121,8 +121,7 @@ class RecModel(object):
         return __version__
 
     def calc_aggregated_points_in_aoi(
-            self, zip_file_binary, date_range, average_metric,
-            out_vector_filename):
+            self, zip_file_binary, date_range, out_vector_filename):
         """Aggregate the PUD in the AOI.
 
         Parameters:
@@ -130,7 +129,6 @@ class RecModel(object):
                 OGR compatable vector.
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date in text form as YYYY-MM-DD
-            average_metric (string): one of "yearly", "monthly" or "daily"
             out_vector_filename (string): base filename of ouput vector
 
         Returns:
@@ -139,12 +137,6 @@ class RecModel(object):
         """
         # try/except block so Pyro4 can recieve an exception if there is one
         try:
-            allowed_average_metrics = ['yearly', 'monthly', 'daily']
-            if average_metric not in allowed_average_metrics:
-                raise ValueError(
-                    "Unknown aggregate type: '%s', expected one of %s",
-                    average_metric, allowed_average_metrics)
-
             #make a random workspace name so we can work in parallel
             while True:
                 workspace_path = os.path.join(
@@ -171,7 +163,7 @@ class RecModel(object):
                 numpy.datetime64(date_range[0]),
                 numpy.datetime64(date_range[1]))
             base_pud_aoi_path = self._calc_aggregated_points_in_aoi(
-                aoi_path, workspace_path, numpy_date_range, average_metric,
+                aoi_path, workspace_path, numpy_date_range,
                 out_vector_filename)
 
             #ZIP and stream the result back
@@ -196,17 +188,15 @@ class RecModel(object):
             raise
 
     def _calc_aggregated_points_in_aoi(
-            self, aoi_path, workspace_path, date_range, aggregate_metric,
-            out_vector_filename):
+            self, aoi_path, workspace_path, date_range, out_vector_filename):
         """Aggregate the PUD in the AOI.
 
         Parameters:
-            aoi_path (string): a path to an OGR compatable vector.
+            aoi_path (string): a path to an OGR compatible vector.
             workspace_path(string): path to a directory where working files
                 can be created
             date_range (datetime 2-tuple): a tuple that contains the inclusive
                 start and end date
-            aggregate_metric (string): one of "yearly", "monthly" or "daily"
             out_vector_filename (string): base filename of output vector
 
         Returns:
@@ -304,8 +294,7 @@ class RecModel(object):
             polytest_process = multiprocessing.Process(
                 target=_calc_poly_pud, args=(
                     local_qt_pickle_filename, aoi_path, date_range,
-                    aggregate_metric, poly_test_queue,
-                    pud_poly_feature_queue))
+                    poly_test_queue, pud_poly_feature_queue))
             polytest_process.start()
 
         #Copy the input shapefile into the designated output folder
@@ -316,7 +305,11 @@ class RecModel(object):
             aoi_vector, out_aoi_pud_path)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
         photopud_field = ogr.FieldDefn('PUD', ogr.OFTInteger)
+        photopud_mon_field = ogr.FieldDefn('PUD_mon', ogr.OFTInteger)
+        photopud_yr_field = ogr.FieldDefn('PUD_yr', ogr.OFTInteger)
         pud_aoi_layer.CreateField(photopud_field)
+        pud_aoi_layer.CreateField(photopud_mon_field)
+        pud_aoi_layer.CreateField(photopud_yr_field)
 
         last_time = time.time()
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
@@ -347,13 +340,15 @@ class RecModel(object):
                     '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
                     pud_aoi_layer.GetFeatureCount())
                 last_time = current_time
-            poly_id, poly_pud = result_tuple
+            poly_id, pud, pud_monthly, pud_yearly = result_tuple
             poly_feat = pud_aoi_layer.GetFeature(poly_id)
-            poly_feat.SetField('PUD', poly_pud)
+            poly_feat.SetField('PUD', pud)
+            poly_feat.SetField('PUD_mon', pud_monthly)
+            poly_feat.SetField('PUD_yr', pud_yearly)
             pud_aoi_layer.SetFeature(poly_feat)
 
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-               'done with polygon test, synching to disk')
+               'done with polygon test, syncing to disk')
         pud_aoi_layer = None
         pud_aoi_vector.SyncToDisk()
 
@@ -424,7 +419,6 @@ def _parse_input_csv(
     Returns:
         None
     """
-
     for file_offset, chunk_size in iter(block_offset_size_queue.get, 'STOP'):
         csv_file = open(csv_filepath, 'rb')
         csv_file.seek(file_offset, 0)
@@ -622,8 +616,8 @@ def build_quadtree_shape(
 
 
 def _calc_poly_pud(
-        local_qt_pickle_path, aoi_path, date_range, aggregate_metric,
-        poly_test_queue, pud_poly_feature_queue):
+        local_qt_pickle_path, aoi_path, date_range, poly_test_queue,
+        pud_poly_feature_queue):
     """Load a pre-calculated quadtree and test incoming polygons against it.
 
     Updates polygons with a PUD and send back out on the queue.
@@ -633,8 +627,6 @@ def _calc_poly_pud(
         aoi_path (string): path to AOI that contains polygon features
         date_range (tuple): numpy.datetime64 tuple indicating inclusive start
             and stop dates
-        aggregate_metric (string): one of 'yearly', 'monthly', or 'daily' to
-            aggregate multiple points against.
         poly_test_queue (multiprocessing.Queue): queue with incoming
             ogr.Features
         pud_poly_feature_queue (multiprocessing.Queue): queue to put outgoing
@@ -665,19 +657,47 @@ def _calc_poly_pud(
         poly_points = local_qt.get_intersecting_points_in_polygon(
             shapely_polygon)
         pud_set = set()
+        pud_monthly_set = collections.defaultdict(set)
+        pud_yearly_set = collections.defaultdict(set)
 
-        if aggregate_metric == 'yearly':
-            agg_fn = lambda x: x.tolist().timetuple().tm_yday
-        elif aggregate_metric == 'monthly':
-            agg_fn = lambda x: x.tolist().timetuple().tm_mon
-        elif aggregate_metric == 'daily':
-            agg_fn = lambda x: x.tolist().timetuple().tm_mday
+        min_date = None
+        max_date = None
 
         for point_datetime, user_hash, _, _ in poly_points:
             if date_range[0] <= point_datetime <= date_range[1]:
-                pud_hash = user_hash + str(agg_fn(point_datetime))
+                timetuple = point_datetime.tolist().timetuple()
+                if min_date is None:
+                    min_date = timetuple
+                    max_date = timetuple
+                if timetuple < min_date:
+                    min_date = timetuple
+                elif timetuple > max_date:
+                    max_date = timetuple
+
+                year = str(timetuple.tm_year)
+                month = str(timetuple.tm_mon)
+                day = str(timetuple.tm_mday)
+                pud_hash = user_hash + '%s-%s-%s' % (year, month, day)
                 pud_set.add(pud_hash)
-        pud_poly_feature_queue.put((poly_id, len(pud_set)))
+                pud_monthly_set['%s-%s' % (year, month)].add(pud_hash)
+                pud_yearly_set['%s' % (year)].add(pud_hash)
+
+        # calculate the number of years and months between the max/min dates
+        if max_date is not None:
+            n_years = max_date.tm_year - min_date.tm_year + 1
+            n_months = (
+                (n_years - 1) * 12 + max_date.tm_mon - min_date.tm_mon + 1)
+
+            pud_monthly_average = sum(
+                [len(x) for x in pud_monthly_set.itervalues()]) / n_months
+            pud_yearly_average = sum(
+                [len(x) for x in pud_yearly_set.itervalues()]) / n_years
+        else:
+            pud_monthly_average = 0
+            pud_yearly_average = 0
+
+        pud_poly_feature_queue.put(
+            (poly_id, len(pud_set), pud_monthly_average, pud_yearly_average))
     pud_poly_feature_queue.put('STOP')
 
 

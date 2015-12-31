@@ -159,7 +159,7 @@ def execute(args):
 
     result_zip_file_binary = (
         recmodel_server.calc_aggregated_points_in_aoi(
-            zip_file_binary, date_range, args['aggregating_metric'],
+            zip_file_binary, date_range,
             os.path.basename(file_registry['pud_results_path'])))
     LOGGER.info('received result, took %f seconds', time.time() - start_time)
 
