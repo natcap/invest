@@ -1,4 +1,4 @@
-"""InVEST Recreation Server"""
+"""InVEST Recreation Server."""
 
 import subprocess
 import Queue
@@ -15,23 +15,23 @@ import time
 import threading
 import traceback
 import collections
-import file_hash
 import logging
 import StringIO
 
 import Pyro4
+import numpy
 from osgeo import ogr
 from osgeo import osr
 import shapely.ops
 import shapely.wkt
 import shapely.geometry
 import shapely.prepared
+
+import natcap.invest.recreation.file_hash
 import natcap.versioner
-import numpy
+import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree  #pylint: disable=import-error,no-name-in-module
 
 __version__ = natcap.versioner.get_version('natcap.invest.recmodel_server')
-
-import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree
 
 BLOCKSIZE = 2 ** 21
 GLOBAL_MAX_POINTS_PER_NODE = 10000  # Default max points in quadtree to split
@@ -50,7 +50,7 @@ LOGGER = logging.getLogger('natcap.invest.recmodel_server')
 
 
 def _read_file(filename, file_buffer_queue, blocksize):
-    """Reads one blocksize at a time and adds to the file buffer queue"""
+    """Read one blocksize at a time and adds to the file buffer queue."""
     with open(filename, 'rb') as file_to_hash:
         buf = file_to_hash.read(blocksize)
         while len(buf) > 0:
@@ -60,8 +60,7 @@ def _read_file(filename, file_buffer_queue, blocksize):
 
 
 def _hash_blocks(file_buffer_queue):
-    """Processes the file_buffer_queue one buf at a time and adds to current
-        hash"""
+    """Process the buffer one element at a time and add to current hash."""
     hasher = hashlib.sha1()
     for row_buffer in iter(file_buffer_queue.get, "STOP"):
         hasher.update(row_buffer)
@@ -69,9 +68,7 @@ def _hash_blocks(file_buffer_queue):
 
 
 def hashfile(filename, blocksize=2**20):
-    """Memory efficient and threaded function to return a hash since this
-        operation is IO bound"""
-
+    """Memory efficient and threaded function to calculate a hash."""
     file_buffer_queue = Queue.Queue(100)
     read_file_process = threading.Thread(
         target=_read_file, args=(filename, file_buffer_queue, blocksize))
@@ -85,10 +82,29 @@ def hashfile(filename, blocksize=2**20):
 
 
 class RecModel(object):
-    """Class that manages RPCs for calculating photo user days"""
+    """Class that manages RPCs for calculating photo user days."""
 
     def __init__(self, raw_csv_filename, cache_workspace='./quadtree_cache'):
+        """Initialize RecModel object.
 
+        Parameters:
+            raw_csv_filename (string): path to csv file that contains lines
+                with the following pattern:
+
+                id,userid,date/time,lat,lng,err
+
+                example:
+
+                0486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
+
+            cache_workspace (string): path to a writable directory where the
+                object can write quadtree data to disk and search for
+                pre-computed quadtrees based on the hash of the file at
+                `raw_csv_filename`
+
+        Returns:
+            None
+        """
         initial_bounding_box = [-180, -90, 180, 90]
         try:
             self.qt_pickle_filename = construct_userday_quadtree(
@@ -99,35 +115,35 @@ class RecModel(object):
             traceback.print_exc()
             raise
 
-    def get_version(self):  # not static so it can register in Pyro object
-        """Returns the rec model server version"""
+    # not static so it can register in Pyro object
+    def get_version(self):  #pylint: disable=no-self-use
+        """Return the rec model server version."""
         return __version__
 
     def calc_aggregated_points_in_aoi(
-            self, zip_file_binary, date_range, aggregate_metric,
+            self, zip_file_binary, date_range, average_metric,
             out_vector_filename):
-        """Aggregate the number of unique points in the AOI given a date range
-        and temporal metric.
+        """Aggregate the PUD in the AOI.
 
         Parameters:
             zip_file_binary (string): a bytestring that is a zip file of an
                 OGR compatable vector.
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date in text form as YYYY-MM-DD
-            aggregate_metric (string): one of "yearly", "monthly" or "daily"
+            average_metric (string): one of "yearly", "monthly" or "daily"
             out_vector_filename (string): base filename of ouput vector
 
         Returns:
             a bytestring of a zipped copy of `zip_file_binary` with a "PUD"
-            field which contains the metric per polygon."""
-
+            field which contains the metric per polygon.
+        """
         # try/except block so Pyro4 can recieve an exception if there is one
         try:
-            allowed_aggregate_metrics = ['yearly', 'monthly', 'daily']
-            if aggregate_metric not in allowed_aggregate_metrics:
+            allowed_average_metrics = ['yearly', 'monthly', 'daily']
+            if average_metric not in allowed_average_metrics:
                 raise ValueError(
                     "Unknown aggregate type: '%s', expected one of %s",
-                    aggregate_metric, allowed_aggregate_metrics)
+                    average_metric, allowed_average_metrics)
 
             #make a random workspace name so we can work in parallel
             while True:
@@ -155,7 +171,7 @@ class RecModel(object):
                 numpy.datetime64(date_range[0]),
                 numpy.datetime64(date_range[1]))
             base_pud_aoi_path = self._calc_aggregated_points_in_aoi(
-                aoi_path, workspace_path, numpy_date_range, aggregate_metric,
+                aoi_path, workspace_path, numpy_date_range, average_metric,
                 out_vector_filename)
 
             #ZIP and stream the result back
@@ -182,8 +198,7 @@ class RecModel(object):
     def _calc_aggregated_points_in_aoi(
             self, aoi_path, workspace_path, date_range, aggregate_metric,
             out_vector_filename):
-        """Aggregate the number of unique points in the AOI given a date range
-        and temporal metric.
+        """Aggregate the PUD in the AOI.
 
         Parameters:
             aoi_path (string): a path to an OGR compatable vector.
@@ -196,8 +211,8 @@ class RecModel(object):
 
         Returns:
             a path to an ESRI shapefile copy of `aoi_path` updated with a
-            "PUD" field which contains the metric per polygon."""
-
+            "PUD" field which contains the metric per polygon.
+        """
         aoi_vector = ogr.Open(aoi_path)
         #append a _pud to the aoi filename
         out_aoi_pud_path = os.path.join(
@@ -348,16 +363,19 @@ class RecModel(object):
 
 
 def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
-    """Reads files from the CSV as fast as possible and pushes them down
-        the queue
+    """Read lines from the CSV and push to work queue.
 
-        infile_name - csv input file
-        raw_file_lines_queue - will have deques of lines from the raw CSV file
-            put in it
-        n_readers - number of reader processes for inserting the sentinel
+    Parameters:
+        infile_name (string): path to csv file
+        raw_file_lines_queue (multiprocessing.Queue): a buffer of CSV lines
+            appended to a deques will be appended to this queue.  When the
+            file is fully read `n_readers` number of 'STOP's will be pushed
+            to the queue.
+        n_readers (int): number of reader processes for inserting the sentinel
 
-        returns nothing"""
-
+    Returns:
+        None
+    """
     original_size = os.path.getsize(infile_name)
     bytes_left = original_size
     last_time = time.time()
@@ -404,7 +422,8 @@ def _parse_input_csv(
         csv_filepath (string): path to csv file to parse from
 
     Returns:
-        None."""
+        None
+    """
 
     for file_offset, chunk_size in iter(block_offset_size_queue.get, 'STOP'):
         csv_file = open(csv_filepath, 'rb')
@@ -416,7 +435,7 @@ def _parse_input_csv(
         # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
         # this pattern matches the above style of line and only parses valid
         # dates to handle some cases where there are weird dates in the input
-        pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"
+        pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  #pylint: disable=line-too-long
         result = numpy.fromregex(
             StringIO.StringIO(chunk_string), pattern,
             [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
@@ -424,7 +443,7 @@ def _parse_input_csv(
 
         #year_day = result['date'].astype(int)
         def md5hash(user_string):
-            """md5hash userid"""
+            """md5hash userid."""
             return hashlib.md5(user_string).digest()[-4:]
 
         md5hash_v = numpy.vectorize(md5hash, otypes=['S4'])
@@ -441,7 +460,7 @@ def _parse_input_csv(
 
 
 def file_len(file_path):
-    """Count lines in file, return -1 if not supported"""
+    """Count lines in file, return -1 if not supported."""
     wc_process = subprocess.Popen(
         ['wc', '-l', file_path], stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
@@ -455,20 +474,33 @@ def file_len(file_path):
 def construct_userday_quadtree(
         initial_bounding_box, raw_photo_csv_table, cache_dir,
         max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
+    """Construct a spatial quadtree for fast querying of userday points.
 
-    #see if we've already created the quadtree
+    Parameters:
+        initial_bounding_box (list of int):
+        raw_photo_csv_table ():
+        cache_dir (string): path to a directory that can be used to cache
+            the quadtree files on disk
+        max_points_per_node(int): maximum number of points to allow per node
+            of the quadree.  A larger amount will cause the quadtree to
+            subdivide.
+
+    Returns:
+        None
+    """
     LOGGER.info('hashing input file')
     start_time = time.time()
     LOGGER.info(raw_photo_csv_table)
-    csv_hash = file_hash.hashfile(raw_photo_csv_table, fast_hash=True)
+    csv_hash = natcap.invest.recreation.file_hash.hashfile(
+        raw_photo_csv_table, fast_hash=True)
 
     ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
     if os.path.isfile(ooc_qt_picklefilename):
         #that's an out of core quadtree
         return ooc_qt_picklefilename
     else:
-        LOGGER.info('%s not found, constructing quadtree', ooc_qt_picklefilename)
-
+        LOGGER.info(
+            '%s not found, constructing quadtree', ooc_qt_picklefilename)
         LOGGER.info('counting lines in input file')
         total_lines = file_len(raw_photo_csv_table)
         LOGGER.info('%d lines', total_lines)
@@ -560,21 +592,25 @@ def construct_userday_quadtree(
 
 
 def build_quadtree_shape(
-        quad_tree_shapefile_name, quadtree, spatial_reference):
-    """make a shapefile that's some geometry of the quadtree in its cache dir
+        quad_tree_shapefile_path, quadtree, spatial_reference):
+    """Generate a vector of the quadtree geometry.
 
-        quad_tree_shapefile_name - location to save the shapefile
-        quadtree - quadtree datastructure
-        spatial_reference - spatial reference to make the geometry output to
+    Parameters:
+        quad_tree_shapefile_path (string): path to save the vector
+        quadtree (out_of_core_quadtree.OutOfCoreQuadTree): quadtree
+            datastructure
+        spatial_reference (osr.SpatialReference): spatial reference for the
+            output vector
 
-        returns nothing"""
-
-    print 'updating quadtree shape at %s' % quad_tree_shapefile_name
+    Returns:
+        None
+    """
+    LOGGER.info('updating quadtree shape at %s', quad_tree_shapefile_path)
     driver = ogr.GetDriverByName('ESRI Shapefile')
 
-    if os.path.isfile(quad_tree_shapefile_name):
-        os.remove(quad_tree_shapefile_name)
-    datasource = driver.CreateDataSource(quad_tree_shapefile_name)
+    if os.path.isfile(quad_tree_shapefile_path):
+        os.remove(quad_tree_shapefile_path)
+    datasource = driver.CreateDataSource(quad_tree_shapefile_path)
 
     polygon_layer = datasource.CreateLayer(
         'quad_tree_shape', spatial_reference, ogr.wkbPolygon)
@@ -589,6 +625,7 @@ def _calc_poly_pud(
         local_qt_pickle_path, aoi_path, date_range, aggregate_metric,
         poly_test_queue, pud_poly_feature_queue):
     """Load a pre-calculated quadtree and test incoming polygons against it.
+
     Updates polygons with a PUD and send back out on the queue.
 
     Parameters:
@@ -603,8 +640,9 @@ def _calc_poly_pud(
         pud_poly_feature_queue (multiprocessing.Queue): queue to put outgoing
             (fid, pud) tuple
 
-        returns nothing"""
-
+    Returns:
+        None
+    """
     start_time = time.time()
     print 'in a _calc_poly_process, loading %s' % local_qt_pickle_path
     local_qt = pickle.load(open(local_qt_pickle_path, 'rb'))
@@ -619,7 +657,7 @@ def _calc_poly_pud(
         poly_wkt = poly_geom.ExportToWkt()
         try:
             shapely_polygon = shapely.wkt.loads(poly_wkt)
-        except Exception:
+        except Exception:  #pylint: disable=broad-except
             # We often get weird corrupt data, this lets us tolerate it
             LOGGER.warn('error parsing poly, skipping')
             continue
@@ -644,9 +682,10 @@ def _calc_poly_pud(
 
 
 def execute(args):
-    """Launch recreation server and parse/generate point lookup structure if
-    necessary.  Function registers a Pyro RPC RecModel entry point given the
-    configuration input parameters described below.
+    """Launch recreation server and parse/generate quadtree if necessary.
+
+    A call to this function registers a Pyro RPC RecModel entry point given
+    the configuration input parameters described below.
 
     Parameters:
         args['raw_csv_point_data_path'] (string): path to a csv file of the
@@ -656,8 +695,8 @@ def execute(args):
             Pyro entry point.
 
     Returns:
-        Never returns"""
-
+        Never returns
+    """
     daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
     uri = daemon.register(
         RecModel(args['raw_csv_point_data_path'], args['cache_workspace']),
