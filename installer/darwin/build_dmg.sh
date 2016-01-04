@@ -10,11 +10,30 @@
 title="InVEST ${1}"
 finalDMGName="InVEST ${1}"
 
+# remove temp files that can get in the way
 rm *.dmg
+if [ -d "temp/InVEST" ]
+then
+    rm -rfd temp/InVEST
+fi
 
 # prepare a local temp dir for a filesystem
-mkdir temp
-cp -r $2 temp
+mkdir -p temp/InVEST
+invest_bindir=temp/InVEST/`basename $2`
+cp -r $2 $invest_bindir
+
+# copy out all the shell files and fixup the paths.
+# .command extension makes the scripts runnable by the user.
+for sh_file in `ls $invest_bindir/*.sh`
+do
+    new_name=`echo $sh_file | sed 's/\.sh/.command/g'`
+    mv $sh_file temp/InVEST/`basename $new_name`
+done
+
+# Allow the scripts to be run by a single line of bash.
+sed -i '' 's/.\/invest/`dirname $0`\/invest_dist\/invest/g' temp/InVEST/*.command
+chmod u+x temp/InVEST/*.command
+
 source=temp
 
 dir_size_k=`du -k -d 0 $source | awk -F ' ' '{print $1}'`

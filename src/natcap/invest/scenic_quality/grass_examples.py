@@ -48,7 +48,7 @@ if __name__ == '__main__':
     #determine GRASS database path
     temp_uri = grass.script.parse_command('g.tempfile',
                                           pid = 1).keys()[0]
-   
+
     database_uri = temp_uri.split('.tmp')[0]
     location_uri = os.path.join(database_uri, random_input_name)
 

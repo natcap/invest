@@ -34,8 +34,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('ndr core')
 
 cdef double PI = 3.141592653589793238462643383279502884
-cdef int N_BLOCK_ROWS = 16
-cdef int N_BLOCK_COLS = 16
+cdef int N_BLOCK_ROWS = 8
+cdef int N_BLOCK_COLS = 8
 
 cdef class BlockCache:
     cdef numpy.int32_t[:,:] row_tag_cache
@@ -78,8 +78,10 @@ cdef class BlockCache:
         for raster_n_rows, raster_n_cols in raster_dimensions_list:
             if raster_n_rows != n_rows or raster_n_cols != n_cols:
                 raise ValueError(
-                    "a band was passed in that has a different dimension than"
-                    "the memory block was specified as")
+                    "A band was passed in that has a different dimension than "
+                    "the memory block was specified as.\n"
+                    "raster_dimensions_list=%s\n" % str(raster_dimensions_list)
+                    + "bands=%s" % str([b.GetDescription() for b in band_list]))
 
         for band in band_list:
             block_col_size, block_row_size = band.GetBlockSize()
@@ -88,6 +90,14 @@ cdef class BlockCache:
                     'a band in BlockCache is not memory blocked, this might '
                     'make the runtime slow for other algorithms. %s',
                     band.GetDescription())
+
+    def __dealloc__(self):
+        self.band_list[:] = []
+        self.block_list[:] = []
+        self.update_list[:] = []
+        self.row_tag_cache = None
+        self.col_tag_cache = None
+        self.cache_dirty = None
 
     @cython.boundscheck(False)
     @cython.wraparound(False)

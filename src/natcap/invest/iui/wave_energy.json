@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../WaveEnergy",
+          "defaultValue": "~/Documents/wave_energy_workspace",
           "required": true,
           "validateAs": {
             "type": "folder"

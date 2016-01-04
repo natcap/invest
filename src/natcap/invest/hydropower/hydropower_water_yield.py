@@ -204,27 +204,20 @@ def execute(args):
 
     # Get out_nodata values so that we can avoid any issues when running
     # operations
-    Kc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_Kc_raster_uri)
-    if Kc_nodata is None:
-        Kc_nodata = -9999
-    root_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_root_raster_uri)
-    if root_nodata is None:
-        root_nodata = -9999
-    veg_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_veg_raster_uri)
-    if veg_nodata is None:
-        veg_nodata = -9999
-    precip_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(precip_uri)
-    if precip_nodata is None:
-        precip_nodata = -9999
-    eto_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(eto_uri)
-    if eto_nodata is None:
-        eto_nodata = -9999
-    root_rest_layer_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(depth_to_root_rest_layer_uri)
-    if root_rest_layer_nodata is None:
-        root_rest_layer_nodata = -9999
-    pawc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(pawc_uri)
-    if pawc_nodata is None:
-        pawc_nodata = -9999
+    Kc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        tmp_Kc_raster_uri)
+    root_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        tmp_root_raster_uri)
+    veg_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        tmp_veg_raster_uri)
+    precip_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        precip_uri)
+    eto_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        eto_uri)
+    root_rest_layer_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        depth_to_root_rest_layer_uri)
+    pawc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        pawc_uri)
 
     def pet_op(eto_pix, Kc_pix):
         """Vectorize operation for calculating the plant potential
@@ -434,8 +427,10 @@ def execute(args):
 
         # Get a dictionary from the sub-watershed shapefiles attributes based
         # on the fields to be outputted to the CSV table
-        wyield_value_dict_sws = extract_datasource_table_by_key(
-                subwatershed_results_uri, 'subws_id', field_list_sws)
+        wyield_values_sws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+                subwatershed_results_uri, 'subws_id')
+
+        wyield_value_dict_sws = filter_dictionary(wyield_values_sws, field_list_sws)
 
         LOGGER.debug('wyield_value_dict_sws : %s', wyield_value_dict_sws)
 
@@ -480,8 +475,10 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    wyield_value_dict_ws = extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id', field_list_ws)
+    wyield_values_ws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+            watershed_results_uri, 'ws_id')
+
+    wyield_value_dict_ws = filter_dictionary(wyield_values_ws, field_list_ws)
 
     LOGGER.debug('wyield_value_dict_ws : %s', wyield_value_dict_ws)
 
@@ -555,8 +552,10 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    watershed_dict = extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id', field_list_ws)
+    watershed_values = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+            watershed_results_uri, 'ws_id')
+
+    watershed_dict = filter_dictionary(watershed_values, field_list_ws)
 
     #Don't need this anymore
     os.remove(tmp_demand_uri)
@@ -611,8 +610,10 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    watershed_dict_ws = extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id', field_list_ws)
+    watershed_values_ws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+            watershed_results_uri, 'ws_id')
+
+    watershed_dict_ws = filter_dictionary(watershed_values_ws, field_list_ws)
 
     # Write out the CSV Table
     write_new_table(
@@ -731,44 +732,33 @@ def compute_rsupply_volume(watershed_results_uri):
 
         ws_layer.SetFeature(ws_feat)
 
-def extract_datasource_table_by_key(
-        datasource_uri, key_field, wanted_list):
-    """Create a dictionary lookup table of the features in the attribute table
-        of the datasource referenced by datasource_uri.
+def filter_dictionary(dict_data, values):
+    """
+    Create a subset of a dictionary given keys found in a list.
 
-        datasource_uri - a uri to an OGR datasource
-        key_field - a field in datasource_uri that refers to a key (unique) value
-            for each row; for example, a polygon id.
-        wanted_list - a list of field names to add to the dictionary. This is
-            helpful if there are fields that are not wanted to be returned
+    The incoming dictionary should have keys that point to dictionary's.
+        Create a subset of that dictionary by using the same outer keys
+        but only using the inner key:val pair if that inner key is found
+        in the values list.
 
-        returns a dictionary of the form {key_field_0:
-            {field_0: value0, field_1: value1}...}"""
+    Parameters:
+        dict_data (dictionary): a dictionary that has keys which point to
+            dictionary's.
+        values (list): a list of keys to keep from the inner dictionary's
+            of 'dict_data'
 
-    # Pull apart the datasource
-    datasource = ogr.Open(datasource_uri)
-    layer = datasource.GetLayer()
-    layer_def = layer.GetLayerDefn()
+    Returns:
+        a dictionary
+    """
+    new_dict = {}
 
-    # Build up a list of field names for the datasource table
-    field_names = []
-    for field_id in xrange(layer_def.GetFieldCount()):
-        field_def = layer_def.GetFieldDefn(field_id)
-        field_names.append(field_def.GetName())
+    for key, val in dict_data.iteritems():
+        new_dict[key] = {}
+        for sub_key, sub_val in val.iteritems():
+            if sub_key in values:
+                new_dict[key][sub_key] = sub_val
 
-    # Loop through each feature and build up the dictionary representing the
-    # attribute table
-    attribute_dictionary = {}
-    for feature_index in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_index)
-        feature_fields = {}
-        for field_name in field_names:
-            if field_name in wanted_list:
-                feature_fields[field_name] = feature.GetField(field_name)
-        key_value = feature.GetField(key_field)
-        attribute_dictionary[key_value] = feature_fields
-
-    return attribute_dictionary
+    return new_dict
 
 def write_new_table(filename, fields, data):
     """Create a new csv table from a dictionary

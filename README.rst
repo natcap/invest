@@ -1,10 +1,47 @@
 InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs 
 ================================================================
 
-|build_image|
++-----------------------+-------------------------------+-----------------------------+---------------------------+
+| Build type            | Windows                       | Linux (Debian 7)            | Mac OSX 10.10             |
++=======================+===============================+=============================+===========================+
+| Nightly Binary builds | |nightly_binary_build_badge|                                                            |
++-----------------------+-------------------------------+-----------------------------+---------------------------+
+| Dev builds            | |dev_windows_build_badge|     | |dev_linux_build_badge|     | |dev_mac_build_badge|     |
++-----------------------+-------------------------------+-----------------------------+---------------------------+
+| Tests                 | |windows_test_badge|          | |linux_test_badge|          | |mac_test_badge|          |
++-----------------------+-------------------------------+-----------------------------+---------------------------+
+| Test coverage         | |windows_test_coverage_badge| | |linux_test_coverage_badge| | |mac_test_coverage_badge| |
++-----------------------+-------------------------------+-----------------------------+---------------------------+
 
-.. |build_image| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=invest-nightly-develop
+.. |nightly_binary_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=invest-nightly-develop
   :target: http://builds.naturalcapitalproject.org/job/invest-nightly-develop
+
+.. |dev_windows_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=natcap.invest/label=GCE-windows-1
+  :target: http://builds.naturalcapitalproject.org/job/natcap.invest/label=GCE-windows-1
+
+.. |dev_linux_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=natcap.invest/label=GCE-debian-2
+  :target: http://builds.naturalcapitalproject.org/job/natcap.invest/label=GCE-debian-2
+
+.. |dev_mac_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=natcap.invest/label=Stanford-osx-1
+  :target: http://builds.naturalcapitalproject.org/job/natcap.invest/label=Stanford-osx-1
+
+.. |windows_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=GCE-windows-1
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
+
+.. |linux_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=GCE-debian-2
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2
+
+.. |mac_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=Stanford-osx-1
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=Stanford-osx-1
+
+.. |windows_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1/
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
+
+.. |linux_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2/
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-debian-2
+
+.. |mac_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=Stanford-osx-1/
+  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=Stanford-osx-1
 
 About  InVEST
 =============
@@ -33,7 +70,11 @@ but have almost all been ported over to a purely open-source python environment.
 Contributing to Development
 ===========================
 
-Issues, including ongoing work, are tracked in our issue tracker on this bitbucket project.  If you encounter a bug, please let us know!
+The best way to participate is to contribute a fix to a bug you are 
+experiencing or to implement a pet feature!
+
+Issues, including ongoing work, are tracked in our issue tracker on this 
+bitbucket project.  If you encounter a bug, please let us know!
 
 If you have something you'd like to contribute, please fork the repository
 and submit a pull request.  Since mercurial tracks branch names in the metadata
@@ -51,31 +92,39 @@ submitting your PR.
 
 *Thanks for contributing!*
 
-
 InVEST Dependencies
 ===================
+.. note::
+    Do this:
+
+    ``$ paver check``
+    
+    This will verify required applications are available and that
+    you have some of the python packages that are more difficult to install
+    (especially those that depend on low-level C libraries).
+
 InVEST relies on the following python packages:
   * GDAL
   * shapely
   * numpy
   * scipy
-  * poster
-  * pyqt4  *if running a model user interface*
+  * pyqt4  *(if running a model user interface)*
   * matplotlib
   * bs4
-  * python-dateutil
-  * pyparsing
-  * six
   * pyAMG
-  * pillow
   * cython
-  * pyyaml
   * setuptools
+  * h5py
+  * dbfpy
+  * poster
+  * pygeoprocessing
+  * natcap.versioner
 
 For development, we recommend using a virtual environment (such as provided by
-``virtualenv``).
+``virtualenv``).  We provide a paver command (``paver env``) to help with this process.
+See `Building Binaries`_ for an example.
 
-Binaries are generated with ``pyinstaller``.
+Binaries are generated with ``pyinstaller`` via ``paver build_bin``.  See `Building Binaries`_.
 
 To work with this repository, you'll also need these tools to be available
 on the command-line somewhere on your PATH, depending on what you'd like to build:
@@ -85,6 +134,9 @@ on the command-line somewhere on your PATH, depending on what you'd like to buil
   * ``fpm`` (for generating .deb and .rpm packages, can be installed via ``gem``)
   * ``makensis`` (NSIS, for generating Windows installers)
   * ``hdiutil`` (for generating mac DMGs)
+  * ``pdflatex`` (for generating PDF versions of the User's Guide)
+  * ``pandoc`` (for converting .docx files to rst when building the User's
+    Guide.  See http://pandoc.org/installing.html)  
 
 
 For building InVEST binaries, you will also need to have a compiler configured.
@@ -94,13 +146,58 @@ you'll likely need the XCode command-line tools to be installed.
 
 Building Binaries
 =================
+
+One-Step Binary Builds
+----------------------
+The easiest way to build binaries is to call ``paver build``.  If your system
+is properly configured, this will do all of the heavy lifting to:
+
+    + Clone any hg, git, and svn repositories needed for the given steps
+    + Set up a virtual environment with needed package dependencies (skip with
+      ``--python=<your python interpreter here>``
+    + Build binaries out of the virtual environment (skip with ``--skip-bin``)
+    + Build User's Guide documentation (HTML, PDF) (skip with ``--skip-guide``)
+    + Build InVEST API documentation (HTML) (skip with ``--skip-api``)
+    + Build archives of sample data (skip with ``--skip-data``)
+    + Build a system-appropriate installer (skip with ``--skip-installer``)
+
+Assembled binaries are placed in ``dist/release_invest-<version>`` with the
+following directory structure: ::
+
+    dist/
+        natcap.invest-<version>.tar.gz          # Python source distribution
+        release_invest-<version>/
+            data/
+                # All data zipfiles available for this version
+            documentation/
+                # HTML documentation for InVEST
+            invest-<version>-apidics.zip        # Archived HTML API documentation
+            invest-<version>-userguide.zip      # Archived HTML User's Guide
+            InVEST_<version>_Documentation.pdf  # PDF User's Guide
+            invest-<version>.deb                # Debian dpkg
+            invest-<version>.rpm                # RPM package
+            InVEST_<version>_Setup.exe          # Windows installer
+            InVEST <version>.dmg                # Mac disk image
+
+.. note::
+    ``paver build`` will only build binaries and and installer for the system
+    you are running.
+
+
+
+Just building binaries
+----------------------
+The easiest way to build pyinstaller binaries on your platform is to use our
+one-step binary build.  This paver task will 
 Binaries are built through ``paver build_bin``.  The simplest way to call this is 
 ``paver build_bin``, but this assumes that you have all dependencies (including natcap.invest)
 installed to your global python distribution.  More commonly, you'll want to install InVEST to
 a virtual environment before running build_bin.
 
 For example, if you want to build a new virtualenv via the paver command and then build the binaries
-using this new environment: ::
+using this new environment: 
+
+::
 
     #!/bin/sh
     # Example for linux or mac
@@ -121,7 +218,7 @@ the console files for Habitat Risk Assessment would look like:
 
 **Windows:** ``dist\invest_dist\invest_hra.bat`` ::
 
-    start /d "." invest.exe hra
+    .\invest.exe hra
 
 **Linux/Mac:** ``dist/invest_dist/invest_hra.sh`` ::
 
@@ -266,10 +363,12 @@ If the ``--insttype`` flag is not provided, the system default will be used.  Sy
  * Mac: ``dmg``
  * Windows: ``nsis``
 
-Dependencies 
-============
 
-*Debian Systems*
+Developing InVEST
+=================
+
+Debian Systems
+--------------
 
 .. note::
     **Debian builds require GLIBC >= 2.15**
@@ -290,16 +389,14 @@ Specific package dependencies include:
  * ``sudo apt-get install python-setuptools``  Fixes some path issues with setuptools (see https://bitbucket.org/pypa/setuptools/issue/368/module-object-has-no-attribute-packaging)
 
 
-*Mac Systems*
+Mac Systems
+-----------
 
 The easiest way to set up your system is to install all binary dependencies through the Homebrew
 package manager (http://brew.sh).
 
-
-Developing InVEST
-=================
-
-*Setting up an InVEST virtual environment*
+Setting up an InVEST virtual environment
+----------------------------------------
 
 Most likely, the easiest way to run InVEST from your source tree is to build a
 virtual environment using the popular ``virtualenv``
@@ -319,7 +416,8 @@ examples:  ::
     # flag.
     $ paver env --sytem-site-packages -r requirements-docs.txt
 
-*natcap.versioner ImportError*
+natcap.versioner ImportError
+----------------------------
 
 Since June, 2015, we have been moving our python projects to the ``natcap``
 package namespace and gradually publishing our projects on the Python Package
@@ -356,8 +454,27 @@ more information if you're interested.
 
 .. _The relevant issue: https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version#comment-19426088
 
+Matplotlib ImportError
+----------------------
 
-*GDAL*
+On Fedora systems, some users encounter this exception when trying to run an 
+InVEST model that uses matplotlib:
+
+::
+
+    ...
+    line 17, in <module>
+        from .backend_qt5agg import NavigationToolbar2QTAgg
+    ImportError: No module named backend_qt5agg
+
+This is a `known issue`_ with the RedHat build of ``python-matplotlib-qt4``.  The workaround
+is to ``yum install python-matplotlib-qt5``.
+
+.. _known issue: https://bugzilla.redhat.com/show_bug.cgi?id=1219556
+
+
+GDAL
+----
 
 InVEST relies on GDAL/OGR for its raster and vector handling.  This library is
 usually available in your system's package index.
@@ -380,6 +497,41 @@ separately.  To install in this way:
     these installed binaries.
 
 Then, download and install the gdal python package.
+
+
+Running Tests
+=============
+
+To run the full suite of tests:
+
+::
+
+    $ paver test
+
+To specify a test (or multiple tests) to run via `paver test`, use the nosetests 
+format to specify test files, classes, and/or test methods to run.  For example:
+
+::
+
+    $ paver test tests/test_example.py:ExampleTest.test_regression
+
+This will only run this one test, ignoring all other tests that would normally be 
+run.
+
+If you're looking for some extra verbosity (or you're building on jenkins):
+
+::
+
+    $ paver test --jenkins
+
+You may also launch tests from the python shell:
+
+::
+
+    >>> import natcap.invest
+    >>> natcap.invest.test()
+
+Tests are implemented with ``unittest``, so any appropriate test runner should work.
 
 
 Releasing InVEST

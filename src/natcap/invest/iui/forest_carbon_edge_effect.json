@@ -1,0 +1,160 @@
+{
+  "id": "window",
+  "label": "Forest Carbon Edge Effect Model",
+  "targetScript": "natcap.invest.forest_carbon_edge_effect",
+  "modelName": "forest_carbon_edge_effect",
+  "localDocURI": "../documentation/forest_carbon_edge_effect.html",
+  "height": 600,
+  "width": 850,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace Directory",
+          "defaultValue": "~/Documents/forest_carbon_edge_workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix <em>(optional)</em>",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "lulc_uri",
+          "args_id": "lulc_uri",
+          "type": "file",
+          "label": "Land-Use/Land-Cover Map (raster)",
+          "defaultValue": "../forest_carbon_edge_effect/forest_carbon_edge_lulc_demo.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster file, with an integer LULC code for each cell."
+        },
+        {
+          "id": "biophysical_table_uri",
+          "args_id": "biophysical_table_uri",
+          "type": "file",
+          "label": "Biophysical Table (csv)",
+          "defaultValue": "../forest_carbon_edge_effect/forest_edge_carbon_lu_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode",
+              "is_tropical_forest",
+              "c_above"
+            ]
+          },
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'is_tropical_forest', 'c_above'.  If the user selects 'all carbon pools' the table must also contain entries for 'c_below', 'c_soil', and 'c_dead'.  See the InVEST Forest Carbon User's Guide for more information about these fields."
+        },
+        {
+          "id": "pools_to_calculate",
+          "args_id": "pools_to_calculate",
+          "type": "dropdown",
+          "label": "Carbon Pools to Calculate",
+          "options": [
+            "all carbon pools",
+            "above ground only"
+          ],
+          "returns": {
+            "mapValues": {
+              "all carbon pools": "all",
+              "above ground only": "above_ground"
+            }
+          },
+          "defaultValue": "all",
+          "required": true,
+          "helpText": "If 'all carbon pools' is selected then the headers 'c_above', 'c_below', 'c_dead', 'c_soil' are used in the carbon pool calculation.  Otherwise only 'c_above' is considered."
+        },
+        {
+            "id" : "compute_forest_edge_effects",
+            "args_id": "compute_forest_edge_effects",
+            "type": "checkbox",
+            "label": "Compute forest edge effects",
+            "defaultValue": true,
+            "helpText": "If selected, will use the Chaplin-Kramer, et. al method to account for above ground carbon stocks in tropical forest types indicated by a '1' in the 'is_tropical_forest' field in the biophysical table."
+        },
+        {
+          "id": "tropical_forest_edge_carbon_model_shape_uri",
+          "args_id": "tropical_forest_edge_carbon_model_shape_uri",
+          "type": "file",
+          "label": "Global forest carbon edge regression models (vector)",
+          "defaultValue": "../forest_carbon_edge_effect/core_data/forest_carbon_edge_regression_model_parameters.shp",
+          "enabledBy": "compute_forest_edge_effects",
+          "required": true,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                }
+              }
+            ],
+            "fieldsExist": [
+              "method", "theta1", "theta2", "theta3"
+            ]
+          },
+          "helpText": "A shapefile with fields 'method', 'theta1', 'theta2', 'theta3' describing the global forest carbon edge models.  Provided as default data for the model."
+        },
+        {
+          "id": "n_nearest_model_points",
+          "args_id": "n_nearest_model_points",
+          "type": "text",
+          "label": "Number of nearest model points to average",
+          "defaultValue": "10",
+          "required": true,
+          "enabledBy": "compute_forest_edge_effects",
+          "validText": "^[0-9]*$",
+          "helpText": "Used when calculating the biomass in a pixel.  This number determines the number of closest regression models that are used when calculating the total biomass.  Each local model is linearly weighted by distance such that the biomass in the pixel is a function of each of these points with the closest point having the highest effect."
+        },
+        {
+          "id": "biomass_to_carbon_conversion_factor",
+          "args_id": "biomass_to_carbon_conversion_factor",
+          "type": "text",
+          "label": "Forest Edge Biomass to Carbon Conversion Factor",
+          "defaultValue": "0.47",
+          "required": true,
+          "enabledBy": "compute_forest_edge_effects",
+          "validText": "([0-9]+)?\\.[0-9]+",
+          "helpText": "Number by which to scale forest edge biomass to convert to carbon. Default value is 0.47 (according to IPCC 2006). This pertains to forest classes only; values in the biophysical table for non-forest classes should already be in terms of carbon, not biomass."
+        },
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "Service areas of interest <em>(optional)</em> (vector)",
+          "defaultValue": "../forest_carbon_edge_effect/forest_carbon_edge_demo_aoi.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that will be used to aggregate carbon values at the end of the run if provided."
+        }
+      ]
+    }
+  ]
+}

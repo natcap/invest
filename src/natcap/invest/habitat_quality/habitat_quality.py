@@ -8,8 +8,9 @@ import csv
 from osgeo import gdal
 from osgeo import osr
 import numpy as np
-
 import pygeoprocessing.geoprocessing
+
+from .. import utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -31,6 +32,8 @@ def execute(args):
             (optional)
         landuse_bas_uri (string): a uri to an input land use/land cover raster
             (optional, but required for rarity calculations)
+        threat_folder (string): a uri to the directory that will contain all
+            threat rasters (required)
         threats_uri (string): a uri to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
@@ -53,6 +56,7 @@ def execute(args):
             'landuse_cur_uri': 'path/to/landuse_cur_raster',
             'landuse_fut_uri': 'path/to/landuse_fut_raster',
             'landuse_bas_uri': 'path/to/landuse_bas_raster',
+            'threat_raster_folder': 'path/to/threat_rasters/',
             'threats_uri': 'path/to/threats_csv',
             'access_uri': 'path/to/access_shapefile',
             'sensitivity_uri': 'path/to/sensitivity_csv',
@@ -80,22 +84,8 @@ def execute(args):
     out_dir = os.path.join(workspace, 'output')
     pygeoprocessing.geoprocessing.create_directories([inter_dir, out_dir])
 
-    # if the input directory is not present in the workspace then throw an
-    # exception because the threat rasters can't be located.
-    input_dir_low = os.path.join(workspace, 'input')
-    input_dir_up = os.path.join(workspace, 'Input')
-    input_dir = None
-
-    for input_dir_case in [input_dir_low, input_dir_up]:
-        if os.path.isdir(input_dir_case):
-            input_dir = input_dir_case
-            break
-
-    if input_dir is None:
-        raise Exception(
-            'The input directory where the threat rasters '
-            'should be located cannot be found. Please make sure the input '
-            'directory is located within the workspace specified.')
+    # get a handle on the folder with the threat rasters
+    threat_raster_dir = args['threat_raster_folder']
 
     threat_dict = make_dictionary_from_csv(args['threats_uri'],'THREAT')
     sensitivity_dict = make_dictionary_from_csv(
@@ -137,22 +127,22 @@ def execute(args):
         density_uri_dict['density' + ext] = {}
 
         # for each threat given in the CSV file try opening the associated
-        # raster which should be found in workspace/input/
+        # raster which should be found in threat_raster_folder
         for threat in threat_dict:
             try:
                 if ext == '_b':
                     density_uri_dict['density' + ext][threat] = resolve_ambiguous_raster_path(
-                            os.path.join(input_dir, threat + ext),
+                            os.path.join(threat_raster_dir, threat + ext),
                             raise_error=False)
                 else:
                     density_uri_dict['density' + ext][threat] = resolve_ambiguous_raster_path(
-                            os.path.join(input_dir, threat + ext))
+                            os.path.join(threat_raster_dir, threat + ext))
             except:
                 raise Exception('Error: Failed to open raster for the '
                     'following threat : %s . Please make sure the threat '
                     'names in the CSV table correspond to threat rasters '
                     'in the input folder.'
-                    % os.path.join(input_dir, threat + ext))
+                    % os.path.join(threat_raster_dir, threat + ext))
 
     # checking to make sure the land covers have the same projections and are
     # projected in meters. We pass in 1.0 because that is the unit for meters
@@ -256,7 +246,7 @@ def execute(args):
             if decay_type == 'linear':
                 make_linear_decay_kernel_uri(dr_pixel, kernel_uri)
             elif decay_type == 'exponential':
-                make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
+                utils.exponential_decay_kernel_raster(dr_pixel, kernel_uri)
             else:
                 raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
             pygeoprocessing.geoprocessing.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
@@ -543,7 +533,19 @@ def make_dictionary_from_csv(csv_uri, key_field):
     csv_file = open(csv_uri, 'rU')
     reader = csv.DictReader(csv_file)
     for row in reader:
-        out_dict[row[key_field]] = row
+        # create new dictionary to hold modified key values for case
+        # handling
+        row_upper = {}
+        for key in row.keys():
+            # if the key / column header begins with 'L_' we can not
+            # set that to uppercase, since it will interfere with
+            # matching the threat names to the sensitivity table
+            if key.startswith('L_'):
+                row_upper[key] = row[key]
+            else:
+                row_upper[key.upper()] = row[key]
+
+	out_dict[row_upper[key_field]] = row_upper
     csv_file.close()
     return out_dict
 
@@ -679,43 +681,6 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         key_raster_uri, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
         exception_flag=raise_error)
-
-
-def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
-    max_distance = expected_distance * 5
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
-        options=['BIGTIFF=IF_SAFER'])
-
-    #Make some kind of geotransform, it doesn't matter what but
-    #will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
-    srs = osr.SpatialReference()
-    srs.SetUTM( 11, 1 )
-    srs.SetWellKnownGeogCS( 'NAD27' )
-    kernel_dataset.SetProjection( srs.ExportToWkt() )
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
-
-    col_index = numpy.array(xrange(kernel_size))
-    integration = 0.0
-    for row_index in xrange(kernel_size):
-        distance_kernel_row = numpy.sqrt(
-            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
-        kernel = numpy.where(
-            distance_kernel_row > max_distance, 0.0, numpy.exp(-distance_kernel_row / expected_distance))
-        integration += numpy.sum(kernel)
-        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
-
-    for row_index in xrange(kernel_size):
-        kernel_row = kernel_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
-        kernel_row /= integration
-        kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
 def make_linear_decay_kernel_uri(max_distance, kernel_uri):

@@ -40,7 +40,7 @@ try:
 except ImportError:
     USE_CYTHON = False
 
-readme = open('README.rst').read()
+readme = open('README_PYTHON.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 LICENSE = open('LICENSE.txt').read()
 
@@ -125,7 +125,6 @@ setup(
         'natcap.invest.dbfpy',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
-        'natcap.invest.globio',
         'natcap.invest.habitat_quality',
         'natcap.invest.habitat_risk_assessment',
         'natcap.invest.habitat_suitability',
@@ -161,7 +160,7 @@ setup(
     include_dirs=[numpy.get_include()],
     setup_requires=['nose>=1.0'],
     license=LICENSE,
-    zip_safe=True,
+    zip_safe=False,
     keywords='invest',
     classifiers=[
         'Intended Audience :: Developers',

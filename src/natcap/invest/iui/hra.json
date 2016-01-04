@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../HabitatRiskAssess",
+          "defaultValue": "~/Documents/habitat_risk_assessment_workspace",
           "required": true,
           "validateAs": {
             "type": "folder"

@@ -1,10 +1,10 @@
 {
   "id": "window",
   "label": "GLOBIO",
-  "targetScript": "natcap.invest.globio.globio",
+  "targetScript": "natcap.invest.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 900,
+  "height": 700,
   "width": 800,
   "elements": [
     {
@@ -38,7 +38,7 @@
           "args_id": "lulc_to_globio_table_uri",
           "type": "file",
           "label": "Landcover to GLOBIO Landcover Table (CSV)",
-          "defaultValue": "../globio/input/lulc_conversion_table.csv",
+          "defaultValue": "../globio/lulc_conversion_table.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
@@ -46,6 +46,26 @@
           },
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields.",
           "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "aoi_uri",
+          "args_id": "aoi_uri",
+          "type": "file",
+          "label": "AOI (Vector) (optional)",
+          "defaultValue": "../globio/sub_aoi.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that can be used to aggregate MSA sum and mean to a polygon."
         },
         {
           "id": "land_use",
@@ -56,7 +76,7 @@
           "validateAs": {
             "type": "GDAL"
           },
-          "defaultValue": "../globio/input/lulc_2008.tif",
+          "defaultValue": "../globio/lulc_2008.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -64,7 +84,7 @@
           "args_id": "infrastructure_dir",
           "type": "folder",
           "label": "Infrastructure Directory",
-          "defaultValue": "../globio/input/infrastructure_dir",
+          "defaultValue": "../globio/infrastructure_dir",
           "required": true
         },
         {
@@ -72,7 +92,7 @@
           "args_id": "pasture_uri",
           "type": "file",
           "label": "Pasture (Raster)",
-          "defaultValue": "../globio/input/pasture.tif",
+          "defaultValue": "../globio/pasture.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -84,43 +104,11 @@
           "args_id": "potential_vegetation_uri",
           "type": "file",
           "label": "Potential Vegetation (Raster)",
-          "defaultValue": "../globio/input/potential_vegetation.tif",
+          "defaultValue": "../globio/potential_vegetation.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
           },
-          "disabledBy": "predefined_globio"
-        },
-        {
-          "id": "intensification_uri",
-          "args_id": "intensification_uri",
-          "type": "file",
-          "label": "Intensification (Raster)",
-          "defaultValue": "../globio/input/intensification_soy.tif",
-          "required": true,
-          "validateAs": {
-            "type": "GDAL"
-          },
-          "disabledBy": "predefined_globio"
-        },
-        {
-          "id": "pasture_threshold",
-          "args_id": "pasture_threshold",
-          "type": "text",
-          "label": "Pasture Threshold",
-          "defaultValue": "0.5",
-          "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$",
-          "disabledBy": "predefined_globio"
-        },
-        {
-          "id": "intensification_threshold",
-          "args_id": "intensification_threshold",
-          "type": "text",
-          "label": "Intensification Threshold",
-          "defaultValue": "0.46",
-          "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$",
           "disabledBy": "predefined_globio"
         },
         {
@@ -134,61 +122,37 @@
           "disabledBy": "predefined_globio"
         },
         {
+          "id": "pasture_threshold",
+          "args_id": "pasture_threshold",
+          "type": "text",
+          "label": "Pasture Threshold",
+          "defaultValue": "0.5",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "intensification_fraction",
+          "args_id": "intensification_fraction",
+          "type": "text",
+          "label": "Proportion of of Agriculture Intensified",
+          "defaultValue": "0.46",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "helpText": "A value between 0 and 1 denoting proportion of total agriculture that should be classified as 'high input'."
+        },
+        {
           "id": "msa_parameters_uri",
           "args_id": "msa_parameters_uri",
           "type": "file",
           "label": "MSA Parameter Table (CSV)",
-          "defaultValue": "../globio/input/msa_parameters.csv",
+          "defaultValue": "../globio/msa_parameters.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
             "fieldsExist": ["MSA_type", "Value", "MSA_x"]
           },
           "helpText": "A CSV table containing MSA threshold values as defined in the user's guide.  Provided for advanced users that may wish to change those values."
-        }
-      ]
-    },
-    {
-      "id": "aoi_summary",
-      "args_id": "aoi_summary",
-      "label": "Summarize MSA by AOI",
-      "type": "container",
-      "defaultValue": true,
-      "collapsible": true,
-      "elements": [
-        {
-          "id": "aoi_summary_list",
-          "type": "list",
-          "elements": [
-            {
-              "id": "aoi_uri",
-              "args_id": "aoi_uri",
-              "type": "file",
-              "label": "AOI (Vector)",
-              "defaultValue": "../globio/input/sub_aoi.shp",
-              "required": true,
-              "validateAs": {
-                "type": "OGR",
-                "layers": [
-                  {
-                    "name": {
-                      "inheritFrom": "file"
-                    },
-                    "type": "polygons"
-                  }
-                ]
-              },
-              "helpText": "This is a set of polygons that can be used to aggregate MSA by a given field"
-            },
-            {
-              "id": "aoi_summary_key",
-              "args_id": "aoi_summary_key",
-              "type": "text",
-              "label": "Unique feature key in AOI",
-              "required": true,
-              "defaultValue": "OBJECTID"
-            }
-          ]
         }
       ]
     },
