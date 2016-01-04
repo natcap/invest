@@ -20,7 +20,7 @@ from osgeo import osr
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), 'data', 'wave_energy')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
 
 class WaveEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wave Energy module."""
