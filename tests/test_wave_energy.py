@@ -5,7 +5,6 @@ import shutil
 import os
 import collections
 import csv
-import struct
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -17,38 +16,12 @@ from shapely.geometry import Point
 from nose.tools import nottest
 
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), 'data', 'wave_energy')
-
-ReferenceData = collections.namedtuple(
-    'ReferenceData', 'projection origin pixel_size')
-
-def projection_wkt(epsg_id):
-    """
-    Import a projection from an EPSG code.
-
-    Parameters:
-        proj_id(int): If an int, it's an EPSG code
-
-    Returns:
-        A WKT projection string.
-    """
-    reference = osr.SpatialReference()
-    result = reference.ImportFromEPSG(epsg_id)
-    if result != 0:
-        raise RuntimeError('EPSG code %s not recognixed' % epsg_id)
-
-    return reference.ExportToWkt()
-
-SRS_LATLONG = ReferenceData(
-    projection=projection_wkt(4326),
-    origin=(-70.5, 42.5),
-    pixel_size=lambda x: (x, -1. * x))
 
 class WaveEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wave Energy module."""
@@ -77,7 +50,18 @@ class WaveEnergyUnitTests(unittest.TestCase):
         spat_ref = osr.SpatialReference()
         spat_ref.ImportFromWkt(srs_wkt)
 
-        srs_latlong = SRS_LATLONG
+        # Define a Lat/Long WGS84 projection
+        epsg_id = 4326
+        reference = osr.SpatialReference()
+        proj_result = reference.ImportFromEPSG(epsg_id)
+        if proj_result != 0:
+            raise RuntimeError('EPSG code %s not recognized' % epsg_id)
+        # Get projection as WKT
+        latlong_proj = reference.ExportToWkt()
+        # Set origin to use for setting up geometries / geotransforms
+        latlong_origin = (-70.5, 42.5)
+        # Pixel size helper for defining lat/long pixel size
+        pixel_size = lambda x: (x, -1. * x)
 
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
@@ -85,13 +69,13 @@ class WaveEnergyUnitTests(unittest.TestCase):
         input_path = os.path.join(temp_dir, 'input_raster.tif')
         # Create raster to use as testing input
         raster_uri = pygeoprocessing.testing.create_raster_on_disk(
-            [matrix], srs_latlong.origin, srs_latlong.projection, -1.0,
-            srs_latlong.pixel_size(0.033333), filename=input_path)
+            [matrix], latlong_origin, latlong_proj, -1.0,
+            pixel_size(0.033333), filename=input_path)
 
         raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
             raster_uri)
         point = (raster_gt[0], raster_gt[3])
-        raster_wkt = srs_latlong.projection
+        raster_wkt = latlong_proj
 
         # Create a Spatial Reference from the rasters WKT
         raster_sr = osr.SpatialReference()
@@ -309,14 +293,14 @@ class WaveEnergyUnitTests(unittest.TestCase):
         table_uri = os.path.join(temp_dir, 'att_csv_file.csv')
         fields = ['id', 'height', 'length']
         data = {1: {'id': 1, 'height': 10, 'length': 15},
-            0: {'id': 0, 'height': 10, 'length': 15},
-            2: {'id': 2, 'height': 10, 'length': 15}}
+                0: {'id': 0, 'height': 10, 'length': 15},
+                2: {'id': 2, 'height': 10, 'length': 15}}
 
         wave_energy.create_attribute_csv_table(table_uri, fields, data)
 
         exp_rows = [{'id': '0', 'height': '10', 'length': '15'},
-            {'id': '1', 'height': '10', 'length': '15'},
-            {'id': '2', 'height': '10', 'length': '15'}]
+                    {'id': '1', 'height': '10', 'length': '15'},
+                    {'id': '2', 'height': '10', 'length': '15'}]
 
         result_file = open(table_uri, 'rU')
 
@@ -335,13 +319,21 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         result = wave_energy.load_binary_wave_data(wave_file_uri)
 
-        exp_res = {'periods': [.375, 1, 1.5, 2.0],
-                   'heights': [.375, 1, 1.5, 2.0],
-                   'bin_matrix': { (102, 370): [[0, 0, 0, 0], [0, 9, 3, 30]],
-                                (102, 371): [[0, 0, 0, 0], [0, 0, 3, 2.7]]
-                              }
-               }
-        self.assertDictEqual(result, exp_res)
+        exp_res = {'periods': numpy.array(
+            [.375, 1, 1.5, 2.0], dtype=numpy.float32),
+                   'heights': numpy.array([.375, 1], dtype=numpy.float32),
+                   'bin_matrix': {
+                       (102, 370): numpy.array(
+                           [[0, 0, 0, 0], [0, 9, 3, 30]], dtype=numpy.float32),
+                       (102, 371): numpy.array(
+                           [[0, 0, 0, 0], [0, 0, 3, 27]], dtype=numpy.float32)}
+                  }
+
+        for key in ['periods', 'heights']:
+            numpy.testing.assert_array_equal(result[key], exp_res[key])
+
+        for key in [(102, 370), (102, 371)]:
+            numpy.testing.assert_array_equal(result['bin_matrix'][key], exp_res['bin_matrix'][key])
 
 
 class WaveEnergyRegressionTests(unittest.TestCase):
