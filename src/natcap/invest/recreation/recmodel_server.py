@@ -720,6 +720,6 @@ def execute(args):
     daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
     uri = daemon.register(
         RecModel(args['raw_csv_point_data_path'], args['cache_workspace']),
-        'natcap.invest.recreation')
+        'natcap.invest.recreation.recmodel_server')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
     daemon.requestLoop()
