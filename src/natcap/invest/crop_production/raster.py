@@ -7,9 +7,9 @@ import shutil
 import functools
 import logging
 
-import gdal
-import ogr
-import osr
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 import numpy as np
 # from affine import Affine
 from shapely.geometry import Polygon

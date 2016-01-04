@@ -6,10 +6,12 @@ natcap.versioner>=0.2.4
 numpy
 nose
 coverage
+paramiko
 pip>=6.0.0
 poster
 pyamg>=2.2.1
-pygeoprocessing>=0.3.0a12
+pycrypto
+pygeoprocessing>=0.3.0a13
 pyyaml
 scipy>=0.14.0
 setuptools>=8.0
