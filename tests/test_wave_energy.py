@@ -13,7 +13,6 @@ import numpy
 import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
-from nose.tools import nottest
 
 from osgeo import gdal
 from osgeo import osr
@@ -141,7 +140,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(results, expected_results):
             self.assertEqual(res, exp_res)
 
-
     def test_create_percentile_ranges(self):
         """WaveEnergy: testing 'create_percentile_ranges' function."""
         from natcap.invest.wave_energy import wave_energy
@@ -186,7 +184,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(result_id, expected_result_id):
             self.assertEqual(res, exp_res)
 
-    #@nottest
     def test_clip_shape_points(self):
         """WaveEnergy: testing 'clip_shape' clipping points from polygons."""
         from natcap.invest.wave_energy import wave_energy
@@ -244,7 +241,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_vectors_equal(output_path, expected_shape, 1e-9)
 
-    #@nottest
     def test_clip_shape_no_intersection(self):
         """WaveEnergy: testing 'clip_shape' w/ no intersection."""
         from natcap.invest.wave_energy import wave_energy
@@ -370,7 +366,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_valuation(self):
         """WaveEnergy: testing valuation component."""
         from natcap.invest.wave_energy import wave_energy
@@ -416,7 +411,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_aoi(self):
         """WaveEnergy: testing Biophysical component with an AOI."""
         from natcap.invest.wave_energy import wave_energy
@@ -447,7 +441,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_no_aoi(self):
         """WaveEnergy: testing Biophysical component with no AOI."""
         from natcap.invest.wave_energy import wave_energy
@@ -475,7 +468,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_valuation_suffix(self):
         """WaveEnergy: testing suffix through Valuation."""
         from natcap.invest.wave_energy import wave_energy
@@ -516,7 +508,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_valuation_suffix_underscore(self):
         """WaveEnergy: testing suffix with an underscore through Valuation."""
         from natcap.invest.wave_energy import wave_energy
@@ -557,7 +548,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_removing_filenames(self):
         """WaveEnergy: testing that file paths which already exist are removed."""
         from natcap.invest.wave_energy import wave_energy
