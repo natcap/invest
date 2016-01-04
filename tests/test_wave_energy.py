@@ -14,7 +14,6 @@ import numpy
 import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
-from shapely.geometry.polygon import LinearRing
 from nose.tools import nottest
 
 from osgeo import gdal
@@ -119,8 +118,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         raster_uri = os.path.join(temp_dir, 'pixel_groups.tif')
         srs = sampledata.SRS_WILLAMETTE
 
-        group_values = [1,3,5,7]
-        matrix = numpy.array([[1,3,5,9], [3,7,1,5], [2,4,5,7]])
+        group_values = [1, 3, 5, 7]
+        matrix = numpy.array([[1, 3, 5, 9], [3, 7, 1, 5], [2, 4, 5, 7]])
 
         # Create raster to use for testing input
         raster_uri = pygeoprocessing.testing.create_raster_on_disk(
@@ -142,8 +141,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         raster_uri = os.path.join(temp_dir, 'percentile.tif')
         srs = sampledata.SRS_WILLAMETTE
 
-        matrix = numpy.arange(1,101)
-        matrix = matrix.reshape(10,10)
+        matrix = numpy.arange(1, 101)
+        matrix = matrix.reshape(10, 10)
         raster_uri = pygeoprocessing.testing.create_raster_on_disk(
             [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=raster_uri)
@@ -232,14 +231,14 @@ class WaveEnergyUnitTests(unittest.TestCase):
         shape_to_clip_uri = os.path.join(temp_dir, 'shape_to_clip.shp')
         # Create the point shapefile
         shape_to_clip_uri = pygeoprocessing.testing.create_vector_on_disk(
-		    geom_one, srs.projection, fields_pt, attrs_one,
-		    vector_format='ESRI Shapefile', filename=shape_to_clip_uri)
+            geom_one, srs.projection, fields_pt, attrs_one,
+            vector_format='ESRI Shapefile', filename=shape_to_clip_uri)
 
         binding_shape_uri = os.path.join(temp_dir, 'binding_shape.shp')
         # Create the polygon shapefile
         binding_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
-		    geom_two, srs.projection, fields_poly, attrs_poly,
-		    vector_format='ESRI Shapefile', filename=binding_shape_uri)
+            geom_two, srs.projection, fields_poly, attrs_poly,
+            vector_format='ESRI Shapefile', filename=binding_shape_uri)
 
         output_path = os.path.join(temp_dir, 'vector.shp')
         # Call the function to test
@@ -256,8 +255,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         expected_uri = os.path.join(temp_dir, 'exp_vector', 'vector.shp')
         expected_shape = pygeoprocessing.testing.create_vector_on_disk(
-		    geom_three, srs.projection, fields_pt, attrs_one,
-		    vector_format='ESRI Shapefile', filename=expected_uri)
+            geom_three, srs.projection, fields_pt, attrs_one,
+            vector_format='ESRI Shapefile', filename=expected_uri)
 
         pygeoprocessing.testing.assert_vectors_equal(output_path, expected_shape, 1e-9)
 
@@ -287,20 +286,63 @@ class WaveEnergyUnitTests(unittest.TestCase):
         shape_to_clip_uri = os.path.join(temp_dir, 'shape_to_clip.shp')
         # Create the point shapefile
         shape_to_clip_uri = pygeoprocessing.testing.create_vector_on_disk(
-		    geom_one, srs.projection, fields_pt, attrs_one,
-		    vector_format='ESRI Shapefile', filename=shape_to_clip_uri)
+            geom_one, srs.projection, fields_pt, attrs_one,
+            vector_format='ESRI Shapefile', filename=shape_to_clip_uri)
 
         binding_shape_uri = os.path.join(temp_dir, 'binding_shape.shp')
         # Create the polygon shapefile
         binding_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
-		    geom_two, srs.projection, fields_poly, attrs_poly,
-		    vector_format='ESRI Shapefile', filename=binding_shape_uri)
+            geom_two, srs.projection, fields_poly, attrs_poly,
+            vector_format='ESRI Shapefile', filename=binding_shape_uri)
 
         output_path = os.path.join(temp_dir, 'vector.shp')
         # Call the function to test
         self.assertRaises(
             wave_energy.IntersectionError, wave_energy.clip_shape,
             shape_to_clip_uri, binding_shape_uri, output_path)
+
+    def test_create_attribute_csv_table(self):
+        """WaveEnergy: testing 'create_attribute_csv_table' function."""
+        from natcap.invest.wave_energy import wave_energy
+
+        temp_dir = self.workspace_dir
+        table_uri = os.path.join(temp_dir, 'att_csv_file.csv')
+        fields = ['id', 'height', 'length']
+        data = {1: {'id': 1, 'height': 10, 'length': 15},
+            0: {'id': 0, 'height': 10, 'length': 15},
+            2: {'id': 2, 'height': 10, 'length': 15}}
+
+        wave_energy.create_attribute_csv_table(table_uri, fields, data)
+
+        exp_rows = [{'id': '0', 'height': '10', 'length': '15'},
+            {'id': '1', 'height': '10', 'length': '15'},
+            {'id': '2', 'height': '10', 'length': '15'}]
+
+        result_file = open(table_uri, 'rU')
+
+        csv_reader = csv.DictReader(result_file)
+        for row, exp_row in zip(csv_reader, exp_rows):
+            self.assertDictEqual(row, exp_row)
+
+        result_file.close()
+
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_load_binary_wave_data(self):
+        """WaveEnergy: testing 'load_binary_wave_data' function."""
+        from natcap.invest.wave_energy import wave_energy
+
+        wave_file_uri = os.path.join(REGRESSION_DATA, 'example_ww3_binary.bin')
+
+        result = wave_energy.load_binary_wave_data(wave_file_uri)
+
+        exp_res = {'periods': [.375, 1, 1.5, 2.0],
+                   'heights': [.375, 1, 1.5, 2.0],
+                   'bin_matrix': { (102, 370): [[0, 0, 0, 0], [0, 9, 3, 30]],
+                                (102, 371): [[0, 0, 0, 0], [0, 0, 3, 2.7]]
+                              }
+               }
+        self.assertDictEqual(result, exp_res)
+
 
 class WaveEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wave Energy module."""
@@ -348,7 +390,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['valuation_container'] = True
         args['land_gridPts_uri'] = os.path.join(
             SAMPLE_DATA, 'WaveEnergy', 'input', 'LandGridPts_WCVI.csv')
-        args['machine_econ_uri'] =  os.path.join(
+        args['machine_econ_uri'] = os.path.join(
             SAMPLE_DATA, 'WaveEnergy', 'input', 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
 
@@ -453,7 +495,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['valuation_container'] = True
         args['land_gridPts_uri'] = os.path.join(
             SAMPLE_DATA, 'WaveEnergy', 'input', 'LandGridPts_WCVI.csv')
-        args['machine_econ_uri'] =  os.path.join(
+        args['machine_econ_uri'] = os.path.join(
             SAMPLE_DATA, 'WaveEnergy', 'input', 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
         args['suffix'] = 'val'
@@ -494,7 +536,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['valuation_container'] = True
         args['land_gridPts_uri'] = os.path.join(
             SAMPLE_DATA, 'WaveEnergy', 'input', 'LandGridPts_WCVI.csv')
-        args['machine_econ_uri'] =  os.path.join(
+        args['machine_econ_uri'] = os.path.join(
             SAMPLE_DATA, 'WaveEnergy', 'input', 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
         args['suffix'] = '_val'
@@ -523,7 +565,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    #@nottest
+    @nottest
     def test_removing_filenames(self):
         """WaveEnergy: testing that file paths which already exist are removed."""
         from natcap.invest.wave_energy import wave_energy
@@ -535,7 +577,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['valuation_container'] = True
         args['land_gridPts_uri'] = os.path.join(
             SAMPLE_DATA, 'WaveEnergy', 'input', 'LandGridPts_WCVI.csv')
-        args['machine_econ_uri'] =  os.path.join(
+        args['machine_econ_uri'] = os.path.join(
             SAMPLE_DATA, 'WaveEnergy', 'input', 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
 
