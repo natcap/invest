@@ -28,8 +28,8 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
-
 RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'
+
 #this serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
 
@@ -158,6 +158,7 @@ def execute(args):
 
     #transfer zipped file to server
     start_time = time.time()
+    LOGGER.info('Contacting server, please wait.')
     LOGGER.info('server version is %s', recmodel_server.get_version())
 
     result_zip_file_binary = (
@@ -179,7 +180,7 @@ def execute(args):
             file_registry['pud_results_path'], args['predictor_table_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
 
-        coefficents, residual = build_regression(
+        coefficents, residual, r_sq, std_err = build_regression(
             file_registry['coefficent_vector_path'], RESPONSE_ID,
             predictor_id_list)
 
@@ -191,8 +192,10 @@ def execute(args):
         regression_string += ' +\n      %+.2e' % coefficents[-1]  # y intercept
 
         # generate a nice looking regression result and write to log and file
-        report_string = '\nRegression:\n%s = %s\nResidual: %s' % (
-            RESPONSE_ID, regression_string, residual)
+        report_string = (
+            '\nRegression:\n%s = %s\nR^2: %s\nstd_err: %s\nsum of '
+            'residual^2: %s' % (
+                RESPONSE_ID, regression_string, r_sq, std_err, residual))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
                 regression_log:
@@ -815,7 +818,9 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
     Returns:
         X: A list of coefficents in the least-squares solution including
             the y intercept as the last element
-        residuals: sums of resisuals
+        residual_sum: sums of resisuals
+        r_sq: R^2 value
+        std_err: residual standard error
     """
     # Pull apart the datasource
     coefficent_vector = ogr.Open(coefficient_vector_path)
@@ -823,18 +828,19 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
 
     # Loop through each feature and build up the dictionary representing the
     # attribute table
-    coefficient_matrix = numpy.empty(
-        (coefficent_layer.GetFeatureCount(), len(predictor_id_list)+2))
+    n_features = coefficent_layer.GetFeatureCount()
+    coefficient_matrix = numpy.empty((n_features, len(predictor_id_list)+2))
     for row_index, feature in enumerate(coefficent_layer):
         coefficient_matrix[row_index, :] = numpy.array(
             [feature.GetField(str(response_id))] + [
                 feature.GetField(str(key)) for key in predictor_id_list] +
             [1])  # add the 1s for the y intercept
 
-    coefficents, residual, _, _ = numpy.linalg.lstsq(
+    coefficents, residual_sum, _, _ = numpy.linalg.lstsq(
         coefficient_matrix[:, 1:], coefficient_matrix[:, 0])
-
-    return coefficents, residual
+    r_sq = 1 - residual_sum / (n_features * coefficient_matrix[:, 0].var())
+    std_err = numpy.sqrt(r_sq / (n_features - 2))
+    return coefficents, residual_sum, r_sq, std_err
 
 
 def calculate_scenario(
