@@ -12,6 +12,11 @@
       "type": "list",
       "elements": [
         {
+            "id": "internet_warning",
+            "type": "label",
+            "label": "Note, this computer must have an Internet connection in order to run this model."
+        },
+        {
           "id": "workspace_dir",
           "args_id": "workspace_dir",
           "type": "folder",
@@ -40,22 +45,6 @@
           },
           "required": true,
           "helpText": "An OGR-supported vector file representing the area of interest where the model will run the analysis."
-        },
-        {
-          "id": "hostname",
-          "args_id": "hostname",
-          "type": "text",
-          "label": "rec server hostname",
-          "defaultValue": "localhost",
-          "required": true
-        },
-        {
-          "id": "port",
-          "args_id": "port",
-          "type": "text",
-          "label": "rec server port",
-          "defaultValue": "42342",
-          "required": true
         },
         {
           "id": "start_date",

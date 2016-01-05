@@ -8,6 +8,7 @@ import zipfile
 import time
 import logging
 import math
+import urllib
 
 import Pyro4
 from osgeo import ogr
@@ -26,7 +27,9 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
+# This URL is a NatCap global constant
 
+RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'
 #this serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
 
@@ -126,9 +129,9 @@ def execute(args):
         [(_OUTPUT_BASE_FILES, output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    recmodel_server = Pyro4.Proxy(
-        "PYRO:natcap.invest.recreation@%s:%d" % (
-            args['hostname'], int(args['port'])))
+    path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
+    LOGGER.debug(path)
+    recmodel_server = Pyro4.Proxy(path)
 
     if args['grid_aoi']:
         LOGGER.info("gridding aoi")
