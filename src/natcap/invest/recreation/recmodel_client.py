@@ -117,6 +117,16 @@ def execute(args):
     Returns:
         None
     """
+    if ('predictor_table_path' in args and
+            'scenario_predictor_table_path' in args and
+            args['predictor_table_path'] != '' and
+            args['scenario_predictor_table_path'] != ''):
+        _validate_same_ids_and_types(
+            args['predictor_table_path'],
+            args['scenario_predictor_table_path'])
+    else:
+        LOGGER.debug(args)
+
     date_range = (args['start_date'], args['end_date'])
 
     file_suffix = utils.make_suffix_string(
@@ -921,3 +931,43 @@ def calculate_scenario(
                 feature.GetField(str(scenario_predictor_id)))
         feature.SetField(response_id, response_value)
         scenario_coefficent_layer.SetFeature(feature)
+
+
+def _validate_same_ids_and_types(
+        predictor_table_path, scenario_predictor_table_path):
+    """Ensure both tables have same ids and types.
+
+    Assert that both the elements of the 'id' and 'type' fields of each tables
+    contain the same elements and that their values are the same.  This
+    ensures that a user won't get an accidentally incorrect simulation result.
+
+    Parameters:
+        predictor_table_path (string): path to a csv table that has at least
+            the fields 'id' and 'type'
+        scenario_predictor_table_path (string):  path to a csv table that has
+            at least the fields 'id' and 'type'
+
+    Returns:
+        None
+
+    Raises:
+        ValueError if any of the fields in 'id' and 'type' don't match between
+        tables.
+    """
+    predictor_table = pygeoprocessing.get_lookup_from_csv(
+        predictor_table_path, 'id')
+
+    scenario_predictor_table = pygeoprocessing.get_lookup_from_csv(
+        scenario_predictor_table_path, 'id')
+
+    predictor_table_pairs = set([
+        (p_id, predictor_table[p_id]['type']) for p_id in predictor_table])
+    scenario_predictor_table_pairs = set([
+        (p_id, scenario_predictor_table[p_id]['type']) for p_id in
+        scenario_predictor_table])
+    if predictor_table_pairs != scenario_predictor_table_pairs:
+        raise ValueError(
+            'table pairs unequal.\n\tpredictor: %s\n\tscenario:%s' % (
+                str(predictor_table_pairs),
+                str(scenario_predictor_table_pairs)))
+    LOGGER.info('tables validate correctly')
