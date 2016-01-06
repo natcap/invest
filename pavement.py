@@ -2747,7 +2747,7 @@ def jenkins_installer(options):
             # Only push data zipfiles if we're on Windows.
             # Have to pick one, as we're having issues if all slaves are trying
             # to push the same large files.
-            'include-data': platform.system() == 'Windows',
+            'include_data': platform.system() == 'Windows',
         })
 
 
@@ -3088,9 +3088,17 @@ def jenkins_push_artifacts(options):
     if len(release_files) > 0:
         call_task('push', args=_push(release_dir) + release_files)
 
-    if len(data_files) > 0 and getattr(options.jenkins_push_artifacts,
-                                       'include_data', False):
-        call_task('push', args=_push(data_dir) + data_files)
+    try:
+        include_data = options.jenkins_push_artifacts.include_data
+    except AttributeError:
+        include_data = False
+    finally:
+        if len(data_files) == 0:
+            print 'No data files to push.'
+        elif not include_data:
+            print 'Excluding data files from push per user preference'
+        else:
+            call_task('push', args=_push(data_dir) + data_files)
 
     def _archive_present(substring):
         """
