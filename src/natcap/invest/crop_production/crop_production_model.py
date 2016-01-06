@@ -6,7 +6,7 @@ import os
 import logging
 import pprint
 
-import gdal
+from osgeo import gdal
 import numpy as np
 import pygeoprocessing
 

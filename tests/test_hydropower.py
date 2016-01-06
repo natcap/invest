@@ -9,8 +9,10 @@ from osgeo import ogr
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
-SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
-REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', 'hydropower')
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data')
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
 
 
 class HydropowerUnitTests(unittest.TestCase):
@@ -89,6 +91,7 @@ class HydropowerUnitTests(unittest.TestCase):
 
         csv_file.close()
 
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_add_dict_to_shape(self):
         """Hydro: testing 'add_dict_to_shape' function."""
         from natcap.invest.hydropower import hydropower_water_yield

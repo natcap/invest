@@ -5,9 +5,9 @@ Vector Class
 import os
 import shutil
 
-import gdal
-import ogr
-import osr
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 from shapely.geometry import *
 import shapely.wkt
 

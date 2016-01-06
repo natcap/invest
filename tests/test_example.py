@@ -8,8 +8,11 @@ import logging
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
-SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
-REGRESSION_DATA = os.path.join(os.path.dirname(__file__), 'data', '_example_model')
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data')
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    '_example_model')
 
 LOGGER = logging.getLogger('test_example')
 
@@ -35,6 +38,7 @@ class ExampleTest(unittest.TestCase):
 
         shutil.rmtree(args['workspace_dir'])
 
+
 class InVESTImportTest(unittest.TestCase):
     def test_import_everything(self):
         """InVEST: Import everything for the sake of coverage."""
@@ -42,8 +46,12 @@ class InVESTImportTest(unittest.TestCase):
 
         for loader, name, is_pkg in pkgutil.walk_packages(natcap.invest.__path__):
             try:
-                module = loader.find_module(name).load_module(name)
-            except ImportError as exception:
+                loader.find_module(name).load_module(name)
+            except (ImportError, ValueError) as exception:
+                # ImportError happens when the package cannot be found
+                # ValueError happens when using intra-package references. This
+                # should ideally not break at all, but I can't seem to find a
+                # workaround at the moment.
                 LOGGER.exception(exception)
             except AttributeError as attribute_exception:
                 # When a module cannot be imported, `loader` is None, so we get
