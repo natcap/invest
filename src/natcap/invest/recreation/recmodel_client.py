@@ -635,22 +635,6 @@ def _raster_sum_mean(response_vector_path, raster_path):
     return fid_raster_values
 
 
-def _raster_mean(response_vector_path, raster_path):
-    """Average all non-nodata values in the raster under each polygon.
-
-    Parameters:
-        response_polygons_lookup (dictionary): maps feature ID to
-            prepared shapely.Polygon.
-
-        raster_path (string): path to a raster.
-
-    Returns:
-        A dictionary mapping feature IDs from `response_polygons_lookup`
-        to summation under raster.
-    """
-    return {}
-
-
 def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
     """Calculate polygon area overlap.
 
@@ -965,7 +949,6 @@ def _validate_same_id_lengths(table_path):
         ValueError if any of the fields in 'id' and 'type' don't match between
         tables.
     """
-
     predictor_table = pygeoprocessing.get_lookup_from_csv(table_path, 'id')
     too_long = set()
     for p_id in predictor_table:
@@ -975,6 +958,7 @@ def _validate_same_id_lengths(table_path):
         raise ValueError(
             "The following IDs are more than 10 characters long: %s" %
             str(too_long))
+
 
 def _validate_same_ids_and_types(
         predictor_table_path, scenario_predictor_table_path):
