@@ -61,27 +61,6 @@
           "label": "End Date (inclusive)",
           "defaultValue": "2007-12-31",
           "required": true
-        },
-        {
-          "id": "aggregating_metric",
-          "args_id": "aggregating_metric",
-          "type": "dropdown",
-          "label": "Temporal aggregate metric",
-          "options": [
-            "daily",
-            "monthly",
-            "yearly"
-          ],
-          "returns": {
-            "mapValues": {
-              "daily": "daily",
-              "monthly": "monthly",
-              "yearly": "yearly"
-            }
-          },
-          "defaultValue": "all",
-          "required": true,
-          "helpText": "This is the temporal metric that is used to average a photo user across time.  If 'daily', points will be distinct per day, if 'yearly', the same point by the same user on different days, but the same year, will count as a single point."
         }
       ]
     },

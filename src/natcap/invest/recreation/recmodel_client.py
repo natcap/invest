@@ -71,8 +71,6 @@ def execute(args):
         args['end_date'] (string): end date in form YYYY-MM-DD this date
             is the inclusive upper bound to consider points in the PUD and
             regression
-        args['aggregating_metric'] (string): one of 'daily', 'monthly', or
-            'yearly'.
         args['grid_aoi'] (boolean): if true the polygon vector in
             `args['aoi_path']` should be gridded into a new vector and the
             recreation model should be executed on that
