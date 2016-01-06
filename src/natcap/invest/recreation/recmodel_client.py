@@ -862,8 +862,10 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
                 feature.GetField(str(key)) for key in predictor_id_list] +
             [1])  # add the 1s for the y intercept
 
-    coefficents, residual_sum, _, _ = numpy.linalg.lstsq(
+    coefficents, _, _, _ = numpy.linalg.lstsq(
         coefficient_matrix[:, 1:], coefficient_matrix[:, 0])
+    residual_sum = numpy.sum(numpy.sum(
+        (coefficient_matrix[:, 1:] * coefficents), axis=1) ** 2)
     r_sq = 1 - residual_sum / (n_features * coefficient_matrix[:, 0].var())
     std_err = numpy.sqrt(r_sq / (n_features - 2))
     LOGGER.debug(residual_sum)
