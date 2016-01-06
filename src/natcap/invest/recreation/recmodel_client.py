@@ -118,6 +118,9 @@ def execute(args):
         None
     """
     if ('predictor_table_path' in args and
+            args['predictor_table_path'] != ''):
+        _validate_same_id_lengths(args['predictor_table_path'])
+    if ('predictor_table_path' in args and
             'scenario_predictor_table_path' in args and
             args['predictor_table_path'] != '' and
             args['scenario_predictor_table_path'] != ''):
@@ -946,6 +949,28 @@ def calculate_scenario(
         feature.SetField(response_id, response_value)
         scenario_coefficent_layer.SetFeature(feature)
 
+
+def _validate_same_id_lengths(table_path):
+    """Ensure both table has ids of length less than 10.
+
+    Parameter:
+        table_path (string):  path to a csv table that has at least
+            the field 'id'
+
+    Raises:
+        ValueError if any of the fields in 'id' and 'type' don't match between
+        tables.
+    """
+
+    predictor_table = pygeoprocessing.get_lookup_from_csv(table_path, 'id')
+    too_long = set()
+    for p_id in predictor_table:
+        if len(p_id) > 10:
+            too_long.add(p_id)
+    if len(too_long) > 0:
+        raise ValueError(
+            "The following IDs are more than 10 characters long: %s" %
+            str(too_long))
 
 def _validate_same_ids_and_types(
         predictor_table_path, scenario_predictor_table_path):
