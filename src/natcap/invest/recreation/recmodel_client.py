@@ -13,6 +13,7 @@ import urllib
 import Pyro4
 from osgeo import ogr
 from osgeo import gdal
+from osgeo import osr
 import shapely
 import shapely.geometry
 import shapely.wkt
@@ -120,6 +121,8 @@ def execute(args):
     if ('predictor_table_path' in args and
             args['predictor_table_path'] != ''):
         _validate_same_id_lengths(args['predictor_table_path'])
+        _validate_same_projection(
+            args['aoi_path'], args['predictor_table_path'])
     if ('predictor_table_path' in args and
             'scenario_predictor_table_path' in args and
             args['predictor_table_path'] != '' and
@@ -127,6 +130,8 @@ def execute(args):
         _validate_same_ids_and_types(
             args['predictor_table_path'],
             args['scenario_predictor_table_path'])
+        _validate_same_projection(
+            args['aoi_path'], args['scenario_predictor_table_path'])
 
     date_range = (args['start_date'], args['end_date'])
 
@@ -512,7 +517,6 @@ def build_regression_coefficients(
             predictor_path = os.path.join(
                 os.path.dirname(predictor_table_path), raw_path)
 
-        #TODO: worry about a difference in projection between the predictor data and the response polygons
         predictor_type = predictor_table[predictor_id]['type']
 
         if predictor_type.startswith('raster'):
@@ -1012,3 +1016,63 @@ def _validate_same_ids_and_types(
                 str(predictor_table_pairs),
                 str(scenario_predictor_table_pairs)))
     LOGGER.info('tables validate correctly')
+
+
+def _validate_same_projection(base_vector_path, table_path):
+    """Assert the GIS data in the table are in the same projection as the AOI.
+
+    Parameters:
+        base_vector_path (string): path to a GIS vector
+        table_path (string): path to a csv table that has at least
+            the field 'path'
+
+    Returns:
+        None
+
+    Raises:
+        ValueError if the projections in each of the GIS types in the table
+            are not identical to the projection in base_vector_path
+    """
+    # This will load the table as paths which we can iterate through without
+    # bothering the rest of the table structure
+    data_paths = pygeoprocessing.get_lookup_from_csv(
+        table_path, 'path')
+
+    base_vector = ogr.Open(base_vector_path)
+    base_layer = base_vector.GetLayer()
+    base_ref = osr.SpatialReference(base_layer.GetSpatialRef().ExportToWkt())
+    base_layer = None
+    base_vector = None
+
+    invalid_projections = False
+    for raw_path in data_paths:
+        if os.path.isabs(raw_path):
+            path = raw_path
+        else:
+            # assume relative path
+            path = os.path.join(os.path.dirname(table_path), raw_path)
+
+        raster = gdal.Open(path)
+        if raster is not None:
+            projection_as_str = raster.GetProjection()
+            ref = osr.SpatialReference()
+            ref.ImportFromWkt(projection_as_str)
+            raster = None
+        else:
+            vector = ogr.Open(path)
+            if vector is None:
+                LOGGER.error("%s did not load", path)
+            layer = vector.GetLayer()
+            ref = osr.SpatialReference(layer.GetSpatialRef().ExportToWkt())
+            layer = None
+            vector = None
+        if not base_ref.IsSame(ref):
+            LOGGER.warn(
+                "%s might have a different projection than the base AOI "
+                "\nbase:%s\ncurrent:%s", path, base_ref.ExportToPrettyWkt(),
+                ref.ExportToPrettyWkt())
+            invalid_projections = True
+    if invalid_projections:
+        raise ValueError(
+            "One or more of the projections in the table did not match the "
+            "projection of the base vector")
