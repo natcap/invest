@@ -1631,9 +1631,9 @@ def check(options):
         # (unnecessarily) always treats the activation of a virtualenv like
         # it's on a POSIX system.  I've submitted a PR to fix this to the
         # upstream paver repo (https://github.com/paver/paver/pull/153),
-        # but until then, I've created a local version of paver for devs on
-        # Windows systems.
-        requirements.append(('paver>=1.2.4+natcap.1', required, None, (
+        # which was merged, but an official release of paver that includes this
+        # version has not been made just yet.
+        requirements.append(('paver==1.2.4+natcap.1', required, None, (
             'pip install --upgrade '
             'git+https://github.com/phargogh/paver@natcap-version'
         )))
