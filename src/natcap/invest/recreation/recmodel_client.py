@@ -124,8 +124,6 @@ def execute(args):
         _validate_same_ids_and_types(
             args['predictor_table_path'],
             args['scenario_predictor_table_path'])
-    else:
-        LOGGER.debug(args)
 
     date_range = (args['start_date'], args['end_date'])
 
@@ -140,7 +138,6 @@ def execute(args):
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
-    LOGGER.debug(path)
     recmodel_server = Pyro4.Proxy(path)
 
     if args['grid_aoi']:
@@ -169,7 +166,8 @@ def execute(args):
     #transfer zipped file to server
     start_time = time.time()
     LOGGER.info('Contacting server, please wait.')
-    LOGGER.info('server version is %s', recmodel_server.get_version())
+    LOGGER.info('Server online, version: %s', recmodel_server.get_version())
+    LOGGER.info('Please wait for server to calculate PUD...')
 
     result_zip_file_binary = (
         recmodel_server.calc_aggregated_points_in_aoi(
@@ -200,6 +198,10 @@ def execute(args):
             '%+.2e * %s' % (coefficent, p_id)
             for p_id, coefficent in zip(predictor_id_list, coefficents[:-1]))
         regression_string += ' +\n      %+.2e' % coefficents[-1]  # y intercept
+
+        LOGGER.debug(r_sq)
+        LOGGER.debug(std_err)
+        LOGGER.debug(residual)
 
         # generate a nice looking regression result and write to log and file
         report_string = (
@@ -424,10 +426,13 @@ def build_regression_coefficients(
                     each response polygon
                 'polygon_area': area of predictor polygon intersecting the
                     response polygon
+                'polygon_percent_coverage': percent of predictor polygon
+                    intersecting the response polygon
                 'raster_sum': sum of predictor raster under the response
                     polygon
                 'raster_mean': average of predictor raster under the
                     response polygon
+
         out_coefficient_vector_path (string): path to a copy of
             `response_vector_path` with the modified predictor variable
             responses. Overwritten if exists.
@@ -464,7 +469,11 @@ def build_regression_coefficients(
         'point_count': _point_count,
         'point_nearest_distance': _point_nearest_distance,
         'line_intersect_length': _line_intersect_length,
-        'polygon_area': _polygon_area,
+        'polygon_area_coverage': lambda x, y: _polygon_area('area', x, y),
+        'polygon_percent_coverage': lambda x, y: _polygon_area(
+            'percent', x, y),
+        'raster_sum': lambda x, y: _raster_sum_mean(x, y)['sum'],
+        'raster_mean': lambda x, y: _raster_sum_mean(x, y)['mean'],
         }
 
     predictor_table = pygeoprocessing.get_lookup_from_csv(
@@ -502,14 +511,13 @@ def build_regression_coefficients(
 
         #TODO: worry about a difference in projection between the predictor data and the response polygons
         predictor_type = predictor_table[predictor_id]['type']
-        if predictor_type == 'raster_sum':
+
+        if predictor_type.startswith('raster'):
+            # type must be one of raster_sum or raster_mean
+            raster_type = predictor_type.split('_')[1]
             raster_sum_mean_results = _raster_sum_mean(
                 response_vector_path, predictor_path)
-            predictor_results = raster_sum_mean_results['sum']
-        elif predictor_type == 'raster_mean':
-            raster_sum_mean_results = _raster_sum_mean(
-                response_vector_path, predictor_path)
-            predictor_results = raster_sum_mean_results['mean']
+            predictor_results = raster_sum_mean_results[raster_type]
         else:
             predictor_results = predictor_functions[predictor_type](
                 response_polygons_lookup, predictor_path)
@@ -556,9 +564,7 @@ def _raster_sum_mean(response_vector_path, raster_path):
     """Sum all non-nodata values in the raster under each polygon.
 
     Parameters:
-        response_polygons_lookup (dictionary): maps feature ID to
-            prepared shapely.Polygon.
-
+        response_vector_path (string): path to response polygons
         raster_path (string): path to a raster.
 
     Returns:
@@ -640,16 +646,19 @@ def _raster_mean(response_vector_path, raster_path):
     return {}
 
 
-def _polygon_area(response_polygons_lookup, polygon_vector_path):
+def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
     """Calculate polygon area overlap.
 
     Calculates the amount of projected area overlap from `polygon_vector_path`
     with `response_polygons_lookup`.
 
     Parameters:
+        mode (string): one of 'area' or 'percent'.  How this is set affects
+            the metric that's output.  'area' is the area covered in projected
+            units while 'percent' is percent of the total response area
+            covered
         response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
-
         polygon_vector_path (string): path to a single layer polygon vector
             object.
 
@@ -662,7 +671,7 @@ def _polygon_area(response_polygons_lookup, polygon_vector_path):
     prepared_polygons = [
         shapely.prepared.prep(polygon) for polygon in polygons
         if polygon.is_valid]
-    polygon_area_coverage_lookup = {}  # map FID to point count
+    polygon_coverage_lookup = {}  # map FID to point count
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
         if time.time() - start_time > 5.0:
@@ -676,11 +685,15 @@ def _polygon_area(response_polygons_lookup, polygon_vector_path):
             (polygon.intersection(geometry)).area for polygon, prep_poly in
             zip(polygons, prepared_polygons) if
             prep_poly.intersects(geometry)])
-        polygon_area_coverage_lookup[feature_id] = polygon_area_coverage
+        if mode == 'area':
+            polygon_coverage_lookup[feature_id] = polygon_area_coverage
+        elif mode == 'percent':
+            polygon_coverage_lookup[feature_id] = (
+                polygon_area_coverage / geometry.area * 100.0)
     LOGGER.info(
         "%s polygon area: 100.00%% complete",
         os.path.basename(polygon_vector_path))
-    return polygon_area_coverage_lookup
+    return polygon_coverage_lookup
 
 
 def _line_intersect_length(response_polygons_lookup, line_vector_path):
@@ -850,6 +863,7 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
         coefficient_matrix[:, 1:], coefficient_matrix[:, 0])
     r_sq = 1 - residual_sum / (n_features * coefficient_matrix[:, 0].var())
     std_err = numpy.sqrt(r_sq / (n_features - 2))
+    LOGGER.debug(residual_sum)
     return coefficents, residual_sum, r_sq, std_err
 
 
