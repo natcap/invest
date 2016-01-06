@@ -3033,21 +3033,21 @@ def jenkins_push_artifacts(options):
         return release_files
 
     release_files = _get_release_files()
-    if 'post' in version_string:
-        data_dirname = 'develop'
-    else:
-        data_dirname = version_string
     data_files = glob.glob('dist/release_*/data/*')
     if username == 'natcap' and reponame == 'invest':
         # We're not on a fork!  Binaries are pushed to invest-releases
         # dirnames are relative to the dataportal root
+        if 'post' in version_string:
+            data_dirname = 'develop'
+        else:
+            data_dirname = version_string
         data_dir = os.path.join('invest-data', data_dirname)
         release_dir = os.path.join('invest-releases', version_string)
     else:
         # We're on a fork!
         # Push the binaries, documentation to nightly-build
         release_dir = os.path.join('nightly-build', 'invest-forks', username)
-        data_dir = os.path.join(release_dir, 'data', data_dirname)
+        data_dir = os.path.join(release_dir, 'data')
 
     pkey = None
     if getattr(options.jenkins_push_artifacts, 'private_key', False):
