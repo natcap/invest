@@ -204,7 +204,6 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
   !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
   !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
-  !define RECREATION "${SMPATH}\Recreation"
   !define OVERLAP "${SMPATH}\Overlap Analysis"
   !define HRA "${SMPATH}\Habitat Risk Assessment"
   !define BLUECARBON "${SMPATH}\Blue Carbon"
@@ -260,9 +259,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\RouteDEM (${ARCHITECTURE}).lnk" "${INVEST_DATA}\routedem.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\DelineateIt (${ARCHITECTURE}).lnk" "${INVEST_DATA}\delineateit.bat" "" "${INVEST_ICON}"
 
-  CreateDirectory "${RECREATION}"
-  CreateShortCut "${RECREATION}\(1) Recreation Initialization (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_init.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${RECREATION}\(2) Recreation Scenario (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_scenario.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Recreation (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation.bat" "" "${INVEST_ICON}"
 
   ; Write registry keys for convenient uninstallation via add/remove programs.
   ; Inspired by the example at
