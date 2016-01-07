@@ -962,11 +962,13 @@ def fetch(args, options):
     """
 
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('repo', metavar='REPO[@rev]', nargs='+',
+    arg_parser.add_argument('repo', metavar='REPO[@rev]', nargs='*',
                             help=('The repository to fetch.  Optionally, the '
                                   'revision to update to can be specified by '
                                   'using the "@" symbol.  Example: '
-                                  ' `paver fetch data/invest-data@27`'))
+                                  ' `paver fetch data/invest-data@27`. '
+                                  'If no repos are specified, all known repos '
+                                  'will be fetched.'))
 
     # figure out which repos/revs we're hoping to update.
     # None is our internal, temp keyword representing the LATEST possible
@@ -995,14 +997,21 @@ def fetch(args, options):
     # example: `data` would represent all repos under data/
     # example: `src/pyinstaller` would represent the pyinstaller repo
     desired_repo_revs = {}
+    include_all_repos = parsed_args.repo == 0
     known_repos = dict((repo.local_path, repo) for repo in REPOS)
     for known_repo_path, repo_obj in known_repos.iteritems():
-        for user_repo, user_rev in user_repo_revs.iteritems():
-            if user_repo in known_repo_path:
-                if known_repo_path in desired_repo_revs:
-                    raise BuildFailure('The same repo has been selected twice')
-                else:
-                    desired_repo_revs[repo_obj] = user_rev
+        if include_all_repos:
+            # If no repos were specified as input to this function, fetch them
+            # all!  Use the version in versions.json.
+            desired_repo_revs[repo_obj] = repo_obj.tracked_version()
+        else:
+            for user_repo, user_rev in user_repo_revs.iteritems():
+                if user_repo in known_repo_path:
+                    if known_repo_path in desired_repo_revs:
+                        raise BuildFailure('The same repo has been selected '
+                                           'twice')
+                    else:
+                        desired_repo_revs[repo_obj] = user_rev
 
     for user_requested_repo, target_rev in desired_repo_revs.iteritems():
         print 'Fetching {path}'.format(path=user_requested_repo.local_path)
