@@ -42,6 +42,7 @@ _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 
 # For now, this is the field name we use to mark the photo user "days"
 RESPONSE_ID = 'PUD'
+SCENARIO_RESPONSE_ID = 'PUD_EST'
 
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
@@ -227,8 +228,9 @@ def execute(args):
                 args['scenario_predictor_table_path'] != ''):
             LOGGER.info('Calculating scenario')
             calculate_scenario(
-                file_registry['pud_results_path'], RESPONSE_ID, coefficents,
-                predictor_id_list, args['scenario_predictor_table_path'],
+                file_registry['pud_results_path'], SCENARIO_RESPONSE_ID,
+                coefficents, predictor_id_list,
+                args['scenario_predictor_table_path'],
                 file_registry['scenario_results_path'])
 
     LOGGER.info('deleting temporary files')
