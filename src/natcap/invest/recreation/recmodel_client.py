@@ -41,7 +41,7 @@ Pyro4.config.SERIALIZER = 'marshal'
 _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 
 # For now, this is the field name we use to mark the photo user "days"
-RESPONSE_ID = 'PUD'
+RESPONSE_ID = 'PUD_YR_AVG'
 SCENARIO_RESPONSE_ID = 'PUD_EST'
 
 _OUTPUT_BASE_FILES = {
