@@ -183,7 +183,8 @@ def execute(args):
     #transfer zipped file to server
     start_time = time.time()
     LOGGER.info('Contacting server, please wait.')
-    LOGGER.info('Server online, version: %s', recmodel_server.get_version())
+    server_version = recmodel_server.get_version()
+    LOGGER.info('Server online, version: %s', server_version)
     LOGGER.info('Please wait for server to calculate PUD...')
 
     result_zip_file_binary, workspace_id = (
@@ -218,15 +219,12 @@ def execute(args):
             for p_id, coefficent in zip(predictor_id_list, coefficents[:-1]))
         regression_string += ' +\n      %+.2e' % coefficents[-1]  # y intercept
 
-        LOGGER.debug(r_sq)
-        LOGGER.debug(std_err)
-        LOGGER.debug(residual)
-
         # generate a nice looking regression result and write to log and file
         report_string = (
             '\nRegression:\n%s = %s\nR^2: %s\nstd_err: %s\n'
-            'residuals: %s' % (
-                RESPONSE_ID, regression_string, r_sq, std_err, residual))
+            'residuals: %s\nserver id hash: %s' % (
+                RESPONSE_ID, regression_string, r_sq, std_err, residual,
+                server_version))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
                 regression_log:
