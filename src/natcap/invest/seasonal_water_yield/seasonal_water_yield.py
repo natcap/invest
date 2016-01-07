@@ -153,9 +153,23 @@ def execute(args):
     # I found this useful to catch all kinds of weird inputs to the model
     # during debugging and think it makes sense to have in production of this
     # model too.
-    warnings.filterwarnings(
-        'error', module='^natcap\.invest\.seasonal_water_yield$')
+    warnings.filterwarnings('error')
+    try:
+        _execute(args)
+    finally:
+        warnings.resetwarnings()
 
+
+def _execute(args):
+    """Execute the seasonal water yield model.
+
+    Parameters:
+        See the parameters for
+        `natcap.invest.seasonal_water_yield.seasonal_wateryield.execute`.
+
+    Returns:
+        None
+    """
     LOGGER.info('prepare and test inputs for common errors')
 
     # fail early on a missing required rain events table
