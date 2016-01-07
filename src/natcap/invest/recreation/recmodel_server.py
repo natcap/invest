@@ -332,12 +332,12 @@ class RecModel(object):
         pud_aoi_vector = esri_driver.CopyDataSource(
             aoi_vector, out_aoi_pud_path)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
-        photopud_field = ogr.FieldDefn('PUD', ogr.OFTInteger)
-        photopud_mon_field = ogr.FieldDefn('PUD_mon', ogr.OFTInteger)
-        photopud_yr_field = ogr.FieldDefn('PUD_yr', ogr.OFTInteger)
-        pud_aoi_layer.CreateField(photopud_field)
-        pud_aoi_layer.CreateField(photopud_mon_field)
-        pud_aoi_layer.CreateField(photopud_yr_field)
+        pud_id_list = [
+            'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
+            'SEP', 'OCT', 'NOV', 'DEC']
+        for field_id in pud_id_list:
+            pud_aoi_layer.CreateField(
+                ogr.FieldDefn('PUD_%s' % field_id, ogr.OFTReal))
 
         last_time = time.time()
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
@@ -368,11 +368,10 @@ class RecModel(object):
                     '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
                     pud_aoi_layer.GetFeatureCount())
                 last_time = current_time
-            poly_id, pud, pud_monthly, pud_yearly = result_tuple
+            poly_id, pud_list = result_tuple
             poly_feat = pud_aoi_layer.GetFeature(poly_id)
-            poly_feat.SetField('PUD', pud)
-            poly_feat.SetField('PUD_mon', pud_monthly)
-            poly_feat.SetField('PUD_yr', pud_yearly)
+            for pud_index, pud_id in enumerate(pud_id_list):
+                poly_feat.SetField('PUD_%s' % pud_id, pud_list[pud_index])
             pud_aoi_layer.SetFeature(poly_feat)
 
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
@@ -686,7 +685,6 @@ def _calc_poly_pud(
             shapely_polygon)
         pud_set = set()
         pud_monthly_set = collections.defaultdict(set)
-        pud_yearly_set = collections.defaultdict(set)
 
         min_date = None
         max_date = None
@@ -707,25 +705,19 @@ def _calc_poly_pud(
                 day = str(timetuple.tm_mday)
                 pud_hash = user_hash + '%s-%s-%s' % (year, month, day)
                 pud_set.add(pud_hash)
-                pud_monthly_set['%s-%s' % (year, month)].add(pud_hash)
-                pud_yearly_set['%s' % (year)].add(pud_hash)
+                pud_monthly_set[month].add(pud_hash)
 
         # calculate the number of years and months between the max/min dates
+        # index 0 is annual and 1-12 are the months
+        pud_averages = [0.0] * 13
         if max_date is not None:
             n_years = max_date.tm_year - min_date.tm_year + 1
-            n_months = (
-                (n_years - 1) * 12 + max_date.tm_mon - min_date.tm_mon + 1)
+            pud_averages[0] = len(pud_set) / float(n_years)
+            for month, monthly_pud_set in pud_monthly_set:
+                pud_averages[int(month)] = (
+                    len(monthly_pud_set) / float(n_years))
 
-            pud_monthly_average = sum(
-                [len(x) for x in pud_monthly_set.itervalues()]) / n_months
-            pud_yearly_average = sum(
-                [len(x) for x in pud_yearly_set.itervalues()]) / n_years
-        else:
-            pud_monthly_average = 0
-            pud_yearly_average = 0
-
-        pud_poly_feature_queue.put(
-            (poly_id, len(pud_set), pud_monthly_average, pud_yearly_average))
+        pud_poly_feature_queue.put((poly_id, pud_averages))
     pud_poly_feature_queue.put('STOP')
 
 
