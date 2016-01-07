@@ -65,12 +65,12 @@ def execute(args):
         args['aoi_path'] (string): path to AOI vector
         args['hostname'] (string): FQDN to recreation server
         args['port'] (string or int): port on hostname for recreation server
-        args['start_date'] (string): start date in form YYYY-MM-DD this date
+        args['start_year'] (string): start year in form YYYY.  This year
             is the inclusive lower bound to consider points in the PUD and
-            regression
-        args['end_date'] (string): end date in form YYYY-MM-DD this date
+            regression.
+        args['end_year'] (string): end year in form YYYY.  This year
             is the inclusive upper bound to consider points in the PUD and
-            regression
+            regression.
         args['grid_aoi'] (boolean): if true the polygon vector in
             `args['aoi_path']` should be gridded into a new vector and the
             recreation model should be executed on that
@@ -131,10 +131,14 @@ def execute(args):
         _validate_same_projection(
             args['aoi_path'], args['scenario_predictor_table_path'])
 
-    date_range = (args['start_date'], args['end_date'])
-
-    file_suffix = utils.make_suffix_string(
-        args, 'results_suffix')
+    # append jan 1 to start and dec 31 to end
+    if args['end_year'] < args['start_year']:
+        raise ValueError(
+            "Start year must be less than or equal to end year.\n"
+            "start_year: %s\nend_year: %s" % (
+                args['start_year'], args['end_year']))
+    date_range = (args['start_year']+'-01-01', args['end_year']+'-12-31')
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
     pygeoprocessing.create_directories([output_dir])

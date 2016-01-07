@@ -47,20 +47,24 @@
           "helpText": "An OGR-supported vector file representing the area of interest where the model will run the analysis."
         },
         {
-          "id": "start_date",
-          "args_id": "start_date",
+          "id": "start_year",
+          "args_id": "start_year",
           "type": "text",
-          "label": "Start Date (inclusive)",
-          "defaultValue": "2005-01-01",
-          "required": true
+          "label": "Start Year (inclusive)",
+          "defaultValue": "2005",
+          "validText": "[0-9]{4}",
+          "required": true,
+          "helpText": "Year to start PUD calculations, date starts on Jan 1st."
         },
         {
-          "id": "end_date",
-          "args_id": "end_date",
+          "id": "end_year",
+          "args_id": "end_year",
           "type": "text",
-          "label": "End Date (inclusive)",
-          "defaultValue": "2007-12-31",
-          "required": true
+          "label": "End Year (inclusive)",
+          "defaultValue": "2014",
+          "validText": "[0-9]{4}",
+          "required": true,
+          "helpText": "Year to end PUD calculations, date ends and includes Dec 31st."
         }
       ]
     },
