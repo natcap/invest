@@ -6,9 +6,9 @@ import collections
 import csv
 import uuid
 
-import gdal
-import ogr
-import osr
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 import numpy
 import pygeoprocessing
 
