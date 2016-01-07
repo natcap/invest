@@ -423,6 +423,10 @@ class SVNRepository(Repository):
         # Parse the output of SVN status.
         repo_status = sh('svn status', cwd=self.local_path, capture=True)
         for line in repo_status:
+            # If the line is empty, skip it.
+            if line.strip() == '':
+                continue
+
             if line.split()[0] in ['!', 'L']:
                 print 'Checkout or update incomplete!  Repo NOT at known rev.'
                 return False
