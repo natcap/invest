@@ -153,7 +153,8 @@ def execute(args):
     # I found this useful to catch all kinds of weird inputs to the model
     # during debugging and think it makes sense to have in production of this
     # model too.
-    warnings.filterwarnings('error')
+    warnings.filterwarnings(
+        'error', module='^natcap\.invest\.seasonal_water_yield$')
 
     LOGGER.info('prepare and test inputs for common errors')
 
@@ -509,8 +510,6 @@ def execute(args):
     LOGGER.info(' `--\' (v  __( / ||')
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
-
-    warnings.resetwarnings()
 
 
 def _calculate_monthly_quick_flow(
