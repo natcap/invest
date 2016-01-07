@@ -180,11 +180,13 @@ def execute(args):
     LOGGER.info('Server online, version: %s', recmodel_server.get_version())
     LOGGER.info('Please wait for server to calculate PUD...')
 
-    result_zip_file_binary = (
-        recmodel_server.calc_aggregated_points_in_aoi(
+    result_zip_file_binary, workspace_id = (
+        recmodel_server.calc_photo_user_days_in_aoi(
             zip_file_binary, date_range,
             os.path.basename(file_registry['pud_results_path'])))
-    LOGGER.info('received result, took %f seconds', time.time() - start_time)
+    LOGGER.info(
+        'received result, took %f seconds, workspace_id: %s',
+        time.time() - start_time, workspace_id)
 
     #unpack result
     open(file_registry['compressed_pud_path'], 'wb').write(

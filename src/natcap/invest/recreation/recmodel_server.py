@@ -117,12 +117,36 @@ class RecModel(object):
 
     # not static so it can register in Pyro object
     def get_version(self):  #pylint: disable=no-self-use
-        """Return the rec model server version."""
-        return __version__
+        """Return the rec model server version.
 
-    def calc_aggregated_points_in_aoi(
+        This string can be used to uniquely identify the PUD database and
+        algorithm for publication in terms of reproduciability.
+        """
+        return '%s:%s' % (__version__, self.qt_pickle_filename)
+
+    # not static so it can register in Pyro object
+    def fetch_workspace_aoi(self, workspace_id):   #pylint: disable=no-self-use
+        """Download the AOI of the workspace specified by workspace_id."""
+        # try/except block so Pyro4 can recieve an exception if there is one
+        try:
+            #make a random workspace name so we can work in parallel
+            #decompress zip
+            workspace_path = os.path.join(
+                'rec_server_workspaces', workspace_id)
+            out_zip_file_path = os.path.join(
+                workspace_path, str('server_in')+'.zip')
+            return open(out_zip_file_path, 'rb').read()
+        except:
+            print 'exception in calc_aggregated_points_in_aoi'
+            print '-' * 60
+            traceback.print_exc()
+            print '-' * 60
+            raise
+
+
+    def calc_photo_user_days_in_aoi(
             self, zip_file_binary, date_range, out_vector_filename):
-        """Aggregate the PUD in the AOI.
+        """Calculate annual average and per montly average photo user days.
 
         Parameters:
             zip_file_binary (string): a bytestring that is a zip file of an
@@ -132,15 +156,19 @@ class RecModel(object):
             out_vector_filename (string): base filename of ouput vector
 
         Returns:
-            a bytestring of a zipped copy of `zip_file_binary` with a "PUD"
-            field which contains the metric per polygon.
+            zip_result: a bytestring of a zipped copy of `zip_file_binary`
+                with a "PUD_YR_AVG", and a "PUD_{MON}_AVG" for {MON} in the
+                calendar months.
+            workspace_id: a string that can be used to uniquely identify this
+                run on the server
         """
         # try/except block so Pyro4 can recieve an exception if there is one
         try:
             #make a random workspace name so we can work in parallel
             while True:
+                workspace_id = str(uuid.uuid4())
                 workspace_path = os.path.join(
-                    'rec_server_workspaces', str(uuid.uuid4()))
+                    'rec_server_workspaces', workspace_id)
                 if not os.path.exists(workspace_path):
                     os.makedirs(workspace_path)
                     break
@@ -179,7 +207,7 @@ class RecModel(object):
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                 ': calc user days complete sending binary back on ' +
                 workspace_path)
-            return open(aoi_pud_archive_path, 'rb').read()
+            return open(aoi_pud_archive_path, 'rb').read(), workspace_id
         except:
             print 'exception in calc_aggregated_points_in_aoi'
             print '-' * 60
