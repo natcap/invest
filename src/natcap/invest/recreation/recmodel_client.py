@@ -215,8 +215,8 @@ def execute(args):
 
         # generate a nice looking regression result and write to log and file
         report_string = (
-            '\nRegression:\n%s = %s\nR^2: %s\nstd_err: %s\nsum of '
-            'residual^2: %s' % (
+            '\nRegression:\n%s = %s\nR^2: %s\nstd_err: %s\n'
+            'residuals: %s' % (
                 RESPONSE_ID, regression_string, r_sq, std_err, residual))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
