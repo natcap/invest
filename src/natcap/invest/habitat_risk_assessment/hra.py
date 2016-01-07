@@ -493,31 +493,10 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
     Returns nothing.
     '''
     for pair in h_s_c:
-
-
-
-        def check_interaction(pair):
-            cum_rating_sum = 0
-
-            for cum_rating_name in h_s_c[pair]['Crit_Ratings'].iterkeys():
-                cum_rating_sum += h_s_c[pair]['Crit_Ratings'][cum_rating_name]['Rating']
-
-
-            for exp_rating_name in h_s_e[pair]['Crit_Ratings'].iterkeys():
-                cum_rating_sum += h_s_e[pair]['Crit_Ratings'][exp_rating_name]['Rating']
-
-
-            LOGGER.debug('CHECK-INTERACTION PAIR : %s', pair)
-            LOGGER.debug('CHECK-INTERACTION SUM : %s', cum_rating_sum)
-
-            if cum_rating_sum > 0:
-                return False
-            else:
-                return True
-
-        set_overlap_to_zero = check_interaction(pair)
-
-
+        # Check to see if the user has determined this habitat / stressor
+        # pair should have no interaction. This means setting no overlap
+        compute_overlap = h_s_e[pair]['compute_overlap'] and h_s_c[pair]['compute_overlap']
+        LOGGER.debug("Compute Overlap is set to %s, for pair %s", (compute_overlap, pair))
 
         h, s = pair
         h_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(habitats[h]['DS'])
@@ -528,12 +507,14 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         def add_h_s_pixels(h_pix, s_pix):
             '''Since the stressor is buffered, we actually want to make sure to
             preserve that value. If there is an overlap, return s value.'''
-            if set_overlap_to_zero:
-                return np.where(
-                    ((h_pix != h_nodata) & (s_pix != s_nodata)), h_nodata, h_nodata)
-            else:
+            if compute_overlap:
+                # If there is an overlap return the stressor value
                 return np.where(
                     ((h_pix != h_nodata) & (s_pix != s_nodata)), s_pix, h_nodata)
+            else:
+                # Even if there is an overlap, return h_nodata
+                return np.where(
+                    ((h_pix != h_nodata) & (s_pix != s_nodata)), h_nodata, h_nodata)
 
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 

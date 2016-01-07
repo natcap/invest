@@ -860,7 +860,11 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
 
                 #Exposure criteria.
                 if line[4] == 'E':
-
+                    # Create a new entry in the habitat / stressor exposure
+                    # dictionary setting a default value of True for if
+                    # this pair has a valid interaction and therefore to
+                    # compute overlap. Used in hra.make_add_overlap_rasters
+                    h_s_e[(hab_name, stress_name)]['compute_overlap'] = True
                     #If criteria rasters are desired for that criteria.
                     if line[1] == 'SHAPE':
                         h_s_e[(hab_name, stress_name)]['Crit_Rasters'][
@@ -868,12 +872,38 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                             float, line[2:4])))
                     #Have already error checked, so this must be a float.
                     else:
-                        h_s_e[(hab_name, stress_name)]['Crit_Ratings'][
-                            line[0]] = dict(zip(headers, map(
-                            float, line[1:4])))
+                        # Check to see if the user has set a rating to "NA"
+                        if line[1].lower() == 'na':
+                            # Since the user has entered a Ratings value of
+                            # "NA", they indicate there should be no
+                            # interaction between stressor and habitat
+                            LOGGER.debug("Pair '(%s, %s)' being set for NO overlap", (hab_name, stress_name))
+                            # For consistency, set all other headers but
+                            # Ratings to specified value
+                            h_s_e[(hab_name, stress_name)]['Crit_Ratings'][
+                                line[0]] = dict(zip(headers[1:3], map(
+                                float, line[2:4])))
+                            # Set the Rating to 0.0, this is so that later
+                            # in the function "zero_check", the dictionary
+                            # line is removed and not used in future
+                            # calculations
+                            h_s_e[(hab_name, stress_name)]['Crit_Ratings'][
+                                line[0]][headers[0]] = 0.0
+                            # Set the habitat / stressor overlap indicator to
+                            # False
+                            h_s_e[(hab_name, stress_name)]['compute_overlap'] = False
+                        else:
+                            h_s_e[(hab_name, stress_name)]['Crit_Ratings'][
+                                line[0]] = dict(zip(headers, map(
+                                float, line[1:4])))
 
                 #We have already checked, so this must be a 'C'
                 else:
+                    # Create a new entry in the habitat / stressor exposure
+                    # dictionary setting a default value of True for if
+                    # this pair has a valid interaction and therefore to
+                    # compute overlap. Used in hra.make_add_overlap_rasters
+                    h_s_c[(hab_name, stress_name)]['compute_overlap'] = True
                     #If criteria rasters are desired for that criteria.
                     if line[1] == 'SHAPE':
                         h_s_c[(hab_name, stress_name)]['Crit_Rasters'][
@@ -881,9 +911,30 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                             float, line[2:4])))
                     #Have already error checked, so this must be a float.
                     else:
-                        h_s_c[(hab_name, stress_name)]['Crit_Ratings'][
-                            line[0]] = dict(zip(headers, map(
-                            float, line[1:4])))
+                        # Check to see if the user has set a rating to "NA"
+                        if line[1].lower() == 'na':
+                            # Since the user has entered a Ratings value of
+                            # "NA", they indicate there should be no
+                            # interaction between stressor and habitat
+                            LOGGER.debug("Pair '(%s, %s)' being set for NO overlap", (hab_name, stress_name))
+                            # For consistency, set all other headers but
+                            # Ratings to specified value
+                            h_s_c[(hab_name, stress_name)]['Crit_Ratings'][
+                                line[0]] = dict(zip(headers[1:3], map(
+                                float, line[2:4])))
+                            # Set the Rating to 0.0, this is so that later
+                            # in the function "zero_check", the dictionary
+                            # line is removed and not used in future
+                            # calculations
+                            h_s_c[(hab_name, stress_name)]['Crit_Ratings'][
+                                line[0]][headers[0]] = 0.0
+                            # Set the habitat / stressor overlap indicator to
+                            # False
+                            h_s_c[(hab_name, stress_name)]['compute_overlap'] = False
+                        else:
+                            h_s_c[(hab_name, stress_name)]['Crit_Ratings'][
+                                line[0]] = dict(zip(headers, map(
+                                float, line[1:4])))
 
                 try:
                     line = csv_reader.next()
@@ -926,8 +977,9 @@ def error_check(line, hab_name, stress_name):
 
     Returns nothing, should raise exception if there's an issue.
     '''
+    # Check that, if the Ratings value is not SHAPE or NA that it is a float.
     #Rating
-    if line[1] != 'SHAPE':
+    if line[1] != 'SHAPE' and line[1].lower() != 'na':
         try:
             float(line[1])
         except ValueError:
