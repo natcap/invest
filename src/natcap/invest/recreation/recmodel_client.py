@@ -148,7 +148,13 @@ def execute(args):
         [(_OUTPUT_BASE_FILES, output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
+    # in case the user defines a hostname
+    if 'hostname' in args:
+        path = "PYRO:natcap.invest.recreation@%s:%s" % (
+            args['hostname'], args['port'])
+    else:
+        # else use a well known path to get active server
+        path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
     recmodel_server = Pyro4.Proxy(path)
 
     if args['grid_aoi']:
