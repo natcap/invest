@@ -713,7 +713,7 @@ def _calc_poly_pud(
         if max_date is not None:
             n_years = max_date.tm_year - min_date.tm_year + 1
             pud_averages[0] = len(pud_set) / float(n_years)
-            for month, monthly_pud_set in pud_monthly_set:
+            for month, monthly_pud_set in pud_monthly_set.iteritems():
                 pud_averages[int(month)] = (
                     len(monthly_pud_set) / float(n_years))
 
