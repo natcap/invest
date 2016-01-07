@@ -1198,10 +1198,13 @@ def clean(options):
                      'api_env',
                      'natcap.invest.egg-info',
                      'release_env',
+                     'test_env',
                      'invest-bin',
                      ]
     files_to_rm = [
         options.env.bootstrap_file,
+        'installer/linux/*.deb',
+        'installer/linux/*.rpm',
         'installer/darwin/*.dmg',
         'installer/windows/*.exe',
     ]
