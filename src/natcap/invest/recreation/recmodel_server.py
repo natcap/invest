@@ -152,7 +152,7 @@ class RecModel(object):
             zip_file_binary (string): a bytestring that is a zip file of an
                 OGR compatable vector.
             date_range (string 2-tuple): a tuple that contains the inclusive
-                start and end date in text form as YYYY-MM-DD
+                start and end date as a numpy datetime64 object
             out_vector_filename (string): base filename of ouput vector
 
         Returns:
@@ -190,9 +190,10 @@ class RecModel(object):
             numpy_date_range = (
                 numpy.datetime64(date_range[0]),
                 numpy.datetime64(date_range[1]))
-            base_pud_aoi_path = self._calc_aggregated_points_in_aoi(
-                aoi_path, workspace_path, numpy_date_range,
-                out_vector_filename)
+            base_pud_aoi_path, monthly_table_path = (
+                self._calc_aggregated_points_in_aoi(
+                    aoi_path, workspace_path, numpy_date_range,
+                    out_vector_filename))
 
             #ZIP and stream the result back
             print 'zipping result'
@@ -202,6 +203,8 @@ class RecModel(object):
                 for filename in glob.glob(
                         os.path.splitext(base_pud_aoi_path)[0] + '.*'):
                     myzip.write(filename, os.path.basename(filename))
+                myzip.write(
+                    monthly_table_path, os.path.basename(monthly_table_path))
             #return the binary stream
             print (
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
@@ -354,6 +357,17 @@ class RecModel(object):
         #Read the result until we've seen n_processes_alive
         n_processes_alive = n_polytest_processes
         n_poly_tested = 0
+
+        monthly_table_path = os.path.join(workspace_path, 'monthly_table.csv')
+        monthly_table = open(monthly_table_path, 'wb')
+        date_range_year = [
+            date.tolist().timetuple().tm_year for date in date_range]
+        table_headers = [
+            '%s-%s' % (year, month) for year in xrange(
+                int(date_range_year[0]), int(date_range_year[1])+1)
+            for month in xrange(1, 13)]
+        monthly_table.write('poly_id,' + ','.join(table_headers) + '\n')
+
         while True:
             result_tuple = pud_poly_feature_queue.get()
             n_poly_tested += 1
@@ -368,11 +382,16 @@ class RecModel(object):
                     '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
                     pud_aoi_layer.GetFeatureCount())
                 last_time = current_time
-            poly_id, pud_list = result_tuple
+            poly_id, pud_list, pud_monthly_set = result_tuple
             poly_feat = pud_aoi_layer.GetFeature(poly_id)
             for pud_index, pud_id in enumerate(pud_id_list):
                 poly_feat.SetField('PUD_%s' % pud_id, pud_list[pud_index])
             pud_aoi_layer.SetFeature(poly_feat)
+
+            monthly_table.write('%s,' % poly_id)
+            for header in table_headers:
+                monthly_table.write('%s,' % len(pud_monthly_set[header]))
+            monthly_table.write('\n')
 
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                'done with polygon test, syncing to disk')
@@ -381,7 +400,7 @@ class RecModel(object):
 
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                'returning out shapefile path')
-        return out_aoi_pud_path
+        return out_aoi_pud_path, monthly_table_path
 
 
 def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
@@ -706,6 +725,7 @@ def _calc_poly_pud(
                 pud_hash = user_hash + '%s-%s-%s' % (year, month, day)
                 pud_set.add(pud_hash)
                 pud_monthly_set[month].add(pud_hash)
+                pud_monthly_set["%s-%s" % (year, month)].add(pud_hash)
 
         # calculate the number of years and months between the max/min dates
         # index 0 is annual and 1-12 are the months
@@ -713,11 +733,12 @@ def _calc_poly_pud(
         if max_date is not None:
             n_years = max_date.tm_year - min_date.tm_year + 1
             pud_averages[0] = len(pud_set) / float(n_years)
-            for month, monthly_pud_set in pud_monthly_set.iteritems():
-                pud_averages[int(month)] = (
+            for month_id in xrange(1, 13):
+                monthly_pud_set = pud_monthly_set[str(month_id)]
+                pud_averages[month_id] = (
                     len(monthly_pud_set) / float(n_years))
 
-        pud_poly_feature_queue.put((poly_id, pud_averages))
+        pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
     pud_poly_feature_queue.put('STOP')
 
 
