@@ -496,7 +496,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         # Check to see if the user has determined this habitat / stressor
         # pair should have no interaction. This means setting no overlap
         compute_overlap = h_s_e[pair]['compute_overlap'] and h_s_c[pair]['compute_overlap']
-        LOGGER.debug("Compute Overlap is set to %s, for pair %s", (compute_overlap, pair))
+        LOGGER.debug("Compute Overlap is set to %s, for pair %s", compute_overlap, pair)
 
         h, s = pair
         h_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(habitats[h]['DS'])

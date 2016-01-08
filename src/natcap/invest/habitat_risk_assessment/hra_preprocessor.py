@@ -877,7 +877,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                             # Since the user has entered a Ratings value of
                             # "NA", they indicate there should be no
                             # interaction between stressor and habitat
-                            LOGGER.debug("Pair '(%s, %s)' being set for NO overlap", (hab_name, stress_name))
+                            LOGGER.debug("Pair '(%s, %s)' being set for NO overlap", hab_name, stress_name)
                             # For consistency, set all other headers but
                             # Ratings to specified value
                             h_s_e[(hab_name, stress_name)]['Crit_Ratings'][
@@ -916,7 +916,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                             # Since the user has entered a Ratings value of
                             # "NA", they indicate there should be no
                             # interaction between stressor and habitat
-                            LOGGER.debug("Pair '(%s, %s)' being set for NO overlap", (hab_name, stress_name))
+                            LOGGER.debug("Pair '(%s, %s)' being set for NO overlap", hab_name, stress_name)
                             # For consistency, set all other headers but
                             # Ratings to specified value
                             h_s_c[(hab_name, stress_name)]['Crit_Ratings'][
