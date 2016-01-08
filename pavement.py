@@ -59,6 +59,43 @@ def is_exe(fpath):
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 
+def find_executable(program):
+    """
+    Locate the provided program.
+
+    Parameters:
+        program (string): Either the absolute path to an executable or an exe
+            name (e.g. python, git).  On Windows systems, if the program name
+            does not already include '.exe', it will be appended to the
+            program name provided.
+
+    Returns:
+        The absolute path to the executable if it can be found.  Raises
+        EnvironmentError if not.
+
+    Raises:
+        EnvironmentError: When the program cannot be found.
+
+    """
+    if platform.system() == 'Windows' and not program.endswith('.exe'):
+        program += '.exe'
+
+    fpath, fname = os.path.split(program)
+    if fpath:  # fpath is not '' when an absolute path is given.
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    raise EnvironmentError(
+        "Executable not found: {program}".format(
+            program=program))
+
+
 def user_os_installer():
     """
     Determine the operating system installer.
@@ -1525,6 +1562,7 @@ def _import_namespace_pkg(modname, print_msg=True):
 
     return (module, return_type)
 
+
 @task
 @cmdopts([
     ('fix-namespace', '', 'Fix issues with the natcap namespace if found'),
@@ -1555,29 +1593,15 @@ def check(options):
     for program, build_steps in programs:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
 
-        if platform.system() == 'Windows':
-            program += '.exe'
-
-        fpath, fname = os.path.split(program)
-        if fpath:
-            if not is_exe(program):
-                print "{error} executable not found: {program}".format(
-                    error=ERROR, program=program)
-                errors_found = True
+        try:
+            path_to_exe = find_executable(program)
+        except EnvironmentError as exception_msg:
+            errors_found = True
+            print "{error} {exe} not found. Required for {step}".format(
+                error=ERROR, exe=program, step=build_steps)
         else:
-            found_exe = False
-            for path in os.environ["PATH"].split(os.pathsep):
-                path = path.strip('"')
-                exe_file = os.path.join(path, program)
-                if is_exe(exe_file):
-                    found_exe = True
-                    print "Found %-14s: %s" % (program, exe_file)
-                    break
-
-            if not found_exe:
-                print "{error} {exe} not found. Required for {step}".format(
-                    error=ERROR, exe=program, step=build_steps)
-                errors_found = True
+            found_exe = True
+            print "Found %-14s: %s" % (program, path_to_exe)
 
     required = 'required'
     suggested = 'suggested'
