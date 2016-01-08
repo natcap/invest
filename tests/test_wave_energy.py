@@ -3,7 +3,6 @@ import unittest
 import tempfile
 import shutil
 import os
-import collections
 import csv
 
 import pygeoprocessing.testing
