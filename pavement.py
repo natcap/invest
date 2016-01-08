@@ -479,7 +479,11 @@ class SVNRepository(Repository):
             except BuildFailure as failure:
                 if retry:
                     print 'Cleaning up SVN repository %s' % self.local_path
-                    sh('svn cleanup', cwd=self.local_path)
+                    try:
+                        sh('svn cleanup', cwd=self.local_path)
+                    except OSError as error:
+                        # This is raised when svn isn't installed.
+                        find_executable(self.cmd)
                 else:
                     raise failure
 
