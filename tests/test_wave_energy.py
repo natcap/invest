@@ -21,11 +21,12 @@ SAMPLE_DATA = os.path.join(
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
 
+
 class WaveEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wave Energy module."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -201,7 +202,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         attrs_poly = [{'id': 1}]
         # Create geometry for the points, which will get clipped
         geom_one = [
-            Point(pos_x + 20, pos_y - 20), Point(pos_x + 40, pos_y -20),
+            Point(pos_x + 20, pos_y - 20), Point(pos_x + 40, pos_y - 20),
             Point(pos_x + 100, pos_y - 20)]
         # Create geometry for the polygons, which will be used to clip
         geom_two = [Polygon(
@@ -222,14 +223,17 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         output_path = os.path.join(temp_dir, 'vector.shp')
         # Call the function to test
-        wave_energy.clip_shape(shape_to_clip_uri, binding_shape_uri, output_path)
+        wave_energy.clip_shape(
+            shape_to_clip_uri, binding_shape_uri, output_path)
 
         # Create the expected point shapefile
         fields_pt = {'id': 'int', 'myattr': 'string'}
         attrs_one = [{'id': 1, 'myattr': 'hello'}, {'id': 2, 'myattr': 'bye'}]
-        geom_three = [Point(pos_x + 20, pos_y - 20), Point(pos_x + 40, pos_y -20)]
+        geom_three = [Point(pos_x + 20, pos_y - 20),
+                      Point(pos_x + 40, pos_y - 20)]
         # Need to save the expected shapefile in a sub folder since it must
-        # have the same layer name / filename as what it will be compared against.
+        # have the same layer name / filename as what it will be compared
+        # against.
         if not os.path.isdir(os.path.join(temp_dir, 'exp_vector')):
             os.mkdir(os.path.join(temp_dir, 'exp_vector'))
 
@@ -238,7 +242,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
             geom_three, srs.projection, fields_pt, attrs_one,
             vector_format='ESRI Shapefile', filename=expected_uri)
 
-        pygeoprocessing.testing.assert_vectors_equal(output_path, expected_shape, 1e-9)
+        pygeoprocessing.testing.assert_vectors_equal(
+            output_path, expected_shape, 1e-9)
 
     def test_clip_shape_no_intersection(self):
         """WaveEnergy: testing 'clip_shape' w/ no intersection."""
@@ -328,14 +333,15 @@ class WaveEnergyUnitTests(unittest.TestCase):
             numpy.testing.assert_array_equal(result[key], exp_res[key])
 
         for key in [(102, 370), (102, 371)]:
-            numpy.testing.assert_array_equal(result['bin_matrix'][key], exp_res['bin_matrix'][key])
+            numpy.testing.assert_array_equal(
+                result['bin_matrix'][key], exp_res['bin_matrix'][key])
 
 
 class WaveEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wave Energy module."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -548,7 +554,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_removing_filenames(self):
-        """WaveEnergy: testing that file paths which already exist are removed."""
+        """WaveEnergy: testing file paths which already exist are removed."""
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
