@@ -53,8 +53,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         epsg_id = 4326
         reference = osr.SpatialReference()
         proj_result = reference.ImportFromEPSG(epsg_id)
-        if proj_result != 0:
-            raise RuntimeError('EPSG code %s not recognized' % epsg_id)
         # Get projection as WKT
         latlong_proj = reference.ExportToWkt()
         # Set origin to use for setting up geometries / geotransforms
