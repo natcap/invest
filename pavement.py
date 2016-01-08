@@ -1543,6 +1543,7 @@ def check(options):
     programs = [
         ('hg', 'everything'),
         ('git', 'binaries'),
+        ('svn', 'testing, installers'),
         ('make', 'documentation'),
         ('pdflatex', 'documentation'),
         ('pandoc', 'documentation'),
