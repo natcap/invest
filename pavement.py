@@ -968,7 +968,9 @@ def fetch(args, options):
                                   'using the "@" symbol.  Example: '
                                   ' `paver fetch data/invest-data@27`. '
                                   'If no repos are specified, all known repos '
-                                  'will be fetched.'))
+                                  'will be fetched.  Specifying an argument of'
+                                  ' "*" will also cause all repos to be '
+                                  'fetched.'))
 
     # figure out which repos/revs we're hoping to update.
     # None is our internal, temp keyword representing the LATEST possible
@@ -992,12 +994,15 @@ def fetch(args, options):
             repo_name = repo_name[:-1]
         user_repo_revs[repo_name] = repo_rev
 
+    # We include all repos if EITHER the user has not provided any arguments at
+    # all OR the one argument present is a *
+    include_all_repos = (parsed_args.repo == [] or parsed_args.repo == ['*'])
+
     # determine which known repos the user wants to operate on.
     # example: `src` would represent all repos under src/
     # example: `data` would represent all repos under data/
     # example: `src/pyinstaller` would represent the pyinstaller repo
     desired_repo_revs = {}
-    include_all_repos = parsed_args.repo == 0
     known_repos = dict((repo.local_path, repo) for repo in REPOS)
     for known_repo_path, repo_obj in known_repos.iteritems():
         if include_all_repos:
