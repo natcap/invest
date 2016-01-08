@@ -680,7 +680,11 @@ def execute(args):
 
     LOGGER.info('Wind Energy Biophysical Model Complete')
 
-    valuation_checked = args.pop('valuation_container', False)
+    if 'valuation_container' in args:
+        valuation_checked = args['valuation_container']
+    else:
+        valuation_checked = False
+
     if not valuation_checked:
         LOGGER.debug('Valuation Not Selected')
         return

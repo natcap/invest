@@ -465,7 +465,11 @@ def execute(args):
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
-    valuation_checked = args.pop('valuation_container', False)
+    if 'valuation_container' in args:
+        valuation_checked = args['valuation_container']
+    else:
+        valuation_checked = False
+
     if not valuation_checked:
         LOGGER.debug('Valuation not selected')
         #The rest of the function is valuation, so we can quit now

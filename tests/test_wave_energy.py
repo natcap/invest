@@ -570,9 +570,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         # Run through the model again, which should mean deleting
         # shapefiles that have already been made, but which need
         # to be created again.
-        # Wave energy pops the 'valuation_container' if present,
-        # so we have to add that back in!
-        args['valuation_container'] = True
         wave_energy.execute(args)
 
         raster_results = [
