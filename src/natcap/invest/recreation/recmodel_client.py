@@ -542,7 +542,10 @@ def build_regression_coefficients(
             feature = out_coefficent_layer.GetFeature(feature_id)
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
+    out_coefficent_layer = None
     out_coefficent_vector.SyncToDisk()
+    ogr.DataSource.__swig_destroy__(out_coefficent_vector)
+    out_coefficent_vector = None
 
 
 def _build_temporary_indexed_vector(vector_path):
@@ -948,6 +951,11 @@ def calculate_scenario(
                 feature.GetField(str(scenario_predictor_id)))
         feature.SetField(response_id, response_value)
         scenario_coefficent_layer.SetFeature(feature)
+
+    scenario_coefficent_layer = None
+    scenario_coefficent_vector.SyncToDisk()
+    ogr.DataSource.__swig_destroy__(scenario_coefficent_vector)
+    scenario_coefficent_vector = None
 
 
 def _validate_same_id_lengths(table_path):

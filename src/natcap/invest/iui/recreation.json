@@ -39,7 +39,7 @@
           "args_id": "aoi_path",
           "type": "file",
           "label": "Area of Interest (Vector)",
-          "defaultValue": "../Recreation/input/initial/BC_AOI.shp",
+          "defaultValue": "../Recreation/BC_AOI.shp",
           "validateAs": {
             "type": "OGR"
           },
@@ -84,7 +84,7 @@
               "args_id": "predictor_table_path",
               "type": "file",
               "label": "Predictor Table",
-              "defaultValue": "../Recreation/input/initial/predictors.csv",
+              "defaultValue": "../Recreation/predictors.csv",
               "validateAs": {
                 "type": "CSV"
               },
@@ -96,7 +96,7 @@
               "args_id": "scenario_predictor_table_path",
               "type": "file",
               "label": "Scenario Predictor Table (optional)",
-              "defaultValue": "../Recreation/input/initial/scenario_predictors.csv",
+              "defaultValue": "../Recreation/scenario_predictors.csv",
               "validateAs": {
                 "type": "CSV"
               },
