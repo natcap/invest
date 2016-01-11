@@ -154,7 +154,22 @@ def execute(args):
     # during debugging and think it makes sense to have in production of this
     # model too.
     warnings.filterwarnings('error')
+    try:
+        _execute(args)
+    finally:
+        warnings.resetwarnings()
 
+
+def _execute(args):
+    """Execute the seasonal water yield model.
+
+    Parameters:
+        See the parameters for
+        `natcap.invest.seasonal_water_yield.seasonal_wateryield.execute`.
+
+    Returns:
+        None
+    """
     LOGGER.info('prepare and test inputs for common errors')
 
     # fail early on a missing required rain events table
@@ -508,8 +523,6 @@ def execute(args):
     LOGGER.info(' `--\' (v  __( / ||')
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
-
-    warnings.resetwarnings()
 
 
 def _calculate_monthly_quick_flow(
