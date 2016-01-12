@@ -495,12 +495,16 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
     for pair in h_s_c:
         # Check to see if the user has determined this habitat / stressor
         # pair should have no interaction. This means setting no overlap
-        compute_overlap = h_s_e[pair]['compute_overlap'] and h_s_c[pair]['compute_overlap']
-        LOGGER.debug("Compute Overlap is set to %s, for pair %s", compute_overlap, pair)
+        compute_overlap = all(h_s_e[pair]['compute_overlap'] +
+                              h_s_c[pair]['compute_overlap'])
+        LOGGER.debug("Compute Overlap is set to %s, for pair %s",
+                     compute_overlap, pair)
 
         h, s = pair
-        h_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(habitats[h]['DS'])
-        s_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(stress_dict[s])
+        h_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+            habitats[h]['DS'])
+        s_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+            stress_dict[s])
 
         files = [habitats[h]['DS'], stress_dict[s]]
 
@@ -510,11 +514,13 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             if compute_overlap:
                 # If there is an overlap return the stressor value
                 return np.where(
-                    ((h_pix != h_nodata) & (s_pix != s_nodata)), s_pix, h_nodata)
+                    ((h_pix != h_nodata) & (s_pix != s_nodata)),
+                    s_pix, h_nodata)
             else:
                 # Even if there is an overlap, return h_nodata
                 return np.where(
-                    ((h_pix != h_nodata) & (s_pix != s_nodata)), h_nodata, h_nodata)
+                    ((h_pix != h_nodata) & (s_pix != s_nodata)),
+                    h_nodata, h_nodata)
 
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 

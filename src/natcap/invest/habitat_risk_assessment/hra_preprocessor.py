@@ -65,6 +65,17 @@ class MissingSensOrResilException(Exception):
     '''
     pass
 
+class NA_RatingsError(Exception):
+    """
+    An exception that is raised on an invalid 'NA' input.
+
+    When one or more Ratings value is set to "NA" for a habitat - stressor
+    pair, but not ALL are set to "NA". If ALL Rating values for a
+    habitat - stressor pair are "NA", then the habitat - stressor pair is
+    considered to have NO interaction.
+    """
+
+    pass
 
 def execute(args):
     """
@@ -851,6 +862,13 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
             h_s_c[(hab_name, stress_name)] = {'Crit_Ratings': {},
                                               'Crit_Rasters': {}}
 
+            # Create a new entry in the habitat / stressor exposure
+            # and circumstance dictionaries setting a default value of True
+            # for if this pair has a valid interaction and therefore to
+            # compute overlap. Used in hra.make_add_overlap_rasters
+            h_s_e[(hab_name, stress_name)]['overlap_list'] = []
+            h_s_c[(hab_name, stress_name)]['overlap_list'] = []
+
             #Draining the ratings scores.
             while ''.join(line) != '':
 
@@ -860,11 +878,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
 
                 #Exposure criteria.
                 if line[4] == 'E':
-                    # Create a new entry in the habitat / stressor exposure
-                    # dictionary setting a default value of True for if
-                    # this pair has a valid interaction and therefore to
-                    # compute overlap. Used in hra.make_add_overlap_rasters
-                    h_s_e[(hab_name, stress_name)]['compute_overlap'] = True
+                    h_s_e[(hab_name, stress_name)]['overlap_list'].append(True)
                     #If criteria rasters are desired for that criteria.
                     if line[1] == 'SHAPE':
                         h_s_e[(hab_name, stress_name)]['Crit_Rasters'][
@@ -877,7 +891,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                             # Since the user has entered a Ratings value of
                             # "NA", they indicate there should be no
                             # interaction between stressor and habitat
-                            LOGGER.debug("Pair '(%s, %s)' being set for NO overlap", hab_name, stress_name)
+
                             # For consistency, set all other headers but
                             # Ratings to specified value
                             h_s_e[(hab_name, stress_name)]['Crit_Ratings'][
@@ -891,7 +905,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                                 line[0]][headers[0]] = 0.0
                             # Set the habitat / stressor overlap indicator to
                             # False
-                            h_s_e[(hab_name, stress_name)]['compute_overlap'] = False
+                            h_s_e[(hab_name, stress_name)]['overlap_list'][-1] = False
                         else:
                             h_s_e[(hab_name, stress_name)]['Crit_Ratings'][
                                 line[0]] = dict(zip(headers, map(
@@ -903,7 +917,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                     # dictionary setting a default value of True for if
                     # this pair has a valid interaction and therefore to
                     # compute overlap. Used in hra.make_add_overlap_rasters
-                    h_s_c[(hab_name, stress_name)]['compute_overlap'] = True
+                    h_s_c[(hab_name, stress_name)]['overlap_list'].append(True)
                     #If criteria rasters are desired for that criteria.
                     if line[1] == 'SHAPE':
                         h_s_c[(hab_name, stress_name)]['Crit_Rasters'][
@@ -916,7 +930,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                             # Since the user has entered a Ratings value of
                             # "NA", they indicate there should be no
                             # interaction between stressor and habitat
-                            LOGGER.debug("Pair '(%s, %s)' being set for NO overlap", hab_name, stress_name)
+
                             # For consistency, set all other headers but
                             # Ratings to specified value
                             h_s_c[(hab_name, stress_name)]['Crit_Ratings'][
@@ -930,7 +944,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                                 line[0]][headers[0]] = 0.0
                             # Set the habitat / stressor overlap indicator to
                             # False
-                            h_s_c[(hab_name, stress_name)]['compute_overlap'] = False
+                            h_s_c[(hab_name, stress_name)]['overlap_list'][-1] = False
                         else:
                             h_s_c[(hab_name, stress_name)]['Crit_Ratings'][
                                 line[0]] = dict(zip(headers, map(
@@ -940,6 +954,26 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                     line = csv_reader.next()
                 except StopIteration:
                     break
+
+            # Combine circumstance and exposure overlap lists
+            overlap_list = (h_s_e[(hab_name, stress_name)]['overlap_list'] +
+                h_s_c[(hab_name, stress_name)]['overlap_list'])
+            # Error if at least one, but not all Ratings for the
+            # habitat - stressor pair are set to 'NA'
+            if any(overlap_list) and not all(overlap_list):
+                raise NA_RatingsError("There were 'NA' Rating values found "
+                    "for habitat - stressor pair : %s - %s , in the criteria "
+                    "ratings CSV file, however, not all Rating values were "
+                    "set to 'NA'. 'NA' values indicate that the habitat "
+                    "and stressor should be considered to have NO "
+                    "Interaction, even if there is an overlap from the "
+                    "sources. The model treats this as setting any overlap "
+                    "between two sources to False. To achieve this "
+                    "behaviour ALL Rating values for the habitat - stressor "
+                    "pair must be set to 'NA'. If one or a few of the "
+                    "criteria for a habitat - stressor pair should be "
+                    "ignored, please use a zero (0) value." % (
+                    hab_name, stress_name))
 
             #Assume if we've gotten here, we're at the end of a block. Iterate
             #counter by one, since we know it's A whitespace line. If there is
