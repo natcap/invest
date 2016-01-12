@@ -863,7 +863,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                                               'Crit_Rasters': {}}
 
             # Create a new entry in the habitat / stressor exposure
-            # and circumstance dictionaries setting a default value of True
+            # and consequence dictionaries setting a default value of True
             # for if this pair has a valid interaction and therefore to
             # compute overlap. Used in hra.make_add_overlap_rasters
             h_s_e[(hab_name, stress_name)]['overlap_list'] = []
@@ -955,7 +955,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                 except StopIteration:
                     break
 
-            # Combine circumstance and exposure overlap lists
+            # Combine consequence and exposure overlap lists
             overlap_list = (h_s_e[(hab_name, stress_name)]['overlap_list'] +
                 h_s_c[(hab_name, stress_name)]['overlap_list'])
             # Error if at least one, but not all Ratings for the
