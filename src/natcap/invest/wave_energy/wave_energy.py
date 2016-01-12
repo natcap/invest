@@ -20,6 +20,12 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
+class IntersectionError(Exception):
+    """A custom error message for when the AOI does not intersect any wave
+        data points.
+    """
+    pass
+
 def execute(args):
     """
     Executes both the biophysical and valuation parts of the
@@ -459,7 +465,11 @@ def execute(args):
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
-    valuation_checked = args.pop('valuation_container', False)
+    if 'valuation_container' in args:
+        valuation_checked = args['valuation_container']
+    else:
+        valuation_checked = False
+
     if not valuation_checked:
         LOGGER.debug('Valuation not selected')
         #The rest of the function is valuation, so we can quit now
@@ -1270,7 +1280,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     # Add in a check to make sure the intersection didn't come back
     # empty
     if(shp_layer.GetFeatureCount() == 0):
-        raise Exception('Intersection ERROR: clip_shape found no '
+        raise IntersectionError('Intersection ERROR: clip_shape found no '
             'intersection between: file - %s and file - %s. This '
             'could be caused by the AOI not overlapping any Wave Energy '
             'Points. '

@@ -154,7 +154,22 @@ def execute(args):
     # during debugging and think it makes sense to have in production of this
     # model too.
     warnings.filterwarnings('error')
+    try:
+        _execute(args)
+    finally:
+        warnings.resetwarnings()
 
+
+def _execute(args):
+    """Execute the seasonal water yield model.
+
+    Parameters:
+        See the parameters for
+        `natcap.invest.seasonal_water_yield.seasonal_wateryield.execute`.
+
+    Returns:
+        None
+    """
     LOGGER.info('prepare and test inputs for common errors')
 
     # fail early on a missing required rain events table
@@ -248,11 +263,10 @@ def execute(args):
             [file_registry['soil_group_aligned_path']] +
             file_registry['et0_path_aligned_list'] + output_align_list)
 
-    align_index = 0
+    align_index = len(input_align_list) - 1  # this aligns with the DEM
     if args['user_defined_local_recharge']:
         input_align_list.append(args['l_path'])
         output_align_list.append(file_registry['l_aligned_path'])
-        align_index = len(input_align_list) - 1
     elif args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
         output_align_list.append(
@@ -509,8 +523,6 @@ def execute(args):
     LOGGER.info(' `--\' (v  __( / ||')
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
-
-    warnings.resetwarnings()
 
 
 def _calculate_monthly_quick_flow(

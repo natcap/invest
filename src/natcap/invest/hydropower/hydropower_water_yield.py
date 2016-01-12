@@ -489,7 +489,11 @@ def execute(args):
         os.remove(tmp_uri)
 
     # Check to see if Water Scarcity was selected to run
-    water_scarcity_checked = args.pop('water_scarcity_container', False)
+    if 'water_scarcity_container' in args:
+        water_scarcity_checked = args['water_scarcity_container']
+    else:
+        water_scarcity_checked = False
+
     if not water_scarcity_checked:
         LOGGER.debug('Water Scarcity Not Selected')
         # Since Scarcity and Valuation are not selected write out
@@ -570,7 +574,11 @@ def execute(args):
 
 
     # Check to see if Valuation was selected to run
-    valuation_checked = args.pop('valuation_container', False)
+    if 'valuation_container' in args:
+        valuation_checked = args['valuation_container']
+    else:
+        valuation_checked = False
+
     if not valuation_checked:
         LOGGER.debug('Valuation Not Selected')
         # Since Valuation are not selected write out
