@@ -477,14 +477,14 @@ class SVNRepository(Repository):
             try:
                 cmd(*args, **kwargs)
             except BuildFailure as failure:
-                if retry:
+                if retry and self.ischeckedout():
+                    # We should only retry if the repo is checked out.
                     print 'Cleaning up SVN repository %s' % self.local_path
-                    try:
-                        sh('svn cleanup', cwd=self.local_path)
-                    except OSError as error:
-                        # This is raised when svn isn't installed.
-                        find_executable(self.cmd)
+                    sh('svn cleanup', cwd=self.local_path)
+                    # Now we'll try the original command again!
                 else:
+                    # If there was a failure before the repo is checked out,
+                    # then the issue is probably identified in stderr.
                     raise failure
 
     def clone(self, rev=None):
