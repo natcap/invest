@@ -46,6 +46,116 @@ except pkg_resources.VersionConflict:
     NO_WHEEL_SH = '--no-use-wheel'
 
 
+def supports_color():
+    """
+    Returns True if the running system's terminal supports color, and False
+    otherwise.
+
+    Taken from http://stackoverflow.com/a/22254892/299084
+    """
+    plat = sys.platform
+    supported_platform = plat != 'Pocket PC' and (plat != 'win32' or
+                                                  'ANSICON' in os.environ)
+    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+    if not supported_platform or not is_a_tty:
+        return False
+    return True
+
+
+TERM_IS_COLOR = supports_color()
+
+
+def _colorize(color_pattern, msg):
+    """
+    Apply the color pattern (likely an ANSI color escape code sequence)
+    to the message if the current terminal supports color.  If the terminal
+    does not support color, return the messge.
+    """
+    if TERM_IS_COLOR:
+        return color_pattern % msg
+    return msg
+
+def green(msg):
+    """
+    Return a string that is formatted as ANSI green.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[92m%s\033[0m', msg)
+
+def yellow(msg):
+    """
+    Return a string that is formatted as ANSI yellow.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[93m%s\033[0m', msg)
+
+def red(msg):
+    """
+    Return a string that is formatted as ANSI red.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[91m%s\033[0m', msg)
+
+def bold(message):
+    """
+    Return a string formatted as ANSI bold.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize("\033[1m%s\033[0m", message)
+
+
+ERROR = red('ERROR:')
+WARNING = yellow('WARNING:')
+OK = green('OK')
+
+
+def _import_namespace_pkg(modname, print_msg=True):
+    """
+    Import a package within the natcap namespace and print helpful
+    debug messages as packages are discovered.
+
+    Parameters:
+        modname (string): The natcap subpackage name.
+        print_msg=True (bool): Whether to print messages about the import
+            state.
+
+    Returns:
+        Either 'egg' or 'dir' if the package is importable.
+
+    Raises:
+        ImportError: If the package cannot be imported.
+    """
+    module = importlib.import_module('natcap.%s' % modname)
+    try:
+        version = module.__version__
+    except AttributeError:
+        packagename = 'natcap.%s' % modname
+        version = pkg_resources.require(packagename)[0].version
+
+    is_egg = reduce(
+        lambda x, y: x or y,
+        [p.endswith('.egg') for p in module.__file__.split(os.sep)])
+
+    if len(module.__path__) > 1:
+        module_path = module.__path__
+    else:
+        module_path = module.__path__[0]
+
+    if not is_egg:
+        return_type = 'dir'
+        message = '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
+            warn=WARNING, mod=modname, ver=version, dir=module_path)
+    else:
+        return_type = 'egg'
+        message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
+            mod=modname, ver=version, dir=module_path)
+
+    if print_msg:
+        print message
+
+    return (module, return_type)
+
+
 def is_exe(fpath):
     """
     Check whether a file is executable and that it exists.
@@ -763,13 +873,6 @@ def env(options):
     """
     Set up a virtualenv for the project.
     """
-
-    call_task('check_repo', options={
-        'force-dev': False,
-        'repo': 'src/pygeoprocessing',
-        'fetch': True,
-    })
-
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
     # We therefore make our own bootstrapping function calls here.
@@ -804,17 +907,40 @@ def after_install(options, home_dir):
     preinstalled_pkgs = set([])
 
     if options.env.with_pygeoprocessing:
-        # install with --no-deps (will otherwise try to install numpy, gdal,
-        # etc.), and -I to ignore any existing pygeoprocessing install (as
-        # might exist in system-site-packages).
-        # Installing as egg grants pygeoprocessing greater precendence in the
-        # import order.  If I install as a wheel, the system install of
-        # pygeoprocessing takes precedence.  I believe this to be a bug in
-        # pygeoprocessing (poster, for example, does not have this issue!).
-        install_string += (
-            "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
-            "'--no-deps', '-I', '--egg', './src/pygeoprocessing'])\n"
-        )
+        # Verify that natcap.versioner is present and importable.
+        # pygeoprocessing won't install properly unless this is present.
+        _import_namespace_pkg('versioner')
+
+        # Check and update the pygeoprocessing repo if needed.
+        call_task('check_repo', options={
+            'force-dev': False,
+            'repo': 'src/pygeoprocessing',
+            'fetch': True,
+        })
+
+        try:
+            # Determine the required pygeoprocessing and only install it to the
+            # env if the system version isn't suitable.
+            pygeo_version = REPOS_DICT['pygeoprocessing'].tracked_version(
+                convert=False)
+            pkg_resources.require('pygeoprocessing>=%s' % pygeo_version)
+        except (pkg_resources.DistributionNotFound,
+                pkg_resources.VersionConflict) as (required_pkg, found_pkg):
+            print yellow(('Unsuitable pygeoprocessing %s found, but %s '
+                          'required. Installing the correct version to the '
+                          'dev_env.') % (required_pkg, found_pkg))
+            # install with --no-deps (will otherwise try to install numpy, gdal,
+            # etc.), and -I to ignore any existing pygeoprocessing install (as
+            # might exist in system-site-packages).
+            # Installing as egg grants pygeoprocessing greater precendence in the
+            # import order.  If I install as a wheel, the system install of
+            # pygeoprocessing takes precedence.  I believe this to be a bug in
+            # pygeoprocessing (poster, for example, does not have this issue!).
+            install_string += (
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
+                "'--no-deps', '-I', '--egg', './src/pygeoprocessing'])\n"
+            )
+
         preinstalled_pkgs.add('pygeoprocessing')
     else:
         print 'Skipping the installation of pygeoprocessing per user input.'
@@ -860,7 +986,7 @@ def after_install(options, home_dir):
             projectname = requirement.project_name  # project name w/o version req
             if projectname in preinstalled_pkgs:
                 print ('Requirement %s from requirements.txt already '
-                       'installed') % projectname
+                       'handled by bootstrap script') % projectname
                 continue
             try:
                 install_params = pkg_pip_params[projectname]
@@ -1418,112 +1544,6 @@ def check_repo(options):
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
     print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
-def supports_color():
-    """
-    Returns True if the running system's terminal supports color, and False
-    otherwise.
-
-    Taken from http://stackoverflow.com/a/22254892/299084
-    """
-    plat = sys.platform
-    supported_platform = plat != 'Pocket PC' and (plat != 'win32' or
-                                                  'ANSICON' in os.environ)
-    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
-    if not supported_platform or not is_a_tty:
-        return False
-    return True
-
-TERM_IS_COLOR = supports_color()
-
-def _colorize(color_pattern, msg):
-    """
-    Apply the color pattern (likely an ANSI color escape code sequence)
-    to the message if the current terminal supports color.  If the terminal
-    does not support color, return the messge.
-    """
-    if TERM_IS_COLOR:
-        return color_pattern % msg
-    return msg
-
-def green(msg):
-    """
-    Return a string that is formatted as ANSI green.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[92m%s\033[0m', msg)
-
-def yellow(msg):
-    """
-    Return a string that is formatted as ANSI yellow.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[93m%s\033[0m', msg)
-
-def red(msg):
-    """
-    Return a string that is formatted as ANSI red.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[91m%s\033[0m', msg)
-
-def bold(message):
-    """
-    Return a string formatted as ANSI bold.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize("\033[1m%s\033[0m", message)
-
-
-ERROR = red('ERROR:')
-WARNING = yellow('WARNING:')
-OK = green('OK')
-
-
-def _import_namespace_pkg(modname, print_msg=True):
-    """
-    Import a package within the natcap namespace and print helpful
-    debug messages as packages are discovered.
-
-    Parameters:
-        modname (string): The natcap subpackage name.
-        print_msg=True (bool): Whether to print messages about the import
-            state.
-
-    Returns:
-        Either 'egg' or 'dir' if the package is importable.
-
-    Raises:
-        ImportError: If the package cannot be imported.
-    """
-    module = importlib.import_module('natcap.%s' % modname)
-    try:
-        version = module.__version__
-    except AttributeError:
-        packagename = 'natcap.%s' % modname
-        version = pkg_resources.require(packagename)[0].version
-
-    is_egg = reduce(
-        lambda x, y: x or y,
-        [p.endswith('.egg') for p in module.__file__.split(os.sep)])
-
-    if len(module.__path__) > 1:
-        module_path = module.__path__
-    else:
-        module_path = module.__path__[0]
-
-    if not is_egg:
-        return_type = 'dir'
-        message = '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-            warn=WARNING, mod=modname, ver=version, dir=module_path)
-    else:
-        return_type = 'egg'
-        message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
-            mod=modname, ver=version, dir=module_path)
-
-    if print_msg:
-        print message
-
-    return (module, return_type)
 
 @task
 @cmdopts([
