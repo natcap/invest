@@ -153,7 +153,7 @@ def execute(args):
     # I found this useful to catch all kinds of weird inputs to the model
     # during debugging and think it makes sense to have in production of this
     # model too.
-    warnings.filterwarnings('error')
+    # warnings.filterwarnings('error')
     try:
         _execute(args)
     finally:
@@ -597,10 +597,14 @@ def _calculate_monthly_quick_flow(
         qf_im[:] = qf_nodata
 
         # qf_im is the quickflow at pixel i on month m Eq. [1]
+        # the last two terms modified to be the exponent of the sum of the
+        # logs so that the exponent in the natural log is numerically small
+
         qf_im[valid_mask] = (25.4 * valid_n_events * (
             (a_im - valid_si) * numpy.exp(-0.2 * valid_si / a_im) +
-            valid_si ** 2 / a_im * numpy.exp((0.8 * valid_si) / a_im) *
-            scipy.special.expn(1, valid_si / a_im)))
+            valid_si ** 2 / a_im * numpy.exp(
+                (0.8 * valid_si) / a_im +
+                numpy.log(scipy.special.expn(1, valid_si / a_im)))))
 
         # if precip is 0, then QF should be zero
         qf_im[(p_im == 0) | (n_events == 0)] = 0.0
