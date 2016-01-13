@@ -16,7 +16,7 @@ import pygeoprocessing.routing
 import pygeoprocessing.routing.routing_core
 import natcap.invest.utils
 
-import seasonal_water_yield_core
+import seasonal_water_yield_core  #pylint: disable=import-error
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -153,8 +153,8 @@ def execute(args):
     # I found this useful to catch all kinds of weird inputs to the model
     # during debugging and think it makes sense to have in production of this
     # model too.
-    warnings.filterwarnings('error')
     try:
+        warnings.filterwarnings('error')
         _execute(args)
     finally:
         warnings.resetwarnings()
@@ -598,16 +598,15 @@ def _calculate_monthly_quick_flow(
 
         # Precompute the last two terms in quickflow so we can handle a
         # numerical instability when s_i is large and/or a_im is small
-
-        e1 = scipy.special.expn(1, valid_si / a_im)
         # on large valid_si/a_im this number will be zero and the latter
         # exponent will also be zero because of a divide by zero. rather than
         # raise that numerical warning, just handle it manually
-        nonzero_e1_mask = e1 != 0
+        E1 = scipy.special.expn(1, valid_si / a_im)  #pylint: disable=invalid-name,no-member
+        nonzero_e1_mask = E1 != 0
         exp_result = numpy.zeros(valid_si.shape)
         exp_result[nonzero_e1_mask] = numpy.exp(
             (0.8 * valid_si[nonzero_e1_mask]) / a_im[nonzero_e1_mask] +
-            numpy.log(e1[nonzero_e1_mask]))
+            numpy.log(E1[nonzero_e1_mask]))
 
         # qf_im is the quickflow at pixel i on month m Eq. [1]
         qf_im[valid_mask] = (25.4 * valid_n_events * (
