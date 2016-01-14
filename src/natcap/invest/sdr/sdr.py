@@ -47,7 +47,6 @@ _INTERMEDIATE_BASE_FILES = {
     'cp_factor_path': 'cp.tif',
     }
 
-
 _TMP_BASE_FILES = {
     'aligned_dem_path': 'aligned_dem.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
@@ -240,31 +239,13 @@ def execute(args):
         f_reg['sdr_path'])
 
     LOGGER.info('calculate sed export')
-    sed_export_path = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
-    sed_export_nodata = -1.0
-    def sed_export_op(usle, sdr):
-        nodata_mask = (usle == nodata_usle) | (sdr == sdr_nodata)
-        return numpy.where(
-            nodata_mask, sed_export_nodata, usle * sdr)
-    pygeoprocessing.vectorize_datasets(
-        [usle_path, sdr_factor_path], sed_export_op, sed_export_path,
-        gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    _calculate_sed_export(
+        f_reg['usle_path'], f_reg['sdr_path'], f_reg['sed_export_path'])
 
     LOGGER.info('calculate sediment retention index')
-    def sediment_index_op(rkls, usle, sdr_factor):
-        nodata_mask = (rkls == nodata_rkls) | (usle == nodata_usle) | (sdr_factor == sdr_nodata)
-        return numpy.where(
-            nodata_mask, nodata_sed_retention_index, (rkls - usle) * sdr_factor / sdr_max)
-
-    nodata_sed_retention_index = -1
-    sed_retention_index_path = os.path.join(
-        output_dir, 'sed_retention_index%s.tif' % file_suffix)
-
-    pygeoprocessing.vectorize_datasets(
-        [rkls_path, usle_path, sdr_factor_path], sediment_index_op, sed_retention_index_path,
-        gdal.GDT_Float32, nodata_sed_retention_index, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    _calculate_sed_retention_index(
+        f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
+        float(args['sdr_max']), f_reg['sed_retention_index_path'])
 
     LOGGER.info('calculate sediment retention')
     d_up_bare_soil_path = os.path.join(intermediate_dir, 'd_up_bare_soil%s.tif' % file_suffix)
@@ -924,4 +905,49 @@ def _calculate_sdr(
     pygeoprocessing.vectorize_datasets(
         [ic_path, stream_path], sdr_op, out_sdr_path,
         gdal.GDT_Float32, sdr_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+
+def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
+    sed_export_nodata = -1.0
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(usle_path)
+    sdr_nodata = pygeoprocessing.get_nodata_from_uri(sdr_path)
+    usle_nodata = pygeoprocessing.get_nodata_from_uri(usle_path)
+
+    def sed_export_op(usle, sdr):
+        """Sediment export."""
+        nodata_mask = (usle == usle_nodata) | (sdr == sdr_nodata)
+        return numpy.where(
+            nodata_mask, sed_export_nodata, usle * sdr)
+
+    pygeoprocessing.vectorize_datasets(
+        [usle_path, sdr_path], sed_export_op, out_sed_export_path,
+        gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+
+def _calculate_sed_retention_index(
+        rkls_path, usle_path, sdr_path, sdr_max,
+        out_sed_retention_index_path):
+
+    rkls_nodata = pygeoprocessing.get_nodata_from_uri(rkls_path)
+    usle_nodata = pygeoprocessing.get_nodata_from_uri(usle_path)
+    sdr_nodata = pygeoprocessing.get_nodata_from_uri(sdr_path)
+
+    def sediment_index_op(rkls, usle, sdr_factor):
+        """Calculate sediment retention index."""
+        nodata_mask = (
+            (rkls == rkls_nodata) | (usle == usle_nodata) |
+            (sdr_factor == sdr_nodata))
+        return numpy.where(
+            nodata_mask,
+            nodata_sed_retention_index, (rkls - usle) * sdr_factor / sdr_max)
+
+    nodata_sed_retention_index = -1
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(rkls_path)
+
+    pygeoprocessing.vectorize_datasets(
+        [rkls_path, usle_path, sdr_path], sediment_index_op,
+        out_sed_retention_index_path, gdal.GDT_Float32,
+        nodata_sed_retention_index, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
