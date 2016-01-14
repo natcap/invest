@@ -1107,7 +1107,7 @@ def execute(args):
             elif area_change > 0:
                 change_list.append((priorities_dict[cover_id],
                                     cover_id,
-                                    10000 * int(math.ceil(area_change \
+                                    int(math.ceil(10000 * area_change \
                                         / (cell_size**2)))))
             else:
                 LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
@@ -1123,7 +1123,7 @@ def execute(args):
             elif area_change > 0:
                 change_list.append((transition_dict[cover_id][args["priority_field"]],
                                    cover_id,
-                                   10000 * int(math.ceil(area_change \
+                                   int(math.ceil(10000 * area_change \
                                         / (cell_size**2)))))
             else:
                 LOGGER.warn("Cover %i suitability specified, but no change indicated.", cover_id)
