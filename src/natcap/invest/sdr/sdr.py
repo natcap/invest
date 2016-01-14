@@ -53,6 +53,10 @@ _TMP_BASE_FILES = {
     'aligned_erodibility_path': 'aligned_erodibility.tif',
     'aligned_watersheds_path': 'aligned_watersheds_path.tif',
     'aligned_drainage_path': 'aligned_drainage.tif',
+    'zero_absorption_source_path': 'zero_absorption_source.tif',
+    'loss_path': 'loss_path.tif',
+    'w_accumulation_path': 'w_accumulation.tif',
+    's_accumulation_path': 's_accumulation.tif',
     }
 
 NODATA_USLE = -1.0
@@ -127,7 +131,7 @@ def execute(args):
     pygeoprocessing.create_directories(
         [output_dir, intermediate_output_dir])
 
-    file_registry = _build_file_registry(
+    f_reg = _build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
@@ -136,13 +140,13 @@ def execute(args):
     aligned_list = []
     for file_key in ['lulc', 'dem', 'erosivity', 'erodibility']:
         base_list.append(args[file_key + "_path"])
-        aligned_list.append(file_registry["aligned_" + file_key + "_path"])
+        aligned_list.append(f_reg["aligned_" + file_key + "_path"])
 
     drainage_present = False
     if 'drainage_path' in args and args['drainage_path'] != '':
         drainage_present = True
         base_list.append(args['drainage_path'])
-        aligned_list.append(file_registry['aligned_drainage_path'])
+        aligned_list.append(f_reg['aligned_drainage_path'])
 
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(
         args['lulc_path'])
@@ -151,52 +155,61 @@ def execute(args):
         'intersection', 0, aoi_uri=args['watersheds_path'])
 
     # do DEM processing here
-    _process_dem(*[file_registry[key] for key in [
+    _process_dem(*[f_reg[key] for key in [
         'aligned_dem_path', 'slope_path', 'thresholded_slope_path',
         'flow_direction_path', 'flow_accumulation_path', 'ls_path']])
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
     pygeoprocessing.routing.stream_threshold(
-        file_registry['flow_accumulation_path'],
+        f_reg['flow_accumulation_path'],
         float(args['threshold_flow_accumulation']),
-        file_registry['stream_path'])
+        f_reg['stream_path'])
     stream_nodata = pygeoprocessing.get_nodata_from_uri(
-        file_registry['stream_path'])
+        f_reg['stream_path'])
 
     if drainage_present:
         _add_drainage(
-            file_registry['stream_path'],
-            file_registry['aligned_drainage_path'],
-            file_registry['stream_and_drainage_path'])
-        file_registry['drainage_raster_path'] = (
-            file_registry['stream_and_drainage_path'])
+            f_reg['stream_path'],
+            f_reg['aligned_drainage_path'],
+            f_reg['stream_and_drainage_path'])
+        f_reg['drainage_raster_path'] = (
+            f_reg['stream_and_drainage_path'])
     else:
-        file_registry['drainage_raster_path'] = (
-            file_registry['stream_path'])
+        f_reg['drainage_raster_path'] = (
+            f_reg['stream_path'])
 
     #Calculate the W factor
     LOGGER.info('calculate per pixel W')
-    _calculate_w(biophysical_table, *[file_registry[key] for key in [
+    _calculate_w(biophysical_table, *[f_reg[key] for key in [
         'aligned_lulc_path', 'w_path', 'thresholded_w_path']])
 
     LOGGER.info('calculate CP raster')
     _calculate_cp(
-        biophysical_table, file_registry['aligned_lulc_path'],
-        file_registry['cp_factor_path'])
+        biophysical_table, f_reg['aligned_lulc_path'],
+        f_reg['cp_factor_path'])
 
     LOGGER.info('calculating RKLS')
-    _calculate_rkls(*[file_registry[key] for key in [
+    _calculate_rkls(*[f_reg[key] for key in [
         'ls_path', 'aligned_erosivity_path', 'aligned_erodibility_path',
         'stream_path', 'rkls_path']])
 
     LOGGER.info('calculating USLE')
-    _calculate_usle(*[file_registry[key] for key in [
+    _calculate_usle(*[f_reg[key] for key in [
         'rkls_path', 'cp_factor_path', 'drainage_raster_path', 'usle_path']])
 
     #calculate W_bar
     LOGGER.info('calculating W_bar')
-    _calculate_w_bar()
+    for factor_path, accumulation_path, out_bar_path in [
+            (f_reg['thresholded_w_path'], f_reg['w_accumulation_path'],
+             f_reg['w_bar_path']),
+            (f_reg['thresholded_slope_path'], f_reg['s_accumulation_path'],
+             f_reg['s_bar_path'])]:
+        _calculate_bar_factor(
+            f_reg['aligned_dem_path'], factor_path,
+            f_reg['flow_accumulation_path'], f_reg['flow_direction_path'],
+            f_reg['zero_absorption_source_path'], f_reg['loss_path'],
+            accumulation_path, out_bar_path)
 
     LOGGER.info('calculating d_up')
     d_up_path = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
@@ -712,7 +725,7 @@ def _build_file_registry(base_file_path_list, file_suffix):
     all_paths = set()
     duplicate_keys = set()
     duplicate_paths = set()
-    file_registry = {}
+    f_reg = {}
 
     def _build_path(base_filename, path):
         """Internal helper to avoid code duplication."""
@@ -729,18 +742,18 @@ def _build_file_registry(base_file_path_list, file_suffix):
     for base_file_dict, path in base_file_path_list:
         for file_key, file_payload in base_file_dict.iteritems():
             # check for duplicate keys
-            if file_key in file_registry:
+            if file_key in f_reg:
                 duplicate_keys.add(file_key)
             else:
                 # handle the case whether it's a filename or a list of strings
                 if isinstance(file_payload, basestring):
                     full_path = _build_path(file_payload, path)
-                    file_registry[file_key] = full_path
+                    f_reg[file_key] = full_path
                 elif isinstance(file_payload, list):
-                    file_registry[file_key] = []
+                    f_reg[file_key] = []
                     for filename in file_payload:
                         full_path = _build_path(filename, path)
-                        file_registry[file_key].append(full_path)
+                        f_reg[file_key].append(full_path)
 
     if len(duplicate_paths) > 0 or len(duplicate_keys):
         raise ValueError(
@@ -748,7 +761,7 @@ def _build_file_registry(base_file_path_list, file_suffix):
             "duplicate_keys: %s duplicate_paths: %s" % (
                 duplicate_keys, duplicate_paths))
 
-    return file_registry
+    return f_reg
 
 
 def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
@@ -869,52 +882,3 @@ def _calculate_bar_factor(
         [accumulation_path, flow_accumulation_path], bar_op, out_bar_path,
         gdal.GDT_Float32, bar_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
-
-
-def _calculate_w_bar(
-        dem_path, flow_accumulation_path, zero_absorption_source_path,
-        loss_path, w_accumulation_path, s_accumulation_path,
-        thresholded_w_factor_path, thresholded_slope_path,
-        flow_direction_path, aligned_dem_path, out_w_bar_path,
-        out_s_bar_path):
-    """Calculate W bar."""
-    #need this for low level route_flux function
-    pygeoprocessing.make_constant_raster_from_base_uri(
-        dem_path, 0.0, zero_absorption_source_path)
-
-    flow_accumulation_nodata = pygeoprocessing.get_nodata_from_uri(
-        flow_accumulation_path)
-
-    for factor_path, accumulation_path in [
-            (thresholded_w_factor_path, w_accumulation_path),
-            (thresholded_slope_path, s_accumulation_path)]:
-        LOGGER.info("calculating %s", accumulation_path)
-        pygeoprocessing.routing.route_flux(
-            flow_direction_path, aligned_dem_path, factor_path,
-            zero_absorption_source_path, loss_path, accumulation_path,
-            'flux_only')
-
-    LOGGER.info("calculating w_bar")
-
-    w_bar_nodata = pygeoprocessing.get_nodata_from_uri(w_accumulation_path)
-    s_bar_nodata = pygeoprocessing.get_nodata_from_uri(s_accumulation_path)
-    bar_nodata = None
-    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(dem_path)
-    for bar_nodata, accumulation_path, bar_path in [
-            (w_bar_nodata, w_accumulation_path, out_w_bar_path),
-            (s_bar_nodata, s_accumulation_path, out_s_bar_path)]:
-        LOGGER.info("calculating %s", accumulation_path)
-        def bar_op(base_accumulation, flow_accumulation):
-            """Aggreegate accumulation from base divided by the flow accum."""
-            result = numpy.empty(base_accumulation.shape)
-            valid_mask = (
-                (base_accumulation != bar_nodata) &
-                (flow_accumulation != flow_accumulation_nodata))
-            result[:] = bar_nodata
-            result[valid_mask] = (
-                base_accumulation[valid_mask] / flow_accumulation[valid_mask])
-            return result
-        pygeoprocessing.vectorize_datasets(
-            [accumulation_path, flow_accumulation_path], bar_op, bar_path,
-            gdal.GDT_Float32, bar_nodata, out_pixel_size, "intersection",
-            dataset_to_align_index=0, vectorize_op=False)
