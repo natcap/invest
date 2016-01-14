@@ -92,11 +92,15 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
             if col_block_width > cols_per_block:
                 col_block_width = cols_per_block
 
+            # Numpy creates index rasters as ints by default, which sometimes
+            # creates problems on 32-bit builds when we try to add Int32
+            # matrices to float64 matrices.
             row_indices, col_indices = numpy.indices((row_block_width,
-                                                      col_block_width))
+                                                      col_block_width),
+                                                     dtype=numpy.float)
 
-            row_indices += row_offset - max_distance
-            col_indices += col_offset - max_distance
+            row_indices += numpy.float(row_offset - max_distance)
+            col_indices += numpy.float(col_offset - max_distance)
 
             kernel_index_distances = numpy.hypot(
                 row_indices, col_indices)
