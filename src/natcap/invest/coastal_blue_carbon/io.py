@@ -1,16 +1,24 @@
+# -*- coding: utf-8 -*-
 """CBC Model IO Functions."""
 
 import csv
 import os
 import shutil
 import pprint as pp
+import logging
 
+import numpy as np
 import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 
 from natcap.invest.coastal_blue_carbon import NODATA_INT, NODATA_FLOAT, HA_PER_M2
 from natcap.invest.coastal_blue_carbon.classes.raster import Raster
 from natcap.invest.coastal_blue_carbon.classes.raster_stack import RasterStack
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.io')
+
 
 class AttrDict(dict):
     """Create a subclass of dictionary where keys can be accessed as attributes.
@@ -33,7 +41,11 @@ def get_inputs(args):
         d = {
             'workspace_dir': <string>,
             'outputs_dir': <string>,
-            'border_year_list': <list>,
+            'transition_years': <list>,
+            'analysis_year': <int>,
+            'snapshot_years': <list>
+            'timesteps': <int>,
+            'transitions': <int>,
             'do_economic_analysis': <bool>,
             'price_t': <dict>,
             'discount_rate': None,
@@ -67,8 +79,6 @@ def get_inputs(args):
         'outputs_dir': None,
         'border_year_list': None,
         'do_economic_analysis': False,
-        'price_t': None,
-        'discount_rate': None,
         'lulc_to_Sb': {'lulc': 'biomass'},         # ic
         'lulc_to_Ss': {'lulc': 'soil'},            # ic
         'lulc_to_L': {'lulc': 'litter'},           # ic
@@ -78,19 +88,24 @@ def get_inputs(args):
         'lulc_to_Hs': {'lulc': 'hl-soil'},         # tc
         'lulc_trans_to_Db': {('lulc1', 'lulc2'): 'dist-val'}, # tc <-- preprocess with lulc_to_Db_high, lulc_to_Db_med, lulc_to_Db_low, lulc_to_Ds_high, lulc_to_Ds_med, lulc_to_Ds_low
         'lulc_trans_to_Ds': {('lulc1', 'lulc2'): 'dist-val'}, # tc <-- same
-        'C_s': [],                                      # given
-        'Y_pr': AttrDict({'biomass': [], 'soil': []}),  # precompute
-        'D_pr': AttrDict({'biomass': [], 'soil': []}),  # precompute
-        'H_pr': AttrDict({'biomass': [], 'soil': []}),  # precompute
-        'L_s': [],                                      # precompute
-        'A_pr': AttrDict({'biomass': [], 'soil': []}),
-        'E_pr': AttrDict({'biomass': [], 'soil': []}),
-        'S_pb': AttrDict({'biomass': [], 'soil': []}),
-        'T_b': [],
-        'N_pr': AttrDict({'biomass': [], 'soil': []}),
-        'N_r': [],
-        'N': None,
-        'V': None
+        'C_s': [],
+        'C_prior': None,
+        'C_r_rasters': [],
+        'transition_years': [],
+        'analysis_year': None,
+        'snapshot_years': [],
+        'timesteps': None,
+        'transitions': None,
+        'discount_rate': None,
+        'interest_rate': None,
+        'price': None,
+        'price_t': None,
+        'T_s_rasters': [],
+        'A_r_rasters': [],
+        'E_r_rasters': [],
+        'N_r_rasters': [],
+        'N_total_raster': None,
+        'NPV_raster': None,
     })
 
     # Directories
@@ -101,20 +116,28 @@ def get_inputs(args):
     output_dir_name = 'outputs_core'
     if args['results_suffix'] != '':
         output_dir_name = output_dir_name + '_' + args['results_suffix']
-    outputs_dir = os.path.join(args['workspace_dir'], output_dir_name)
-    geoprocess.create_directories([args['workspace_dir'], outputs_dir])
     d.workspace_dir = args['workspace_dir']
-    d.outputs_dir = outputs_dir
+    d.outputs_dir = os.path.join(args['workspace_dir'], output_dir_name)
+    geoprocess.create_directories([args['workspace_dir'], d.outputs_dir])
 
     # Rasters
-    d.border_year_list = [int(i) for i in args['lulc_snapshot_years_list']]
-    for i in range(0, len(d.border_year_list)-1):
-        if d.border_year_list[i] >= d.border_year_list[i+1]:
+    d.transition_years = [int(i) for i in args['lulc_transition_years_list']]
+    for i in range(0, len(d.transition_years)-1):
+        if d.transition_years[i] >= d.transition_years[i+1]:
             raise ValueError(
                 'LULC snapshot years must be provided in chronological order.'
                 ' and in the same order as the LULC snapshot rasters.')
+    d.transitions = len(d.transition_years)
 
-    d.C_s = _get_snapshot_rasters(args['lulc_snapshot_list'])
+    d.snapshot_years = [int(i) for i in d.transition_years]
+    if args['analysis_year'] not in ['', None]:
+        if int(args['analysis_year']) <= d.snapshot_years[-1]:
+            raise ValueError('Analysis year must be greater than last transition year.')
+        d.snapshot_years += [int(args['analysis_year'])]
+    d.timesteps = d.snapshot_years[-1] - d.snapshot_years[0]
+
+    d.C_prior_raster = args['lulc_baseline_map_uri']  #d.C_s[0]
+    d.C_r_rasters = args['lulc_transition_maps_list'] # d.C_s[1:]
 
     # Reclass Dictionaries
     lulc_lookup_dict = geoprocess.get_lookup_from_csv(
@@ -146,7 +169,7 @@ def get_inputs(args):
 
     # Parse LULC Transition CSV (Carbon Direction and Relative Magnitude)
     lulc_trans_to_Db, lulc_trans_to_Ds = _get_lulc_trans_to_D_dicts(
-        args['lulc_transition_uri'],
+        args['lulc_transition_matrix_uri'],
         args['lulc_lookup_uri'],
         biomass_transient_dict,
         soil_transient_dict)
@@ -156,8 +179,73 @@ def get_inputs(args):
     # Economic Analysis
     if args['do_economic_analysis']:
         d.do_economic_analysis = True
-        d.discount_rate = args['discount_rate']
-        d.price_t = _get_yearly_carbon_price_dict(args)
+        d.discount_rate = float(args['discount_rate']) * 0.01
+        if args['do_price_table']:
+            d.price_t = _get_price_table(
+                args['price_table_uri'],
+                d.snapshot_years[0],
+                d.snapshot_years[-1])
+        else:
+            d.interest_rate = float(args['interest_rate']) * 0.01
+            d.price = args['price']
+            d.price_t = (1 + d.interest_rate) ** np.arange(0, d.timesteps+1) * d.price
+
+        d.price_t = d.price_t / (1 + d.discount_rate)**np.arange(0, d.timesteps+1)
+
+    # Create Output Rasters
+    d.template_raster = d.C_prior_raster
+
+    # Total Carbon Stock
+    for i in range(0, len(d.snapshot_years)):
+        fn = 'carbon_stock_at_%s.tif' % d.snapshot_years[i]
+        filepath = os.path.join(d.outputs_dir, fn)
+        geoprocess.new_raster_from_base_uri(
+            d.template_raster, filepath, 'GTiff', NODATA_FLOAT, 6)
+        d.T_s_rasters.append(filepath)
+
+    # Transition Accumulation
+    for i in range(0, len(d.snapshot_years)-1):
+        fn = 'carbon_accumulation_between_%s_and_%s.tif' % (
+            d.snapshot_years[i], d.snapshot_years[i+1])
+        filepath = os.path.join(d.outputs_dir, fn)
+        geoprocess.new_raster_from_base_uri(
+            d.template_raster, filepath, 'GTiff', NODATA_FLOAT, 6)
+        d.A_r_rasters.append(filepath)
+
+    # Transition Emissions
+    for i in range(0, len(d.snapshot_years)-1):
+        fn = 'carbon_emissions_between_%s_and_%s.tif' % (
+            d.snapshot_years[i], d.snapshot_years[i+1])
+        filepath = os.path.join(d.outputs_dir, fn)
+        geoprocess.new_raster_from_base_uri(
+            d.template_raster, filepath, 'GTiff', NODATA_FLOAT, 6)
+        d.E_r_rasters.append(filepath)
+
+    # Transition Net Sequestration
+    for i in range(0, len(d.snapshot_years)-1):
+        fn = 'net_carbon_sequestration_between_%s_and_%s.tif' % (
+            d.snapshot_years[i], d.snapshot_years[i+1])
+        filepath = os.path.join(d.outputs_dir, fn)
+        geoprocess.new_raster_from_base_uri(
+            d.template_raster, filepath, 'GTiff', NODATA_FLOAT, 6)
+        d.N_r_rasters.append(filepath)
+
+    # Total Net Sequestration
+    fn = 'net_carbon_sequestration_between_%s_and_%s.tif' % (
+        d.snapshot_years[0], d.snapshot_years[-1])
+    filepath = os.path.join(d.outputs_dir, fn)
+    geoprocess.new_raster_from_base_uri(
+        d.template_raster, filepath, 'GTiff', NODATA_FLOAT, 6)
+    d.N_total_raster = filepath
+
+    # Net Sequestration from Base Year to Analysis Year
+    if args['do_economic_analysis']:
+        # Total Net Present Value
+        fn = 'net_present_value.tif'
+        filepath = os.path.join(d.outputs_dir, fn)
+        geoprocess.new_raster_from_base_uri(
+            d.template_raster, filepath, 'GTiff', NODATA_FLOAT, 6)
+        d.NPV_raster = filepath
 
     return d
 
@@ -205,18 +293,21 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri, biomass_tra
     return lulc_trans_to_Db, lulc_trans_to_Db
 
 
-def _get_snapshot_rasters(lulc_snapshot_list):
+def _get_snapshot_rasters(lulc_baseline_map_uri, lulc_transition_maps_list):
     """Get valid snapshot rasters.
 
     Assert same projection, align, and set same nodata value.
 
     Parameters:
-        lulc_snapshot_list (list): filepaths to lulc rasters
+        lulc_baseline_map_uri (str): filepath to baseline raster
+        lulc_transition_maps_list (list): filepaths to lulc rasters
 
     Returns:
         C_s (list): list of aligned rasters with standard nodata value
     """
-    stack = RasterStack([Raster.from_file(i) for i in lulc_snapshot_list])
+    maps = [Raster.from_file(lulc_baseline_map_uri)]
+    maps += [Raster.from_file(i) for i in lulc_transition_maps_list]
+    stack = RasterStack(maps)
 
     for r in stack.raster_list:
         r.resample_method = 'nearest'
@@ -283,51 +374,21 @@ def _create_transient_dict(carbon_pool_transient_uri):
     return biomass_transient_dict, soil_transient_dict
 
 
-def _get_yearly_carbon_price_dict(vars_dict):
-    """Return dictionary of discounted prices for each year.
+def _get_price_table(price_table_uri, start_year, end_year):
+    price_dict = geoprocess.get_lookup_from_table(price_table_uri, 'year')
 
-    Parameters:
-        discount_rate (float)
-        lulc_snapshot_years_list (list)
-        analysis_year (int)
-        interest_rate (float)
-        price (float)
-        do_price_table (boolean)
-        price_table_uri (string)
+    price_t = np.zeros(end_year - start_year + 1)
 
-    Returns:
-        yearly_carbon_price_dict (dictionary)
-    """
-    discount_rate = float(vars_dict['discount_rate'])
-    start_year = int(vars_dict['lulc_snapshot_years_list'][0])
-    end_year = int(vars_dict['lulc_snapshot_years_list'][-1])
+    for year in range(start_year, end_year+1):
+        if year not in price_dict:
+            raise KeyError("Carbon price table must contain prices for all"
+                "relevant years in analysis.")
 
-    yearly_carbon_price_dict = {}
-    if vars_dict['do_price_table']:
-        price_dict = geoprocess.get_lookup_from_table(
-            vars_dict['price_table_uri'], 'year')
+    for year in range(start_year, end_year+1):
+        idx = year - start_year
+        price_t[idx] = price_dict[year]['price']
 
-        # check all years in dict
-        for year in range(start_year, end_year):
-            if year not in price_dict:
-                raise KeyError(
-                    "Not all years are provided in carbon price table")
-
-        for (year, d) in price_dict.items():
-            t = year - start_year
-            yearly_carbon_price_dict[int(year)] = d['price']/(
-                (1 + discount_rate/100.0)**t)
-    else:
-        price_0 = float(vars_dict['price'])
-        interest_rate = float(vars_dict['interest_rate'])
-
-        for year in range(start_year, end_year):
-            t = year - start_year
-            price_t = price_0 * (1 + interest_rate/100.0)**t
-            discounted_price = (price_t/((1 + discount_rate/100.0)**t))
-            yearly_carbon_price_dict[year] = discounted_price
-
-    return yearly_carbon_price_dict
+    return price_t
 
 
 def write_csv(filepath, l):

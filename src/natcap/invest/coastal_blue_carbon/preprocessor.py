@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
 import os
 import csv

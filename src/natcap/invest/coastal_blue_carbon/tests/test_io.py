@@ -1,4 +1,5 @@
-"""Tests for the New CBC Model."""
+# -*- coding: utf-8 -*-
+"""Tests for IO Functions."""
 import unittest
 import pprint
 import os

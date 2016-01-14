@@ -40,8 +40,8 @@
           "required": true
         },
         {
-          "id": "lulc_transition_uri",
-          "args_id": "lulc_transition_uri",
+          "id": "lulc_transition_matrix_uri",
+          "args_id": "lulc_transition_matrix_uri",
           "type": "file",
           "label": "LULC Transition Effect of Carbon Table (CSV)",
           "defaultValue": "../CoastalBlueCarbon/outputs_preprocessor/transitions_sample.csv",
@@ -61,18 +61,35 @@
           "id": "carbon_pool_transient_uri",
           "args_id": "carbon_pool_transient_uri",
           "type": "file",
-          "label": "Carbon Pool Transient Variables File (CSV)",
+          "label": "Carbon Pool Transient Variables Table (CSV)",
           "defaultValue": "../CoastalBlueCarbon/outputs_preprocessor/carbon_pool_transient_sample.csv",
           "helpText": "The provided CSV table contains information related to the transition of carbon into and out of coastal blue carbon pools. All non-coastal blue carbon habitat lulc classes are assumed to neither sequester nor emit carbon as a result of change. The ‘yearly_accumulation’ values should be given in terms of Megatonnes of CO2e/ha-yr. The ‘half-life’ values must be given in terms of years. The ‘disturbance’ values must be given as a decimal percentage of stock distrubed given a transition occurs away from a lulc-class.",
           "required": true
+       },
+       {
+         "id": "lulc_baseline_map_uri",
+         "args_id": "lulc_baseline_map_uri",
+         "type": "file",
+         "label": "Baseline LULC Raster (GDAL-supported)",
+         "sampleElement": {
+           "id": "sample_id",
+           "type": "file",
+           "label": "Input",
+           "validateAs": {
+             "type": "GDAL"
+           }
+         },
+         "defaultValue": "../CoastalBlueCarbon/inputs/GBJC_2004_mean_Resample.tif",
+         "helpText": "A GDAL-supported raster representing the baseline landscape/seascape.",
+         "required": true
        }
       ]
     },
     {
-      "id": "lulc_snapshot_list",
+      "id": "lulc_transition_maps_list",
       "type": "multi",
-      "args_id": "lulc_snapshot_list",
-      "label": "Land Use/Land Cover Rasters (GDAL-supported)",
+      "args_id": "lulc_transition_maps_list",
+      "label": "Transition LULC Rasters (GDAL-supported)",
       "sampleElement": {
         "id": "sample_id",
         "type": "file",
@@ -82,18 +99,17 @@
         }
       },
       "defaultValue": [
-        "../CoastalBlueCarbon/inputs/GBJC_2004_mean_Resample.tif",
         "../CoastalBlueCarbon/inputs/GBJC_2050_mean_Resample.tif",
         "../CoastalBlueCarbon/inputs/GBJC_2100_mean_Resample.tif"
       ],
       "linkText": "Add Another",
-      "helpText": "A set of GDAL-supported rasters representing the landscape/seascape at particular points in time. Provided in chronological order."
+      "helpText": "A set of GDAL-supported rasters representing the landscape/seascape at particular points in time. Provided in chronological order after baseline."
     },
     {
-      "id": "lulc_snapshot_years_list",
+      "id": "lulc_transition_years_list",
       "type": "multi",
-      "args_id": "lulc_snapshot_years_list",
-      "label": "Land Use/Land Cover Years",
+      "args_id": "lulc_transition_years_list",
+      "label": "Transition Years",
       "sampleElement": {
         "id": "sample_id",
         "type": "text",
@@ -107,11 +123,32 @@
       },
       "defaultValue": [
         "2004",
-        "2050",
-        "2100"
+        "2050"
       ],
       "linkText": "Add Another",
-      "helpText": "LULC snapshot years must be entered in chronological order."
+      "helpText": "Transition years must be entered in chronological order."
+    },
+    {
+      "id": "analysis_year_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "analysis_year",
+          "args_id": "analysis_year",
+          "label": "Analysis Year (Optional)",
+          "type": "text",
+          "dataType": "string",
+          "validateAs": {
+            "type": "number",
+            "allowedValues": {
+               "pattern": "^[0-9]+"
+            }
+          },
+          "defaultValue": "",
+          "required": false,
+          "helpText": "An analysis year extends the transient analysis beyond the transition years."
+        }
+      ]
     },
     {
       "id": "do_economic_analysis",
