@@ -107,6 +107,7 @@ def execute(args):
     run(d)
     LOGGER.info("...Model run complete.")
 
+
 def run(d):
     block_iterator = geoprocess.iterblocks(d.C_prior_raster)
     for offset_dict, _ in block_iterator:
@@ -229,6 +230,7 @@ def run(d):
             NPV = np.sum(V[:], axis=0)
             utils.write_to_raster(d.NPV_raster, NPV, offset_dict['xoff'], offset_dict['yoff'])
 
+
 def timestep_to_transition_idx(d, timestep):
     """Convert timestep to transition index."""
     for i in xrange(0, d.transitions):
@@ -236,15 +238,18 @@ def timestep_to_transition_idx(d, timestep):
             return i
     return None
 
+
 def snapshot_idx_to_timestep(d, snapshot_idx):
     """Convert snapshot_idx to timestep."""
     return d.snapshot_years[snapshot_idx] - d.snapshot_years[0]
+
 
 def is_transition_year(d, timestep):
     if (timestep_to_transition_idx(d, timestep) != timestep_to_transition_idx(d, timestep-1) and
         timestep_to_transition_idx(d, timestep)):
         return True
     return False
+
 
 def transition_idx_to_timestep(d, transition_idx):
     """Convert transition_idx to timestep."""

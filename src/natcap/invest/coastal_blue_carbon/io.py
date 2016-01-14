@@ -12,8 +12,7 @@ import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 
 from natcap.invest.coastal_blue_carbon import NODATA_INT, NODATA_FLOAT, HA_PER_M2
-from natcap.invest.coastal_blue_carbon.classes.raster import Raster
-from natcap.invest.coastal_blue_carbon.classes.raster_stack import RasterStack
+
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -291,41 +290,6 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri, biomass_tra
     lulc_trans_to_Db = dict(soil_item_list)
 
     return lulc_trans_to_Db, lulc_trans_to_Db
-
-
-def _get_snapshot_rasters(lulc_baseline_map_uri, lulc_transition_maps_list):
-    """Get valid snapshot rasters.
-
-    Assert same projection, align, and set same nodata value.
-
-    Parameters:
-        lulc_baseline_map_uri (str): filepath to baseline raster
-        lulc_transition_maps_list (list): filepaths to lulc rasters
-
-    Returns:
-        C_s (list): list of aligned rasters with standard nodata value
-    """
-    maps = [Raster.from_file(lulc_baseline_map_uri)]
-    maps += [Raster.from_file(i) for i in lulc_transition_maps_list]
-    stack = RasterStack(maps)
-
-    for r in stack.raster_list:
-        r.resample_method = 'nearest'
-    if not stack.all_same_projection():
-        raise ValueError('LULC snapshot rasters must be in same projection.')
-    if not stack.all_aligned():
-        stack = stack.align()
-
-    stack = stack.set_standard_nodata(NODATA_INT)
-    stack_filepath_list = stack.get_raster_uri_list()
-
-    C_s = []
-    for i in stack_filepath_list:
-        temp = geoprocess.temporary_filename()
-        shutil.copy(i, temp)
-        C_s.append(temp)
-
-    return C_s
 
 
 def _create_transient_dict(carbon_pool_transient_uri):
