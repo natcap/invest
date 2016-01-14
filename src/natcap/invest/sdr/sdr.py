@@ -36,9 +36,9 @@ _INTERMEDIATE_BASE_FILES = {
     'w_bar_path': 'w_bar.tif',
     's_bar_path': 's_bar.tif',
     'd_up_path': 'd_up.tif',
-    'ws_factor_path': 'ws_factor.tif',
     'd_dn_path': 'd_dn.tif',
-    'ic_factor_path': 'ic_factor.tif',
+    'ws_factor_path': 'ws_factor.tif',
+    'ic_path': 'ic_factor.tif',
     'sdr_factor_path': 'sdr_factor.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
     'w_path': 'w.tif',
@@ -230,18 +230,8 @@ def execute(args):
         f_reg['d_dn_path'], factor_uri=f_reg['ws_inverse_path'])
 
     LOGGER.info('calculate ic')
-    ic_factor_path = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
-    ic_nodata = -9999.0
-    d_up_nodata = pygeoprocessing.get_nodata_from_uri(d_up_path)
-    d_dn_nodata = pygeoprocessing.get_nodata_from_uri(d_dn_path)
-    def ic_op(d_up, d_dn):
-        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata)
-        return numpy.where(
-            nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
-    pygeoprocessing.vectorize_datasets(
-        [d_up_path, d_dn_path], ic_op, ic_factor_path,
-        gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    _calculate_ic(
+        f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_path'])
 
     LOGGER.info('calculate sdr')
     sdr_factor_path = os.path.join(intermediate_dir, 'sdr_factor%s.tif' % file_suffix)
@@ -911,3 +901,19 @@ def _calculate_inverse_ws_factor(
         out_ws_factor_inverse_path, gdal.GDT_Float32, ws_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
+
+
+def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
+    ic_nodata = -9999.0
+    d_up_nodata = pygeoprocessing.get_nodata_from_uri(d_up_path)
+    d_dn_nodata = pygeoprocessing.get_nodata_from_uri(d_dn_path)
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(d_up_path)
+    def ic_op(d_up, d_dn):
+        """Calculate IC factor."""
+        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata)
+        return numpy.where(
+            nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
+    pygeoprocessing.vectorize_datasets(
+        [d_up_path, d_dn_path], ic_op, out_ic_factor_path,
+        gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
