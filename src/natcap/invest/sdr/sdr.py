@@ -43,8 +43,10 @@ _INTERMEDIATE_BASE_FILES = {
     'stream_and_drainage_path': 'stream_and_drainage.tif',
     'w_path': 'w.tif',
     'thresholded_w_path': 'w_threshold.tif',
+    'ws_inverse_path': 'ws_inverse.tif',
     'cp_factor_path': 'cp.tif',
     }
+
 
 _TMP_BASE_FILES = {
     'aligned_dem_path': 'aligned_dem.tif',
@@ -212,44 +214,20 @@ def execute(args):
             accumulation_path, out_bar_path)
 
     LOGGER.info('calculating d_up')
-    d_up_path = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
-    cell_area = out_pixel_size ** 2
-    d_up_nodata = -1.0
-    def d_up(w_bar, s_bar, flow_accumulation):
-        """Calculate the d_up index
-            w_bar * s_bar * sqrt(upstream area) """
-        d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
-        return numpy.where(
-            (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) &
-            (flow_accumulation != flow_accumulation_nodata), d_up_array,
-            d_up_nodata)
-    pygeoprocessing.vectorize_datasets(
-        [w_bar_path, s_bar_path, flow_accumulation_path], d_up, d_up_path,
-        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    _calculate_d_up(
+        *[f_reg[key] for key in [
+            'w_bar_path', 's_bar_path', 'flow_accumulation_path',
+            'd_up_path']])
 
     LOGGER.info('calculate WS factor')
-    ws_factor_inverse_path = os.path.join(
-        intermediate_dir, 'ws_factor_inverse%s.tif' % file_suffix)
-    ws_nodata = -1.0
-    slope_nodata = pygeoprocessing.get_nodata_from_uri(
-        preprocessed_data['thresholded_slope_path'])
-
-    def ws_op(w_factor, s_factor):
-        #calculating the inverse so we can use the distance to stream factor function
-        return numpy.where(
-            (w_factor != w_nodata) & (s_factor != slope_nodata),
-            1.0 / (w_factor * s_factor), ws_nodata)
-
-    pygeoprocessing.vectorize_datasets(
-        [thresholded_w_factor_path, thresholded_slope_path], ws_op, ws_factor_inverse_path,
-        gdal.GDT_Float32, ws_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    _calculate_inverse_ws_factor(
+        f_reg['thresholded_slope_path'], f_reg['thresholded_w_path'],
+        f_reg['ws_inverse_path'])
 
     LOGGER.info('calculating d_dn')
-    d_dn_path = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
     pygeoprocessing.routing.routing_core.distance_to_stream(
-        flow_direction_path, stream_path, d_dn_path, factor_path=ws_factor_inverse_path)
+        f_reg['flow_direction_path'], f_reg['stream_path'],
+        f_reg['d_dn_path'], factor_uri=f_reg['ws_inverse_path'])
 
     LOGGER.info('calculate ic')
     ic_factor_path = os.path.join(intermediate_dir, 'ic_factor%s.tif' % file_suffix)
@@ -882,3 +860,54 @@ def _calculate_bar_factor(
         [accumulation_path, flow_accumulation_path], bar_op, out_bar_path,
         gdal.GDT_Float32, bar_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
+
+
+def _calculate_d_up(
+        w_bar_path, s_bar_path, flow_accumulation_path, out_d_up_path):
+    """Calculate D_up."""
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(w_bar_path)
+    cell_area = out_pixel_size ** 2
+    d_up_nodata = -1.0
+    w_bar_nodata = pygeoprocessing.get_nodata_from_uri(w_bar_path)
+    s_bar_nodata = pygeoprocessing.get_nodata_from_uri(s_bar_path)
+    flow_accumulation_nodata = pygeoprocessing.get_nodata_from_uri(
+        flow_accumulation_path)
+
+    def d_up(w_bar, s_bar, flow_accumulation):
+        """Calculate the d_up index.
+
+        w_bar * s_bar * sqrt(upstream area)
+
+        """
+        d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
+        return numpy.where(
+            (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) &
+            (flow_accumulation != flow_accumulation_nodata), d_up_array,
+            d_up_nodata)
+
+    pygeoprocessing.vectorize_datasets(
+        [w_bar_path, s_bar_path, flow_accumulation_path], d_up, out_d_up_path,
+        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+
+def _calculate_inverse_ws_factor(
+        thresholded_slope_path, thresholded_w_factor_path,
+        out_ws_factor_inverse_path):
+    ws_nodata = -1.0
+    slope_nodata = pygeoprocessing.get_nodata_from_uri(thresholded_slope_path)
+    w_nodata = pygeoprocessing.get_nodata_from_uri(thresholded_w_factor_path)
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(
+        thresholded_slope_path)
+
+    def ws_op(w_factor, s_factor):
+        """Calculate the inverse ws factor."""
+        return numpy.where(
+            (w_factor != w_nodata) & (s_factor != slope_nodata),
+            1.0 / (w_factor * s_factor), ws_nodata)
+
+    pygeoprocessing.vectorize_datasets(
+        [thresholded_w_factor_path, thresholded_slope_path], ws_op,
+        out_ws_factor_inverse_path, gdal.GDT_Float32, ws_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
