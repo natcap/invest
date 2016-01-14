@@ -39,7 +39,7 @@ _INTERMEDIATE_BASE_FILES = {
     'd_dn_path': 'd_dn.tif',
     'ws_factor_path': 'ws_factor.tif',
     'ic_path': 'ic_factor.tif',
-    'sdr_factor_path': 'sdr_factor.tif',
+    'sdr_path': 'sdr_factor.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
     'w_path': 'w.tif',
     'thresholded_w_path': 'w_threshold.tif',
@@ -234,22 +234,10 @@ def execute(args):
         f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_path'])
 
     LOGGER.info('calculate sdr')
-    sdr_factor_path = os.path.join(intermediate_dir, 'sdr_factor%s.tif' % file_suffix)
-    sdr_nodata = -9999.0
-    k = float(args['k_param'])
-    ic_0 = float(args['ic_0_param'])
-    sdr_max = float(args['sdr_max'])
-    def sdr_op(ic_factor, stream):
-        nodata_mask = (ic_factor == ic_nodata)
-        sdr = numpy.where(
-            nodata_mask, sdr_nodata, sdr_max/(1+numpy.exp((ic_0-ic_factor)/k)))
-        #mask out the stream layer
-        return numpy.where(stream == 1, 0.0, sdr)
-
-    pygeoprocessing.vectorize_datasets(
-        [ic_factor_path, stream_path], sdr_op, sdr_factor_path,
-        gdal.GDT_Float32, sdr_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    _calculate_sdr(
+        float(args['k_param']), float(args['ic_0_param']),
+        float(args['sdr_max']), f_reg['ic_path'], f_reg['stream_path'],
+        f_reg['sdr_path'])
 
     LOGGER.info('calculate sed export')
     sed_export_path = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
@@ -916,4 +904,24 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
     pygeoprocessing.vectorize_datasets(
         [d_up_path, d_dn_path], ic_op, out_ic_factor_path,
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
+
+def _calculate_sdr(
+        k_factor, ic_0, sdr_max, ic_path, stream_path, out_sdr_path):
+    sdr_nodata = -9999.0
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(stream_path)
+    ic_nodata = pygeoprocessing.get_nodata_from_uri(ic_path)
+
+    def sdr_op(ic_factor, stream):
+        """Calculate SDR factor."""
+        nodata_mask = (ic_factor == ic_nodata)
+        sdr = numpy.where(
+            nodata_mask, sdr_nodata, sdr_max/(1+numpy.exp((ic_0-ic_factor)/k_factor)))
+        #mask out the stream layer
+        return numpy.where(stream == 1, 0.0, sdr)
+
+    pygeoprocessing.vectorize_datasets(
+        [ic_path, stream_path], sdr_op, out_sdr_path,
+        gdal.GDT_Float32, sdr_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
