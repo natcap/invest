@@ -488,7 +488,7 @@ def _calculate_rkls(
     cell_area_ha = cell_size ** 2 / 10000.0
 
     def rkls_function(ls_factor, erosivity, erodibility, stream):
-        """Calculates the USLE equation
+        """Calculates the RKLS equation.
 
         ls_factor - length/slope factor
         erosivity - related to peak rainfall events
@@ -500,13 +500,23 @@ def _calculate_rkls(
             defined, nodata if some are not defined, 0 if in a stream
             (stream)"""
 
-        rkls = numpy.where(
-            stream == 1, 0.0,
-            ls_factor * erosivity * erodibility * cell_area_ha)
-        return numpy.where(
-            (ls_factor == ls_factor_nodata) | (erosivity == erosivity_nodata) |
-            (erodibility == erodibility_nodata) | (stream == stream_nodata),
-            usle_nodata, rkls)
+        rkls = numpy.empty(ls_factor.shape)
+        valid_mask = (
+            (ls_factor != ls_factor_nodata) &
+            (erosivity != erosivity_nodata) &
+            (erodibility != erodibility_nodata) &
+            (stream != stream_nodata))
+        rkls[:] = usle_nodata
+
+        no_stream_mask = stream[valid_mask] == 0
+        rkls[valid_mask][no_stream_mask] = (
+            ls_factor[valid_mask][no_stream_mask] *
+            erosivity[valid_mask][no_stream_mask] *
+            erodibility[valid_mask][no_stream_mask] *
+            cell_area_ha)
+        # rkls is 1 on the stream
+        rkls[valid_mask][stream[valid_mask] == 1] = 1
+        return rkls
 
     dataset_path_list = [
         ls_factor_path, erosivity_path, erodibility_path, stream_path]
