@@ -931,18 +931,10 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
             # habitat - stressor pair are set to 'NA'
             if any(overlap_list) and not all(overlap_list):
                 raise NA_RatingsError("There were 'NA' Rating values found "
-                    "for habitat - stressor pair : %s - %s , in the criteria "
-                    "ratings CSV file, however, not all Rating values were "
-                    "set to 'NA'. 'NA' values indicate that the habitat "
-                    "and stressor should be considered to have NO "
-                    "Interaction, even if there is an overlap from the "
-                    "sources. The model treats this as setting any overlap "
-                    "between two sources to False. To achieve this "
-                    "behaviour ALL Rating values for the habitat - stressor "
-                    "pair must be set to 'NA'. If one or a few of the "
-                    "criteria for a habitat - stressor pair should be "
-                    "ignored, please use a zero (0) value." % (
-                    hab_name, stress_name))
+                    "for habitat - stressor pair : %s - %s , however, not "
+                    "all Rating values were set to 'NA'. ALL or NONE Rating "
+                    "values for the habitat - stressor pair must be set to "
+                    "'NA'. " % (hab_name, stress_name))
 
             #Assume if we've gotten here, we're at the end of a block. Iterate
             #counter by one, since we know it's A whitespace line. If there is
