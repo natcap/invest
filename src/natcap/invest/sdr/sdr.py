@@ -383,7 +383,6 @@ def calculate_ls_factor(
         return numpy.where(nodata_mask, ls_nodata, l_factor * slope_factor)
 
     #Call vectorize datasets to calculate the ls_factor
-    dataset_path_list = [aspect_path, slope_path, flow_accumulation_path]
     pygeoprocessing.vectorize_datasets(
         [aspect_path, slope_path, flow_accumulation_path], ls_factor_function,
         ls_factor_path, gdal.GDT_Float32, ls_nodata, cell_size, "intersection",
@@ -396,17 +395,19 @@ def calculate_ls_factor(
     m_path = os.path.join(base_directory, "m.tif")
 
     def m_op(percent_slope):
-        """Calculate m factor."""
-        slope_in_radians = numpy.arctan(percent_slope / 100.0)
+        """Calculate m factor.
 
+        These constant table values are taken from the tables in
+        "InVEST Sediment Model_modifications_10-01-2012_RS.docx"
+        in the FT Team dropbox.
+        """
+        slope_in_radians = numpy.arctan(percent_slope / 100.0)
         beta = ((numpy.sin(slope_in_radians) / 0.0896) /
                 (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
-        #slope table in percent
         slope_table = [1., 3.5, 5., 9.]
         exponent_table = [0.2, 0.3, 0.4, 0.5]
-        #Look up the correct m value from the table
-        m_exp = beta/(1+beta)
+        m_exp = beta / (1 + beta)
         for i in range(4):
             m_exp[percent_slope <= slope_table[i]] = exponent_table[i]
         return m_exp
@@ -448,7 +449,7 @@ def calculate_ls_factor(
         vectorize_op=False)
 
     def xi_op(aspect_angle):
-        """xi factor that is essentially a dot product projection"""
+        """xi factor which is the relative flow length across a cell."""
         return (
             numpy.abs(numpy.sin(aspect_angle)) +
             numpy.abs(numpy.cos(aspect_angle)))
@@ -496,7 +497,8 @@ def _calculate_rkls(
 
         returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
             defined, nodata if some are not defined, 0 if in a stream
-            (stream)"""
+            (stream)
+        """
 
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
