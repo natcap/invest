@@ -60,7 +60,7 @@ _TMP_BASE_FILES = {
     'aligned_watersheds_path': 'aligned_watersheds_path.tif',
     'aligned_drainage_path': 'aligned_drainage.tif',
     'zero_absorption_source_path': 'zero_absorption_source.tif',
-    'loss_path': 'loss_path.tif',
+    'loss_path': 'loss.tif',
     'w_accumulation_path': 'w_accumulation.tif',
     's_accumulation_path': 's_accumulation.tif',
     }
@@ -500,22 +500,19 @@ def _calculate_rkls(
             defined, nodata if some are not defined, 0 if in a stream
             (stream)"""
 
-        rkls = numpy.empty(ls_factor.shape)
+        rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         valid_mask = (
-            (ls_factor != ls_factor_nodata) &
-            (erosivity != erosivity_nodata) &
-            (erodibility != erodibility_nodata) &
-            (stream != stream_nodata))
+            (ls_factor != ls_factor_nodata) & (erosivity != erosivity_nodata) &
+            (erodibility != erodibility_nodata) & (stream != stream_nodata) &
+            (stream == 0))
         rkls[:] = usle_nodata
 
-        no_stream_mask = stream[valid_mask] == 0
-        rkls[valid_mask][no_stream_mask] = (
-            ls_factor[valid_mask][no_stream_mask] *
-            erosivity[valid_mask][no_stream_mask] *
-            erodibility[valid_mask][no_stream_mask] *
-            cell_area_ha)
+        rkls[valid_mask] = (
+            ls_factor[valid_mask] * erosivity[valid_mask] *
+            erodibility[valid_mask] * cell_area_ha)
+
         # rkls is 1 on the stream
-        rkls[valid_mask][stream[valid_mask] == 1] = 1
+        rkls[stream == 1] = 1
         return rkls
 
     dataset_path_list = [
@@ -870,11 +867,15 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
     d_up_nodata = pygeoprocessing.get_nodata_from_uri(d_up_path)
     d_dn_nodata = pygeoprocessing.get_nodata_from_uri(d_dn_path)
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(d_up_path)
+
     def ic_op(d_up, d_dn):
         """Calculate IC factor."""
-        nodata_mask = (d_up == d_up_nodata) | (d_dn == d_dn_nodata)
-        return numpy.where(
-            nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
+        valid_mask = (d_up != d_up_nodata) & (d_dn != d_dn_nodata)
+        ic_array = numpy.empty(valid_mask.shape)
+        ic_array[:] = ic_nodata
+        ic_array[valid_mask] = numpy.log10(d_up[valid_mask] / d_dn[valid_mask])
+        return ic_array
+
     pygeoprocessing.vectorize_datasets(
         [d_up_path, d_dn_path], ic_op, out_ic_factor_path,
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
