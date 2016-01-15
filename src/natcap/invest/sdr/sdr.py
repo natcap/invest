@@ -461,8 +461,8 @@ def calculate_ls_factor(
 
 
 def _calculate_rkls(
-    ls_factor_path, erosivity_path, erodibility_path, stream_path,
-    rkls_path):
+        ls_factor_path, erosivity_path, erodibility_path, stream_path,
+        rkls_path):
     """Calculate per-pixel potential soil loss using the RKLS.
 
     (revised universial soil loss equation with no C or P).
@@ -501,10 +501,10 @@ def _calculate_rkls(
             (stream)"""
 
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
-        valid_mask = (
+        nodata_mask = (
             (ls_factor != ls_factor_nodata) & (erosivity != erosivity_nodata) &
-            (erodibility != erodibility_nodata) & (stream != stream_nodata) &
-            (stream == 0))
+            (erodibility != erodibility_nodata) & (stream != stream_nodata))
+        valid_mask = nodata_mask & (stream == 0)
         rkls[:] = usle_nodata
 
         rkls[valid_mask] = (
@@ -512,7 +512,7 @@ def _calculate_rkls(
             erodibility[valid_mask] * cell_area_ha)
 
         # rkls is 1 on the stream
-        rkls[stream == 1] = 1
+        rkls[nodata_mask & (stream == 1)] = 1
         return rkls
 
     dataset_path_list = [
