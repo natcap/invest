@@ -774,11 +774,21 @@ def _calculate_d_up(
         w_bar * s_bar * sqrt(upstream area)
 
         """
-        d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
-        return numpy.where(
+        valid_mask = (
             (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) &
-            (flow_accumulation != flow_accumulation_nodata), d_up_array,
-            d_up_nodata)
+            (flow_accumulation != flow_accumulation_nodata))
+        d_up_array = numpy.empty(valid_mask.shape)
+        d_up_array[:] = d_up_nodata
+        d_up_array[valid_mask] = (
+            w_bar[valid_mask] * s_bar[valid_mask] * numpy.sqrt(
+                flow_accumulation[valid_mask] * cell_area))
+        return d_up_array
+
+        #d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
+        #return numpy.where(
+        #    (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) &
+        #    (flow_accumulation != flow_accumulation_nodata), d_up_array,
+        #    d_up_nodata)
 
     pygeoprocessing.vectorize_datasets(
         [w_bar_path, s_bar_path, flow_accumulation_path], d_up, out_d_up_path,
