@@ -5,8 +5,8 @@
     "src/invest-natcap.default": "f18244edcff0f68871b9f839a904bc98b5a50b82",
     "src/pygeoprocessing": "REQUIREMENTS_TXT:pygeoprocessing",
     "src/pyinstaller": {
-        "Darwin": "3.0",
-        "Windows": "3.0",
-        "Linux": "3.0"
+        "Darwin": "v3.1",
+        "Windows": "v3.1",
+        "Linux": "v3.1"
     }
 }
