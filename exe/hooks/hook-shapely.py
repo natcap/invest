@@ -1,6 +1,7 @@
 import os
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files, get_package_paths
-from PyInstaller.compat import is_darwin, is_win, is_linux
+from PyInstaller.utils.hooks import \
+    (collect_submodules, collect_data_files, get_package_paths)
+from PyInstaller.compat import is_darwin, is_win
 
 hiddenimports = collect_submodules('shapely')
 
@@ -10,5 +11,4 @@ datas = collect_data_files('shapely')
 if is_win:
     datas += [(os.path.join(pkg_dir, 'DLLs/geos_c.dll'), '')]
 elif is_darwin:
-    datas += [(os.path.join(pkg_dir, '.dylibs/libgeos_c.1.dylib'), '')]
-    datas += [(os.path.join(pkg_dir, '.dylibs/libgeos-3.4.2.dylib'), '')]
+    datas += [(os.path.join(pkg_dir, '.dylibs/*.dylib'), '')]
