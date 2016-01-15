@@ -164,8 +164,6 @@ def execute(args):
         f_reg['flow_accumulation_path'],
         float(args['threshold_flow_accumulation']),
         f_reg['stream_path'])
-    stream_nodata = pygeoprocessing.get_nodata_from_uri(
-        f_reg['stream_path'])
 
     if drainage_present:
         _add_drainage(
@@ -322,13 +320,14 @@ def calculate_ls_factor(
     cell_area = cell_size ** 2
 
     def ls_factor_function(aspect_angle, percent_slope, flow_accumulation):
-        """Calculate the ls factor
+        """Calculate the ls factor.
 
             aspect_angle - flow direction in radians
             percent_slope - slope in terms of percent
             flow_accumulation - upstream pixels at this point
 
-            returns the ls_factor calculation for this point"""
+            returns the ls_factor calculation for this point
+        """
 
         #Skip the calculation if any of the inputs are nodata
         nodata_mask = (
@@ -340,7 +339,7 @@ def calculate_ls_factor(
         #pixel, thus we take the absolute value of each trigonometric
         #function to keep the computation in the first quadrant
         xij = (numpy.abs(numpy.sin(aspect_angle)) +
-            numpy.abs(numpy.cos(aspect_angle)))
+               numpy.abs(numpy.cos(aspect_angle)))
 
         contributing_area = (flow_accumulation-1) * cell_area
 
@@ -350,14 +349,16 @@ def calculate_ls_factor(
 
         #From Equation 4 in "Extension and validation of a geographic
         #information system ..."
-        slope_factor = numpy.where(percent_slope < 9.0,
+        slope_factor = numpy.where(
+            percent_slope < 9.0,
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
         #Set the m value to the lookup table that's Table 1 in
         #InVEST Sediment Model_modifications_10-01-2012_RS.docx in the
         #FT Team dropbox
-        beta = ((numpy.sin(slope_in_radians) / 0.0896) /
+        beta = (
+            (numpy.sin(slope_in_radians) / 0.0896) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
         #slope table in percent
@@ -384,9 +385,9 @@ def calculate_ls_factor(
     #Call vectorize datasets to calculate the ls_factor
     dataset_path_list = [aspect_path, slope_path, flow_accumulation_path]
     pygeoprocessing.vectorize_datasets(
-        dataset_path_list, ls_factor_function, ls_factor_path, gdal.GDT_Float32,
-        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
+        [aspect_path, slope_path, flow_accumulation_path], ls_factor_function,
+        ls_factor_path, gdal.GDT_Float32, ls_nodata, cell_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
 
     base_directory = os.path.dirname(ls_factor_path)
     xi_path = os.path.join(base_directory, "xi.tif")
@@ -394,12 +395,12 @@ def calculate_ls_factor(
     beta_path = os.path.join(base_directory, "beta.tif")
     m_path = os.path.join(base_directory, "m.tif")
 
-
-    def m_op(aspect_angle, percent_slope, flow_accumulation):
+    def m_op(percent_slope):
+        """Calculate m factor."""
         slope_in_radians = numpy.arctan(percent_slope / 100.0)
 
         beta = ((numpy.sin(slope_in_radians) / 0.0896) /
-            (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
+                (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
         #slope table in percent
         slope_table = [1., 3.5, 5., 9.]
@@ -408,47 +409,51 @@ def calculate_ls_factor(
         m_exp = beta/(1+beta)
         for i in range(4):
             m_exp[percent_slope <= slope_table[i]] = exponent_table[i]
-
         return m_exp
 
     pygeoprocessing.vectorize_datasets(
-        dataset_path_list, m_op, m_path, gdal.GDT_Float32,
+        [slope_path], m_op, m_path, gdal.GDT_Float32,
         ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
+    def beta_op(percent_slope):
+        """Calculate beta.
 
-    def beta_op(aspect_angle, percent_slope, flow_accumulation):
+        Taken from "InVEST Sediment Model_modifications_10-01-2012_RS.docx"
+        in the FT Team dropbox.
+        """
         slope_in_radians = numpy.arctan(percent_slope / 100.0)
-
-        #Set the m value to the lookup table that's Table 1 in
-        #InVEST Sediment Model_modifications_10-01-2012_RS.docx in the
-        #FT Team dropbox
         return ((numpy.sin(slope_in_radians) / 0.0896) /
-            (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
+                (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
     pygeoprocessing.vectorize_datasets(
-        dataset_path_list, beta_op, beta_path, gdal.GDT_Float32,
-        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
+        [slope_path], beta_op, beta_path, gdal.GDT_Float32, ls_nodata,
+        cell_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
-    def s_factor_op(aspect_angle, percent_slope, flow_accumulation):
-        slope_in_radians = numpy.arctan(percent_slope / 100.0)
+    def s_factor_op(percent_slope):
+        """Calculate s factor.
 
-        #From Equation 4 in "Extension and validation of a geographic
-        #information system ..."
-        return numpy.where(percent_slope < 9.0,
+        From Equation 4 in "Extension and validation of a geographic
+        information system"
+        """
+        slope_in_radians = numpy.arctan(percent_slope / 100.0)
+        return numpy.where(
+            percent_slope < 9.0,
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
     pygeoprocessing.vectorize_datasets(
-        dataset_path_list, s_factor_op, s_factor_path, gdal.GDT_Float32,
+        [slope_path], s_factor_op, s_factor_path, gdal.GDT_Float32,
         ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
-    def xi_op(aspect_angle, percent_slope, flow_accumulation):
-        return (numpy.abs(numpy.sin(aspect_angle)) +
+    def xi_op(aspect_angle):
+        """xi factor that is essentially a dot product projection"""
+        return (
+            numpy.abs(numpy.sin(aspect_angle)) +
             numpy.abs(numpy.cos(aspect_angle)))
     pygeoprocessing.vectorize_datasets(
-        dataset_path_list, xi_op, xi_path, gdal.GDT_Float32,
+        [aspect_path], xi_op, xi_path, gdal.GDT_Float32,
         ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
