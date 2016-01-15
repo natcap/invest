@@ -809,11 +809,15 @@ def _calculate_d_up_bare(
         w_bar * s_bar * sqrt(upstream area)
 
         """
-        d_up_array = s_bar * numpy.sqrt(flow_accumulation * cell_area)
-        return numpy.where(
-            (s_bar != s_bar_nodata) &
-            (flow_accumulation != flow_accumulation_nodata), d_up_array,
-            d_up_nodata)
+        valid_mask = (
+            (flow_accumulation != flow_accumulation_nodata) &
+            (s_bar != s_bar_nodata))
+        d_up_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        d_up_array[:] = d_up_nodata
+        d_up_array[valid_mask] = (
+            numpy.sqrt(flow_accumulation[valid_mask] * cell_area) *
+            s_bar[valid_mask])
+        return d_up_array
 
     pygeoprocessing.vectorize_datasets(
         [s_bar_path, flow_accumulation_path], d_up, out_d_up_bare_path,
