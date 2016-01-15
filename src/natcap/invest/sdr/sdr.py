@@ -870,7 +870,9 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
 
     def ic_op(d_up, d_dn):
         """Calculate IC factor."""
-        valid_mask = (d_up != d_up_nodata) & (d_dn != d_dn_nodata)
+        valid_mask = (
+            (d_up != d_up_nodata) & (d_dn != d_dn_nodata) & (d_dn != 0) &
+            (d_up != 0))
         ic_array = numpy.empty(valid_mask.shape)
         ic_array[:] = ic_nodata
         ic_array[valid_mask] = numpy.log10(d_up[valid_mask] / d_dn[valid_mask])
