@@ -67,47 +67,40 @@ _TMP_BASE_FILES = {
 
 NODATA_USLE = -1.0
 
+
 def execute(args):
-    """This function invokes the SDR model given
-        URI inputs of files. It may write log, warning, or error messages to
-        stdout.
+    """InvEST SDR model.
 
-        args - a python dictionary with at the following possible entries:
-        args['workspace_dir'] - a uri to the directory that will write output
-            and other temporary files during calculation. (required)
-        args['results_suffix'] - a string to append to any output file name (optional)
-        args['dem_path'] - a uri to a digital elevation raster file (required)
-        args['erosivity_path'] - a uri to an input raster describing the
-            rainfall eroisivity index (required)
-        args['erodibility_path'] - a uri to an input raster describing soil
-            erodibility (required)
-        args['lulc_path'] - a uri to a land use/land cover raster whose
-            LULC indexes correspond to indexs in the biophysical table input.
-            Used for determining soil retention and other biophysical
-            properties of the landscape.  (required)
-        args['watersheds_path'] - a uri to an input shapefile of the watersheds
-            of interest as polygons. (required)
-        args['biophysical_table_path'] - a uri to an input CSV file with
-            biophysical information about each of the land use classes.
-        args['threshold_flow_accumulation'] - an integer describing the number
-            of upstream cells that must flow int a cell before it's considered
-            part of a stream.  required if 'stream_path' is not provided.
-        args['k_param'] - k calibration parameter (see user's guide for values)
-        args['sdr_max'] - the max value the SDR can be
-        args['ic_0_param'] - ic_0 calibration parameter (see user's guide for
-            values)
-        args['drainage_path'] - An optional GIS raster dataset mask, that
-            indicates areas that drain to the watershed.  Format is that 1's
-            indicate drainage areas and 0's or nodata indicate areas with no
-            additional drainage.  This model is most accurate when the drainage
-            raster aligns with the DEM.
-        args['_prepare'] - (optional) The preprocessed set of data created by the
-            sdr._prepare call.  This argument could be used in cases where the
-            call to this function is scripted and can save a significant amount
-            of runtime.
+    This function calculates the sediment export and retention of a landscape
+    using the sediment delivery ratio model described in the InVEST user's
+    guide.
 
-        returns nothing."""
+    Parameters:
+        args['workspace_dir'] (string): output directory for intermediate,
+            temporary, and final files
+        args['results_suffix'] (string): (optional) string to append to any
+            output file names
+        args['dem_path'] (string): path to a digital elevation raster
+        args['erosivity_path'] (string): path to rainfall erosivity index
+            raster
+        args['erodibility_path'] (string): a path to soil erodibility raster
+        args['lulc_path'] (string): path to land use/land cover raster
+        args['watersheds_path'] (string): path to vector of the watersheds
+        args['biophysical_table_path'] (string): path to CSV file with
+            biophysical information of each land use classes.  contain the
+            fields 'usle_c' and 'usle_p'
+        args['threshold_flow_accumulation'] (number): number of upstream pixels
+            on the dem to threshold to a stream.
+        args['k_param'] (number): k calibration parameter
+        args['sdr_max'] (number): max value the SDR
+        args['ic_0_param'] (number): ic_0 calibration parameter
+        args['drainage_path'] (string): (optional) path to drainage raster that
+            is used to add additional drainage areas to the internally
+            calculated stream layer
 
+    Returns:
+        None.
+    """
     #append a _ to the suffix if it's not empty and doens't already have one
     file_suffix = natcap.invest.utils.make_suffix_string(
         args, 'results_suffix')
@@ -780,12 +773,6 @@ def _calculate_d_up(
             w_bar[valid_mask] * s_bar[valid_mask] * numpy.sqrt(
                 flow_accumulation[valid_mask] * cell_area))
         return d_up_array
-
-        #d_up_array = w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
-        #return numpy.where(
-        #    (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) &
-        #    (flow_accumulation != flow_accumulation_nodata), d_up_array,
-        #    d_up_nodata)
 
     pygeoprocessing.vectorize_datasets(
         [w_bar_path, s_bar_path, flow_accumulation_path], d_up, out_d_up_path,
