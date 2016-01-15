@@ -245,6 +245,7 @@ def snapshot_idx_to_timestep(d, snapshot_idx):
 
 
 def is_transition_year(d, timestep):
+    """Check whether given timestep is a transition year."""
     if (timestep_to_transition_idx(d, timestep) != timestep_to_transition_idx(d, timestep-1) and
         timestep_to_transition_idx(d, timestep)):
         return True

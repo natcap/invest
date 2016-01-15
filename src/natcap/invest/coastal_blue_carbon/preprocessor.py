@@ -10,7 +10,7 @@ import gdal
 from pygeoprocessing.geoprocessing import get_lookup_from_csv
 
 from natcap.invest.coastal_blue_carbon import NODATA_INT, NODATA_FLOAT, HA_PER_M2
-from natcap.invest.coastal_blue_carbon.classes.raster import Raster
+from natcap.invest.coastal_blue_carbon.raster import Raster
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')

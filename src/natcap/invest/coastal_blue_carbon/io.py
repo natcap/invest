@@ -11,7 +11,7 @@ import numpy as np
 import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 
-from natcap.invest.coastal_blue_carbon import NODATA_INT, NODATA_FLOAT, HA_PER_M2
+from natcap.invest.coastal_blue_carbon import NODATA_FLOAT
 
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -339,6 +339,16 @@ def _create_transient_dict(carbon_pool_transient_uri):
 
 
 def _get_price_table(price_table_uri, start_year, end_year):
+    """Get price table.
+
+    Parameters:
+        price_table_uri (str): filepath to price table csv file
+        start_year (int): start year of analysis
+        end_year (int): end year of analysis
+
+    Returns:
+        price_t (np.array): price for each year.
+    """
     price_dict = geoprocess.get_lookup_from_table(price_table_uri, 'year')
 
     price_t = np.zeros(end_year - start_year + 1)
