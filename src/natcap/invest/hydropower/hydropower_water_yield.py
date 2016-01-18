@@ -276,40 +276,55 @@ def execute(args):
         returns - fractp value
         """
 
-        #Compute Budyko Dryness index
-        #Use the original AET equation if the land cover type is vegetation
-        #If not vegetation (wetlands, urban, water, etc...) use
-        #Alternative equation Kc * Eto
-        phi = (Kc * eto) / (precip)
-        pet = Kc * eto
+        valid_mask = (
+            (Kc != Kc_nodata) & (eto != eto_nodata) &
+            (precip != precip_nodata) & (root != root_nodata) &
+            (soil != root_rest_layer_nodata) & (pawc != pawc_nodata) &
+            (veg != veg_nodata) & (precip != 0.0) & (Kc != 0.0) &
+            (eto != 0.0))
 
-        #Calculate plant available water content (mm) using the minimum
-        #of soil depth and root depth
-        awc = numpy.where(root < soil, root, soil) * pawc
-        climate_w = ((awc / precip) * seasonality_constant) + 1.25
+        # Compute Budyko Dryness index
+        # Use the original AET equation if the land cover type is vegetation
+        # If not vegetation (wetlands, urban, water, etc...) use
+        # Alternative equation Kc * Eto
+        phi = (Kc[valid_mask] * eto[valid_mask]) / precip[valid_mask]
+        pet = Kc[valid_mask] * eto[valid_mask]
+
+        # Calculate plant available water content (mm) using the minimum
+        # of soil depth and root depth
+        awc = numpy.where(
+            root[valid_mask] < soil[valid_mask], root[valid_mask],
+            soil[valid_mask]) * pawc[valid_mask]
+        climate_w = (
+            (awc / precip[valid_mask]) * seasonality_constant) + 1.25
         # Capping to 5.0 to set to upper limit if exceeded
         climate_w = numpy.where(climate_w > 5.0, 5.0, climate_w)
 
-        #Compute evapotranspiration partition of the water balance
-        aet_p = (1.0 + (pet / precip)) - ((1.0 + (pet / precip) ** climate_w) ** (1.0 / climate_w))
+        # Compute evapotranspiration partition of the water balance
+        aet_p = (
+            1.0 + (pet / precip[valid_mask])) - (
+                (1.0 + (pet / precip[valid_mask]) ** climate_w) ** (
+                    1.0 / climate_w))
 
-        #We take the minimum of the following values (phi, aet_p)
-        #to determine the evapotranspiration partition of the
+        # We take the minimum of the following values (phi, aet_p)
+        # to determine the evapotranspiration partition of the
         # water balance (see users guide)
-        veg_result =  numpy.where(phi < aet_p, phi, aet_p)
-        #Take the minimum of precip and Kc * ETo to avoid x / p > 1.0
-        nonveg_result = numpy.where(precip < Kc * eto, precip, Kc * eto) / precip
-        #If veg is 1.0 use the result for vegetated areas else use result
-        #for non veg areas
-        result = numpy.where(veg == 1.0, veg_result, nonveg_result)
+        veg_result = numpy.where(phi < aet_p, phi, aet_p)
+        # Take the minimum of precip and Kc * ETo to avoid x / p > 1.0
+        nonveg_result = numpy.where(
+            precip[valid_mask] < Kc[valid_mask] * eto[valid_mask],
+            precip[valid_mask],
+            Kc[valid_mask] * eto[valid_mask]) / precip[valid_mask]
+        # If veg is 1.0 use the result for vegetated areas else use result
+        # for non veg areas
+        result = numpy.where(
+            veg[valid_mask] == 1.0,
+            veg_result, nonveg_result)
 
-        #If any of the local variables which are in the 'fractp_nodata_dict'
-        #dictionary are equal to a out_nodata value, then return out_nodata
-        return numpy.where(
-            (Kc == Kc_nodata) | (eto == eto_nodata) | (precip == precip_nodata)
-            | (root == root_nodata) | (soil == root_rest_layer_nodata) |
-            (pawc == pawc_nodata) | (veg == veg_nodata) | (precip == 0.0) |
-            (Kc == 0.0) | (eto == 0.0), out_nodata, result)
+        fractp = numpy.empty(valid_mask.shape)
+        fractp[:] = out_nodata
+        fractp[valid_mask] = result
+        return fractp
 
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
