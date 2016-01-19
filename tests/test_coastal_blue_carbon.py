@@ -59,7 +59,7 @@ def create_table(uri, rows_list):
 
 class TestGetInputs(unittest.TestCase):
 
-    """Test io.get_inputs."""
+    """Test io library functions."""
 
     def setUp(self):
         band_matrices = [np.ones((2,2))]
@@ -118,7 +118,7 @@ class TestGetInputs(unittest.TestCase):
 
 class TestModel(unittest.TestCase):
 
-    """Function-Level Tests."""
+    """Test main model functions."""
 
     def setUp(self):
         band_matrices = [np.ones((2,2))]
@@ -168,6 +168,7 @@ class TestModel(unittest.TestCase):
         }
 
     def test_model_run(self):
+        """Test main model 'run' function."""
         d = io.get_inputs(self.args)
         cbc.run(d)
         output_raster = os.path.join(
