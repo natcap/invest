@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for Main Model."""
+"""Tests for IO Functions."""
 import unittest
 import pprint
 import os
@@ -55,6 +55,65 @@ def create_table(uri, rows_list):
         writer = csv.writer(f)
         writer.writerows(rows_list)
     return uri
+
+
+class TestGetInputs(unittest.TestCase):
+
+    """Test io.get_inputs."""
+
+    def setUp(self):
+        band_matrices = [np.ones((2,2))]
+        srs = pygeotest.sampledata.SRS_WILLAMETTE
+
+        workspace = os.path.join(os.getcwd(), 'workspace')
+        if os.path.exists(workspace):
+            shutil.rmtree(workspace)
+        os.mkdir(workspace)
+        lulc_lookup_uri = create_table(os.path.join(os.getcwd(),
+            'workspace/lulc_lookup.csv'), lulc_lookup_list)
+        lulc_transition_matrix_uri = create_table(os.path.join(os.getcwd(),
+            'workspace/lulc_transition_matrix.csv'), lulc_transition_matrix_list)
+        carbon_pool_initial_uri = create_table(os.path.join(os.getcwd(),
+            'workspace/carbon_pool_initial.csv'), carbon_pool_initial_list)
+        carbon_pool_transient_uri = create_table(os.path.join(os.getcwd(),
+            'workspace/carbon_pool_transient.csv'), carbon_pool_transient_list)
+        raster_0_uri = pygeotest.create_raster_on_disk(
+            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_0.tif'))
+        raster_1_uri = pygeotest.create_raster_on_disk(
+            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_1.tif'))
+        raster_2_uri = pygeotest.create_raster_on_disk(
+            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_2.tif'))
+        lulc_baseline_map_uri = raster_0_uri
+        lulc_transition_maps_list = [raster_1_uri, raster_2_uri]
+
+        self.args = {
+            'workspace_dir': workspace,
+            'results_suffix': 'test',
+            'lulc_lookup_uri': lulc_lookup_uri,
+            'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
+            'lulc_baseline_map_uri': raster_0_uri,
+            'lulc_transition_maps_list': [raster_1_uri, raster_2_uri],
+            'lulc_transition_years_list': [2000, 2005],
+            'analysis_year': 2010,
+            'carbon_pool_initial_uri': carbon_pool_initial_uri,
+            'carbon_pool_transient_uri': carbon_pool_transient_uri,
+            'do_economic_analysis': True,
+            'do_price_table': False,
+            'price': 2.,
+            'interest_rate': 5.,
+            'price_table_uri': None,
+            'discount_rate': 2.
+        }
+
+    def test_get_inputs(self):
+        d = io.get_inputs(self.args)
+        self.assertTrue(d['lulc_to_Hb'][0] == 0.0)
+
+    def tearDown(self):
+        shutil.rmtree(self.args['workspace_dir'])
 
 
 class TestModel(unittest.TestCase):
