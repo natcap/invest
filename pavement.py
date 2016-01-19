@@ -2223,8 +2223,10 @@ def build_bin(options):
         _write_console_files(binary, 'bat')
     else:
         binary = os.path.join(invest_dist, 'invest')
-        shutil.copy('/usr/local/Cellar/libpng/1.6.20/lib/*', invest_dist)
-        shutil.copy('/usr/local/Cellar/geos/3.5.0/lib/*', invest_dist)
+        if platform.system() == 'Darwin':
+            # Patch for correct dylibs until better pyinstaller solution found
+            sh('cp /usr/local/Cellar/libpng/1.6.20/lib/* %s' % invest_dist)
+            sh('cp /usr/local/Cellar/geos/3.5.0/lib/* %s' % invest_dist)
         _write_console_files(binary, 'sh')
 
 
