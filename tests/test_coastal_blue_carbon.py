@@ -57,7 +57,7 @@ def create_table(uri, rows_list):
     return uri
 
 
-class TestGetInputs(unittest.TestCase):
+class TestIO(unittest.TestCase):
 
     """Test io library functions."""
 
