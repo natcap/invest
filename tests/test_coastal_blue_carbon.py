@@ -12,7 +12,7 @@ from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
 
 from natcap.invest.coastal_blue_carbon import coastal_blue_carbon as cbc
-from natcap.invest.coastal_blue_carbon import io
+from natcap.invest.coastal_blue_carbon import io, preprocessor
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -65,18 +65,19 @@ class TestIO(unittest.TestCase):
         band_matrices = [np.ones((2,2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
 
-        workspace = os.path.join(os.getcwd(), 'workspace')
+        path = os.path.dirname(os.path.realpath(__file__))
+        workspace = os.path.join(path, 'workspace')
         if os.path.exists(workspace):
             shutil.rmtree(workspace)
         os.mkdir(workspace)
-        lulc_lookup_uri = create_table(os.path.join(os.getcwd(),
-            'workspace/lulc_lookup.csv'), lulc_lookup_list)
-        lulc_transition_matrix_uri = create_table(os.path.join(os.getcwd(),
-            'workspace/lulc_transition_matrix.csv'), lulc_transition_matrix_list)
-        carbon_pool_initial_uri = create_table(os.path.join(os.getcwd(),
-            'workspace/carbon_pool_initial.csv'), carbon_pool_initial_list)
-        carbon_pool_transient_uri = create_table(os.path.join(os.getcwd(),
-            'workspace/carbon_pool_transient.csv'), carbon_pool_transient_list)
+        lulc_lookup_uri = create_table(os.path.join(workspace,
+            'lulc_lookup.csv'), lulc_lookup_list)
+        lulc_transition_matrix_uri = create_table(os.path.join(workspace,
+            'lulc_transition_matrix.csv'), lulc_transition_matrix_list)
+        carbon_pool_initial_uri = create_table(os.path.join(workspace,
+            'carbon_pool_initial.csv'), carbon_pool_initial_list)
+        carbon_pool_transient_uri = create_table(os.path.join(workspace,
+            'carbon_pool_transient.csv'), carbon_pool_transient_list)
         raster_0_uri = pygeotest.create_raster_on_disk(
             band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_0.tif'))
@@ -124,18 +125,19 @@ class TestModel(unittest.TestCase):
         band_matrices = [np.ones((2,2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
 
-        workspace = os.path.join(os.getcwd(), 'workspace')
+        path = os.path.dirname(os.path.realpath(__file__))
+        workspace = os.path.join(path, 'workspace')
         if os.path.exists(workspace):
             shutil.rmtree(workspace)
         os.mkdir(workspace)
-        lulc_lookup_uri = create_table(os.path.join(os.getcwd(),
-            'workspace/lulc_lookup.csv'), lulc_lookup_list)
-        lulc_transition_matrix_uri = create_table(os.path.join(os.getcwd(),
-            'workspace/lulc_transition_matrix.csv'), lulc_transition_matrix_list)
-        carbon_pool_initial_uri = create_table(os.path.join(os.getcwd(),
-            'workspace/carbon_pool_initial.csv'), carbon_pool_initial_list)
-        carbon_pool_transient_uri = create_table(os.path.join(os.getcwd(),
-            'workspace/carbon_pool_transient.csv'), carbon_pool_transient_list)
+        lulc_lookup_uri = create_table(os.path.join(workspace,
+            'lulc_lookup.csv'), lulc_lookup_list)
+        lulc_transition_matrix_uri = create_table(os.path.join(workspace,
+            'lulc_transition_matrix.csv'), lulc_transition_matrix_list)
+        carbon_pool_initial_uri = create_table(os.path.join(workspace,
+            'carbon_pool_initial.csv'), carbon_pool_initial_list)
+        carbon_pool_transient_uri = create_table(os.path.join(workspace,
+            'carbon_pool_transient.csv'), carbon_pool_transient_list)
         raster_0_uri = pygeotest.create_raster_on_disk(
             band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_0.tif'))
@@ -179,6 +181,52 @@ class TestModel(unittest.TestCase):
         a = band.ReadAsArray()
         ds = None
         np.testing.assert_almost_equal(a[0, 0], 45.73148727)
+
+    def tearDown(self):
+        shutil.rmtree(self.args['workspace_dir'])
+
+
+class TestPreprocessor(unittest.TestCase):
+
+    """Test preprocessor library functions."""
+
+    def setUp(self):
+        band_matrices = [np.ones((2,2))]
+        srs = pygeotest.sampledata.SRS_WILLAMETTE
+
+        path = os.path.dirname(os.path.realpath(__file__))
+        workspace = os.path.join(path, 'workspace')
+        if os.path.exists(workspace):
+            shutil.rmtree(workspace)
+        os.mkdir(workspace)
+
+        lulc_lookup_uri = create_table(os.path.join(workspace,
+            'lulc_lookup.csv'), lulc_lookup_list)
+
+        raster_0_uri = pygeotest.create_raster_on_disk(
+            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_0.tif'))
+        raster_1_uri = pygeotest.create_raster_on_disk(
+            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_1.tif'))
+        raster_2_uri = pygeotest.create_raster_on_disk(
+            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_2.tif'))
+
+        self.args = {
+            'workspace_dir': workspace,
+            'results_suffix': 'test',
+            'lulc_lookup_uri': lulc_lookup_uri,
+            'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
+        }
+
+    def test_preprocessor(self):
+        path = os.path.dirname(os.path.realpath(__file__))
+        preprocessor.execute(self.args)
+        trans_csv = os.path.join(path, 'workspace/outputs_preprocessor_test/transitions.csv')
+        with open(trans_csv, 'r') as f:
+            lines = f.readlines()
+        self.assertTrue(lines[2][:8] == 'Z,,accum')
 
     def tearDown(self):
         shutil.rmtree(self.args['workspace_dir'])

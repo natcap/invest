@@ -19,7 +19,7 @@ import shapely
 import pygeoprocessing as pygeo
 import pygeoprocessing.geoprocessing as geoprocess
 
-from natcap.invest.coastal_blue_carbon.classes.affine import Affine
+from natcap.invest.coastal_blue_carbon.affine import Affine
 
 LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.classes.raster')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
