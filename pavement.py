@@ -2224,9 +2224,12 @@ def build_bin(options):
     else:
         binary = os.path.join(invest_dist, 'invest')
         if platform.system() == 'Darwin':
-            # Patch for correct dylibs until better pyinstaller solution found
-            sh('cp /usr/local/Cellar/libpng/1.6.20/lib/* %s' % invest_dist)
-            sh('cp /usr/local/Cellar/geos/3.5.0/lib/* %s' % invest_dist)
+            try:
+                # Patch for correct dylibs until better pyinstaller solution found
+                sh('cp /usr/local/Cellar/libpng/1.6.20/lib/*dylib %s' % invest_dist)
+                sh('cp /usr/local/Cellar/geos/3.5.0/lib/*dylib %s' % invest_dist)
+            except:
+                pass
         _write_console_files(binary, 'sh')
 
 
