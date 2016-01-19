@@ -65,6 +65,17 @@ class MissingSensOrResilException(Exception):
     '''
     pass
 
+class NA_RatingsError(Exception):
+    """
+    An exception that is raised on an invalid 'NA' input.
+
+    When one or more Ratings value is set to "NA" for a habitat - stressor
+    pair, but not ALL are set to "NA". If ALL Rating values for a
+    habitat - stressor pair are "NA", then the habitat - stressor pair is
+    considered to have NO interaction.
+    """
+
+    pass
 
 def execute(args):
     """
@@ -786,8 +797,8 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                 #the shapefile later.
                 if line[1] == 'SHAPE':
                     try:
-                        habs[hab_name]['Crit_Rasters'][key] = \
-                            dict(zip(headers[1:3], map(float, line[2:4])))
+                        habs[hab_name]['Crit_Rasters'][key] = dict(
+                            zip(headers[1:3], [float(x) for x in line[2:4]]))
                     except ValueError:
                         raise UnexpectedString("Entries in CSV table may not \
                             be strings, and may not be left blank. Check \
@@ -798,8 +809,8 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                 #helptext
                 else:
                     try:
-                        habs[hab_name]['Crit_Ratings'][key] = \
-                            dict(zip(headers, map(float, line[1:4])))
+                        habs[hab_name]['Crit_Ratings'][key] = dict(
+                            zip(headers, [float(x) for x in line[1:4]]))
                     except ValueError:
                         raise UnexpectedString("Entries in CSV table may not \
                             be strings, and may not be left blank. Check \
@@ -851,44 +862,79 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
             h_s_c[(hab_name, stress_name)] = {'Crit_Ratings': {},
                                               'Crit_Rasters': {}}
 
-            #Draining the ratings scores.
+            # Create a new entry in the habitat / stressor exposure
+            # and consequence dictionaries. This list is to determine
+            # if this pair has a valid interaction and therefore to
+            # compute overlap. Used in hra.make_add_overlap_rasters
+            h_s_e[(hab_name, stress_name)]['overlap_list'] = []
+            h_s_c[(hab_name, stress_name)]['overlap_list'] = []
+
+            # Draining the ratings scores.
             while ''.join(line) != '':
 
-                #Just abstract all of the erroring out, so that we know if
-                #we're below here, it should all work perfectly. LOL
+                # Just abstract all of the erroring out, so that we know if
+                # we're below here, it should all work perfectly. LOL
                 error_check(line, hab_name, stress_name)
 
-                #Exposure criteria.
-                if line[4] == 'E':
+                for criteria_type, h_s_x, in zip(['E', 'C'], [h_s_e, h_s_c]):
+                    # Exposure/Consequence criteria.
+                    if line[4] == criteria_type:
+                        # Add a default True value for each criteria to the
+                        # overlap list, assuming overlap should occur.
+                        h_s_x[(hab_name, stress_name)]['overlap_list'].append(True)
+                        # If criteria rasters are desired for that criteria.
+                        if line[1] == 'SHAPE':
+                            h_s_x[(hab_name, stress_name)]['Crit_Rasters'][
+                                line[0]] = dict(
+                                    zip(headers[1:3],
+                                        [float(x) for x in line[2:4]]))
+                        # Have already error checked, so this must be a float.
+                        else:
+                            # Check to see if the user has set a rating to "NA"
+                            if line[1].lower() == 'na':
+                                # Since the user has entered a Ratings value of
+                                # "NA", they indicate there should be no
+                                # interaction between stressor and habitat
 
-                    #If criteria rasters are desired for that criteria.
-                    if line[1] == 'SHAPE':
-                        h_s_e[(hab_name, stress_name)]['Crit_Rasters'][
-                            line[0]] = dict(zip(headers[1:3], map(
-                            float, line[2:4])))
-                    #Have already error checked, so this must be a float.
+                                # For consistency, set all other headers but
+                                # Ratings to specified value
+                                h_s_x[(hab_name, stress_name)]['Crit_Ratings'][
+                                    line[0]] = dict(
+                                        zip(headers[1:3],
+                                            [float(x) for x in line[2:4]]))
+                                # Set the Rating to 0.0, this is so that later
+                                # in the function "zero_check", the dictionary
+                                # line is removed and not used in future
+                                # calculations
+                                h_s_x[(hab_name, stress_name)]['Crit_Ratings'][
+                                    line[0]][headers[0]] = 0.0
+                                # Set the habitat / stressor overlap indicator
+                                # to False
+                                h_s_x[(hab_name, stress_name)]['overlap_list'][-1] = False
+                            else:
+                                h_s_x[(hab_name, stress_name)]['Crit_Ratings'][
+                                    line[0]] = dict(
+                                        zip(headers,
+                                            [float(x) for x in line[1:4]]))
                     else:
-                        h_s_e[(hab_name, stress_name)]['Crit_Ratings'][
-                            line[0]] = dict(zip(headers, map(
-                            float, line[1:4])))
-
-                #We have already checked, so this must be a 'C'
-                else:
-                    #If criteria rasters are desired for that criteria.
-                    if line[1] == 'SHAPE':
-                        h_s_c[(hab_name, stress_name)]['Crit_Rasters'][
-                            line[0]] = dict(zip(headers[1:3], map(
-                            float, line[2:4])))
-                    #Have already error checked, so this must be a float.
-                    else:
-                        h_s_c[(hab_name, stress_name)]['Crit_Ratings'][
-                            line[0]] = dict(zip(headers, map(
-                            float, line[1:4])))
+                        continue
 
                 try:
                     line = csv_reader.next()
                 except StopIteration:
                     break
+
+            # Combine consequence and exposure overlap lists
+            overlap_list = (h_s_e[(hab_name, stress_name)]['overlap_list'] +
+                h_s_c[(hab_name, stress_name)]['overlap_list'])
+            # Error if at least one, but not all Ratings for the
+            # habitat - stressor pair are set to 'NA'
+            if any(overlap_list) and not all(overlap_list):
+                raise NA_RatingsError("There were 'NA' Rating values found "
+                    "for habitat - stressor pair : %s - %s , however, not "
+                    "all Rating values were set to 'NA'. ALL or NONE Rating "
+                    "values for the habitat - stressor pair must be set to "
+                    "'NA'. " % (hab_name, stress_name))
 
             #Assume if we've gotten here, we're at the end of a block. Iterate
             #counter by one, since we know it's A whitespace line. If there is
@@ -926,8 +972,9 @@ def error_check(line, hab_name, stress_name):
 
     Returns nothing, should raise exception if there's an issue.
     '''
+    # Check that, if the Ratings value is not SHAPE or NA that it is a float.
     #Rating
-    if line[1] != 'SHAPE':
+    if line[1] != 'SHAPE' and line[1].lower() != 'na':
         try:
             float(line[1])
         except ValueError:
