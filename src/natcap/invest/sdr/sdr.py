@@ -942,13 +942,9 @@ def _generate_report(
     for feature_id in xrange(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
         for field_name in field_summaries:
-            try:
-                ws_id = feature.GetFieldAsInteger('ws_id')
-                feature.SetField(
-                    field_name, float(field_summaries[field_name][ws_id]))
-            except KeyError:
-                LOGGER.warning('unknown field %s', field_name)
-                feature.SetField(field_name, 0.0)
+            ws_id = feature.GetFieldAsInteger('ws_id')
+            feature.SetField(
+                field_name, float(field_summaries[field_name][ws_id]))
         layer.SetFeature(feature)
     original_datasource.Destroy()
     datasource_copy.Destroy()
