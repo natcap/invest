@@ -16,7 +16,7 @@ if is_win:
     path_base = os.path.join('..', 'release_env', 'lib')
 else:
     path_base = os.path.join('..', 'release_env', 'lib', 'python2.7')
-path_base = os.path.abspath(path_base)    
+path_base = os.path.abspath(path_base)
 path_extension.insert(0, path_base)
 path_extension.insert(0, os.path.join(path_base, 'site-packages'))
 print 'PATH EXT: %s' % path_extension
@@ -29,10 +29,13 @@ kwargs = {
         'natcap',
         'natcap.invest',
         'natcap.versioner',
-        'natcap.invest.version', 
+        'natcap.invest.version',
         'yaml',
         'distutils',
         'distutils.dist',
+        'PyQt4',
+        'PyQt4.QtCore',
+        'PyQt4.QtGui'
     ],
 }
 
@@ -59,7 +62,7 @@ exe = EXE(
     a.binaries + [
         ('msvcp90.dll', 'C:\\Windows\\System32\\msvcp90.dll', 'BINARY'),
         ('msvcr90.dll', 'C:\\Windows\\System32\\msvcr90.dll', 'BINARY')
-    ] if is_win else a.binaries, 
+    ] if is_win else a.binaries,
     a.scripts,
     name=exename,
     exclude_binaries=1,
