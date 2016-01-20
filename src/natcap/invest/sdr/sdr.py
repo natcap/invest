@@ -133,7 +133,7 @@ def execute(args):
     pygeoprocessing.create_directories(
         [output_dir, intermediate_output_dir])
 
-    f_reg = _build_file_registry(
+    f_reg = natcap.invest.utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
@@ -549,71 +549,8 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
         dataset_to_align_index=0, vectorize_op=False)
 
 
-def _build_file_registry(base_file_path_list, file_suffix):
-    """Combine file suffixes with key names, base filenames, and directories.
-
-    Parameters:
-        base_file_tuple_list (list): a list of (dict, path) tuples where
-            the dictionaries have a 'file_key': 'basefilename' pair, or
-            'file_key': list of 'basefilename's.  'path'
-            indicates the file directory path to prepend to the basefile name.
-        file_suffix (string): a string to append to every filename, can be
-            empty string
-
-    Returns:
-        dictionary of 'file_keys' from the dictionaries in
-        `base_file_tuple_list` mapping to full file paths with suffixes or
-        lists of file paths with suffixes depending on the original type of
-        the 'basefilename' pair.
-
-    Raises:
-        ValueError if there are duplicate file keys or duplicate file paths.
-    """
-    all_paths = set()
-    duplicate_keys = set()
-    duplicate_paths = set()
-    f_reg = {}
-
-    def _build_path(base_filename, path):
-        """Internal helper to avoid code duplication."""
-        pre, post = os.path.splitext(base_filename)
-        full_path = os.path.join(path, pre+file_suffix+post)
-
-        # Check for duplicate keys or paths
-        if full_path in all_paths:
-            duplicate_paths.add(full_path)
-        else:
-            all_paths.add(full_path)
-        return full_path
-
-    for base_file_dict, path in base_file_path_list:
-        for file_key, file_payload in base_file_dict.iteritems():
-            # check for duplicate keys
-            if file_key in f_reg:
-                duplicate_keys.add(file_key)
-            else:
-                # handle the case whether it's a filename or a list of strings
-                if isinstance(file_payload, basestring):
-                    full_path = _build_path(file_payload, path)
-                    f_reg[file_key] = full_path
-                elif isinstance(file_payload, list):
-                    f_reg[file_key] = []
-                    for filename in file_payload:
-                        full_path = _build_path(filename, path)
-                        f_reg[file_key].append(full_path)
-
-    if len(duplicate_paths) > 0 or len(duplicate_keys):
-        raise ValueError(
-            "Cannot consolidate because of duplicate paths or keys: "
-            "duplicate_keys: %s duplicate_paths: %s" % (
-                duplicate_keys, duplicate_paths))
-
-    return f_reg
-
-
 def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
     """Combine stream and drainage path into one raster."""
-
     def add_drainage_op(stream, drainage):
         """Add drainage mask to stream layer."""
         return numpy.where(drainage == 1, 1, stream)
