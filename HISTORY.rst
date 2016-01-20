@@ -12,6 +12,7 @@
 * Refactored all the InVEST model user interfaces so that Workspace defaults to the user's home "Documents" directory.
 * Fixed an HRA bug where stessors with a buffer of zero were being buffered by 1 pixel
 * HRA enhancement which creates a common raster to burn all input shapefiles onto, ensuring consistent alignment.
+* Fixed an issue in SDR model where a landcover map that was smaller than the DEM would create extraneous "0" valued cells.
 
 3.2.1
 =====
