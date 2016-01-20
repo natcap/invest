@@ -24,6 +24,7 @@ _OUTPUT_BASE_FILES = {
     'sed_retention_index_path': 'sed_retention_index.tif',
     'sed_retention_path': 'sed_retention.tif',
     'watershed_results_sdr_path': 'watershed_results_sdr.shp',
+    'stream_and_drainage_path': 'stream_and_drainage.tif',
     }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -39,20 +40,16 @@ _INTERMEDIATE_BASE_FILES = {
     'd_dn_path': 'd_dn.tif',
     'd_dn_bare_soil_path': 'd_dn_bare_soil.tif',
     'd_up_bare_soil_path': 'd_up_bare_soil.tif',
+    'ic_bare_soil_path': 'ic_bare_soil.tif',
+    'sdr_bare_soil_path': 'sdr_bare_soil.tif',
     'ws_factor_path': 'ws_factor.tif',
     'ic_path': 'ic.tif',
-    'ic_bare_soil_path': 'ic_bare_soil.tif',
     'sdr_path': 'sdr_factor.tif',
-    'sdr_bare_soil_path': 'sdr_bare_soil.tif',
-    'stream_and_drainage_path': 'stream_and_drainage.tif',
     'w_path': 'w.tif',
-    'thresholded_w_path': 'w_threshold.tif',
-    'ws_inverse_path': 'ws_inverse.tif',
-    's_inverse_path': 's_inverse.tif',
-    'cp_factor_path': 'cp.tif',
     }
 
 _TMP_BASE_FILES = {
+    'cp_factor_path': 'cp.tif',
     'aligned_dem_path': 'aligned_dem.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
     'aligned_erosivity_path': 'aligned_erosivity.tif',
@@ -63,6 +60,9 @@ _TMP_BASE_FILES = {
     'loss_path': 'loss.tif',
     'w_accumulation_path': 'w_accumulation.tif',
     's_accumulation_path': 's_accumulation.tif',
+    'thresholded_w_path': 'w_threshold.tif',
+    'ws_inverse_path': 'ws_inverse.tif',
+    's_inverse_path': 's_inverse.tif',
     }
 
 NODATA_USLE = -1.0
