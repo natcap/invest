@@ -101,14 +101,13 @@ def execute(args):
     Returns:
         None.
     """
-    #append a _ to the suffix if it's not empty and doens't already have one
     file_suffix = natcap.invest.utils.make_suffix_string(
         args, 'results_suffix')
 
     biophysical_table = pygeoprocessing.get_lookup_from_csv(
         args['biophysical_table_path'], 'lucode')
 
-    #Test to see if c or p values are outside of 0..1
+    # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
         for (lulc_code, table) in biophysical_table.iteritems():
             try:
@@ -153,13 +152,26 @@ def execute(args):
         base_list, aligned_list, ['nearest'] * len(base_list), out_pixel_size,
         'intersection', 0, aoi_uri=args['watersheds_path'])
 
-    # do DEM processing here
-    _process_dem(*[f_reg[key] for key in [
-        'aligned_dem_path', 'slope_path', 'thresholded_slope_path',
-        'flow_direction_path', 'flow_accumulation_path', 'ls_path']])
+    LOGGER.info("calculating slope")
+    pygeoprocessing.calculate_slope(
+        f_reg['aligned_dem_path'], f_reg['slope_path'])
+    _threshold_slope(f_reg['slope_path'], f_reg['thresholded_slope_path'])
 
-    #classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
+    LOGGER.info("calculating flow direction")
+    pygeoprocessing.routing.flow_direction_d_inf(
+        f_reg['aligned_dem_path'], f_reg['flow_direction_path'])
+
+    LOGGER.info("calculating flow accumulation")
+    pygeoprocessing.routing.flow_accumulation(
+        f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
+        f_reg['flow_accumulation_path'])
+
+    LOGGER.info('calculate ls term')
+    _calculate_ls_factor(
+        f_reg['flow_accumulation_path'], f_reg['slope_path'],
+        f_reg['flow_direction_path'], f_reg['ls_path'])
+
+    LOGGER.info("classifying streams from flow accumulation raster")
     pygeoprocessing.routing.stream_threshold(
         f_reg['flow_accumulation_path'],
         float(args['threshold_flow_accumulation']),
@@ -176,7 +188,6 @@ def execute(args):
         f_reg['drainage_raster_path'] = (
             f_reg['stream_path'])
 
-    #Calculate the W factor
     LOGGER.info('calculate per pixel W')
     _calculate_w(biophysical_table, *[f_reg[key] for key in [
         'aligned_lulc_path', 'w_path', 'thresholded_w_path']])
@@ -195,8 +206,7 @@ def execute(args):
     _calculate_usle(*[f_reg[key] for key in [
         'rkls_path', 'cp_factor_path', 'drainage_raster_path', 'usle_path']])
 
-    #calculate W_bar
-    LOGGER.info('calculating W_bar')
+    LOGGER.info('calculating w_bar')
     for factor_path, accumulation_path, out_bar_path in [
             (f_reg['thresholded_w_path'], f_reg['w_accumulation_path'],
              f_reg['w_bar_path']),
@@ -244,34 +254,30 @@ def execute(args):
         float(args['sdr_max']), f_reg['sed_retention_index_path'])
 
     LOGGER.info('calculate sediment retention')
-    # calculate inverse s factor (not ws)
     LOGGER.info('calculate S factor')
     _calculate_inverse_s_factor(
         f_reg['thresholded_slope_path'], f_reg['s_inverse_path'])
-    # calculate d_dn_bare_soil_path
+
     LOGGER.info('calculating d_dn bare soil')
     pygeoprocessing.routing.routing_core.distance_to_stream(
         f_reg['flow_direction_path'], f_reg['stream_path'],
         f_reg['d_dn_bare_soil_path'], factor_uri=f_reg['s_inverse_path'])
 
-    # calculate d_up_bare_soil_path
     LOGGER.info('calculating d_up bare soil')
     _calculate_d_up_bare(
         f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
         f_reg['d_up_bare_soil_path'])
 
-    # calculate ic_factor_bare_soil_path
     LOGGER.info('calculate ic')
     _calculate_ic(
         f_reg['d_up_bare_soil_path'], f_reg['d_dn_bare_soil_path'],
         f_reg['ic_bare_soil_path'])
-    # calculate sdr_factor_bare_soil_path
+
     _calculate_sdr(
         float(args['k_param']), float(args['ic_0_param']),
         float(args['sdr_max']), f_reg['ic_bare_soil_path'],
         f_reg['stream_path'], f_reg['sdr_bare_soil_path'])
 
-    # sed_retention_bare_soil_path
     _calculate_sed_retention(
         f_reg['rkls_path'], f_reg['usle_path'], f_reg['stream_path'],
         f_reg['sdr_path'], f_reg['sdr_bare_soil_path'],
@@ -283,112 +289,102 @@ def execute(args):
         f_reg['sed_export_path'], f_reg['sed_retention_path'],
         f_reg['watershed_results_sdr_path'])
 
+    for tmp_filename_key in _TMP_BASE_FILES:
+        try:
+            os.remove(f_reg[tmp_filename_key])
+        except OSError:
+            LOGGER.warn(
+                "Can't remove temporary file: %s", f_reg[tmp_filename_key])
 
-def calculate_ls_factor(
-        flow_accumulation_path, slope_path, aspect_path, ls_factor_path,
-        ls_nodata):
-    """Calculates the LS factor.
+
+def _calculate_ls_factor(
+        flow_accumulation_path, slope_path, aspect_path, out_ls_factor_path):
+    """Calculate LS factor.
 
     LS factor as Equation 3 from "Extension and validation
     of a geographic information system-based method for calculating the
     Revised Universal Soil Loss Equation length-slope factor for erosion
     risk assessments in large watersheds"
 
-        (Required that all raster inputs are same dimensions and projections
-        and have square cells)
-        flow_accumulation_path - a uri to a  single band raster of type float that
-            indicates the contributing area at the inlet of a grid cell
-        slope_path - a uri to a single band raster of type float that indicates
-            the slope at a pixel given as a percent
-        aspect_path - a uri to a single band raster of type float that indicates the
-            direction that slopes are facing in terms of radians east and
-            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and
-            0 or 2pi is east.
-        ls_factor_path - (input) a string to the path where the LS raster will
-            be written
+    Parameters:
+        flow_accumulation_path (string): path to raster, pixel values are the
+            contributing upstream area at that cell
+        slope_path (string): path to slope raster as a percent
+        aspect_path string): path to raster flow direction raster in radians
+        out_ls_factor_path (string): path to output ls_factor raster
 
     Returns:
         None
     """
+
+    ls_nodata = -1.0  # reasonable ls nodata value
     flow_accumulation_nodata = pygeoprocessing.get_nodata_from_uri(
         flow_accumulation_path)
     slope_nodata = pygeoprocessing.get_nodata_from_uri(slope_path)
     aspect_nodata = pygeoprocessing.get_nodata_from_uri(aspect_path)
 
-    #Assumes that cells are square
     cell_size = pygeoprocessing.get_cell_size_from_uri(flow_accumulation_path)
     cell_area = cell_size ** 2
 
     def ls_factor_function(aspect_angle, percent_slope, flow_accumulation):
-        """Calculate the ls factor.
+        """Calculate the LS factor.
 
-            aspect_angle - flow direction in radians
-            percent_slope - slope in terms of percent
-            flow_accumulation - upstream pixels at this point
-
-            returns the ls_factor calculation for this point
+        Parameters:
+            aspect_angle (numpy.ndarray): flow direction in radians
+            percent_slope (numpy.ndarray): slope in percent
+            flow_accumulation (numpy.ndarray): upstream pixels
+        Returns:
+            ls_factor
         """
-
-        #Skip the calculation if any of the inputs are nodata
         nodata_mask = (
             (aspect_angle == aspect_nodata) | (percent_slope == slope_nodata) |
             (flow_accumulation == flow_accumulation_nodata))
 
-        #Here the aspect direction can range from 0 to 2PI, but the purpose
-        #of the term is to determine the length of the flow path on the
-        #pixel, thus we take the absolute value of each trigonometric
-        #function to keep the computation in the first quadrant
+        # Determine the length of the flow path on the pixel
         xij = (numpy.abs(numpy.sin(aspect_angle)) +
                numpy.abs(numpy.cos(aspect_angle)))
 
         contributing_area = (flow_accumulation-1) * cell_area
-
-        #To convert to radians, we need to divide the percent_slope by 100 since
-        #it's a percent.
         slope_in_radians = numpy.arctan(percent_slope / 100.0)
 
-        #From Equation 4 in "Extension and validation of a geographic
-        #information system ..."
+        # From Equation 4 in "Extension and validation of a geographic
+        # information system ..."
         slope_factor = numpy.where(
             percent_slope < 9.0,
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
-        #Set the m value to the lookup table that's Table 1 in
-        #InVEST Sediment Model_modifications_10-01-2012_RS.docx in the
-        #FT Team dropbox
+        # Set m value via lookup table: Table 1 in
+        # InVEST Sediment Model_modifications_10-01-2012_RS.docx
         beta = (
             (numpy.sin(slope_in_radians) / 0.0896) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
-        #slope table in percent
+        # slope table in percent
         slope_table = [1., 3.5, 5., 9.]
         exponent_table = [0.2, 0.3, 0.4, 0.5]
-        #Look up the correct m value from the table
         m_exp = beta/(1+beta)
         for i in range(4):
             m_exp[percent_slope <= slope_table[i]] = exponent_table[i]
 
-        #The length part of the ls_factor:
         l_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
              contributing_area ** (m_exp+1)) /
             ((cell_size ** (m_exp + 2)) * (xij**m_exp) * (22.13**m_exp)))
 
-        #From the McCool paper "as a final check against excessively long slope
-        #length calculations ... cap of 333m"
+        # from McCool paper: "as a final check against excessively long slope
+        # length calculations ... cap of 333m"
         l_factor[l_factor > 333] = 333
 
-        #This is the ls_factor
         return numpy.where(nodata_mask, ls_nodata, l_factor * slope_factor)
 
-    #Call vectorize datasets to calculate the ls_factor
+    # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.vectorize_datasets(
         [aspect_path, slope_path, flow_accumulation_path], ls_factor_function,
-        ls_factor_path, gdal.GDT_Float32, ls_nodata, cell_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+        out_ls_factor_path, gdal.GDT_Float32, ls_nodata, cell_size,
+        "intersection", dataset_to_align_index=0, vectorize_op=False)
 
-    base_directory = os.path.dirname(ls_factor_path)
+    base_directory = os.path.dirname(out_ls_factor_path)
     xi_path = os.path.join(base_directory, "xi.tif")
     s_factor_path = os.path.join(base_directory, "slope_factor.tif")
     beta_path = os.path.join(base_directory, "beta.tif")
@@ -436,13 +432,14 @@ def calculate_ls_factor(
         """Calculate s factor.
 
         From Equation 4 in "Extension and validation of a geographic
-        information system"
+        information system".
         """
         slope_in_radians = numpy.arctan(percent_slope / 100.0)
         return numpy.where(
             percent_slope < 9.0,
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
+
     pygeoprocessing.vectorize_datasets(
         [slope_path], s_factor_op, s_factor_path, gdal.GDT_Float32,
         ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
@@ -487,22 +484,23 @@ def _calculate_rkls(
     cell_area_ha = cell_size ** 2 / 10000.0
 
     def rkls_function(ls_factor, erosivity, erodibility, stream):
-        """Calculates the RKLS equation.
+        """Calculate the RKLS equation.
 
-        ls_factor - length/slope factor
-        erosivity - related to peak rainfall events
-        erodibility - related to the potential for soil to erode
-        stream - 1 or 0 depending if there is a stream there.  If so, no
-            potential soil loss due to USLE
+        Parameters:
+            ls_factor (numpy.ndarray): length/slope factor
+        erosivity (numpy.ndarray): related to peak rainfall events
+        erodibility (numpy.ndarray): related to the potential for soil to
+            erode
+        stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
 
-        returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
-            defined, nodata if some are not defined, 0 if in a stream
-            (stream)
+        Returns:
+            ls_factor * erosivity * erodibility * usle_c_p or nodata if
+            any values are nodata themselves.
         """
-
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
-            (ls_factor != ls_factor_nodata) & (erosivity != erosivity_nodata) &
+            (ls_factor != ls_factor_nodata) &
+            (erosivity != erosivity_nodata) &
             (erodibility != erodibility_nodata) & (stream != stream_nodata))
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = usle_nodata
@@ -515,31 +513,18 @@ def _calculate_rkls(
         rkls[nodata_mask & (stream == 1)] = 1
         return rkls
 
-    dataset_path_list = [
-        ls_factor_path, erosivity_path, erodibility_path, stream_path]
-
-    #Aligning with index 3 that's the stream and the most likely to be
-    #aligned with LULCs
+    # aligning with index 3 that's the stream and the most likely to be
+    # aligned with LULCs
     pygeoprocessing.vectorize_datasets(
-        dataset_path_list, rkls_function, rkls_path, gdal.GDT_Float32,
-        usle_nodata, cell_size, "intersection", dataset_to_align_index=3,
-        vectorize_op=False)
+        [ls_factor_path, erosivity_path, erodibility_path, stream_path],
+        rkls_function, rkls_path, gdal.GDT_Float32, usle_nodata, cell_size,
+        "intersection", dataset_to_align_index=3, vectorize_op=False)
 
 
-def _process_dem(
-        dem_path, slope_path, thresholded_slope_path, flow_direction_path,
-        flow_accumulation_path, ls_path):
-    """Process the DEM related operations such as slope and flow accumulation.
-
-    """
-    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(
-        dem_path)
-
-    #Calculate slope
-    LOGGER.info("Calculating slope")
-    pygeoprocessing.calculate_slope(dem_path, slope_path)
-    slope_nodata = pygeoprocessing.get_nodata_from_uri(
-        slope_path)
+def _threshold_slope(slope_path, out_thresholded_slope_path):
+    """Threshold the slope between 0.005 and 1.0."""
+    slope_nodata = pygeoprocessing.get_nodata_from_uri(slope_path)
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(slope_path)
     def threshold_slope(slope):
         """Convert slope to m/m and clamp at 0.005 and 1.0.
 
@@ -553,23 +538,9 @@ def _process_dem(
         return slope_copy
 
     pygeoprocessing.vectorize_datasets(
-        [slope_path], threshold_slope, thresholded_slope_path,
+        [slope_path], threshold_slope, out_thresholded_slope_path,
         gdal.GDT_Float64, slope_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
-
-    #Calculate flow accumulation
-    LOGGER.info("calculating flow accumulation")
-    pygeoprocessing.routing.flow_direction_d_inf(
-        dem_path, flow_direction_path)
-    pygeoprocessing.routing.flow_accumulation(
-        flow_direction_path, dem_path, flow_accumulation_path)
-
-    #Calculate LS term
-    LOGGER.info('calculate ls term')
-    ls_nodata = -1.0
-    calculate_ls_factor(
-        flow_accumulation_path, slope_path, flow_direction_path, ls_path,
-        ls_nodata)
 
 
 def _build_file_registry(base_file_path_list, file_suffix):
