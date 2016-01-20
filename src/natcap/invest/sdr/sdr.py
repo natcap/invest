@@ -63,6 +63,10 @@ _TMP_BASE_FILES = {
     'thresholded_w_path': 'w_threshold.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     's_inverse_path': 's_inverse.tif',
+    'xi_path': 'xi.tif',
+    's_factor_path': 's.tif',
+    'beta_path': 'beta.tif',
+    'm_path': 'm.tif',
     }
 
 NODATA_USLE = -1.0
@@ -124,7 +128,7 @@ def execute(args):
                         table_key, str(lulc_code), table[table_key]))
 
     intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate')
+        args['workspace_dir'], 'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
     pygeoprocessing.create_directories(
         [output_dir, intermediate_output_dir])
@@ -167,9 +171,12 @@ def execute(args):
         f_reg['flow_accumulation_path'])
 
     LOGGER.info('calculate ls term')
+
     _calculate_ls_factor(
         f_reg['flow_accumulation_path'], f_reg['slope_path'],
-        f_reg['flow_direction_path'], f_reg['ls_path'])
+        f_reg['flow_direction_path'], f_reg['xi_path'],
+        f_reg['s_factor_path'], f_reg['beta_path'], f_reg['m_path'],
+        f_reg['ls_path'])
 
     LOGGER.info("classifying streams from flow accumulation raster")
     pygeoprocessing.routing.stream_threshold(
@@ -298,7 +305,8 @@ def execute(args):
 
 
 def _calculate_ls_factor(
-        flow_accumulation_path, slope_path, aspect_path, out_ls_factor_path):
+        flow_accumulation_path, slope_path, aspect_path,
+        xi_path, s_factor_path, beta_path, m_path, out_ls_factor_path):
     """Calculate LS factor.
 
     LS factor as Equation 3 from "Extension and validation
@@ -311,6 +319,10 @@ def _calculate_ls_factor(
             contributing upstream area at that cell
         slope_path (string): path to slope raster as a percent
         aspect_path string): path to raster flow direction raster in radians
+        xi_path (string): path to hold temoprary xi raster
+        s_factor_path (string): path to hold temporary s factor
+        beta_path (string): path to hold temporary beta factor
+        m_path (string): path to hold temporary m factor
         out_ls_factor_path (string): path to output ls_factor raster
 
     Returns:
@@ -382,12 +394,6 @@ def _calculate_ls_factor(
         [aspect_path, slope_path, flow_accumulation_path], ls_factor_function,
         out_ls_factor_path, gdal.GDT_Float32, ls_nodata, cell_size,
         "intersection", dataset_to_align_index=0, vectorize_op=False)
-
-    base_directory = os.path.dirname(out_ls_factor_path)
-    xi_path = os.path.join(base_directory, "xi.tif")
-    s_factor_path = os.path.join(base_directory, "slope_factor.tif")
-    beta_path = os.path.join(base_directory, "beta.tif")
-    m_path = os.path.join(base_directory, "m.tif")
 
     def m_op(percent_slope):
         """Calculate m factor.
