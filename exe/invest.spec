@@ -32,10 +32,7 @@ kwargs = {
         'natcap.invest.version',
         'yaml',
         'distutils',
-        'distutils.dist',
-        'PyQt4',
-        'PyQt4.QtCore',
-        'PyQt4.QtGui'
+        'distutils.dist'
     ],
 }
 
