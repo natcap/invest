@@ -6,7 +6,7 @@
     "src/pygeoprocessing": "REQUIREMENTS_TXT:pygeoprocessing",
     "src/pyinstaller": {
         "Darwin": "v3.1",
-        "Windows": "v2.1",
+        "Windows": "v3.1",
         "Linux": "064388440f8ed6b592b1c6a2f980e9cb378c7d6f"
     }
 }
