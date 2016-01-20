@@ -117,12 +117,12 @@ def execute(args):
             try:
                 float_value = float(table[table_key])
                 if float_value < 0 or float_value > 1:
-                    raise Exception(
+                    raise ValueError(
                         'Value should be within range 0..1 offending value '
                         'table %s, lulc_code %s, value %s' % (
                             table_key, str(lulc_code), str(float_value)))
             except ValueError:
-                raise Exception(
+                raise ValueError(
                     'Value is not a floating point value within range 0..1 '
                     'offending value table %s, lulc_code %s, value %s' % (
                         table_key, str(lulc_code), table[table_key]))
