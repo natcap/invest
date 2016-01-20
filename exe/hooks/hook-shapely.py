@@ -1,14 +1,25 @@
-import os
-from PyInstaller.utils.hooks import \
-    (collect_submodules, collect_data_files, get_package_paths)
-from PyInstaller.compat import is_darwin, is_win
+from sys import platform as _platform
+if _platform == "linux" or _platform == "linux2":
+    # linux
+    import os
+    from hookutils import collect_submodules, collect_data_files, get_package_paths
+    hiddenimports = collect_submodules('shapely')
 
-hiddenimports = collect_submodules('shapely')
-
-pkg_base, pkg_dir = get_package_paths('shapely')
-datas = collect_data_files('shapely')
-
-if is_win:
+    pkg_base, pkg_dir = get_package_paths('shapely')
+    datas = collect_data_files('shapely')
     datas += [(os.path.join(pkg_dir, 'DLLs/geos_c.dll'), '')]
-elif is_darwin:
-    datas += [(os.path.join(pkg_dir, '.dylibs/*.dylib'), '')]
+else:
+    import os
+    from PyInstaller.utils.hooks import \
+        (collect_submodules, collect_data_files, get_package_paths)
+    from PyInstaller.compat import is_darwin, is_win
+
+    hiddenimports = collect_submodules('shapely')
+
+    pkg_base, pkg_dir = get_package_paths('shapely')
+    datas = collect_data_files('shapely')
+
+    if is_win:
+        datas += [(os.path.join(pkg_dir, 'DLLs/geos_c.dll'), '')]
+    elif is_darwin:
+        datas += [(os.path.join(pkg_dir, '.dylibs/*.dylib'), '')]
