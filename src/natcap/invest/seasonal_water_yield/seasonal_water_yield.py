@@ -198,7 +198,7 @@ def _execute(args):
     gamma = float(fractions.Fraction(args['gamma']))
     threshold_flow_accumulation = float(args['threshold_flow_accumulation'])
     pixel_size = pygeoprocessing.get_cell_size_from_uri(
-        args['lulc_raster_path'])
+        args['dem_raster_path'])
     file_suffix = natcap.invest.utils.make_suffix_string(
         args, 'results_suffix')
     intermediate_output_dir = os.path.join(
