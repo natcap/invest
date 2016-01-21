@@ -2,6 +2,7 @@
 
 3.3.0
 =====
+* Fixed a bug in the Area Change rule of the Rule-Based Scenario Generator, where units were being converted incorrectly. (Issue `#3472 <https://bitbucket.org/natcap/invest/issues/3472>`_) Thanks to Fosco Vesely for this fix.
 * InVEST Seasonal Water Yield model released.
 * InVEST Forest Carbon Edge Effect model released.
 * InVEST Scenario Generator: Proximity Based model released and renamed the previous "Scenario Generator" to "Scenario Generator: Rule Based".
@@ -13,6 +14,7 @@
 * Fixed an HRA bug where stessors with a buffer of zero were being buffered by 1 pixel
 * HRA enhancement which creates a common raster to burn all input shapefiles onto, ensuring consistent alignment.
 * Fixed an issue in SDR model where a landcover map that was smaller than the DEM would create extraneous "0" valued cells.
+* New HRA feature which allows for "NA" values to be entered into the "Ratings" column for a habitat / stressor pair in the Criteria Ratings CSV. If ALL ratings are set to NA, the habitat / stressor will be treated as having no interaction. This means in the model, that there will be no overlap between the two sources. All rows parameters with an NA rating will not be used in calculating results.
 
 3.2.1
 =====
