@@ -72,6 +72,34 @@ class SDRTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_output_exists_regression(self):
+        """SDR test case where an output shapefile already exists.
+
+        Execute SDR with sample data but workspace already contains
+        "watershed_results_sdr.shp".  Model should delete file and proceed
+        with report.
+        """
+        from natcap.invest.sdr import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+
+        # copy AOI on top of where the output shapefile should reside
+        shutil.copy(
+            args['watersheds_path'], os.path.join(
+                self.workspace_dir, 'watershed_results_sdr.shp'))
+
+        sdr.execute(args)
+
+        SDRTests._assert_regression_results_equal(
+            args['workspace_dir'],
+            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
+            os.path.join(args['workspace_dir'], 'watershed_results_sdr.shp'),
+            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_drainage_regression(self):
         """SDR drainage layer regression test on sample data.
 
