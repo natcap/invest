@@ -34,14 +34,14 @@ def execute(args):
         model. The left-most column represents the source lulc class, and the
         top row represents the destination lulc class.
 
-    :param str args['carbon_pool_initial_uri']: rhe provided CSV table contains
+    :param str args['carbon_pool_initial_uri']: the provided CSV table contains
         information related to the initial conditions of the carbon stock within
         each of the three pools of a habitat. Biomass includes carbon stored
         above and below ground. All non-coastal blue carbon habitat lulc
         classes are assumed to contain no carbon. The values for 'biomass',
         'soil', and 'litter' should be given in terms of Megatonnes CO2 e/ ha.
 
-    :param str args['carbon_pool_transient_uri']: rhe provided CSV table
+    :param str args['carbon_pool_transient_uri']: the provided CSV table
         contains information related to the transition of carbon into and out
         of coastal blue carbon pools. All non-coastal blue carbon habitat lulc
         classes are assumed to neither sequester nor emit carbon as a result of
@@ -53,16 +53,18 @@ def execute(args):
     :param str args['lulc_baseline_map_uri']: a GDAL-supported raster
         representing the baseline landscape/seascape.
 
-    :param list args['lulc_transition_maps_list']: a set of GDAL-supported
+    :param list args['lulc_transition_maps_list']: a list of GDAL-supported
         rasters representing the landscape/seascape at particular points in
         time. Provided in chronological order.
 
-    :param list args['lulc_transition_years_list']: a set of years that
+    :param list args['lulc_transition_years_list']: a list of years that
         respectively correspond to transition years of the rasters. Provided in
         chronological order.
 
-    :param int args['analysis_year']: Optional. the final year of the
-        time-series.  Must come chronologically after the last transition.
+    :param int args['analysis_year']: optional. Indicates how many timesteps to
+        run the transient analysis beyond the last transition year. Must come
+        chronologically after the last transition year if provided. Otherwise,
+        the final timestep of the model will be set to the last transition year.
 
     :param bool args['do_economic_analysis']: boolean value indicating whether
         model should run economic analysis.
@@ -76,10 +78,11 @@ def execute(args):
     :param float args['interest_rate']: the interest rate on the price per
         Megatonne CO2 e, compounded yearly.
 
-    :param bool args['price_table_uri']: can be used in place of price and
-        interest rate inputs. The provided CSV table contains the price per
-        Megatonne CO2e sequestered for a given year, for all years from the
-        original snapshot to the analysis year, if provided.
+    :param bool args['price_table_uri']: If `args['do_price_table']` is set to
+        `True` the provided CSV table is used in place of price and interest
+        rate inputs. The table contains the price per Megatonne CO2e sequestered
+        for a given year, for all years from the original snapshot to the
+        analysis year, if provided.
 
     :param bool args['discount_rate']: the discount rate on future valuations of
         sequestered carbon, compounded yearly.
