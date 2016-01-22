@@ -13,6 +13,7 @@
 * Refactored all the InVEST model user interfaces so that Workspace defaults to the user's home "Documents" directory.
 * Fixed an HRA bug where stessors with a buffer of zero were being buffered by 1 pixel
 * HRA enhancement which creates a common raster to burn all input shapefiles onto, ensuring consistent alignment.
+* New HRA feature which allows for "NA" values to be entered into the "Ratings" column for a habitat / stressor pair in the Criteria Ratings CSV. If ALL ratings are set to NA, the habitat / stressor will be treated as having no interaction. This means in the model, that there will be no overlap between the two sources. All rows parameters with an NA rating will not be used in calculating results.
 
 3.2.1
 =====
