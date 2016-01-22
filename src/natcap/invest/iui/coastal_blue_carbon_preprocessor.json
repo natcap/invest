@@ -36,8 +36,14 @@
           "type": "file",
           "label": "LULC Lookup Table (CSV)",
           "defaultValue": "../CoastalBlueCarbon/inputs/lulc_lookup.csv",
-          "helpText": "A CSV table used to map lulc classes to their values in a raster, as well as to indicate whether or not the lulc class is a coastal blue carbon habitat.",
-          "required": true
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lulc-class"
+            ]
+          },
+          "helpText": "A CSV table used to map lulc classes to their values in a raster, as well as to indicate whether or not the lulc class is a coastal blue carbon habitat."
         }
       ]
     },
