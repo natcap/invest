@@ -969,7 +969,7 @@ def after_install(options, home_dir):
                 pkg_resources.VersionConflict) as (required_pkg, found_pkg):
             print yellow(('Unsuitable pygeoprocessing %s found, but %s '
                           'required. Installing the correct version to the '
-                          'dev_env.') % (required_pkg, found_pkg))
+                          'dev_env.') % (found_pkg, required_pkg))
             # install with --no-deps (will otherwise try to install numpy, gdal,
             # etc.), and -I to ignore any existing pygeoprocessing install (as
             # might exist in system-site-packages).

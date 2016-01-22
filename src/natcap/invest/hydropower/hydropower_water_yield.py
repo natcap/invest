@@ -664,6 +664,8 @@ def compute_watershed_valuation(watersheds_uri, val_dict):
     # Add the new fields to the shapefile
     for new_field in [energy_field, npv_field]:
         field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
         ws_layer.CreateField(field_defn)
 
     num_features = ws_layer.GetFeatureCount()
@@ -724,6 +726,8 @@ def compute_rsupply_volume(watershed_results_uri):
     # Add the new fields to the shapefile
     for new_field in [rsupply_vol_name, rsupply_mn_name]:
         field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
         ws_layer.CreateField(field_defn)
 
     num_features = ws_layer.GetFeatureCount()
@@ -836,6 +840,8 @@ def compute_water_yield_volume(shape_uri, pixel_area):
 
     # Add the new field to the shapefile
     field_defn = ogr.FieldDefn(vol_name, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
 
     num_features = layer.GetFeatureCount()
@@ -846,8 +852,6 @@ def compute_water_yield_volume(shape_uri, pixel_area):
         wyield_mn = feat.GetField(wyield_mn_id)
         pixel_count_id = feat.GetFieldIndex('num_pixels')
         pixel_count = feat.GetField(pixel_count_id)
-
-        geom = feat.GetGeometryRef()
 
         # Calculate water yield volume,
         #1000 is for converting the mm of wyield to meters
@@ -882,6 +886,8 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, key):
 
     # Create the new field
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
 
     # Get the number of features (polygons) and iterate through each
