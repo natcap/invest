@@ -9,6 +9,7 @@ import ast
 
 from osgeo import gdal
 from pygeoprocessing.geoprocessing import get_lookup_from_csv
+from pygeoprocessing import create_directories
 
 from natcap.invest.coastal_blue_carbon import NODATA_INT
 from natcap.invest.coastal_blue_carbon.raster import Raster
@@ -44,22 +45,37 @@ def execute(args):
         }
     """
     LOGGER.info('Starting Coastal Blue Carbon Preprocessor run...')
+
+    # Inputs
     vars_dict = _get_inputs(args)
+
+    # Run Preprocessor
     vars_dict['transition_matrix_dict'] = _preprocess_data(
         vars_dict['lulc_lookup_dict'], vars_dict['lulc_snapshot_list'])
+
+    # Outputs
+    filename = 'transitions%s.csv' % vars_dict['results_suffix']
+    transition_table_filepath = os.path.join(vars_dict['output_dir'], filename)
     _create_transition_table(
+        transition_table_filepath,
         vars_dict['lulc_class_list'],
         vars_dict['transition_matrix_dict'],
-        vars_dict['code_to_lulc_dict'],
-        vars_dict['output_dir'])
+        vars_dict['code_to_lulc_dict'])
+
+    filename = 'carbon_pool_initial_template%s.csv' % vars_dict['results_suffix']
+    initial_table_filepath = os.path.join(vars_dict['output_dir'], filename)
     _create_carbon_pool_initial_table_template(
+        initial_table_filepath,
         vars_dict['lulc_class_list'],
-        vars_dict['output_dir'],
         vars_dict['code_to_lulc_dict'])
+
+    filename = 'carbon_pool_transient_template%s.csv' % vars_dict['results_suffix']
+    transient_table_filepath = os.path.join(vars_dict['output_dir'], filename)
     _create_carbon_pool_transient_table_template(
+        transient_table_filepath,
         vars_dict['lulc_class_list'],
-        vars_dict['output_dir'],
         vars_dict['code_to_lulc_dict'])
+
     LOGGER.info('...Coastal Blue Carbon Preprocessor run complete.')
 
 
@@ -69,6 +85,7 @@ def _get_inputs(args):
     vars_dict = dict(args.items())
     try:
         vars_dict['results_suffix']
+        vars_dict['results_suffix'] = '_' + vars_dict['results_suffix']
     except:
         vars_dict['results_suffix'] = ''
 
@@ -93,18 +110,9 @@ def _get_inputs(args):
     vars_dict['lulc_to_code_dict'] = lulc_to_code_dict
     vars_dict['lulc_class_list'] = lulc_to_code_dict.keys()
 
-    # make workspace and output dir if necessary
-    output_dir_name = 'outputs_preprocessor'
-    if vars_dict['results_suffix'] != '':
-        output_dir_name = output_dir_name + '_' + vars_dict['results_suffix']
-    output_dir = os.path.join(vars_dict['workspace_dir'], output_dir_name)
-    if not os.path.isdir(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except:
-            LOGGER.error("Cannot create Workspace Directory")
-            raise OSError
-    vars_dict['output_dir'] = output_dir
+    # Create workspace and output directories
+    vars_dict['output_dir'] = os.path.join(vars_dict['workspace_dir'], 'outputs_preprocessor')
+    create_directories([vars_dict['output_dir']])
 
     _validate_inputs(vars_dict)
     return vars_dict
@@ -149,48 +157,48 @@ def _validate_inputs(vars_dict):
         raise ValueError(msg)
 
 
+def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
+    raster_t1 = Raster.from_file(
+    raster_t1_uri).set_datatype_and_nodata(gdal.GDT_Int32, NODATA_INT)
+    raster_t2 = Raster.from_file(
+    raster_t2_uri).set_datatype_and_nodata(gdal.GDT_Int32, NODATA_INT)
+
+    band_t1 = raster_t1.get_band(1).data.flatten()
+    band_t2 = raster_t2.get_band(1).data.flatten()
+
+    transition_list = zip(band_t1, band_t2)
+    transition_set = set(transition_list)
+
+    return transition_set
+
+
+def _mark_transition_type(lookup_dict, transition_matrix_dict, lulc_from, lulc_to):
+    """Mark transition type, given lulc_from and lulc_to."""
+    from_is_habitat = bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat'])
+    to_is_habitat = bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])
+
+    if (lulc_from == NODATA_INT) or (lulc_to == NODATA_INT):
+        pass
+    elif from_is_habitat and to_is_habitat:
+        # veg --> veg
+        transition_matrix_dict[(lulc_from, lulc_to)] = 'accum'
+    elif not from_is_habitat and to_is_habitat:
+        # non-veg --> veg
+        transition_matrix_dict[(lulc_from, lulc_to)] = 'accum'
+    elif from_is_habitat and not to_is_habitat:
+        # veg --> non-veg
+        transition_matrix_dict[(lulc_from, lulc_to)] = 'disturb'
+    elif not from_is_habitat and not to_is_habitat:
+        # non-veg --> non-veg
+        transition_matrix_dict[(lulc_from, lulc_to)] = 'NCC'
+    else:
+        raise Exception
+
+    return transition_matrix_dict
+
+
 def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
     """Preprocess data."""
-
-    def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
-        raster_t1 = Raster.from_file(
-            raster_t1_uri).set_datatype_and_nodata(gdal.GDT_Int32, NODATA_INT)
-        raster_t2 = Raster.from_file(
-            raster_t2_uri).set_datatype_and_nodata(gdal.GDT_Int32, NODATA_INT)
-
-        band_t1 = raster_t1.get_band(1).data.flatten()
-        band_t2 = raster_t2.get_band(1).data.flatten()
-
-        transition_list = zip(band_t1, band_t2)
-        transition_set = set(transition_list)
-
-        return transition_set
-
-
-    def _mark_transition_type(lookup_dict, transition_matrix_dict, lulc_from, lulc_to):
-        """Mark transition type, given lulc_from and lulc_to."""
-        if (lulc_from == NODATA_INT) or (lulc_to == NODATA_INT):
-            pass
-        elif (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
-            bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
-            # veg --> veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'accum'
-        elif (not bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
-            bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
-            # non-veg --> veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'accum'
-        elif (bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
-            not bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
-            # veg --> non-veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'disturb'
-        elif (not bool(lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']) and
-              not bool(lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])):
-            # non-veg --> non-veg
-            transition_matrix_dict[(lulc_from, lulc_to)] = 'NCC'
-        else:
-            raise Exception
-
-        return transition_matrix_dict
 
     LOGGER.info('Processing data...')
     # Transition Matrix
@@ -239,7 +247,7 @@ def _validate_transitions(transition_set):
                 'invalid transition from lulc-code to nodata value')
 
 
-def _create_transition_table(lulc_class_list, transition_matrix_dict, code_to_lulc_dict, output_dir):
+def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict, code_to_lulc_dict):
     """Create transition table representing the lulc transition effect on
     carbon emissions or sequestration."""
 
@@ -259,8 +267,7 @@ def _create_transition_table(lulc_class_list, transition_matrix_dict, code_to_lu
         transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = \
             top_dict
 
-    fpath = os.path.join(output_dir, 'transitions.csv')
-    with open(fpath, 'wb') as csv_file:
+    with open(filepath, 'wb') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list_sorted
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
@@ -269,7 +276,7 @@ def _create_transition_table(lulc_class_list, transition_matrix_dict, code_to_lu
             row = dict([('lulc-class', lulc_class)] + transition_by_lulc_class_dict[lulc_class].items())
             writer.writerow(row)
 
-    _append_legend(fpath)
+    _append_legend(filepath)
 
 
 def _append_legend(fpath):
@@ -282,24 +289,19 @@ def _append_legend(fpath):
         csv_file.write("\n,NCC (no-carbon-change)")
 
 
-def _create_carbon_pool_initial_table_template(lulc_class_list, output_dir, code_to_lulc_dict):
+def _create_carbon_pool_initial_table_template(filepath, lulc_class_list, code_to_lulc_dict):
     """Create carbon pool initial values table."""
-
-    fpath = os.path.join(
-        output_dir, 'carbon_pool_initial_template.csv')
-    with open(fpath, 'wb') as csv_file:
+    with open(filepath, 'wb') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(['code', 'lulc-class', 'biomass', 'soil', 'litter'])
         for code in code_to_lulc_dict.keys():
-            row = [code, code_to_lulc_dict[code]] + \
-                ['', '', '']
+            row = [code, code_to_lulc_dict[code]] + ['', '', '']
             writer.writerow(row)
 
 
-def _create_carbon_pool_transient_table_template(lulc_class_list, output_dir, code_to_lulc_dict):
+def _create_carbon_pool_transient_table_template(filepath, lulc_class_list, code_to_lulc_dict):
     """Create carbon pool transient values table."""
-    fpath = os.path.join(output_dir, 'carbon_pool_transient_template.csv')
-    with open(fpath, 'wb') as csv_file:
+    with open(filepath, 'wb') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(['code', 'lulc-class', 'pool', 'half-life',
                          'low-impact-disturb', 'med-impact-disturb',

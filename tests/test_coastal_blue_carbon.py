@@ -190,7 +190,8 @@ class TestPreprocessor(unittest.TestCase):
     """Test preprocessor library functions."""
 
     def setUp(self):
-        band_matrices = [np.ones((2,2))]
+        band_matrices_zeros = [np.zeros((2,2))]
+        band_matrices_ones = [np.ones((2,2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
 
         path = os.path.dirname(os.path.realpath(__file__))
@@ -203,14 +204,17 @@ class TestPreprocessor(unittest.TestCase):
             'lulc_lookup.csv'), lulc_lookup_list)
 
         raster_0_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            band_matrices_ones, srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_0.tif'))
         raster_1_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            band_matrices_ones, srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_1.tif'))
         raster_2_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            band_matrices_ones, srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_2.tif'))
+        raster_3_uri = pygeotest.create_raster_on_disk(
+            band_matrices_zeros, srs.origin, srs.projection, -1, srs.pixel_size(100),
+            datatype=gdal.GDT_Int32, filename=os.path.join(workspace, 'raster_3.tif'))
 
         self.args = {
             'workspace_dir': workspace,
@@ -219,13 +223,28 @@ class TestPreprocessor(unittest.TestCase):
             'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
         }
 
+        self.args2 = {
+            'workspace_dir': workspace,
+            'results_suffix': 'test',
+            'lulc_lookup_uri': lulc_lookup_uri,
+            'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_3_uri]
+        }
+
     def test_preprocessor(self):
         path = os.path.dirname(os.path.realpath(__file__))
         preprocessor.execute(self.args)
-        trans_csv = os.path.join(path, 'workspace/outputs_preprocessor_test/transitions.csv')
+        trans_csv = os.path.join(path, 'workspace/outputs_preprocessor/transitions_test.csv')
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
-        self.assertTrue(lines[2][:8] == 'Z,,accum')
+        self.assertTrue(lines[2][:].startswith('Z,,accum'))
+
+    def test_preprocessor_2(self):
+        path = os.path.dirname(os.path.realpath(__file__))
+        preprocessor.execute(self.args2)
+        trans_csv = os.path.join(path, 'workspace/outputs_preprocessor/transitions_test.csv')
+        with open(trans_csv, 'r') as f:
+            lines = f.readlines()
+        self.assertTrue(lines[2][:].startswith('Z,disturb,accum'))
 
     def tearDown(self):
         shutil.rmtree(self.args['workspace_dir'])
