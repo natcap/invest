@@ -7,7 +7,7 @@ import shutil
 import csv
 
 import numpy as np
-import gdal
+from osgeo import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
 
@@ -171,16 +171,15 @@ class TestModel(unittest.TestCase):
 
     def test_model_run(self):
         """Test main model 'run' function."""
-        d = io.get_inputs(self.args)
-        cbc.run(d)
+        cbc.execute(self.args)
         output_raster = os.path.join(
             os.path.split(os.path.realpath(__file__))[0],
-            'workspace/outputs_core_test/net_present_value.tif')
+            'workspace/outputs_core/net_present_value_test.tif')
         ds = gdal.Open(output_raster)
         band = ds.GetRasterBand(1)
         a = band.ReadAsArray()
         ds = None
-        np.testing.assert_almost_equal(a[0, 0], 45.73148727)
+        np.testing.assert_almost_equal(a[0, 0], 45.731491, decimal=5)
 
     def tearDown(self):
         shutil.rmtree(self.args['workspace_dir'])

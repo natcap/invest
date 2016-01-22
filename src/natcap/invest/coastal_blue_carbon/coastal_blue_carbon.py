@@ -6,11 +6,14 @@ import os
 import pprint as pp
 import shutil
 import logging
-import numpy as np
+import math
+import time
 
+import numpy as np
+from osgeo import gdal
 import pygeoprocessing.geoprocessing as geoprocess
 
-from natcap.invest.coastal_blue_carbon import io, utils
+from natcap.invest.coastal_blue_carbon import io
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -76,16 +79,16 @@ def execute(args):
     :param float args['price']: the price per Megatonne CO2 e at the base year.
 
     :param float args['interest_rate']: the interest rate on the price per
-        Megatonne CO2 e, compounded yearly.
+        Megatonne CO2 e, compounded yearly.  Provided as a percentage.
 
     :param bool args['price_table_uri']: If `args['do_price_table']` is set to
-        `True` the provided CSV table is used in place of price and interest
-        rate inputs. The table contains the price per Megatonne CO2e sequestered
-        for a given year, for all years from the original snapshot to the
-        analysis year, if provided.
+        `True` the provided CSV table is used in place of the initial price and
+        interest rate inputs. The table contains the price per Megatonne CO2e
+        sequestered for a given year, for all years from the original snapshot
+        to the analysis year, if provided.
 
-    :param bool args['discount_rate']: the discount rate on future valuations of
-        sequestered carbon, compounded yearly.
+    :param float args['discount_rate']: the discount rate on future valuations
+        of sequestered carbon, compounded yearly.  Provided as a percentage.
 
     Example Args::
 
@@ -108,77 +111,86 @@ def execute(args):
             'discount_rate': '<float>'
         }
     """
-    LOGGER.info("Starting model run...")
+    LOGGER.info("Starting Coastal Blue Carbon model run...")
     d = io.get_inputs(args)
-    run(d)
-    LOGGER.info("...Model run complete.")
 
+    # Setup Logging
+    num_blocks = get_num_blocks(d.C_prior_raster)
+    current_block = 1
+    current_time = time.time()
 
-def run(d):
     block_iterator = geoprocess.iterblocks(d.C_prior_raster)
-    for offset_dict, _ in block_iterator:
+    for offset_dict, C_prior in block_iterator:
+        # Update User
+        if time.time() - current_time >= 2.0:
+            LOGGER.info("Processing block %i of %i" % (current_block, num_blocks))
+            current_time = time.time()
+        current_block += 1
+
         # Initialization
-        C_prior = utils.read_from_raster(d.C_prior_raster, offset_dict)
-        C_r = [utils.read_from_raster(i, offset_dict) for i in d.C_r_rasters]
+        C_r = [read_from_raster(i, offset_dict) for i in d.C_r_rasters]
         timesteps = d.timesteps
         transitions = d.transitions
 
-        x_size = len(C_prior)
-        y_size = len(C_prior[0])
+        y_size, x_size = C_prior.shape
 
-        S_biomass = np.zeros((timesteps+1, x_size, y_size))
-        S_soil    = np.zeros((timesteps+1, x_size, y_size))
-        S_litter  = np.zeros((timesteps+1, x_size, y_size))
-        T         = np.zeros((timesteps+1, x_size, y_size))
-        A_biomass = np.zeros((timesteps, x_size, y_size))
-        A_soil    = np.zeros((timesteps, x_size, y_size))
-        E_biomass = np.zeros((timesteps, x_size, y_size))
-        E_soil    = np.zeros((timesteps, x_size, y_size))
-        N_biomass = np.zeros((timesteps, x_size, y_size))
-        N_soil    = np.zeros((timesteps, x_size, y_size))
-        V         = np.zeros((timesteps, x_size, y_size))
-        P         = np.zeros((timesteps, x_size, y_size))
+        stock_shape = (timesteps+1, x_size, y_size)
+        S_biomass = np.zeros(stock_shape, dtype=np.float32)
+        S_soil    = np.zeros(stock_shape, dtype=np.float32)
+        S_litter  = np.zeros(stock_shape, dtype=np.float32)
+        T         = np.zeros(stock_shape, dtype=np.float32)
 
-        L         = np.zeros((transitions, x_size, y_size))
-        Y_biomass = np.zeros((transitions, x_size, y_size))
-        Y_soil    = np.zeros((transitions, x_size, y_size))
-        D_biomass = np.zeros((transitions, x_size, y_size))
-        D_soil    = np.zeros((transitions, x_size, y_size))
-        H_biomass = np.zeros((transitions, x_size, y_size))
-        H_soil    = np.zeros((transitions, x_size, y_size))
-        R_biomass = np.zeros((transitions, x_size, y_size))
-        R_soil    = np.zeros((transitions, x_size, y_size))
+        timestep_shape = (timesteps, x_size, y_size)
+        A_biomass = np.zeros(timestep_shape, dtype=np.float32)
+        A_soil    = np.zeros(timestep_shape, dtype=np.float32)
+        E_biomass = np.zeros(timestep_shape, dtype=np.float32)
+        E_soil    = np.zeros(timestep_shape, dtype=np.float32)
+        N_biomass = np.zeros(timestep_shape, dtype=np.float32)
+        N_soil    = np.zeros(timestep_shape, dtype=np.float32)
+        V         = np.zeros(timestep_shape, dtype=np.float32)
+        P         = np.zeros(timestep_shape, dtype=np.float32)
+
+        transition_shape = (transitions, x_size, y_size)
+        L         = np.zeros(transition_shape, dtype=np.float32)
+        Y_biomass = np.zeros(transition_shape, dtype=np.float32)
+        Y_soil    = np.zeros(transition_shape, dtype=np.float32)
+        D_biomass = np.zeros(transition_shape, dtype=np.float32)
+        D_soil    = np.zeros(transition_shape, dtype=np.float32)
+        H_biomass = np.zeros(transition_shape, dtype=np.float32)
+        H_soil    = np.zeros(transition_shape, dtype=np.float32)
+        R_biomass = np.zeros(transition_shape, dtype=np.float32)
+        R_soil    = np.zeros(transition_shape, dtype=np.float32)
 
         # Set Accum and Disturbance Values
         for i in xrange(0, transitions):
             if i == 0:
-                D_biomass[i] = utils.reclass_transition(C_prior, C_r[0], d.lulc_trans_to_Db, out_dtype=np.float32)
-                D_soil[i]    = utils.reclass_transition(C_prior, C_r[0], d.lulc_trans_to_Ds, out_dtype=np.float32)
-                H_biomass[i] = utils.reclass(C_prior, d.lulc_to_Hb, out_dtype=np.float32)
-                H_soil[i]    = utils.reclass(C_prior, d.lulc_to_Hs, out_dtype=np.float32)
+                D_biomass[i] = reclass_transition(C_prior, C_r[0], d.lulc_trans_to_Db, out_dtype=np.float32)
+                D_soil[i]    = reclass_transition(C_prior, C_r[0], d.lulc_trans_to_Ds, out_dtype=np.float32)
+                H_biomass[i] = reclass(C_prior, d.lulc_to_Hb, out_dtype=np.float32)
+                H_soil[i]    = reclass(C_prior, d.lulc_to_Hs, out_dtype=np.float32)
             else:
-                D_biomass[i] = utils.reclass_transition(C_r[i-1], C_r[i], d.lulc_trans_to_Db, out_dtype=np.float32)
-                D_soil[i]    = utils.reclass_transition(C_r[i-1], C_r[i], d.lulc_trans_to_Ds, out_dtype=np.float32)
-                H_biomass[i] = utils.reclass(C_r[i-1], d.lulc_to_Hb, out_dtype=np.float32)
-                H_soil[i]    = utils.reclass(C_r[i-1], d.lulc_to_Hs, out_dtype=np.float32)
+                D_biomass[i] = reclass_transition(C_r[i-1], C_r[i], d.lulc_trans_to_Db, out_dtype=np.float32)
+                D_soil[i]    = reclass_transition(C_r[i-1], C_r[i], d.lulc_trans_to_Ds, out_dtype=np.float32)
+                H_biomass[i] = reclass(C_r[i-1], d.lulc_to_Hb, out_dtype=np.float32)
+                H_soil[i]    = reclass(C_r[i-1], d.lulc_to_Hs, out_dtype=np.float32)
 
-            L[i]         = utils.reclass(C_r[i], d.lulc_to_L, out_dtype=np.float32)
-            Y_biomass[i] = utils.reclass(C_r[i], d.lulc_to_Yb, out_dtype=np.float32)
-            Y_soil[i]    = utils.reclass(C_r[i], d.lulc_to_Ys, out_dtype=np.float32)
+            L[i]         = reclass(C_r[i], d.lulc_to_L, out_dtype=np.float32)
+            Y_biomass[i] = reclass(C_r[i], d.lulc_to_Yb, out_dtype=np.float32)
+            Y_soil[i]    = reclass(C_r[i], d.lulc_to_Ys, out_dtype=np.float32)
 
-        S_biomass[0] = utils.reclass(C_prior, d.lulc_to_Sb, out_dtype=np.float32)
-        S_soil[0]    = utils.reclass(C_prior, d.lulc_to_Ss, out_dtype=np.float32)
-        S_litter[0]  = utils.reclass(C_prior, d.lulc_to_L, out_dtype=np.float32)
+        S_biomass[0] = reclass(C_prior, d.lulc_to_Sb, out_dtype=np.float32)
+        S_soil[0]    = reclass(C_prior, d.lulc_to_Ss, out_dtype=np.float32)
+        S_litter[0]  = reclass(C_prior, d.lulc_to_L, out_dtype=np.float32)
         T[0]         = S_biomass[0] + S_soil[0] + S_litter[0]
 
         R_biomass[0] = D_biomass[0] * S_biomass[0]
         R_soil[0]    = D_soil[0] * S_soil[0]
 
         # Transient Analysis
-        for i in range(0, timesteps):
-            transition_idx = timestep_to_transition_idx(d, i)
+        for i in xrange(0, timesteps):
+            transition_idx = timestep_to_transition_idx(d.snapshot_years, d.transitions, i)
 
-            if is_transition_year(d, i):
+            if is_transition_year(d.snapshot_years, d.transitions, i):
                 # Set disturbed stock values
                 R_biomass[transition_idx] = D_biomass[transition_idx] * S_biomass[i]
                 R_soil[transition_idx] = D_soil[transition_idx] * S_soil[i]
@@ -190,8 +202,8 @@ def run(d):
             # Emissions
             E_biomass[i] = np.zeros(A_biomass[0].shape)
             E_soil[i] = np.zeros(A_biomass[0].shape)
-            for transition_idx in xrange(0, timestep_to_transition_idx(d, i)+1):
-                j = transition_idx_to_timestep(d, transition_idx)
+            for transition_idx in xrange(0, timestep_to_transition_idx(d.snapshot_years, d.transitions, i)+1):
+                j = d.transition_years[transition_idx] - d.transition_years[0]
                 E_biomass[i] += R_biomass[transition_idx] * (0.5**(i-j) - 0.5**(i-j+1))
                 E_soil[i] += R_soil[transition_idx] * (0.5**(i-j) - 0.5**(i-j+1))
 
@@ -209,55 +221,141 @@ def run(d):
                 V[i] = (N_biomass[i] + N_soil[0]) * d.price_t[i]
 
         # Write outputs: T_s, A_r, E_r, N_r, NPV
-        T_s = [T[snapshot_idx_to_timestep(d, i)] for i in range(0, len(d.snapshot_years))]
+        T_s = [T[snapshot_idx_to_timestep(d.snapshot_years, i)] for i in xrange(0, len(d.snapshot_years))]
         A = A_biomass + A_soil
-        A_r = [sum(A[snapshot_idx_to_timestep(d, i):snapshot_idx_to_timestep(d, i+1)]) for i in range(0, len(d.snapshot_years)-1)]
+        A_r = [sum(A[snapshot_idx_to_timestep(d.snapshot_years, i):snapshot_idx_to_timestep(d.snapshot_years, i+1)]) for i in xrange(0, len(d.snapshot_years)-1)]
         E = E_biomass + E_soil
-        E_r = [sum(E[snapshot_idx_to_timestep(d, i):snapshot_idx_to_timestep(d, i+1)]) for i in range(0, len(d.snapshot_years)-1)]
+        E_r = [sum(E[snapshot_idx_to_timestep(d.snapshot_years, i):snapshot_idx_to_timestep(d.snapshot_years, i+1)]) for i in xrange(0, len(d.snapshot_years)-1)]
         N = N_biomass + N_soil
-        N_r = [sum(N[snapshot_idx_to_timestep(d, i):snapshot_idx_to_timestep(d, i+1)]) for i in range(0, len(d.snapshot_years)-1)]
+        N_r = [sum(N[snapshot_idx_to_timestep(d.snapshot_years, i):snapshot_idx_to_timestep(d.snapshot_years, i+1)]) for i in xrange(0, len(d.snapshot_years)-1)]
         N_total = sum(N)
 
-        for i in range(0, len(d.T_s_rasters)):
-            utils.write_to_raster(d.T_s_rasters[i], T_s[i], offset_dict['xoff'], offset_dict['yoff'])
+        for i in xrange(0, len(d.T_s_rasters)):
+            write_to_raster(d.T_s_rasters[i], T_s[i], offset_dict['xoff'], offset_dict['yoff'])
 
-        for i in range(0, len(d.A_r_rasters)):
-            utils.write_to_raster(d.A_r_rasters[i], A_r[i], offset_dict['xoff'], offset_dict['yoff'])
+        for i in xrange(0, len(d.A_r_rasters)):
+            write_to_raster(d.A_r_rasters[i], A_r[i], offset_dict['xoff'], offset_dict['yoff'])
 
-        for i in range(0, len(d.E_r_rasters)):
-            utils.write_to_raster(d.E_r_rasters[i], E_r[i], offset_dict['xoff'], offset_dict['yoff'])
+        for i in xrange(0, len(d.E_r_rasters)):
+            write_to_raster(d.E_r_rasters[i], E_r[i], offset_dict['xoff'], offset_dict['yoff'])
 
-        for i in range(0, len(d.N_r_rasters)):
-            utils.write_to_raster(d.N_r_rasters[i], N_r[i], offset_dict['xoff'], offset_dict['yoff'])
+        for i in xrange(0, len(d.N_r_rasters)):
+            write_to_raster(d.N_r_rasters[i], N_r[i], offset_dict['xoff'], offset_dict['yoff'])
 
-        utils.write_to_raster(d.N_total_raster, N_total, offset_dict['xoff'], offset_dict['yoff'])
+        write_to_raster(d.N_total_raster, N_total, offset_dict['xoff'], offset_dict['yoff'])
 
         if d.do_economic_analysis:
-            NPV = np.sum(V[:], axis=0)
-            utils.write_to_raster(d.NPV_raster, NPV, offset_dict['xoff'], offset_dict['yoff'])
+            NPV = np.sum(V, axis=0)
+            write_to_raster(d.NPV_raster, NPV, offset_dict['xoff'], offset_dict['yoff'])
+
+    LOGGER.info("...Coastal Blue Carbon model run complete.")
 
 
-def timestep_to_transition_idx(d, timestep):
-    """Convert timestep to transition index."""
-    for i in xrange(0, d.transitions):
-        if timestep < (d.snapshot_years[i+1] - d.snapshot_years[0]):
+def timestep_to_transition_idx(snapshot_years, transitions, timestep):
+    """Convert timestep to transition index.
+
+    Args:
+        snapshot_years (list)
+        transitions (int)
+        timestep (int)
+
+    Returns:
+        transition_idx (int)
+    """
+    for i in xrange(0, transitions):
+        if timestep < (snapshot_years[i+1] - snapshot_years[0]):
             return i
     return None
 
 
-def snapshot_idx_to_timestep(d, snapshot_idx):
+def snapshot_idx_to_timestep(snapshot_years, snapshot_idx):
     """Convert snapshot_idx to timestep."""
-    return d.snapshot_years[snapshot_idx] - d.snapshot_years[0]
+    return snapshot_years[snapshot_idx] - snapshot_years[0]
 
 
-def is_transition_year(d, timestep):
+def is_transition_year(snapshot_years, transitions, timestep):
     """Check whether given timestep is a transition year."""
-    if (timestep_to_transition_idx(d, timestep) != timestep_to_transition_idx(d, timestep-1) and
-        timestep_to_transition_idx(d, timestep)):
+    if (timestep_to_transition_idx(snapshot_years, transitions, timestep) \
+            != timestep_to_transition_idx(snapshot_years, transitions, timestep-1) and
+        timestep_to_transition_idx(snapshot_years, transitions, timestep)):
         return True
     return False
 
 
-def transition_idx_to_timestep(d, transition_idx):
-    """Convert transition_idx to timestep."""
-    return d.transition_years[transition_idx] - d.transition_years[0]
+def get_num_blocks(raster_uri):
+    """Get the number of blocks in a raster file."""
+    ds = gdal.Open(raster_uri)
+    n_rows = ds.RasterYSize
+    n_cols = ds.RasterXSize
+
+    band = ds.GetRasterBand(1)
+    cols_per_block, rows_per_block =  band.GetBlockSize()
+
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+
+    ds.FlushCache()
+    ds = None
+
+    return n_col_blocks * n_row_blocks
+
+
+def reclass(a, reclass_dict, mask_other_vals=True, out_dtype=None):
+    """Reclass values in array.
+
+    Should set values not in reclass_dict to NaN. (Currently does not)
+    """
+    def reclass_op(array):
+        a = np.ma.masked_array(np.copy(array))
+        if out_dtype:
+            a = a.astype(out_dtype)
+        if mask_other_vals:
+            u = list(np.unique(a.data))
+            other_vals = []
+            for i in u:
+                if i not in reclass_dict:
+                    other_vals.append(i)
+            for i in other_vals:
+                a[array == i] = np.nan #np.ma.masked
+        for item in reclass_dict.items():
+            a[array == item[0]] = item[1]
+        if isinstance(array, np.ma.masked_array) or mask_other_vals:
+            return a
+        else:
+            return a.data
+    return reclass_op(a)
+
+
+def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None):
+    """Reclass arrays based on element-wise combinations between two arrays."""
+    def reclass_transition_op(a_prev, a_next):
+        a = a_prev.flatten()
+        b = a_next.flatten()
+        c = np.ma.masked_array(np.zeros(a.shape))
+        if out_dtype:
+            c = c.astype(out_dtype)
+        z = zip(a, b)
+        for i in range(0, len(z)):
+            if z[i] in trans_dict:
+                c[i] = trans_dict[z[i]]
+            else:
+                c[i] = np.ma.masked
+        return c.reshape(a_prev.shape)
+    return reclass_transition_op(a_prev, a_next)
+
+
+def write_to_raster(output_raster, array, xoff, yoff):
+    ds = gdal.Open(output_raster, gdal.GA_Update)
+    band = ds.GetRasterBand(1)
+    band.WriteArray(array, xoff, yoff)
+    ds.FlushCache()
+    ds = None
+
+
+def read_from_raster(input_raster, offset_block):
+    ds = gdal.Open(input_raster)
+    band = ds.GetRasterBand(1)
+    a = band.ReadAsArray(**offset_block)
+    ds.FlushCache()
+    ds = None
+    return a
