@@ -146,7 +146,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             I_ptr[cell_id] = row
             J_ptr[cell_id] = col
             # Compute the angle of the cell center
-            angle = atan2(-(row - viewpoint_row), col - viewpoint_col)
+            angle = atan2(float(-(row - viewpoint_row)), float(col - viewpoint_col))
             a_ptr[cell_id] = (angle + two_pi) % two_pi
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
