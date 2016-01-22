@@ -11,7 +11,7 @@ import numpy as np
 from osgeo import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 
-from natcap.invest.coastal_blue_carbon import NODATA_FLOAT
+NODATA_FLOAT = -16777216
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -81,8 +81,8 @@ def get_inputs(args):
         'lulc_to_Ys': {'lulc': 'accum-soil'},      # tc
         'lulc_to_Hb': {'lulc': 'hl-bio'},          # tc
         'lulc_to_Hs': {'lulc': 'hl-soil'},         # tc
-        'lulc_trans_to_Db': {('lulc1', 'lulc2'): 'dist-val'}, # tc <-- preprocess with lulc_to_Db_high, lulc_to_Db_med, lulc_to_Db_low, lulc_to_Ds_high, lulc_to_Ds_med, lulc_to_Ds_low
-        'lulc_trans_to_Ds': {('lulc1', 'lulc2'): 'dist-val'}, # tc <-- same
+        'lulc_trans_to_Db': {('lulc1', 'lulc2'): 'dist-val'},
+        'lulc_trans_to_Ds': {('lulc1', 'lulc2'): 'dist-val'},
         'C_s': [],
         'C_prior': None,
         'C_r_rasters': [],
@@ -127,12 +127,13 @@ def get_inputs(args):
     d.snapshot_years = [int(i) for i in d.transition_years]
     if args['analysis_year'] not in ['', None]:
         if int(args['analysis_year']) <= d.snapshot_years[-1]:
-            raise ValueError('Analysis year must be greater than last transition year.')
+            raise ValueError(
+                'Analysis year must be greater than last transition year.')
         d.snapshot_years.append(int(args['analysis_year']))
     d.timesteps = d.snapshot_years[-1] - d.snapshot_years[0]
 
-    d.C_prior_raster = args['lulc_baseline_map_uri']  #d.C_s[0]
-    d.C_r_rasters = args['lulc_transition_maps_list'] # d.C_s[1:]
+    d.C_prior_raster = args['lulc_baseline_map_uri']
+    d.C_r_rasters = args['lulc_transition_maps_list']
 
     # Reclass Dictionaries
     lulc_lookup_dict = geoprocess.get_lookup_from_csv(
@@ -142,25 +143,28 @@ def get_inputs(args):
     initial_dict = geoprocess.get_lookup_from_csv(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
-    d.lulc_to_Sb = dict((lulc_to_code_dict[key.lower()], sub['biomass']) \
-        for key, sub in initial_dict.items())
-    d.lulc_to_Ss = dict((lulc_to_code_dict[key.lower()], sub['soil']) \
-        for key, sub in initial_dict.items())
-    d.lulc_to_L =  dict((lulc_to_code_dict[key.lower()], sub['litter']) \
-        for key, sub in initial_dict.items())
+    d.lulc_to_Sb = dict((lulc_to_code_dict[key.lower()], sub['biomass'])
+                        for key, sub in initial_dict.items())
+    d.lulc_to_Ss = dict((lulc_to_code_dict[key.lower()], sub['soil'])
+                        for key, sub in initial_dict.items())
+    d.lulc_to_L = dict((lulc_to_code_dict[key.lower()], sub['litter'])
+                       for key, sub in initial_dict.items())
 
     # Transition Dictionaries
     biomass_transient_dict, soil_transient_dict = \
         _create_transient_dict(args['carbon_pool_transient_uri'])
 
-    d.lulc_to_Yb = dict((lulc_to_code_dict[key.lower()], sub['yearly_accumulation']) \
-        for key, sub in biomass_transient_dict.items())
-    d.lulc_to_Ys = dict((lulc_to_code_dict[key.lower()], sub['yearly_accumulation']) \
-        for key, sub in soil_transient_dict.items())
-    d.lulc_to_Hb = dict((lulc_to_code_dict[key.lower()], sub['half-life']) \
-        for key, sub in biomass_transient_dict.items())
-    d.lulc_to_Hs = dict((lulc_to_code_dict[key.lower()], sub['half-life']) \
-        for key, sub in soil_transient_dict.items())
+    d.lulc_to_Yb = dict((lulc_to_code_dict[key.lower()],
+                        sub['yearly_accumulation'])
+                        for key, sub in biomass_transient_dict.items())
+    d.lulc_to_Ys = dict((lulc_to_code_dict[key.lower()],
+                        sub['yearly_accumulation'])
+                        for key, sub in soil_transient_dict.items())
+    d.lulc_to_Hb = dict((lulc_to_code_dict[key.lower()],
+                        sub['half-life'])
+                        for key, sub in biomass_transient_dict.items())
+    d.lulc_to_Hs = dict((lulc_to_code_dict[key.lower()], sub['half-life'])
+                        for key, sub in soil_transient_dict.items())
 
     # Parse LULC Transition CSV (Carbon Direction and Relative Magnitude)
     lulc_trans_to_Db, lulc_trans_to_Ds = _get_lulc_trans_to_D_dicts(
@@ -183,16 +187,19 @@ def get_inputs(args):
         else:
             d.interest_rate = float(args['interest_rate']) * 0.01
             price = args['price']
-            d.price_t = (1 + d.interest_rate) ** np.arange(0, d.timesteps+1) * price
+            d.price_t = (1 + d.interest_rate) ** np.arange(
+                0, d.timesteps+1) * price
 
-        d.price_t = d.price_t / (1 + discount_rate)**np.arange(0, d.timesteps+1)
+        d.price_t = d.price_t / (1 + discount_rate)**np.arange(
+            0, d.timesteps+1)
 
     # Create Output Rasters
     template_raster = d.C_prior_raster
 
     # Total Carbon Stock
     for i in range(0, len(d.snapshot_years)):
-        fn = 'carbon_stock_at_%s%s.tif' % (d.snapshot_years[i], d.results_suffix)
+        fn = 'carbon_stock_at_%s%s.tif' % (
+            d.snapshot_years[i], d.results_suffix)
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
@@ -243,7 +250,8 @@ def get_inputs(args):
     return d
 
 
-def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri, biomass_transient_dict, soil_transient_dict):
+def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
+                               biomass_transient_dict, soil_transient_dict):
     """Get the lulc_trans_to_D dictionaries.
 
     Args:
@@ -277,9 +285,11 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri, biomass_tra
             continue
         for k2, v in sub.items():
             if k2 is not '' and v.endswith('disturb'):
-                lulc_trans_to_Db[(lulc_to_code_dict[k], lulc_to_code_dict[k2])] =\
+                lulc_trans_to_Db[(
+                    lulc_to_code_dict[k], lulc_to_code_dict[k2])] = \
                     biomass_transient_dict[k][v]
-                lulc_trans_to_Ds[(lulc_to_code_dict[k], lulc_to_code_dict[k2])] =\
+                lulc_trans_to_Ds[(
+                    lulc_to_code_dict[k], lulc_to_code_dict[k2])] = \
                     soil_transient_dict[k][v]
 
     return lulc_trans_to_Db, lulc_trans_to_Db
@@ -346,7 +356,8 @@ def _get_price_table(price_table_uri, start_year, end_year):
     price_t = np.zeros(end_year - start_year + 1)
 
     try:
-        return np.array([price_dict[year-start_year]['price'] for year in xrange(start_year, end_year+1)])
+        return np.array([price_dict[year-start_year]['price']
+                        for year in xrange(start_year, end_year+1)])
     except KeyError as missing_year:
         raise KeyError('Carbon price table does not contain a price value for '
                        '%s' % missing_year)
