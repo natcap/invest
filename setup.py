@@ -90,7 +90,8 @@ EXTENSION_LIST = ([
     Extension(
         name="scenic_quality_cython_core",
         sources=[
-        'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
+            'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
+        language="c++",
         include_dirs=[numpy.get_include()]),
     Extension(
         name="ndr_core",
