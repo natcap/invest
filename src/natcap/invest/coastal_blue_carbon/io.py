@@ -18,14 +18,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.io')
 
 
-class AttrDict(dict):
-    """Create a subclass of dictionary where keys can be accessed as attributes.
-    """
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-
-
 def get_inputs(args):
     """Get Inputs.
 
@@ -70,7 +62,7 @@ def get_inputs(args):
         }
 
     """
-    d = AttrDict({
+    d = {
         'workspace_dir': None,
         'border_year_list': None,
         'do_economic_analysis': False,
@@ -99,7 +91,7 @@ def get_inputs(args):
         'N_r_rasters': [],
         'N_total_raster': None,
         'NPV_raster': None,
-    })
+    }
 
     # Directories
     try:
@@ -110,30 +102,31 @@ def get_inputs(args):
     if len(args['results_suffix']) > 1:
         args['results_suffix'] = '_' + args['results_suffix']
 
-    d.results_suffix = args['results_suffix']
-    d.workspace_dir = args['workspace_dir']
+    d['results_suffix'] = args['results_suffix']
+    d['workspace_dir'] = args['workspace_dir']
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
     geoprocess.create_directories([args['workspace_dir'], outputs_dir])
 
     # Rasters
-    d.transition_years = [int(i) for i in args['lulc_transition_years_list']]
-    for i in range(0, len(d.transition_years)-1):
-        if d.transition_years[i] >= d.transition_years[i+1]:
+    d['transition_years'] = [int(i) for i in
+                             args['lulc_transition_years_list']]
+    for i in range(0, len(d['transition_years'])-1):
+        if d['transition_years'][i] >= d['transition_years'][i+1]:
             raise ValueError(
                 'LULC snapshot years must be provided in chronological order.'
                 ' and in the same order as the LULC snapshot rasters.')
-    d.transitions = len(d.transition_years)
+    d['transitions'] = len(d['transition_years'])
 
-    d.snapshot_years = [int(i) for i in d.transition_years]
+    d['snapshot_years'] = [int(i) for i in d['transition_years']]
     if args['analysis_year'] not in ['', None]:
-        if int(args['analysis_year']) <= d.snapshot_years[-1]:
+        if int(args['analysis_year']) <= d['snapshot_years'][-1]:
             raise ValueError(
                 'Analysis year must be greater than last transition year.')
-        d.snapshot_years.append(int(args['analysis_year']))
-    d.timesteps = d.snapshot_years[-1] - d.snapshot_years[0]
+        d['snapshot_years'].append(int(args['analysis_year']))
+    d['timesteps'] = d['snapshot_years'][-1] - d['snapshot_years'][0]
 
-    d.C_prior_raster = args['lulc_baseline_map_uri']
-    d.C_r_rasters = args['lulc_transition_maps_list']
+    d['C_prior_raster'] = args['lulc_baseline_map_uri']
+    d['C_r_rasters'] = args['lulc_transition_maps_list']
 
     # Reclass Dictionaries
     lulc_lookup_dict = geoprocess.get_lookup_from_csv(
@@ -143,28 +136,28 @@ def get_inputs(args):
     initial_dict = geoprocess.get_lookup_from_csv(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
-    d.lulc_to_Sb = dict((lulc_to_code_dict[key.lower()], sub['biomass'])
-                        for key, sub in initial_dict.items())
-    d.lulc_to_Ss = dict((lulc_to_code_dict[key.lower()], sub['soil'])
-                        for key, sub in initial_dict.items())
-    d.lulc_to_L = dict((lulc_to_code_dict[key.lower()], sub['litter'])
-                       for key, sub in initial_dict.items())
+    d['lulc_to_Sb'] = dict((lulc_to_code_dict[key.lower()], sub['biomass'])
+                           for key, sub in initial_dict.items())
+    d['lulc_to_Ss'] = dict((lulc_to_code_dict[key.lower()], sub['soil'])
+                           for key, sub in initial_dict.items())
+    d['lulc_to_L'] = dict((lulc_to_code_dict[key.lower()], sub['litter'])
+                          for key, sub in initial_dict.items())
 
     # Transition Dictionaries
     biomass_transient_dict, soil_transient_dict = \
         _create_transient_dict(args['carbon_pool_transient_uri'])
 
-    d.lulc_to_Yb = dict((lulc_to_code_dict[key.lower()],
-                        sub['yearly_accumulation'])
-                        for key, sub in biomass_transient_dict.items())
-    d.lulc_to_Ys = dict((lulc_to_code_dict[key.lower()],
-                        sub['yearly_accumulation'])
-                        for key, sub in soil_transient_dict.items())
-    d.lulc_to_Hb = dict((lulc_to_code_dict[key.lower()],
-                        sub['half-life'])
-                        for key, sub in biomass_transient_dict.items())
-    d.lulc_to_Hs = dict((lulc_to_code_dict[key.lower()], sub['half-life'])
-                        for key, sub in soil_transient_dict.items())
+    d['lulc_to_Yb'] = dict((lulc_to_code_dict[key.lower()],
+                           sub['yearly_accumulation'])
+                           for key, sub in biomass_transient_dict.items())
+    d['lulc_to_Ys'] = dict((lulc_to_code_dict[key.lower()],
+                           sub['yearly_accumulation'])
+                           for key, sub in soil_transient_dict.items())
+    d['lulc_to_Hb'] = dict((lulc_to_code_dict[key.lower()],
+                           sub['half-life'])
+                           for key, sub in biomass_transient_dict.items())
+    d['lulc_to_Hs'] = dict((lulc_to_code_dict[key.lower()], sub['half-life'])
+                           for key, sub in soil_transient_dict.items())
 
     # Parse LULC Transition CSV (Carbon Direction and Relative Magnitude)
     lulc_trans_to_Db, lulc_trans_to_Ds = _get_lulc_trans_to_D_dicts(
@@ -172,80 +165,86 @@ def get_inputs(args):
         args['lulc_lookup_uri'],
         biomass_transient_dict,
         soil_transient_dict)
-    d.lulc_trans_to_Db = lulc_trans_to_Db
-    d.lulc_trans_to_Ds = lulc_trans_to_Ds
+    d['lulc_trans_to_Db'] = lulc_trans_to_Db
+    d['lulc_trans_to_Ds'] = lulc_trans_to_Ds
 
     # Economic Analysis
     if args['do_economic_analysis']:
-        d.do_economic_analysis = True
+        d['do_economic_analysis'] = True
         discount_rate = float(args['discount_rate']) * 0.01
         if args['do_price_table']:
-            d.price_t = _get_price_table(
+            d['price_t'] = _get_price_table(
                 args['price_table_uri'],
-                d.snapshot_years[0],
-                d.snapshot_years[-1])
+                d['snapshot_years'][0],
+                d['snapshot_years'][-1])
         else:
-            d.interest_rate = float(args['interest_rate']) * 0.01
+            d['interest_rate'] = float(args['interest_rate']) * 0.01
             price = args['price']
-            d.price_t = (1 + d.interest_rate) ** np.arange(
-                0, d.timesteps+1) * price
+            d['price_t'] = (1 + d['interest_rate']) ** np.arange(
+                0, d['timesteps']+1) * price
 
-        d.price_t = d.price_t / (1 + discount_rate)**np.arange(
-            0, d.timesteps+1)
+        d['price_t'] = d['price_t'] / (1 + discount_rate)**np.arange(
+            0, d['timesteps']+1)
 
     # Create Output Rasters
-    template_raster = d.C_prior_raster
+    template_raster = d['C_prior_raster']
 
     # Total Carbon Stock
-    for i in range(0, len(d.snapshot_years)):
+    for i in range(0, len(d['snapshot_years'])):
         fn = 'carbon_stock_at_%s%s.tif' % (
-            d.snapshot_years[i], d.results_suffix)
+            d['snapshot_years'][i], d['results_suffix'])
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d.T_s_rasters.append(filepath)
+        d['T_s_rasters'].append(filepath)
 
-    for i in range(0, len(d.snapshot_years)-1):
+    for i in range(0, len(d['snapshot_years'])-1):
         # Transition Accumulation
         fn = 'carbon_accumulation_between_%s_and_%s%s.tif' % (
-            d.snapshot_years[i], d.snapshot_years[i+1], d.results_suffix)
+            d['snapshot_years'][i],
+            d['snapshot_years'][i+1],
+            d['results_suffix'])
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d.A_r_rasters.append(filepath)
+        d['A_r_rasters'].append(filepath)
 
         # Transition Emissions
         fn = 'carbon_emissions_between_%s_and_%s%s.tif' % (
-            d.snapshot_years[i], d.snapshot_years[i+1], d.results_suffix)
+            d['snapshot_years'][i],
+            d['snapshot_years'][i+1],
+            d['results_suffix'])
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d.E_r_rasters.append(filepath)
+        d['E_r_rasters'].append(filepath)
 
         # Transition Net Sequestration
         fn = 'net_carbon_sequestration_between_%s_and_%s%s.tif' % (
-            d.snapshot_years[i], d.snapshot_years[i+1], d.results_suffix)
+            d['snapshot_years'][i],
+            d['snapshot_years'][i+1],
+            d['results_suffix'])
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d.N_r_rasters.append(filepath)
+        d['N_r_rasters'].append(filepath)
 
     # Total Net Sequestration
     fn = 'net_carbon_sequestration_between_%s_and_%s%s.tif' % (
-        d.snapshot_years[0], d.snapshot_years[-1], d.results_suffix)
+        d['snapshot_years'][0], d['snapshot_years'][-1], d['results_suffix'])
     filepath = os.path.join(outputs_dir, fn)
     geoprocess.new_raster_from_base_uri(
         template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-    d.N_total_raster = filepath
+    d['N_total_raster'] = filepath
 
     # Net Sequestration from Base Year to Analysis Year
     if args['do_economic_analysis']:
         # Total Net Present Value
-        fn = 'net_present_value%s.tif' % (d.results_suffix)
+        fn = 'net_present_value%s.tif' % (d['results_suffix'])
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d.NPV_raster = filepath
+        d['NPV_raster'] = filepath
 
     return d
 
