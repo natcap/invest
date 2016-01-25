@@ -2124,7 +2124,7 @@ def build_bin(options):
     # Write the package versions to a text file for the record.
     # Assume we're in a virtualenv
     pip_bin = os.path.join(os.path.dirname(python_exe), 'pip')
-    sh('{pip} freeze > package_versions.txt'.format(pip=pip_bin), cwd=bindir)
+    sh('pip freeze > package_versions.txt', cwd=bindir)
 
     # Record the hg path, branch, sha1 of this repo to a text file. This will help us down
     # the road to differentiate between built binaries from different forks.
@@ -2231,11 +2231,12 @@ def build_bin(options):
             try:
                 sh('cp /usr/local/Cellar/libpng/*/lib/*dylib %s' % invest_dist)
                 sh('cp /usr/local/Cellar/geos/*/lib/*dylib %s' % invest_dist)
-            finally:
-                if not all(os.path.exists(os.path.join(
-                        invest_dist, 'invest', i)) for i in ['libpng.dylib', 'libgeos_c.1.dylib'])
-                    msg = 'Failure copying libpng and geos libraries to invest.'
-                    raise BuildFailure(msg)
+            except:
+                pass
+            if not all(os.path.exists(os.path.join(
+                    invest_dist, 'invest', i)) for i in ['libpng.dylib', 'libgeos_c.1.dylib']):
+                msg = 'Failure copying libpng and geos libraries to invest.'
+                raise BuildFailure(msg)
         _write_console_files(binary, 'sh')
 
 
