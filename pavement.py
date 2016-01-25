@@ -2225,7 +2225,7 @@ def build_bin(options):
         binary = os.path.join(invest_dist, 'invest')
         if platform.system() == 'Darwin':
             # Patch for correct dylibs until better pyinstaller solution found
-            if not all([os.direxists(i) for i in ['/usr/local/Cellar/libpng/', '/usr/local/Cellar/geos/']]):
+            if not all([os.path.exists(i) for i in ['/usr/local/Cellar/libpng/', '/usr/local/Cellar/geos/']]):
                 msg = 'Mac builds require a homebrew version of libpng and geos libraries to be installed.'
                 raise BuildFailure(msg)
             sh('cp /usr/local/Cellar/libpng/*/lib/*dylib %s' % invest_dist)
