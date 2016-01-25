@@ -467,7 +467,6 @@ def _execute(args):
         file_registry['zero_absorption_source_path'],
         file_registry['loss_path'],
         file_registry['l_sum_path'], 'flux_only',
-        aoi_uri=args['aoi_path'],
         stream_uri=file_registry['stream_path'])
 
     LOGGER.info('calculate B_sum')
