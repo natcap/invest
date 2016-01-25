@@ -2229,8 +2229,8 @@ def build_bin(options):
                 msg = 'Mac builds require a homebrew version of libpng and geos libraries to be installed.'
                 raise BuildFailure(msg)
             try:
-                sh('cp -P /usr/local/Cellar/libpng/*/lib/*dylib %s' % invest_dist)
-                sh('cp -P /usr/local/Cellar/geos/*/lib/*dylib %s' % invest_dist)
+                sh('cp -R /usr/local/Cellar/libpng/*/lib/*dylib %s' % invest_dist)
+                sh('cp -R /usr/local/Cellar/geos/*/lib/*dylib %s' % invest_dist)
             except:
                 pass
             if not all(os.path.exists(os.path.join(
