@@ -813,8 +813,14 @@ def _ogr_to_geometry_list(vector_path):
     for feature in layer:
         feature_geometry = feature.GetGeometryRef()
         shapely_geometry = shapely.wkt.loads(feature_geometry.ExportToWkt())
+        if not shapely_geometry.is_valid:
+            shapely_geometry = shapely_geometry.buffer(0)
         if shapely_geometry.is_valid:
             geometry_list.append(shapely_geometry)
+        else:
+            LOGGER.error(
+                "Unable to fix broken geometry on FID %d in %s", 
+                feature.GetFID(), vector_path)
         feature_geometry = None
     layer = None
     ogr.DataSource.__swig_destroy__(vector)
