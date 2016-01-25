@@ -2228,15 +2228,8 @@ def build_bin(options):
             if not all([os.path.exists(i) for i in ['/usr/local/Cellar/libpng/', '/usr/local/Cellar/geos/']]):
                 msg = 'Mac builds require a homebrew version of libpng and geos libraries to be installed.'
                 raise BuildFailure(msg)
-            try:
-                sh('cp -R /usr/local/Cellar/libpng/*/lib/*dylib %s' % invest_dist)
-                sh('cp -R /usr/local/Cellar/geos/*/lib/*dylib %s' % invest_dist)
-            except:
-                pass
-            if not all(os.path.exists(os.path.join(
-                    invest_dist, 'invest', i)) for i in ['libpng.dylib', 'libgeos_c.1.dylib']):
-                msg = 'Failure copying libpng and geos libraries to invest.'
-                raise BuildFailure(msg)
+            sh('cp -R /usr/local/Cellar/libpng/*/lib/*dylib %s' % invest_dist)
+            sh('cp -R /usr/local/Cellar/geos/*/lib/*dylib %s' % invest_dist)
         _write_console_files(binary, 'sh')
 
 
