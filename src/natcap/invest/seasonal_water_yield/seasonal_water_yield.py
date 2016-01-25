@@ -16,7 +16,7 @@ import pygeoprocessing.routing
 import pygeoprocessing.routing.routing_core
 import natcap.invest.utils
 
-import seasonal_water_yield_core
+import seasonal_water_yield_core  #pylint: disable=import-error
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -153,8 +153,23 @@ def execute(args):
     # I found this useful to catch all kinds of weird inputs to the model
     # during debugging and think it makes sense to have in production of this
     # model too.
-    warnings.filterwarnings('error')
+    try:
+        warnings.filterwarnings('error')
+        _execute(args)
+    finally:
+        warnings.resetwarnings()
 
+
+def _execute(args):
+    """Execute the seasonal water yield model.
+
+    Parameters:
+        See the parameters for
+        `natcap.invest.seasonal_water_yield.seasonal_wateryield.execute`.
+
+    Returns:
+        None
+    """
     LOGGER.info('prepare and test inputs for common errors')
 
     # fail early on a missing required rain events table
@@ -248,11 +263,10 @@ def execute(args):
             [file_registry['soil_group_aligned_path']] +
             file_registry['et0_path_aligned_list'] + output_align_list)
 
-    align_index = 0
+    align_index = len(input_align_list) - 1  # this aligns with the DEM
     if args['user_defined_local_recharge']:
         input_align_list.append(args['l_path'])
         output_align_list.append(file_registry['l_aligned_path'])
-        align_index = len(input_align_list) - 1
     elif args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
         output_align_list.append(
@@ -453,7 +467,6 @@ def execute(args):
         file_registry['zero_absorption_source_path'],
         file_registry['loss_path'],
         file_registry['l_sum_path'], 'flux_only',
-        aoi_uri=args['aoi_path'],
         stream_uri=file_registry['stream_path'])
 
     LOGGER.info('calculate B_sum')
@@ -509,8 +522,6 @@ def execute(args):
     LOGGER.info(' `--\' (v  __( / ||')
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
-
-    warnings.resetwarnings()
 
 
 def _calculate_monthly_quick_flow(
@@ -584,11 +595,22 @@ def _calculate_monthly_quick_flow(
         qf_im = numpy.empty(p_im.shape)
         qf_im[:] = qf_nodata
 
+        # Precompute the last two terms in quickflow so we can handle a
+        # numerical instability when s_i is large and/or a_im is small
+        # on large valid_si/a_im this number will be zero and the latter
+        # exponent will also be zero because of a divide by zero. rather than
+        # raise that numerical warning, just handle it manually
+        E1 = scipy.special.expn(1, valid_si / a_im)  #pylint: disable=invalid-name,no-member
+        nonzero_e1_mask = E1 != 0
+        exp_result = numpy.zeros(valid_si.shape)
+        exp_result[nonzero_e1_mask] = numpy.exp(
+            (0.8 * valid_si[nonzero_e1_mask]) / a_im[nonzero_e1_mask] +
+            numpy.log(E1[nonzero_e1_mask]))
+
         # qf_im is the quickflow at pixel i on month m Eq. [1]
         qf_im[valid_mask] = (25.4 * valid_n_events * (
             (a_im - valid_si) * numpy.exp(-0.2 * valid_si / a_im) +
-            valid_si ** 2 / a_im * numpy.exp((0.8 * valid_si) / a_im) *
-            scipy.special.expn(1, valid_si / a_im)))
+            valid_si ** 2 / a_im * exp_result))
 
         # if precip is 0, then QF should be zero
         qf_im[(p_im == 0) | (n_events == 0)] = 0.0

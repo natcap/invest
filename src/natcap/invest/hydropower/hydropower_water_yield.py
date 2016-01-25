@@ -276,40 +276,55 @@ def execute(args):
         returns - fractp value
         """
 
-        #Compute Budyko Dryness index
-        #Use the original AET equation if the land cover type is vegetation
-        #If not vegetation (wetlands, urban, water, etc...) use
-        #Alternative equation Kc * Eto
-        phi = (Kc * eto) / (precip)
-        pet = Kc * eto
+        valid_mask = (
+            (Kc != Kc_nodata) & (eto != eto_nodata) &
+            (precip != precip_nodata) & (root != root_nodata) &
+            (soil != root_rest_layer_nodata) & (pawc != pawc_nodata) &
+            (veg != veg_nodata) & (precip != 0.0) & (Kc != 0.0) &
+            (eto != 0.0))
 
-        #Calculate plant available water content (mm) using the minimum
-        #of soil depth and root depth
-        awc = numpy.where(root < soil, root, soil) * pawc
-        climate_w = ((awc / precip) * seasonality_constant) + 1.25
+        # Compute Budyko Dryness index
+        # Use the original AET equation if the land cover type is vegetation
+        # If not vegetation (wetlands, urban, water, etc...) use
+        # Alternative equation Kc * Eto
+        phi = (Kc[valid_mask] * eto[valid_mask]) / precip[valid_mask]
+        pet = Kc[valid_mask] * eto[valid_mask]
+
+        # Calculate plant available water content (mm) using the minimum
+        # of soil depth and root depth
+        awc = numpy.where(
+            root[valid_mask] < soil[valid_mask], root[valid_mask],
+            soil[valid_mask]) * pawc[valid_mask]
+        climate_w = (
+            (awc / precip[valid_mask]) * seasonality_constant) + 1.25
         # Capping to 5.0 to set to upper limit if exceeded
         climate_w = numpy.where(climate_w > 5.0, 5.0, climate_w)
 
-        #Compute evapotranspiration partition of the water balance
-        aet_p = (1.0 + (pet / precip)) - ((1.0 + (pet / precip) ** climate_w) ** (1.0 / climate_w))
+        # Compute evapotranspiration partition of the water balance
+        aet_p = (
+            1.0 + (pet / precip[valid_mask])) - (
+                (1.0 + (pet / precip[valid_mask]) ** climate_w) ** (
+                    1.0 / climate_w))
 
-        #We take the minimum of the following values (phi, aet_p)
-        #to determine the evapotranspiration partition of the
+        # We take the minimum of the following values (phi, aet_p)
+        # to determine the evapotranspiration partition of the
         # water balance (see users guide)
-        veg_result =  numpy.where(phi < aet_p, phi, aet_p)
-        #Take the minimum of precip and Kc * ETo to avoid x / p > 1.0
-        nonveg_result = numpy.where(precip < Kc * eto, precip, Kc * eto) / precip
-        #If veg is 1.0 use the result for vegetated areas else use result
-        #for non veg areas
-        result = numpy.where(veg == 1.0, veg_result, nonveg_result)
+        veg_result = numpy.where(phi < aet_p, phi, aet_p)
+        # Take the minimum of precip and Kc * ETo to avoid x / p > 1.0
+        nonveg_result = numpy.where(
+            precip[valid_mask] < Kc[valid_mask] * eto[valid_mask],
+            precip[valid_mask],
+            Kc[valid_mask] * eto[valid_mask]) / precip[valid_mask]
+        # If veg is 1.0 use the result for vegetated areas else use result
+        # for non veg areas
+        result = numpy.where(
+            veg[valid_mask] == 1.0,
+            veg_result, nonveg_result)
 
-        #If any of the local variables which are in the 'fractp_nodata_dict'
-        #dictionary are equal to a out_nodata value, then return out_nodata
-        return numpy.where(
-            (Kc == Kc_nodata) | (eto == eto_nodata) | (precip == precip_nodata)
-            | (root == root_nodata) | (soil == root_rest_layer_nodata) |
-            (pawc == pawc_nodata) | (veg == veg_nodata) | (precip == 0.0) |
-            (Kc == 0.0) | (eto == 0.0), out_nodata, result)
+        fractp = numpy.empty(valid_mask.shape)
+        fractp[:] = out_nodata
+        fractp[valid_mask] = result
+        return fractp
 
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
@@ -489,7 +504,11 @@ def execute(args):
         os.remove(tmp_uri)
 
     # Check to see if Water Scarcity was selected to run
-    water_scarcity_checked = args.pop('water_scarcity_container', False)
+    if 'water_scarcity_container' in args:
+        water_scarcity_checked = args['water_scarcity_container']
+    else:
+        water_scarcity_checked = False
+
     if not water_scarcity_checked:
         LOGGER.debug('Water Scarcity Not Selected')
         # Since Scarcity and Valuation are not selected write out
@@ -570,7 +589,11 @@ def execute(args):
 
 
     # Check to see if Valuation was selected to run
-    valuation_checked = args.pop('valuation_container', False)
+    if 'valuation_container' in args:
+        valuation_checked = args['valuation_container']
+    else:
+        valuation_checked = False
+
     if not valuation_checked:
         LOGGER.debug('Valuation Not Selected')
         # Since Valuation are not selected write out
@@ -641,6 +664,8 @@ def compute_watershed_valuation(watersheds_uri, val_dict):
     # Add the new fields to the shapefile
     for new_field in [energy_field, npv_field]:
         field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
         ws_layer.CreateField(field_defn)
 
     num_features = ws_layer.GetFeatureCount()
@@ -701,6 +726,8 @@ def compute_rsupply_volume(watershed_results_uri):
     # Add the new fields to the shapefile
     for new_field in [rsupply_vol_name, rsupply_mn_name]:
         field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
         ws_layer.CreateField(field_defn)
 
     num_features = ws_layer.GetFeatureCount()
@@ -813,6 +840,8 @@ def compute_water_yield_volume(shape_uri, pixel_area):
 
     # Add the new field to the shapefile
     field_defn = ogr.FieldDefn(vol_name, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
 
     num_features = layer.GetFeatureCount()
@@ -823,8 +852,6 @@ def compute_water_yield_volume(shape_uri, pixel_area):
         wyield_mn = feat.GetField(wyield_mn_id)
         pixel_count_id = feat.GetFieldIndex('num_pixels')
         pixel_count = feat.GetField(pixel_count_id)
-
-        geom = feat.GetGeometryRef()
 
         # Calculate water yield volume,
         #1000 is for converting the mm of wyield to meters
@@ -859,6 +886,8 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, key):
 
     # Create the new field
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
 
     # Get the number of features (polygons) and iterate through each
