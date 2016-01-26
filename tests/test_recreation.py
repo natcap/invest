@@ -1,5 +1,6 @@
 """InVEST Recreation model tests."""
 
+import multiprocessing
 import unittest
 import tempfile
 import shutil
@@ -16,6 +17,34 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation_model')
 
+
+class TestLocalRecServer(unittest.TestCase):
+    """Tests using a local rec server."""
+
+    def setUp(self):
+        """Setup workspace and server."""
+        multiprocessing.freeze_support()
+
+        from natcap.invest.recreation import recmodel_server
+        self.workspace_dir = tempfile.mkdtemp()
+        self.recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            os.path.join(self.workspace_dir, 'server_cache'))
+
+    def test_local_aoi(self):
+        """Recreation test local AOI with local server."""
+        aoi_path = os.path.join(SAMPLE_DATA, 'BC_AOI.shp')
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+        out_vector_filename = os.path.join(
+            self.workspace_dir, 'pud.shp')
+        self.recreation_server._calc_aggregated_points_in_aoi(
+            aoi_path, self.workspace_dir, date_range, out_vector_filename)
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
 
 class RecreationRegressionTests(unittest.TestCase):
     """Regression tests for InVEST Seasonal Water Yield model."""
@@ -92,7 +121,7 @@ class RecreationRegressionTests(unittest.TestCase):
             AssertionError if any files are missing or results are out of
             range by `tolerance_places`
         """
-         # Test that the workspace has the same files as we expect
+        # Test that the workspace has the same files as we expect
         RecreationRegressionTests._test_same_files(
             file_list_path, workspace_dir)
 
@@ -153,7 +182,7 @@ class RecreationRegressionTests(unittest.TestCase):
             for file_path in file_list:
                 full_path = os.path.join(directory_path, file_path.rstrip())
                 if full_path == '':
-                    #skip blank lines
+                    # skip blank lines
                     continue
                 if not os.path.isfile(full_path):
                     missing_files.append(full_path)

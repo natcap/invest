@@ -29,7 +29,7 @@ import shapely.prepared
 
 import natcap.invest.recreation.file_hash
 import natcap.versioner
-import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree  #pylint: disable=import-error,no-name-in-module
+import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
 
 __version__ = natcap.versioner.get_version('natcap.invest.recmodel_server')
 
