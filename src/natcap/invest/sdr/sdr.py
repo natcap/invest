@@ -751,7 +751,7 @@ def _calculate_inverse_ws_factor(
         thresholded_slope_path, thresholded_w_factor_path,
         out_ws_factor_inverse_path):
     """Calculate 1/(w*s)."""
-    ws_nodata = -1.0
+    ws_nodata = -1.0  # 1/WS can never be negative, so reasonable nodata value
     slope_nodata = pygeoprocessing.get_nodata_from_uri(thresholded_slope_path)
     w_nodata = pygeoprocessing.get_nodata_from_uri(thresholded_w_factor_path)
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(
