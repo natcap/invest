@@ -17,7 +17,7 @@ class TimberRegressionTests(unittest.TestCase):
     """Regression Tests for the Timber Model."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
