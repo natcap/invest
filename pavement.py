@@ -2230,6 +2230,8 @@ def build_bin(options):
                 raise BuildFailure(msg)
             sh('cp -R /usr/local/Cellar/libpng/*/lib/*dylib %s' % invest_dist)
             sh('cp -R /usr/local/Cellar/geos/*/lib/*dylib %s' % invest_dist)
+
+
         _write_console_files(binary, 'sh')
 
 

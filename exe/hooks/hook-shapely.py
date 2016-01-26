@@ -1,7 +1,8 @@
-from sys import platform as _platform
+import sys
 import os
 from PyInstaller.compat import is_darwin, is_win
-if _platform == "linux" or _platform == "linux2":
+
+if sys.platform.startswith('linux'):
     from hookutils import \
         (collect_submodules, collect_data_files, get_package_paths)
 else:
