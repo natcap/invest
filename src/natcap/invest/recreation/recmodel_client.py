@@ -545,7 +545,7 @@ def _build_regression_coefficients(
             predictor_results = predictor_functions[predictor_type](
                 response_polygons_lookup, predictor_path)
         for feature_id, value in predictor_results.iteritems():
-            feature = out_coefficent_layer.GetFeature(feature_id)
+            feature = out_coefficent_layer.GetFeature(int(feature_id))
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
     out_coefficent_layer = None
@@ -891,7 +891,6 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         (coefficient_matrix[:, 1:] * coefficents), axis=1) ** 2)
     r_sq = 1 - residual_sum / (n_features * coefficient_matrix[:, 0].var())
     std_err = numpy.sqrt(r_sq / (n_features - 2))
-    LOGGER.debug(residual_sum)
     return coefficents, residual_sum, r_sq, std_err
 
 
