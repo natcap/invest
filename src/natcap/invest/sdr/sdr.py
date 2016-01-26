@@ -593,7 +593,19 @@ def _calculate_w(
 
 
 def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
-    """Map LULC to C*P value."""
+    """Map LULC to C*P value.
+
+    Parameters:
+        biophysical_table (dict): map of lulc codes to dictionaries that
+            contain at least the entry 'usle_c" and 'usle_p' corresponding to
+            those USLE components.
+        lulc_path (string): path to LULC raster
+        cp_factor_path (string): path to output raster of LULC mapped to C*P
+            values
+
+    Returns:
+        None
+    """
     lulc_to_cp = dict(
         [(lulc_code, float(table['usle_c']) * float(table['usle_p'])) for
          (lulc_code, table) in biophysical_table.items()])
