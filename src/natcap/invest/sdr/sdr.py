@@ -883,7 +883,27 @@ def _calculate_sed_retention_index(
 def _calculate_sed_retention(
         rkls_path, usle_path, stream_path, sdr_path, sdr_bare_soil_path,
         out_sed_ret_bare_soil_path):
-    """Difference in exported sediments on basic and bare watershed."""
+    """Difference in exported sediments on basic and bare watershed.
+
+    Calculates the difference of sediment export on the real landscape and
+    a bare soil landscape given that SDR has been calculated for bare soil.
+    Essentially:
+
+        RKLS * SDR_bare - USLE * SDR
+
+    Parameters:
+        rkls_path (string): path to RKLS raster
+        usle_path (string): path to USLE raster
+        stream_path (string): path to stream/drainage mask
+        sdr_path (string): path to SDR raster
+        sdr_bare_soil_path (string): path to SDR raster calculated for a bare
+            watershed
+        out_sed_ret_bare_soil_path (string): path to output raster indicating
+            where sediment is retained
+
+    Returns:
+        None
+    """
     rkls_nodata = pygeoprocessing.get_nodata_from_uri(rkls_path)
     usle_nodata = pygeoprocessing.get_nodata_from_uri(usle_path)
     stream_nodata = pygeoprocessing.get_nodata_from_uri(stream_path)
