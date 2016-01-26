@@ -667,7 +667,7 @@ def _calculate_bar_factor(
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(dem_path)
 
     def bar_op(base_accumulation, flow_accumulation):
-        """Aggreegate accumulation from base divided by the flow accum."""
+        """Aggregate accumulation from base divided by the flow accum."""
         result = numpy.empty(base_accumulation.shape)
         valid_mask = (
             (base_accumulation != bar_nodata) &
