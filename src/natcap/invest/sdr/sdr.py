@@ -687,7 +687,7 @@ def _calculate_d_up(
     """Calculate w_bar * s_bar * sqrt(flow accumulation * cell area)."""
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(w_bar_path)
     cell_area = out_pixel_size ** 2
-    d_up_nodata = -1.0
+    d_up_nodata = -1.0 # d_up can't be negative, so reasonable nodata value
     w_bar_nodata = pygeoprocessing.get_nodata_from_uri(w_bar_path)
     s_bar_nodata = pygeoprocessing.get_nodata_from_uri(s_bar_path)
     flow_accumulation_nodata = pygeoprocessing.get_nodata_from_uri(
