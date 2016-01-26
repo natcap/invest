@@ -3,9 +3,7 @@ import unittest
 import tempfile
 import shutil
 import os
-import csv
 
-from osgeo import ogr
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
@@ -13,20 +11,6 @@ SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'timber')
-
-
-class TimberUnitTests(unittest.TestCase):
-    """Unit tests for the Timber Model."""
-
-    def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
-        # this lets us delete the workspace after its done no matter the
-        # the rest result
-        self.workspace_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        """Overriding tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
 
 
 class TimberRegressionTests(unittest.TestCase):
@@ -50,7 +34,7 @@ class TimberRegressionTests(unittest.TestCase):
             'timber_shape_uri': os.path.join(
                 SAMPLE_DATA, 'timber', 'input', 'plantation.shp'),
             'attr_table_uri': os.path.join(
-                SAMPLE_DATA, 'timber', 'input', 'plant_table.dbf'),
+                SAMPLE_DATA, 'timber', 'input', 'plant_table.csv'),
             'market_disc_rate': 7
         }
         return args

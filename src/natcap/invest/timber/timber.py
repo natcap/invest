@@ -1,13 +1,11 @@
 """InVEST Timber model at the "uri" level.  No separation between
     biophysical and valuation since the model is so simple."""
 
-import sys
 import os
 import math
+import csv
 
 from osgeo import ogr
-
-from natcap.invest.dbfpy import dbf
 
 
 def execute(args):
@@ -22,7 +20,7 @@ def execute(args):
             name (optional)
         args['timber_shape_uri'] (string): The shapefile describing timber
             parcels with fields as described in the user guide (Required)
-        args['attr_table_uri'] (string): The DBF polygon attribute table
+        args['attr_table_uri'] (string): The CSV attribute table
             location with fields that describe polygons in timber_shape_uri
             (Required)
         market_disc_rate (float): The market discount rate
@@ -40,20 +38,14 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    filesystemencoding = sys.getfilesystemencoding()
-
-    timber_shape = ogr.Open(
-        args['timber_shape_uri'].encode(filesystemencoding), 1)
+    timber_shape = ogr.Open(args['timber_shape_uri'], 1)
 
     #Add the Output directory onto the given workspace
-    workspace_dir = args['workspace_dir'] + os.sep + 'output/'
+    workspace_dir = os.path.join(args['workspace_dir'], 'output')
     if not os.path.isdir(workspace_dir):
         os.makedirs(workspace_dir)
 
-    #CopyDataSource expects a python string, yet some versions of json load a
-    #'unicode' object from the dumped command line arguments.  The cast to a
-    #python string here should ensure we are able to proceed.
-    shape_source = str(workspace_dir + 'timber%s.shp' % file_suffix)
+    shape_source = os.path.join(workspace_dir, 'timber%s.shp' % file_suffix)
 
     #If there is already an existing shapefile with the same name
     #and path, delete it
@@ -68,12 +60,30 @@ def execute(args):
     timber_shape.Destroy()
     copy.Destroy()
 
-    timber_output_shape = ogr.Open(shape_source.encode(filesystemencoding), 1)
+    timber_output_shape = ogr.Open(shape_source, 1)
 
     layer = timber_output_shape.GetLayerByName('timber%s' % file_suffix)
     #Set constant variables from arguments
     mdr = args['market_disc_rate']
-    attr_table = dbf.Dbf(args['attr_table_uri'], readOnly=True)
+
+    attr_table = open(args['attr_table_uri'], 'rU')
+    reader = csv.DictReader(attr_table)
+
+    # Making a shallow copy of the attribute 'fieldnames' explicitly to
+    # edit to all the fields to lowercase because it is more readable
+    # and easier than editing the attribute itself
+    field_names = reader.fieldnames
+
+    for index in range(len(field_names)):
+        field_names[index] = field_names[index].lower()
+
+    parcel_id_lookup = {}
+    # Iterate through the CSV file and construct a lookup dictionary
+    for row in reader:
+        parcel_id_lookup[int(row['parcel_id'])] = row
+
+    attr_table.close()
+
     #Set constant variables for calculations
     mdr_perc = 1 + (mdr / 100.00)
     sumtwo_lower_limit = 0
@@ -83,10 +93,49 @@ def execute(args):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
 
-    #Build a lookup table mapping the Parcel_IDs and corresponding row index
-    parcel_id_lookup = {}
-    for i in range(attr_table.recordCount):
-        parcel_id_lookup[attr_table[i]['Parcel_ID']] = attr_table[i]
+    def npv_summation_one(
+            lower, upper, harvest_value, mdr_perc, freq_harv, subtractor):
+        """Calculates the first summation for the npv of a parcel.
+
+        Parameters:
+            lower (int) : lower limit for the summation
+            upper (int) : upper limit for the summation
+            harvest_value (float) : the harvested value for a parcel
+            mdr_perc (float) : the discount rate factor as percent
+            freq_harv (float) : the frequency of harvest periods, in years,
+                for each parcel
+            subtractor (float) : used to distinguish if immediate harvest
+                occurs
+
+        Returns:
+            The first summation as a float
+        """
+        summation = 0.0
+        upper = upper + 1
+        for num in range(lower, upper):
+            summation = summation + (
+                harvest_value / (mdr_perc ** ((freq_harv * num) - subtractor)))
+
+        return summation
+
+    def npv_summation_two(lower, upper, maint_cost, mdr_perc):
+        """Calculates the second summation for the npv of a parcel.
+
+        Parameters:
+            lower (int) : lower limit for the summation
+            upper (int) : upper limit for the summation
+            maint_cost (float) : the cost to maintain the parcel
+            mdr_perc (float) : the discount rate factor as percent
+
+        Returns:
+            The second summation as a float
+        """
+        summation = 0.0
+        upper = upper + 1
+        for num in range(lower, upper):
+            summation = summation + (maint_cost / (mdr_perc ** num))
+
+        return summation
 
     #Loop through each feature (polygon) in the shapefile layer
     for feat in layer:
@@ -96,16 +145,16 @@ def execute(args):
         parcl_id = feat.GetField(parcl_index)
         attr_row = parcel_id_lookup[parcl_id]
         #Set polygon attribute values from row
-        freq_harv = attr_row['Freq_harv']
-        num_years = float(attr_row['T'])
-        harv_mass = attr_row['Harv_mass']
-        harv_cost = attr_row['Harv_cost']
-        price = attr_row['Price']
-        maint_cost = attr_row['Maint_cost']
-        bcef = attr_row['BCEF']
-        parcl_area = attr_row['Parcl_area']
-        perc_harv = attr_row['Perc_harv']
-        immed_harv = attr_row['Immed_harv']
+        freq_harv = float(attr_row['freq_harv'])
+        num_years = float(attr_row['t'])
+        harv_mass = float(attr_row['harv_mass'])
+        harv_cost = float(attr_row['harv_cost'])
+        price = float(attr_row['price'])
+        maint_cost = float(attr_row['maint_cost'])
+        bcef = float(attr_row['bcef'])
+        parcl_area = float(attr_row['parcl_area'])
+        perc_harv = float(attr_row['perc_harv'])
+        immed_harv = attr_row['immed_harv']
 
         sumtwo_upper_limit = int(num_years - 1)
         #Variable used in npv summation one equation as a distinguisher
@@ -131,9 +180,9 @@ def execute(args):
             summation_two = npv_summation_two(
                 sumtwo_lower_limit, sumtwo_upper_limit, maint_cost, mdr_perc)
             #Calculate Biomass
-            biomass = \
-                    parcl_area * (perc_harv / 100.00) * harv_mass \
-                    * math.floor(yr_per_freq)
+            biomass = (parcl_area * (perc_harv / 100.00) * harv_mass *
+                        math.floor(yr_per_freq))
+
         elif immed_harv.upper() == 'Y' or immed_harv.upper() == 'YES':
             sumone_upper_limit = int((math.ceil(yr_per_freq) - 1.0))
             sumone_lower_limit = 0
@@ -168,28 +217,7 @@ def execute(args):
     timber_output_shape.Destroy()
 
     #Close the polygon attribute table DBF file and wipe datasources
-    attr_table.close()
+    #attr_table.close()
     copy = None
     timber_shape = None
     timber_output_shape = None
-
-
-#Calculates the first summation for the net present value of a parcel
-def npv_summation_one(
-        lower, upper, harvest_value, mdr_perc, freq_harv, subtractor):
-    summation = 0.0
-    upper = upper + 1
-    for num in range(lower, upper):
-        summation = summation + (
-            harvest_value / (mdr_perc ** ((freq_harv * num) - subtractor)))
-
-    return summation
-
-#Calculates the second summation for the net present value of a parcel
-def npv_summation_two(lower, upper, maint_cost, mdr_perc):
-    summation = 0.0
-    upper = upper + 1
-    for num in range(lower, upper):
-        summation = summation + (maint_cost / (mdr_perc ** num))
-
-    return summation
