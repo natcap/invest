@@ -196,8 +196,9 @@ def execute(args):
             f_reg['stream_path'])
 
     LOGGER.info('calculate per pixel W')
-    _calculate_w(biophysical_table, *[f_reg[key] for key in [
-        'aligned_lulc_path', 'w_path', 'thresholded_w_path']])
+    _calculate_w(
+        biophysical_table, f_reg['aligned_lulc_path'], f_reg['w_path'],
+        f_reg['thresholded_w_path'])
 
     LOGGER.info('calculate CP raster')
     _calculate_cp(
@@ -550,7 +551,19 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
 
 
 def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
-    """Combine stream and drainage path into one raster."""
+    """Combine stream and drainage masks into one raster mask.
+
+    Parameters:
+        stream_path (string): path to stream raster mask where 1 indicates
+            a stream, and 0 is a valid landscape pixel but not a stream.
+        drainage_raster_path (string): path to 1/0 mask of drainage areas.
+            1 indicates any water reaching that pixel drains to a stream.
+        out_stream_and_drainage_path (string): output raster of a logical
+            OR of stream and drainage inputs
+
+    Returns:
+        None
+    """
     def add_drainage_op(stream, drainage):
         """Add drainage mask to stream layer."""
         return numpy.where(drainage == 1, 1, stream)
@@ -567,7 +580,21 @@ def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
 def _calculate_w(
         biophysical_table, lulc_path, w_factor_path,
         out_thresholded_w_factor_path):
-    """Calculate W factorby mapping C value to LULC and thresholding <0.001"""
+    """W factor: map C values from LULC and lower threshold to 0.001.
+
+    W is a factor in calculating d_up accumulation for SDR.
+
+    Parameters:
+        biophysical_table (dict): map of LULC codes to dictionaries that
+            contain at least a 'usle_c' field
+        lulc_path (string): path to LULC raster
+        w_factor_path (string): path to outputed raw W factor
+        out_thresholded_w_factor_path (string): W factor from `w_factor_path`
+            thresholded to be no less than 0.001.
+
+    Returns:
+        None
+    """
     lulc_to_c = dict(
         [(lulc_code, float(table['usle_c'])) for
          (lulc_code, table) in biophysical_table.items()])
@@ -699,7 +726,7 @@ def _calculate_d_up(
     """Calculate w_bar * s_bar * sqrt(flow accumulation * cell area)."""
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(w_bar_path)
     cell_area = out_pixel_size ** 2
-    d_up_nodata = -1.0 # d_up can't be negative, so reasonable nodata value
+    d_up_nodata = -1.0  # d_up can't be negative, so reasonable nodata value
     w_bar_nodata = pygeoprocessing.get_nodata_from_uri(w_bar_path)
     s_bar_nodata = pygeoprocessing.get_nodata_from_uri(s_bar_path)
     flow_accumulation_nodata = pygeoprocessing.get_nodata_from_uri(
