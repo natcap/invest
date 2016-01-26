@@ -111,12 +111,14 @@ class RecModel(object):
                 initial_bounding_box, raw_csv_filename, cache_workspace)
             self.cache_workspace = cache_workspace
         except:
-            print "FATAL: construct_userday_quadtree exited while multiprocessing"
+            LOGGER.error(
+                "FATAL: construct_userday_quadtree exited while "
+                "multiprocessing")
             traceback.print_exc()
             raise
 
     # not static so it can register in Pyro object
-    def get_version(self):  #pylint: disable=no-self-use
+    def get_version(self):  # pylint: disable=no-self-use
         """Return the rec model server version.
 
         This string can be used to uniquely identify the PUD database and
@@ -125,12 +127,11 @@ class RecModel(object):
         return '%s:%s' % (__version__, self.qt_pickle_filename)
 
     # not static so it can register in Pyro object
-    def fetch_workspace_aoi(self, workspace_id):   #pylint: disable=no-self-use
+    def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
         """Download the AOI of the workspace specified by workspace_id."""
         # try/except block so Pyro4 can recieve an exception if there is one
         try:
-            #make a random workspace name so we can work in parallel
-            #decompress zip
+            # make a random workspace name so we can work in parallel
             workspace_path = os.path.join(
                 'rec_server_workspaces', workspace_id)
             out_zip_file_path = os.path.join(
@@ -142,7 +143,6 @@ class RecModel(object):
             traceback.print_exc()
             print '-' * 60
             raise
-
 
     def calc_photo_user_days_in_aoi(
             self, zip_file_binary, date_range, out_vector_filename):
@@ -164,7 +164,7 @@ class RecModel(object):
         """
         # try/except block so Pyro4 can recieve an exception if there is one
         try:
-            #make a random workspace name so we can work in parallel
+            # make a random workspace name so we can work in parallel
             while True:
                 workspace_id = str(uuid.uuid4())
                 workspace_path = os.path.join(
@@ -173,7 +173,7 @@ class RecModel(object):
                     os.makedirs(workspace_path)
                     break
 
-            #decompress zip
+            # decompress zip
             out_zip_file_filename = os.path.join(
                 workspace_path, str('server_in')+'.zip')
 
@@ -195,7 +195,7 @@ class RecModel(object):
                     aoi_path, workspace_path, numpy_date_range,
                     out_vector_filename))
 
-            #ZIP and stream the result back
+            # ZIP and stream the result back
             print 'zipping result'
             aoi_pud_archive_path = os.path.join(
                 workspace_path, 'aoi_pud_result.zip')
@@ -205,7 +205,7 @@ class RecModel(object):
                     myzip.write(filename, os.path.basename(filename))
                 myzip.write(
                     monthly_table_path, os.path.basename(monthly_table_path))
-            #return the binary stream
+            # return the binary stream
             print (
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                 ': calc user days complete sending binary back on ' +
@@ -235,12 +235,12 @@ class RecModel(object):
             "PUD" field which contains the metric per polygon.
         """
         aoi_vector = ogr.Open(aoi_path)
-        #append a _pud to the aoi filename
+        # append a _pud to the aoi filename
         out_aoi_pud_path = os.path.join(
             os.path.dirname(aoi_path), out_vector_filename)
 
-        #start the workers now, because they have to load a quadtree and
-        #it will take some time
+        # start the workers now, because they have to load a quadtree and
+        # it will take some time
         poly_test_queue = multiprocessing.Queue()
         pud_poly_feature_queue = multiprocessing.Queue(4)
         n_polytest_processes = multiprocessing.cpu_count()
@@ -320,7 +320,7 @@ class RecModel(object):
         build_quadtree_shape(
             local_quad_tree_shapefile_name, local_qt, aoi_ref)
 
-        #Start several testing processes
+        # Start several testing processes
         for _ in xrange(n_polytest_processes):
             polytest_process = multiprocessing.Process(
                 target=_calc_poly_pud, args=(
@@ -328,7 +328,7 @@ class RecModel(object):
                     poly_test_queue, pud_poly_feature_queue))
             polytest_process.start()
 
-        #Copy the input shapefile into the designated output folder
+        # Copy the input shapefile into the designated output folder
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                'Creating a copy of the input shapefile')
         esri_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -346,15 +346,15 @@ class RecModel(object):
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                'testing polygons against quadtree')
 
-        #Load up the test queue with polygons
+        # Load up the test queue with polygons
         for poly_feat in pud_aoi_layer:
             poly_test_queue.put(poly_feat.GetFID())
 
-        #Fill the queue with STOPs for each process
+        # Fill the queue with STOPs for each process
         for _ in xrange(n_polytest_processes):
             poly_test_queue.put('STOP')
 
-        #Read the result until we've seen n_processes_alive
+        # Read the result until we've seen n_processes_alive
         n_processes_alive = n_polytest_processes
         n_poly_tested = 0
 
@@ -437,7 +437,7 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
             row_deque.append(row)
 
             if len(row_deque) > CSV_ROWS_PER_PARSE:
-                #print row_deque
+                # print row_deque
                 raw_file_lines_queue.put(row_deque)
                 row_deque = collections.deque()
     if len(row_deque) > 0:
@@ -475,13 +475,12 @@ def _parse_input_csv(
         # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
         # this pattern matches the above style of line and only parses valid
         # dates to handle some cases where there are weird dates in the input
-        pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  #pylint: disable=line-too-long
+        pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
         result = numpy.fromregex(
             StringIO.StringIO(chunk_string), pattern,
             [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
              ('lng', 'f4')])
 
-        #year_day = result['date'].astype(int)
         def md5hash(user_string):
             """md5hash userid."""
             return hashlib.md5(user_string).digest()[-4:]
@@ -536,7 +535,6 @@ def construct_userday_quadtree(
 
     ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
     if os.path.isfile(ooc_qt_picklefilename):
-        #that's an out of core quadtree
         return ooc_qt_picklefilename
     else:
         LOGGER.info(
@@ -544,7 +542,6 @@ def construct_userday_quadtree(
         LOGGER.info('counting lines in input file')
         total_lines = file_len(raw_photo_csv_table)
         LOGGER.info('%d lines', total_lines)
-        #construct a new quadtree
         ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
             initial_bounding_box, max_points_per_node, GLOBAL_DEPTH,
             cache_dir, pickle_filename=ooc_qt_picklefilename)
@@ -552,7 +549,6 @@ def construct_userday_quadtree(
         n_parse_processes = multiprocessing.cpu_count() - 1
         if n_parse_processes < 1:
             n_parse_processes = 1
-        #n_parse_processes = 1
 
         block_offset_size_queue = multiprocessing.Queue(n_parse_processes * 2)
         numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
@@ -612,7 +608,7 @@ def construct_userday_quadtree(
                     current_time-start_time)
                 last_time = time.time()
 
-        #save quadtree to disk
+        # save quadtree to disk
         ooc_qt.flush()
         LOGGER.info(
             '100.00%% complete, %d points skipped, %d nodes in qt in '
@@ -627,7 +623,7 @@ def construct_userday_quadtree(
         LOGGER.info("building quadtree shapefile overview")
         build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
 
-    print 'took %f seconds' % (time.time() - start_time)
+    LOGGER.info('took %f seconds', (time.time() - start_time))
     return ooc_qt_picklefilename
 
 
@@ -695,7 +691,7 @@ def _calc_poly_pud(
         poly_wkt = poly_geom.ExportToWkt()
         try:
             shapely_polygon = shapely.wkt.loads(poly_wkt)
-        except Exception:  #pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             # We often get weird corrupt data, this lets us tolerate it
             LOGGER.warn('error parsing poly, skipping')
             continue
