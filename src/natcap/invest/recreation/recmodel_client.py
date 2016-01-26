@@ -892,8 +892,9 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
 
     coefficents, _, _, _ = numpy.linalg.lstsq(
         coefficient_matrix[:, 1:], numpy.log1p(coefficient_matrix[:, 0]))
-    residual_sum = numpy.sum(numpy.sum(
-        (coefficient_matrix[:, 1:] * coefficents), axis=1) ** 2)
+    residual_sum = numpy.sum((
+        numpy.log1p(coefficient_matrix[:, 0]) - numpy.sum(
+            coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
     r_sq = 1 - residual_sum / (n_features * coefficient_matrix[:, 0].var())
     std_err = numpy.sqrt(r_sq / (n_features - 2))
     return coefficents, residual_sum, r_sq, std_err
