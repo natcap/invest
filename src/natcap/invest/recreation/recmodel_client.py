@@ -2,7 +2,6 @@
 
 import collections
 import uuid
-import tempfile
 import os
 import zipfile
 import time
@@ -29,9 +28,9 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
-RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'
+RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
 
-#this serializer lets us pass null bytes in strings unlike the default
+# 'marshale' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
 
 # These are the expected extensions associated with an ESRI Shapefile
@@ -55,6 +54,10 @@ _TMP_BASE_FILES = {
     'local_aoi_path': 'aoi.shp',
     'compressed_aoi_path': 'aoi.zip',
     'compressed_pud_path': 'pud.zip',
+    'tmp_indexed_vector_path': 'indexed_vector.shp',
+    'tmp_fid_raster_path': 'vector_fid_raster.tif',
+    'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
+    'tmp_scenario_fid_raster_path': 'scenario_vector_fid_raster.tif',
     }
 
 
@@ -159,7 +162,7 @@ def execute(args):
 
     if args['grid_aoi']:
         LOGGER.info("gridding aoi")
-        grid_vector(
+        _grid_vector(
             args['aoi_path'], args['grid_type'], args['cell_size'],
             file_registry['local_aoi_path'])
     else:
@@ -177,10 +180,10 @@ def execute(args):
                 LOGGER.info('archiving %s', filename)
                 aoizip.write(filename, os.path.basename(filename))
 
-    #convert shapefile to binary string for serialization
+    # convert shapefile to binary string for serialization
     zip_file_binary = open(file_registry['compressed_aoi_path'], 'rb').read()
 
-    #transfer zipped file to server
+    # transfer zipped file to server
     start_time = time.time()
     LOGGER.info('Contacting server, please wait.')
     server_version = recmodel_server.get_version()
@@ -195,7 +198,7 @@ def execute(args):
         'received result, took %f seconds, workspace_id: %s',
         time.time() - start_time, workspace_id)
 
-    #unpack result
+    # unpack result
     open(file_registry['compressed_pud_path'], 'wb').write(
         result_zip_file_binary)
     zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
@@ -204,11 +207,13 @@ def execute(args):
     if 'compute_regression' in args and args['compute_regression']:
         LOGGER.info('Calculating regression')
         predictor_id_list = []
-        build_regression_coefficients(
+        _build_regression_coefficients(
             file_registry['pud_results_path'], args['predictor_table_path'],
+            file_registry['tmp_indexed_vector_path'],
+            file_registry['tmp_fid_raster_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
 
-        coefficents, residual, r_sq, std_err = build_regression(
+        coefficents, residual, r_sq, std_err = _build_regression(
             file_registry['coefficent_vector_path'], RESPONSE_ID,
             predictor_id_list)
 
@@ -233,10 +238,12 @@ def execute(args):
         if ('scenario_predictor_table_path' in args and
                 args['scenario_predictor_table_path'] != ''):
             LOGGER.info('Calculating scenario')
-            calculate_scenario(
+            _calculate_scenario(
                 file_registry['pud_results_path'], SCENARIO_RESPONSE_ID,
                 coefficents, predictor_id_list,
                 args['scenario_predictor_table_path'],
+                file_registry['tmp_scenario_indexed_vector_path'],
+                file_registry['tmp_scenario_fid_raster_path'],
                 file_registry['scenario_results_path'])
 
     LOGGER.info('deleting temporary files')
@@ -244,17 +251,15 @@ def execute(args):
         file_path = file_registry[file_id]
         try:
             if file_path.endswith('.shp'):
-                #delete like a vector
                 driver = ogr.GetDriverByName('ESRI Shapefile')
                 driver.DeleteDataSource(file_path)
             else:
                 os.remove(file_path)
         except OSError:
-            # Let it go.
-            pass
+            pass  # let it go
 
 
-def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
+def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     """Convert vector to a regular grid.
 
     Here the vector is gridded such that all cells are contained within the
@@ -301,12 +306,12 @@ def grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         delta_long_x = cell_size * 0.5
         delta_y = cell_size * 0.25 * (3 ** 0.5)
 
-        #Since the grid is hexagonal it's not obvious how many rows and
-        #columns there should be just based on the number of squares that
-        #could fit into it.  The solution is to calculate the width and height
-        #of the largest row and column.
-        n_cols = int(math.floor(grid_width/(3 * delta_long_x)) + 1)
-        n_rows = int(math.floor(grid_height/delta_y) + 1)
+        # Since the grid is hexagonal it's not obvious how many rows and
+        # columns there should be just based on the number of squares that
+        # could fit into it.  The solution is to calculate the width and
+        # height of the largest row and column.
+        n_cols = int(math.floor(grid_width / (3 * delta_long_x)) + 1)
+        n_rows = int(math.floor(grid_height / delta_y) + 1)
 
         def _generate_polygon(col_index, row_index):
             """Generate a points for a closed hexagon."""
@@ -422,14 +427,15 @@ def _build_file_registry(base_file_path_list, file_suffix):
     return file_registry
 
 
-def build_regression_coefficients(
+def _build_regression_coefficients(
         response_vector_path, predictor_table_path,
+        tmp_indexed_vector_path, tmp_fid_raster_path,
         out_coefficient_vector_path, out_predictor_id_list):
     """Calculate least squares fit for the polygons in the response vector.
 
-    Build a least squares regression from the response vector, spatial
-    predictor datasets in `predictor_table_path`, and a column of 1s for the
-    y intercept.
+    Build a least squares regression from the log normalized response vector,
+    spatial predictor datasets in `predictor_table_path`, and a column of 1s
+    for the y intercept.
 
     Parameters:
         response_vector_path (string): path to a single layer polygon vector.
@@ -450,7 +456,11 @@ def build_regression_coefficients(
                     polygon
                 'raster_mean': average of predictor raster under the
                     response polygon
-
+        tmp_indexed_vector_path (string): path to temporary working file in
+            case the response vector needs an index added
+        tmp_fid_raster_path (string): path to a temporary working file for an
+            indexed version of the vector to be rasterized to use in raster
+            calculations
         out_coefficient_vector_path (string): path to a copy of
             `response_vector_path` with the modified predictor variable
             responses. Overwritten if exists.
@@ -490,8 +500,6 @@ def build_regression_coefficients(
         'polygon_area_coverage': lambda x, y: _polygon_area('area', x, y),
         'polygon_percent_coverage': lambda x, y: _polygon_area(
             'percent', x, y),
-        'raster_sum': lambda x, y: _raster_sum_mean(x, y)['sum'],
-        'raster_mean': lambda x, y: _raster_sum_mean(x, y)['mean'],
         }
 
     predictor_table = pygeoprocessing.get_lookup_from_csv(
@@ -512,8 +520,6 @@ def build_regression_coefficients(
                 predictor_id]
             del predictor_table[predictor_id]
 
-    # see if we need to compute raster results, just do both at once
-
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
@@ -522,8 +528,7 @@ def build_regression_coefficients(
         raw_path = predictor_table[predictor_id]['path']
         if os.path.isabs(raw_path):
             predictor_path = raw_path
-        else:
-            # assume relative path w.r.t. the response table
+        else:  # assume relative path w.r.t. the response table
             predictor_path = os.path.join(
                 os.path.dirname(predictor_table_path), raw_path)
 
@@ -533,7 +538,8 @@ def build_regression_coefficients(
             # type must be one of raster_sum or raster_mean
             raster_type = predictor_type.split('_')[1]
             raster_sum_mean_results = _raster_sum_mean(
-                response_vector_path, predictor_path)
+                response_vector_path, predictor_path,
+                tmp_indexed_vector_path, tmp_fid_raster_path)
             predictor_results = raster_sum_mean_results[raster_type]
         else:
             predictor_results = predictor_functions[predictor_type](
@@ -548,66 +554,76 @@ def build_regression_coefficients(
     out_coefficent_vector = None
 
 
-def _build_temporary_indexed_vector(vector_path):
+def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
     """Copy single layer vector and add a field to map feature indexes.
 
     Parameters:
         vector_path (string): path to OGR vector
+        out_fid_index_vector_path (string): desired path to the copied vector
+            that has an index field added to it
 
     Returns:
         fid_field (string): name of FID field added to output vector_path
-        fid_indexed_vector_path (string): path to copy of `vector_path` with
-            additional FID field added to it.
     """
     driver = ogr.GetDriverByName('ESRI Shapefile')
     vector = ogr.Open(vector_path)
-    tmp_dir = tempfile.mkdtemp()
-    fid_indexed_path = os.path.join(tmp_dir, 'copy.shp')
+    if os.path.exists(out_fid_index_vector_path):
+        os.remove(out_fid_index_vector_path)
+
     fid_indexed_vector = driver.CopyDataSource(
-        vector, fid_indexed_path)
+        vector, out_fid_index_vector_path)
     fid_indexed_layer = fid_indexed_vector.GetLayer()
 
     # make a random field name
-    fid_name = str(uuid.uuid4())[-8:]
-    fid_field = ogr.FieldDefn(str(fid_name), ogr.OFTInteger)
-    fid_indexed_layer.CreateField(fid_field)
+    fid_field = str(uuid.uuid4())[-8:]
+    fid_field_defn = ogr.FieldDefn(str(fid_field), ogr.OFTInteger)
+    fid_indexed_layer.CreateField(fid_field_defn)
     for feature in fid_indexed_layer:
         fid = feature.GetFID()
-        feature.SetField(fid_name, fid)
+        feature.SetField(fid_field, fid)
         fid_indexed_layer.SetFeature(feature)
+
     fid_indexed_vector.SyncToDisk()
+    fid_indexed_layer = None
+    ogr.DataSource.__swig_destroy__(fid_indexed_vector)
 
-    return fid_name, fid_indexed_path
+    return fid_field
 
 
-def _raster_sum_mean(response_vector_path, raster_path):
+def _raster_sum_mean(
+        response_vector_path, raster_path, tmp_indexed_vector_path,
+        tmp_fid_raster_path):
     """Sum all non-nodata values in the raster under each polygon.
 
     Parameters:
         response_vector_path (string): path to response polygons
         raster_path (string): path to a raster.
+        tmp_indexed_vector_path (string): desired path to a vector that will
+            be used to add unique indexes to `response_vector_path`
+        tmp_fid_raster_path (string): desired path to raster that will be used
+            to aggregate `raster_path` values by unique response IDs.
 
     Returns:
         A dictionary indexing 'sum', 'mean', and 'count', to dictionaries
         mapping feature IDs from `response_polygons_lookup` to those values
         of the raster under the polygon.
     """
-    fid_field, fid_indexed_path = _build_temporary_indexed_vector(
-        response_vector_path)
+    fid_field = _build_temporary_indexed_vector(
+        response_vector_path, tmp_indexed_vector_path)
 
     raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(raster_path)
-    fid_raster_path = 'fid.tif'#pygeoprocessing.temporary_filename(suffix='.tif')
     fid_nodata = -1
+    # create an empty raster same size as raster_path
     pygeoprocessing.vectorize_datasets(
-        [raster_path], lambda x: x*0+fid_nodata, fid_raster_path, gdal.GDT_Int32,
-        fid_nodata, out_pixel_size, "union",
-        dataset_to_align_index=0, aoi_uri=fid_indexed_path,
+        [raster_path], lambda x: x*0+fid_nodata, tmp_fid_raster_path,
+        gdal.GDT_Int32, fid_nodata, out_pixel_size, "union",
+        dataset_to_align_index=0, aoi_uri=tmp_indexed_vector_path,
         vectorize_op=False)
 
-    fid_vector = ogr.Open(fid_indexed_path)
+    fid_vector = ogr.Open(tmp_indexed_vector_path)
     fid_layer = fid_vector.GetLayer()
-    fid_raster = gdal.Open(fid_raster_path, gdal.GA_Update)
+    fid_raster = gdal.Open(tmp_fid_raster_path, gdal.GA_Update)
     gdal.RasterizeLayer(
         fid_raster, [1], fid_layer, options=['ATTRIBUTE=%s' % fid_field])
     fid_raster.FlushCache()
@@ -619,7 +635,8 @@ def _raster_sum_mean(response_vector_path, raster_path):
         'mean': collections.defaultdict(float),
         'count': collections.defaultdict(int),
         }
-    for offset_dict, fid_block in pygeoprocessing.iterblocks(fid_raster_path):
+    for offset_dict, fid_block in pygeoprocessing.iterblocks(
+            tmp_fid_raster_path):
         raster_array = band.ReadAsArray(**offset_dict)
 
         unique_ids = numpy.unique(fid_block)
@@ -819,7 +836,7 @@ def _ogr_to_geometry_list(vector_path):
             geometry_list.append(shapely_geometry)
         else:
             LOGGER.error(
-                "Unable to fix broken geometry on FID %d in %s", 
+                "Unable to fix broken geometry on FID %d in %s",
                 feature.GetFID(), vector_path)
         feature_geometry = None
     layer = None
@@ -827,8 +844,8 @@ def _ogr_to_geometry_list(vector_path):
     return geometry_list
 
 
-def build_regression(coefficient_vector_path, response_id, predictor_id_list):
-    """Build multiple regression for response in the coefficient vector table.
+def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
+    """Multiple regression for log response of the coefficient vector table.
 
     The regression is built such that each feature in the single layer vector
     pointed to by `coefficent_vector_path` corresponds to one data point.
@@ -855,7 +872,6 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
         r_sq: R^2 value
         std_err: residual standard error
     """
-    # Pull apart the datasource
     coefficent_vector = ogr.Open(coefficient_vector_path)
     coefficent_layer = coefficent_vector.GetLayer()
 
@@ -870,7 +886,7 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
             [1])  # add the 1s for the y intercept
 
     coefficents, _, _, _ = numpy.linalg.lstsq(
-        coefficient_matrix[:, 1:], coefficient_matrix[:, 0])
+        coefficient_matrix[:, 1:], numpy.log1p(coefficient_matrix[:, 0]))
     residual_sum = numpy.sum(numpy.sum(
         (coefficient_matrix[:, 1:] * coefficents), axis=1) ** 2)
     r_sq = 1 - residual_sum / (n_features * coefficient_matrix[:, 0].var())
@@ -879,10 +895,14 @@ def build_regression(coefficient_vector_path, response_id, predictor_id_list):
     return coefficents, residual_sum, r_sq, std_err
 
 
-def calculate_scenario(
+def _calculate_scenario(
         base_aoi_path, response_id, predictor_coefficents, predictor_id_list,
-        scenario_predictor_table_path, scenario_results_path):
+        scenario_predictor_table_path, tmp_indexed_vector_path,
+        tmp_fid_raster_path, scenario_results_path):
     """Calculate the PUD of a scenario given an existing regression.
+
+    It is expected that the predictor coefficients have been derived from a
+    log normal distribution.
 
     Parameters:
         base_aoi_path (string): path to the a polygon vector that was used
@@ -918,6 +938,11 @@ def calculate_scenario(
                         response polygon in projected units of AOI
                 Note also that each ID in the table must have a corresponding
                 entry in `response_id` else the input is invalid.
+        tmp_indexed_vector_path (string): path to temporary working file in
+            case the response vector needs an index added
+        tmp_fid_raster_path (string): path to a temporary working file for an
+            indexed version of the vector to be rasterized to use in raster
+            calculations
         scenario_results_path (string): path to desired output scenario
             vector result which will be geometrically a copy of the input
             AOI but contain the base regression fields as well as the scenario
@@ -927,8 +952,9 @@ def calculate_scenario(
         None
     """
     scenario_predictor_id_list = []
-    build_regression_coefficients(
+    _build_regression_coefficients(
         base_aoi_path, scenario_predictor_table_path,
+        tmp_indexed_vector_path, tmp_fid_raster_path,
         scenario_results_path, scenario_predictor_id_list)
 
     id_to_coefficient = dict(
@@ -955,7 +981,8 @@ def calculate_scenario(
             response_value += (
                 id_to_coefficient[scenario_predictor_id] *
                 feature.GetField(str(scenario_predictor_id)))
-        feature.SetField(response_id, response_value)
+        # recall the coefficients are log normal, so expm1 inverses it
+        feature.SetField(response_id, numpy.expm1(response_value))
         scenario_coefficent_layer.SetFeature(feature)
 
     scenario_coefficent_layer = None
