@@ -528,7 +528,16 @@ def _calculate_rkls(
 
 
 def _threshold_slope(slope_path, out_thresholded_slope_path):
-    """Threshold the slope between 0.005 and 1.0."""
+    """Threshold the slope between 0.005 and 1.0.
+
+    Parameters:
+        slope_path (string): path to a raster of slope in percent
+        out_thresholded_slope_path (string): path to output raster of
+            thresholded slope between 0.005 and 1.0
+
+    Returns:
+        None
+    """
     slope_nodata = pygeoprocessing.get_nodata_from_uri(slope_path)
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(slope_path)
 
@@ -537,12 +546,14 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
 
         As desribed in Cavalli et al., 2013.
         """
-        slope_copy = slope / 100
-        nodata_mask = slope == slope_nodata
-        slope_copy[slope_copy < 0.005] = 0.005
-        slope_copy[slope_copy > 1.0] = 1.0
-        slope_copy[nodata_mask] = slope_nodata
-        return slope_copy
+        valid_slope = slope != slope_nodata
+        slope_m = slope[valid_slope] / 100.0
+        slope_m[slope_m < 0.005] = 0.005
+        slope_m[slope_m > 1.0] = 1.0
+        result = numpy.empty(valid_slope.shape)
+        result[:] = slope_nodata
+        result[valid_slope] = slope_nodata
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [slope_path], threshold_slope, out_thresholded_slope_path,
