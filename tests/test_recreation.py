@@ -30,6 +30,11 @@ class RecreationRegressionTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
+    def test_local_server(self):
+        """Launch a local server with a reduced set of point data."""
+
+        pass
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_regression(self):
