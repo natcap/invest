@@ -93,7 +93,7 @@ def execute(args):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
 
-    def npv_summation_one(
+    def _npv_summation_one(
             lower, upper, harvest_value, mdr_perc, freq_harv, subtractor):
         """Calculates the first summation for the npv of a parcel.
 
@@ -118,7 +118,7 @@ def execute(args):
 
         return summation
 
-    def npv_summation_two(lower, upper, maint_cost, mdr_perc):
+    def _npv_summation_two(lower, upper, maint_cost, mdr_perc):
         """Calculates the second summation for the npv of a parcel.
 
         Parameters:
@@ -174,10 +174,10 @@ def execute(args):
             sumone_upper_limit = int(math.floor(yr_per_freq))
             sumone_lower_limit = 1
             subtractor = 1.0
-            summation_one = npv_summation_one(
+            summation_one = _npv_summation_one(
                 sumone_lower_limit, sumone_upper_limit, harvest_value,
                 mdr_perc, freq_harv, subtractor)
-            summation_two = npv_summation_two(
+            summation_two = _npv_summation_two(
                 sumtwo_lower_limit, sumtwo_upper_limit, maint_cost, mdr_perc)
             #Calculate Biomass
             biomass = (parcl_area * (perc_harv / 100.00) * harv_mass *
@@ -186,10 +186,10 @@ def execute(args):
         elif immed_harv.upper() == 'Y' or immed_harv.upper() == 'YES':
             sumone_upper_limit = int((math.ceil(yr_per_freq) - 1.0))
             sumone_lower_limit = 0
-            summation_one = npv_summation_one(
+            summation_one = _npv_summation_one(
                 sumone_lower_limit, sumone_upper_limit, harvest_value,
                 mdr_perc, freq_harv, subtractor)
-            summation_two = npv_summation_two(
+            summation_two = _npv_summation_two(
                 sumtwo_lower_limit, sumtwo_upper_limit, maint_cost, mdr_perc)
             #Calculate Biomass
             biomass = (
