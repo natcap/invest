@@ -552,7 +552,7 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
         slope_m[slope_m > 1.0] = 1.0
         result = numpy.empty(valid_slope.shape)
         result[:] = slope_nodata
-        result[valid_slope] = slope_nodata
+        result[valid_slope] = slope_m
         return result
 
     pygeoprocessing.vectorize_datasets(
