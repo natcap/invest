@@ -327,7 +327,6 @@ def _calculate_ls_factor(
     Returns:
         None
     """
-    ls_nodata = -1.0  # reasonable ls nodata value
     flow_accumulation_nodata = pygeoprocessing.get_nodata_from_uri(
         flow_accumulation_path)
     slope_nodata = pygeoprocessing.get_nodata_from_uri(slope_path)
@@ -386,12 +385,12 @@ def _calculate_ls_factor(
         # length calculations ... cap of 333m"
         l_factor[l_factor > 333] = 333
 
-        return numpy.where(nodata_mask, ls_nodata, l_factor * slope_factor)
+        return numpy.where(nodata_mask, NODATA_USLE, l_factor * slope_factor)
 
     # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.vectorize_datasets(
         [aspect_path, slope_path, flow_accumulation_path], ls_factor_function,
-        out_ls_factor_path, gdal.GDT_Float32, ls_nodata, cell_size,
+        out_ls_factor_path, gdal.GDT_Float32, NODATA_USLE, cell_size,
         "intersection", dataset_to_align_index=0, vectorize_op=False)
 
 
@@ -417,7 +416,6 @@ def _calculate_rkls(
     erosivity_nodata = pygeoprocessing.get_nodata_from_uri(erosivity_path)
     erodibility_nodata = pygeoprocessing.get_nodata_from_uri(erodibility_path)
     stream_nodata = pygeoprocessing.get_nodata_from_uri(stream_path)
-    usle_nodata = -1.0
 
     cell_size = pygeoprocessing.get_cell_size_from_uri(ls_factor_path)
     cell_area_ha = cell_size ** 2 / 10000.0
@@ -442,7 +440,7 @@ def _calculate_rkls(
             (erosivity != erosivity_nodata) &
             (erodibility != erodibility_nodata) & (stream != stream_nodata))
         valid_mask = nodata_mask & (stream == 0)
-        rkls[:] = usle_nodata
+        rkls[:] = NODATA_USLE
 
         rkls[valid_mask] = (
             ls_factor[valid_mask] * erosivity[valid_mask] *
@@ -456,7 +454,7 @@ def _calculate_rkls(
     # aligned with LULCs
     pygeoprocessing.vectorize_datasets(
         [ls_factor_path, erosivity_path, erodibility_path, stream_path],
-        rkls_function, rkls_path, gdal.GDT_Float32, usle_nodata, cell_size,
+        rkls_function, rkls_path, gdal.GDT_Float32, NODATA_USLE, cell_size,
         "intersection", dataset_to_align_index=3, vectorize_op=False)
 
 
@@ -542,24 +540,23 @@ def _calculate_w(
     lulc_to_c = dict(
         [(lulc_code, float(table['usle_c'])) for
          (lulc_code, table) in biophysical_table.items()])
-    w_nodata = -1.0
 
     pygeoprocessing.reclassify_dataset_uri(
         lulc_path, lulc_to_c, w_factor_path, gdal.GDT_Float64,
-        w_nodata, exception_flag='values_required')
+        NODATA_USLE, exception_flag='values_required')
 
     def threshold_w(w_val):
         """Threshold w to 0.001."""
         w_val_copy = w_val.copy()
-        nodata_mask = w_val == w_nodata
+        nodata_mask = w_val == NODATA_USLE
         w_val_copy[w_val < 0.001] = 0.001
-        w_val_copy[nodata_mask] = w_nodata
+        w_val_copy[nodata_mask] = NODATA_USLE
         return w_val_copy
 
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(lulc_path)
     pygeoprocessing.vectorize_datasets(
         [w_factor_path], threshold_w, out_thresholded_w_factor_path,
-        gdal.GDT_Float64, w_nodata, out_pixel_size, "intersection",
+        gdal.GDT_Float64, NODATA_USLE, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
 
@@ -580,10 +577,9 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
     lulc_to_cp = dict(
         [(lulc_code, float(table['usle_c']) * float(table['usle_p'])) for
          (lulc_code, table) in biophysical_table.items()])
-    cp_nodata = -1.0
     pygeoprocessing.reclassify_dataset_uri(
         lulc_path, lulc_to_cp, cp_factor_path, gdal.GDT_Float64,
-        cp_nodata, exception_flag='values_required')
+        NODATA_USLE, exception_flag='values_required')
 
 
 def _calculate_usle(
@@ -670,7 +666,6 @@ def _calculate_d_up(
     """Calculate w_bar * s_bar * sqrt(flow accumulation * cell area)."""
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(w_bar_path)
     cell_area = out_pixel_size ** 2
-    d_up_nodata = -1.0  # d_up can't be negative, so reasonable nodata value
     w_bar_nodata = pygeoprocessing.get_nodata_from_uri(w_bar_path)
     s_bar_nodata = pygeoprocessing.get_nodata_from_uri(s_bar_path)
     flow_accumulation_nodata = pygeoprocessing.get_nodata_from_uri(
@@ -686,7 +681,7 @@ def _calculate_d_up(
             (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) &
             (flow_accumulation != flow_accumulation_nodata))
         d_up_array = numpy.empty(valid_mask.shape)
-        d_up_array[:] = d_up_nodata
+        d_up_array[:] = NODATA_USLE
         d_up_array[valid_mask] = (
             w_bar[valid_mask] * s_bar[valid_mask] * numpy.sqrt(
                 flow_accumulation[valid_mask] * cell_area))
@@ -694,7 +689,7 @@ def _calculate_d_up(
 
     pygeoprocessing.vectorize_datasets(
         [w_bar_path, s_bar_path, flow_accumulation_path], d_up, out_d_up_path,
-        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
+        gdal.GDT_Float32, NODATA_USLE, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
 
@@ -703,7 +698,6 @@ def _calculate_d_up_bare(
     """Calculate s_bar * sqrt(flow accumulation * cell area)."""
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(s_bar_path)
     cell_area = out_pixel_size ** 2
-    d_up_nodata = -1.0
     s_bar_nodata = pygeoprocessing.get_nodata_from_uri(s_bar_path)
     flow_accumulation_nodata = pygeoprocessing.get_nodata_from_uri(
         flow_accumulation_path)
@@ -718,7 +712,7 @@ def _calculate_d_up_bare(
             (flow_accumulation != flow_accumulation_nodata) &
             (s_bar != s_bar_nodata))
         d_up_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        d_up_array[:] = d_up_nodata
+        d_up_array[:] = NODATA_USLE
         d_up_array[valid_mask] = (
             numpy.sqrt(flow_accumulation[valid_mask] * cell_area) *
             s_bar[valid_mask])
@@ -726,7 +720,7 @@ def _calculate_d_up_bare(
 
     pygeoprocessing.vectorize_datasets(
         [s_bar_path, flow_accumulation_path], d_up, out_d_up_bare_path,
-        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
+        gdal.GDT_Float32, NODATA_USLE, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
 
@@ -734,7 +728,6 @@ def _calculate_inverse_ws_factor(
         thresholded_slope_path, thresholded_w_factor_path,
         out_ws_factor_inverse_path):
     """Calculate 1/(w*s)."""
-    ws_nodata = -1.0  # 1/WS can never be negative, so reasonable nodata value
     slope_nodata = pygeoprocessing.get_nodata_from_uri(thresholded_slope_path)
     w_nodata = pygeoprocessing.get_nodata_from_uri(thresholded_w_factor_path)
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(
@@ -744,11 +737,11 @@ def _calculate_inverse_ws_factor(
         """Calculate the inverse ws factor."""
         return numpy.where(
             (w_factor != w_nodata) & (s_factor != slope_nodata),
-            1.0 / (w_factor * s_factor), ws_nodata)
+            1.0 / (w_factor * s_factor), NODATA_USLE)
 
     pygeoprocessing.vectorize_datasets(
         [thresholded_w_factor_path, thresholded_slope_path], ws_op,
-        out_ws_factor_inverse_path, gdal.GDT_Float32, ws_nodata,
+        out_ws_factor_inverse_path, gdal.GDT_Float32, NODATA_USLE,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
@@ -756,7 +749,6 @@ def _calculate_inverse_ws_factor(
 def _calculate_inverse_s_factor(
         thresholded_slope_path, out_s_factor_inverse_path):
     """Calculate 1/s."""
-    s_nodata = -1.0
     slope_nodata = pygeoprocessing.get_nodata_from_uri(thresholded_slope_path)
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(
         thresholded_slope_path)
@@ -764,18 +756,19 @@ def _calculate_inverse_s_factor(
     def s_op(s_factor):
         """Calculate the inverse s factor."""
         return numpy.where(
-            (s_factor != slope_nodata), 1.0 / s_factor, s_nodata)
+            (s_factor != slope_nodata), 1.0 / s_factor, NODATA_USLE)
 
     pygeoprocessing.vectorize_datasets(
         [thresholded_slope_path], s_op,
-        out_s_factor_inverse_path, gdal.GDT_Float32, s_nodata,
+        out_s_factor_inverse_path, gdal.GDT_Float32, NODATA_USLE,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
 
 def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
     """Calculate log10(d_up/d_dn)."""
-    ic_nodata = -9999.0
+    # ic can be positive or negative, so float.min is a reasonable nodata value
+    ic_nodata = numpy.finfo('float32').min
     d_up_nodata = pygeoprocessing.get_nodata_from_uri(d_up_path)
     d_dn_nodata = pygeoprocessing.get_nodata_from_uri(d_dn_path)
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(d_up_path)
@@ -799,7 +792,6 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
 def _calculate_sdr(
         k_factor, ic_0, sdr_max, ic_path, stream_path, out_sdr_path):
     """Derive SDR from k, ic0, ic; 0 on the stream and clamped to sdr_max."""
-    sdr_nodata = -9999.0
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(stream_path)
     ic_nodata = pygeoprocessing.get_nodata_from_uri(ic_path)
 
@@ -807,19 +799,18 @@ def _calculate_sdr(
         """Calculate SDR factor."""
         nodata_mask = (ic_factor == ic_nodata)
         sdr = numpy.where(
-            nodata_mask, sdr_nodata, sdr_max / (
+            nodata_mask, NODATA_USLE, sdr_max / (
                 1+numpy.exp((ic_0-ic_factor)/k_factor)))
         return numpy.where(stream == 1, 0.0, sdr)
 
     pygeoprocessing.vectorize_datasets(
         [ic_path, stream_path], sdr_op, out_sdr_path,
-        gdal.GDT_Float32, sdr_nodata, out_pixel_size, "intersection",
+        gdal.GDT_Float32, NODATA_USLE, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
 
 def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
     """Calculate USLE * SDR."""
-    sed_export_nodata = -1.0
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(usle_path)
     sdr_nodata = pygeoprocessing.get_nodata_from_uri(sdr_path)
     usle_nodata = pygeoprocessing.get_nodata_from_uri(usle_path)
@@ -828,11 +819,11 @@ def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
         """Sediment export."""
         nodata_mask = (usle == usle_nodata) | (sdr == sdr_nodata)
         return numpy.where(
-            nodata_mask, sed_export_nodata, usle * sdr)
+            nodata_mask, NODATA_USLE, usle * sdr)
 
     pygeoprocessing.vectorize_datasets(
         [usle_path, sdr_path], sed_export_op, out_sed_export_path,
-        gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection",
+        gdal.GDT_Float32, NODATA_USLE, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
 
