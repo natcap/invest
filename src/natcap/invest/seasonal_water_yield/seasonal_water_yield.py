@@ -198,7 +198,7 @@ def _execute(args):
     gamma = float(fractions.Fraction(args['gamma']))
     threshold_flow_accumulation = float(args['threshold_flow_accumulation'])
     pixel_size = pygeoprocessing.get_cell_size_from_uri(
-        args['lulc_raster_path'])
+        args['dem_raster_path'])
     file_suffix = natcap.invest.utils.make_suffix_string(
         args, 'results_suffix')
     intermediate_output_dir = os.path.join(
@@ -467,7 +467,6 @@ def _execute(args):
         file_registry['zero_absorption_source_path'],
         file_registry['loss_path'],
         file_registry['l_sum_path'], 'flux_only',
-        aoi_uri=args['aoi_path'],
         stream_uri=file_registry['stream_path'])
 
     LOGGER.info('calculate B_sum')
