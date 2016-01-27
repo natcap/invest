@@ -2746,6 +2746,10 @@ def jenkins_installer(options):
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
     build_options = {}
+    if platform.system() == 'Windows':
+        # force building with msvc on jenkins on Windows
+        build_options['compiler'] = 'msvc'
+
     for opt_name, build_opts, needed_repo in [
             ('nodata', ['skip_data'], 'data/invest-data'),
             ('nodocs', ['skip_guide', 'skip_api'], 'doc/users-guide'),
