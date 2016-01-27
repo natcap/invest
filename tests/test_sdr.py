@@ -56,7 +56,7 @@ class SDRTests(unittest.TestCase):
         generated and that the aggregate shapefile fields are the same as the
         regression case.
         """
-        from natcap.invest.sdr import sdr
+        from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(
@@ -79,7 +79,7 @@ class SDRTests(unittest.TestCase):
         "watershed_results_sdr.shp".  Model should delete file and proceed
         with report.
         """
-        from natcap.invest.sdr import sdr
+        from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(
@@ -107,7 +107,7 @@ class SDRTests(unittest.TestCase):
         output files are generated and that the aggregate shapefile fields
         are the same as the regression case.
         """
-        from natcap.invest.sdr import sdr
+        from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(
@@ -126,7 +126,7 @@ class SDRTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_usle_c_too_large(self):
         """SDR test exepected exception for USLE_C > 1.0."""
-        from natcap.invest.sdr import sdr
+        from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(
@@ -141,7 +141,7 @@ class SDRTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_usle_p_nan(self):
         """SDR est expected exception for USLE_P not a number."""
-        from natcap.invest.sdr import sdr
+        from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(
