@@ -2050,6 +2050,10 @@ def build_bin(options):
     else:
         python_binary = sys.executable
     python_exe = os.path.abspath(python_binary)
+    if python_exe == sys.executable:
+        print yellow('Using system python. You are responsible for installing '
+                     'the correct version of InVEST')
+    print 'Using python binary %s' % python_exe
 
     # For some reason, pyinstaller doesn't locate the natcap.versioner package
     # when it's installed and available on the system.  Placing
