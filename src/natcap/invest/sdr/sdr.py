@@ -63,10 +63,6 @@ _TMP_BASE_FILES = {
     'thresholded_w_path': 'w_threshold.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     's_inverse_path': 's_inverse.tif',
-    'xi_path': 'xi.tif',
-    's_factor_path': 's.tif',
-    'beta_path': 'beta.tif',
-    'm_path': 'm.tif',
     }
 
 NODATA_USLE = -1.0
@@ -174,9 +170,7 @@ def execute(args):
 
     _calculate_ls_factor(
         f_reg['flow_accumulation_path'], f_reg['slope_path'],
-        f_reg['flow_direction_path'], f_reg['xi_path'],
-        f_reg['s_factor_path'], f_reg['beta_path'], f_reg['m_path'],
-        f_reg['ls_path'])
+        f_reg['flow_direction_path'], f_reg['ls_path'])
 
     LOGGER.info("classifying streams from flow accumulation raster")
     pygeoprocessing.routing.stream_threshold(
@@ -306,8 +300,7 @@ def execute(args):
 
 
 def _calculate_ls_factor(
-        flow_accumulation_path, slope_path, aspect_path,
-        xi_path, s_factor_path, beta_path, m_path, out_ls_factor_path):
+        flow_accumulation_path, slope_path, aspect_path, out_ls_factor_path):
     """Calculate LS factor.
 
     LS factor as Equation 3 from "Extension and validation
@@ -320,10 +313,6 @@ def _calculate_ls_factor(
             contributing upstream area at that cell
         slope_path (string): path to slope raster as a percent
         aspect_path string): path to raster flow direction raster in radians
-        xi_path (string): path to hold temoprary xi raster
-        s_factor_path (string): path to hold temporary s factor
-        beta_path (string): path to hold temporary beta factor
-        m_path (string): path to hold temporary m factor
         out_ls_factor_path (string): path to output ls_factor raster
 
     Returns:
@@ -395,71 +384,6 @@ def _calculate_ls_factor(
         [aspect_path, slope_path, flow_accumulation_path], ls_factor_function,
         out_ls_factor_path, gdal.GDT_Float32, ls_nodata, cell_size,
         "intersection", dataset_to_align_index=0, vectorize_op=False)
-
-    def m_op(percent_slope):
-        """Calculate m factor.
-
-        These constant table values are taken from the tables in
-        "InVEST Sediment Model_modifications_10-01-2012_RS.docx"
-        in the FT Team dropbox.
-        """
-        slope_in_radians = numpy.arctan(percent_slope / 100.0)
-        beta = ((numpy.sin(slope_in_radians) / 0.0896) /
-                (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
-
-        slope_table = [1., 3.5, 5., 9.]
-        exponent_table = [0.2, 0.3, 0.4, 0.5]
-        m_exp = beta / (1 + beta)
-        for i in range(4):
-            m_exp[percent_slope <= slope_table[i]] = exponent_table[i]
-        return m_exp
-
-    pygeoprocessing.vectorize_datasets(
-        [slope_path], m_op, m_path, gdal.GDT_Float32,
-        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
-
-    def beta_op(percent_slope):
-        """Calculate beta.
-
-        Taken from "InVEST Sediment Model_modifications_10-01-2012_RS.docx"
-        in the FT Team dropbox.
-        """
-        slope_in_radians = numpy.arctan(percent_slope / 100.0)
-        return ((numpy.sin(slope_in_radians) / 0.0896) /
-                (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
-
-    pygeoprocessing.vectorize_datasets(
-        [slope_path], beta_op, beta_path, gdal.GDT_Float32, ls_nodata,
-        cell_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
-
-    def s_factor_op(percent_slope):
-        """Calculate s factor.
-
-        From Equation 4 in "Extension and validation of a geographic
-        information system".
-        """
-        slope_in_radians = numpy.arctan(percent_slope / 100.0)
-        return numpy.where(
-            percent_slope < 9.0,
-            10.8 * numpy.sin(slope_in_radians) + 0.03,
-            16.8 * numpy.sin(slope_in_radians) - 0.5)
-
-    pygeoprocessing.vectorize_datasets(
-        [slope_path], s_factor_op, s_factor_path, gdal.GDT_Float32,
-        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
-
-    def xi_op(aspect_angle):
-        """xi factor which is the relative flow length across a cell."""
-        return (
-            numpy.abs(numpy.sin(aspect_angle)) +
-            numpy.abs(numpy.cos(aspect_angle)))
-    pygeoprocessing.vectorize_datasets(
-        [aspect_path], xi_op, xi_path, gdal.GDT_Float32,
-        ls_nodata, cell_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
 
 
 def _calculate_rkls(
