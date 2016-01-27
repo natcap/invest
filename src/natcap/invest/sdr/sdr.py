@@ -400,7 +400,7 @@ def _calculate_rkls(
         rkls_path):
     """Calculate per-pixel potential soil loss using the RKLS.
 
-    (revised universial soil loss equation with no C or P).
+    (revised universal soil loss equation with no C or P).
 
     Parameters:
         ls_factor_path (string): path to LS raster
