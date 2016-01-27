@@ -1,5 +1,6 @@
 import argparse
 import distutils
+import distutils.ccompiler
 import getpass
 import glob
 import imp
@@ -131,7 +132,8 @@ paver.easy.options(
         requirements='',
         bootstrap_file='bootstrap.py',
         dev=False,
-        with_pygeoprocessing=False
+        with_pygeoprocessing=False,
+        compiler=None
     ),
     build_docs=Bunch(
         force_dev=False,
@@ -157,7 +159,8 @@ paver.easy.options(
     virtualenv=Bunch(),
     dev_env=Bunch(
         envname='test_env',
-        noinvest=False
+        noinvest=False,
+        compiler=None
     ),
     check=Bunch(
         fix_namespace=False,
@@ -682,6 +685,9 @@ def version(options):
 @cmdopts([
     ('envname=', 'e', 'The name of the environment to use'),
     ('noinvest', '', 'Skip installing InVEST'),
+    ('compiler=', 'c', ('The compiler to use.  Must be a valid distutils '
+                      'compiler string. See `python setup.py build '
+                      '--help-compiler` for available compiler strings.'))
 ])
 def dev_env(options):
     """
@@ -702,6 +708,7 @@ def dev_env(options):
         'with_invest': not options.dev_env.noinvest,
         'with_pygeoprocessing': True,
         'envname': options.dev_env.envname,
+        'compiler': options.dev_env.compiler,
         'dev': True,
     })
 
@@ -757,7 +764,10 @@ def _parse_version_requirement(pkg_name):
     ('requirements=', 'r', 'Install requirements from a file'),
     ('dev', 'd', ('Install InVEST namespace packages as flat eggs instead of '
                   'in a single folder hierarchy.  Better for development, '
-                  'not so great for pyinstaller build'))
+                  'not so great for pyinstaller build')),
+    ('compiler=', 'c', ('The compiler to use.  Must be a valid distutils '
+                      'compiler string. See `python setup.py build '
+                      '--help-compiler` for available compiler strings.'))
 ])
 def env(options):
     """
@@ -803,6 +813,23 @@ def after_install(options, home_dir):
     # Track preinstalled packages so we don't install them twice.
     preinstalled_pkgs = set([])
 
+    if options.env.compiler:
+        _valid_compilers = distutils.ccompiler.compiler_class.keys()
+        if options.env.compiler not in _valid_compilers:
+            raise BuildFailure('Invalid compiler: %s not in %s' % (
+                options.env.compiler, _valid_compilers))
+        print 'Preferring user-defined compiler %s' % str(options.env.compiler)
+        # If the user defined a compiler to use, customize the available pip
+        # options to pass the compiler flag through to the setup.py build_ext
+        # command that precedes the install.
+        compiler_string = ("'--global-option', 'build_ext', '--global-option', "
+                           "'--compiler={compiler}', ").format(
+                               compiler=options.env.compiler)
+    else:
+        # If the user didn't specify the compiler as a command-line option,
+        # we'll default to whatever pip thinks is best.
+        compiler_string = ''
+
     if options.env.with_pygeoprocessing:
         # install with --no-deps (will otherwise try to install numpy, gdal,
         # etc.), and -I to ignore any existing pygeoprocessing install (as
@@ -813,8 +840,9 @@ def after_install(options, home_dir):
         # pygeoprocessing (poster, for example, does not have this issue!).
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
-            "'--no-deps', '-I', '--egg', './src/pygeoprocessing'])\n"
-        )
+            "'--no-deps', '-I', '--egg', {compiler_flags} "
+            "'./src/pygeoprocessing'])\n"
+        ).format(compiler_flags=compiler_string)
         preinstalled_pkgs.add('pygeoprocessing')
     else:
         print 'Skipping the installation of pygeoprocessing per user input.'
@@ -888,22 +916,28 @@ def after_install(options, home_dir):
 
         if not options.env.dev:
             install_string += (
-                # Recent versions of pip build wheels by default before installing, but wheel
-                # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
+                # Recent versions of pip build wheels by default before
+                # installing, but wheel has a bug preventing builds for
+                # namespace packages.
+                # Therefore, skip wheel builds for invest.
                 # Pyinstaller also doesn't handle namespace packages all that
                 # well, so --egg --no-use-wheel doesn't really work in a
                 # release environment either.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', {no_wheel_flag}, "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install'"
+                ", {no_wheel_flag}, {compiler_flags}"
                 " invest_sdist])\n"
-            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS)
+            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS,
+                     compiler_flags=compiler_string)
         else:
             install_string += (
                 # If we're in a development environment, it's ok (even
                 # preferable) to install natcap namespace packages as flat
                 # eggs.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', {no_wheel_flag}, "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), "
+                "'install', '--egg', {no_wheel_flag}, {compiler_flags}"
                 " invest_sdist])\n"
-            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS)
+            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS,
+                     compiler_flags=compiler_string)
     else:
         print 'Skipping the installation of natcap.invest per user input'
 
