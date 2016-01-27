@@ -70,7 +70,7 @@ def execute(args):
     # and easier than editing the attribute itself
     field_names = reader.fieldnames
 
-    for index in range(len(field_names)):
+    for index in xrange(len(field_names)):
         field_names[index] = field_names[index].lower()
 
     parcel_id_lookup = {}
@@ -108,7 +108,7 @@ def execute(args):
         """
         summation = 0.0
         upper = upper + 1
-        for num in range(lower, upper):
+        for num in xrange(lower, upper):
             summation = summation + (
                 harvest_value / (mdr_perc ** ((freq_harv * num) - subtractor)))
 
@@ -128,7 +128,7 @@ def execute(args):
         """
         summation = 0.0
         upper = upper + 1
-        for num in range(lower, upper):
+        for num in xrange(lower, upper):
             summation = summation + (maint_cost / (mdr_perc ** num))
 
         return summation
