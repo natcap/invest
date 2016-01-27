@@ -215,8 +215,7 @@ def execute(args):
     # OGR closes datasources this way to make sure data gets flushed properly
     timber_output_shape.Destroy()
 
-    # Close the polygon attribute table DBF file and wipe datasources
-    # attr_table.close()
+    # Wipe datasources
     copy = None
     timber_shape = None
     timber_output_shape = None
