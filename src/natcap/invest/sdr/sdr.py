@@ -302,9 +302,10 @@ def execute(args):
     for tmp_filename_key in _TMP_BASE_FILES:
         try:
             os.remove(f_reg[tmp_filename_key])
-        except OSError:
+        except OSError as os_error:
             LOGGER.warn(
-                "Can't remove temporary file: %s", f_reg[tmp_filename_key])
+                "Can't remove temporary file: %s\nOriginal Exception:\n%s",
+                f_reg[tmp_filename_key], os_error)
 
 
 def _calculate_ls_factor(
