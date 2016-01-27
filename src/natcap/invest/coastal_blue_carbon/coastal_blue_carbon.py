@@ -106,25 +106,24 @@ def execute(args):
 
     # Setup Logging
     num_blocks = get_num_blocks(d['C_prior_raster'])
-    current_block = 1
     current_time = time.time()
 
-    block_iterator = geoprocess.iterblocks(d['C_prior_raster'])
-    for offset_dict, C_prior in block_iterator:
+    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
+    for current_block, block in block_iterator:
+        offset_dict, C_prior = block
         # Update User
         if time.time() - current_time >= 2.0:
             LOGGER.info("Processing block %i of %i" %
-                        (current_block, num_blocks))
+                        (current_block+1, num_blocks))
             current_time = time.time()
-        current_block += 1
 
         # Initialization
         C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
         timesteps = d['timesteps']
-        transitions = d['transitions']
 
-        y_size, x_size = C_prior.shape
+        x_size, y_size = C_prior.shape
 
+        # timesteps+1 to include initial conditions
         stock_shape = (timesteps+1, x_size, y_size)
         S_biomass = np.zeros(stock_shape, dtype=np.float32)
         S_soil = np.zeros(stock_shape, dtype=np.float32)
@@ -141,7 +140,7 @@ def execute(args):
         V = np.zeros(timestep_shape, dtype=np.float32)
         P = np.zeros(timestep_shape, dtype=np.float32)
 
-        transition_shape = (transitions, x_size, y_size)
+        transition_shape = (d['transitions'], x_size, y_size)
         L = np.zeros(transition_shape, dtype=np.float32)
         Y_biomass = np.zeros(transition_shape, dtype=np.float32)
         Y_soil = np.zeros(transition_shape, dtype=np.float32)
@@ -153,7 +152,7 @@ def execute(args):
         R_soil = np.zeros(transition_shape, dtype=np.float32)
 
         # Set Accum and Disturbance Values
-        for i in xrange(0, transitions):
+        for i in xrange(0, d['transitions']):
             if i == 0:
                 D_biomass[i] = reclass_transition(
                     C_prior, C_r[0], d['lulc_trans_to_Db'],
@@ -249,33 +248,14 @@ def execute(args):
                for i in xrange(0, len(d['snapshot_years'])-1)]
         N_total = sum(N)
 
-        for i in xrange(0, len(d['T_s_rasters'])):
-            write_to_raster(
-                d['T_s_rasters'][i],
-                T_s[i],
-                offset_dict['xoff'],
-                offset_dict['yoff'])
+        raster_tuples = [
+            ('T_s_rasters', T_s),
+            ('A_r_rasters', A_r),
+            ('E_r_rasters', E_r),
+            ('N_r_rasters', N_r)]
 
-        for i in xrange(0, len(d['A_r_rasters'])):
-            write_to_raster(
-                d['A_r_rasters'][i],
-                A_r[i],
-                offset_dict['xoff'],
-                offset_dict['yoff'])
-
-        for i in xrange(0, len(d['E_r_rasters'])):
-            write_to_raster(
-                d['E_r_rasters'][i],
-                E_r[i],
-                offset_dict['xoff'],
-                offset_dict['yoff'])
-
-        for i in xrange(0, len(d['N_r_rasters'])):
-            write_to_raster(
-                d['N_r_rasters'][i],
-                N_r[i],
-                offset_dict['xoff'],
-                offset_dict['yoff'])
+        for key, array in raster_tuples:
+            write_rasters(d, key, array, offset_dict)
 
         write_to_raster(
             d['N_total_raster'],
@@ -298,12 +278,13 @@ def timestep_to_transition_idx(snapshot_years, transitions, timestep):
     """Convert timestep to transition index.
 
     Args:
-        snapshot_years (list)
-        transitions (int)
-        timestep (int)
+        snapshot_years (list): a list of years corresponding to the provided
+            rasters
+        transitions (int): the number of transitions in the scenario
+        timestep (int): the current timestep
 
     Returns:
-        transition_idx (int)
+        transition_idx (int): the current transition
     """
     for i in xrange(0, transitions):
         if timestep < (snapshot_years[i+1] - snapshot_years[0]):
@@ -317,7 +298,17 @@ def snapshot_idx_to_timestep(snapshot_years, snapshot_idx):
 
 
 def is_transition_year(snapshot_years, transitions, timestep):
-    """Check whether given timestep is a transition year."""
+    """Check whether given timestep is a transition year.
+
+    Args:
+        snapshot_years (list): list of snapshot years.
+        transitions (int): number of transitions.
+        timestep (int): current timestep.
+
+    Returns:
+        is_transition_year (bool): whether the year corresponding to the
+            timestep is a transition year.
+    """
     if (timestep_to_transition_idx(snapshot_years, transitions, timestep) !=
         timestep_to_transition_idx(snapshot_years, transitions, timestep-1) and
             timestep_to_transition_idx(snapshot_years, transitions, timestep)):
@@ -391,3 +382,13 @@ def read_from_raster(input_raster, offset_block):
     a = band.ReadAsArray(**offset_block)
     ds = None
     return a
+
+
+def write_rasters(d, key, array, offset_dict):
+    """Write rasters"""
+    for i in xrange(0, len(d[key])):
+        write_to_raster(
+            d[key][i],
+            array[i],
+            offset_dict['xoff'],
+            offset_dict['yoff'])
