@@ -2055,6 +2055,10 @@ def build_bin(options):
                      'the correct version of InVEST')
     print 'Using python binary %s' % python_exe
 
+    # Verify that natcap.invest is installed
+    sh(('{python} -c "import pkg_resources; '
+        'pkg_resources.require(\'natcap.invest\')"').format(python=python_exe))
+
     # For some reason, pyinstaller doesn't locate the natcap.versioner package
     # when it's installed and available on the system.  Placing
     # natcap.versioner's .egg in the pyinstaller eggs/ directory allows
@@ -2063,7 +2067,6 @@ def build_bin(options):
     sitepkgs = sh('{python} -c "import distutils.sysconfig; '
                   'print distutils.sysconfig.get_python_lib()"'.format(
                       python=python_exe), capture=True).rstrip()
-    pathsep = ';' if platform.system() == 'Windows' else ':'
 
     # env_site_pkgs should be relative to the repo root
     env_site_pkgs = os.path.abspath(
