@@ -145,8 +145,12 @@ class RecreationRegressionTests(unittest.TestCase):
 
         with open(agg_results_path, 'rb') as agg_result_file:
             for line in agg_result_file:
-                expected_result_lookup = dict(
-                    zip(headers, [float(x) for x in line.split(',')]))
+                try:
+                    expected_result_lookup = dict(
+                        zip(headers, [float(x) for x in line.split(',')]))
+                except ValueError:
+                    print line
+                    raise
                 feature = result_layer.GetFeature(
                     int(expected_result_lookup['FID']))
                 for field, value in expected_result_lookup.iteritems():

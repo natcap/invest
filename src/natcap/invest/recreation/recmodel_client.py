@@ -45,7 +45,7 @@ SCENARIO_RESPONSE_ID = 'PUD_EST'
 
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
-    'coefficent_vector_path': 'regression_coeffiicents.shp',
+    'coefficent_vector_path': 'regression_coefficients.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
     }
@@ -226,12 +226,15 @@ def execute(args):
 
         # generate a nice looking regression result and write to log and file
         report_string = (
-            '\nRegression:\n%s = %s\n'
-            'Residual standard error: %s\n'
-            'Multiple R-squared: %s\n'
-            'Adjusted R-squared: %s\n'
-            'SSreg: %s\n'
-            'server id hash: %s' % (
+            '\n******************************\n'
+            'Regression:\n%s =\n'
+            '      %s\n'
+            'Residual standard error: %.2f\n'
+            'Multiple R-squared: %.2f\n'
+            'Adjusted R-squared: %.2f\n'
+            'SSreg: %.2f\n'
+            'server id hash: %s\n'
+            '******************************\n' % (
                 RESPONSE_ID, regression_string, std_err, r_sq, r_sq_adj,
                 ssreg, server_version))
         LOGGER.info(report_string)
