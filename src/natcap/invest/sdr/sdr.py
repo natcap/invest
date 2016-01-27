@@ -1,4 +1,12 @@
-"""InVEST Sediment Delivery Ratio (SDR) module."""
+"""InVEST Sediment Delivery Ratio (SDR) module.
+
+The SDR method in this model is based on:
+    Winchell, M. F., et al. "Extension and validation of a geographic
+    information system-based method for calculating the Revised Universal
+    Soil Loss Equation length-slope factor for erosion risk assessments in
+    large watersheds." Journal of Soil and Water Conservation 63.3 (2008):
+    105-111.
+"""
 import os
 import logging
 
