@@ -2040,9 +2040,16 @@ def build_bin(options):
         dry('rm -r %s' % invest_dist_dir,
             shutil.rmtree, invest_dist_dir)
 
-    pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
+    pyinstaller_file = os.path.join('..', 'src', 'pyinstaller',
+                                    'pyinstaller.py')
 
-    python_exe = os.path.abspath(options.build_bin.python)
+    # Prefer the user's python binary if it's provided.  Otherwise, use the
+    # system python.
+    if options.build_bin.python:
+        python_binary = options.build_bin.python
+    else:
+        python_binary = sys.executable
+    python_exe = os.path.abspath(python_binary)
 
     # For some reason, pyinstaller doesn't locate the natcap.versioner package
     # when it's installed and available on the system.  Placing
@@ -2074,11 +2081,12 @@ def build_bin(options):
 
     # Write the package versions to a text file for the record.
     # Assume we're in a virtualenv
-    pip_bin = os.path.join(os.path.dirname(python_exe), 'pip')
-    sh('{pip} freeze > package_versions.txt'.format(pip=pip_bin), cwd=bindir)
+    sh(('{python} -c "import pip; pip.main([\'freeze\'])" '
+        '> package_versions.txt').format(pip=python_exe), cwd=bindir)
 
-    # Record the hg path, branch, sha1 of this repo to a text file. This will help us down
-    # the road to differentiate between built binaries from different forks.
+    # Record the hg path, branch, sha1 of this repo to a text file. This will
+    # help us down the road to differentiate between built binaries from
+    # different forks.
     with open(os.path.join(bindir, 'buildinfo.txt'), 'w') as buildinfo_textfile:
         hg_path = sh('hg paths', capture=True)
         buildinfo_textfile.write(hg_path)
@@ -2137,11 +2145,12 @@ def build_bin(options):
                         break
 
             # Download a valid source tarball to the dist dir.
-
-            sh('{pip_ep} install --no-deps --no-use-wheel --download {distdir} \'{versioner}\''.format(
-                pip_ep=os.path.join(os.path.dirname(python_exe), 'pip'),
-                distdir='dist',
-                versioner=versioner_spec
+            sh(("{python} -c \"import pip; pip.main["
+                "'install', '--no-deps', '--no-use-wheel', '--download', "
+                "'{distdir}' \'{versioner}\'").format(
+                    python=python_exe,
+                    distdir='dist',
+                    versioner=versioner_spec
             ))
 
             cwd = os.getcwd()
