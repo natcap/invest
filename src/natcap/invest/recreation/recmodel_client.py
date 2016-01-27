@@ -213,7 +213,7 @@ def execute(args):
             file_registry['tmp_fid_raster_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
 
-        coefficents, residual, r_sq, std_err = _build_regression(
+        coefficents, ssreg, r_sq, r_sq_adj, std_err = _build_regression(
             file_registry['coefficent_vector_path'], RESPONSE_ID,
             predictor_id_list)
 
@@ -226,10 +226,14 @@ def execute(args):
 
         # generate a nice looking regression result and write to log and file
         report_string = (
-            '\nRegression:\n%s = %s\nR^2: %s\nstd_err: %s\n'
-            'residuals: %s\nserver id hash: %s' % (
-                RESPONSE_ID, regression_string, r_sq, std_err, residual,
-                server_version))
+            '\nRegression:\n%s = %s\n'
+            'Residual standard error: %s\n'
+            'Multiple R-squared: %s\n'
+            'Adjusted R-squared: %s\n'
+            'SSreg: %s\n'
+            'server id hash: %s' % (
+                RESPONSE_ID, regression_string, std_err, r_sq, r_sq_adj,
+                ssreg, server_version))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
                 regression_log:
@@ -549,7 +553,7 @@ def _build_regression_coefficients(
                 feature = out_coefficent_layer.GetFeature(int(feature_id))
             except:
                 LOGGER.error(
-                    'feature_id: %s type:', feature_id, type(feature_id))
+                    'feature_id: %s type: %s', feature_id, type(feature_id))
                 raise
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
@@ -871,10 +875,11 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
             by this function.
 
     Returns:
-        X: A list of coefficents in the least-squares solution including
+        X: A list of coefficients in the least-squares solution including
             the y intercept as the last element
-        residual_sum: sums of resisuals
+        ssreg: sums of squared residuals
         r_sq: R^2 value
+        r_sq_adj: adjusted R^2 value
         std_err: residual standard error
     """
     coefficent_vector = ogr.Open(coefficient_vector_path)
@@ -890,14 +895,21 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
                 feature.GetField(str(key)) for key in predictor_id_list] +
             [1])  # add the 1s for the y intercept
 
+    y_factors = numpy.log1p(coefficient_matrix[:, 0])
+
     coefficents, _, _, _ = numpy.linalg.lstsq(
-        coefficient_matrix[:, 1:], numpy.log1p(coefficient_matrix[:, 0]))
-    residual_sum = numpy.sum((
-        numpy.log1p(coefficient_matrix[:, 0]) - numpy.sum(
-            coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
-    r_sq = 1 - residual_sum / (n_features * coefficient_matrix[:, 0].var())
-    std_err = numpy.sqrt(r_sq / (n_features - 2))
-    return coefficents, residual_sum, r_sq, std_err
+        coefficient_matrix[:, 1:], y_factors)
+    ssreg = numpy.sum((
+        y_factors -
+        numpy.sum(coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
+    sstot = numpy.sum((
+        numpy.average(y_factors) -
+        numpy.log1p(coefficient_matrix[:, 0])) ** 2)
+    r_sq = 1 - ssreg / sstot
+    r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / (
+        n_features - len(predictor_id_list) - 1)
+    std_err = numpy.sqrt(1 - r_sq_adj) * numpy.std(y_factors)
+    return coefficents, ssreg, r_sq, r_sq_adj, std_err
 
 
 def _calculate_scenario(
