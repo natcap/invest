@@ -2068,7 +2068,9 @@ def build_bin(options):
                   'print distutils.sysconfig.get_python_lib()"'.format(
                       python=python_exe), capture=True).rstrip()
 
-    # env_site_pkgs should be relative to the repo root
+    # env_site_pkgs should be relative to the repo root if we are in a
+    # virtualenv.  If we are not in a virtualenv, these folders shouldn't point
+    # to anything and will be ignored.
     env_site_pkgs = os.path.abspath(
         os.path.normpath(os.path.join(options.env.envname, 'lib')))
     if platform.system() != 'Windows':
@@ -2078,10 +2080,10 @@ def build_bin(options):
         print "PYTHONPATH: %s" % os.environ['PYTHONPATH']
     except KeyError:
         print "Nothing in 'PYTHONPATH'"
-    sh('%(python)s %(pyinstaller)s --clean --noconfirm --paths=%(paths)s invest.spec' % {
+    sh('%(python)s %(pyinstaller)s --clean --noconfirm %(paths)s invest.spec' % {
         'python': python_exe,
         'pyinstaller': pyinstaller_file,
-        'paths': env_site_pkgs,
+        'paths': '--paths=%s' % env_site_pkgs if os.path.exists(env_site_pkgs) else '',
     }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')

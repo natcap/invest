@@ -11,14 +11,22 @@ current_dir = os.path.join(os.getcwd(), os.path.dirname(sys.argv[1]))
 # This helps IMMENSELY with trying to get the binaries to work from within
 # a virtual environment, even if the virtual environment is hardcoded.
 path_extension = []
+release_env_dir = os.path.abspath(os.path.join('..', 'release_env'))
 if is_win:
     import distutils
-    path_base = os.path.join('..', 'release_env', 'lib')
+    env_path_base = os.path.join(release_env_dir, 'lib')
 else:
-    path_base = os.path.join('..', 'release_env', 'lib', 'python2.7')
-path_base = os.path.abspath(path_base)    
-path_extension.insert(0, path_base)
-path_extension.insert(0, os.path.join(path_base, 'site-packages'))
+    env_path_base = os.path.join(release_env_dir, 'lib', 'python2.7')
+
+# We're in a virtualenv if the expected env lib dir exists AND the python
+# executable is within the release env dir.
+# NOTE: Pyinstaller seems to pick up packages within the global site-packages
+# just fine, so we don't need to modify the pathext when we're not in a
+# virtualenv.
+if os.path.exists(env_path_base) and sys.executable.startswith(release_env_dir):
+    env_path_base = os.path.abspath(env_path_base)
+    path_extension.insert(0, env_path_base)
+    path_extension.insert(0, os.path.join(env_path_base, 'site-packages'))
 print 'PATH EXT: %s' % path_extension
 
 kwargs = {
