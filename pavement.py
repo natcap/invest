@@ -1479,7 +1479,7 @@ WARNING = yellow('WARNING:')
 OK = green('OK')
 
 
-def _import_namespace_pkg(modname, print_msg=True):
+def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     """
     Import a package within the natcap namespace and print helpful
     debug messages as packages are discovered.
@@ -1488,6 +1488,10 @@ def _import_namespace_pkg(modname, print_msg=True):
         modname (string): The natcap subpackage name.
         print_msg=True (bool): Whether to print messages about the import
             state.
+        preferred='egg' (string): One of 'egg' or 'dir'.  If 'egg', the
+            given namespace package should be installed as an egg.  If 'dir',
+            the given namespace package should be installed as a flat,
+            as happens when installing from a wheel.
 
     Returns:
         Either 'egg' or 'dir' if the package is importable.
@@ -1511,19 +1515,53 @@ def _import_namespace_pkg(modname, print_msg=True):
     else:
         module_path = module.__path__[0]
 
-    if not is_egg:
-        return_type = 'dir'
-        message = '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-            warn=WARNING, mod=modname, ver=version, dir=module_path)
+    return_type = 'egg' if is_egg else 'dir'
+
+    if is_egg != (preferred == 'egg'):
+        alert = "{warn} ".format(warn=WARNING)
+        message = "not installed as {fmt}".format(fmt=preferred)
     else:
-        return_type = 'egg'
-        message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
-            mod=modname, ver=version, dir=module_path)
+        alert = "{ok} ".format(ok=OK)
+        message = "installed as expected"
+
+    message = "{alert}natcap.{mod}=={ver} ({dir}) {msg}".format(
+        alert=alert, mod=modname, ver=version, dir=module_path, msg=message)
 
     if print_msg:
         print message
 
     return (module, return_type)
+
+
+def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True):
+    """Determine how namespace packages are installed.
+
+    Parameters:
+        ns_pkg_name (string): The name of the namespace package to inspect.
+        preferred='egg' (string): The preferred format.  One of ['egg', 'dir'].
+            If 'egg' the package is expected to be an egg.  If 'dir', the
+            package is expected to be in a flat directory with all other
+            packages within the namespace.
+        print_msg=True (bool): Whether to print a warning.
+
+    Returns:
+        A tuple of (subpackages installed as eggs, subpackages installed flat)
+    """
+    eggs = []
+    noneggs = []
+    ns_module = importlib.import_module(ns_pkg_name)
+
+    for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
+        module, pkg_type = _import_namespace_pkg(modname,
+                                                 preferred=preferred,
+                                                 print_msg=print_msg)
+
+        if pkg_type == 'egg':
+            eggs.append(modname)
+        else:
+            noneggs.append(modname)
+    return (eggs, noneggs)
+
 
 @task
 @cmdopts([
@@ -1804,15 +1842,8 @@ def check(options):
             print yellow('--fix-namespace provided; Fixing issues as they are'
                          ' encountered')
 
-        import natcap
-
-        for importer, modname, ispkg in pkgutil.iter_modules(natcap.__path__):
-            module, pkg_type = _import_namespace_pkg(modname)
-
-            if pkg_type == 'egg':
-                eggs.append(modname)
-            else:
-                noneggs.append(modname)
+        eggs, noneggs = get_namespace_pkg_types('natcap', preferred='egg',
+                                                print_msg=True)
 
         if len(noneggs) > 0:
             if options.check.fix_namespace:
@@ -2015,6 +2046,40 @@ def build_bin(options):
     """
     Build frozen binaries of InVEST.
     """
+    # Prefer the user's python binary if it's provided.  Otherwise, use the
+    # system python.
+    if options.build_bin.python:
+        python_binary = options.build_bin.python
+    else:
+        python_binary = sys.executable
+    python_exe = os.path.abspath(python_binary)
+    if python_exe == sys.executable:
+        print yellow('Using system python. You are responsible for installing '
+                     'the correct version of InVEST')
+    print 'Using python binary %s' % python_exe
+
+    # Verify that natcap.invest is installed
+    sh(('{python} -c "import pkg_resources; '
+        'pkg_resources.require(\'natcap.invest\')"').format(python=python_exe))
+
+    # verify that all natcap packages available to the defined python
+    # installation are installed flat (non-eggs). In practice, pyinstaller
+    # doesn't know what to do with namespace packages when they are installed
+    # as eggs, so we need to enforce this here.
+    natcap_eggs, natcap_noneggs = get_namespace_pkg_types('natcap', preferred='dir')
+
+    if len(natcap_eggs) > 0:
+        print red("Building binaries requires natcap namespace packages to "
+                  "be installed 'flat', all in the same directory.\n"
+                  "These packages were installed as eggs but need to be "
+                  "installed as wheels:")
+        for egg_name in natcap_eggs:
+            print red("* " + egg_name) + (
+                ' (pip uninstall -y {pkg} && '
+                'pip install {pkg})'.format(
+                    pkg='natcap.' + egg_name))
+            raise BuildFailure('Invalid natcap package layout.  See the log '
+                               'for details')
 
     pyi_repo = REPOS_DICT['pyinstaller']
     call_task('check_repo', options={
@@ -2042,22 +2107,6 @@ def build_bin(options):
 
     pyinstaller_file = os.path.join('..', 'src', 'pyinstaller',
                                     'pyinstaller.py')
-
-    # Prefer the user's python binary if it's provided.  Otherwise, use the
-    # system python.
-    if options.build_bin.python:
-        python_binary = options.build_bin.python
-    else:
-        python_binary = sys.executable
-    python_exe = os.path.abspath(python_binary)
-    if python_exe == sys.executable:
-        print yellow('Using system python. You are responsible for installing '
-                     'the correct version of InVEST')
-    print 'Using python binary %s' % python_exe
-
-    # Verify that natcap.invest is installed
-    sh(('{python} -c "import pkg_resources; '
-        'pkg_resources.require(\'natcap.invest\')"').format(python=python_exe))
 
     # For some reason, pyinstaller doesn't locate the natcap.versioner package
     # when it's installed and available on the system.  Placing
