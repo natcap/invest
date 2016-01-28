@@ -1501,6 +1501,11 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
         ImportError: If the package cannot be imported.
     """
     module = importlib.import_module('natcap.%s' % modname)
+
+    # Reload the module in case it's been imported before. Doing this helps to
+    # an issue with the module's __path__ attribute being updated after
+    # reinstalling within the same process.
+    module = reload(module)
     try:
         version = module.__version__
     except AttributeError:
@@ -1561,7 +1566,7 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True):
             eggs.append(modname)
         else:
             noneggs.append(modname)
-    return (eggs, noneggs)
+    return (sorted(eggs), sorted(noneggs))
 
 
 def reinstall_pkg(pkg_name, reinstall_as_egg=True):
@@ -2098,11 +2103,15 @@ def build_bin(options):
     # installation are installed flat (non-eggs). In practice, pyinstaller
     # doesn't know what to do with namespace packages when they are installed
     # as eggs, so we need to enforce this here.
-    natcap_eggs, natcap_noneggs = get_namespace_pkg_types('natcap',
-                                                          preferred='dir')
 
-    if len(natcap_eggs) > 0:
-        if options.build_bin.fix_namespace:
+    for retry in [True, False]:
+        natcap_eggs, natcap_noneggs = get_namespace_pkg_types('natcap',
+                                                            preferred='dir')
+        # If the package layout looks ok, break out of the loop.
+        if len(natcap_eggs) == 0:
+            break
+
+        if options.build_bin.fix_namespace and retry:
             for egg_name in natcap_eggs:
                 reinstall_pkg('natcap.' + egg_name, reinstall_as_egg=False)
         else:
