@@ -85,13 +85,13 @@ def get_inputs(args):
         'workspace_dir': None,
         'border_year_list': None,
         'do_economic_analysis': False,
-        'lulc_to_Sb': {'lulc': 'biomass'},         # ic
-        'lulc_to_Ss': {'lulc': 'soil'},            # ic
-        'lulc_to_L': {'lulc': 'litter'},           # ic
-        'lulc_to_Yb': {'lulc': 'accum-bio'},       # tc
-        'lulc_to_Ys': {'lulc': 'accum-soil'},      # tc
-        'lulc_to_Hb': {'lulc': 'hl-bio'},          # tc
-        'lulc_to_Hs': {'lulc': 'hl-soil'},         # tc
+        'lulc_to_Sb': {'lulc': 'biomass'},
+        'lulc_to_Ss': {'lulc': 'soil'},
+        'lulc_to_L': {'lulc': 'litter'},
+        'lulc_to_Yb': {'lulc': 'accum-bio'},
+        'lulc_to_Ys': {'lulc': 'accum-soil'},
+        'lulc_to_Hb': {'lulc': 'hl-bio'},
+        'lulc_to_Hs': {'lulc': 'hl-soil'},
         'lulc_trans_to_Db': {('lulc1', 'lulc2'): 'dist-val'},
         'lulc_trans_to_Ds': {('lulc1', 'lulc2'): 'dist-val'},
         'C_s': [],

@@ -47,9 +47,9 @@ def execute(args):
             information related to the transition of carbon into and out of
             coastal blue carbon pools. All non-coastal blue carbon habitat lulc
             classes are assumed to neither sequester nor emit carbon as a
-            result of change. The ‘yearly_accumulation’ values should be given
-            in terms of Megatonnes of CO2 e/ha-yr. The ‘half-life’ values must
-            be given in terms of years. The ‘disturbance’ values must be given
+            result of change. The 'yearly_accumulation' values should be given
+            in terms of Megatonnes of CO2 e/ha-yr. The 'half-life' values must
+            be given in terms of years. The 'disturbance' values must be given
             as a decimal percentage of stock distrubed given a transition
             occurs away from a lulc-class.
         lulc_baseline_map_uri (str): a GDAL-supported raster representing the
