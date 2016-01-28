@@ -376,7 +376,16 @@ def reclass(array, d, nodata=None, out_dtype=None):
 
 
 def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None):
-    """Reclass arrays based on element-wise combinations between two arrays."""
+    """Reclass arrays based on element-wise combinations between two arrays.
+
+    Args:
+        a_prev (np.array): previous lulc array
+        a_next (np.array): next lulc array
+        trans_dict (dict): reclassification map
+
+    Returns:
+        reclass_array (np.array): reclassified array
+    """
     a = a_prev.flatten()
     b = a_next.flatten()
     c = np.ma.masked_array(np.zeros(a.shape))

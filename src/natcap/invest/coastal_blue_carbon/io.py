@@ -22,7 +22,26 @@ def get_inputs(args):
     """Get Inputs.
 
     Parameters:
-        args (dict): user args dictionary.
+        workspace_dir (str): workspace directory
+        results_suffix (str): optional suffix appended to results
+        lulc_lookup_uri (str): lulc lookup table filepath
+        lulc_transition_matrix_uri (str): lulc transition table filepath
+        carbon_pool_initial_uri (str): initial conditions table filepath
+        carbon_pool_transient_uri (str): transient conditions table filepath
+        lulc_baseline_map_uri (str): baseline map filepath
+        lulc_transition_maps_list (list): ordered list of transition map
+            filepaths
+        lulc_transition_years_list (list): ordered list of transition years
+        analysis_year (int): optional final year to extend the analysis beyond
+            the last transition year
+        do_economic_analysis (bool): whether to run economic component of
+            the analysis
+        do_price_table (bool): whether to use the price table for the economic
+            component of the analysis
+        price (float): the price of net sequestered carbon
+        interest_rate (float): the interest rate on the price of carbon
+        price_table_uri (str): price table filepath
+        discount_rate (float): the discount rate on future valuations of carbon
 
     Returns:
         d (dict): data dictionary.
