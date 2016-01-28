@@ -45,7 +45,7 @@ SCENARIO_RESPONSE_ID = 'PUD_EST'
 
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
-    'coefficent_vector_path': 'regression_coeffiicents.shp',
+    'coefficent_vector_path': 'regression_coefficients.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
     }
