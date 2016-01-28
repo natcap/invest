@@ -225,15 +225,20 @@ def execute(args):
 
             # get the cell size from LULC to use for intermediate / output
             # rasters
-            cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+            lulc_cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
                 args['landuse_cur_uri'])
+
+            # need the cell size for the threat raster so we can create
+            # an appropriate kernel for convolution
+            threat_cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+                threat_dataset_uri)
 
             # convert max distance (given in KM) to meters
             dr_max = float(threat_data['MAX_DIST']) * 1000.0
 
             # convert max distance from meters to the number of pixels that
             # represents on the raster
-            dr_pixel = dr_max / cell_size
+            dr_pixel = dr_max / threat_cell_size
             LOGGER.debug('Max distance in pixels: %f', dr_pixel)
 
             filtered_threat_uri = os.path.join(
@@ -323,7 +328,7 @@ def execute(args):
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             degradation_rasters, total_degradation, deg_sum_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, "intersection",
+            gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
             vectorize_op=False)
 
         LOGGER.debug('Finished vectorize on total_degradation')
@@ -363,7 +368,7 @@ def execute(args):
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [deg_sum_uri, habitat_uri], quality_op, quality_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, "intersection",
+            gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
             vectorize_op = False)
 
         LOGGER.debug('Finished vectorize on quality_op')
@@ -420,7 +425,7 @@ def execute(args):
 
                 pygeoprocessing.geoprocessing.vectorize_datasets(
                     [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
-                    gdal.GDT_Int32, base_nodata, cell_size, "intersection",
+                    gdal.GDT_Int32, base_nodata, lulc_cell_size, "intersection",
                     vectorize_op = False)
 
                 LOGGER.debug('Finished vectorize on trim_op')
