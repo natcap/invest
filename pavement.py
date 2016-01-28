@@ -2091,7 +2091,7 @@ def build_bin(options):
     # Write the package versions to a text file for the record.
     # Assume we're in a virtualenv
     sh(('{python} -c "import pip; pip.main([\'freeze\'])" '
-        '> package_versions.txt').format(pip=python_exe), cwd=bindir)
+        '> package_versions.txt').format(python=python_exe), cwd=bindir)
 
     # Record the hg path, branch, sha1 of this repo to a text file. This will
     # help us down the road to differentiate between built binaries from
@@ -2154,9 +2154,10 @@ def build_bin(options):
                         break
 
             # Download a valid source tarball to the dist dir.
-            sh(("{python} -c \"import pip; pip.main["
+            sh(("{python} -c "
+                "\"import pip; pip.main(["
                 "'install', '--no-deps', '--no-use-wheel', '--download', "
-                "'{distdir}' \'{versioner}\'").format(
+                "'{distdir}', \'{versioner}\'])\"").format(
                     python=python_exe,
                     distdir='dist',
                     versioner=versioner_spec
