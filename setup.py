@@ -144,7 +144,6 @@ setup(
         'natcap.invest.routing',
         'natcap.invest.scenario_generator',
         'natcap.invest.scenic_quality',
-        'natcap.invest.sdr',
         'natcap.invest.seasonal_water_yield',
         'natcap.invest.testing',
         'natcap.invest.timber',

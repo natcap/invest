@@ -22,7 +22,7 @@ from osgeo import osr
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), 'data', 'wind_energy')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy')
 
 def _create_csv(fields, data, fname):
     """Create a new CSV table from a dictionary.

@@ -381,7 +381,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Freshwater Base Datasets (optional for freshwater models)" "Freshwater.zip" 4710
     !insertmacro downloadData "Hydropower (optional)" "Hydropower.zip" 100
     !insertmacro downloadData "Nutrient Retention (required to run model)" "WP_Nutrient_Retention.zip" 4
-    !insertmacro downloadData "SDR (required to run model)" "Sedimentation.zip" 4
     !insertmacro downloadData "Seasonal Water Yield: (optional)" "seasonal_water_yield.zip" 500000
   SectionGroupEnd
 
