@@ -8,6 +8,7 @@ import shutil
 import logging
 import math
 import time
+import itertools
 
 import numpy as np
 from osgeo import gdal
@@ -381,12 +382,14 @@ def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None):
     c = np.ma.masked_array(np.zeros(a.shape))
     if out_dtype:
         c = c.astype(out_dtype)
-    z = zip(a, b)
-    for i in range(0, len(z)):
-        if z[i] in trans_dict:
-            c[i] = trans_dict[z[i]]
+
+    z = enumerate(itertools.izip(a, b))
+    for i in z:
+        if i[1] in trans_dict:
+            c[i[0]] = trans_dict[i[1]]
         else:
-            c[i] = np.ma.masked
+            c[i[0]] = np.ma.masked
+
     return c.reshape(a_prev.shape)
 
 
