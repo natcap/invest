@@ -144,7 +144,8 @@ paver.easy.options(
     ),
     build_bin=Bunch(
         force_dev=False,
-        python=_PYTHON
+        python=_PYTHON,
+        fix_namespace=False
     ),
     jenkins_installer=Bunch(
         nodata='false',
@@ -1563,6 +1564,41 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True):
     return (eggs, noneggs)
 
 
+def reinstall_pkg(pkg_name, reinstall_as_egg=True):
+    """Reinstall a python package via pip.
+
+    Also prints colorful messages to the command line with status updates.
+
+    Parameters:
+        pkg_name (string): The name of the package to reinstall.
+        reinstall_as_egg (bool): Whether to reinstall as an egg.  If False,
+            the package will be reinstalled as the pip default (wheel).
+
+    Returns:
+        None.
+    """
+    pkg_type = 'egg' if reinstall_as_egg else 'wheel'
+
+    print yellow('Reinstalling {pkg} as {type}'.format(pkg=pkg_name,
+                                                       type=pkg_type))
+    sh('pip uninstall -y {package} > {package}.log'.format(package=pkg_name))
+
+    flags = {
+        'egg': '--egg {no_wheel} '.format(no_wheel=NO_WHEEL_SH),
+        'wheel': ''
+    }
+
+    sh(('pip install {flags} {package} > {package}.log').format(
+        package=pkg_name, flags=flags[pkg_type]))
+
+    # If the package install fails with nonzero exit code, this line won't be
+    # reached.  If we can print this line, we can safely assume that the
+    # package installed correctly.
+    print green('Package {pkg} reinstalled successfully as {type}'.format(
+        pkg=pkg_name, type=pkg_type))
+
+
+
 @task
 @cmdopts([
     ('fix-namespace', '', 'Fix issues with the natcap namespace if found'),
@@ -1848,12 +1884,7 @@ def check(options):
         if len(noneggs) > 0:
             if options.check.fix_namespace:
                 for package in noneggs:
-                    print yellow('Reinstalling natcap.%s as egg' % package)
-                    sh('pip uninstall -y natcap.{package} > natcap.{package}.log'.format(package=package))
-                    sh(('pip install --egg {no_wheel} '
-                        'natcap.{package} > natcap.{package}.log').format(
-                            package=package, no_wheel=NO_WHEEL_SH))
-                    print green('Package natcap.%s reinstalled successfully' % package)
+                    reinstall_pkg('natcap.' + package)
             else:
                 pip_inst_template = \
                     yellow("    pip install --egg {no_wheel} natcap.%s").format(
@@ -2041,6 +2072,7 @@ def build_data(options):
 @cmdopts([
     ('force-dev', '', 'Whether to allow development versions of repos to be built'),
     ('python=', '', 'The python interpreter to use'),
+    ('fix-namespace', '', 'Fix issues with the natcap namespace if found'),
 ], share_with=['check_repo'])
 def build_bin(options):
     """
@@ -2066,20 +2098,26 @@ def build_bin(options):
     # installation are installed flat (non-eggs). In practice, pyinstaller
     # doesn't know what to do with namespace packages when they are installed
     # as eggs, so we need to enforce this here.
-    natcap_eggs, natcap_noneggs = get_namespace_pkg_types('natcap', preferred='dir')
+    natcap_eggs, natcap_noneggs = get_namespace_pkg_types('natcap',
+                                                          preferred='dir')
 
     if len(natcap_eggs) > 0:
-        print red("Building binaries requires natcap namespace packages to "
-                  "be installed 'flat', all in the same directory.\n"
-                  "These packages were installed as eggs but need to be "
-                  "installed as wheels:")
-        for egg_name in natcap_eggs:
-            print red("* " + egg_name) + (
-                ' (pip uninstall -y {pkg} && '
-                'pip install {pkg})'.format(
-                    pkg='natcap.' + egg_name))
-            raise BuildFailure('Invalid natcap package layout.  See the log '
-                               'for details')
+        if options.build_bin.fix_namespace:
+            for egg_name in natcap_eggs:
+                reinstall_pkg('natcap.' + egg_name, reinstall_as_egg=False)
+        else:
+            print red("Building binaries requires natcap namespace packages to "
+                    "be installed 'flat', all in the same directory.\n"
+                    "These packages were installed as eggs but need to be "
+                    "installed as wheels:")
+            for egg_name in natcap_eggs:
+                print red("* " + egg_name) + (
+                    ' (pip uninstall -y {pkg} && '
+                    'pip install {pkg})'.format(
+                        pkg='natcap.' + egg_name))
+                print yellow('\nRun `paver build_bin --fix-namespace` to correct')
+                raise BuildFailure('Invalid natcap package layout.  See the log '
+                                'for details')
 
     pyi_repo = REPOS_DICT['pyinstaller']
     call_task('check_repo', options={
