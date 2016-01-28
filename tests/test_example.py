@@ -45,8 +45,9 @@ class InVESTImportTest(unittest.TestCase):
         import natcap.invest
 
         for loader, name, is_pkg in pkgutil.walk_packages(natcap.invest.__path__):
+            full_pkg_name = 'natcap.invest.' + name
             try:
-                loader.find_module(name).load_module(name)
+                loader.find_module(full_pkg_name).load_module(full_pkg_name)
             except (ImportError, ValueError) as exception:
                 # ImportError happens when the package cannot be found
                 # ValueError happens when using intra-package references. This
