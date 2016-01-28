@@ -63,18 +63,16 @@ def supports_color():
     return True
 
 
-TERM_IS_COLOR = supports_color()
-
-
 def _colorize(color_pattern, msg):
     """
     Apply the color pattern (likely an ANSI color escape code sequence)
     to the message if the current terminal supports color.  If the terminal
     does not support color, return the messge.
     """
-    if TERM_IS_COLOR:
+    if supports_color():
         return color_pattern % msg
     return msg
+
 
 def green(msg):
     """
@@ -83,6 +81,7 @@ def green(msg):
     """
     return _colorize('\033[92m%s\033[0m', msg)
 
+
 def yellow(msg):
     """
     Return a string that is formatted as ANSI yellow.
@@ -90,12 +89,14 @@ def yellow(msg):
     """
     return _colorize('\033[93m%s\033[0m', msg)
 
+
 def red(msg):
     """
     Return a string that is formatted as ANSI red.
     If the terminal does not support color, the input message is returned.
     """
     return _colorize('\033[91m%s\033[0m', msg)
+
 
 def bold(message):
     """
@@ -108,53 +109,6 @@ def bold(message):
 ERROR = red('ERROR:')
 WARNING = yellow('WARNING:')
 OK = green('OK')
-
-
-def _import_namespace_pkg(modname, print_msg=True):
-    """
-    Import a package within the natcap namespace and print helpful
-    debug messages as packages are discovered.
-
-    Parameters:
-        modname (string): The natcap subpackage name.
-        print_msg=True (bool): Whether to print messages about the import
-            state.
-
-    Returns:
-        Either 'egg' or 'dir' if the package is importable.
-
-    Raises:
-        ImportError: If the package cannot be imported.
-    """
-    module = importlib.import_module('natcap.%s' % modname)
-    try:
-        version = module.__version__
-    except AttributeError:
-        packagename = 'natcap.%s' % modname
-        version = pkg_resources.require(packagename)[0].version
-
-    is_egg = reduce(
-        lambda x, y: x or y,
-        [p.endswith('.egg') for p in module.__file__.split(os.sep)])
-
-    if len(module.__path__) > 1:
-        module_path = module.__path__
-    else:
-        module_path = module.__path__[0]
-
-    if not is_egg:
-        return_type = 'dir'
-        message = '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-            warn=WARNING, mod=modname, ver=version, dir=module_path)
-    else:
-        return_type = 'egg'
-        message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
-            mod=modname, ver=version, dir=module_path)
-
-    if print_msg:
-        print message
-
-    return (module, return_type)
 
 
 def is_exe(fpath):
@@ -1618,67 +1572,6 @@ def check_repo(options):
         else:
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
     print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
-
-
-def supports_color():
-    """
-    Returns True if the running system's terminal supports color, and False
-    otherwise.
-
-    Taken from http://stackoverflow.com/a/22254892/299084
-    """
-    plat = sys.platform
-    supported_platform = plat != 'Pocket PC' and (plat != 'win32' or
-                                                  'ANSICON' in os.environ)
-    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
-    if not supported_platform or not is_a_tty:
-        return False
-    return True
-
-TERM_IS_COLOR = supports_color()
-
-def _colorize(color_pattern, msg):
-    """
-    Apply the color pattern (likely an ANSI color escape code sequence)
-    to the message if the current terminal supports color.  If the terminal
-    does not support color, return the messge.
-    """
-    if TERM_IS_COLOR:
-        return color_pattern % msg
-    return msg
-
-def green(msg):
-    """
-    Return a string that is formatted as ANSI green.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[92m%s\033[0m', msg)
-
-def yellow(msg):
-    """
-    Return a string that is formatted as ANSI yellow.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[93m%s\033[0m', msg)
-
-def red(msg):
-    """
-    Return a string that is formatted as ANSI red.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[91m%s\033[0m', msg)
-
-def bold(message):
-    """
-    Return a string formatted as ANSI bold.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize("\033[1m%s\033[0m", message)
-
-
-ERROR = red('ERROR:')
-WARNING = yellow('WARNING:')
-OK = green('OK')
 
 
 def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
