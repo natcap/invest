@@ -334,21 +334,44 @@ def get_num_blocks(raster_uri):
     return n_col_blocks * n_row_blocks
 
 
-def reclass(array, reclass_dict, out_dtype=None):
-    """Reclass values in array.
+def reclass(array, d, nodata=None, out_dtype=None):
+    """Reclassify values in array.
 
-    Should set values not in reclass_dict to NaN. (Currently does not)
+    Args:
+        array (np.array): input data
+        d (dict): reclassification map
+
+    Returns:
+        reclass_array (np.array): reclassified array
     """
-    a = np.ma.masked_array(np.copy(array))
     if out_dtype:
-        a = a.astype(out_dtype)
-    u = np.unique(a.data)
-    other_vals = [i for i in u if i not in reclass_dict]
-    for i in other_vals:
-        a[array == i] = np.nan
-    for item in reclass_dict.items():
-        a[array == item[0]] = item[1]
-    return a
+        array = array.astype(out_dtype)
+    u = np.unique(array)
+    has_map = np.in1d(u, d.keys())
+    if np.issubdtype(array.dtype, int):
+        ndata = np.iinfo(array.dtype).min
+    else:
+        ndata = np.finfo(array.dtype).min
+
+    if not all(has_map):
+        LOGGER.info("No value provided for the following codes %s" %
+                    (str(u[~has_map])))
+
+    a_ravel = array.ravel()
+    a_ravel[~has_map] = ndata
+    d[ndata] = ndata
+    k = sorted(d.keys())
+    i = np.digitize(array, k)
+    v = np.array([d[key] for key in k])
+    index = np.digitize(a_ravel, k, right=True)
+    reclass_array = v[index].reshape(array.shape)
+
+    if nodata:
+        reclass_array[reclass_array == ndata] = nodata
+    elif np.issubdtype(array.dtype, float):
+        reclass_array[reclass_array == ndata] = np.nan
+
+    return reclass_array
 
 
 def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None):
