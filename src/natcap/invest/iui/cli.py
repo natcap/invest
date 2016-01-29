@@ -21,6 +21,7 @@ TOOLS_IN_DEVELOPMENT = set([
     'scenic_quality',
     'crop_production',
     'scenic_quality',
+    'habitat_suitability',
 ])
 
 
