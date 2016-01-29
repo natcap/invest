@@ -82,7 +82,14 @@ def execute(args):
 
 
 def _get_inputs(args):
-    """Get Inputs."""
+    """Get Inputs.
+
+    Args:
+        args (dict): model arguments dictionary
+
+    Returns:
+        vars_dict (dict): processed data from args dictionary
+    """
     LOGGER.info('Getting inputs...')
     vars_dict = dict(args.items())
     try:
@@ -125,7 +132,11 @@ def _get_inputs(args):
 
 
 def _validate_inputs(vars_dict):
-    """Validate inputs."""
+    """Validate inputs.
+
+    Args:
+        vars_dict (dict): processed data from args dictionary
+    """
     LOGGER.info('Validating inputs...')
     lulc_snapshot_list = vars_dict['lulc_snapshot_list']
     lulc_lookup_dict = vars_dict['lulc_lookup_dict']
@@ -156,6 +167,15 @@ def _validate_inputs(vars_dict):
 
 
 def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
+    """Get land cover transition.
+
+    Args:
+        raster_t1_uri (str): filepath to first raster
+        raster_t2_uri (str): filepath to second raster
+
+    Returns:
+        transition_set (set): a set of all types of transitions
+    """
     array_t1 = get_flattened_band(raster_t1_uri)
     array_t2 = get_flattened_band(raster_t2_uri)
 
@@ -165,9 +185,16 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
     return transition_set
 
 
-def get_flattened_band(uri):
-    """Gets first band of raster."""
-    ds = gdal.Open(uri)
+def get_flattened_band(raster_uri):
+    """Gets first band of raster.
+
+    Args:
+        raster_uri (str): raster filepath
+
+    Returns:
+        array (np.array): first raster band as flattened array
+    """
+    ds = gdal.Open(raster_uri)
     band = ds.GetRasterBand(1)
     array = band.ReadAsArray().flatten()
     band = None
@@ -175,9 +202,17 @@ def get_flattened_band(uri):
     return array
 
 
-def _mark_transition_type(
-        lookup_dict, lulc_from, lulc_to):
-    """Mark transition type, given lulc_from and lulc_to."""
+def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
+    """Mark transition type, given lulc_from and lulc_to.
+
+    Args:
+        lookup_dict (dict): dictionary of lookup values
+        lulc_from (int): lulc code of previous cell
+        lulc_to (int): lulc code of next cell
+
+    Returns:
+        transition_matrix_dict (dict): dictionary of lulc transitions
+    """
     from_is_habitat = bool(
         lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat'])
     to_is_habitat = bool(
@@ -200,7 +235,16 @@ def _mark_transition_type(
 
 
 def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
-    """Preprocess data."""
+    """Preprocess data.
+
+    Args:
+        lulc_lookup_dict (dict): dictionary of lookup values
+        lulc_snapshot_list (list): list of raster paths
+
+    Returns:
+        transition_matrix_dict (dict): dictionary of transitions for transition
+            matrix file.
+    """
     LOGGER.info('Processing data...')
 
     # Transition Matrix
@@ -208,7 +252,6 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
         (i, '') for i in product(lulc_lookup_dict.keys(), repeat=2))
 
     # Determine Transitions and Directions
-    lulc_snapshot_list = lulc_snapshot_list
     for snapshot_idx in xrange(0, len(lulc_snapshot_list)-1):
         transition_set = _get_land_cover_transitions(
             lulc_snapshot_list[snapshot_idx],
@@ -227,10 +270,17 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
     return transition_matrix_dict
 
 
-def _create_transition_table(
-        filepath, lulc_class_list, transition_matrix_dict, code_to_lulc_dict):
+def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
+                             code_to_lulc_dict):
     """Create transition table representing the lulc transition effect on
-    carbon emissions or sequestration."""
+    carbon emissions or sequestration.
+
+    Args:
+        filepath (str): output filepath
+        lulc_class_list (list): list of lulc classes (strings)
+        transition_matrix_dict (dict): dictionary of lulc transitions
+        code_to_lulc_dict (dict): map lulc codes to lulc classes
+    """
 
     LOGGER.info('Creating transition table as output...')
     code_list = code_to_lulc_dict.keys()
@@ -271,7 +321,13 @@ def _create_transition_table(
 
 def _create_carbon_pool_initial_table_template(
         filepath, lulc_class_list, code_to_lulc_dict):
-    """Create carbon pool initial values table."""
+    """Create carbon pool initial values table.
+
+    Args:
+        filepath (str): filepath to carbon pool initial conditions
+        lulc_class_list (list): list of lulc classes
+        code_to_lulc_dict (dict): map lulc codes to lulc classes
+    """
     with open(filepath, 'w') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(['code', 'lulc-class', 'biomass', 'soil', 'litter'])
@@ -282,7 +338,13 @@ def _create_carbon_pool_initial_table_template(
 
 def _create_carbon_pool_transient_table_template(
         filepath, lulc_class_list, code_to_lulc_dict):
-    """Create carbon pool transient values table."""
+    """Create carbon pool transient values table.
+
+    Args:
+        filepath (str): filepath to carbon pool initial conditions
+        lulc_class_list (list): list of lulc classes
+        code_to_lulc_dict (dict): map lulc codes to lulc classes
+    """
     with open(filepath, 'w') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(['code', 'lulc-class', 'pool', 'half-life',

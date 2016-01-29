@@ -256,7 +256,7 @@ def execute(args):
             ('N_r_rasters', N_r)]
 
         for key, array in raster_tuples:
-            write_rasters(d, key, array, offset_dict)
+            write_rasters(d[key], array, offset_dict)
 
         write_to_raster(
             d['N_total_raster'],
@@ -294,7 +294,15 @@ def timestep_to_transition_idx(snapshot_years, transitions, timestep):
 
 
 def snapshot_idx_to_timestep(snapshot_years, snapshot_idx):
-    """Convert snapshot_idx to timestep."""
+    """Convert snapshot_idx to timestep.
+
+    Args:
+        snapshot_years (list): list of snapshot years.
+        snapshot_idx (int): index of snapshot
+
+    Returns:
+        snapshot_timestep (int): timestep of the snapshot
+    """
     return snapshot_years[snapshot_idx] - snapshot_years[0]
 
 
@@ -318,7 +326,14 @@ def is_transition_year(snapshot_years, transitions, timestep):
 
 
 def get_num_blocks(raster_uri):
-    """Get the number of blocks in a raster file."""
+    """Get the number of blocks in a raster file.
+
+    Args:
+        raster_uri (str): filepath to raster
+
+    Returns:
+        num_blocks (int): number of blocks in raster
+    """
     ds = gdal.Open(raster_uri)
     n_rows = ds.RasterYSize
     n_cols = ds.RasterXSize
@@ -403,7 +418,14 @@ def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None):
 
 
 def write_to_raster(output_raster, array, xoff, yoff):
-    """Write numpy array to raster block."""
+    """Write numpy array to raster block.
+
+    Args:
+        output_raster (str): filepath to output raster
+        array (np.array): block to save to raster
+        xoff (int): offset index for x-dimension
+        yoff (int): offset index for y-dimension
+    """
     ds = gdal.Open(output_raster, gdal.GA_Update)
     band = ds.GetRasterBand(1)
     band.WriteArray(array, xoff, yoff)
@@ -411,7 +433,15 @@ def write_to_raster(output_raster, array, xoff, yoff):
 
 
 def read_from_raster(input_raster, offset_block):
-    """Read numpy array from raster block."""
+    """Read numpy array from raster block.
+
+    Args:
+        input_raster (str): filepath to input raster
+        offset_block (dict): dictionary of offset information
+
+    Returns:
+        a (np.array): a blocked array of the input raster
+    """
     ds = gdal.Open(input_raster)
     band = ds.GetRasterBand(1)
     a = band.ReadAsArray(**offset_block)
@@ -419,11 +449,17 @@ def read_from_raster(input_raster, offset_block):
     return a
 
 
-def write_rasters(d, key, array, offset_dict):
-    """Write rasters"""
-    for i in xrange(0, len(d[key])):
+def write_rasters(raster_list, array_list, offset_dict):
+    """Write rasters.
+
+    Args:
+        raster_list (list): list of output raster filepaths
+        array_list (np.array): arrays to write to raster
+        offset_dict (dict): information for where to write arrays to rasters
+    """
+    for i in xrange(0, len(raster_list)):
         write_to_raster(
-            d[key][i],
-            array[i],
+            raster_list[i],
+            array_list[i],
             offset_dict['xoff'],
             offset_dict['yoff'])
