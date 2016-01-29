@@ -931,7 +931,8 @@ def _calculate_scenario(
         response_id (string): text ID of response variable to write to
             the scenario result
         predictor_coefficents (numpy.ndarray): 1D array of regression
-            coefficents
+            coefficients that are parallel to `predictor_id_list` except the
+            last element is the y-intercept.
         predictor_id_list (list of string): list of text ID predictor
             variables that correspond with `coefficients`
         scenario_predictor_table_path (string): path to a CSV table of
@@ -1001,6 +1002,7 @@ def _calculate_scenario(
             response_value += (
                 id_to_coefficient[scenario_predictor_id] *
                 feature.GetField(str(scenario_predictor_id)))
+        response_value += predictor_coefficents[-1]  # y-intercept
         # recall the coefficients are log normal, so expm1 inverses it
         feature.SetField(response_id, numpy.expm1(response_value))
         scenario_coefficent_layer.SetFeature(feature)
