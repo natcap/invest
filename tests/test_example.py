@@ -1,9 +1,11 @@
-import unittest
-import tempfile
-import shutil
+import importlib
+import itertools
+import logging
 import os
 import pkgutil
-import logging
+import shutil
+import tempfile
+import unittest
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -44,17 +46,18 @@ class InVESTImportTest(unittest.TestCase):
         """InVEST: Import everything for the sake of coverage."""
         import natcap.invest
 
-        for loader, name, is_pkg in pkgutil.walk_packages(natcap.invest.__path__):
+        iteration_args = {
+            'path': natcap.invest.__path__,
+            'prefix': 'natcap.invest.',
+        }
+        for _loader, name, _is_pkg in itertools.chain(
+                pkgutil.walk_packages(**iteration_args),  # catch packages
+                pkgutil.iter_modules(**iteration_args)):  # catch modules
             try:
-                loader.find_module(name).load_module(name)
+                importlib.import_module(name)
             except (ImportError, ValueError) as exception:
                 # ImportError happens when the package cannot be found
                 # ValueError happens when using intra-package references. This
                 # should ideally not break at all, but I can't seem to find a
                 # workaround at the moment.
                 LOGGER.exception(exception)
-            except AttributeError as attribute_exception:
-                # When a module cannot be imported, `loader` is None, so we get
-                # an AttributeError.
-                LOGGER.error('Module %s has no loader', name)
-                LOGGER.exception(attribute_exception)
