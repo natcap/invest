@@ -208,7 +208,7 @@ def _execute(args):
         [intermediate_output_dir, output_dir])
 
     LOGGER.info('Building file registry')
-    file_registry = _build_file_registry(
+    file_registry = natcap.invest.utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
@@ -837,68 +837,6 @@ def _sum_valid(raster_path):
         raster_sum += numpy.sum(block[valid_mask])
         raster_count += numpy.count_nonzero(valid_mask)
     return raster_sum, raster_count
-
-
-def _build_file_registry(base_file_path_list, file_suffix):
-    """Combine file suffixes with key names, base filenames, and directories.
-
-    Parameters:
-        base_file_tuple_list (list): a list of (dict, path) tuples where
-            the dictionaries have a 'file_key': 'basefilename' pair, or
-            'file_key': list of 'basefilename's.  'path'
-            indicates the file directory path to prepend to the basefile name.
-        file_suffix (string): a string to append to every filename, can be
-            empty string
-
-    Returns:
-        dictionary of 'file_keys' from the dictionaries in
-        `base_file_tuple_list` mapping to full file paths with suffixes or
-        lists of file paths with suffixes depending on the original type of
-        the 'basefilename' pair.
-
-    Raises:
-        ValueError if there are duplicate file keys or duplicate file paths.
-    """
-    all_paths = set()
-    duplicate_keys = set()
-    duplicate_paths = set()
-    file_registry = {}
-
-    def _build_path(base_filename, path):
-        """Internal helper to avoid code duplication."""
-        pre, post = os.path.splitext(base_filename)
-        full_path = os.path.join(path, pre+file_suffix+post)
-
-        # Check for duplicate keys or paths
-        if full_path in all_paths:
-            duplicate_paths.add(full_path)
-        else:
-            all_paths.add(full_path)
-        return full_path
-
-    for base_file_dict, path in base_file_path_list:
-        for file_key, file_payload in base_file_dict.iteritems():
-            # check for duplicate keys
-            if file_key in file_registry:
-                duplicate_keys.add(file_key)
-            else:
-                # handle the case whether it's a filename or a list of strings
-                if isinstance(file_payload, basestring):
-                    full_path = _build_path(file_payload, path)
-                    file_registry[file_key] = full_path
-                elif isinstance(file_payload, list):
-                    file_registry[file_key] = []
-                    for filename in file_payload:
-                        full_path = _build_path(filename, path)
-                        file_registry[file_key].append(full_path)
-
-    if len(duplicate_paths) > 0 or len(duplicate_keys):
-        raise ValueError(
-            "Cannot consolidate because of duplicate paths or keys: "
-            "duplicate_keys: %s duplicate_paths: %s" % (
-                duplicate_keys, duplicate_paths))
-
-    return file_registry
 
 
 def _mask_any_nodata(input_raster_path_list, output_raster_path_list):

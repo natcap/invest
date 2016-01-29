@@ -2,11 +2,16 @@
   "id": "window",
   "label": "Habitat Suitability",
   "targetScript": "natcap.invest.habitat_suitability.habitat_suitability",
-  "modelName": "hra_preprocess",
+  "modelName": "habitat_suitability",
   "localDocURI": "../documentation/habitat_suitability.html",
   "height": 700,
   "width": 700,
   "elements": [
+    {
+      "id": "beta_only",
+      "label": "This tool is considered UNSTABLE.  Users may experience performance issues and unexpected errors.",
+      "type": "label"
+    },
     {
       "id": "output_container",
       "label": "Output Parameters",
