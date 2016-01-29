@@ -1,9 +1,10 @@
-import unittest
-import tempfile
-import shutil
+import itertools
+import logging
 import os
 import pkgutil
-import logging
+import shutil
+import tempfile
+import unittest
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -44,10 +45,15 @@ class InVESTImportTest(unittest.TestCase):
         """InVEST: Import everything for the sake of coverage."""
         import natcap.invest
 
-        for loader, name, is_pkg in pkgutil.walk_packages(natcap.invest.__path__):
-            full_pkg_name = 'natcap.invest.' + name
+        iteration_args = {
+            'path': natcap.invest.__path__,
+            'prefix': 'natcap.invest.',
+        }
+        for loader, name, is_pkg in itertools.chain(
+                pkgutil.walk_packages(**iteration_args),  # catch packages
+                pkgutil.iter_modules(**iteration_args)):  # catch modules
             try:
-                loader.find_module(full_pkg_name).load_module(full_pkg_name)
+                loader.find_module(name).load_module(name)
             except (ImportError, ValueError) as exception:
                 # ImportError happens when the package cannot be found
                 # ValueError happens when using intra-package references. This
