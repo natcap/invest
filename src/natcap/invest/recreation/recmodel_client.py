@@ -213,17 +213,13 @@ def execute(args):
             file_registry['tmp_fid_raster_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
 
-        coefficents, ssreg, r_sq, r_sq_adj, std_err, se_est = (
+        coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
             _build_regression(
                 file_registry['coefficent_vector_path'], RESPONSE_ID,
                 predictor_id_list))
 
         # the last coefficient is the y intercept and has no id, thus
         # the [:-1] on the coefficients list
-        #regression_string = ' +\n      '.join(
-        #    '%+.2e * %s' % (coefficent, p_id)
-        #    for p_id, coefficent in zip(predictor_id_list, coefficents[:-1]))
-        #regression_string += ' +\n      %+.2e' % coefficents[-1]  # y intercept
         coefficents_string = '               estimate     stderr    t value\n'
         coefficents_string += '%-12s %+.3e %+.3e %+.3e\n' % (
             '(Intercept)', coefficents[-1], se_est[-1],
@@ -239,13 +235,13 @@ def execute(args):
             '\n******************************\n'
             '%s\n'
             '---\n\n'
-            'Residual standard error: %.4f\n'
+            'Residual standard error: %.4f on %d degrees of freedom\n'
             'Multiple R-squared: %.4f\n'
             'Adjusted R-squared: %.4f\n'
             'SSreg: %.4f\n'
             'server id hash: %s\n'
             '********************************\n' % (
-                coefficents_string, std_err, r_sq, r_sq_adj, ssreg,
+                coefficents_string, std_err, dof, r_sq, r_sq_adj, ssreg,
                 server_version))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
@@ -894,6 +890,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         r_sq: R^2 value
         r_sq_adj: adjusted R^2 value
         std_err: residual standard error
+        dof: degrees of freedom
         se_est: standard error estimate on coefficients
     """
     coefficent_vector = ogr.Open(coefficient_vector_path)
@@ -923,7 +920,10 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
     r_sq = 1 - ssreg / sstot
     r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / (
         n_features - len(predictor_id_list) - 1)
-    std_err = numpy.sqrt(1 - r_sq_adj) * numpy.std(y_factors)
+
+    dof = n_features - len(predictor_id_list) - 1
+    std_err = numpy.sqrt(ssreg / dof)
+    LOGGER.debug("DOF %d", n_features - len(predictor_id_list) - 1)
 
     mse = numpy.mean(
         (y_factors -
@@ -932,7 +932,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         numpy.dot(coefficient_matrix.T, coefficient_matrix)))
     se_est = numpy.sqrt(var_est)
 
-    return coefficents, ssreg, r_sq, r_sq_adj, std_err, se_est
+    return coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est
 
 
 def _calculate_scenario(
