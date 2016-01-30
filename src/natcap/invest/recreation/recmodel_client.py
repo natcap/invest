@@ -213,30 +213,40 @@ def execute(args):
             file_registry['tmp_fid_raster_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
 
-        coefficents, ssreg, r_sq, r_sq_adj, std_err = _build_regression(
-            file_registry['coefficent_vector_path'], RESPONSE_ID,
-            predictor_id_list)
+        coefficents, ssreg, r_sq, r_sq_adj, std_err, se_est = (
+            _build_regression(
+                file_registry['coefficent_vector_path'], RESPONSE_ID,
+                predictor_id_list))
 
         # the last coefficient is the y intercept and has no id, thus
         # the [:-1] on the coefficients list
-        regression_string = ' +\n      '.join(
-            '%+.2e * %s' % (coefficent, p_id)
-            for p_id, coefficent in zip(predictor_id_list, coefficents[:-1]))
-        regression_string += ' +\n      %+.2e' % coefficents[-1]  # y intercept
+        #regression_string = ' +\n      '.join(
+        #    '%+.2e * %s' % (coefficent, p_id)
+        #    for p_id, coefficent in zip(predictor_id_list, coefficents[:-1]))
+        #regression_string += ' +\n      %+.2e' % coefficents[-1]  # y intercept
+        coefficents_string = '               estimate     stderr    t value\n'
+        coefficents_string += '%-12s %+.3e %+.3e %+.3e\n' % (
+            '(Intercept)', coefficents[-1], se_est[-1],
+            coefficents[-1] / se_est[-1])
+        coefficents_string += '\n'.join(
+            '%-12s %+.3e %+.3e %+.3e' % (
+                p_id, coefficent, se_est, coefficent / se_est)
+            for p_id, coefficent, se_est in zip(
+                predictor_id_list, coefficents[:-1], se_est[1:]))
 
         # generate a nice looking regression result and write to log and file
         report_string = (
             '\n******************************\n'
-            'Regression:\n%s =\n'
-            '      %s\n'
-            'Residual standard error: %.2f\n'
-            'Multiple R-squared: %.2f\n'
-            'Adjusted R-squared: %.2f\n'
-            'SSreg: %.2f\n'
+            '%s\n'
+            '---\n\n'
+            'Residual standard error: %.4f\n'
+            'Multiple R-squared: %.4f\n'
+            'Adjusted R-squared: %.4f\n'
+            'SSreg: %.4f\n'
             'server id hash: %s\n'
-            '******************************\n' % (
-                RESPONSE_ID, regression_string, std_err, r_sq, r_sq_adj,
-                ssreg, server_version))
+            '********************************\n' % (
+                coefficents_string, std_err, r_sq, r_sq_adj, ssreg,
+                server_version))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
                 regression_log:
@@ -884,6 +894,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         r_sq: R^2 value
         r_sq_adj: adjusted R^2 value
         std_err: residual standard error
+        se_est: standard error estimate on coefficients
     """
     coefficent_vector = ogr.Open(coefficient_vector_path)
     coefficent_layer = coefficent_vector.GetLayer()
@@ -898,6 +909,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
                 feature.GetField(str(key)) for key in predictor_id_list] +
             [1])  # add the 1s for the y intercept
 
+    LOGGER.debug(coefficient_matrix.dtype)
     y_factors = numpy.log1p(coefficient_matrix[:, 0])
 
     coefficents, _, _, _ = numpy.linalg.lstsq(
@@ -912,7 +924,15 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
     r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / (
         n_features - len(predictor_id_list) - 1)
     std_err = numpy.sqrt(1 - r_sq_adj) * numpy.std(y_factors)
-    return coefficents, ssreg, r_sq, r_sq_adj, std_err
+
+    mse = numpy.mean(
+        (y_factors -
+         numpy.sum(coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
+    var_est = mse * numpy.diag(numpy.linalg.pinv(
+        numpy.dot(coefficient_matrix.T, coefficient_matrix)))
+    se_est = numpy.sqrt(var_est)
+
+    return coefficents, ssreg, r_sq, r_sq_adj, std_err, se_est
 
 
 def _calculate_scenario(
