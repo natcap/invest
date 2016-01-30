@@ -229,7 +229,7 @@ def execute(args):
             '%-12s %+.3e %+.3e %+.3e' % (
                 p_id, coefficent, se_est_factor, coefficent / se_est_factor)
             for p_id, coefficent, se_est_factor in zip(
-                predictor_id_list, coefficents[:-1], se_est[1:]))
+                predictor_id_list, coefficents[:-1], se_est[:-1]))
 
         # generate a nice looking regression result and write to log and file
         report_string = (
@@ -923,10 +923,10 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
 
     dof = n_features - len(predictor_id_list) - 1
     std_err = numpy.sqrt(ssreg / dof)
-    mse = numpy.mean((
+    sigma2 = numpy.sum((
         y_factors - numpy.sum(
-            coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
-    var_est = mse * numpy.diag(numpy.linalg.pinv(
+            coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2) / dof
+    var_est = sigma2 * numpy.diag(numpy.linalg.pinv(
         numpy.dot(coefficient_matrix[:, 1:].T, coefficient_matrix[:, 1:])))
     se_est = numpy.sqrt(var_est)
 
