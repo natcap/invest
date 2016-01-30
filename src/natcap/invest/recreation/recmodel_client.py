@@ -220,14 +220,15 @@ def execute(args):
 
         # the last coefficient is the y intercept and has no id, thus
         # the [:-1] on the coefficients list
+        LOGGER.debug(se_est.shape)
         coefficents_string = '               estimate     stderr    t value\n'
         coefficents_string += '%-12s %+.3e %+.3e %+.3e\n' % (
             '(Intercept)', coefficents[-1], se_est[-1],
             coefficents[-1] / se_est[-1])
         coefficents_string += '\n'.join(
             '%-12s %+.3e %+.3e %+.3e' % (
-                p_id, coefficent, se_est, coefficent / se_est)
-            for p_id, coefficent, se_est in zip(
+                p_id, coefficent, se_est_factor, coefficent / se_est_factor)
+            for p_id, coefficent, se_est_factor in zip(
                 predictor_id_list, coefficents[:-1], se_est[1:]))
 
         # generate a nice looking regression result and write to log and file
@@ -906,7 +907,6 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
                 feature.GetField(str(key)) for key in predictor_id_list] +
             [1])  # add the 1s for the y intercept
 
-    LOGGER.debug(coefficient_matrix.dtype)
     y_factors = numpy.log1p(coefficient_matrix[:, 0])
 
     coefficents, _, _, _ = numpy.linalg.lstsq(
@@ -923,13 +923,11 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
 
     dof = n_features - len(predictor_id_list) - 1
     std_err = numpy.sqrt(ssreg / dof)
-    LOGGER.debug("DOF %d", n_features - len(predictor_id_list) - 1)
-
-    mse = numpy.mean(
-        (y_factors -
-         numpy.sum(coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
+    mse = numpy.mean((
+        y_factors - numpy.sum(
+            coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
     var_est = mse * numpy.diag(numpy.linalg.pinv(
-        numpy.dot(coefficient_matrix.T, coefficient_matrix)))
+        numpy.dot(coefficient_matrix[:, 1:].T, coefficient_matrix[:, 1:])))
     se_est = numpy.sqrt(var_est)
 
     return coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est
