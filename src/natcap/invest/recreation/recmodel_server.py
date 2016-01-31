@@ -701,19 +701,9 @@ def _calc_poly_pud(
         pud_set = set()
         pud_monthly_set = collections.defaultdict(set)
 
-        min_date = None
-        max_date = None
-
         for point_datetime, user_hash, _, _ in poly_points:
             if date_range[0] <= point_datetime <= date_range[1]:
                 timetuple = point_datetime.tolist().timetuple()
-                if min_date is None:
-                    min_date = timetuple
-                    max_date = timetuple
-                if timetuple < min_date:
-                    min_date = timetuple
-                elif timetuple > max_date:
-                    max_date = timetuple
 
                 year = str(timetuple.tm_year)
                 month = str(timetuple.tm_mon)
@@ -726,13 +716,12 @@ def _calc_poly_pud(
         # calculate the number of years and months between the max/min dates
         # index 0 is annual and 1-12 are the months
         pud_averages = [0.0] * 13
-        if max_date is not None:
-            n_years = max_date.tm_year - min_date.tm_year + 1
-            pud_averages[0] = len(pud_set) / float(n_years)
-            for month_id in xrange(1, 13):
-                monthly_pud_set = pud_monthly_set[str(month_id)]
-                pud_averages[month_id] = (
-                    len(monthly_pud_set) / float(n_years))
+        n_years = date_range[0].tm_year - date_range[1].tm_year + 1
+        pud_averages[0] = len(pud_set) / float(n_years)
+        for month_id in xrange(1, 13):
+            monthly_pud_set = pud_monthly_set[str(month_id)]
+            pud_averages[month_id] = (
+                len(monthly_pud_set) / float(n_years))
 
         pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
     pud_poly_feature_queue.put('STOP')
