@@ -45,7 +45,7 @@ class TestLocalRecServer(unittest.TestCase):
         multiprocessing.freeze_support()
 
         from natcap.invest.recreation import recmodel_server
-        self.workspace_dir = 'local_rec_workspace' #tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp()
         self.recreation_server = recmodel_server.RecModel(
             os.path.join(REGRESSION_DATA, 'sample_data.csv'),
             os.path.join(self.workspace_dir, 'server_cache'))
@@ -96,7 +96,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(1.0)
+    @timeout(100.0)
     def test_base_regression(self):
         """Recreation base regression test on sample data.
 
