@@ -45,21 +45,32 @@ class TestLocalRecServer(unittest.TestCase):
         multiprocessing.freeze_support()
 
         from natcap.invest.recreation import recmodel_server
-        self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = 'local_rec_workspace' #tempfile.mkdtemp()
         self.recreation_server = recmodel_server.RecModel(
             os.path.join(REGRESSION_DATA, 'sample_data.csv'),
             os.path.join(self.workspace_dir, 'server_cache'))
 
     def test_local_aoi(self):
         """Recreation test local AOI with local server."""
-        aoi_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
+        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
         date_range = (
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
-        out_vector_filename = os.path.join(
-            self.workspace_dir, 'pud.shp')
+        out_vector_filename = 'pud.shp'
+        LOGGER.debug(out_vector_filename)
         self.recreation_server._calc_aggregated_points_in_aoi(
             aoi_path, self.workspace_dir, date_range, out_vector_filename)
+
+        output_lines = open(os.path.join(
+            self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
+        expected_lines = open(os.path.join(
+            REGRESSION_DATA, 'expected_monthly_table_for_subset.csv'),
+                              'rb').readlines()
+
+        if output_lines != expected_lines:
+            raise ValueError(
+                "Output table not the same as input. "
+                "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
 
     def tearDown(self):
         """Delete workspace."""
@@ -73,11 +84,11 @@ class RecreationRegressionTests(unittest.TestCase):
         """Setup workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = 'test_workspace' # tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Delete workspace."""
-        pass#shutil.rmtree(self.workspace_dir)
+        shutil.rmtree(self.workspace_dir)
 
     def test_local_server(self):
         """Launch a local server with a reduced set of point data."""
@@ -85,7 +96,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    #@timeout(100.0)
+    @timeout(1.0)
     def test_base_regression(self):
         """Recreation base regression test on sample data.
 

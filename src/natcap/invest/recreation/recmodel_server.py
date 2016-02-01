@@ -236,8 +236,7 @@ class RecModel(object):
         """
         aoi_vector = ogr.Open(aoi_path)
         # append a _pud to the aoi filename
-        out_aoi_pud_path = os.path.join(
-            os.path.dirname(aoi_path), out_vector_filename)
+        out_aoi_pud_path = os.path.join(workspace_path, out_vector_filename)
 
         # start the workers now, because they have to load a quadtree and
         # it will take some time
@@ -332,6 +331,7 @@ class RecModel(object):
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                'Creating a copy of the input shapefile')
         esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+        LOGGER.debug(out_aoi_pud_path)
         pud_aoi_vector = esri_driver.CopyDataSource(
             aoi_vector, out_aoi_pud_path)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
