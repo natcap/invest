@@ -631,14 +631,11 @@ def _raster_sum_mean(
         response_vector_path, tmp_indexed_vector_path)
 
     raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
-    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(raster_path)
     fid_nodata = -1
     # create an empty raster same size as raster_path
-    pygeoprocessing.vectorize_datasets(
-        [raster_path], lambda x: x*0+fid_nodata, tmp_fid_raster_path,
-        gdal.GDT_Int32, fid_nodata, out_pixel_size, "union",
-        dataset_to_align_index=0, aoi_uri=tmp_indexed_vector_path,
-        vectorize_op=False)
+    pygeoprocessing.new_raster_from_base_uri(
+        raster_path, tmp_fid_raster_path, 'GTiff', fid_nodata,
+        gdal.GDT_Int32, fill_value=fid_nodata)
 
     fid_vector = ogr.Open(tmp_indexed_vector_path)
     fid_layer = fid_vector.GetLayer()
@@ -646,6 +643,8 @@ def _raster_sum_mean(
     gdal.RasterizeLayer(
         fid_raster, [1], fid_layer, options=['ATTRIBUTE=%s' % fid_field])
     fid_raster.FlushCache()
+    gdal.Dataset.__swig_destroy__(fid_raster)
+    fid_raster = None
 
     raster = gdal.Open(raster_path)
     band = raster.GetRasterBand(1)
@@ -1127,7 +1126,12 @@ def _validate_same_projection(base_vector_path, table_path):
             # assume relative path
             path = os.path.join(os.path.dirname(table_path), raw_path)
 
+        def error_handler(err_level, err_no, err_msg):
+            """Empty error handler to avoid stderr output."""
+            pass
+        gdal.PushErrorHandler(error_handler)
         raster = gdal.Open(path)
+        gdal.PopErrorHandler()
         if raster is not None:
             projection_as_str = raster.GetProjection()
             ref = osr.SpatialReference()
