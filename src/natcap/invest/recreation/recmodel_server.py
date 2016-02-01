@@ -716,7 +716,9 @@ def _calc_poly_pud(
         # calculate the number of years and months between the max/min dates
         # index 0 is annual and 1-12 are the months
         pud_averages = [0.0] * 13
-        n_years = date_range[0].tm_year - date_range[1].tm_year + 1
+        n_years = (
+            date_range[0].tolist().timetuple().tm_year -
+            date_range[1].tolist().timetuple().tm_year + 1)
         pud_averages[0] = len(pud_set) / float(n_years)
         for month_id in xrange(1, 13):
             monthly_pud_set = pud_monthly_set[str(month_id)]
