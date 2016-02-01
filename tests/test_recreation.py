@@ -161,8 +161,8 @@ class RecreationRegressionTests(unittest.TestCase):
         headers = [
             'FID', 'PUD_YR_AVG', 'PUD_JAN', 'PUD_FEB', 'PUD_MAR', 'PUD_APR',
             'PUD_MAY', 'PUD_JUN', 'PUD_JUL', 'PUD_AUG', 'PUD_SEP', 'PUD_OCT',
-            'PUD_NOV', 'PUD_DEC', 'bonefish', 'airdist', 'ports', 'beaches',
-            'bathy', 'PUD_EST']
+            'PUD_NOV', 'PUD_DEC', 'bonefish', 'airdist', 'ports', 'bathy',
+            'PUD_EST']
 
         with open(agg_results_path, 'rb') as agg_result_file:
             header_line = agg_result_file.readline().strip()
