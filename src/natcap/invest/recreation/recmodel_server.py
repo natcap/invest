@@ -114,7 +114,7 @@ class RecModel(object):
             LOGGER.error(
                 "FATAL: construct_userday_quadtree exited while "
                 "multiprocessing")
-            traceback.print_exc()
+            LOGGER.error(traceback.format_exc())
             raise
 
     # not static so it can register in Pyro object
@@ -138,10 +138,8 @@ class RecModel(object):
                 workspace_path, str('server_in')+'.zip')
             return open(out_zip_file_path, 'rb').read()
         except:
-            print 'exception in calc_aggregated_points_in_aoi'
-            print '-' * 60
-            traceback.print_exc()
-            print '-' * 60
+            LOGGER.error('exception in calc_aggregated_points_in_aoi')
+            LOGGER.error(traceback.format_exc())
             raise
 
     def calc_photo_user_days_in_aoi(
@@ -196,7 +194,7 @@ class RecModel(object):
                     out_vector_filename))
 
             # ZIP and stream the result back
-            print 'zipping result'
+            LOGGER.info('zipping result')
             aoi_pud_archive_path = os.path.join(
                 workspace_path, 'aoi_pud_result.zip')
             with zipfile.ZipFile(aoi_pud_archive_path, 'w') as myzip:
@@ -206,16 +204,14 @@ class RecModel(object):
                 myzip.write(
                     monthly_table_path, os.path.basename(monthly_table_path))
             # return the binary stream
-            print (
-                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-                ': calc user days complete sending binary back on ' +
+            LOGGER.info(
+                'calc user days complete sending binary back on %s',
                 workspace_path)
             return open(aoi_pud_archive_path, 'rb').read(), workspace_id
         except:
-            print 'exception in calc_aggregated_points_in_aoi'
-            print '-' * 60
-            traceback.print_exc()
-            print '-' * 60
+            LOGGER.error(
+                'exception in calc_aggregated_points_in_aoi: %s',
+                traceback.format_exc())
             raise
 
     def _calc_aggregated_points_in_aoi(
@@ -268,30 +264,32 @@ class RecModel(object):
             aoi_extent[1],
             aoi_extent[3]]
 
-        print 'querying global quadtree against %s' % str(global_b_box)
+        LOGGER.info(
+            'querying global quadtree against %s', str(global_b_box))
         local_points = global_qt.get_intersecting_points_in_bounding_box(
             global_b_box)
-        print 'found %d points' % len(local_points)
+        LOGGER.info('found %d points', len(local_points))
 
         local_qt_cache_dir = os.path.join(workspace_path, 'local_qt')
         local_qt_pickle_filename = os.path.join(
             local_qt_cache_dir, 'local_qt.pickle')
         os.mkdir(local_qt_cache_dir)
 
-        print 'building local quadtree in bounds %s' % str(local_b_box)
+        LOGGER.info('building local quadtree in bounds %s', str(local_b_box))
         local_qt = out_of_core_quadtree.OutOfCoreQuadTree(
             local_b_box, LOCAL_MAX_POINTS_PER_NODE, LOCAL_DEPTH,
             local_qt_cache_dir, pickle_filename=local_qt_pickle_filename)
 
-        print 'building local quadtree with %d points' % len(local_points)
+        LOGGER.info(
+            'building local quadtree with %d points', len(local_points))
         last_time = time.time()
         for point_list_slice_index in xrange(
                 0, len(local_points), POINTS_TO_ADD_PER_STEP):
             time_elapsed = time.time() - last_time
             if time_elapsed > 5.0:
                 LOGGER.info(
-                    '%d out of %d points added to local_qt so far, and n_nodes'
-                    ' in qt %d in %.2fs', local_qt.n_points(),
+                    '%d out of %d points added to local_qt so far, and '
+                    ' n_nodes in qt %d in %.2fs', local_qt.n_points(),
                     len(local_points), local_qt.n_nodes(), time_elapsed)
                 last_time = time.time()
             projected_point_list = local_points[
@@ -310,7 +308,7 @@ class RecModel(object):
 
             local_qt.add_points(
                 projected_point_list, 0, len(projected_point_list))
-        print 'saving local qt to %s' % local_qt_pickle_filename
+        LOGGER.info('saving local qt to %s', local_qt_pickle_filename)
         local_qt.flush()
 
         local_quad_tree_shapefile_name = os.path.join(
@@ -328,10 +326,8 @@ class RecModel(object):
             polytest_process.start()
 
         # Copy the input shapefile into the designated output folder
-        print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-               'Creating a copy of the input shapefile')
+        LOGGER.info('Creating a copy of the input shapefile')
         esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-        LOGGER.debug(out_aoi_pud_path)
         pud_aoi_vector = esri_driver.CopyDataSource(
             aoi_vector, out_aoi_pud_path)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
@@ -343,8 +339,7 @@ class RecModel(object):
                 ogr.FieldDefn('PUD_%s' % field_id, ogr.OFTReal))
 
         last_time = time.time()
-        print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-               'testing polygons against quadtree')
+        LOGGER.info('testing polygons against quadtree')
 
         # Load up the test queue with polygons
         for poly_feat in pud_aoi_layer:
@@ -388,18 +383,18 @@ class RecModel(object):
                 poly_feat.SetField('PUD_%s' % pud_id, pud_list[pud_index])
             pud_aoi_layer.SetFeature(poly_feat)
 
-            monthly_table.write('%s,' % poly_id)
-            for header in table_headers:
-                monthly_table.write('%s,' % len(pud_monthly_set[header]))
-            monthly_table.write('\n')
+            line = '%s,' % poly_id
+            line += (
+                ",".join(['%s' % len(pud_monthly_set[header])
+                    for header in table_headers]))
+            line += '\n'  # final newline
+            monthly_table.write(line)
 
-        print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-               'done with polygon test, syncing to disk')
+        LOGGER.info('done with polygon test, syncing to disk')
         pud_aoi_layer = None
         pud_aoi_vector.SyncToDisk()
 
-        print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
-               'returning out shapefile path')
+        LOGGER.info('returning out shapefile path')
         return out_aoi_pud_path, monthly_table_path
 
 
@@ -430,14 +425,14 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
             bytes_left -= len(','.join(row))
             current_time = time.time()
             if current_time - last_time > 5.0:
-                print '%.2f%% of %s read, text row queue size %d' % (
-                    (100.0 * (1.0 - (float(bytes_left) / original_size)),
-                     infile_name, raw_file_lines_queue.qsize()))
+                LOGGER.info(
+                    '%.2f%% of %s read, text row queue size %d',
+                    100.0 * (1.0 - (float(bytes_left) / original_size)),
+                     infile_name, raw_file_lines_queue.qsize())
                 last_time = current_time
             row_deque.append(row)
 
             if len(row_deque) > CSV_ROWS_PER_PARSE:
-                # print row_deque
                 raw_file_lines_queue.put(row_deque)
                 row_deque = collections.deque()
     if len(row_deque) > 0:
@@ -678,9 +673,9 @@ def _calc_poly_pud(
         None
     """
     start_time = time.time()
-    print 'in a _calc_poly_process, loading %s' % local_qt_pickle_path
+    LOGGER.info('in a _calc_poly_process, loading %s', local_qt_pickle_path)
     local_qt = pickle.load(open(local_qt_pickle_path, 'rb'))
-    print 'local qt load took %.2fs' % (time.time() - start_time)
+    LOGGER.info('local qt load took %.2fs', time.time() - start_time)
 
     aoi_vector = ogr.Open(aoi_path)
     aoi_layer = aoi_vector.GetLayer()
