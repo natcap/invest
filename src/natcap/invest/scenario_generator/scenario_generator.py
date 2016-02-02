@@ -26,14 +26,14 @@ shapeTypes = {0: "Null Shape", 1: "Point", 3: "PolyLine", 5: "Polygon",
 
 
 def calculate_weights(arr, rounding=4):
-    """
+    """Calculate the weights (of what?)
 
     Args:
-        arr ():
-        rounding (int):
+        arr (np.array): input array
+        rounding (int): number of decimal places to include
 
     Returns:
-        weights_list (list):
+        weights_list (list): list of normalized eigenvectors?
     """
     PLACES = Decimal(10) ** -(rounding)
 
@@ -56,10 +56,10 @@ def calculate_weights(arr, rounding=4):
 
 
 def calculate_priority(table_uri):
-    """
+    """Calculate the priority (of each lulc class?).
 
     Args:
-        table_uri (str):
+        table_uri (str): path to priority table
 
     Returns:
         priority_dict (dict):
@@ -76,7 +76,7 @@ def calculate_priority(table_uri):
     matrix = np.zeros((len(cover_id_list), len(cover_id_list)))
 
     for row in range(len(cover_id_list)):
-        for col in range(row+1):
+        for col in range(row + 1):
             matrix[row][col] = float(table[row+1][cover_id_index_list[col]])
             matrix[col][row] = 1 / matrix[row][col]
 
@@ -86,24 +86,24 @@ def calculate_priority(table_uri):
 
 
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
-    """
+    """Calculate the distance to non-zero cell for all zero-value cells of
+    input raster.
 
     Args:
-        dataset_in_uri (str)
-        dataset_out_uri (str)
+        dataset_in_uri (str): the input mask raster. Distances calculated from
+            the non-zero cells in raster.
+        dataset_out_uri (str): the output raster where all zero values are
+            equal to the euclidean distance of the closest non-zero pixel.
     """
     # Compute pixel distance
-    geoprocess.distance_transform_edt(
-        dataset_in_uri, dataset_out_uri)
+    geoprocess.distance_transform_edt(dataset_in_uri, dataset_out_uri)
 
     # Convert to meters
     def pixel_to_meters_op(x):
         x[x != nodata] *= cell_size
-
         return x
 
-    cell_size = geoprocess.get_cell_size_from_uri(
-        dataset_in_uri)
+    cell_size = geoprocess.get_cell_size_from_uri(dataset_in_uri)
     nodata = geoprocess.get_nodata_from_uri(dataset_out_uri)
     tmp = geoprocess.temporary_filename()
     geoprocess.vectorize_datasets(
@@ -134,24 +134,30 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
 
 
 def get_geometry_type_from_uri(datasource_uri):
-    """
+    """Get geometry type from a shapefile.
 
     Args:
-        datasource_uri (str):
+        datasource_uri (str): path to shapefile
+
+    Returns:
+        shape_type (int): ogr geometry type
     """
     datasource = open(datasource_uri, 'r')
     datasource.seek(32)
     shape_type, = struct.unpack('<i', datasource.read(4))
     datasource.close()
-
     return shape_type
 
 
 def get_transition_set_count_from_uri(dataset_uri_list):
-    """
+    """Get transition set count from raster.
 
     Args:
-        dataset_uri_list (list):
+        dataset_uri_list (list): list of paths to rasters
+
+    Returns:
+        unique_raster_values_count (dict): cell type with each raster value
+        transitions (dict):
     """
     cell_size = geoprocess.get_cell_size_from_uri(
         dataset_uri_list[0])
@@ -257,7 +263,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
 
 def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
-    """
+    """Create chart HTML.
 
     Args:
         cover_dict (dict):
@@ -425,12 +431,12 @@ def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
 
 
 def filter_fragments(input_uri, size, output_uri):
-    """
+    """Filter fragments.
 
     Args:
-        input_uri (str):
-        size ():
-        output_uri (str):
+        input_uri (str): path to input raster
+        size (float): patch (/fragments?) size threshold
+        output_uri (str): path to output raster
     """
     # clump and sieve
     LOGGER.debug("Filtering patches smaller than %i from %s.", size, input_uri)
@@ -493,11 +499,12 @@ def filter_fragments(input_uri, size, output_uri):
 
 
 def sum_uri(dataset_uri, datasource_uri):
-    """Wrapper call to geoprocess.aggregate_raster_values_uri to extract total
+    """Wrapper call to geoprocess.aggregate_raster_values_uri to extract
+    total (what?)
 
     Args:
-        dataset_uri (str): the uri for the input raster
-        datasource_uri (str): area of interest shapefile
+        dataset_uri (str): path to input raster
+        datasource_uri (str): path to aoi shapefile
 
     Returns:
         total (float): ?
@@ -514,36 +521,42 @@ def execute(args):
         workspace_dir (str): path to workspace directory
         suffix (str): string to append to output files
         landcover (str): path to land-cover raster
-        transition (str): path to land attributes table
+        transition (str): path to land-cover attributes table
 
-        calculate_priorities (bool):
-        priorities_csv_uri (str):
-        proximity_weight (float):
-        calculate_transition (bool):
-        transition_id ():
-        percent_field ():
-        priority_field ():
-        proximity_field ():
+        calculate_priorities (bool): whether to calculate priorities
+        priorities_csv_uri (str): path to priority csv table
 
-        calculate_factors (bool):
-        suitability_folder (str):
-        suitability (str):
-        weight (float):
-        factor_inclusion (int):
-        factors_field_container (bool):
-        suitability_id ():
-        suitability_layer ():
-        suitability_field ():
-        distance_field ():
+        calculate_proximity (bool): whether to calculate proximity
+        proximity_weight (float): weight given to proximity
 
-        calculate_constraints (bool):
+        calculate_transition (bool): whether to specifiy transitions
+        transition_id (str): suitability id
+        percent_field (str): percent change
+        area_field (str): area change
+        priority_field (str): priority
+        proximity_field (str): proximity
+
+        calculate_factors (bool): whether to use suitability factors
+        suitability_folder (str): path to suitability folder
+        suitability (str): path to suitability factors table
+        weight (float): suitability factor weight
+        factor_inclusion (int): the rasterization method -- all touched or
+            center points
+        factors_field_container (bool): whether to use suitability factor
+            inputs
+        suitability_id (str):
+        suitability_layer (str):
+        suitability_field (str):
+        distance_field (str):
+
+        calculate_constraints (bool): whether to use constraint inputs
         constraints (str): filepath to constraints shapefile layer
-        constraints_field ():
+        constraints_field (str): shapefile field containing constraints field
 
-        override_layer (bool):
-        override (str): filepath to override shapefile layer
-        override_field ():
-        override_inclusion ():
+        override_layer (bool): whether to use override layer
+        override (str): path to override shapefile
+        override_field (str): shapefile field containing override value
+        override_inclusion (int): the rasterization method
 
     Example Args::
 
@@ -551,32 +564,34 @@ def execute(args):
             'workspace_dir': 'path/to/dir',
             'suffix': '',
             'landcover': 'path/to/raster',
-            'transition': '',
-            'calculate_priorities': '',
-            'priorities_csv_uri': '',
-            'proximity_weight': '',
-            'calculate_transition': '',
-            'transition_id': '',
-            'percent_field': '',
-            'priority_field': '',
-            'proximity_field': '',
-            'calculate_factors': '',
-            'suitability_folder': '',
-            'suitability': '',
-            'weight': '',
-            'factor_inclusion': '',
-            'factors_field_container': '',
+            'transition': 'path/to/csv',
+            'calculate_priorities': True,
+            'priorities_csv_uri': 'path/to/csv',
+            'calculate_proximity': True,
+            'proximity_weight': 0.3,
+            'calculate_transition': True,
+            'transition_id': 'ID',
+            'percent_field': 'Percent Change',
+            'area_field': 'Area Change',
+            'priority_field': 'Priority',
+            'proximity_field': 'Proximity',
+            'calculate_factors': True,
+            'suitability_folder': 'path/to/dir',
+            'suitability': 'path/to/csv',
+            'weight': 0.5,
+            'factor_inclusion': 0,
+            'factors_field_container': True,
             'suitability_id': '',
             'suitability_layer': '',
             'suitability_field': '',
             'distance_field': '',
-            'calculate_constraints': '',
-            'constraints': '',
+            'calculate_constraints': True,
+            'constraints': 'path/to/shapefile',
             'constraints_field': '',
-            'override_layer': '',
-            'override': '',
+            'override_layer': True,
+            'override': 'path/to/shapefile',
             'override_field': '',
-            'override_inclusion': ''
+            'override_inclusion': 0
         }
 
     """
@@ -605,7 +620,6 @@ def execute(args):
     args["suitability_weight"] = "Wt"
     args["suitability_field"] = "Suitfield"
     args["distance_field"] = "Dist"
-
     args["suitability_cover_id"] = "Cover ID"
 
     # exercise fields
@@ -804,7 +818,6 @@ def execute(args):
     #         landcover_uri = landcover_resample_uri
 
     cell_size = geoprocess.get_cell_size_from_uri(landcover_uri)
-
     suitability_transition_dict = {}
 
     if args["calculate_transition"]:

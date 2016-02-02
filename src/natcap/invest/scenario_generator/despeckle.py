@@ -20,19 +20,19 @@ def temporary_filename():
     Returns:
         fname (str): unique temporary filename
     """
-
     file_handle, path = tempfile.mkstemp()
     os.close(file_handle)
 
     def remove_file(path):
         """Function to remove a file and handle exceptions to register in
         atexit.
+
+        Args:
+            path (str): filepath
         """
         try:
             os.remove(path)
         except OSError:
-            # This happens if the file didn't exist, which is okay because
-            # maybe we deleted it in a method
             pass
 
     atexit.register(remove_file, path)
@@ -58,19 +58,20 @@ def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype,
     dimensions and geotranforms of the base GDAL raster dataset.
 
     Args:
-        base - a the GDAL raster dataset to base output size, and transforms on
-        output_uri - a string URI to the new output raster dataset.
-        gdal_format - a string representing the GDAL file format of the
+        base (str): path to template raster
+        output_uri (str): path to output raster
+        gdal_format (str): a string representing the GDAL file format of the
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
             as 'GTiff' or 'MEM'
-        nodata - a value that will be set as the nodata value for the
+        nodata (number): a value that will be set as the nodata value for the
             output raster.  Should be the same type as 'datatype'
-        datatype - the pixel datatype of the output raster, for example
-            gdal.GDT_Float32.  See the following header file for supported
-            pixel types:
+        datatype (gdal.GDT_*) the pixel datatype of the output raster, for
+            example gdal.GDT_Float32.  See the following header file for
+            supported pixel types:
             http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
-        fill_value - (optional) the value to fill in the raster on creation
+        fill_value (number): (optional) the value to fill in the raster on
+            creation
 
     Returns:
         raster (gdal.dataset): new GDAL raster dataset.
@@ -100,7 +101,14 @@ def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype,
 
 def filter_fragments_uri(input_uri, value, patch_size, pixel_count, output_uri,
                          replace=None):
-    """
+    """Filter patches...
+
+    Args:
+        input_uri (str): path to input raster
+        value ():
+        patch_size ():
+        pixel_count ():
+        output_uri (str): path to output raster
     """
     src_ds = gdal.Open(input_uri)
     src_band = src_ds.GetRasterBand(1)
@@ -120,6 +128,7 @@ def filter_fragments_uri(input_uri, value, patch_size, pixel_count, output_uri,
         patch_size,
         value,
         os.path.basename(input_uri))
+
     dst_array = filter_fragments(
         src_array, value, patch_size, pixel_count, replace)
 
@@ -128,7 +137,16 @@ def filter_fragments_uri(input_uri, value, patch_size, pixel_count, output_uri,
 
 
 def filter_fragments(src_array, value, patch_size, pixel_count, replace=None):
-    """
+    """Filter fragments.
+
+    Args:
+        src_array (np.array): input array
+        value ():
+        patch_size ():
+        pixel_count ():
+
+    Returns:
+        dst_array (np.array): output array
     """
     dst_array = np.copy(src_array)
 
