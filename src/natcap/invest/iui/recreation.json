@@ -39,7 +39,7 @@
           "args_id": "aoi_path",
           "type": "file",
           "label": "Area of Interest (Vector)",
-          "defaultValue": "../Recreation/BC_AOI.shp",
+          "defaultValue": "../recreation/andros_aoi.shp",
           "validateAs": {
             "type": "OGR"
           },
@@ -74,6 +74,7 @@
       "collapsible": true,
       "args_id": "compute_regression",
       "label": "Compute Regression",
+      "defaultValue": true,
       "elements": [
         {
           "id": "regression_element_list",
@@ -84,7 +85,7 @@
               "args_id": "predictor_table_path",
               "type": "file",
               "label": "Predictor Table",
-              "defaultValue": "../Recreation/predictors.csv",
+              "defaultValue": "../recreation/predictors.csv",
               "validateAs": {
                 "type": "CSV"
               },
@@ -96,7 +97,7 @@
               "args_id": "scenario_predictor_table_path",
               "type": "file",
               "label": "Scenario Predictor Table (optional)",
-              "defaultValue": "../Recreation/scenario_predictors.csv",
+              "defaultValue": "../recreation/predictors_scenario.csv",
               "validateAs": {
                 "type": "CSV"
               },
@@ -111,6 +112,7 @@
       "id": "grid_container",
       "type": "container",
       "collapsible": true,
+      "defaultValue": true,
       "args_id": "grid_aoi",
       "label": "Grid the AOI",
       "elements": [
@@ -133,7 +135,7 @@
                   "hexagon": "hexagon"
                 }
               },
-              "defaultValue": "square",
+              "defaultValue": "hexagon",
               "required": true
             },
             {
@@ -144,7 +146,7 @@
               "validText": "[0-9]+(\\.[0-9][0-9])?",
               "dataType": "float",
               "required": true,
-              "defaultValue": "5000",
+              "defaultValue": "7000",
               "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
             }
           ]

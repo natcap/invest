@@ -394,7 +394,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831620
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 4804
-    !insertmacro downloadData "Recreation (optional)" "Recreation.zip" 24
+    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 24
   SectionGroupEnd
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA

@@ -1,12 +1,14 @@
-"""Buffered file manager module"""
+"""Buffered file manager module."""
 
 import uuid
 import time
 import collections
 import os
-import numpy
-import sqlite3
 import logging
+import sqlite3
+
+import numpy
+import pygeoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -15,18 +17,15 @@ LOGGER = logging.getLogger('natcap.invest.recmodel_server.buffered_file_manager'
 
 
 class BufferedFileManager(object):
-    """A file manager that buffers many reads and writes in hopes that
-        expensive file operations are mitigated."""
+    """File manager to buffers reads and writes to mitigate file IO."""
 
     _ARRAY_TUPLE_TYPE = numpy.dtype('datetime64[D],a4,f4,f4')
 
     def __init__(self, manager_filename, max_bytes_to_buffer):
-        """make a new BufferedFileManager object"""
-
+        """TODO"""
         self.manager_filename = manager_filename
         self.manager_directory = os.path.dirname(manager_filename)
-        if not os.path.exists(self.manager_directory):
-            os.mkdir(self.manager_directory)
+        pygeoprocessing.create_directories([self.manager_directory])
         db_connection = sqlite3.connect(
             manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()

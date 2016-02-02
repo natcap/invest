@@ -213,27 +213,37 @@ def execute(args):
             file_registry['tmp_fid_raster_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
 
-        coefficents, ssreg, r_sq, r_sq_adj, std_err = _build_regression(
-            file_registry['coefficent_vector_path'], RESPONSE_ID,
-            predictor_id_list)
+        coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
+            _build_regression(
+                file_registry['coefficent_vector_path'], RESPONSE_ID,
+                predictor_id_list))
 
         # the last coefficient is the y intercept and has no id, thus
         # the [:-1] on the coefficients list
-        regression_string = ' +\n      '.join(
-            '%+.2e * %s' % (coefficent, p_id)
-            for p_id, coefficent in zip(predictor_id_list, coefficents[:-1]))
-        regression_string += ' +\n      %+.2e' % coefficents[-1]  # y intercept
+        LOGGER.debug(se_est.shape)
+        coefficents_string = '               estimate     stderr    t value\n'
+        coefficents_string += '%-12s %+.3e %+.3e %+.3e\n' % (
+            '(Intercept)', coefficents[-1], se_est[-1],
+            coefficents[-1] / se_est[-1])
+        coefficents_string += '\n'.join(
+            '%-12s %+.3e %+.3e %+.3e' % (
+                p_id, coefficent, se_est_factor, coefficent / se_est_factor)
+            for p_id, coefficent, se_est_factor in zip(
+                predictor_id_list, coefficents[:-1], se_est[:-1]))
 
         # generate a nice looking regression result and write to log and file
         report_string = (
-            '\nRegression:\n%s = %s\n'
-            'Residual standard error: %s\n'
-            'Multiple R-squared: %s\n'
-            'Adjusted R-squared: %s\n'
-            'SSreg: %s\n'
-            'server id hash: %s' % (
-                RESPONSE_ID, regression_string, std_err, r_sq, r_sq_adj,
-                ssreg, server_version))
+            '\n******************************\n'
+            '%s\n'
+            '---\n\n'
+            'Residual standard error: %.4f on %d degrees of freedom\n'
+            'Multiple R-squared: %.4f\n'
+            'Adjusted R-squared: %.4f\n'
+            'SSreg: %.4f\n'
+            'server id hash: %s\n'
+            '********************************\n' % (
+                coefficents_string, std_err, dof, r_sq, r_sq_adj, ssreg,
+                server_version))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
                 regression_log:
@@ -621,14 +631,11 @@ def _raster_sum_mean(
         response_vector_path, tmp_indexed_vector_path)
 
     raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
-    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(raster_path)
     fid_nodata = -1
     # create an empty raster same size as raster_path
-    pygeoprocessing.vectorize_datasets(
-        [raster_path], lambda x: x*0+fid_nodata, tmp_fid_raster_path,
-        gdal.GDT_Int32, fid_nodata, out_pixel_size, "union",
-        dataset_to_align_index=0, aoi_uri=tmp_indexed_vector_path,
-        vectorize_op=False)
+    pygeoprocessing.new_raster_from_base_uri(
+        raster_path, tmp_fid_raster_path, 'GTiff', fid_nodata,
+        gdal.GDT_Int32, fill_value=fid_nodata)
 
     fid_vector = ogr.Open(tmp_indexed_vector_path)
     fid_layer = fid_vector.GetLayer()
@@ -636,6 +643,8 @@ def _raster_sum_mean(
     gdal.RasterizeLayer(
         fid_raster, [1], fid_layer, options=['ATTRIBUTE=%s' % fid_field])
     fid_raster.FlushCache()
+    gdal.Dataset.__swig_destroy__(fid_raster)
+    fid_raster = None
 
     raster = gdal.Open(raster_path)
     band = raster.GetRasterBand(1)
@@ -881,6 +890,8 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         r_sq: R^2 value
         r_sq_adj: adjusted R^2 value
         std_err: residual standard error
+        dof: degrees of freedom
+        se_est: standard error estimate on coefficients
     """
     coefficent_vector = ogr.Open(coefficient_vector_path)
     coefficent_layer = coefficent_vector.GetLayer()
@@ -908,8 +919,17 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
     r_sq = 1 - ssreg / sstot
     r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / (
         n_features - len(predictor_id_list) - 1)
-    std_err = numpy.sqrt(1 - r_sq_adj) * numpy.std(y_factors)
-    return coefficents, ssreg, r_sq, r_sq_adj, std_err
+
+    dof = n_features - len(predictor_id_list) - 1
+    std_err = numpy.sqrt(ssreg / dof)
+    sigma2 = numpy.sum((
+        y_factors - numpy.sum(
+            coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2) / dof
+    var_est = sigma2 * numpy.diag(numpy.linalg.pinv(
+        numpy.dot(coefficient_matrix[:, 1:].T, coefficient_matrix[:, 1:])))
+    se_est = numpy.sqrt(var_est)
+
+    return coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est
 
 
 def _calculate_scenario(
@@ -928,7 +948,8 @@ def _calculate_scenario(
         response_id (string): text ID of response variable to write to
             the scenario result
         predictor_coefficents (numpy.ndarray): 1D array of regression
-            coefficents
+            coefficients that are parallel to `predictor_id_list` except the
+            last element is the y-intercept.
         predictor_id_list (list of string): list of text ID predictor
             variables that correspond with `coefficients`
         scenario_predictor_table_path (string): path to a CSV table of
@@ -998,6 +1019,7 @@ def _calculate_scenario(
             response_value += (
                 id_to_coefficient[scenario_predictor_id] *
                 feature.GetField(str(scenario_predictor_id)))
+        response_value += predictor_coefficents[-1]  # y-intercept
         # recall the coefficients are log normal, so expm1 inverses it
         feature.SetField(response_id, numpy.expm1(response_value))
         scenario_coefficent_layer.SetFeature(feature)
@@ -1104,7 +1126,12 @@ def _validate_same_projection(base_vector_path, table_path):
             # assume relative path
             path = os.path.join(os.path.dirname(table_path), raw_path)
 
+        def error_handler(err_level, err_no, err_msg):
+            """Empty error handler to avoid stderr output."""
+            pass
+        gdal.PushErrorHandler(error_handler)
         raster = gdal.Open(path)
+        gdal.PopErrorHandler()
         if raster is not None:
             projection_as_str = raster.GetProjection()
             ref = osr.SpatialReference()

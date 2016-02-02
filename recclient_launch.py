@@ -36,8 +36,9 @@ def main():
         #'aoi_path': r"C:\Users\Rich\Documents\svn_repos\invest-sample-data\Recreation\input\initial\predictors\parks.shp",
         'aoi_path': r"C:\Users\rpsharp\Dropbox\globalrec_data\grid.shp",
         'workspace_dir': r"./reclient_workspace",
-        'start_date': '2005-01-01',
-        'end_date': '2007-12-31',
+        'start_year': '2005',
+        'end_year': '2014',
+        'grid_aoi': False,
     }
 
     if os.path.exists(recclient_args['workspace_dir']):

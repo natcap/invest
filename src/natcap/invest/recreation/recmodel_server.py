@@ -122,14 +122,14 @@ class RecModel(object):
         """Return the rec model server version.
 
         This string can be used to uniquely identify the PUD database and
-        algorithm for publication in terms of reproduciability.
+        algorithm for publication in terms of reproducibility.
         """
         return '%s:%s' % (__version__, self.qt_pickle_filename)
 
     # not static so it can register in Pyro object
     def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
         """Download the AOI of the workspace specified by workspace_id."""
-        # try/except block so Pyro4 can recieve an exception if there is one
+        # try/except block so Pyro4 can receive an exception if there is one
         try:
             # make a random workspace name so we can work in parallel
             workspace_path = os.path.join(
@@ -146,14 +146,14 @@ class RecModel(object):
 
     def calc_photo_user_days_in_aoi(
             self, zip_file_binary, date_range, out_vector_filename):
-        """Calculate annual average and per montly average photo user days.
+        """Calculate annual average and per monthly average photo user days.
 
         Parameters:
             zip_file_binary (string): a bytestring that is a zip file of an
-                OGR compatable vector.
+                OGR compatible vector.
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date as a numpy datetime64 object
-            out_vector_filename (string): base filename of ouput vector
+            out_vector_filename (string): base filename of output vector
 
         Returns:
             zip_result: a bytestring of a zipped copy of `zip_file_binary`
@@ -162,7 +162,7 @@ class RecModel(object):
             workspace_id: a string that can be used to uniquely identify this
                 run on the server
         """
-        # try/except block so Pyro4 can recieve an exception if there is one
+        # try/except block so Pyro4 can receive an exception if there is one
         try:
             # make a random workspace name so we can work in parallel
             while True:
@@ -236,8 +236,7 @@ class RecModel(object):
         """
         aoi_vector = ogr.Open(aoi_path)
         # append a _pud to the aoi filename
-        out_aoi_pud_path = os.path.join(
-            os.path.dirname(aoi_path), out_vector_filename)
+        out_aoi_pud_path = os.path.join(workspace_path, out_vector_filename)
 
         # start the workers now, because they have to load a quadtree and
         # it will take some time
@@ -332,6 +331,7 @@ class RecModel(object):
         print (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: ") +
                'Creating a copy of the input shapefile')
         esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+        LOGGER.debug(out_aoi_pud_path)
         pud_aoi_vector = esri_driver.CopyDataSource(
             aoi_vector, out_aoi_pud_path)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
@@ -634,7 +634,7 @@ def build_quadtree_shape(
     Parameters:
         quad_tree_shapefile_path (string): path to save the vector
         quadtree (out_of_core_quadtree.OutOfCoreQuadTree): quadtree
-            datastructure
+            data structure
         spatial_reference (osr.SpatialReference): spatial reference for the
             output vector
 
@@ -701,19 +701,9 @@ def _calc_poly_pud(
         pud_set = set()
         pud_monthly_set = collections.defaultdict(set)
 
-        min_date = None
-        max_date = None
-
         for point_datetime, user_hash, _, _ in poly_points:
             if date_range[0] <= point_datetime <= date_range[1]:
                 timetuple = point_datetime.tolist().timetuple()
-                if min_date is None:
-                    min_date = timetuple
-                    max_date = timetuple
-                if timetuple < min_date:
-                    min_date = timetuple
-                elif timetuple > max_date:
-                    max_date = timetuple
 
                 year = str(timetuple.tm_year)
                 month = str(timetuple.tm_mon)
@@ -726,13 +716,14 @@ def _calc_poly_pud(
         # calculate the number of years and months between the max/min dates
         # index 0 is annual and 1-12 are the months
         pud_averages = [0.0] * 13
-        if max_date is not None:
-            n_years = max_date.tm_year - min_date.tm_year + 1
-            pud_averages[0] = len(pud_set) / float(n_years)
-            for month_id in xrange(1, 13):
-                monthly_pud_set = pud_monthly_set[str(month_id)]
-                pud_averages[month_id] = (
-                    len(monthly_pud_set) / float(n_years))
+        n_years = (
+            date_range[1].tolist().timetuple().tm_year -
+            date_range[0].tolist().timetuple().tm_year + 1)
+        pud_averages[0] = len(pud_set) / float(n_years)
+        for month_id in xrange(1, 13):
+            monthly_pud_set = pud_monthly_set[str(month_id)]
+            pud_averages[month_id] = (
+                len(monthly_pud_set) / float(n_years))
 
         pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
     pud_poly_feature_queue.put('STOP')
