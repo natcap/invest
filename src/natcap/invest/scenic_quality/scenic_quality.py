@@ -20,77 +20,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 
-def old_reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
-    """A URI wrapper for reproject dataset that opens the original_dataset_uri
-        before passing it to reproject_dataset.
-
-       original_dataset_uri - a URI to a gdal Dataset on disk
-
-       All other arguments to reproject_dataset are passed in.
-
-       return - nothing"""
-
-    original_dataset = gdal.Open(original_dataset_uri)
-    reproject_dataset(original_dataset, *args, **kwargs)
-
-    geoprocessing.calculate_raster_stats_uri(original_dataset_uri)
-
-def reproject_dataset_uri(original_dataset_uri, output_wkt, output_uri,
-                      output_type = gdal.GDT_Float32):
-    """A function to reproject and resample a GDAL dataset given an output pixel size
-        and output reference and uri.
-
-       original_dataset - a gdal Dataset to reproject
-       pixel_spacing - output dataset pixel size in projected linear units (probably meters)
-       output_wkt - output project in Well Known Text (the result of ds.GetProjection())
-       output_uri - location on disk to dump the reprojected dataset
-       output_type - gdal type of the output
-
-       return projected dataset"""
-
-    original_dataset = gdal.Open(original_dataset_uri)
-
-    original_sr = osr.SpatialReference()
-    original_sr.ImportFromWkt(original_dataset.GetProjection())
-
-    output_sr = osr.SpatialReference()
-    output_sr.ImportFromWkt(output_wkt)
-
-    vrt = gdal.AutoCreateWarpedVRT(original_dataset, None, output_wkt, gdal.GRA_Bilinear)
-
-    # Get the Geotransform vector
-    geo_t = vrt.GetGeoTransform()
-    x_size = vrt.RasterXSize # Raster xsize
-    y_size = vrt.RasterYSize # Raster ysize
-
-    # Work out the boundaries of the new dataset in the target projection
-
-
-    gdal_driver = gdal.GetDriverByName('GTiff')
-    # The size of the raster is given the new projection and pixel spacing
-    # Using the values we calculated above. Also, setting it to store one band
-    # and to use Float32 data type.
-
-    output_dataset = gdal_driver.Create(output_uri, x_size,
-                              y_size, 1, output_type)
-
-    # Set the nodata value
-    original_band = original_dataset.GetRasterBand(1)
-    out_nodata = original_band.GetNoDataValue()
-    original_band.SetNoDataValue(out_nodata)
-
-    # Set the geotransform
-    output_dataset.SetGeoTransform(geo_t)
-    output_dataset.SetProjection (output_sr.ExportToWkt())
-
-    # Perform the projection/resampling
-    gdal.ReprojectImage(original_dataset, output_dataset,
-                        original_sr.ExportToWkt(), output_sr.ExportToWkt(),
-                        gdal.GRA_Bilinear)
-
-    geoprocessing.calculate_raster_stats_uri(output_uri)
-
-
 def reclassify_quantile_dataset_uri( \
     dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
 
@@ -434,57 +363,62 @@ def get_count_feature_set_uri(fs_uri):
     return count
 
 def execute(args):
-    """DOCSTRING"""
-    LOGGER.info("Start Scenic Quality Model")
+    """Run the Scenic Quality Model.
 
-    #create copy of args
-    aq_args=args.copy()
+    Parameters:
+        args['workspace_dir'] (string):
+        args['aoi_path'] (string):
+        args['cell_size'] (int):
+        args['structure_path'] (string):
+        args['dem_path'] (string):
+        args['refraction'] (float):
+        args['population_path'] (string):
+        args['overlap_path'] (string):
+        args['valuation_function'] (string):
+        args['a_coef'] (string):
+        args['b_coef'] (string):
+        args['c_coef'] (string):
+        args['d_coef'] (string):
+        args['max_valuation_radius'] (string):
+
+    """
+    LOGGER.info("Start Scenic Quality Model")
 
     #validate input
     LOGGER.debug("Validating parameters.")
     dem_cell_size=geoprocessing.get_cell_size_from_uri(args['dem_uri'])
     LOGGER.debug("DEM cell size: %f" % dem_cell_size)
-    if "cell_size" in aq_args:
-        if aq_args['cell_size'] < dem_cell_size:
-            raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
-    else:
-        aq_args['cell_size'] = dem_cell_size
 
-    intermediate_dir = os.path.join(aq_args['workspace_dir'], 'intermediate')
-    if not os.path.isdir(intermediate_dir):
-        os.makedirs(intermediate_dir)
-
-    output_dir = os.path.join(aq_args['workspace_dir'], 'output')
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    geoprocessing.create_directories([intermediate_dir, output_dir])
 
     #local variables
     LOGGER.debug("Setting local variables.")
-    z_factor=1
-    curvature_correction=aq_args['refraction']
+    curvature_correction = float(args['refraction'])
 
     #intermediate files
-    aoi_dem_uri=os.path.join(intermediate_dir,"aoi_dem.shp")
-    aoi_pop_uri=os.path.join(intermediate_dir,"aoi_pop.shp")
+    aoi_dem_uri = os.path.join(intermediate_dir, "aoi_dem.shp")
+    aoi_pop_uri = os.path.join(intermediate_dir, "aoi_pop.shp")
 
-    viewshed_dem_uri=os.path.join(intermediate_dir,"dem_vs.tif")
-    viewshed_dem_reclass_uri=os.path.join(intermediate_dir,"dem_vs_re.tif")
+    viewshed_dem_uri = os.path.join(intermediate_dir, "dem_vs.tif")
+    viewshed_dem_reclass_uri = os.path.join(intermediate_dir, "dem_vs_re.tif")
 
-    pop_clip_uri=os.path.join(intermediate_dir,"pop_clip.tif")
-    pop_prj_uri=os.path.join(intermediate_dir,"pop_prj.tif")
-    pop_vs_uri=os.path.join(intermediate_dir,"pop_vs.tif")
+    pop_clip_uri = os.path.join(intermediate_dir, "pop_clip.tif")
+    pop_prj_uri = os.path.join(intermediate_dir, "pop_prj.tif")
+    pop_vs_uri = os.path.join(intermediate_dir, "pop_vs.tif")
 
-    viewshed_reclass_uri=os.path.join(intermediate_dir,"vshed_bool.tif")
-    viewshed_polygon_uri=os.path.join(intermediate_dir,"vshed.shp")
+    viewshed_reclass_uri = os.path.join(intermediate_dir, "vshed_bool.tif")
+    viewshed_polygon_uri = os.path.join(intermediate_dir, "vshed.shp")
 
     #outputs
-    viewshed_uri=os.path.join(output_dir,"vshed.tif")
-    viewshed_quality_uri=os.path.join(output_dir,"vshed_qual.tif")
-    pop_stats_uri=os.path.join(output_dir,"populationStats.html")
-    overlap_uri=os.path.join(output_dir,"vp_overlap.shp")
+    viewshed_uri = os.path.join(output_dir, "vshed.tif")
+    viewshed_quality_uri = os.path.join(output_dir, "vshed_qual.tif")
+    pop_stats_uri = os.path.join(output_dir, "populationStats.html")
+    overlap_uri = os.path.join(output_dir, "vp_overlap.shp")
 
     #determining best data type for viewshed
-    features = get_count_feature_set_uri(aq_args['structure_uri'])
+    features = get_count_feature_set_uri(args['structure_uri'])
     if features < 2 ** 16:
         viewshed_type = gdal.GDT_UInt16
         viewshed_nodata = (2 ** 16) - 1
@@ -498,33 +432,34 @@ def execute(args):
     LOGGER.info("Clipping DEM by AOI.")
 
     LOGGER.debug("Projecting AOI for DEM.")
-    dem_wkt = geoprocessing.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
-    geoprocessing.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
+    dem_wkt = geoprocessing.get_dataset_projection_wkt_uri(args['dem_uri'])
+    geoprocessing.reproject_datasource_uri(args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
     LOGGER.debug("Clipping DEM by projected AOI.")
-    LOGGER.debug("DEM: %s, AIO: %s", aq_args['dem_uri'], aoi_dem_uri)
-    geoprocessing.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
+    geoprocessing.clip_dataset_uri(args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
     LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
     LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
 
-    nodata_dem = geoprocessing.get_nodata_from_uri(aq_args['dem_uri'])
+    nodata_dem = geoprocessing.get_nodata_from_uri(args['dem_uri'])
 
     def no_zeros(value):
-        if value == nodata_dem:
-            return nodata_dem
-        elif value < 0:
-            return 0
-        else:
-            return value
 
-    geoprocessing.vectorize_datasets([viewshed_dem_uri],
-                                    no_zeros,
-                                    viewshed_dem_reclass_uri,
-                                    get_data_type_uri(viewshed_dem_uri),
-                                    nodata_dem,
-                                    aq_args["cell_size"],
-                                    "union")
+        valid_mask = (value != nodata_dem)
+        return numpy.where(value[valid_mask] < 0, 0, value)
+
+        #if value == nodata_dem:
+        #    return nodata_dem
+        #elif value < 0:
+        #    return 0
+        #else:
+        #    return value
+
+    dem_data_type = geoprocessing.get_
+    geoprocessing.vectorize_datasets(
+        [viewshed_dem_uri], no_zeros, viewshed_dem_reclass_uri,
+        get_data_type_uri(viewshed_dem_uri), nodata_dem,
+        dem_cell_size, 'intersection', vectorize_op=False)
 
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
@@ -571,10 +506,9 @@ def execute(args):
         #reproject clipped population
         LOGGER.debug("Reprojecting clipped population raster.")
         vs_wkt = geoprocessing.get_dataset_projection_wkt_uri(viewshed_uri)
-        reproject_dataset_uri(pop_clip_uri,
-                                           vs_wkt,
-                                           pop_prj_uri,
-                                           get_data_type_uri(pop_clip_uri))
+        pop_cell_size = geoprocessing.get_cell_size_from_uri(pop_clip_uri)
+        geoprocessing.reproject_dataset_uri(
+            pop_clip_uri, pop_cell_size, vs_wkt, 'bilinear', pop_prj_uri)
 
         #align and resample population
         def copy(value1, value2):
