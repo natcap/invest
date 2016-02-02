@@ -96,7 +96,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(1.0)
+    @timeout(300.0)
     def test_base_regression(self):
         """Recreation base regression test on sample data.
 
@@ -108,8 +108,8 @@ class RecreationRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': True,
-            'start_year': '2004',
-            'end_year': '2015',
+            'start_year': '2005',
+            'end_year': '2014',
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
