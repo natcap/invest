@@ -60,6 +60,9 @@ _TMP_BASE_FILES = {
     'tmp_scenario_fid_raster_path': 'scenario_vector_fid_raster.tif',
     }
 
+# Dave wants me to set these hard limits
+MAX_YEAR = 2014
+MIN_YEAR = 2005
 
 def execute(args):
     """Execute recreation client model on remote server.
@@ -136,11 +139,22 @@ def execute(args):
             args['aoi_path'], args['scenario_predictor_table_path'])
 
     # append jan 1 to start and dec 31 to end
-    if args['end_year'] < args['start_year']:
+    if int(args['end_year']) < int(args['start_year']):
         raise ValueError(
             "Start year must be less than or equal to end year.\n"
             "start_year: %s\nend_year: %s" % (
                 args['start_year'], args['end_year']))
+
+    # request by Dave to hard code in restrictions on start and end year
+    if not (MIN_YEAR <= int(args['start_year']) <= MAX_YEAR):
+        raise ValueError(
+            "Start year must be between %d and %d.\n"
+            " User input: (%s)" % (MIN_YEAR, MAX_YEAR, args['start_year']))
+    if not (MIN_YEAR <= int(args['end_year']) <= MAX_YEAR):
+        raise ValueError(
+            "End year must be between %d and %d.\n"
+            " User input: (%s)" % (MIN_YEAR, MAX_YEAR, args['end_year']))
+
     date_range = (args['start_year']+'-01-01', args['end_year']+'-12-31')
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
