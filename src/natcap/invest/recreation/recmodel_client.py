@@ -60,9 +60,6 @@ _TMP_BASE_FILES = {
     'tmp_scenario_fid_raster_path': 'scenario_vector_fid_raster.tif',
     }
 
-# Dave wants me to set these hard limits
-MAX_YEAR = 2014
-MIN_YEAR = 2005
 
 def execute(args):
     """Execute recreation client model on remote server.
@@ -145,15 +142,31 @@ def execute(args):
             "start_year: %s\nend_year: %s" % (
                 args['start_year'], args['end_year']))
 
-    # request by Dave to hard code in restrictions on start and end year
-    if not (MIN_YEAR <= int(args['start_year']) <= MAX_YEAR):
+    # in case the user defines a hostname
+    if 'hostname' in args:
+        path = "PYRO:natcap.invest.recreation@%s:%s" % (
+            args['hostname'], args['port'])
+    else:
+        # else use a well known path to get active server
+        path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
+
+    LOGGER.info('Contacting server, please wait.')
+    recmodel_server = Pyro4.Proxy(path)
+    server_version = recmodel_server.get_version()
+    LOGGER.info('Server online, version: %s', server_version)
+
+    # validate available year range
+    min_year, max_year = recmodel_server.get_valid_year_range()
+    LOGGER.info(
+        "Server supports year queries between %d and %d", min_year, max_year)
+    if not (min_year <= int(args['start_year']) <= max_year):
         raise ValueError(
             "Start year must be between %d and %d.\n"
-            " User input: (%s)" % (MIN_YEAR, MAX_YEAR, args['start_year']))
-    if not (MIN_YEAR <= int(args['end_year']) <= MAX_YEAR):
+            " User input: (%s)" % (min_year, max_year, args['start_year']))
+    if not (min_year <= int(args['end_year']) <= max_year):
         raise ValueError(
             "End year must be between %d and %d.\n"
-            " User input: (%s)" % (MIN_YEAR, MAX_YEAR, args['end_year']))
+            " User input: (%s)" % (min_year, max_year, args['end_year']))
 
     date_range = (args['start_year']+'-01-01', args['end_year']+'-12-31')
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
@@ -164,15 +177,6 @@ def execute(args):
     file_registry = _build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
-
-    # in case the user defines a hostname
-    if 'hostname' in args:
-        path = "PYRO:natcap.invest.recreation@%s:%s" % (
-            args['hostname'], args['port'])
-    else:
-        # else use a well known path to get active server
-        path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
-    recmodel_server = Pyro4.Proxy(path)
 
     if args['grid_aoi']:
         LOGGER.info("gridding aoi")
@@ -199,9 +203,6 @@ def execute(args):
 
     # transfer zipped file to server
     start_time = time.time()
-    LOGGER.info('Contacting server, please wait.')
-    server_version = recmodel_server.get_version()
-    LOGGER.info('Server online, version: %s', server_version)
     LOGGER.info('Please wait for server to calculate PUD...')
 
     result_zip_file_binary, workspace_id = (

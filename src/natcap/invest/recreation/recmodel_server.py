@@ -84,7 +84,7 @@ def hashfile(filename, blocksize=2**20):
 class RecModel(object):
     """Class that manages RPCs for calculating photo user days."""
 
-    def __init__(self, raw_csv_filename, cache_workspace='./quadtree_cache'):
+    def __init__(self, raw_csv_filename, min_year, max_year, cache_workspace):
         """Initialize RecModel object.
 
         Parameters:
@@ -96,7 +96,8 @@ class RecModel(object):
                 example:
 
                 0486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
-
+            min_year (int): minimum year allowed to be queried by user
+            max_year (int): maximum year allowed to be queried by user
             cache_workspace (string): path to a writable directory where the
                 object can write quadtree data to disk and search for
                 pre-computed quadtrees based on the hash of the file at
@@ -105,17 +106,31 @@ class RecModel(object):
         Returns:
             None
         """
-        initial_bounding_box = [-180, -90, 180, 90]
         try:
+            initial_bounding_box = [-180, -90, 180, 90]
+            if max_year < min_year:
+                raise ValueError(
+                    "max_year is less than min_year, must be greater or "
+                    "equal to")
             self.qt_pickle_filename = construct_userday_quadtree(
                 initial_bounding_box, raw_csv_filename, cache_workspace)
             self.cache_workspace = cache_workspace
+            self.min_year = min_year
+            self.max_year = max_year
         except:
             LOGGER.error(
                 "FATAL: construct_userday_quadtree exited while "
                 "multiprocessing")
             LOGGER.error(traceback.format_exc())
             raise
+
+    def get_valid_year_range(self):
+        """Return the min and max year queriable.
+
+        Returns:
+            (min_year, max_year)
+        """
+        return (self.min_year, self.max_year)
 
     # not static so it can register in Pyro object
     def get_version(self):  # pylint: disable=no-self-use
@@ -328,6 +343,7 @@ class RecModel(object):
         # Copy the input shapefile into the designated output folder
         LOGGER.info('Creating a copy of the input shapefile')
         esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+        LOGGER.debug(out_aoi_pud_path)
         pud_aoi_vector = esri_driver.CopyDataSource(
             aoi_vector, out_aoi_pud_path)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
@@ -736,13 +752,17 @@ def execute(args):
         args['hostname'] (string): hostname to host Pyro server.
         args['port'] (int/or string representation of int): port number to host
             Pyro entry point.
+        args['max_year'] (int): maximum year allowed to be queries by user
+        args['min_year'] (int): minimum valid year allowed to be queried by
+            user
 
     Returns:
         Never returns
     """
     daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
     uri = daemon.register(
-        RecModel(args['raw_csv_point_data_path'], args['cache_workspace']),
+        RecModel(args['raw_csv_point_data_path'], args['min_year'],
+            args['max_year'], args['cache_workspace']),
         'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
     daemon.requestLoop()

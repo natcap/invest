@@ -48,7 +48,7 @@ class TestLocalRecServer(unittest.TestCase):
         self.workspace_dir = tempfile.mkdtemp()
         self.recreation_server = recmodel_server.RecModel(
             os.path.join(REGRESSION_DATA, 'sample_data.csv'),
-            os.path.join(self.workspace_dir, 'server_cache'))
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
     def test_local_aoi(self):
         """Recreation test local AOI with local server."""
