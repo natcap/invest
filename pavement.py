@@ -63,18 +63,16 @@ def supports_color():
     return True
 
 
-TERM_IS_COLOR = supports_color()
-
-
 def _colorize(color_pattern, msg):
     """
     Apply the color pattern (likely an ANSI color escape code sequence)
     to the message if the current terminal supports color.  If the terminal
     does not support color, return the messge.
     """
-    if TERM_IS_COLOR:
+    if supports_color():
         return color_pattern % msg
     return msg
+
 
 def green(msg):
     """
@@ -83,6 +81,7 @@ def green(msg):
     """
     return _colorize('\033[92m%s\033[0m', msg)
 
+
 def yellow(msg):
     """
     Return a string that is formatted as ANSI yellow.
@@ -90,12 +89,14 @@ def yellow(msg):
     """
     return _colorize('\033[93m%s\033[0m', msg)
 
+
 def red(msg):
     """
     Return a string that is formatted as ANSI red.
     If the terminal does not support color, the input message is returned.
     """
     return _colorize('\033[91m%s\033[0m', msg)
+
 
 def bold(message):
     """
@@ -108,53 +109,6 @@ def bold(message):
 ERROR = red('ERROR:')
 WARNING = yellow('WARNING:')
 OK = green('OK')
-
-
-def _import_namespace_pkg(modname, print_msg=True):
-    """
-    Import a package within the natcap namespace and print helpful
-    debug messages as packages are discovered.
-
-    Parameters:
-        modname (string): The natcap subpackage name.
-        print_msg=True (bool): Whether to print messages about the import
-            state.
-
-    Returns:
-        Either 'egg' or 'dir' if the package is importable.
-
-    Raises:
-        ImportError: If the package cannot be imported.
-    """
-    module = importlib.import_module('natcap.%s' % modname)
-    try:
-        version = module.__version__
-    except AttributeError:
-        packagename = 'natcap.%s' % modname
-        version = pkg_resources.require(packagename)[0].version
-
-    is_egg = reduce(
-        lambda x, y: x or y,
-        [p.endswith('.egg') for p in module.__file__.split(os.sep)])
-
-    if len(module.__path__) > 1:
-        module_path = module.__path__
-    else:
-        module_path = module.__path__[0]
-
-    if not is_egg:
-        return_type = 'dir'
-        message = '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-            warn=WARNING, mod=modname, ver=version, dir=module_path)
-    else:
-        return_type = 'egg'
-        message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
-            mod=modname, ver=version, dir=module_path)
-
-    if print_msg:
-        print message
-
-    return (module, return_type)
 
 
 def is_exe(fpath):
@@ -293,7 +247,8 @@ paver.easy.options(
     ),
     build_bin=Bunch(
         force_dev=False,
-        python=_PYTHON
+        python=_PYTHON,
+        fix_namespace=False
     ),
     jenkins_installer=Bunch(
         nodata='false',
@@ -1619,6 +1574,129 @@ def check_repo(options):
     print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
 
+def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
+    """
+    Import a package within the natcap namespace and print helpful
+    debug messages as packages are discovered.
+
+    Parameters:
+        modname (string): The natcap subpackage name.
+        print_msg=True (bool): Whether to print messages about the import
+            state.
+        preferred='egg' (string): One of 'egg' or 'dir'.  If 'egg', the
+            given namespace package should be installed as an egg.  If 'dir',
+            the given namespace package should be installed as a flat,
+            as happens when installing from a wheel.
+
+    Returns:
+        Either 'egg' or 'dir' if the package is importable.
+
+    Raises:
+        ImportError: If the package cannot be imported.
+    """
+    module = importlib.import_module('natcap.%s' % modname)
+
+    # Reload the module in case it's been imported before. Doing this helps to
+    # an issue with the module's __path__ attribute being updated after
+    # reinstalling within the same process.
+    module = reload(module)
+    try:
+        version = module.__version__
+    except AttributeError:
+        packagename = 'natcap.%s' % modname
+        version = pkg_resources.require(packagename)[0].version
+
+    is_egg = reduce(
+        lambda x, y: x or y,
+        [p.endswith('.egg') for p in module.__file__.split(os.sep)])
+
+    if len(module.__path__) > 1:
+        module_path = module.__path__
+    else:
+        module_path = module.__path__[0]
+
+    return_type = 'egg' if is_egg else 'dir'
+
+    if is_egg != (preferred == 'egg'):
+        alert = "{warn} ".format(warn=WARNING)
+        message = "not installed as {fmt}".format(fmt=preferred)
+    else:
+        alert = "{ok} ".format(ok=OK)
+        message = "installed as expected"
+
+    message = "{alert}natcap.{mod}=={ver} ({dir}) {msg}".format(
+        alert=alert, mod=modname, ver=version, dir=module_path, msg=message)
+
+    if print_msg:
+        print message
+
+    return (module, return_type)
+
+
+def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True):
+    """Determine how namespace packages are installed.
+
+    Parameters:
+        ns_pkg_name (string): The name of the namespace package to inspect.
+        preferred='egg' (string): The preferred format.  One of ['egg', 'dir'].
+            If 'egg' the package is expected to be an egg.  If 'dir', the
+            package is expected to be in a flat directory with all other
+            packages within the namespace.
+        print_msg=True (bool): Whether to print a warning.
+
+    Returns:
+        A tuple of (subpackages installed as eggs, subpackages installed flat)
+    """
+    eggs = []
+    noneggs = []
+    ns_module = importlib.import_module(ns_pkg_name)
+
+    for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
+        module, pkg_type = _import_namespace_pkg(modname,
+                                                 preferred=preferred,
+                                                 print_msg=print_msg)
+
+        if pkg_type == 'egg':
+            eggs.append(modname)
+        else:
+            noneggs.append(modname)
+    return (sorted(eggs), sorted(noneggs))
+
+
+def reinstall_pkg(pkg_name, reinstall_as_egg=True):
+    """Reinstall a python package via pip.
+
+    Also prints colorful messages to the command line with status updates.
+
+    Parameters:
+        pkg_name (string): The name of the package to reinstall.
+        reinstall_as_egg (bool): Whether to reinstall as an egg.  If False,
+            the package will be reinstalled as the pip default (wheel).
+
+    Returns:
+        None.
+    """
+    pkg_type = 'egg' if reinstall_as_egg else 'wheel'
+
+    print yellow('Reinstalling {pkg} as {type}'.format(pkg=pkg_name,
+                                                       type=pkg_type))
+    sh('pip uninstall -y {package} > {package}.log'.format(package=pkg_name))
+
+    flags = {
+        'egg': '--egg {no_wheel} '.format(no_wheel=NO_WHEEL_SH),
+        'wheel': ''
+    }
+
+    sh(('pip install {flags} {package} > {package}.log').format(
+        package=pkg_name, flags=flags[pkg_type]))
+
+    # If the package install fails with nonzero exit code, this line won't be
+    # reached.  If we can print this line, we can safely assume that the
+    # package installed correctly.
+    print green('Package {pkg} reinstalled successfully as {type}'.format(
+        pkg=pkg_name, type=pkg_type))
+
+
 
 @task
 @cmdopts([
@@ -1886,25 +1964,13 @@ def check(options):
             print yellow('--fix-namespace provided; Fixing issues as they are'
                          ' encountered')
 
-        import natcap
-
-        for importer, modname, ispkg in pkgutil.iter_modules(natcap.__path__):
-            module, pkg_type = _import_namespace_pkg(modname)
-
-            if pkg_type == 'egg':
-                eggs.append(modname)
-            else:
-                noneggs.append(modname)
+        eggs, noneggs = get_namespace_pkg_types('natcap', preferred='egg',
+                                                print_msg=True)
 
         if len(noneggs) > 0:
             if options.check.fix_namespace:
                 for package in noneggs:
-                    print yellow('Reinstalling natcap.%s as egg' % package)
-                    sh('pip uninstall -y natcap.{package} > natcap.{package}.log'.format(package=package))
-                    sh(('pip install --egg {no_wheel} '
-                        'natcap.{package} > natcap.{package}.log').format(
-                            package=package, no_wheel=NO_WHEEL_SH))
-                    print green('Package natcap.%s reinstalled successfully' % package)
+                    reinstall_pkg('natcap.' + package)
             else:
                 pip_inst_template = \
                     yellow("    pip install --egg {no_wheel} natcap.%s").format(
@@ -2092,12 +2158,78 @@ def build_data(options):
 @cmdopts([
     ('force-dev', '', 'Whether to allow development versions of repos to be built'),
     ('python=', '', 'The python interpreter to use'),
+    ('fix-namespace', '', 'Fix issues with the natcap namespace if found'),
 ], share_with=['check_repo'])
 def build_bin(options):
     """
     Build frozen binaries of InVEST.
     """
+    # Prefer the user's python binary if it's provided.  Otherwise, use the
+    # system python.
+    if options.build_bin.python:
+        python_binary = options.build_bin.python
+    else:
+        python_binary = sys.executable
+    python_exe = os.path.abspath(python_binary)
+    if python_exe == sys.executable:
+        print yellow('Using system python. For best results, install the '
+                     'correct version of InVEST before building binaries.')
+    print 'Using python binary %s' % python_exe
 
+    # Verify that natcap.invest is installed
+    sh(('{python} -c "import pkg_resources; '
+        'pkg_resources.require(\'natcap.invest\')"').format(python=python_exe))
+
+    # verify that all natcap packages available to the defined python
+    # installation are installed flat (non-eggs). In practice, pyinstaller
+    # doesn't know what to do with namespace packages when they are installed
+    # as eggs, so we need to enforce this here.
+    print bold('\nChecking natcap namespace')
+    for retry in [True, False]:
+        natcap_eggs, natcap_noneggs = get_namespace_pkg_types('natcap',
+                                                              preferred='dir')
+        # If the package layout looks ok, break out of the loop.
+        if len(natcap_eggs) == 0:
+            break
+
+        invest_version = _invest_version(python_exe)
+        invest_install_string = (
+            "python setup.py bdist_wheel && "
+            "pip install natcap.invest=={version} "
+            "--no-index -f dist").format(
+                version=invest_version)
+
+        if options.build_bin.fix_namespace and retry:
+            for egg_name in natcap_eggs:
+                if egg_name == 'invest':
+                    print yellow('WARNING: Reinstalling natcap.invest from '
+                                 'the current state of the source tree.')
+                    sh("pip uninstall -y natcap.invest && "
+                       "{install_invest}".format(
+                           install_invest=invest_install_string))
+                else:
+                    reinstall_pkg('natcap.' + egg_name, reinstall_as_egg=False)
+        else:
+            print (
+                "\nNatcap namespace issues:\n"
+                "Building binaries requires natcap namespace packages to \n"
+                "be installed 'flat', all in the same directory.\n"
+                "These packages were installed as eggs but need to be \n"
+                "installed as wheels for pyinstaller to work as expected:")
+            for egg_name in natcap_eggs:
+                if egg_name == 'invest':
+                    install_string = invest_install_string
+                else:
+                    install_string = (
+                        'pip install natcap.{pkg}'.format(pkg=egg_name))
+
+                print yellow("    %s" % install_string)
+            print '\nOr run `paver build_bin --fix-namespace`'
+            raise BuildFailure('Invalid natcap package layout. Some packages '
+                               'are installed as eggs: {eggs}'.format(
+                                   eggs=', '.join(natcap_eggs)))
+
+    print green('Natcap namespace installed correctly')
     pyi_repo = REPOS_DICT['pyinstaller']
     call_task('check_repo', options={
         'force_dev': options.build_bin.force_dev,
@@ -2122,9 +2254,8 @@ def build_bin(options):
         dry('rm -r %s' % invest_dist_dir,
             shutil.rmtree, invest_dist_dir)
 
-    pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
-
-    python_exe = os.path.abspath(options.build_bin.python)
+    pyinstaller_file = os.path.join('..', 'src', 'pyinstaller',
+                                    'pyinstaller.py')
 
     # For some reason, pyinstaller doesn't locate the natcap.versioner package
     # when it's installed and available on the system.  Placing
@@ -2134,9 +2265,10 @@ def build_bin(options):
     sitepkgs = sh('{python} -c "import distutils.sysconfig; '
                   'print distutils.sysconfig.get_python_lib()"'.format(
                       python=python_exe), capture=True).rstrip()
-    pathsep = ';' if platform.system() == 'Windows' else ':'
 
-    # env_site_pkgs should be relative to the repo root
+    # env_site_pkgs should be relative to the repo root if we are in a
+    # virtualenv.  If we are not in a virtualenv, these folders shouldn't point
+    # to anything and will be ignored.
     env_site_pkgs = os.path.abspath(
         os.path.normpath(os.path.join(options.env.envname, 'lib')))
     if platform.system() != 'Windows':
@@ -2146,21 +2278,22 @@ def build_bin(options):
         print "PYTHONPATH: %s" % os.environ['PYTHONPATH']
     except KeyError:
         print "Nothing in 'PYTHONPATH'"
-    sh('%(python)s %(pyinstaller)s --clean --noconfirm --paths=%(paths)s invest.spec' % {
+    sh('%(python)s %(pyinstaller)s --clean --noconfirm %(paths)s invest.spec' % {
         'python': python_exe,
         'pyinstaller': pyinstaller_file,
-        'paths': env_site_pkgs,
+        'paths': '--paths=%s' % env_site_pkgs if os.path.exists(env_site_pkgs) else '',
     }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
 
     # Write the package versions to a text file for the record.
     # Assume we're in a virtualenv
-    pip_bin = os.path.join(os.path.dirname(python_exe), 'pip')
-    sh('{pip} freeze > package_versions.txt'.format(pip=pip_bin), cwd=bindir)
+    sh(('{python} -c "import pip; pip.main([\'freeze\'])" '
+        '> package_versions.txt').format(python=python_exe), cwd=bindir)
 
-    # Record the hg path, branch, sha1 of this repo to a text file. This will help us down
-    # the road to differentiate between built binaries from different forks.
+    # Record the hg path, branch, sha1 of this repo to a text file. This will
+    # help us down the road to differentiate between built binaries from
+    # different forks.
     with open(os.path.join(bindir, 'buildinfo.txt'), 'w') as buildinfo_textfile:
         hg_path = sh('hg paths', capture=True)
         buildinfo_textfile.write(hg_path)
@@ -2219,11 +2352,13 @@ def build_bin(options):
                         break
 
             # Download a valid source tarball to the dist dir.
-
-            sh('{pip_ep} install --no-deps --no-use-wheel --download {distdir} \'{versioner}\''.format(
-                pip_ep=os.path.join(os.path.dirname(python_exe), 'pip'),
-                distdir='dist',
-                versioner=versioner_spec
+            sh(("{python} -c "
+                "\"import pip; pip.main(["
+                "'install', '--no-deps', '--no-use-wheel', '--download', "
+                "'{distdir}', \'{versioner}\'])\"").format(
+                    python=python_exe,
+                    distdir='dist',
+                    versioner=versioner_spec
             ))
 
             cwd = os.getcwd()
