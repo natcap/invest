@@ -337,6 +337,57 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_coefficient_vector_path, expected_coeff_vector_path, 1e-4)
 
+    def test_absolute_regression_coef(self):
+        """Recreation test regression coefficients from full path."""
+        from natcap.invest.recreation import recmodel_client
+
+        response_vector_path = os.path.join(
+            self.workspace_dir, 'hex_grid_vector_path.shp')
+
+        recmodel_client._grid_vector(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
+            response_vector_path)
+
+        predictor_table_path = os.path.join(
+            self.workspace_dir, 'predictors.csv')
+
+        # these are absolute paths for predictor data
+        predictor_list = [
+            ('ports', os.path.join(SAMPLE_DATA, 'dredged_ports.shp'),
+             'point_count'),
+            ('airdist', os.path.join(SAMPLE_DATA, 'airport.shp'),
+             'point_nearest_distance'),
+            ('bonefish', os.path.join(SAMPLE_DATA, 'bonefish.shp'),
+             'polygon_percent_coverage'),
+            ('bathy', os.path.join(SAMPLE_DATA, 'dem90m.tif'),
+             'raster_mean'),
+            ]
+
+        with open(predictor_table_path, 'wb') as table_file:
+            table_file.write('id,path,type\n')
+            for predictor_id, path, predictor_type in predictor_list:
+                table_file.write(
+                    '%s,%s,%s\n' % (predictor_id, path, predictor_type))
+
+        tmp_indexed_vector_path = os.path.join(
+            self.workspace_dir, 'tmp_indexed_vector.shp')
+        tmp_fid_raster_path = os.path.join(
+            self.workspace_dir, 'tmp_fid_raster_path.shp')
+        out_coefficient_vector_path = os.path.join(
+            self.workspace_dir, 'out_coefficient_vector.shp')
+        out_predictor_id_list = []
+
+        recmodel_client._build_regression_coefficients(
+            response_vector_path, predictor_table_path,
+            tmp_indexed_vector_path, tmp_fid_raster_path,
+            out_coefficient_vector_path, out_predictor_id_list)
+
+        expected_coeff_vector_path = os.path.join(
+            REGRESSION_DATA, 'test_regression_coefficients.shp')
+
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_coefficient_vector_path, expected_coeff_vector_path, 1e-4)
+
     def test_bad_grid_type(self):
         """Recreation ensure that bad grid type raises ValueError."""
         from natcap.invest.recreation import recmodel_client
