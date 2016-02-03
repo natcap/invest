@@ -13,20 +13,21 @@ from osgeo import osr
 
 from pygeoprocessing import geoprocessing
 from natcap.invest.scenic_quality import scenic_quality_core
-#from natcap.invest.overlap_analysis import overlap_analysis
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 
-def reclassify_quantile_dataset_uri( \
+def reclassify_quantile_dataset_uri(
     dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
-
+    """Create a Raster based on quantiles.
+    """
     nodata_ds = geoprocessing.get_nodata_from_uri(dataset_uri)
 
     memory_file_uri = geoprocessing.temporary_filename()
-    memory_array = geoprocessing.load_memory_mapped_array(dataset_uri, memory_file_uri)
+    memory_array = geoprocessing.load_memory_mapped_array(
+        dataset_uri, memory_file_uri)
     memory_array_flat = memory_array.reshape((-1,))
 
     quantile_breaks = [0]
@@ -46,25 +47,11 @@ def reclassify_quantile_dataset_uri( \
 
     cell_size = geoprocessing.get_cell_size_from_uri(dataset_uri)
 
-    geoprocessing.vectorize_datasets([dataset_uri],
-                                    reclass,
-                                    dataset_out_uri,
-                                    datatype_out,
-                                    nodata_out,
-                                    cell_size,
-                                    "union",
-                                    dataset_to_align_index=0)
+    geoprocessing.vectorize_datasets(
+        [dataset_uri], reclass, dataset_out_uri, datatype_out, nodata_out,
+        cell_size, "union", dataset_to_align_index=0)
 
     geoprocessing.calculate_raster_stats_uri(dataset_out_uri)
-
-def get_data_type_uri(ds_uri):
-    raster_ds = gdal.Open(ds_uri)
-    band = raster_ds.GetRasterBand(1)
-    raster_data_type = band.DataType
-    band = None
-    raster_ds = None
-
-    return raster_data_type
 
 def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     curvature_correction, refr_coeff, args):
@@ -386,7 +373,7 @@ def execute(args):
 
     #validate input
     LOGGER.debug("Validating parameters.")
-    dem_cell_size=geoprocessing.get_cell_size_from_uri(args['dem_uri'])
+    dem_cell_size = geoprocessing.get_cell_size_from_uri(args['dem_uri'])
     LOGGER.debug("DEM cell size: %f" % dem_cell_size)
 
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -444,7 +431,8 @@ def execute(args):
     nodata_dem = geoprocessing.get_nodata_from_uri(args['dem_uri'])
 
     def no_zeros(value):
-
+        """
+        """
         valid_mask = (value != nodata_dem)
         return numpy.where(value[valid_mask] < 0, 0, value)
 
@@ -455,53 +443,59 @@ def execute(args):
         #else:
         #    return value
 
-    dem_data_type = geoprocessing.get_
+    dem_data_type = geoprocessing.get_datatype_from_uri(viewshed_dem_uri)
     geoprocessing.vectorize_datasets(
         [viewshed_dem_uri], no_zeros, viewshed_dem_reclass_uri,
-        get_data_type_uri(viewshed_dem_uri), nodata_dem,
-        dem_cell_size, 'intersection', vectorize_op=False)
+        dem_data_type, nodata_dem, dem_cell_size, 'intersection',
+        vectorize_op=False)
 
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
-    compute_viewshed_uri(viewshed_dem_reclass_uri,
-             viewshed_uri,
-             aq_args['structure_uri'],
-             curvature_correction,
-             aq_args['refraction'],
-             aq_args)
+    # Call to James's impending viewshed alg
+    geoprocessing.viewshed(viewshed_dem_reclass_uri, args['structure_uri'], viewshed_uri,
+             curved_earth=False, refractivity=0.13, temp_dir=None,
+             block_size=1024, max_radius=float('inf'), skip_over_nodata=True)
 
+    #compute_viewshed_uri(viewshed_dem_reclass_uri,
+    #         viewshed_uri,
+    #         aq_args['structure_uri'],
+    #         curvature_correction,
+    #         aq_args['refraction'],
+    #         aq_args)
+
+    # Do Valuation on viewshed_uri
+
+    # Do quantiles on viewshed_uri
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
     quantile_list = [25,50,75,100]
     LOGGER.debug('reclassify input %s', viewshed_uri)
     LOGGER.debug('reclassify output %s', viewshed_quality_uri)
-    reclassify_quantile_dataset_uri(viewshed_uri,
-                                    quantile_list,
-                                    viewshed_quality_uri,
-                                    viewshed_type,
-                                    viewshed_nodata)
+    reclassify_quantile_dataset_uri(
+        viewshed_uri, quantile_list, viewshed_quality_uri, viewshed_type,
+        viewshed_nodata)
 
+    # Do population results
     if "pop_uri" in args:
         #tabulate population impact
         LOGGER.info("Tabulating population impact.")
         LOGGER.debug("Tabulating unaffected population.")
-        nodata_pop = geoprocessing.get_nodata_from_uri(aq_args["pop_uri"])
-        LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
+        nodata_pop = geoprocessing.get_nodata_from_uri(args["pop_uri"])
+        LOGGER.debug("The no data value for the population raster is %s.",
+            str(nodata_pop))
         nodata_viewshed = geoprocessing.get_nodata_from_uri(viewshed_uri)
-        LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_viewshed))
+        LOGGER.debug("The no data value for the viewshed raster is %s.",
+            str(nodata_viewshed))
 
         #clip population
         LOGGER.debug("Projecting AOI for population raster clip.")
-        pop_wkt = geoprocessing.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
-        geoprocessing.reproject_datasource_uri(aq_args['aoi_uri'],
-                                              pop_wkt,
-                                              aoi_pop_uri)
+        pop_wkt = geoprocessing.get_dataset_projection_wkt_uri(args['pop_uri'])
+        geoprocessing.reproject_datasource_uri(
+            args['aoi_uri'], pop_wkt, aoi_pop_uri)
 
         LOGGER.debug("Clipping population raster by projected AOI.")
-        geoprocessing.clip_dataset_uri(aq_args['pop_uri'],
-                                      aoi_pop_uri,
-                                      pop_clip_uri,
-                                      False)
+        geoprocessing.clip_dataset_uri(
+            args['pop_uri'], aoi_pop_uri, pop_clip_uri, False)
 
         #reproject clipped population
         LOGGER.debug("Reprojecting clipped population raster.")
@@ -518,15 +512,11 @@ def execute(args):
                 return value1
 
         LOGGER.debug("Resampling and aligning population raster.")
-        geoprocessing.vectorize_datasets([pop_prj_uri, viewshed_uri],
-                                       copy,
-                                       pop_vs_uri,
-                                       get_data_type_uri(pop_prj_uri),
-                                       nodata_pop,
-                                       aq_args["cell_size"],
-                                       "intersection",
-                                       ["bilinear", "bilinear"],
-                                       1)
+        pop_prj_datatype = geoprocessing.get_datatype_from_uri(pop_prj_uri)
+        geoprocessing.vectorize_datasets(
+            [pop_prj_uri, viewshed_uri], copy, pop_vs_uri,
+            pop_prj_datatype, nodata_pop, args["cell_size"],
+            "intersection", ["bilinear", "bilinear"], 1)
 
         pop = gdal.Open(pop_vs_uri)
         pop_band = pop.GetRasterBand(1)
@@ -569,6 +559,8 @@ def execute(args):
         outfile.write(table % (unaffected_pop, affected_pop))
         outfile.close()
 
+    # Do overlap / polygon percentages if provided
+
     #perform overlap analysis
     LOGGER.info("Performing overlap analysis.")
 
@@ -583,17 +575,13 @@ def execute(args):
         else:
             return nodata_vs_bool
 
-    geoprocessing.vectorize_datasets([viewshed_uri],
-                                    non_zeros,
-                                    viewshed_reclass_uri,
-                                    gdal.GDT_Byte,
-                                    nodata_vs_bool,
-                                    aq_args["cell_size"],
-                                    "union")
+    geoprocessing.vectorize_datasets(
+        [viewshed_uri], non_zeros, viewshed_reclass_uri, gdal.GDT_Byte,
+        nodata_vs_bool, args["cell_size"], "union")
 
-    if "overlap_uri" in aq_args:
+    if "overlap_uri" in args:
         LOGGER.debug("Copying overlap analysis features.")
-        geoprocessing.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
+        geoprocessing.copy_datasource_uri(args["overlap_uri"], overlap_uri)
 
         LOGGER.debug("Adding id field to overlap features.")
         id_name = "investID"
