@@ -25,11 +25,12 @@ shapeTypes = {0: "Null Shape", 1: "Point", 3: "PolyLine", 5: "Polygon",
               31: "MultiPatch"}
 
 
-def calculate_weights(arr, rounding=4):
-    """Calculate the weights (of what?)
+def calculate_weights(array, rounding=4):
+    """Calculate the relative weights of land-cover types. Highest-weighted
+    land-cover types will achieve their goal before lower-weighted types.
 
     Args:
-        arr (np.array): input array
+        array (np.array): input array
         rounding (int): number of decimal places to include
 
     Returns:
@@ -38,7 +39,7 @@ def calculate_weights(arr, rounding=4):
     PLACES = Decimal(10) ** -(rounding)
 
     # get eigenvalues and vectors
-    evas, eves = sp.linalg.eig(arr)
+    evas, eves = sp.linalg.eig(array)
 
     # get primary eigenvalue and vector
     eva = max(evas)
@@ -56,13 +57,13 @@ def calculate_weights(arr, rounding=4):
 
 
 def calculate_priority(table_uri):
-    """Calculate the priority (of each lulc class?).
+    """Arrange land-cover type by highest priority.
 
     Args:
         table_uri (str): path to priority table
 
     Returns:
-        priority_dict (dict):
+        priority_dict (dict): land-cover and weights_matrix
     """
     table = [line.strip().split(",") for line in open(table_uri).readlines()]
     id_index = table[0].index("Id")
@@ -140,7 +141,7 @@ def get_geometry_type_from_uri(datasource_uri):
         datasource_uri (str): path to shapefile
 
     Returns:
-        shape_type (int): ogr geometry type
+        shape_type (int): OGR geometry type
     """
     datasource = open(datasource_uri, 'r')
     datasource.seek(32)
@@ -263,15 +264,15 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
 
 def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
-    """Create chart HTML.
+    """Create charts showing original, final, and change.
 
     Args:
-        cover_dict (dict):
-        cover_names_dict (dict):
-        workspace_dir (str):
+        cover_dict (dict): land cover {'cover_id': [before, after]}
+        cover_names_dict (dict): land cover names
+        workspace_dir (str): path to workspace directory
 
     Returns:
-        chart_html (str):
+        chart_html (str): html chart
     """
     html = "\n<table BORDER=1>"
     html += "\n<TR><td>Id</td><td>% Before</td><td>% After</td></TR>"
@@ -496,22 +497,6 @@ def filter_fragments(input_uri, size, output_uri):
             target[pixels_to_remove] = 0
 
     dst_band.WriteArray(dst_array)
-
-
-def sum_uri(dataset_uri, datasource_uri):
-    """Wrapper call to geoprocess.aggregate_raster_values_uri to extract
-    total (what?)
-
-    Args:
-        dataset_uri (str): path to input raster
-        datasource_uri (str): path to aoi shapefile
-
-    Returns:
-        total (float): ?
-    """
-    total = geoprocess.aggregate_raster_values_uri(
-        dataset_uri, datasource_uri).total
-    return total.__getitem__(total.keys().pop())
 
 
 def execute(args):
