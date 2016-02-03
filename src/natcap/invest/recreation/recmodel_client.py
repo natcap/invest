@@ -159,11 +159,11 @@ def execute(args):
     min_year, max_year = recmodel_server.get_valid_year_range()
     LOGGER.info(
         "Server supports year queries between %d and %d", min_year, max_year)
-    if not (min_year <= int(args['start_year']) <= max_year):
+    if not min_year <= int(args['start_year']) <= max_year:
         raise ValueError(
             "Start year must be between %d and %d.\n"
             " User input: (%s)" % (min_year, max_year, args['start_year']))
-    if not (min_year <= int(args['end_year']) <= max_year):
+    if not min_year <= int(args['end_year']) <= max_year:
         raise ValueError(
             "End year must be between %d and %d.\n"
             " User input: (%s)" % (min_year, max_year, args['end_year']))

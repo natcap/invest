@@ -188,14 +188,77 @@ class RecreationRegressionTests(unittest.TestCase):
 
         recmodel_client.execute(args)
 
-        RecreationRegressionTests._assert_regression_results_equal(
+        RecreationRegressionTests._assert_regression_results_eq(
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
             os.path.join(REGRESSION_DATA, 'scenario_results.csv'))
 
+    def test_square_grid_regression(self):
+        """Recreation base regression on square gridded AOI.
+
+        Executes Recreation model with default data and default arguments.
+        """
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'compute_regression': False,
+            'cell_size': 20000.0,
+            'grid_aoi': True,
+            'grid_type': 'square',
+            'start_year': '2005',
+            'end_year': '2014',
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+        }
+
+        recmodel_client.execute(args)
+
+        output_lines = open(os.path.join(
+            self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
+        expected_lines = open(os.path.join(
+            REGRESSION_DATA, 'expected_monthly_table_for_square_grid.csv'),
+                              'rb').readlines()
+
+        if output_lines != expected_lines:
+            raise ValueError(
+                "Output table not the same as input. "
+                "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
+
+
+    def test_no_grid_regression(self):
+        """Recreation base regression on ungridded AOI.
+
+        Executes Recreation model with default data and default arguments.
+        """
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'compute_regression': False,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': False,
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+        }
+
+        recmodel_client.execute(args)
+
+        output_lines = open(os.path.join(
+            self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
+        expected_lines = open(os.path.join(
+            REGRESSION_DATA, 'expected_monthly_table_for_no_grid.csv'),
+                              'rb').readlines()
+
+        if output_lines != expected_lines:
+            raise ValueError(
+                "Output table not the same as input. "
+                "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
+
     def test_year_order(self):
-        """Recreation ensure that end year < start year raises exception."""
+        """Recreation ensure that end year < start year raise ValueError."""
         from natcap.invest.recreation import recmodel_client
 
         args = {
@@ -217,13 +280,34 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
+    def test_year_out_of_range(self):
+        """Recreation that end_year out of range raise ValueError."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': True,
+            'start_year': '2005',
+            'end_year': '2219',  # end years ridiculously out of range
+            'grid_aoi': True,
+            'grid_type': 'hexagon',
+            'predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors.csv'),
+            'results_suffix': u'',
+            'scenario_predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
 
     @staticmethod
-    def _assert_regression_results_equal(
+    def _assert_regression_results_eq(
             workspace_dir, file_list_path, result_vector_path,
             agg_results_path):
-        """Test that workspace against the expected list of files
-        and aggregated results.
+        """Test workspace against the expected list of files and results.
 
         Parameters:
             workspace_dir (string): path to the completed model workspace
