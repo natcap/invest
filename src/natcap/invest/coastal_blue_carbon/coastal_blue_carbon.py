@@ -110,12 +110,11 @@ def execute(args):
     current_time = time.time()
 
     block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
-    for current_block, block in block_iterator:
-        offset_dict, C_prior = block
+    for block_idx, (offset_dict, C_prior) in block_iterator:
         # Update User
         if time.time() - current_time >= 2.0:
             LOGGER.info("Processing block %i of %i" %
-                        (current_block+1, num_blocks))
+                        (block_idx+1, num_blocks))
             current_time = time.time()
 
         # Initialization
