@@ -153,30 +153,17 @@ def execute(args):
 
         # Set Accum and Disturbance Values
         for i in xrange(0, d['transitions']):
-            if i == 0:
-                D_biomass[i] = reclass_transition(
-                    C_prior, C_r[0], d['lulc_trans_to_Db'],
-                    out_dtype=np.float32)
-                D_soil[i] = reclass_transition(
-                    C_prior, C_r[0], d['lulc_trans_to_Ds'],
-                    out_dtype=np.float32)
-                H_biomass[i] = reclass(
-                    C_prior, d['lulc_to_Hb'],
-                    out_dtype=np.float32)
-                H_soil[i] = reclass(
-                    C_prior, d['lulc_to_Hs'],
-                    out_dtype=np.float32)
-            else:
-                D_biomass[i] = reclass_transition(
-                    C_r[i-1], C_r[i], d['lulc_trans_to_Db'],
-                    out_dtype=np.float32)
-                D_soil[i] = reclass_transition(
-                    C_r[i-1], C_r[i], d['lulc_trans_to_Ds'],
-                    out_dtype=np.float32)
-                H_biomass[i] = reclass(
-                    C_r[i-1], d['lulc_to_Hb'], out_dtype=np.float32)
-                H_soil[i] = reclass(
-                    C_r[i-1], d['lulc_to_Hs'], out_dtype=np.float32)
+            C_list = [C_prior] + C_r
+            D_biomass[i] = reclass_transition(
+                C_list[i], C_list[i+1], d['lulc_trans_to_Db'],
+                out_dtype=np.float32)
+            D_soil[i] = reclass_transition(
+                C_list[i], C_list[i+1], d['lulc_trans_to_Ds'],
+                out_dtype=np.float32)
+            H_biomass[i] = reclass(
+                C_list[i], d['lulc_to_Hb'], out_dtype=np.float32)
+            H_soil[i] = reclass(
+                C_list[i], d['lulc_to_Hs'], out_dtype=np.float32)
 
             L[i] = reclass(C_r[i], d['lulc_to_L'], out_dtype=np.float32)
             Y_biomass[i] = reclass(C_r[i], d['lulc_to_Yb'],
@@ -289,7 +276,6 @@ def timestep_to_transition_idx(snapshot_years, transitions, timestep):
     for i in xrange(0, transitions):
         if timestep < (snapshot_years[i+1] - snapshot_years[0]):
             return i
-    return None
 
 
 def snapshot_idx_to_timestep(snapshot_years, snapshot_idx):
@@ -352,6 +338,9 @@ def get_num_blocks(raster_uri):
 def reclass(array, d, nodata=None, out_dtype=None):
     """Reclassify values in array.
 
+    If a nodata value is not provided, the function will return an array with
+    NaN values in its place to mark cells that could not be reclassed.
+
     Args:
         array (np.array): input data
         d (dict): reclassification map
@@ -376,7 +365,6 @@ def reclass(array, d, nodata=None, out_dtype=None):
     a_ravel[~has_map] = ndata
     d[ndata] = ndata
     k = sorted(d.keys())
-    i = np.digitize(array, k)
     v = np.array([d[key] for key in k])
     index = np.digitize(a_ravel, k, right=True)
     reclass_array = v[index].reshape(array.shape)
@@ -407,11 +395,11 @@ def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None):
         c = c.astype(out_dtype)
 
     z = enumerate(itertools.izip(a, b))
-    for i in z:
-        if i[1] in trans_dict:
-            c[i[0]] = trans_dict[i[1]]
+    for index, transition_tuple in z:
+        if transition_tuple in trans_dict:
+            c[index] = trans_dict[transition_tuple]
         else:
-            c[i[0]] = np.ma.masked
+            c[index] = np.ma.masked
 
     return c.reshape(a_prev.shape)
 

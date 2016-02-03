@@ -12,7 +12,9 @@ import pygeoprocessing.geoprocessing as geoprocess
 from pygeoprocessing.geoprocessing import get_lookup_from_csv
 from pygeoprocessing import create_directories
 
-NODATA_INT = -9999
+from natcap.invest import utils as invest_utils
+
+NODATA_INT = -9999  # typical integer nodata value used in rasters
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -92,11 +94,8 @@ def _get_inputs(args):
     """
     LOGGER.info('Getting inputs...')
     vars_dict = dict(args.items())
-    try:
-        vars_dict['results_suffix']
-        vars_dict['results_suffix'] = '_' + vars_dict['results_suffix']
-    except:
-        vars_dict['results_suffix'] = ''
+    vars_dict['results_suffix'] = invest_utils.make_suffix_string(
+        vars_dict, 'results_suffix')
 
     lulc_lookup_dict = get_lookup_from_csv(
         vars_dict['lulc_lookup_uri'], 'code')

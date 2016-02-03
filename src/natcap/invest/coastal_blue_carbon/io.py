@@ -11,7 +11,9 @@ import numpy as np
 from osgeo import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 
-NODATA_FLOAT = -16777216
+from natcap.invest import utils as invest_utils
+
+NODATA_FLOAT = -16777216  # largest negative 32-bit floating point number
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -113,15 +115,8 @@ def get_inputs(args):
     }
 
     # Directories
-    try:
-        args['results_suffix']
-    except:
-        args['results_suffix'] = ''
-
-    if len(args['results_suffix']) > 1:
-        args['results_suffix'] = '_' + args['results_suffix']
-
-    d['results_suffix'] = args['results_suffix']
+    d['results_suffix'] = invest_utils.make_suffix_string(
+        args, 'results_suffix')
     d['workspace_dir'] = args['workspace_dir']
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
     geoprocess.create_directories([args['workspace_dir'], outputs_dir])
@@ -136,8 +131,8 @@ def get_inputs(args):
                 ' and in the same order as the LULC snapshot rasters.')
     d['transitions'] = len(d['transition_years'])
 
-    d['snapshot_years'] = [int(i) for i in d['transition_years']]
-    if args['analysis_year'] not in ['', None]:
+    d['snapshot_years'] = d['transition_years'][:]
+    if 'analysis_year' in args and args['analysis_year'] not in ['', None]:
         if int(args['analysis_year']) <= d['snapshot_years'][-1]:
             raise ValueError(
                 'Analysis year must be greater than last transition year.')
@@ -155,12 +150,12 @@ def get_inputs(args):
     initial_dict = geoprocess.get_lookup_from_csv(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
-    d['lulc_to_Sb'] = dict((lulc_to_code_dict[key.lower()], sub['biomass'])
-                           for key, sub in initial_dict.items())
-    d['lulc_to_Ss'] = dict((lulc_to_code_dict[key.lower()], sub['soil'])
-                           for key, sub in initial_dict.items())
-    d['lulc_to_L'] = dict((lulc_to_code_dict[key.lower()], sub['litter'])
-                          for key, sub in initial_dict.items())
+    code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
+        in initial_dict.iteritems())
+    for args_key, col_name in [('lulc_to_Sb', 'biomass'),
+        ('lulc_to_Ss', 'soil'), ('lulc_to_L', 'litter')]:
+            d[args_key] = dict(
+                (code, row[col_name]) for code, row in code_dict.iteritems())
 
     # Transition Dictionaries
     biomass_transient_dict, soil_transient_dict = \
@@ -179,17 +174,17 @@ def get_inputs(args):
                            for key, sub in soil_transient_dict.items())
 
     # Parse LULC Transition CSV (Carbon Direction and Relative Magnitude)
-    lulc_trans_to_Db, lulc_trans_to_Ds = _get_lulc_trans_to_D_dicts(
+    d['lulc_trans_to_Db'], d['lulc_trans_to_Ds'] = _get_lulc_trans_to_D_dicts(
         args['lulc_transition_matrix_uri'],
         args['lulc_lookup_uri'],
         biomass_transient_dict,
         soil_transient_dict)
-    d['lulc_trans_to_Db'] = lulc_trans_to_Db
-    d['lulc_trans_to_Ds'] = lulc_trans_to_Ds
 
     # Economic Analysis
+    d['do_economic_analysis'] = False
     if args['do_economic_analysis']:
         d['do_economic_analysis'] = True
+        # convert percentage to decimal
         discount_rate = float(args['discount_rate']) * 0.01
         if args['do_price_table']:
             d['price_t'] = _get_price_table(
@@ -197,13 +192,12 @@ def get_inputs(args):
                 d['snapshot_years'][0],
                 d['snapshot_years'][-1])
         else:
-            d['interest_rate'] = float(args['interest_rate']) * 0.01
+            interest_rate = float(args['interest_rate']) * 0.01
             price = args['price']
-            d['price_t'] = (1 + d['interest_rate']) ** np.arange(
+            d['price_t'] = (1 + interest_rate) ** np.arange(
                 0, d['timesteps']+1) * price
 
-        d['price_t'] = d['price_t'] / (1 + discount_rate)**np.arange(
-            0, d['timesteps']+1)
+        d['price_t'] /= (1 + discount_rate) ** np.arange(0, d['timesteps']+1)
 
     # Create Output Rasters
     template_raster = d['C_prior_raster']
@@ -299,6 +293,7 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
     lulc_trans_to_Db = {}
     lulc_trans_to_Ds = {}
     for k, sub in lulc_transition_dict.items():
+        # break before legend in csv file
         if k is not '':
             continue
         for k2, v in sub.items():
@@ -310,7 +305,7 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
                     lulc_to_code_dict[k], lulc_to_code_dict[k2])] = \
                     soil_transient_dict[k][v]
 
-    return lulc_trans_to_Db, lulc_trans_to_Db
+    return lulc_trans_to_Db, lulc_trans_to_Ds
 
 
 def _create_transient_dict(carbon_pool_transient_uri):
