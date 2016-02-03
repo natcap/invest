@@ -1,5 +1,7 @@
 """InVEST Recreation model tests."""
 
+import socket
+import threading
 import multiprocessing
 import multiprocessing.pool
 import unittest
@@ -9,9 +11,10 @@ import os
 import functools
 import logging
 
+import pygeoprocessing
+from pygeoprocessing.testing import scm
 import numpy
 from osgeo import ogr
-from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
@@ -21,6 +24,7 @@ REGRESSION_DATA = os.path.join(
     'recreation_model')
 
 LOGGER = logging.getLogger('test_recreation')
+
 
 def timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
@@ -35,6 +39,72 @@ def timeout(max_timeout):
             return async_result.get(max_timeout)
         return func_wrapper
     return timeout_decorator
+
+
+class TestLocalPyroRecServer(unittest.TestCase):
+    """Tests that set up local rec server on a port and call through."""
+
+    def setUp(self):
+        """Setup Pyro port."""
+        multiprocessing.freeze_support()
+        self.workspace_dir = tempfile.mkdtemp()
+
+    @timeout(10.0)
+    def test_empty_server(self):
+        """Recreation test a client call to custom server."""
+        from natcap.invest.recreation import recmodel_server
+        from natcap.invest.recreation import recmodel_client
+
+        pygeoprocessing.create_directories([self.workspace_dir])
+        empty_point_data_path = os.path.join(
+            self.workspace_dir, 'empty_table.csv')
+        open(empty_point_data_path, 'w').close()  # touch the file
+
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': port,
+            'raw_csv_point_data_path': empty_point_data_path,
+            'cache_workspace': self.workspace_dir,
+            'min_year': 2004,
+            'max_year': 2015,
+        }
+
+        server_thread = threading.Thread(
+            target=recmodel_server.execute, args=(server_args,))
+        server_thread.start()
+
+        client_args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'hostname': 'localhost',
+            'port': port,
+            'compute_regression': False,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': False,
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+        }
+        recmodel_client.execute(client_args)
+
+        # testing for file existence seems reasonable since mostly we are
+        # testing that a local server starts and a client connects to it
+        _test_same_files(
+            os.path.join(REGRESSION_DATA, 'file_list_empty_local_server.txt'),
+            self.workspace_dir)
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
 
 
 class TestLocalRecServer(unittest.TestCase):
@@ -90,13 +160,9 @@ class RecreationRegressionTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_local_server(self):
-        """Launch a local server with a reduced set of point data."""
-        pass
-
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(300.0)
+    @timeout(1.0)
     def test_base_regression(self):
         """Recreation base regression test on sample data.
 
@@ -128,6 +194,30 @@ class RecreationRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
             os.path.join(REGRESSION_DATA, 'scenario_results.csv'))
 
+    def test_year_order(self):
+        """Recreation ensure that end year < start year raises exception."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': True,
+            'start_year': '2014',  # note start_year > end_year
+            'end_year': '2005',
+            'grid_aoi': True,
+            'grid_type': 'hexagon',
+            'predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors.csv'),
+            'results_suffix': u'',
+            'scenario_predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
+
+
     @staticmethod
     def _assert_regression_results_equal(
             workspace_dir, file_list_path, result_vector_path,
@@ -153,8 +243,7 @@ class RecreationRegressionTests(unittest.TestCase):
             range by `tolerance_places`
         """
         # Test that the workspace has the same files as we expect
-        RecreationRegressionTests._test_same_files(
-            file_list_path, workspace_dir)
+        _test_same_files(file_list_path, workspace_dir)
 
         # we expect a file called 'aggregated_results.shp'
         result_vector = ogr.Open(result_vector_path)
@@ -195,10 +284,6 @@ class RecreationRegressionTests(unittest.TestCase):
                 feature = result_layer.GetFeature(
                     int(expected_result_lookup['FID']))
                 for field, value in expected_result_lookup.iteritems():
-                    print (
-                        "field, value, feature.GetField(field), FID %s %s %s %s" % (
-                            field, value, feature.GetField(field),
-                            int(expected_result_lookup['FID'])))
                     numpy.testing.assert_almost_equal(
                         feature.GetField(field), value,
                         decimal=tolerance_places)
@@ -209,33 +294,33 @@ class RecreationRegressionTests(unittest.TestCase):
         ogr.DataSource.__swig_destroy__(result_vector)
         result_vector = None
 
-    @staticmethod
-    def _test_same_files(base_list_path, directory_path):
-        """Assert expected files are in the `directory_path`.
 
-        Parameters:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
-            directory_path (string): a path to a directory whose contents will
-                be checked against the files listed in `base_list_file`
+def _test_same_files(base_list_path, directory_path):
+    """Assert expected files are in the `directory_path`.
 
-        Returns:
-            None
+    Parameters:
+        base_list_path (string): a path to a file that has one relative
+            file path per line.
+        directory_path (string): a path to a directory whose contents will
+            be checked against the files listed in `base_list_file`
 
-        Raises:
-            AssertionError when there are files listed in `base_list_file`
-                that don't exist in the directory indicated by `path`
-        """
-        missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':
-                    # skip blank lines
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
-        if len(missing_files) > 0:
-            raise AssertionError(
-                "The following files were expected but not found: " +
-                '\n'.join(missing_files))
+    Returns:
+        None
+
+    Raises:
+        AssertionError when there are files listed in `base_list_file`
+            that don't exist in the directory indicated by `path`
+    """
+    missing_files = []
+    with open(base_list_path, 'r') as file_list:
+        for file_path in file_list:
+            full_path = os.path.join(directory_path, file_path.rstrip())
+            if full_path == '':
+                # skip blank lines
+                continue
+            if not os.path.isfile(full_path):
+                missing_files.append(full_path)
+    if len(missing_files) > 0:
+        raise AssertionError(
+            "The following files were expected but not found: " +
+            '\n'.join(missing_files))
