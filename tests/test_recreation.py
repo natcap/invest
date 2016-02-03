@@ -257,6 +257,25 @@ class RecreationRegressionTests(unittest.TestCase):
                 "Output table not the same as input. "
                 "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
 
+    def test_bad_grid_type(self):
+        """Recreation ensure that bad grid type raises ValueError."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': False,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': True,
+            'grid_type': 'circle',  # intentionally bad gridtype
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
+
     def test_year_order(self):
         """Recreation ensure that end year < start year raise ValueError."""
         from natcap.invest.recreation import recmodel_client
