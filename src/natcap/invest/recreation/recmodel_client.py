@@ -302,7 +302,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         cell_size (float): dimensions of the grid cell in the projected units
             of `vector_path`
         out_grid_vector_path (string): path to the output ESRI shapefile
-            vector that contains a gridded version of `vector_path`
+            vector that contains a gridded version of `vector_path`, this file
+            should not exist before this call
 
     Returns:
         None
@@ -408,9 +409,10 @@ def _build_regression_coefficients(
     Parameters:
         response_vector_path (string): path to a single layer polygon vector.
         predictor_table_path (string): path to a CSV file with three columns
-            'id', 'path' and 'type' where 'path' indicates the full or
-            relative path to the `predictor_table_path` table for the spatial
-            predictor dataset and 'type' is one of
+            'id', 'path' and 'type'.  'id' is the unique ID for that predictor
+            and must be less than 10 characters long. 'path' indicates the
+            full or relative path to the `predictor_table_path` table for the
+            spatial predictor dataset. 'type' is one of:
                 'point_count': count # of points per response polygon
                 'point_nearest_distance': distance from nearest point to the
                     centroid of the response polygon
@@ -472,21 +474,7 @@ def _build_regression_coefficients(
 
     predictor_table = pygeoprocessing.get_lookup_from_csv(
         predictor_table_path, 'id')
-    del out_predictor_id_list[:]  # prepare for appending
-    for predictor_id in predictor_table.keys():
-        out_predictor_id_list.append(predictor_id)
-        if len(predictor_id) > 10:
-            short_predictor_id = predictor_id[:10]
-            LOGGER.warn(
-                '%s is too long for shapefile, truncating to %s',
-                predictor_id, short_predictor_id)
-            if short_predictor_id in predictor_table:
-                raise ValueError(
-                    "predictor_table id collision because we had to shorten "
-                    "a long id.")
-            predictor_table[short_predictor_id] = predictor_table[
-                predictor_id]
-            del predictor_table[predictor_id]
+    out_predictor_id_list[:] = predictor_table.keys()
 
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)

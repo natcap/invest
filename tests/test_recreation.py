@@ -195,36 +195,39 @@ class RecreationRegressionTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'scenario_results.csv'))
 
     def test_square_grid_regression(self):
-        """Recreation base regression on square gridded AOI.
-
-        Executes Recreation model with default data and default arguments.
-        """
+        """Recreation square grid regression test."""
         from natcap.invest.recreation import recmodel_client
 
-        args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'compute_regression': False,
-            'cell_size': 20000.0,
-            'grid_aoi': True,
-            'grid_type': 'square',
-            'start_year': '2005',
-            'end_year': '2014',
-            'results_suffix': u'',
-            'workspace_dir': self.workspace_dir,
-        }
+        out_grid_vector_path = os.path.join(
+            self.workspace_dir, 'square_grid_vector_path.shp')
 
-        recmodel_client.execute(args)
+        recmodel_client._grid_vector(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'square', 20000.0,
+            out_grid_vector_path)
 
-        output_lines = open(os.path.join(
-            self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
-        expected_lines = open(os.path.join(
-            REGRESSION_DATA, 'expected_monthly_table_for_square_grid.csv'),
-                              'rb').readlines()
+        expected_grid_vector_path = os.path.join(
+            REGRESSION_DATA, 'square_grid_vector_path.shp')
 
-        if output_lines != expected_lines:
-            raise ValueError(
-                "Output table not the same as input. "
-                "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 0.0)
+
+
+    def test_hex_grid_regression(self):
+        """Recreation hex grid regression test."""
+        from natcap.invest.recreation import recmodel_client
+
+        out_grid_vector_path = os.path.join(
+            self.workspace_dir, 'hex_grid_vector_path.shp')
+
+        recmodel_client._grid_vector(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
+            out_grid_vector_path)
+
+        expected_grid_vector_path = os.path.join(
+            REGRESSION_DATA, 'hex_grid_vector_path.shp')
+
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 0.0)
 
 
     def test_no_grid_regression(self):
@@ -254,33 +257,85 @@ class RecreationRegressionTests(unittest.TestCase):
                 "Output table not the same as input. "
                 "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
 
-    def test_existing_output_shapefiles(self):
-        """Recreation test case when output files need to be overwritten."""
+    def test_predictor_id_too_long(self):
+        """Recreation test ID too long raises ValueError."""
         from natcap.invest.recreation import recmodel_client
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'compute_regression': False,
+            'compute_regression': True,
             'start_year': '2005',
             'end_year': '2014',
-            'grid_aoi': False,
+            'grid_aoi': True,
+            'grid_type': 'square',
+            'cell_size': 20000,
+            'predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors_id_too_long.csv'),
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
         }
 
-        recmodel_client.execute(args)
-        recmodel_client.execute(args)  # call again to overwrite output
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
 
-        output_lines = open(os.path.join(
-            self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
-        expected_lines = open(os.path.join(
-            REGRESSION_DATA, 'expected_monthly_table_for_no_grid.csv'),
-                              'rb').readlines()
+    def test_existing_output_shapefiles(self):
+        """Recreation grid test when output files need to be overwritten."""
+        from natcap.invest.recreation import recmodel_client
 
-        if output_lines != expected_lines:
-            raise ValueError(
-                "Output table not the same as input. "
-                "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
+        out_grid_vector_path = os.path.join(
+            self.workspace_dir, 'hex_grid_vector_path.shp')
+
+        recmodel_client._grid_vector(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
+            out_grid_vector_path)
+        # overwrite output
+        recmodel_client._grid_vector(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
+            out_grid_vector_path)
+
+        expected_grid_vector_path = os.path.join(
+            REGRESSION_DATA, 'hex_grid_vector_path.shp')
+
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 0.0)
+
+    def test_existing_regression_coef(self):
+        """Recreation test regression coefficients handle existing output."""
+        from natcap.invest.recreation import recmodel_client
+
+        response_vector_path = os.path.join(
+            self.workspace_dir, 'hex_grid_vector_path.shp')
+
+        recmodel_client._grid_vector(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
+            response_vector_path)
+
+        predictor_table_path = os.path.join(REGRESSION_DATA, 'predictors.csv')
+
+        tmp_indexed_vector_path = os.path.join(
+            self.workspace_dir, 'tmp_indexed_vector.shp')
+        tmp_fid_raster_path = os.path.join(
+            self.workspace_dir, 'tmp_fid_raster_path.shp')
+        out_coefficient_vector_path = os.path.join(
+            self.workspace_dir, 'out_coefficient_vector.shp')
+        out_predictor_id_list = []
+
+        recmodel_client._build_regression_coefficients(
+            response_vector_path, predictor_table_path,
+            tmp_indexed_vector_path, tmp_fid_raster_path,
+            out_coefficient_vector_path, out_predictor_id_list)
+
+        # build again to test against overwritting output
+        recmodel_client._build_regression_coefficients(
+            response_vector_path, predictor_table_path,
+            tmp_indexed_vector_path, tmp_fid_raster_path,
+            out_coefficient_vector_path, out_predictor_id_list)
+
+        expected_coeff_vector_path = os.path.join(
+            REGRESSION_DATA, 'test_regression_coefficients.shp')
+
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_coefficient_vector_path, expected_coeff_vector_path, 1e-4)
 
     def test_bad_grid_type(self):
         """Recreation ensure that bad grid type raises ValueError."""
@@ -324,7 +379,30 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
-    def test_year_out_of_range(self):
+    def test_start_year_out_of_range(self):
+        """Recreation that start_year out of range raise ValueError."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': True,
+            'start_year': '2219',  # start year ridiculously out of range
+            'end_year': '2250',
+            'grid_aoi': True,
+            'grid_type': 'hexagon',
+            'predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors.csv'),
+            'results_suffix': u'',
+            'scenario_predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
+
+    def test_end_year_out_of_range(self):
         """Recreation that end_year out of range raise ValueError."""
         from natcap.invest.recreation import recmodel_client
 
@@ -333,7 +411,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'cell_size': 7000.0,
             'compute_regression': True,
             'start_year': '2005',
-            'end_year': '2219',  # end years ridiculously out of range
+            'end_year': '2219',  # end year ridiculously out of range
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
