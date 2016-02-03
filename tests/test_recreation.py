@@ -160,6 +160,47 @@ class RecreationRegressionTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
+    def test_raster_sum_mean_no_nodata(self):
+        """Recreation test sum/mean if raster doesn't have nodata defined."""
+        from natcap.invest.recreation import recmodel_client
+
+        # The following raster has no nodata value
+        raster_path = os.path.join(REGRESSION_DATA, 'no_nodata_raster.tif')
+
+        response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
+        tmp_indexed_vector_path = os.path.join(
+            self.workspace_dir, 'tmp_indexed_vector.shp')
+        tmp_fid_raster_path = os.path.join(
+            self.workspace_dir, 'tmp_fid_raster.tif')
+        fid_values = recmodel_client._raster_sum_mean(
+            response_vector_path, raster_path, tmp_indexed_vector_path,
+            tmp_fid_raster_path)
+
+        # These constants were calculated by hand by Rich.
+        numpy.testing.assert_equal(fid_values['count'][0], 5178)
+        numpy.testing.assert_equal(fid_values['sum'][0], 67314)
+
+    def test_raster_sum_mean_nodata(self):
+        """Recreation test sum/mean if raster is all nodata."""
+        from natcap.invest.recreation import recmodel_client
+
+        # The following raster has no nodata value
+        raster_path = os.path.join(REGRESSION_DATA, 'nodata_raster.tif')
+
+        response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
+        tmp_indexed_vector_path = os.path.join(
+            self.workspace_dir, 'tmp_indexed_vector.shp')
+        tmp_fid_raster_path = os.path.join(
+            self.workspace_dir, 'tmp_fid_raster.tif')
+        fid_values = recmodel_client._raster_sum_mean(
+            response_vector_path, raster_path, tmp_indexed_vector_path,
+            tmp_fid_raster_path)
+
+        # These constants were calculated by hand by Rich.
+        numpy.testing.assert_equal(fid_values['count'][0], 0)
+        numpy.testing.assert_equal(fid_values['sum'][0], 0)
+        numpy.testing.assert_equal(fid_values['mean'][0], 0)
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @timeout(1.0)
