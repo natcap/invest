@@ -501,12 +501,7 @@ def _build_regression_coefficients(
             predictor_results = predictor_functions[predictor_type](
                 response_polygons_lookup, predictor_path)
         for feature_id, value in predictor_results.iteritems():
-            try:
-                feature = out_coefficent_layer.GetFeature(int(feature_id))
-            except:
-                LOGGER.error(
-                    'feature_id: %s type: %s', feature_id, type(feature_id))
-                raise
+            feature = out_coefficent_layer.GetFeature(int(feature_id))
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
     out_coefficent_layer = None
