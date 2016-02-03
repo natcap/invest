@@ -36,7 +36,7 @@ def calculate_weights(array, rounding=4):
     Returns:
         weights_list (list): list of normalized eigenvectors?
     """
-    PLACES = Decimal(10) ** -(rounding)
+    decimal_places = Decimal(10) ** -(rounding)
 
     # get eigenvalues and vectors
     evas, eves = sp.linalg.eig(array)
@@ -53,7 +53,7 @@ def calculate_weights(array, rounding=4):
     vector = [abs(e[0]) for e in normalized]
 
     # return nice rounded Decimal values with labels
-    return [Decimal(str(v)).quantize(PLACES) for v in vector]
+    return [Decimal(str(v)).quantize(decimal_places) for v in vector]
 
 
 def calculate_priority(table_uri):
@@ -158,7 +158,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
     Returns:
         unique_raster_values_count (dict): cell type with each raster value
-        transitions (dict):
+        transitions (dict): count of cells
     """
     cell_size = geoprocess.get_cell_size_from_uri(
         dataset_uri_list[0])
@@ -172,8 +172,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
     for dataset_uri in dataset_uri_list:
         unique_raster_values_count[dataset_uri] = \
-            geoprocess.unique_raster_values_count(
-                dataset_uri)
+            geoprocess.unique_raster_values_count(dataset_uri)
         lulc_codes.update(unique_raster_values_count[dataset_uri].keys())
 
     lulc_codes = list(lulc_codes)
@@ -199,7 +198,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
         return orig + dest
 
     counts = {}
-    for i in range(len(dataset_uri_list)-1):
+    for i in range(len(dataset_uri_list) - 1):
         orig_uri = geoprocess.temporary_filename()
         dest_uri = geoprocess.temporary_filename()
         multi_uri = geoprocess.temporary_filename()
@@ -233,8 +232,7 @@ def get_transition_set_count_from_uri(dataset_uri_list):
             "union")
 
         # get unique counts
-        counts[i] = geoprocess.unique_raster_values_count(
-            multi_uri, False)
+        counts[i] = geoprocess.unique_raster_values_count(multi_uri, False)
 
     restore_classes = {}
     for key in reclass_orig_dict:
@@ -247,14 +245,13 @@ def get_transition_set_count_from_uri(dataset_uri_list):
         transitions[key] = {}
         for k in counts[key]:
             try:
-                orig = restore_classes[k % (2**shift)]
+                orig = restore_classes[k % (2 ** shift)]
             except KeyError:
                 orig = lulc_nodata
             try:
                 dest = restore_classes[k >> shift]
             except KeyError:
                 dest = lulc_nodata
-
             try:
                 transitions[key][orig][dest] = counts[key][k]
             except KeyError:
@@ -264,7 +261,14 @@ def get_transition_set_count_from_uri(dataset_uri_list):
 
 
 def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
-    """Create charts showing original, final, and change.
+    """Create charts showing statistics about land-cover change.
+
+    - Initial land-cover cell count
+    - Scenario land-cover cell count
+    - Land-cover percent change
+    - Land-cover percent total: initial, final, change
+    - Transition matrix
+    - Unconverted pixels list
 
     Args:
         cover_dict (dict): land cover {'cover_id': [before, after]}
@@ -473,8 +477,7 @@ def filter_fragments(input_uri, size, output_uri):
         # Label and count disconnected components (fragments)
         label_im, nb_labels = sp.ndimage.label(mask, four_connectedness)
         # Compute fragment sizes
-        fragment_sizes = \
-            sp.ndimage.sum(mask, label_im, range(nb_labels + 1))
+        fragment_sizes = sp.ndimage.sum(mask, label_im, range(nb_labels + 1))
         # List fragments
         fragment_labels = np.array(range(nb_labels + 1))
         # Discard large fragments
@@ -580,9 +583,7 @@ def execute(args):
         }
 
     """
-    ###
-    # overiding, non-standard field names
-    ###
+    # Overiding, non-standard field names
 
     # Preliminary tests
     if ('transition' in args) and ('suitability' in args):
@@ -590,7 +591,7 @@ def execute(args):
             'Transition and suitability tables are the same: ' + \
             args['transition'] + '. The model expects different tables.'
 
-    # transition table fields
+    # Transition table fields
     args["transition_id"] = "Id"
     args["percent_field"] = "Percent Change"
     args["area_field"] = "Area Change"
@@ -599,7 +600,7 @@ def execute(args):
     args["proximity_weight"] = "0.3"
     args["patch_field"] = "Patch ha"
 
-    # factors table fields
+    # Suitability factors table fields
     args["suitability_id"] = "Id"
     args["suitability_layer"] = "Layer"
     args["suitability_weight"] = "Wt"
@@ -607,14 +608,12 @@ def execute(args):
     args["distance_field"] = "Dist"
     args["suitability_cover_id"] = "Cover ID"
 
-    # exercise fields
+    # Exercise fields
     args["returns_cover_id"] = "Cover ID"
     args["returns_layer"] = "/Users/olwero/Dropbox/Work/Ecosystem_Services/"\
         "NatCap/Olympics/2014/Scenarios/Exercise/inputtest/returns.csv"
 
-    ###
-    # get parameters, set outputs
-    ###
+    # Get parameters, set outputs
     workspace = args["workspace_dir"]
 
     if not os.path.exists(workspace):
@@ -638,6 +637,8 @@ def execute(args):
     try:
         physical_suitability_weight = float(args["weight"])
     except KeyError:
+        LOGGER.info("Physical suitability weight not found in user arguments. "
+                    "Setting weight to 0.5")
         physical_suitability_weight = 0.5
 
     # output file names
@@ -676,19 +677,16 @@ def execute(args):
         intermediate_dir, "proximity_norm_%s" + suffix + ".tif")
     adjusted_suitability_name = os.path.join(
         intermediate_dir, "adjusted_suitability_%s" + suffix + ".tif")
-
     scenario_name = "scenario" + suffix + ".tif"
 
-    ###
-    # constants
-    ###
+    # Constants
     raster_format = "GTiff"
     transition_type = gdal.GDT_Int16
     transition_nodata = -1
     change_nodata = -9999
 
-    # value to multiply transition matrix entries (ie covert 10 point scale to
-    # 100 point scale)
+    # Value to multiply transition matrix entries
+    #    (ie covert 10 point scale to 100 point scale)
     transition_scale = 10
     distance_scale = 100
 
@@ -704,10 +702,7 @@ def execute(args):
     ds_type = "GTiff"
     driver = gdal.GetDriverByName(ds_type)
 
-    ###
-    # validate data
-    ###
-    # raise warning if nothing is going to happen
+    # Validate data
     if not any([args["calculate_transition"],
                 args["calculate_factors"],
                 args["override_layer"]]):
@@ -716,22 +711,18 @@ def execute(args):
         LOGGER.error(msg)
         raise ValueError(msg)
 
-    # transition table validation
-    # raise error if transition table provided, but not used
+    # Transition table validation
     if args["transition"] and not(args["calculate_transition"] or args[
             "calculate_factors"]):
         msg = "Transition table provided but not used."
         LOGGER.warn(msg)
-        # raise ValueError(msg)
 
     transition_dict = {}
     if args["calculate_transition"] or args["calculate_factors"]:
-        # load transition table
         transition_dict = geoprocess.get_lookup_from_csv(
             args["transition"],
             args["transition_id"])
 
-        # raise error if LULC contains cover id's not in transition table
         landcover_count_dict = geoprocess.unique_raster_values_count(
             landcover_uri)
         missing_lulc = set(landcover_count_dict).difference(
@@ -746,12 +737,10 @@ def execute(args):
             raise ValueError(msg)
 
         for cover_id in transition_dict:
-            # raise error if percent change for new LULC
             if (transition_dict[cover_id][args["percent_field"]] > 0) and not (
                     cover_id in landcover_count_dict):
                 msg = "Cover %i does not exist in LULC and therefore cannot "\
                       "have a percent change." % cover_id
-                LOGGER.error(msg)
                 raise ValueError(msg)
 
             # raise error if change by percent and area both specified
@@ -759,10 +748,9 @@ def execute(args):
                     transition_dict[cover_id][args["area_field"]] > 0):
                 msg = "Cover %i cannot have both an increase by percent and "\
                       "area." % cover_id
-                LOGGER.error(msg)
                 raise ValueError(msg)
 
-    # factor parameters validation
+    # Factor parameters validation
     if args["calculate_factors"]:
         pass
         # error if overall physical weight not in [0, 1] range
@@ -772,43 +760,18 @@ def execute(args):
         # if point or line, integer distance field only
         # error if same factor twice for same coverage
 
-    ###
-    # resample, align and rasterize data
-    ###
+    # Resample, align and rasterize data
     if args["calculate_priorities"]:
         LOGGER.info("Calculating priorities.")
         priorities_dict = calculate_priority(args["priorities_csv_uri"])
 
-    # check geographic extents, projections
-
-    # # validate resampling size
-    # if args["resolution"] != "":
-    #     if args["resolution"] < geoprocess.get_cell_size_from_uri(
-    #             landcover_uri):
-    #         msg = "The analysis resolution cannot be smaller than the input."
-    #         LOGGER.error(msg)
-    #         raise ValueError(msg)
-    #
-    #     else:
-    #         LOGGER.info("Resampling land cover.")
-    #         bounding_box = geoprocess.get_bounding_box(
-    #             landcover_uri)
-    #         geoprocess.resize_and_resample_dataset_uri(
-    #             landcover_uri,
-    #             bounding_box,
-    #             args["resolution"],
-    #             landcover_resample_uri,
-    #             "nearest")
-    #         LOGGER.debug("Changing landcover uri to resampled uri.")
-    #         landcover_uri = landcover_resample_uri
-
+    # Check geographic extents, projections
     cell_size = geoprocess.get_cell_size_from_uri(landcover_uri)
     suitability_transition_dict = {}
 
     if args["calculate_transition"]:
         for next_lulc in transition_dict:
             this_uri = os.path.join(workspace, transition_name % next_lulc)
-            # construct reclass dictionary
             reclass_dict = {}
             all_zeros = True
             for this_lulc in transition_dict:
@@ -817,7 +780,6 @@ def execute(args):
                 all_zeros = all_zeros and (value == 0)
 
             if not all_zeros:
-                # reclass lulc by reclass_dict
                 geoprocess.reclassify_dataset_uri(
                     landcover_uri,
                     reclass_dict,
@@ -826,7 +788,7 @@ def execute(args):
                     suitability_nodata,
                     exception_flag="values_required")
 
-                # changing nodata value so 0's no longer nodata
+                # Change nodata value so 0's no longer nodata
                 dataset = gdal.Open(this_uri, 1)
                 band = dataset.GetRasterBand(1)
                 nodata = band.SetNoDataValue(transition_nodata)
@@ -897,7 +859,7 @@ def execute(args):
                         factor_stem, suitability_field_name, distance)] =\
                         ds_uri
 
-                # point or line
+                # Point or line
                 elif shape_type in [1, 3, 8, 11, 13, 18, 21, 23, 28]:
                     # For features with no area, it's (almost) impossible to
                     # hit the center pixel, so we use ALL_TOUCHED=TRUE
@@ -1061,13 +1023,10 @@ def execute(args):
 
                 def weighted_op(*values):
                     result = (values[0] * weights_list[0]).astype(float)
-
                     for v, w in zip(values[1:], weights_list[1:]):
                         result += v * w
-
                     return result
 
-                # print('------files:', uri_list, weights_list)
                 geoprocess.vectorize_datasets(
                     list(uri_list),
                     weighted_op,
@@ -1123,12 +1082,10 @@ def execute(args):
             filter_fragments(suitability_dict[cover_id], size, output_uri)
             suitability_dict[cover_id] = output_uri
 
-    ###
-    # compute intermediate data if needed
-    ###
+    # Compute intermediate data if needed
 
-    # contraints raster (reclass using permability values, filters on
-    # clump size)
+    # Contraints raster
+    #   (reclass using permability values, filters on clump size)
     if args["calculate_constraints"]:
         LOGGER.info("Rasterizing constraints.")
         constraints_uri = args["constraints"]
@@ -1553,10 +1510,7 @@ def execute(args):
         datasource = None
         dataset = None
 
-    ###
-    # tabulate coverages
-    ###
-
+    # Tabulate coverages
     unique_raster_values_count, transitions = \
         get_transition_set_count_from_uri([landcover_uri, scenario_uri])
 
@@ -1677,7 +1631,7 @@ def execute(args):
         htm.write("<p><i>All target pixels converted.</i></p>")
     htm.write("\n</html>")
 
-    # input CSVs
+    # Input CSVs
     input_csv_list = []
 
     if args["calculate_priorities"]:
