@@ -228,10 +228,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
 
     def test_no_grid_regression(self):
-        """Recreation base regression on ungridded AOI.
-
-        Executes Recreation model with default data and default arguments.
-        """
+        """Recreation base regression on ungridded AOI."""
         from natcap.invest.recreation import recmodel_client
 
         args = {
@@ -245,6 +242,34 @@ class RecreationRegressionTests(unittest.TestCase):
         }
 
         recmodel_client.execute(args)
+
+        output_lines = open(os.path.join(
+            self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
+        expected_lines = open(os.path.join(
+            REGRESSION_DATA, 'expected_monthly_table_for_no_grid.csv'),
+                              'rb').readlines()
+
+        if output_lines != expected_lines:
+            raise ValueError(
+                "Output table not the same as input. "
+                "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
+
+    def test_existing_output_shapefiles(self):
+        """Recreation test case when output files need to be overwritten."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'compute_regression': False,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': False,
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+        }
+
+        recmodel_client.execute(args)
+        recmodel_client.execute(args)  # call again to overwrite output
 
         output_lines = open(os.path.join(
             self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
