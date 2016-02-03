@@ -2172,8 +2172,8 @@ def build_bin(options):
         python_binary = sys.executable
     python_exe = os.path.abspath(python_binary)
     if python_exe == sys.executable:
-        print yellow('Using system python. You are responsible for installing '
-                     'the correct version of InVEST')
+        print yellow('Using system python. For best results, install the '
+                     'correct version of InVEST before building binaries.')
     print 'Using python binary %s' % python_exe
 
     # Verify that natcap.invest is installed
@@ -2184,31 +2184,52 @@ def build_bin(options):
     # installation are installed flat (non-eggs). In practice, pyinstaller
     # doesn't know what to do with namespace packages when they are installed
     # as eggs, so we need to enforce this here.
-
+    print bold('\nChecking natcap namespace')
     for retry in [True, False]:
         natcap_eggs, natcap_noneggs = get_namespace_pkg_types('natcap',
-                                                            preferred='dir')
+                                                              preferred='dir')
         # If the package layout looks ok, break out of the loop.
         if len(natcap_eggs) == 0:
             break
 
+        invest_version = _invest_version(python_exe)
+        invest_install_string = (
+            "python setup.py bdist_wheel && "
+            "pip install natcap.invest=={version} "
+            "--no-index -f dist").format(
+                version=invest_version)
+
         if options.build_bin.fix_namespace and retry:
             for egg_name in natcap_eggs:
-                reinstall_pkg('natcap.' + egg_name, reinstall_as_egg=False)
+                if egg_name == 'invest':
+                    print yellow('WARNING: Reinstalling natcap.invest from '
+                                 'the current state of the source tree.')
+                    sh("pip uninstall -y natcap.invest && "
+                       "{install_invest}".format(
+                           install_invest=invest_install_string))
+                else:
+                    reinstall_pkg('natcap.' + egg_name, reinstall_as_egg=False)
         else:
-            print red("Building binaries requires natcap namespace packages to "
-                    "be installed 'flat', all in the same directory.\n"
-                    "These packages were installed as eggs but need to be "
-                    "installed as wheels:")
+            print (
+                "\nNatcap namespace issues:\n"
+                "Building binaries requires natcap namespace packages to \n"
+                "be installed 'flat', all in the same directory.\n"
+                "These packages were installed as eggs but need to be \n"
+                "installed as wheels for pyinstaller to work as expected:")
             for egg_name in natcap_eggs:
-                print red("* " + egg_name) + (
-                    ' (pip uninstall -y {pkg} && '
-                    'pip install {pkg})'.format(
-                        pkg='natcap.' + egg_name))
-                print yellow('\nRun `paver build_bin --fix-namespace` to correct')
-                raise BuildFailure('Invalid natcap package layout.  See the log '
-                                'for details')
+                if egg_name == 'invest':
+                    install_string = invest_install_string
+                else:
+                    install_string = (
+                        'pip install natcap.{pkg}'.format(pkg=egg_name))
 
+                print yellow("    %s" % install_string)
+            print '\nOr run `paver build_bin --fix-namespace`'
+            raise BuildFailure('Invalid natcap package layout. Some packages '
+                               'are installed as eggs: {eggs}'.format(
+                                   eggs=', '.join(natcap_eggs)))
+
+    print green('Natcap namespace installed correctly')
     pyi_repo = REPOS_DICT['pyinstaller']
     call_task('check_repo', options={
         'force_dev': options.build_bin.force_dev,
