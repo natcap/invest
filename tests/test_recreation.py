@@ -211,7 +211,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(100.0)
+    @timeout(1.0)
     def test_base_regression(self):
         """Recreation base regression test on sample data.
 
