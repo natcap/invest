@@ -8,7 +8,6 @@ import uuid
 import csv
 import zipfile
 import glob
-import datetime
 import hashlib
 import pickle
 import time
@@ -347,12 +346,16 @@ class RecModel(object):
         pud_aoi_vector = esri_driver.CopyDataSource(
             aoi_vector, out_aoi_pud_path)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
-        pud_id_list = [
+        pud_id_suffix_list = [
             'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
             'SEP', 'OCT', 'NOV', 'DEC']
-        for field_id in pud_id_list:
-            pud_aoi_layer.CreateField(
-                ogr.FieldDefn('PUD_%s' % field_id, ogr.OFTReal))
+        for field_suffix in pud_id_suffix_list:
+            field_id = 'PUD_%s' % field_suffix
+            # delete the field if it already exists
+            field_index = pud_aoi_layer.FindFieldIndex(str(field_id), 1)
+            if field_index >= 0:
+                pud_aoi_layer.DeleteField(field_index)
+            pud_aoi_layer.CreateField(ogr.FieldDefn(field_id, ogr.OFTReal))
 
         last_time = time.time()
         LOGGER.info('testing polygons against quadtree')
