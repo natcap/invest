@@ -69,7 +69,6 @@ def execute(args):
     initial_table_filepath = os.path.join(vars_dict['output_dir'], filename)
     _create_carbon_pool_initial_table_template(
         initial_table_filepath,
-        vars_dict['lulc_class_list'],
         vars_dict['code_to_lulc_dict'])
 
     filename = 'carbon_pool_transient_template%s.csv' % \
@@ -77,7 +76,6 @@ def execute(args):
     transient_table_filepath = os.path.join(vars_dict['output_dir'], filename)
     _create_carbon_pool_transient_table_template(
         transient_table_filepath,
-        vars_dict['lulc_class_list'],
         vars_dict['code_to_lulc_dict'])
 
     LOGGER.info('...Coastal Blue Carbon Preprocessor run complete.')
@@ -150,14 +148,12 @@ def _validate_inputs(vars_dict):
 
     # assert all raster values in lookup table
     raster_val_set = set()
-    for snapshot_idx in xrange(0, len(lulc_snapshot_list)):
+    for snapshot in lulc_snapshot_list:
         raster_val_set = raster_val_set.union(set(
-            geoprocess.unique_raster_values_uri(
-                lulc_snapshot_list[snapshot_idx])))
+            geoprocess.unique_raster_values_uri(snapshot)))
 
     code_set = set(lulc_lookup_dict.keys())
-    code_set.add(geoprocess.get_nodata_from_uri(
-        lulc_snapshot_list[snapshot_idx]))
+    code_set.add(geoprocess.get_nodata_from_uri(lulc_snapshot_list[0]))
 
     if raster_val_set.difference(code_set):
         msg = "These raster values are not in the lookup table: %s" % \
@@ -175,13 +171,23 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
     Returns:
         transition_set (set): a set of all types of transitions
     """
-    array_t1 = get_flattened_band(raster_t1_uri)
-    array_t2 = get_flattened_band(raster_t2_uri)
+    iter_r1 = geoprocess.iterblocks(raster_t1_uri)
+    transition_set = set()
 
-    transition_list = zip(array_t1, array_t2)
-    transition_set = set(transition_list)
+    for d, a1 in iter_r1:
+        a2 = read_from_raster(raster_t2_uri, d)
+        transition_list = zip(a1.flatten(), a2.flatten())
+        transition_set = transition_set.union(set(transition_list))
 
     return transition_set
+
+
+def read_from_raster(input_raster, offset_block):
+    ds = gdal.Open(input_raster)
+    band = ds.GetRasterBand(1)
+    a = band.ReadAsArray(**offset_block)
+    ds = None
+    return a
 
 
 def get_flattened_band(raster_uri):
@@ -210,7 +216,7 @@ def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
         lulc_to (int): lulc code of next cell
 
     Returns:
-        transition_matrix_dict (dict): dictionary of lulc transitions
+        carbon (str): direction of carbon flow
     """
     from_is_habitat = bool(
         lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat'])
@@ -228,9 +234,8 @@ def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
     elif not from_is_habitat and not to_is_habitat:
         return 'NCC'  # non-veg --> non-veg
     else:
-        raise Exception
-
-    return transition_matrix_dict
+        raise Exception('Unknown land cover transition.  Please check '
+                        'that your lulc lookup table is formatted correctly.')
 
 
 def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
@@ -318,13 +323,11 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         csv_file.write("\n,NCC (no-carbon-change)")
 
 
-def _create_carbon_pool_initial_table_template(
-        filepath, lulc_class_list, code_to_lulc_dict):
+def _create_carbon_pool_initial_table_template(filepath, code_to_lulc_dict):
     """Create carbon pool initial values table.
 
     Args:
         filepath (str): filepath to carbon pool initial conditions
-        lulc_class_list (list): list of lulc classes
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
     with open(filepath, 'w') as csv_file:
@@ -336,12 +339,11 @@ def _create_carbon_pool_initial_table_template(
 
 
 def _create_carbon_pool_transient_table_template(
-        filepath, lulc_class_list, code_to_lulc_dict):
+        filepath, code_to_lulc_dict):
     """Create carbon pool transient values table.
 
     Args:
         filepath (str): filepath to carbon pool initial conditions
-        lulc_class_list (list): list of lulc classes
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
     with open(filepath, 'w') as csv_file:

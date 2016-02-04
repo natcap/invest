@@ -69,8 +69,8 @@ class TestIO(unittest.TestCase):
         if os.path.exists(workspace):
             shutil.rmtree(workspace)
         os.mkdir(workspace)
-        lulc_lookup_uri = create_table(os.path.join(workspace,
-                                       'lulc_lookup.csv'), lulc_lookup_list)
+        lulc_lookup_uri = create_table(
+            os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
         lulc_transition_matrix_uri = create_table(
             os.path.join(workspace, 'lulc_transition_matrix.csv'),
             lulc_transition_matrix_list)
