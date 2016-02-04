@@ -237,7 +237,6 @@ def execute(args):
 
         # the last coefficient is the y intercept and has no id, thus
         # the [:-1] on the coefficients list
-        LOGGER.debug(se_est.shape)
         coefficents_string = '               estimate     stderr    t value\n'
         coefficents_string += '%-12s %+.3e %+.3e %+.3e\n' % (
             '(Intercept)', coefficents[-1], se_est[-1],

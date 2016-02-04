@@ -49,6 +49,8 @@ class TestLocalPyroRecServer(unittest.TestCase):
         multiprocessing.freeze_support()
         self.workspace_dir = tempfile.mkdtemp()
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     @timeout(10.0)
     def test_empty_server(self):
         """Recreation test a client call to custom server."""
@@ -120,6 +122,8 @@ class TestLocalRecServer(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'sample_data.csv'),
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_local_aoi(self):
         """Recreation test local AOI with local server."""
         aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
@@ -160,6 +164,8 @@ class RecreationRegressionTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_raster_sum_mean_no_nodata(self):
         """Recreation test sum/mean if raster doesn't have nodata defined."""
         from natcap.invest.recreation import recmodel_client
@@ -180,6 +186,8 @@ class RecreationRegressionTests(unittest.TestCase):
         numpy.testing.assert_equal(fid_values['count'][0], 5178)
         numpy.testing.assert_equal(fid_values['sum'][0], 67314)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_raster_sum_mean_nodata(self):
         """Recreation test sum/mean if raster is all nodata."""
         from natcap.invest.recreation import recmodel_client
@@ -203,7 +211,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(1.0)
+    @timeout(100.0)
     def test_base_regression(self):
         """Recreation base regression test on sample data.
 
@@ -235,6 +243,8 @@ class RecreationRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
             os.path.join(REGRESSION_DATA, 'scenario_results.csv'))
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_square_grid_regression(self):
         """Recreation square grid regression test."""
         from natcap.invest.recreation import recmodel_client
@@ -252,7 +262,35 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 0.0)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_all_metrics(self):
+        """Recreation test with all but trivial predictor metrics."""
+        from natcap.invest.recreation import recmodel_client
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 20000.0,
+            'compute_regression': True,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': True,
+            'grid_type': 'hexagon',
+            'predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors_all.csv'),
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+        }
+        recmodel_client.execute(args)
 
+        out_grid_vector_path = os.path.join(
+            self.workspace_dir, 'regression_coefficients.shp')
+        expected_grid_vector_path = os.path.join(
+            REGRESSION_DATA, 'trivial_regression_coefficients.shp')
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 1e-5)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hex_grid_regression(self):
         """Recreation hex grid regression test."""
         from natcap.invest.recreation import recmodel_client
@@ -270,7 +308,8 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 0.0)
 
-
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_grid_regression(self):
         """Recreation base regression on ungridded AOI."""
         from natcap.invest.recreation import recmodel_client
@@ -298,6 +337,8 @@ class RecreationRegressionTests(unittest.TestCase):
                 "Output table not the same as input. "
                 "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_predictor_id_too_long(self):
         """Recreation test ID too long raises ValueError."""
         from natcap.invest.recreation import recmodel_client
@@ -319,6 +360,8 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_existing_output_shapefiles(self):
         """Recreation grid test when output files need to be overwritten."""
         from natcap.invest.recreation import recmodel_client
@@ -340,6 +383,8 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 0.0)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
         from natcap.invest.recreation import recmodel_client
@@ -378,6 +423,8 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_coefficient_vector_path, expected_coeff_vector_path, 1e-4)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_absolute_regression_coef(self):
         """Recreation test regression coefficients from full path."""
         from natcap.invest.recreation import recmodel_client
@@ -429,6 +476,8 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_coefficient_vector_path, expected_coeff_vector_path, 1e-4)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_bad_grid_type(self):
         """Recreation ensure that bad grid type raises ValueError."""
         from natcap.invest.recreation import recmodel_client
@@ -448,6 +497,8 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_year_order(self):
         """Recreation ensure that end year < start year raise ValueError."""
         from natcap.invest.recreation import recmodel_client
@@ -471,6 +522,8 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_start_year_out_of_range(self):
         """Recreation that start_year out of range raise ValueError."""
         from natcap.invest.recreation import recmodel_client
@@ -494,6 +547,8 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_end_year_out_of_range(self):
         """Recreation that end_year out of range raise ValueError."""
         from natcap.invest.recreation import recmodel_client
