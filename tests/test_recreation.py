@@ -269,12 +269,13 @@ class RecreationRegressionTests(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(
                 REGRESSION_DATA, 'andros_aoi_with_extra_fields.shp'),
-            'cell_size': 20000.0,
             'compute_regression': True,
             'start_year': '2005',
             'end_year': '2014',
             'grid_aoi': False,
             'predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors_all.csv'),
+            'scenario_predictor_table_path': os.path.join(
                 REGRESSION_DATA, 'predictors_all.csv'),
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
@@ -287,6 +288,13 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'trivial_regression_coefficients.shp')
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1e-5)
+
+        out_scenario_path = os.path.join(
+            self.workspace_dir, 'scenario_results.shp')
+        expected_scenario_path = os.path.join(
+            REGRESSION_DATA, 'trivial_scenario_results.shp')
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_scenario_path, expected_scenario_path, 1e-5)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
