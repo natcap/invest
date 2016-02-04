@@ -268,7 +268,8 @@ class RecreationRegressionTests(unittest.TestCase):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
         args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'aoi_path': os.path.join(
+                REGRESSION_DATA, 'andros_aoi_with_extra_fields.shp'),
             'cell_size': 20000.0,
             'compute_regression': True,
             'start_year': '2005',
@@ -426,7 +427,7 @@ class RecreationRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_absolute_regression_coef(self):
-        """Recreation test regression coefficients from full path."""
+        """Recreation test validation from full path."""
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(
@@ -436,8 +437,7 @@ class RecreationRegressionTests(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
             response_vector_path)
 
-        predictor_table_path = os.path.join(
-            self.workspace_dir, 'predictors.csv')
+        predictor_table_path = 'predictors.csv' # os.path.join(self.workspace_dir, 'predictors.csv')
 
         # these are absolute paths for predictor data
         predictor_list = [
@@ -457,24 +457,8 @@ class RecreationRegressionTests(unittest.TestCase):
                 table_file.write(
                     '%s,%s,%s\n' % (predictor_id, path, predictor_type))
 
-        tmp_indexed_vector_path = os.path.join(
-            self.workspace_dir, 'tmp_indexed_vector.shp')
-        tmp_fid_raster_path = os.path.join(
-            self.workspace_dir, 'tmp_fid_raster_path.shp')
-        out_coefficient_vector_path = os.path.join(
-            self.workspace_dir, 'out_coefficient_vector.shp')
-        out_predictor_id_list = []
-
-        recmodel_client._build_regression_coefficients(
-            response_vector_path, predictor_table_path,
-            tmp_indexed_vector_path, tmp_fid_raster_path,
-            out_coefficient_vector_path, out_predictor_id_list)
-
-        expected_coeff_vector_path = os.path.join(
-            REGRESSION_DATA, 'test_regression_coefficients.shp')
-
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_coefficient_vector_path, expected_coeff_vector_path, 1e-4)
+        recmodel_client._validate_same_projection(
+            response_vector_path, predictor_table_path)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
