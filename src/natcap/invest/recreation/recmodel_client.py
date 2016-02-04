@@ -41,6 +41,9 @@ Pyro4.config.SERIALIZER = 'marshal'
 # format: http://www.gdal.org/drv_shapefile.html
 _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 
+# Have 5.0 seconds between timed progress outputs
+LOGGER_TIME_DELAY = 5.0
+
 # For now, this is the field name we use to mark the photo user "days"
 RESPONSE_ID = 'PUD_YR_AVG'
 SCENARIO_RESPONSE_ID = 'PUD_EST'
@@ -685,19 +688,18 @@ def _line_intersect_length(response_polygons_lookup, line_vector_path):
         A dictionary mapping feature IDs from `response_polygons_lookup`
         to line intersect length.
     """
-    start_time = time.time()
+    last_time = time.time()
     lines = _ogr_to_geometry_list(line_vector_path)
     line_length_lookup = {}  # map FID to intersecting line length
 
+    index = None
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
-        if time.time() - start_time > 5.0:
-            LOGGER.info(
+        last_time = delay_op(
+            last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 "%s line intersect length: %.2f%% complete",
                 os.path.basename(line_vector_path),
-                (100.0*index)/len(response_polygons_lookup))
-            start_time = time.time()
-
+                (100.0 * index)/len(response_polygons_lookup)))
         line_length = sum([
             (line.intersection(geometry)).length for line in lines])
         line_length_lookup[feature_id] = line_length
@@ -721,17 +723,17 @@ def _point_nearest_distance(response_polygons_lookup, point_vector_path):
         A dictionary mapping feature IDs from `response_polygons_lookup`
         to distance to nearest point.
     """
-    start_time = time.time()
+    last_time = time.time()
     points = _ogr_to_geometry_list(point_vector_path)
     point_distance_lookup = {}  # map FID to point count
+    index = None
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
-        if time.time() - start_time > 5.0:
-            LOGGER.info(
+        last_time = delay_op(
+            last_time, 5.0, lambda: LOGGER.info(
                 "%s point distance: %.2f%% complete",
                 os.path.basename(point_vector_path),
-                (100.0*index)/len(response_polygons_lookup))
-            start_time = time.time()
+                (100.0*index)/len(response_polygons_lookup)))
 
         point_distance_lookup[feature_id] = min([
             geometry.distance(point) for point in points])
@@ -755,18 +757,17 @@ def _point_count(response_polygons_lookup, point_vector_path):
         A dictionary mapping feature IDs from `response_polygons_lookup`
         to number of points in that polygon.
     """
-    start_time = time.time()
+    last_time = time.time()
     points = _ogr_to_geometry_list(point_vector_path)
     point_count_lookup = {}  # map FID to point count
+    index = None
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
-        if time.time() - start_time > 5.0:
-            LOGGER.info(
+        last_time = delay_op(
+            last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 "%s point count: %.2f%% complete",
                 os.path.basename(point_vector_path),
-                (100.0*index)/len(response_polygons_lookup))
-            start_time = time.time()
-
+                (100.0*index)/len(response_polygons_lookup)))
         point_count = len([
             point for point in points if geometry.contains(point)])
         point_count_lookup[feature_id] = point_count
@@ -1091,3 +1092,23 @@ def _validate_same_projection(base_vector_path, table_path):
         raise ValueError(
             "One or more of the projections in the table did not match the "
             "projection of the base vector")
+
+
+def delay_op(last_time, time_delay, func):
+    """Execute `func` if last_time + time_delay >= current time.
+
+    Parameters:
+        last_time (float): last time in seconds that `func` was triggered
+        time_delay (float): time to wait in seconds since last_time before
+            triggering `func`
+        func (function): parameterless function to invoke if
+         current_time >= last_time + time_delay
+
+    Returns:
+        If `func` was triggered, return the time which it was triggered in
+        seconds, otherwise return `last_time`.
+    """
+    if time.time() - last_time > time_delay:
+        func()
+        return time.time()
+    return last_time
