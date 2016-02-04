@@ -481,7 +481,8 @@ def _build_regression_coefficients(
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
         # Delete the field if it already exists
-        field_index = out_coefficent_layer.FindFieldIndex(predictor_id, 1)
+        field_index = out_coefficent_layer.FindFieldIndex(
+            str(predictor_id), 1)
         if field_index >= 0:
             out_coefficent_layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
@@ -791,12 +792,7 @@ def _ogr_to_geometry_list(vector_path):
         shapely_geometry = shapely.wkt.loads(feature_geometry.ExportToWkt())
         if not shapely_geometry.is_valid:
             shapely_geometry = shapely_geometry.buffer(0)
-        if shapely_geometry.is_valid:
-            geometry_list.append(shapely_geometry)
-        else:
-            LOGGER.error(
-                "Unable to fix broken geometry on FID %d in %s",
-                feature.GetFID(), vector_path)
+        geometry_list.append(shapely_geometry)
         feature_geometry = None
     layer = None
     ogr.DataSource.__swig_destroy__(vector)
