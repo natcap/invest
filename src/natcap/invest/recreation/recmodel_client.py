@@ -480,6 +480,10 @@ def _build_regression_coefficients(
 
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
+        # Delete the field if it already exists
+        field_index = out_coefficent_layer.FindFieldIndex(predictor_id, 1)
+        if field_index >= 0:
+            out_coefficent_layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
         out_coefficent_layer.CreateField(predictor_field)
 
