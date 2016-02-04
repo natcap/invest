@@ -486,6 +486,8 @@ def _build_regression_coefficients(
         if field_index >= 0:
             out_coefficent_layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
+        predictor_field.SetWidth(24)
+        predictor_field.SetPrecision(11)
         out_coefficent_layer.CreateField(predictor_field)
 
         predictor_path = _sanitize_path(
@@ -536,6 +538,8 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
     # make a random field name
     fid_field = str(uuid.uuid4())[-8:]
     fid_field_defn = ogr.FieldDefn(str(fid_field), ogr.OFTInteger)
+    fid_field_defn.SetWidth(24)
+    fid_field_defn.SetPrecision(11)
     fid_indexed_layer.CreateField(fid_field_defn)
     for feature in fid_indexed_layer:
         fid = feature.GetFID()
@@ -954,6 +958,9 @@ def _calculate_scenario(
         scenario_coefficent_layer.DeleteField(response_index)
 
     response_field = ogr.FieldDefn(response_id, ogr.OFTReal)
+    response_field.SetWidth(24)
+    response_field.SetPrecision(11)
+
     scenario_coefficent_layer.CreateField(response_field)
 
     for feature_id in xrange(scenario_coefficent_layer.GetFeatureCount()):
