@@ -398,14 +398,14 @@ class RecModel(object):
                 last_time = current_time
             poly_id, pud_list, pud_monthly_set = result_tuple
             poly_feat = pud_aoi_layer.GetFeature(poly_id)
-            for pud_index, pud_id in enumerate(pud_id_list):
+            for pud_index, pud_id in enumerate(pud_id_suffix_list):
                 poly_feat.SetField('PUD_%s' % pud_id, pud_list[pud_index])
             pud_aoi_layer.SetFeature(poly_feat)
 
             line = '%s,' % poly_id
             line += (
                 ",".join(['%s' % len(pud_monthly_set[header])
-                    for header in table_headers]))
+                          for header in table_headers]))
             line += '\n'  # final newline
             monthly_table.write(line)
 

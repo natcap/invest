@@ -131,7 +131,6 @@ class TestLocalRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
         out_vector_filename = 'pud.shp'
-        LOGGER.debug(out_vector_filename)
         self.recreation_server._calc_aggregated_points_in_aoi(
             aoi_path, self.workspace_dir, date_range, out_vector_filename)
 
@@ -274,8 +273,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'compute_regression': True,
             'start_year': '2005',
             'end_year': '2014',
-            'grid_aoi': True,
-            'grid_type': 'hexagon',
+            'grid_aoi': False,
             'predictor_table_path': os.path.join(
                 REGRESSION_DATA, 'predictors_all.csv'),
             'results_suffix': u'',

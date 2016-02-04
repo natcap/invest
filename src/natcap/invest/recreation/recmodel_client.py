@@ -853,18 +853,29 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
     sstot = numpy.sum((
         numpy.average(y_factors) -
         numpy.log1p(coefficient_matrix[:, 0])) ** 2)
-    r_sq = 1 - ssreg / sstot
-    r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / (
-        n_features - len(predictor_id_list) - 1)
-
     dof = n_features - len(predictor_id_list) - 1
-    std_err = numpy.sqrt(ssreg / dof)
-    sigma2 = numpy.sum((
-        y_factors - numpy.sum(
-            coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2) / dof
-    var_est = sigma2 * numpy.diag(numpy.linalg.pinv(
-        numpy.dot(coefficient_matrix[:, 1:].T, coefficient_matrix[:, 1:])))
-    se_est = numpy.sqrt(var_est)
+
+    if sstot == 0.0 or dof <= 0.0:
+        # this can happen if there is only one sample
+        r_sq = 1.0
+        r_sq_adj = 1.0
+    else:
+        r_sq = 1. - ssreg / sstot
+        r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / dof
+
+    if dof > 0:
+        std_err = numpy.sqrt(ssreg / dof)
+        sigma2 = numpy.sum((
+            y_factors - numpy.sum(
+                coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2) / dof
+        var_est = sigma2 * numpy.diag(numpy.linalg.pinv(
+            numpy.dot(
+                coefficient_matrix[:, 1:].T, coefficient_matrix[:, 1:])))
+        se_est = numpy.sqrt(var_est)
+    else:
+        LOGGER.warn("Linear model is under constrained with DOF=%d", dof)
+        std_err = sigma2 = numpy.nan
+        se_est = var_est = [numpy.nan] * coefficient_matrix.shape[0]
 
     return coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est
 
