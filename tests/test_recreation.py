@@ -165,6 +165,20 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_data_missing_in_predictors(self):
+        """Recreation raise exception if predictor data missing."""
+        from natcap.invest.recreation import recmodel_client
+
+        response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
+        table_path = os.path.join(
+            REGRESSION_DATA, 'predictors_data_missing.csv')
+
+        with self.assertRaises(ValueError):
+            recmodel_client._validate_same_projection(
+                response_vector_path, table_path)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_raster_sum_mean_no_nodata(self):
         """Recreation test sum/mean if raster doesn't have nodata defined."""
         from natcap.invest.recreation import recmodel_client

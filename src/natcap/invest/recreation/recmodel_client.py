@@ -1087,7 +1087,7 @@ def _validate_same_projection(base_vector_path, table_path):
         else:
             vector = ogr.Open(path)
             if vector is None:
-                LOGGER.error("%s did not load", path)
+                raise ValueError("%s did not load", path)
             layer = vector.GetLayer()
             ref = osr.SpatialReference(layer.GetSpatialRef().ExportToWkt())
             layer = None
