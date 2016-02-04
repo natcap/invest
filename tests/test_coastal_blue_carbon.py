@@ -226,7 +226,7 @@ class TestPreprocessor(unittest.TestCase):
         args = get_preprocessor_args(1)
         preprocessor.execute(args)
         trans_csv = os.path.join(
-            self.args['workspace_dir'],
+            args['workspace_dir'],
             'outputs_preprocessor',
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
@@ -239,13 +239,13 @@ class TestPreprocessor(unittest.TestCase):
         args2 = get_preprocessor_args(2)
         preprocessor.execute(args2)
         trans_csv = os.path.join(
-            self.args2['workspace_dir'],
+            args2['workspace_dir'],
             'outputs_preprocessor',
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
         self.assertTrue(lines[2][:].startswith('Z,disturb,accum'))
-        shutil.rmtree(self.args2['workspace_dir'])
+        shutil.rmtree(args2['workspace_dir'])
 
     def tearDown(self):
         pass
