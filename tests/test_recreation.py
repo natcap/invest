@@ -457,8 +457,13 @@ class RecreationRegressionTests(unittest.TestCase):
                 table_file.write(
                     '%s,%s,%s\n' % (predictor_id, path, predictor_type))
 
-        recmodel_client._validate_same_projection(
-            response_vector_path, predictor_table_path)
+        try:
+            recmodel_client._validate_same_projection(
+                response_vector_path, predictor_table_path)
+        except ValueError:
+            self.fail(
+                "_validate_same_projection raised ValueError unexpectedly!")
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
