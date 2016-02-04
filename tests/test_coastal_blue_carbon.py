@@ -12,6 +12,13 @@ from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
 from pygeoprocessing.testing import scm
 
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data',
+    'Base_Data', 'Freshwater')
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'sdr')
+
 pp = pprint.PrettyPrinter(indent=4)
 
 
