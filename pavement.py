@@ -1883,6 +1883,8 @@ def check(options):
                     importlib.import_module(import_name)
                 except ImportError:
                     raise missing_req
+            except ValueError:
+                raise pkg_resources.VersionConflict(import_name)
 
             pkg = __import__(import_name)
             print "Python package {ok}: {pkg} {ver} (meets {req})".format(
@@ -1896,12 +1898,19 @@ def check(options):
         except (pkg_resources.VersionConflict,
                 pkg_resources.DistributionNotFound) as conflict:
             if not hasattr(conflict, 'report'):
+                if isinstance(conflict, pkg_resources.VersionConflict):
+                    report = ('{pkg} {imported_version} is installed but '
+                              '{expected_version} is required').format(
+                                      pkg=pkg_req.project_name,
+                                      expected_version=requirement,
+                                      imported_version=pkg.__version__)
+                else:
+                    # When the distribution can't be found.
+                    report = ('Package not found:{pkg_req}').format(
+                        pkg_req=requirement)
+            else:
                 # Setuptools introduced report() in v6.1
-                print ('{error} Setuptools is very out of date. '
-                    'Upgrade and try again'.format(error=ERROR))
-                if not options.check.allow_errors:
-                    raise BuildFailure('Setuptools is very out of date. '
-                                    'Upgrade and try again')
+                report = conflict.report()
 
             if severity == required:
                 if install_msg is None:
@@ -1909,7 +1918,7 @@ def check(options):
                 else:
                     fmt_install_msg = '\nInstall this package via:\n    ' + install_msg
                 print 'Python package {error} {report} {msg}'.format(error=ERROR,
-                                                      report=conflict.report(),
+                                                      report=report,
                                                       msg=fmt_install_msg)
                 errors_found = True
             elif severity == lib_needed:
@@ -1918,12 +1927,12 @@ def check(options):
                         '{warning} {report}  This library requires appropriate '
                         'headers to compile the python '
                         'package.').format(warning=WARNING,
-                                           report=conflict.report())
+                                           report=report)
                 else:
                     print ('{warning} {report}.  You may need to upgrade your '
                            'development headers along with the python '
                            'package.').format(warning=WARNING,
-                                              report=conflict.report())
+                                              report=report)
                 warnings_found = True
             elif severity == 'install_managed':
                 print ('{warning} {pkg} is required, but will be '
@@ -1932,7 +1941,7 @@ def check(options):
                             pkg=requirement)
             else:  # severity is 'suggested'
                 print '{warning} {report}'.format(warning=WARNING,
-                                                  report=conflict.report())
+                                                  report=report)
                 warnings_found = True
 
         except ImportError:
