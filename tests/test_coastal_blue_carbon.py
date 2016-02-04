@@ -10,6 +10,7 @@ import numpy as np
 from osgeo import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
+from pygeoprocessing.testing import scm
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -172,6 +173,8 @@ class TestIO(unittest.TestCase):
     def setUp(self):
         pass
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_get_inputs(self):
         from natcap.invest.coastal_blue_carbon import io
         args = get_args()
@@ -194,6 +197,8 @@ class TestModel(unittest.TestCase):
     def setUp(self):
         pass
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_model_run(self):
         """Test main model 'run' function."""
         from natcap.invest.coastal_blue_carbon \
@@ -221,6 +226,8 @@ class TestPreprocessor(unittest.TestCase):
     def setUp(self):
         pass
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_preprocessor(self):
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = get_preprocessor_args(1)
@@ -234,6 +241,8 @@ class TestPreprocessor(unittest.TestCase):
         self.assertTrue(lines[2][:].startswith('Z,,accum'))
         shutil.rmtree(args['workspace_dir'])
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_preprocessor_2(self):
         from natcap.invest.coastal_blue_carbon import preprocessor
         args2 = get_preprocessor_args(2)
