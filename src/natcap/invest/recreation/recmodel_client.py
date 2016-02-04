@@ -488,12 +488,8 @@ def _build_regression_coefficients(
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
         out_coefficent_layer.CreateField(predictor_field)
 
-        raw_path = predictor_table[predictor_id]['path']
-        if os.path.isabs(raw_path):
-            predictor_path = raw_path
-        else:  # assume relative path w.r.t. the response table
-            predictor_path = os.path.join(
-                os.path.dirname(predictor_table_path), raw_path)
+        predictor_path = _sanitize_path(
+            predictor_table_path, predictor_table[predictor_id]['path'])
 
         predictor_type = predictor_table[predictor_id]['type']
 
@@ -1068,11 +1064,7 @@ def _validate_same_projection(base_vector_path, table_path):
 
     invalid_projections = False
     for raw_path in data_paths:
-        if os.path.isabs(raw_path):
-            path = raw_path
-        else:
-            # assume relative path
-            path = os.path.join(os.path.dirname(table_path), raw_path)
+        path = _sanitize_path(table_path, raw_path)
 
         def error_handler(err_level, err_no, err_msg):
             """Empty error handler to avoid stderr output."""
@@ -1123,3 +1115,11 @@ def delay_op(last_time, time_delay, func):
         func()
         return time.time()
     return last_time
+
+
+def _sanitize_path(base_path, raw_path):
+    """Return `path` if absolute, or make absolute local to `base_path`."""
+    if os.path.isabs(raw_path):
+        return raw_path
+    else:  # assume relative path w.r.t. the response table
+        return os.path.join(os.path.dirname(base_path), raw_path)
