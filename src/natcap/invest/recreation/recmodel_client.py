@@ -32,7 +32,7 @@ LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
 RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
 
-# 'marshale' serializer lets us pass null bytes in strings unlike the default
+# 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
 
 # These are the expected extensions associated with an ESRI Shapefile
@@ -299,7 +299,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     original vector.
 
     Parameters:
-        vector_path (string): path to an OGR compatable polygon vector type
+        vector_path (string): path to an OGR compatible polygon vector type
         grid_type (string): one of "square" or "hexagon"
         cell_size (float): dimensions of the grid cell in the projected units
             of `vector_path`
@@ -333,7 +333,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
     extent = vector_layer.GetExtent()  # minx maxx miny maxy
     if grid_type == 'hexagon':
-        # calculate the inner domensions of the hexagons
+        # calculate the inner dimensions of the hexagons
         grid_width = extent[1] - extent[0]
         grid_height = extent[3] - extent[2]
         delta_short_x = cell_size * 0.25
@@ -880,7 +880,7 @@ def _calculate_scenario(
 
     Parameters:
         base_aoi_path (string): path to the a polygon vector that was used
-            to build the original regresssion.  Geometry will be copied for
+            to build the original regression.  Geometry will be copied for
             `scenario_results_path` output vector.
         response_id (string): text ID of response variable to write to
             the scenario result
