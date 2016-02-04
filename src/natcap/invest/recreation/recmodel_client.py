@@ -283,10 +283,10 @@ def execute(args):
     for file_id in _TMP_BASE_FILES:
         file_path = file_registry[file_id]
         try:
-            if file_path.endswith('.shp'):
+            if file_path.endswith('.shp') and os.path.exists(file_path):
                 driver = ogr.GetDriverByName('ESRI Shapefile')
                 driver.DeleteDataSource(file_path)
-            elif os.path.exists(file_path):
+            else:
                 os.remove(file_path)
         except OSError:
             pass  # let it go
