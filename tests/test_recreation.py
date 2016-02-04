@@ -179,6 +179,51 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_data_different_projection(self):
+        """Recreation raise exception if data in different projection."""
+        from natcap.invest.recreation import recmodel_client
+
+        response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
+        table_path = os.path.join(
+            REGRESSION_DATA, 'predictors_wrong_projection.csv')
+
+        with self.assertRaises(ValueError):
+            recmodel_client._validate_same_projection(
+                response_vector_path, table_path)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_different_tables(self):
+        """Recreation exception if scenario ids different than predictor."""
+        from natcap.invest.recreation import recmodel_client
+
+        base_table_path = os.path.join(
+            REGRESSION_DATA, 'predictors_data_missing.csv')
+        scenario_table_path = os.path.join(
+            REGRESSION_DATA, 'predictors_wrong_projection.csv')
+
+        with self.assertRaises(ValueError):
+            recmodel_client._validate_same_ids_and_types(
+                base_table_path, scenario_table_path)
+
+    def test_delay_op(self):
+        """Recreation coverage of delay op function."""
+        from natcap.invest.recreation import recmodel_client
+
+        # not much to test here but that the function is invoked
+        # guarantee the time has exceeded since we can't have negative time
+        last_time = -1.0
+        time_delay = 1.0
+        called = [False]
+
+        def func():
+            """Set `called` to True."""
+            called[0] = True
+        recmodel_client.delay_op(last_time, time_delay, func)
+        self.assertTrue(called[0])
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_raster_sum_mean_no_nodata(self):
         """Recreation test sum/mean if raster doesn't have nodata defined."""
         from natcap.invest.recreation import recmodel_client

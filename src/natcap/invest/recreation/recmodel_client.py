@@ -286,7 +286,7 @@ def execute(args):
             if file_path.endswith('.shp'):
                 driver = ogr.GetDriverByName('ESRI Shapefile')
                 driver.DeleteDataSource(file_path)
-            else:
+            elif os.path.exists(file_path):
                 os.remove(file_path)
         except OSError:
             pass  # let it go
