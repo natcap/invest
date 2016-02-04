@@ -56,75 +56,135 @@ def create_table(uri, rows_list):
     return uri
 
 
+def get_args():
+    band_matrices = [np.ones((2, 2))]
+    srs = pygeotest.sampledata.SRS_WILLAMETTE
+
+    path = os.path.dirname(os.path.realpath(__file__))
+    workspace = os.path.join(path, 'workspace')
+    if os.path.exists(workspace):
+        shutil.rmtree(workspace)
+    os.mkdir(workspace)
+    lulc_lookup_uri = create_table(
+        os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
+    lulc_transition_matrix_uri = create_table(
+        os.path.join(workspace, 'lulc_transition_matrix.csv'),
+        lulc_transition_matrix_list)
+    carbon_pool_initial_uri = create_table(
+        os.path.join(workspace, 'carbon_pool_initial.csv'),
+        carbon_pool_initial_list)
+    carbon_pool_transient_uri = create_table(
+        os.path.join(workspace, 'carbon_pool_transient.csv'),
+        carbon_pool_transient_list)
+    raster_0_uri = pygeotest.create_raster_on_disk(
+        band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+        datatype=gdal.GDT_Int32, filename=os.path.join(
+            workspace, 'raster_0.tif'))
+    raster_1_uri = pygeotest.create_raster_on_disk(
+        band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+        datatype=gdal.GDT_Int32, filename=os.path.join(
+            workspace, 'raster_1.tif'))
+    raster_2_uri = pygeotest.create_raster_on_disk(
+        band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+        datatype=gdal.GDT_Int32, filename=os.path.join(
+            workspace, 'raster_2.tif'))
+    lulc_baseline_map_uri = raster_0_uri
+    lulc_transition_maps_list = [raster_1_uri, raster_2_uri]
+
+    args = {
+        'workspace_dir': workspace,
+        'results_suffix': 'test',
+        'lulc_lookup_uri': lulc_lookup_uri,
+        'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
+        'lulc_baseline_map_uri': raster_0_uri,
+        'lulc_transition_maps_list': [raster_1_uri, raster_2_uri],
+        'lulc_transition_years_list': [2000, 2005],
+        'analysis_year': 2010,
+        'carbon_pool_initial_uri': carbon_pool_initial_uri,
+        'carbon_pool_transient_uri': carbon_pool_transient_uri,
+        'do_economic_analysis': True,
+        'do_price_table': False,
+        'price': 2.,
+        'interest_rate': 5.,
+        'price_table_uri': None,
+        'discount_rate': 2.
+    }
+
+    return args
+
+
+def get_preprocessor_args(args_choice):
+    band_matrices_zeros = [np.zeros((2, 2))]
+    band_matrices_ones = [np.ones((2, 2))]
+    srs = pygeotest.sampledata.SRS_WILLAMETTE
+
+    path = os.path.dirname(os.path.realpath(__file__))
+    workspace = os.path.join(path, 'workspace')
+    if os.path.exists(workspace):
+        shutil.rmtree(workspace)
+    os.mkdir(workspace)
+
+    lulc_lookup_uri = create_table(
+        os.path.join(workspace, 'lulc_lookup.csv'),
+        lulc_lookup_list)
+
+    raster_0_uri = pygeotest.create_raster_on_disk(
+        band_matrices_ones, srs.origin, srs.projection, -1,
+        srs.pixel_size(100), datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_0.tif'))
+    raster_1_uri = pygeotest.create_raster_on_disk(
+        band_matrices_ones, srs.origin, srs.projection, -1,
+        srs.pixel_size(100), datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_1.tif'))
+    raster_2_uri = pygeotest.create_raster_on_disk(
+        band_matrices_ones, srs.origin, srs.projection, -1,
+        srs.pixel_size(100), datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_2.tif'))
+    raster_3_uri = pygeotest.create_raster_on_disk(
+        band_matrices_zeros, srs.origin, srs.projection, -1,
+        srs.pixel_size(100), datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_3.tif'))
+
+    args = {
+        'workspace_dir': workspace,
+        'results_suffix': 'test',
+        'lulc_lookup_uri': lulc_lookup_uri,
+        'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
+    }
+
+    args2 = {
+        'workspace_dir': workspace,
+        'results_suffix': 'test',
+        'lulc_lookup_uri': lulc_lookup_uri,
+        'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_3_uri]
+    }
+
+    if args_choice == 1:
+        return args
+    else:
+        return args2
+
+
 class TestIO(unittest.TestCase):
 
     """Test io library functions."""
 
     def setUp(self):
-        band_matrices = [np.ones((2, 2))]
-        srs = pygeotest.sampledata.SRS_WILLAMETTE
-
-        path = os.path.dirname(os.path.realpath(__file__))
-        workspace = os.path.join(path, 'workspace')
-        if os.path.exists(workspace):
-            shutil.rmtree(workspace)
-        os.mkdir(workspace)
-        lulc_lookup_uri = create_table(
-            os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
-        lulc_transition_matrix_uri = create_table(
-            os.path.join(workspace, 'lulc_transition_matrix.csv'),
-            lulc_transition_matrix_list)
-        carbon_pool_initial_uri = create_table(
-            os.path.join(workspace, 'carbon_pool_initial.csv'),
-            carbon_pool_initial_list)
-        carbon_pool_transient_uri = create_table(
-            os.path.join(workspace, 'carbon_pool_transient.csv'),
-            carbon_pool_transient_list)
-        raster_0_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
-            datatype=gdal.GDT_Int32, filename=os.path.join(
-                workspace, 'raster_0.tif'))
-        raster_1_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
-            datatype=gdal.GDT_Int32, filename=os.path.join(
-                workspace, 'raster_1.tif'))
-        raster_2_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
-            datatype=gdal.GDT_Int32, filename=os.path.join(
-                workspace, 'raster_2.tif'))
-        lulc_baseline_map_uri = raster_0_uri
-        lulc_transition_maps_list = [raster_1_uri, raster_2_uri]
-
-        self.args = {
-            'workspace_dir': workspace,
-            'results_suffix': 'test',
-            'lulc_lookup_uri': lulc_lookup_uri,
-            'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
-            'lulc_baseline_map_uri': raster_0_uri,
-            'lulc_transition_maps_list': [raster_1_uri, raster_2_uri],
-            'lulc_transition_years_list': [2000, 2005],
-            'analysis_year': 2010,
-            'carbon_pool_initial_uri': carbon_pool_initial_uri,
-            'carbon_pool_transient_uri': carbon_pool_transient_uri,
-            'do_economic_analysis': True,
-            'do_price_table': False,
-            'price': 2.,
-            'interest_rate': 5.,
-            'price_table_uri': None,
-            'discount_rate': 2.
-        }
+        pass
 
     def test_get_inputs(self):
         from natcap.invest.coastal_blue_carbon import io
-        d = io.get_inputs(self.args)
+        args = get_args()
+        d = io.get_inputs(args)
         self.assertTrue(d['lulc_to_Hb'][0] == 0.0)
         self.assertTrue(d['lulc_to_Hb'][1] == 1.0)
         self.assertTrue(len(d['price_t']) == 11)
         self.assertTrue(len(d['snapshot_years']) == 3)
         self.assertTrue(len(d['transition_years']) == 2)
+        shutil.rmtree(args['workspace_dir'])
 
     def tearDown(self):
-        shutil.rmtree(self.args['workspace_dir'])
+        pass
 
 
 class TestModel(unittest.TestCase):
@@ -132,65 +192,14 @@ class TestModel(unittest.TestCase):
     """Test main model functions."""
 
     def setUp(self):
-        band_matrices = [np.ones((2, 2))]
-        srs = pygeotest.sampledata.SRS_WILLAMETTE
-
-        path = os.path.dirname(os.path.realpath(__file__))
-        workspace = os.path.join(path, 'workspace')
-        if os.path.exists(workspace):
-            shutil.rmtree(workspace)
-        os.mkdir(workspace)
-        lulc_lookup_uri = create_table(
-            os.path.join(workspace, 'lulc_lookup.csv'),
-            lulc_lookup_list)
-        lulc_transition_matrix_uri = create_table(
-            os.path.join(workspace, 'lulc_transition_matrix.csv'),
-            lulc_transition_matrix_list)
-        carbon_pool_initial_uri = create_table(
-            os.path.join(workspace, 'carbon_pool_initial.csv'),
-            carbon_pool_initial_list)
-        carbon_pool_transient_uri = create_table(
-            os.path.join(workspace, 'carbon_pool_transient.csv'),
-            carbon_pool_transient_list)
-        raster_0_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
-            datatype=gdal.GDT_Int32, filename=os.path.join(
-                workspace, 'raster_0.tif'))
-        raster_1_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
-            datatype=gdal.GDT_Int32, filename=os.path.join(
-                workspace, 'raster_1.tif'))
-        raster_2_uri = pygeotest.create_raster_on_disk(
-            band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
-            datatype=gdal.GDT_Int32, filename=os.path.join(
-                workspace, 'raster_2.tif'))
-        lulc_baseline_map_uri = raster_0_uri
-        lulc_transition_maps_list = [raster_1_uri, raster_2_uri]
-
-        self.args = {
-            'workspace_dir': workspace,
-            'results_suffix': 'test',
-            'lulc_lookup_uri': lulc_lookup_uri,
-            'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
-            'lulc_baseline_map_uri': raster_0_uri,
-            'lulc_transition_maps_list': [raster_1_uri, raster_2_uri],
-            'lulc_transition_years_list': [2000, 2005],
-            'analysis_year': 2010,
-            'carbon_pool_initial_uri': carbon_pool_initial_uri,
-            'carbon_pool_transient_uri': carbon_pool_transient_uri,
-            'do_economic_analysis': True,
-            'do_price_table': False,
-            'price': 2.,
-            'interest_rate': 5.,
-            'price_table_uri': None,
-            'discount_rate': 2.
-        }
+        pass
 
     def test_model_run(self):
         """Test main model 'run' function."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
-        cbc.execute(self.args)
+        args = get_args()
+        cbc.execute(args)
         output_raster = os.path.join(
             os.path.split(os.path.realpath(__file__))[0],
             'workspace/outputs_core/net_present_value_test.tif')
@@ -199,9 +208,10 @@ class TestModel(unittest.TestCase):
         a = band.ReadAsArray()
         ds = None
         np.testing.assert_almost_equal(a[0, 0], 45.731491, decimal=5)
+        shutil.rmtree(args['workspace_dir'])
 
     def tearDown(self):
-        shutil.rmtree(self.args['workspace_dir'])
+        pass
 
 
 class TestPreprocessor(unittest.TestCase):
@@ -209,54 +219,12 @@ class TestPreprocessor(unittest.TestCase):
     """Test preprocessor library functions."""
 
     def setUp(self):
-        band_matrices_zeros = [np.zeros((2, 2))]
-        band_matrices_ones = [np.ones((2, 2))]
-        srs = pygeotest.sampledata.SRS_WILLAMETTE
-
-        path = os.path.dirname(os.path.realpath(__file__))
-        workspace = os.path.join(path, 'workspace')
-        if os.path.exists(workspace):
-            shutil.rmtree(workspace)
-        os.mkdir(workspace)
-
-        lulc_lookup_uri = create_table(
-            os.path.join(workspace, 'lulc_lookup.csv'),
-            lulc_lookup_list)
-
-        raster_0_uri = pygeotest.create_raster_on_disk(
-            band_matrices_ones, srs.origin, srs.projection, -1,
-            srs.pixel_size(100), datatype=gdal.GDT_Int32,
-            filename=os.path.join(workspace, 'raster_0.tif'))
-        raster_1_uri = pygeotest.create_raster_on_disk(
-            band_matrices_ones, srs.origin, srs.projection, -1,
-            srs.pixel_size(100), datatype=gdal.GDT_Int32,
-            filename=os.path.join(workspace, 'raster_1.tif'))
-        raster_2_uri = pygeotest.create_raster_on_disk(
-            band_matrices_ones, srs.origin, srs.projection, -1,
-            srs.pixel_size(100), datatype=gdal.GDT_Int32,
-            filename=os.path.join(workspace, 'raster_2.tif'))
-        raster_3_uri = pygeotest.create_raster_on_disk(
-            band_matrices_zeros, srs.origin, srs.projection, -1,
-            srs.pixel_size(100), datatype=gdal.GDT_Int32,
-            filename=os.path.join(workspace, 'raster_3.tif'))
-
-        self.args = {
-            'workspace_dir': workspace,
-            'results_suffix': 'test',
-            'lulc_lookup_uri': lulc_lookup_uri,
-            'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
-        }
-
-        self.args2 = {
-            'workspace_dir': workspace,
-            'results_suffix': 'test',
-            'lulc_lookup_uri': lulc_lookup_uri,
-            'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_3_uri]
-        }
+        pass
 
     def test_preprocessor(self):
         from natcap.invest.coastal_blue_carbon import preprocessor
-        preprocessor.execute(self.args)
+        args = get_preprocessor_args(1)
+        preprocessor.execute(args)
         trans_csv = os.path.join(
             self.args['workspace_dir'],
             'outputs_preprocessor',
@@ -264,10 +232,12 @@ class TestPreprocessor(unittest.TestCase):
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
         self.assertTrue(lines[2][:].startswith('Z,,accum'))
+        shutil.rmtree(args['workspace_dir'])
 
     def test_preprocessor_2(self):
         from natcap.invest.coastal_blue_carbon import preprocessor
-        preprocessor.execute(self.args2)
+        args2 = get_preprocessor_args(2)
+        preprocessor.execute(args2)
         trans_csv = os.path.join(
             self.args2['workspace_dir'],
             'outputs_preprocessor',
@@ -275,9 +245,10 @@ class TestPreprocessor(unittest.TestCase):
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
         self.assertTrue(lines[2][:].startswith('Z,disturb,accum'))
+        shutil.rmtree(self.args2['workspace_dir'])
 
     def tearDown(self):
-        shutil.rmtree(self.args['workspace_dir'])
+        pass
 
 
 if __name__ == '__main__':
