@@ -28,6 +28,7 @@ import shapely.prepared
 
 import natcap.versioner
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
+from . import recmodel_client
 
 __version__ = natcap.versioner.get_version('natcap.invest.recmodel_server')
 
@@ -294,13 +295,14 @@ class RecModel(object):
         last_time = time.time()
         for point_list_slice_index in xrange(
                 0, len(local_points), POINTS_TO_ADD_PER_STEP):
-            time_elapsed = time.time() - last_time
-            if time_elapsed > 5.0:
-                LOGGER.info(
+
+            last_time = recmodel_client.delay_op(
+                last_time, recmodel_client.LOGGER_TIME_DELAY,
+                lambda: LOGGER.info(
                     '%d out of %d points added to local_qt so far, and '
-                    ' n_nodes in qt %d in %.2fs', local_qt.n_points(),
-                    len(local_points), local_qt.n_nodes(), time_elapsed)
-                last_time = time.time()
+                    ' n_nodes in qt %d', local_qt.n_points(),
+                    len(local_points), local_qt.n_nodes()))
+
             projected_point_list = local_points[
                 point_list_slice_index:
                 point_list_slice_index+POINTS_TO_ADD_PER_STEP]
@@ -385,12 +387,11 @@ class RecModel(object):
                 if n_processes_alive == 0:
                     break
                 continue
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info(
+            last_time = recmodel_client.delay_op(
+                last_time, recmodel_client.LOGGER_TIME_DELAY,
+                lambda: LOGGER.info(
                     '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
-                    pud_aoi_layer.GetFeatureCount())
-                last_time = current_time
+                    pud_aoi_layer.GetFeatureCount()))
             poly_id, pud_list, pud_monthly_set = result_tuple
             poly_feat = pud_aoi_layer.GetFeature(poly_id)
             for pud_index, pud_id in enumerate(pud_id_suffix_list):
@@ -437,15 +438,13 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
         row_deque = collections.deque()
         for row in csvfile_reader:
             bytes_left -= len(','.join(row))
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info(
+            last_time = recmodel_client.delay_op(
+                last_time, recmodel_client.LOGGER_TIME_DELAY,
+                lambda: LOGGER.info(
                     '%.2f%% of %s read, text row queue size %d',
                     100.0 * (1.0 - (float(bytes_left) / original_size)),
-                     infile_name, raw_file_lines_queue.qsize())
-                last_time = current_time
+                    infile_name, raw_file_lines_queue.qsize()))
             row_deque.append(row)
-
             if len(row_deque) > CSV_ROWS_PER_PARSE:
                 raw_file_lines_queue.put(row_deque)
                 row_deque = collections.deque()
@@ -606,22 +605,18 @@ def construct_userday_quadtree(
 
             n_points += len(point_array)
             ooc_qt.add_points(point_array, 0, point_array.size)
-            current_time = time.time()
-            time_elapsed = current_time - last_time
-            if time_elapsed > 5.0:
-                LOGGER.info(
-                    '%.2f%% complete, %d points skipped, %d nodes in qt in '
-                    'only %.2fs', n_points * 100.0 / total_lines,
-                    n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
-                    current_time-start_time)
-                last_time = time.time()
+            last_time = recmodel_client.delay_op(
+                last_time, recmodel_client.LOGGER_TIME_DELAY,
+                lambda: LOGGER.info(
+                    '%.2f%% complete, %d points skipped, %d nodes in qt',
+                    (n_points + 1) * 100.0 / (total_lines + 1),
+                    n_points - ooc_qt.n_points(), ooc_qt.n_nodes()))
 
         # save quadtree to disk
         ooc_qt.flush()
         LOGGER.info(
-            '100.00%% complete, %d points skipped, %d nodes in qt in '
-            'only %.2fs', n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
-            time.time()-start_time)
+            '100.00%% complete, %d points skipped, %d nodes in qt',
+            n_points - ooc_qt.n_points(), ooc_qt.n_nodes())
 
         quad_tree_shapefile_name = os.path.join(
             cache_dir, 'quad_tree_shape.shp')
