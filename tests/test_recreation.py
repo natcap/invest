@@ -1,5 +1,6 @@
 """InVEST Recreation model tests."""
 
+import zipfile
 import socket
 import threading
 import multiprocessing
@@ -144,6 +145,44 @@ class TestLocalRecServer(unittest.TestCase):
             raise ValueError(
                 "Output table not the same as input. "
                 "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_workspace_fetch(self):
+        """Recreation test fetching local workspace."""
+        from natcap.invest.recreation import recmodel_client
+
+        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+        out_vector_filename = 'pud.shp'
+
+        compressed_aoi_path = os.path.join(
+            self.workspace_dir, 'compressed_aoi.zip')
+        with zipfile.ZipFile(compressed_aoi_path, 'w') as aoizip:
+            basename = os.path.splitext(aoi_path)[0]
+            for suffix in recmodel_client._ESRI_SHAPEFILE_EXTENSIONS:
+                filename = basename + suffix
+                if os.path.exists(filename):
+                    aoizip.write(filename, os.path.basename(filename))
+
+        with open(compressed_aoi_path, 'rb') as compressed_aoi_file:
+            zip_file_binary = compressed_aoi_file.read()
+        zip_result, workspace_id = (
+            self.recreation_server.calc_photo_user_days_in_aoi(
+                zip_file_binary, date_range, out_vector_filename))
+
+        workspace_zip = (
+            self.recreation_server.fetch_workspace_aoi(workspace_id))
+        with zipfile.ZipFile(compressed_aoi_path, 'r') as compressed_aoi:
+            compressed_aoi.extractall(self.workspace_dir)
+
+        # the workspace should have the same AOI as we sent
+        self.assertEqual(
+            open(os.path.join(
+                self.workspace_dir, 'test_aoi_for_subset.shp'), 'rb').read(),
+            open(aoi_path, 'rb').read())
 
     def tearDown(self):
         """Delete workspace."""
