@@ -7,7 +7,25 @@ import os
 import time
 
 def _read_file(file_path, file_buffer_queue, blocksize, fast_hash=False):
-    """Hash `file_path` one blocksize at a time and adds to file_buffer_queue."""
+    """Divide file into blocks and add to a processing queue.
+
+    Parameters:
+        file_path (string): path to desired file to hash
+        file_buffer_queue (Queue): this queue is appended `blocksize` binary
+            strings from file_path in front to back order of the file. When
+            the entire file is read the sentinal 'STOP' is appended to the
+            queue.
+        blocksize (int):
+        fast_hash (boolean): if False, the entire file is appended to
+            `file_buffer_queue`.  If True two blocksizes from the beginning
+            and end of `file_path`'s file are appended along with the
+            basefilename, date/time creation and access, and filesize.
+            This allows a potentially quick and not terribly inaccurate screen
+            for two files being different without hashing all their contents.
+
+    Returns:
+        None.
+    """
     with open(file_path, 'rb') as file_to_hash:
         if fast_hash:
             #fast hash reads the first and last blocks and uses the modified
