@@ -26,7 +26,6 @@ import shapely.wkt
 import shapely.geometry
 import shapely.prepared
 
-import natcap.invest.recreation.file_hash
 import natcap.versioner
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
 
@@ -48,36 +47,31 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.recmodel_server')
 
 
-def _read_file(filename, file_buffer_queue, blocksize):
-    """Read one blocksize at a time and adds to the file buffer queue."""
-    with open(filename, 'rb') as file_to_hash:
-        buf = file_to_hash.read(blocksize)
-        while len(buf) > 0:
-            file_buffer_queue.put(buf)
-            buf = file_to_hash.read(blocksize)
-    file_buffer_queue.put('STOP')
+def execute(args):
+    """Launch recreation server and parse/generate quadtree if necessary.
 
+    A call to this function registers a Pyro RPC RecModel entry point given
+    the configuration input parameters described below.
 
-def _hash_blocks(file_buffer_queue):
-    """Process the buffer one element at a time and add to current hash."""
-    hasher = hashlib.sha1()
-    for row_buffer in iter(file_buffer_queue.get, "STOP"):
-        hasher.update(row_buffer)
-    file_buffer_queue.put(hasher.hexdigest()[:16])
+    Parameters:
+        args['raw_csv_point_data_path'] (string): path to a csv file of the
+            format
+        args['hostname'] (string): hostname to host Pyro server.
+        args['port'] (int/or string representation of int): port number to host
+            Pyro entry point.
+        args['max_year'] (int): maximum year allowed to be queries by user
+        args['min_year'] (int): minimum valid year allowed to be queried by
+            user
 
-
-def hashfile(filename, blocksize=2**20):
-    """Memory efficient and threaded function to calculate a hash."""
-    file_buffer_queue = Queue.Queue(100)
-    read_file_process = threading.Thread(
-        target=_read_file, args=(filename, file_buffer_queue, blocksize))
-    read_file_process.start()
-    hash_blocks_process = threading.Thread(
-        target=_hash_blocks, args=(file_buffer_queue,))
-    hash_blocks_process.start()
-    read_file_process.join()
-    hash_blocks_process.join()
-    return file_buffer_queue.get()
+    Returns:
+        Never returns
+    """
+    daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
+    uri = daemon.register(RecModel(
+        args['raw_csv_point_data_path'], args['min_year'], args['max_year'],
+        args['cache_workspace']), 'natcap.invest.recreation')
+    LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
+    daemon.requestLoop()
 
 
 class RecModel(object):
@@ -544,8 +538,7 @@ def construct_userday_quadtree(
     LOGGER.info('hashing input file')
     start_time = time.time()
     LOGGER.info(raw_photo_csv_table)
-    csv_hash = natcap.invest.recreation.file_hash.hashfile(
-        raw_photo_csv_table, fast_hash=True)
+    csv_hash = _hashfile(raw_photo_csv_table, fast_hash=True)
 
     ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
     if os.path.isfile(ooc_qt_picklefilename):
@@ -743,29 +736,94 @@ def _calc_poly_pud(
     pud_poly_feature_queue.put('STOP')
 
 
-def execute(args):
-    """Launch recreation server and parse/generate quadtree if necessary.
+def _hashfile(
+        file_path, blocksize=2**20, concurent_blocks=100, fast_hash=False):
+    """Memory efficient hash of file.
 
-    A call to this function registers a Pyro RPC RecModel entry point given
-    the configuration input parameters described below.
+    This function concurrently reads `blocksize` chunks from `file_path` and
+    continously aggregates a running hash of those blocks with memory
+    efficiency and IO/bound computational efficiency in mind.
 
     Parameters:
-        args['raw_csv_point_data_path'] (string): path to a csv file of the
-            format
-        args['hostname'] (string): hostname to host Pyro server.
-        args['port'] (int/or string representation of int): port number to host
-            Pyro entry point.
-        args['max_year'] (int): maximum year allowed to be queries by user
-        args['min_year'] (int): minimum valid year allowed to be queried by
-            user
+        file_path (string): path to file to hash
+        blocksize (int): how many bytes to load from `file_path` at a time
+            for hashing
+        concurent_blocks (int): how many blocks of `file_path` to hold in
+            memory at one time.  Setting this larger allows the algorithm to
+            read ahead while the hash computes blocks as they come in.
+        fast_hash (boolean): if True computes hash of entire file, if False
+            computes hash of the first and last blocks of the file along with
+            the filename, file size, and creation time.
 
     Returns:
-        Never returns
+        if `fast_hash` is False, returns the sha1 hash of file_path
+        if `fast_hash` is True, returns the sha1 hash of the first and last
+            blocks of file_path appended to the filename, file size, and
+            access time.  The hash is also appended with the suffix
+            "_fast_hash" to avoid confusion about the source.
     """
-    daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
-    uri = daemon.register(
-        RecModel(args['raw_csv_point_data_path'], args['min_year'],
-            args['max_year'], args['cache_workspace']),
-        'natcap.invest.recreation')
-    LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
-    daemon.requestLoop()
+    def _read_file(file_path, file_buffer_queue, blocksize, fast_hash=False):
+        """Divide file into blocks and add to a processing queue.
+
+        Parameters:
+            file_path (string): path to desired file to hash
+            file_buffer_queue (Queue): this queue is appended `blocksize`
+                binary strings from file_path in front to back order of the
+                file. When the entire file is read the sentinal 'STOP' is
+                appended to the queue.
+            blocksize (int):
+            fast_hash (boolean): if False, the entire file is appended to
+                `file_buffer_queue`.  If True two blocksizes from the beginning
+                and end of `file_path`'s file are appended along with the
+                basefilename, date/time creation and access, and filesize.
+                This allows a potentially quick and not terribly inaccurate
+                screen for two files being different without hashing all their
+                contents.
+
+        Returns:
+            None.
+        """
+        with open(file_path, 'rb') as file_to_hash:
+            if fast_hash:
+                # fast hash reads the first and last blocks and uses the modified
+                # stamp and filesize
+                buf = file_to_hash.read(blocksize)
+                file_buffer_queue.put(buf)
+                file_size = os.path.getsize(file_path)
+                if file_size - blocksize > 0:
+                    file_to_hash.seek(file_size - blocksize)
+                    buf = file_to_hash.read(blocksize)
+                file_buffer_queue.put(buf)
+                file_buffer_queue.put(os.path.basename(file_path))
+                file_buffer_queue.put(str(file_size))
+                file_buffer_queue.put(time.ctime(os.path.getmtime(file_path)))
+            else:
+                buf = file_to_hash.read(blocksize)
+                while len(buf) > 0:
+                    file_buffer_queue.put(buf)
+                    buf = file_to_hash.read(blocksize)
+        file_buffer_queue.put('STOP')
+
+    def _hash_blocks(file_buffer_queue):
+        """Return sha1 hash of in order elements of `file_buffer_queue`."""
+        hasher = hashlib.sha1()
+        for row_buffer in iter(file_buffer_queue.get, "STOP"):
+            hasher.update(row_buffer)
+        file_buffer_queue.put(hasher.hexdigest()[:16])
+
+    file_buffer_queue = Queue.Queue(100)
+    read_file_process = threading.Thread(
+        target=_read_file, args=(
+            file_path, file_buffer_queue, blocksize, fast_hash))
+    read_file_process.start()
+    hash_blocks_process = threading.Thread(
+        target=_hash_blocks, args=(file_buffer_queue,))
+    hash_blocks_process.start()
+    read_file_process.join()
+    hash_blocks_process.join()
+    file_hash = file_buffer_queue.get()
+    if fast_hash:
+        # this appends something so that a small file will have a different
+        # hash whether it's fast hash or slow hash
+        file_hash += '_fast_hash'
+    return file_hash

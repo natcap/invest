@@ -166,24 +166,24 @@ class RecreationRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_file_hash(self):
         """Recreation test for hashing a file."""
-        from natcap.invest.recreation import file_hash
+        from natcap.invest.recreation import recmodel_server
 
         sample_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
         # hash constant is from regression case
         self.assertEqual(
             'b372f3f062afb3e8',
-            file_hash.hashfile(
+            recmodel_server._hashfile(
                 sample_data_path, blocksize=2**10, fast_hash=False))
 
     def test_file_hash_fast(self):
         """Recreation test for fast hashing a file."""
-        from natcap.invest.recreation import file_hash
+        from natcap.invest.recreation import recmodel_server
 
         sample_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
         # hash constant is from regression case
         self.assertEqual(
             '828c5f883a80ff38_fast_hash',
-            file_hash.hashfile(
+            recmodel_server._hashfile(
                 sample_data_path, blocksize=2**10, fast_hash=True))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
