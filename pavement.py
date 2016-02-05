@@ -1913,14 +1913,15 @@ def check(options):
                 pkg_resources.DistributionNotFound) as conflict:
             if not hasattr(conflict, 'report'):
                 if isinstance(conflict, pkg_resources.VersionConflict):
+                    version = __import__(import_name).__version__
                     report = ('{pkg} {imported_version} is installed but '
                               '{expected_version} is required').format(
                                       pkg=project_name,
                                       expected_version=requirement,
-                                      imported_version=pkg.__version__)
+                                      imported_version=version)
                 else:
                     # When the distribution can't be found.
-                    report = ('Package not found:{pkg_req}').format(
+                    report = ('Package not found: {pkg_req}').format(
                         pkg_req=requirement)
             else:
                 # Setuptools introduced report() in v6.1
