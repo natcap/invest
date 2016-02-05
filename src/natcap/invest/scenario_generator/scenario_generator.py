@@ -56,16 +56,17 @@ def calculate_weights(array, rounding=4):
     return [Decimal(str(v)).quantize(decimal_places) for v in vector]
 
 
-def calculate_priority(table_uri):
-    """Arrange land-cover type by highest priority.
+def calculate_priority(priority_table_uri):
+    """Create land-cover priority weights.
 
     Args:
-        table_uri (str): path to priority table
+        priority_table_uri (str): path to priority csv table
 
     Returns:
         priority_dict (dict): land-cover and weights_matrix
     """
-    table = [line.strip().split(",") for line in open(table_uri).readlines()]
+    table = [line.strip().split(",") for line in open(
+        priority_table_uri).readlines()]
     id_index = table[0].index("Id")
 
     cover_id_list = [row[id_index] for row in table]
