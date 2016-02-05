@@ -10,6 +10,7 @@ import json
 import os
 import pkgutil
 import platform
+import re
 import shutil
 import site
 import socket
@@ -1846,8 +1847,9 @@ def check(options):
     # Compare the above-defined requirements with those in requirements.txt
     # The resulting set should be the union of the two.  Package verison
     # requirements should be stored in requirements.txt.
-    existing_reqs = set([pkg_resources.Requirement.parse(r[0]).project_name
-                         for r in requirements])
+    pkgname_regex = '^[a-zA-Z0-9-_]*'
+    existing_reqs = set([re.findall(pkgname_regex, r[0])[0] for r in
+                         requirements])
     requirements_txt_dict = _read_requirements_dict()
     for reqname, req in requirements_txt_dict.iteritems():
         if reqname not in existing_reqs:
@@ -1868,9 +1870,11 @@ def check(options):
             pass
 
         try:
-            pkg_req = pkg_resources.Requirement.parse(requirement)
+            pkg_req = requirement
+            project_name = re.findall(pkgname_regex, requirement)[0]
             if import_name is None:
-                import_name = pkg_req.project_name
+                import_name = project_name
+            pkg_version_format_ok = True
 
             try:
                 pkg_resources.require(requirement)
@@ -1883,11 +1887,23 @@ def check(options):
                     importlib.import_module(import_name)
                 except ImportError:
                     raise missing_req
+            except ValueError:
+                # When we have an old version of setuptools (setuptools<8.0),
+                # pep440 version strings are not compliant and raise a
+                # ValueError.  When this happens, we need to do our own version
+                # comparison that is NOT guaranteed to be correct since there
+                # isn't a defined way to compare them.
+                print yellow('WARNING: Cannot evaluate versions '
+                             'for {pkg_req. Upgrade to '
+                             'setuptools>=8.0 for accurate version '
+                             'comparison.').format(pkg_req=pkg_req)
+                pkg_version_format_ok = False
+
 
             pkg = __import__(import_name)
             print "Python package {ok}: {pkg} {ver} (meets {req})".format(
-                ok=OK,
-                pkg=pkg_req.project_name,
+                ok=OK if pkg_version_format_ok else yellow('UNKNOWN'),
+                pkg=project_name,
                 ver=pkg.__version__,
                 req=requirement)
         except AttributeError as error:
@@ -1896,12 +1912,20 @@ def check(options):
         except (pkg_resources.VersionConflict,
                 pkg_resources.DistributionNotFound) as conflict:
             if not hasattr(conflict, 'report'):
+                if isinstance(conflict, pkg_resources.VersionConflict):
+                    version = __import__(import_name).__version__
+                    report = ('{pkg} {imported_version} is installed but '
+                              '{expected_version} is required').format(
+                                      pkg=project_name,
+                                      expected_version=requirement,
+                                      imported_version=version)
+                else:
+                    # When the distribution can't be found.
+                    report = ('Package not found: {pkg_req}').format(
+                        pkg_req=requirement)
+            else:
                 # Setuptools introduced report() in v6.1
-                print ('{error} Setuptools is very out of date. '
-                    'Upgrade and try again'.format(error=ERROR))
-                if not options.check.allow_errors:
-                    raise BuildFailure('Setuptools is very out of date. '
-                                    'Upgrade and try again')
+                report = conflict.report()
 
             if severity == required:
                 if install_msg is None:
@@ -1909,7 +1933,7 @@ def check(options):
                 else:
                     fmt_install_msg = '\nInstall this package via:\n    ' + install_msg
                 print 'Python package {error} {report} {msg}'.format(error=ERROR,
-                                                      report=conflict.report(),
+                                                      report=report,
                                                       msg=fmt_install_msg)
                 errors_found = True
             elif severity == lib_needed:
@@ -1918,12 +1942,12 @@ def check(options):
                         '{warning} {report}  This library requires appropriate '
                         'headers to compile the python '
                         'package.').format(warning=WARNING,
-                                           report=conflict.report())
+                                           report=report)
                 else:
                     print ('{warning} {report}.  You may need to upgrade your '
                            'development headers along with the python '
                            'package.').format(warning=WARNING,
-                                              report=conflict.report())
+                                              report=report)
                 warnings_found = True
             elif severity == 'install_managed':
                 print ('{warning} {pkg} is required, but will be '
@@ -1932,7 +1956,7 @@ def check(options):
                             pkg=requirement)
             else:  # severity is 'suggested'
                 print '{warning} {report}'.format(warning=WARNING,
-                                                  report=conflict.report())
+                                                  report=report)
                 warnings_found = True
 
         except ImportError:
