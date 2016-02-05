@@ -164,6 +164,19 @@ class RecreationRegressionTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_incorrect_years(self):
+        """Recreation server should raise a value error if start>end year."""
+        from natcap.invest.recreation import recmodel_server
+
+        # here start year is 2014 and end year is 2005
+        with self.assertRaises(ValueError):
+            self.recreation_server = recmodel_server.RecModel(
+                os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+                2014,  # start year > end year
+                2005,  # end year
+                os.path.join(self.workspace_dir, 'server_cache'))
+
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_file_hash(self):
         """Recreation test for hashing a file."""
         from natcap.invest.recreation import recmodel_server
