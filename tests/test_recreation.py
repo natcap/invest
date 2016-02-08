@@ -52,6 +52,36 @@ class TestLocalPyroRecServer(unittest.TestCase):
         multiprocessing.freeze_support()
         self.workspace_dir = tempfile.mkdtemp()
 
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_hashfile(self):
+        """Recreation test for hash and fast hash of file."""
+        from natcap.invest.recreation import recmodel_server
+        file_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+        file_hash = recmodel_server._hashfile(
+            file_path, blocksize=2**20, fast_hash=False)
+        self.assertEqual(file_hash, 'b372f3f062afb3e8')
+
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_hashfile_fast(self):
+        """Recreation test for hash and fast hash of file."""
+        from natcap.invest.recreation import recmodel_server
+        file_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+        file_hash = recmodel_server._hashfile(
+            file_path, blocksize=2**20, fast_hash=True)
+        self.assertEqual(file_hash, '374cedfe96ad2e12_fast_hash')
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_year_order(self):
+        """Recreation ensure that end year < start year raise ValueError."""
+        from natcap.invest.recreation import recmodel_server
+
+        with self.assertRaises(ValueError):
+            # intentionally construct start year > end year
+            _ = recmodel_server.RecModel(
+                os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+                2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @timeout(20.0)
@@ -145,7 +175,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
                 zip_file_binary, date_range, out_vector_filename))
 
         # unpack result
-        result_zip_path = os.path.join(REGRESSION_DATA, 'pud_result.zip')
+        result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
         open(result_zip_path, 'wb').write(zip_result)
         zipfile.ZipFile(result_zip_path, 'r').extractall(self.workspace_dir)
 
@@ -161,7 +191,6 @@ class TestLocalPyroRecServer(unittest.TestCase):
             workspace_id)
         out_workspace_dir = os.path.join(self.workspace_dir, 'workspace_zip')
         os.makedirs(out_workspace_dir)
-        result_zip_path = os.path.join(REGRESSION_DATA, 'pud_result.zip')
         workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
         open(workspace_zip_path, 'wb').write(workspace_zip_binary)
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
@@ -735,28 +764,6 @@ class RecreationRegressionTests(unittest.TestCase):
             self.fail(
                 "_validate_same_projection raised ValueError unexpectedly!")
 
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_bad_grid_type(self):
-        """Recreation ensure that bad grid type raises ValueError."""
-        from natcap.invest.recreation import recmodel_client
-
-        args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 7000.0,
-            'compute_regression': False,
-            'start_year': '2005',
-            'end_year': '2014',
-            'grid_aoi': True,
-            'grid_type': 'circle',  # intentionally bad gridtype
-            'results_suffix': u'',
-            'workspace_dir': self.workspace_dir,
-        }
-
-        with self.assertRaises(ValueError):
-            recmodel_client.execute(args)
-
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_year_order(self):
@@ -776,6 +783,27 @@ class RecreationRegressionTests(unittest.TestCase):
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
                 REGRESSION_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_bad_grid_type(self):
+        """Recreation ensure that bad grid type raises ValueError."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': False,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': True,
+            'grid_type': 'circle',  # intentionally bad gridtype
+            'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
         }
 

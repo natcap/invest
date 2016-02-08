@@ -26,7 +26,6 @@ import shapely.wkt
 import shapely.geometry
 import shapely.prepared
 
-import natcap.invest.recreation.file_hash
 import natcap.versioner
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
 from natcap.invest.recreation import recmodel_client
@@ -371,7 +370,6 @@ class RecModel(object):
                 if n_processes_alive == 0:
                     break
                 continue
-            current_time = time.time()
             last_time = recmodel_client.delay_op(
                 last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                     '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
@@ -480,8 +478,7 @@ def construct_userday_quadtree(
     LOGGER.info('hashing input file')
     start_time = time.time()
     LOGGER.info(raw_photo_csv_table)
-    csv_hash = natcap.invest.recreation.file_hash.hashfile(
-        raw_photo_csv_table, fast_hash=True)
+    csv_hash = _hashfile(raw_photo_csv_table, fast_hash=True)
 
     ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
     if os.path.isfile(ooc_qt_picklefilename):
@@ -710,3 +707,66 @@ def execute(args):
         'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
     daemon.requestLoop()
+
+
+def _hashfile(file_path, blocksize=2**20, fast_hash=False):
+    """Hash file with memory efficiency as a priority.
+
+    Parameters:
+        file_path (string): path to file to hash
+        blocksize (int): largest memory block to hold in memory at once in
+            bytes
+        fast_hash (boolean): if True, hashes the first and last `blocksize` of
+            `file_path`, the file_size, file_name, and file_path which takes
+            less time on large files for a full hash.  Full hash is done if
+            this parameter is true
+
+    Returns:
+        sha1 hash of `file_path` if fast_hash is False, otherwise sha1 hash of
+        first and last memory blocks, file size, file modified, file name, and
+        appends "_fast_hash" to result.
+    """
+    def _read_file(file_path, file_buffer_queue, blocksize, fast_hash=False):
+        """Read one blocksize at a time and adds to the file buffer queue."""
+        with open(file_path, 'rb') as file_to_hash:
+            if fast_hash:
+                # fast hash reads the first and last blocks and uses the
+                # modified stamp and filesize
+                buf = file_to_hash.read(blocksize)
+                file_buffer_queue.put(buf)
+                file_size = os.path.getsize(file_path)
+                if file_size - blocksize > 0:
+                    file_to_hash.seek(file_size - blocksize)
+                    buf = file_to_hash.read(blocksize)
+                file_buffer_queue.put(buf)
+                file_buffer_queue.put(file_path)
+                file_buffer_queue.put(str(file_size))
+                file_buffer_queue.put(time.ctime(os.path.getmtime(file_path)))
+            else:
+                buf = file_to_hash.read(blocksize)
+                while len(buf) > 0:
+                    file_buffer_queue.put(buf)
+                    buf = file_to_hash.read(blocksize)
+        file_buffer_queue.put('STOP')
+
+    def _hash_blocks(file_buffer_queue):
+        """Process file_buffer_queue one buf at a time."""
+        hasher = hashlib.sha1()
+        for row_buffer in iter(file_buffer_queue.get, "STOP"):
+            hasher.update(row_buffer)
+        file_buffer_queue.put(hasher.hexdigest()[:16])
+
+    file_buffer_queue = Queue.Queue(100)
+    read_file_process = threading.Thread(
+        target=_read_file, args=(
+            file_path, file_buffer_queue, blocksize, fast_hash))
+    read_file_process.start()
+    hash_blocks_process = threading.Thread(
+        target=_hash_blocks, args=(file_buffer_queue,))
+    hash_blocks_process.start()
+    read_file_process.join()
+    hash_blocks_process.join()
+    file_hash = file_buffer_queue.get()
+    if fast_hash:
+        file_hash += '_fast_hash'
+    return file_hash
