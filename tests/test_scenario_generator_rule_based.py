@@ -8,6 +8,8 @@ import tempfile
 import unittest
 import csv
 
+import numpy as np
+from osgeo import gdal, ogr, osr
 import shapely
 from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
@@ -64,7 +66,7 @@ def create_raster(raster_uri, array):
     """Create test raster."""
     srs = pygeotest.sampledata.SRS_WILLAMETTE
     pygeotest.create_raster_on_disk(
-        array,
+        [array],
         srs.origin,
         srs.projection,
         -1,
@@ -77,9 +79,10 @@ def create_raster(raster_uri, array):
 def create_shapefile(shapefile_uri, geometry):
     """Create test shapefile."""
     srs = pygeotest.sampledata.SRS_WILLAMETTE
+    geometries = [shapely.geometry.Point(0., 0.).buffer(1.0)]
     pygeotest.create_vector_on_disk(
         geometries,
-        projection,
+        srs.projection,
         fields=None,
         attributes=None,
         vector_format='GeoJSON',
@@ -106,18 +109,19 @@ def get_args():
     create_raster(land_cover_raster_uri, array)
 
     transition_matrix_uri = os.path.join(workspace_dir, 'transition.csv')
-    create_raster(transition_matrix_uri, transition_likelihood_table)
+    create_csv_table(transition_matrix_uri, transition_likelihood_table)
 
     suitability_dir = os.path.join(workspace_dir, 'suitability')
     if not os.path.exists(suitability_dir):
         os.mkdir(suitability_dir)
 
     priorities_csv_uri = os.path.join(workspace_dir, 'priorities.csv')
-    create_csv_table(priorities_csv_uri, priorities_csv_list)
+    create_csv_table(priorities_csv_uri, priority_table)
 
     suitability_factors_csv_uri = os.path.join(
         workspace_dir, 'suitability.csv')
-    create_csv_table(suitability_factors_csv_uri, suitability_csv_list)
+    create_csv_table(
+        suitability_factors_csv_uri, land_suitability_factors_table)
 
     constraints_shapefile_uri = os.path.join(workspace_dir, 'constraints.shp')
     constraints_geometry = None
@@ -169,61 +173,61 @@ class UnitTests(unittest.TestCase):
     """Test functions in scenario generator model."""
 
     def test_calculate_weights(self):
-        from natcap.invest import scenario_generator
+        from natcap.invest import scenario_generator as sg
         array = np.array([1, 2, 3])
-        weights_list = scenario_generator.calculate_weights(array)
+        weights_list = sg.scenario_generator.calculate_weights(array)
 
     def test_calculate_priority(self):
-        from natcap.invest import scenario_generator
+        from natcap.invest import scenario_generator as sg
         args = get_args()
         priority_table_uri = ''
-        priority_dict = scenario_generator.calculate_priority(
+        priority_dict = sg.scenario_generator.calculate_priority(
             priority_table_uri)
         shutil.rmtree(args['workspace_dir'])
 
     def test_calculate_distance_raster_uri(self):
-        from natcap.invest import scenario_generator
+        from natcap.invest import scenario_generator as sg
         args = get_args()
         dataset_in_uri = ''
         dataset_out_uri = ''
-        scenario_generator.calculate_distance_raster_uri(
+        sg.scenario_generator.calculate_distance_raster_uri(
             dataset_in_uri, dataset_out_uri)
         shutil.rmtree(args['workspace_dir'])
 
     def test_get_geometry_type_from_uri(self):
-        from natcap.invest import scenario_generator
+        from natcap.invest import scenario_generator as sg
         args = get_args()
         datasource_uri = ''
-        shape_type = scenario_generator.get_geometry_type_from_uri(
+        shape_type = sg.scenario_generator.get_geometry_type_from_uri(
             datasource_uri)
         shutil.rmtree(args['workspace_dir'])
 
     def test_get_transition_set_count_from_uri(self):
-        from natcap.invest import scenario_generator
+        from natcap.invest import scenario_generator as sg
         args = get_args()
         dataset_uri_list = ''
         unique_raster_values_count, transitions = \
-            scenario_generator.get_transition_set_count_from_uri(
+            sg.scenario_generator.get_transition_set_count_from_uri(
                 dataset_uri_list)
         shutil.rmtree(args['workspace_dir'])
 
     def test_generate_chart_html(self):
-        from natcap.invest import scenario_generator
+        from natcap.invest import scenario_generator as sg
         args = get_args()
         cover_dict = {}
         cover_names_dict = {}
         workspace_dir = ''
-        chart_html = scenario_generator.generate_chart_html(
+        chart_html = sg.scenario_generator.generate_chart_html(
             cover_dict, cover_names_dict, workspace_dir)
         shutil.rmtree(args['workspace_dir'])
 
     def test_filter_fragments(self):
-        from natcap.invest import scenario_generator
+        from natcap.invest import scenario_generator as sg
         args = get_args()
         input_uri = ''
         size = None
         output_uri = ''
-        scenario_generator.filter_fragments(input_uri, size, output_uri)
+        sg.scenario_generator.filter_fragments(input_uri, size, output_uri)
         shutil.rmtree(args['workspace_dir'])
 
 
