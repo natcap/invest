@@ -53,13 +53,13 @@ class TestLocalPyroRecServer(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @timeout(10.0)
     def test_empty_server(self):
-        """Recreation test a client call to custom server."""
+        """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_client
 
         pygeoprocessing.create_directories([self.workspace_dir])
         empty_point_data_path = os.path.join(
-            self.workspace_dir, 'empty_table.csv')
+            REGRESSION_DATA, 'sample_data.csv')
         open(empty_point_data_path, 'w').close()  # touch the file
 
         # attempt to get an open port; could result in race condition but
@@ -85,7 +85,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
         server_thread.start()
 
         client_args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'aoi_path': os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
             'cell_size': 7000.0,
             'hostname': 'localhost',
             'port': port,
@@ -103,6 +103,66 @@ class TestLocalPyroRecServer(unittest.TestCase):
         _test_same_files(
             os.path.join(REGRESSION_DATA, 'file_list_empty_local_server.txt'),
             self.workspace_dir)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @timeout(100.0)
+    def test_base_regression_local_server(self):
+        """Recreation base regression test on sample data on local server.
+
+        Executes Recreation model with default data and default arguments.
+        """
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        pygeoprocessing.create_directories([self.workspace_dir])
+        point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': port,
+            'raw_csv_point_data_path': point_data_path,
+            'cache_workspace': self.workspace_dir,
+            'min_year': 2004,
+            'max_year': 2015,
+        }
+
+        server_thread = threading.Thread(
+            target=recmodel_server.execute, args=(server_args,))
+        server_thread.start()
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': True,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': True,
+            'grid_type': 'hexagon',
+            'predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors.csv'),
+            'results_suffix': u'',
+            'scenario_predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        recmodel_client.execute(args)
+
+        RecreationRegressionTests._assert_regression_results_eq(
+            args['workspace_dir'],
+            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
+            os.path.join(args['workspace_dir'], 'scenario_results.shp'),
+            os.path.join(REGRESSION_DATA, 'scenario_results.csv'))
 
     def tearDown(self):
         """Delete workspace."""
@@ -654,7 +714,6 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # we expect a file called 'aggregated_results.shp'
         result_vector = ogr.Open(result_vector_path)
-        print result_vector_path
         result_layer = result_vector.GetLayer()
 
         # The tolerance of 3 digits after the decimal was determined by
@@ -686,7 +745,7 @@ class RecreationRegressionTests(unittest.TestCase):
                     expected_result_lookup = dict(
                         zip(headers, [float(x) for x in line.split(',')]))
                 except ValueError:
-                    print line
+                    LOGGER.error(line)
                     raise
                 feature = result_layer.GetFeature(
                     int(expected_result_lookup['FID']))
