@@ -1598,7 +1598,11 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     # virtualenv appears to respect __import__ better than
     # importlib.import_module, which is helpful for when running this in a
     # virtualenv (via @paver.virtual.virtualenv)
-    module = __import__('natcap.%s' % modname)
+    _ns_module_name = 'natcap.%s' % modname
+    try:
+        module = __import__(modname, fromlist=['natcap'])
+    except ImportError:
+        module = importlib.import_module(_ns_module_name)
 
     # Reload the module in case it's been imported before. Doing this helps to
     # an issue with the module's __path__ attribute being updated after
@@ -1607,8 +1611,7 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     try:
         version = module.__version__
     except AttributeError:
-        packagename = 'natcap.%s' % modname
-        version = pkg_resources.require(packagename)[0].version
+        version = pkg_resources.require(_ns_module_name)[0].version
 
     is_egg = reduce(
         lambda x, y: x or y,
