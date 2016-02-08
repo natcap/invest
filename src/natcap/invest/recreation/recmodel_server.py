@@ -29,7 +29,7 @@ import shapely.prepared
 import natcap.invest.recreation.file_hash
 import natcap.versioner
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
-
+from natcap.invest.recreation import recmodel_client
 __version__ = natcap.versioner.get_version('natcap.invest.recmodel_server')
 
 BLOCKSIZE = 2 ** 21
@@ -39,6 +39,7 @@ GLOBAL_DEPTH = 10
 LOCAL_MAX_POINTS_PER_NODE = 50
 LOCAL_DEPTH = 8
 CSV_ROWS_PER_PARSE = 2 ** 10
+LOGGER_TIME_DELAY = 5.0
 
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
@@ -48,42 +49,12 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.recmodel_server')
 
 
-def _read_file(filename, file_buffer_queue, blocksize):
-    """Read one blocksize at a time and adds to the file buffer queue."""
-    with open(filename, 'rb') as file_to_hash:
-        buf = file_to_hash.read(blocksize)
-        while len(buf) > 0:
-            file_buffer_queue.put(buf)
-            buf = file_to_hash.read(blocksize)
-    file_buffer_queue.put('STOP')
-
-
-def _hash_blocks(file_buffer_queue):
-    """Process the buffer one element at a time and add to current hash."""
-    hasher = hashlib.sha1()
-    for row_buffer in iter(file_buffer_queue.get, "STOP"):
-        hasher.update(row_buffer)
-    file_buffer_queue.put(hasher.hexdigest()[:16])
-
-
-def hashfile(filename, blocksize=2**20):
-    """Memory efficient and threaded function to calculate a hash."""
-    file_buffer_queue = Queue.Queue(100)
-    read_file_process = threading.Thread(
-        target=_read_file, args=(filename, file_buffer_queue, blocksize))
-    read_file_process.start()
-    hash_blocks_process = threading.Thread(
-        target=_hash_blocks, args=(file_buffer_queue,))
-    hash_blocks_process.start()
-    read_file_process.join()
-    hash_blocks_process.join()
-    return file_buffer_queue.get()
-
-
 class RecModel(object):
     """Class that manages RPCs for calculating photo user days."""
 
-    def __init__(self, raw_csv_filename, min_year, max_year, cache_workspace):
+    def __init__(
+            self, raw_csv_filename, min_year, max_year, cache_workspace,
+            max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
         """Initialize RecModel object.
 
         Parameters:
@@ -112,7 +83,8 @@ class RecModel(object):
                     "max_year is less than min_year, must be greater or "
                     "equal to")
             self.qt_pickle_filename = construct_userday_quadtree(
-                initial_bounding_box, raw_csv_filename, cache_workspace)
+                initial_bounding_box, raw_csv_filename, cache_workspace,
+                max_points_per_node)
             self.cache_workspace = cache_workspace
             self.min_year = min_year
             self.max_year = max_year
@@ -212,6 +184,7 @@ class RecModel(object):
             aoi_pud_archive_path = os.path.join(
                 workspace_path, 'aoi_pud_result.zip')
             with zipfile.ZipFile(aoi_pud_archive_path, 'w') as myzip:
+                LOGGER.debug(base_pud_aoi_path)
                 for filename in glob.glob(
                         os.path.splitext(base_pud_aoi_path)[0] + '.*'):
                     myzip.write(filename, os.path.basename(filename))
@@ -297,15 +270,16 @@ class RecModel(object):
         LOGGER.info(
             'building local quadtree with %d points', len(local_points))
         last_time = time.time()
+        time_elapsed = None
         for point_list_slice_index in xrange(
                 0, len(local_points), POINTS_TO_ADD_PER_STEP):
             time_elapsed = time.time() - last_time
-            if time_elapsed > 5.0:
-                LOGGER.info(
+            last_time = recmodel_client.delay_op(
+                last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                     '%d out of %d points added to local_qt so far, and '
                     ' n_nodes in qt %d in %.2fs', local_qt.n_points(),
-                    len(local_points), local_qt.n_nodes(), time_elapsed)
-                last_time = time.time()
+                    len(local_points), local_qt.n_nodes(), time_elapsed))
+
             projected_point_list = local_points[
                 point_list_slice_index:
                 point_list_slice_index+POINTS_TO_ADD_PER_STEP]
@@ -391,11 +365,10 @@ class RecModel(object):
                     break
                 continue
             current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info(
+            last_time = recmodel_client.delay_op(
+                last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                     '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
-                    pud_aoi_layer.GetFeatureCount())
-                last_time = current_time
+                    pud_aoi_layer.GetFeatureCount()))
             poly_id, pud_list, pud_monthly_set = result_tuple
             poly_feat = pud_aoi_layer.GetFeature(poly_id)
             for pud_index, pud_id in enumerate(pud_id_suffix_list):
@@ -442,13 +415,11 @@ def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
         row_deque = collections.deque()
         for row in csvfile_reader:
             bytes_left -= len(','.join(row))
-            current_time = time.time()
-            if current_time - last_time > 5.0:
-                LOGGER.info(
+            last_time = recmodel_client.delay_op(
+                last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                     '%.2f%% of %s read, text row queue size %d',
                     100.0 * (1.0 - (float(bytes_left) / original_size)),
-                     infile_name, raw_file_lines_queue.qsize())
-                last_time = current_time
+                    infile_name, raw_file_lines_queue.qsize()))
             row_deque.append(row)
 
             if len(row_deque) > CSV_ROWS_PER_PARSE:
@@ -526,7 +497,7 @@ def file_len(file_path):
 
 def construct_userday_quadtree(
         initial_bounding_box, raw_photo_csv_table, cache_dir,
-        max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
+        max_points_per_node):
     """Construct a spatial quadtree for fast querying of userday points.
 
     Parameters:
@@ -763,9 +734,14 @@ def execute(args):
         Never returns
     """
     daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
+    max_points_per_node = GLOBAL_MAX_POINTS_PER_NODE
+    if 'max_points_per_node' in args:
+        max_points_per_node = args['max_points_per_node']
+
     uri = daemon.register(
         RecModel(args['raw_csv_point_data_path'], args['min_year'],
-            args['max_year'], args['cache_workspace']),
+                 args['max_year'], args['cache_workspace'],
+                 max_points_per_node=max_points_per_node),
         'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
     daemon.requestLoop()

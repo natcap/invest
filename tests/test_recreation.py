@@ -1,5 +1,7 @@
 """InVEST Recreation model tests."""
 
+import glob
+import zipfile
 import socket
 import threading
 import multiprocessing
@@ -108,6 +110,83 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    #@timeout(100.0)
+    def test_local_aggregate_points(self):
+        """Recreation test single threaded local AOI aggregate calculation."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+
+        if not os.path.exists(self.workspace_dir):
+            os.makedirs(self.workspace_dir)
+
+        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
+
+        basename = os.path.splitext(aoi_path)[0]
+        aoi_archive_path = os.path.join(
+            self.workspace_dir, 'aoi_zipped.zip')
+        with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
+            for filename in glob.glob(basename + '.*'):
+                myzip.write(filename, os.path.basename(filename))
+
+        # convert shapefile to binary string for serialization
+        zip_file_binary = open(aoi_archive_path, 'rb').read()
+
+        # transfer zipped file to server
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+        out_vector_filename = 'test_aoi_for_subset_pud.shp'
+        zip_result, workspace_id = (
+            recreation_server.calc_photo_user_days_in_aoi(
+                zip_file_binary, date_range, out_vector_filename))
+
+        # unpack result
+        result_zip_path = os.path.join(REGRESSION_DATA, 'pud_result.zip')
+        open(result_zip_path, 'wb').write(zip_result)
+        zipfile.ZipFile(result_zip_path, 'r').extractall(self.workspace_dir)
+
+        result_vector_path = os.path.join(
+            self.workspace_dir, out_vector_filename)
+        expected_vector_path = os.path.join(
+            REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
+        pygeoprocessing.testing.assert_vectors_equal(
+            expected_vector_path, result_vector_path, 1e-5)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @timeout(100.0)
+    def test_local_calc_poly_pud(self):
+        """Recreation test single threaded local PUD calculation."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+
+        poly_test_queue = multiprocessing.Queue()
+        poly_test_queue.put(0)
+        poly_test_queue.put('STOP')
+        pud_poly_feature_queue = multiprocessing.Queue()
+        recmodel_server._calc_poly_pud(
+            recreation_server.qt_pickle_filename,
+            os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp'),
+            date_range, poly_test_queue, pud_poly_feature_queue)
+
+        # assert annual average PUD is the same as regression
+        self.assertEqual(
+            53.3, pud_poly_feature_queue.get()[1][0])
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     @timeout(100.0)
     def test_base_regression_local_server(self):
         """Recreation base regression test on sample data on local server.
@@ -136,6 +215,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
             'cache_workspace': self.workspace_dir,
             'min_year': 2004,
             'max_year': 2015,
+            'max_points_per_node': 50,
         }
 
         server_thread = threading.Thread(
