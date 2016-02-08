@@ -1637,10 +1637,10 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     return (module, return_type)
 
 
-class decorate_if(object):
+def decorate_if(condition, decorator):
     """Conditionally decorate a function.
 
-    This class provides a decorator that allows a developer to provide a
+    This provides a decorator that allows a developer to define a
     condition and a decorator.  When used on a function and the condition
     is True, the provided decorator will be used on the target function.
 
@@ -1648,33 +1648,21 @@ class decorate_if(object):
         @decorate_if(sys.platform() == 'Linux', some_other_decorator)
         def example_func():
             ...
+
+    Parameters:
+        condition (bool): whether to decorate the target function.
+        decorator (function): function to use as a decorator when
+            ``condition`` is True.
+
+    Returns:
+        If ``condition`` is True, the decorated function is returned.
+        Otherwise, the original function is returned.
     """
-    def __init__(self, condition, dec):
-        """Construct the decorator object.
-
-        Parameters:
-            condition (bool): Whether to decorate the given function
-            dec (function): The decorator to use if ``condition`` is True.
-        """
-        self.decorator = dec
-        self.condition = condition
-
-    def __call__(self, func):
-        """Evaluate the conditional decorator.
-
-        If self.condition is ``True``, decorate ``func`` with
-        ``self.decorator``
-
-        Parameters:
-            func (function): The function to conditonally decorate.
-
-        Returns:
-            The (possibly) decorated function.
-        """
-        if self.condition:
-            # Return the function unchanged, not decorated.
-            return self.decorator(func)
-        return func
+    def _check_condition(function):
+        if condition:
+            return decorator(function)
+        return function
+    return _check_condition
 
 
 def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
