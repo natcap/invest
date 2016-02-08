@@ -87,9 +87,12 @@ def create_shapefile(shapefile_uri, geometry):
     return shapefile_uri
 
 
-def create_csv_table(table_uri, list):
-    """Create test csv table."""
-    pass
+def create_csv_table(table_uri, rows_list):
+    """Create csv file from list of lists."""
+    with open(table_uri, 'w') as f:
+        writer = csv.writer(f)
+        writer.writerows(rows_list)
+    return table_uri
 
 
 def get_args():
@@ -98,11 +101,12 @@ def get_args():
     if not os.path.exists(workspace_dir):
         os.mkdir(workspace_dir)
 
+    array = np.array(land_cover_array)
     land_cover_raster_uri = os.path.join(workspace_dir, 'lulc.tif')
     create_raster(land_cover_raster_uri, array)
 
     transition_matrix_uri = os.path.join(workspace_dir, 'transition.csv')
-    create_raster(transition_matrix_uri, array)
+    create_raster(transition_matrix_uri, transition_likelihood_table)
 
     suitability_dir = os.path.join(workspace_dir, 'suitability')
     if not os.path.exists(suitability_dir):
@@ -221,3 +225,7 @@ class UnitTests(unittest.TestCase):
         output_uri = ''
         scenario_generator.filter_fragments(input_uri, size, output_uri)
         shutil.rmtree(args['workspace_dir'])
+
+
+if __name__ == '__main__':
+    unittest.main()
