@@ -1638,16 +1638,42 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
 
 
 class decorate_if(object):
+    """Conditionally decorate a function.
+
+    This class provides a decorator that allows a developer to provide a
+    condition and a decorator.  When used on a function and the condition
+    is True, the provided decorator will be used on the target function.
+
+    Example:
+        @decorate_if(sys.platform() == 'Linux', some_other_decorator)
+        def example_func():
+            ...
+    """
     def __init__(self, condition, dec):
+        """Construct the decorator object.
+
+        Parameters:
+            condition (bool): Whether to decorate the given function
+            dec (function): The decorator to use if ``condition`` is True.
+        """
         self.decorator = dec
         self.condition = condition
 
     def __call__(self, func):
+        """Evaluate the conditional decorator.
+
+        If self.condition is ``True``, decorate ``func`` with
+        ``self.decorator``
+
+        Parameters:
+            func (function): The function to conditonally decorate.
+
+        Returns:
+            The (possibly) decorated function.
+        """
         if self.condition:
-            print 'decorating!'
             # Return the function unchanged, not decorated.
             return self.decorator(func)
-        print 'not decorating!'
         return func
 
 
