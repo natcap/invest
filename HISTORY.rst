@@ -17,6 +17,7 @@
 * New HRA feature which allows for "NA" values to be entered into the "Ratings" column for a habitat / stressor pair in the Criteria Ratings CSV. If ALL ratings are set to NA, the habitat / stressor will be treated as having no interaction. This means in the model, that there will be no overlap between the two sources. All rows parameters with an NA rating will not be used in calculating results.
 * Habitat Quality bug fix when given land cover rasters with different pixel sizes than threat rasters. Model would use the wrong pixel distance for the convolution kernel.
 * Light refactor of Timber model. Now using CSV input attribute file instead of DBF file.
+* Fixed clipping bug in Wave Energy model that was not properly clipping polygons correctly. Found when using global data.
 
 3.2.1
 =====
