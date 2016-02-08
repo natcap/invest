@@ -1,5 +1,6 @@
-"""InVEST specific code utils"""
+"""InVEST specific code utils."""
 import math
+import os
 
 import numpy
 from osgeo import gdal
@@ -8,7 +9,9 @@ import pygeoprocessing
 
 
 def make_suffix_string(args, suffix_key):
-    """Make an InVEST appropriate suffix string given the args dictionary and
+    """Make an InVEST appropriate suffix string.
+
+    Creates an InVEST appropriate suffix string  given the args dictionary and
     suffix key.  In general, prepends an '_' when necessary and generates an
     empty string when necessary.
 
@@ -22,8 +25,7 @@ def make_suffix_string(args, suffix_key):
             return "",
         If `args['suffix_key']` starts with '_' return `args['suffix_key']`
             else return '_'+`args['suffix_key']`
-        """
-
+    """
     try:
         file_suffix = args[suffix_key]
         if file_suffix != "" and not file_suffix.startswith('_'):
@@ -116,7 +118,70 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     # object in interblocks()
     kernel_dataset.FlushCache()
 
-    for block_data, kernel_block in pygeoprocessing.iterblocks(kernel_filepath):
+    for block_data, kernel_block in pygeoprocessing.iterblocks(
+            kernel_filepath):
         kernel_block /= integration
         kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
                                yoff=block_data['yoff'])
+
+
+def build_file_registry(base_file_path_list, file_suffix):
+    """Combine file suffixes with key names, base filenames, and directories.
+
+    Parameters:
+        base_file_tuple_list (list): a list of (dict, path) tuples where
+            the dictionaries have a 'file_key': 'basefilename' pair, or
+            'file_key': list of 'basefilename's.  'path'
+            indicates the file directory path to prepend to the basefile name.
+        file_suffix (string): a string to append to every filename, can be
+            empty string
+
+    Returns:
+        dictionary of 'file_keys' from the dictionaries in
+        `base_file_tuple_list` mapping to full file paths with suffixes or
+        lists of file paths with suffixes depending on the original type of
+        the 'basefilename' pair.
+
+    Raises:
+        ValueError if there are duplicate file keys or duplicate file paths.
+    """
+    all_paths = set()
+    duplicate_keys = set()
+    duplicate_paths = set()
+    f_reg = {}
+
+    def _build_path(base_filename, path):
+        """Internal helper to avoid code duplication."""
+        pre, post = os.path.splitext(base_filename)
+        full_path = os.path.join(path, pre+file_suffix+post)
+
+        # Check for duplicate keys or paths
+        if full_path in all_paths:
+            duplicate_paths.add(full_path)
+        else:
+            all_paths.add(full_path)
+        return full_path
+
+    for base_file_dict, path in base_file_path_list:
+        for file_key, file_payload in base_file_dict.iteritems():
+            # check for duplicate keys
+            if file_key in f_reg:
+                duplicate_keys.add(file_key)
+            else:
+                # handle the case whether it's a filename or a list of strings
+                if isinstance(file_payload, basestring):
+                    full_path = _build_path(file_payload, path)
+                    f_reg[file_key] = full_path
+                elif isinstance(file_payload, list):
+                    f_reg[file_key] = []
+                    for filename in file_payload:
+                        full_path = _build_path(filename, path)
+                        f_reg[file_key].append(full_path)
+
+    if len(duplicate_paths) > 0 or len(duplicate_keys):
+        raise ValueError(
+            "Cannot consolidate because of duplicate paths or keys: "
+            "duplicate_keys: %s duplicate_paths: %s" % (
+                duplicate_keys, duplicate_paths))
+
+    return f_reg

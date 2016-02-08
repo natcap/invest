@@ -182,8 +182,29 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(result_id, expected_result_id):
             self.assertEqual(res, exp_res)
 
-    def test_clip_shape_points(self):
-        """WaveEnergy: testing 'clip_shape' clipping points from polygons."""
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_clip_datasource_layer_polygons(self):
+        """WaveEnergy: testing clipping polygons from polygons."""
+        from natcap.invest.wave_energy import wave_energy
+
+        temp_dir = self.workspace_dir
+        srs = sampledata.SRS_WILLAMETTE
+
+        aoi_path = os.path.join(REGRESSION_DATA, 'aoi_proj_to_extract.shp')
+        extract_path = os.path.join(
+            SAMPLE_DATA, 'WaveEnergy', 'input', 'WaveData',
+            'Global_extract.shp')
+
+        result_path = os.path.join(temp_dir, 'aoi_proj_clipped.shp')
+        wave_energy.clip_datasource_layer(aoi_path, extract_path, result_path)
+
+        expected_path = os.path.join(REGRESSION_DATA, 'aoi_proj_clipped.shp')
+        pygeoprocessing.testing.assert_vectors_equal(
+            result_path, expected_path, 1e-9)
+
+    def test_clip_datasource_layer_points(self):
+        """WaveEnergy: testing clipping points from polygons."""
         from natcap.invest.wave_energy import wave_energy
 
         temp_dir = self.workspace_dir
@@ -221,7 +242,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         output_path = os.path.join(temp_dir, 'vector.shp')
         # Call the function to test
-        wave_energy.clip_shape(
+        wave_energy.clip_datasource_layer(
             shape_to_clip_uri, binding_shape_uri, output_path)
 
         # Create the expected point shapefile
@@ -243,8 +264,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             output_path, expected_shape, 1e-9)
 
-    def test_clip_shape_no_intersection(self):
-        """WaveEnergy: testing 'clip_shape' w/ no intersection."""
+    def test_clip_datasouce_layer_no_intersection(self):
+        """WaveEnergy: testing 'clip_datasource_layer' w/ no intersection."""
         from natcap.invest.wave_energy import wave_energy
 
         temp_dir = self.workspace_dir
@@ -280,7 +301,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         output_path = os.path.join(temp_dir, 'vector.shp')
         # Call the function to test
         self.assertRaises(
-            wave_energy.IntersectionError, wave_energy.clip_shape,
+            wave_energy.IntersectionError, wave_energy.clip_datasource_layer,
             shape_to_clip_uri, binding_shape_uri, output_path)
 
     def test_create_attribute_csv_table(self):
