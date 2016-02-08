@@ -6,10 +6,12 @@ import pkgutil
 import shutil
 import tempfile
 import unittest
+import csv
 
 import shapely
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+from pygeoprocessing import geoprocessing as geoprocess
+import pygeoprocessing.testing as pygeotest
+
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
@@ -59,14 +61,34 @@ transition_matrix = [
 
 
 def create_raster(raster_uri, array):
-    pass
+    """Create test raster."""
+    srs = pygeotest.sampledata.SRS_WILLAMETTE
+    pygeotest.create_raster_on_disk(
+        array,
+        srs.origin,
+        srs.projection,
+        -1,
+        srs.pixel_size(100),
+        datatype=gdal.GDT_Int32,
+        filename=raster_uri)
+    return raster_uri
 
 
 def create_shapefile(shapefile_uri, geometry):
-    pass
+    """Create test shapefile."""
+    srs = pygeotest.sampledata.SRS_WILLAMETTE
+    pygeotest.create_vector_on_disk(
+        geometries,
+        projection,
+        fields=None,
+        attributes=None,
+        vector_format='GeoJSON',
+        filename=None)
+    return shapefile_uri
 
 
 def create_csv_table(table_uri, list):
+    """Create test csv table."""
     pass
 
 
@@ -82,8 +104,7 @@ def get_args():
     transition_matrix_uri = os.path.join(workspace_dir, 'transition.csv')
     create_raster(transition_matrix_uri, array)
 
-    suitability_dir = os.path.join(
-        os.path.dirname(__file__), 'workspace', 'suitability')
+    suitability_dir = os.path.join(workspace_dir, 'suitability')
     if not os.path.exists(suitability_dir):
         os.mkdir(suitability_dir)
 
