@@ -51,7 +51,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(10.0)
+    @timeout(20.0)
     def test_empty_server(self):
         """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
@@ -59,7 +59,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
         pygeoprocessing.create_directories([self.workspace_dir])
         empty_point_data_path = os.path.join(
-            REGRESSION_DATA, 'sample_data.csv')
+            self.workspace_dir, 'empty_table.csv')
         open(empty_point_data_path, 'w').close()  # touch the file
 
         # attempt to get an open port; could result in race condition but
@@ -82,10 +82,12 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
         server_thread = threading.Thread(
             target=recmodel_server.execute, args=(server_args,))
+        server_thread.daemon = True
         server_thread.start()
 
         client_args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
+            'aoi_path': os.path.join(
+                REGRESSION_DATA, 'test_aoi_for_subset.shp'),
             'cell_size': 7000.0,
             'hostname': 'localhost',
             'port': port,
@@ -190,7 +192,7 @@ class TestLocalRecServer(unittest.TestCase):
         date_range = (
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
-        out_vector_filename = 'pud.shp'
+        out_vector_filename = os.path.join(self.workspace_dir, 'pud.shp')
         self.recreation_server._calc_aggregated_points_in_aoi(
             aoi_path, self.workspace_dir, date_range, out_vector_filename)
 
