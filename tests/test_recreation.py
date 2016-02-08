@@ -140,6 +140,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
         server_thread = threading.Thread(
             target=recmodel_server.execute, args=(server_args,))
+        server_thread.daemon = True
         server_thread.start()
 
         args = {
