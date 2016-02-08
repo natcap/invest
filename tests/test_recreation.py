@@ -1,5 +1,6 @@
 """InVEST Recreation model tests."""
 
+import Queue
 import glob
 import zipfile
 import socket
@@ -110,7 +111,6 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    #@timeout(100.0)
     def test_local_aggregate_points(self):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_client
@@ -158,7 +158,6 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(100.0)
     def test_local_calc_poly_pud(self):
         """Recreation test single threaded local PUD calculation."""
         from natcap.invest.recreation import recmodel_client
@@ -184,6 +183,24 @@ class TestLocalPyroRecServer(unittest.TestCase):
         # assert annual average PUD is the same as regression
         self.assertEqual(
             53.3, pud_poly_feature_queue.get()[1][0])
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_read_from_disk_csv(self):
+        """Recreation test reading raw CSV."""
+        from natcap.invest.recreation import recmodel_server
+
+        csv_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+        raw_file_lines_queue = multiprocessing.Queue()
+        n_readers = 1
+        recmodel_server._read_from_disk_csv(
+            csv_path, raw_file_lines_queue, n_readers)
+        lines = 0
+        # need to drain the queue like this because there is otherwise no
+        # reliable function to determine the queue's size
+        while raw_file_lines_queue.get() != 'STOP':
+            lines += 1
+        self.assertEqual(98, lines)  # we expect 5 from regression results
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
