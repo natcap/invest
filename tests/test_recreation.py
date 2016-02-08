@@ -156,6 +156,19 @@ class TestLocalPyroRecServer(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             expected_vector_path, result_vector_path, 1e-5)
 
+        # ensure the remote workspace is as expected
+        workspace_zip_binary = recreation_server.fetch_workspace_aoi(
+            workspace_id)
+        out_workspace_dir = os.path.join(self.workspace_dir, 'workspace_zip')
+        os.makedirs(out_workspace_dir)
+        result_zip_path = os.path.join(REGRESSION_DATA, 'pud_result.zip')
+        workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
+        open(workspace_zip_path, 'wb').write(workspace_zip_binary)
+        zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
+        pygeoprocessing.testing.assert_vectors_equal(
+            aoi_path,
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1e-5)
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_local_calc_poly_pud(self):
@@ -163,6 +176,39 @@ class TestLocalPyroRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
+        recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+
+        poly_test_queue = multiprocessing.Queue()
+        poly_test_queue.put(0)
+        poly_test_queue.put('STOP')
+        pud_poly_feature_queue = multiprocessing.Queue()
+        recmodel_server._calc_poly_pud(
+            recreation_server.qt_pickle_filename,
+            os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp'),
+            date_range, poly_test_queue, pud_poly_feature_queue)
+
+        # assert annual average PUD is the same as regression
+        self.assertEqual(
+            53.3, pud_poly_feature_queue.get()[1][0])
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_local_calc_existing_cached(self):
+        """Recreation local PUD calculation on existing quadtree."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+        recreation_server = None
+        # This will not generate a new quadtree but instead load existing one
         recreation_server = recmodel_server.RecModel(
             os.path.join(REGRESSION_DATA, 'sample_data.csv'),
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
@@ -661,7 +707,8 @@ class RecreationRegressionTests(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
             response_vector_path)
 
-        predictor_table_path = 'predictors.csv' # os.path.join(self.workspace_dir, 'predictors.csv')
+        predictor_table_path = os.path.join(
+            self.workspace_dir, 'predictors.csv')
 
         # these are absolute paths for predictor data
         predictor_list = [

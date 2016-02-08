@@ -114,7 +114,14 @@ class RecModel(object):
 
     # not static so it can register in Pyro object
     def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
-        """Download the AOI of the workspace specified by workspace_id."""
+        """Download the AOI of the workspace specified by workspace_id.
+
+        Parameters:
+            workspace_id (string): unique workspace ID on server to query.
+
+        Returns:
+            zip file as a binary string of workspace.
+        """
         # try/except block so Pyro4 can receive an exception if there is one
         try:
             # make a random workspace name so we can work in parallel
