@@ -506,8 +506,10 @@ InVEST Coastal Vulnerability relies on the rtree package for spatial indexing
 geometries. Rtree depends on the libspatialindex library from
 http://libspatialindex.github.com.
 
-To install on *nix download the libspatialindex library and run:
+To install on \*nix download the libspatialindex library and run:
+
     ``sudo ./configure; sudo make; sudo make install``
+
     ``sudo pip install rtree``
 
 Installing on a windows computer is a little more complicated. Christoph
