@@ -1,6 +1,6 @@
 """InVEST Recreation model tests."""
 
-import Queue
+import datetime
 import glob
 import zipfile
 import socket
@@ -186,21 +186,20 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_read_from_disk_csv(self):
-        """Recreation test reading raw CSV."""
+    def test_parse_input_csv(self):
+        """Recreation test parsing raw CSV."""
         from natcap.invest.recreation import recmodel_server
 
         csv_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
-        raw_file_lines_queue = multiprocessing.Queue()
-        n_readers = 1
-        recmodel_server._read_from_disk_csv(
-            csv_path, raw_file_lines_queue, n_readers)
-        lines = 0
-        # need to drain the queue like this because there is otherwise no
-        # reliable function to determine the queue's size
-        while raw_file_lines_queue.get() != 'STOP':
-            lines += 1
-        self.assertEqual(98, lines)  # we expect 5 from regression results
+        block_offset_size_queue = multiprocessing.Queue()
+        block_offset_size_queue.put((0, 2**10))
+        block_offset_size_queue.put('STOP')
+        numpy_array_queue = multiprocessing.Queue()
+        recmodel_server._parse_input_csv(
+            block_offset_size_queue, csv_path, numpy_array_queue)
+        val = numpy_array_queue.get()
+        # we know what the first date is
+        self.assertEqual(val[0][0], datetime.date(2013, 3, 17))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)

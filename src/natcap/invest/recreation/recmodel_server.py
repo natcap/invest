@@ -390,48 +390,6 @@ class RecModel(object):
         return out_aoi_pud_path, monthly_table_path
 
 
-def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
-    """Read lines from the CSV and push to work queue.
-
-    Parameters:
-        infile_name (string): path to csv file
-        raw_file_lines_queue (multiprocessing.Queue): a buffer of CSV lines
-            appended to a deques will be appended to this queue.  When the
-            file is fully read `n_readers` number of 'STOP's will be pushed
-            to the queue.
-        n_readers (int): number of reader processes for inserting the sentinel
-
-    Returns:
-        None
-    """
-    original_size = os.path.getsize(infile_name)
-    bytes_left = original_size
-    last_time = time.time()
-
-    with open(infile_name, 'rb') as infile:
-        csvfile_reader = csv.reader(infile)
-        csvfile_reader.next()  # skip the header
-
-        row_deque = collections.deque()
-        for row in csvfile_reader:
-            bytes_left -= len(','.join(row))
-            last_time = recmodel_client.delay_op(
-                last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
-                    '%.2f%% of %s read, text row queue size %d',
-                    100.0 * (1.0 - (float(bytes_left) / original_size)),
-                    infile_name, raw_file_lines_queue.qsize()))
-            row_deque.append(row)
-
-            if len(row_deque) > CSV_ROWS_PER_PARSE:
-                raw_file_lines_queue.put(row_deque)
-                row_deque = collections.deque()
-    if len(row_deque) > 0:
-        raw_file_lines_queue.put(row_deque)
-    for _ in xrange(n_readers):
-        raw_file_lines_queue.put('STOP')
-    LOGGER.info('done reading csv from disk')
-
-
 def _parse_input_csv(
         block_offset_size_queue, csv_filepath, numpy_array_queue):
     """Parse CSV file lines to (datetime64[d], userhash, lat, lng) tuples.
