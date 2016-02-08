@@ -1,4 +1,4 @@
-InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs 
+InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
 ================================================================
 
 +-----------------------+-------------------------------+-----------------------------+---------------------------+
@@ -70,10 +70,10 @@ but have almost all been ported over to a purely open-source python environment.
 Contributing to Development
 ===========================
 
-The best way to participate is to contribute a fix to a bug you are 
+The best way to participate is to contribute a fix to a bug you are
 experiencing or to implement a pet feature!
 
-Issues, including ongoing work, are tracked in our issue tracker on this 
+Issues, including ongoing work, are tracked in our issue tracker on this
 bitbucket project.  If you encounter a bug, please let us know!
 
 If you have something you'd like to contribute, please fork the repository
@@ -98,7 +98,7 @@ InVEST Dependencies
     Do this:
 
     ``$ paver check``
-    
+
     This will verify required applications are available and that
     you have some of the python packages that are more difficult to install
     (especially those that depend on low-level C libraries).
@@ -119,6 +119,7 @@ InVEST relies on the following python packages:
   * poster
   * pygeoprocessing
   * natcap.versioner
+  * rtree
 
 For development, we recommend using a virtual environment (such as provided by
 ``virtualenv``).  We provide a paver command (``paver env``) to help with this process.
@@ -136,7 +137,7 @@ on the command-line somewhere on your PATH, depending on what you'd like to buil
   * ``hdiutil`` (for generating mac DMGs)
   * ``pdflatex`` (for generating PDF versions of the User's Guide)
   * ``pandoc`` (for converting .docx files to rst when building the User's
-    Guide.  See http://pandoc.org/installing.html)  
+    Guide.  See http://pandoc.org/installing.html)
 
 
 For building InVEST binaries, you will also need to have a compiler configured.
@@ -188,14 +189,14 @@ following directory structure: ::
 Just building binaries
 ----------------------
 The easiest way to build pyinstaller binaries on your platform is to use our
-one-step binary build.  This paver task will 
-Binaries are built through ``paver build_bin``.  The simplest way to call this is 
+one-step binary build.  This paver task will
+Binaries are built through ``paver build_bin``.  The simplest way to call this is
 ``paver build_bin``, but this assumes that you have all dependencies (including natcap.invest)
 installed to your global python distribution.  More commonly, you'll want to install InVEST to
 a virtual environment before running build_bin.
 
 For example, if you want to build a new virtualenv via the paver command and then build the binaries
-using this new environment: 
+using this new environment:
 
 ::
 
@@ -208,7 +209,7 @@ using this new environment:
         --clear \
         --envname=$ENVNAME \
         --with-invest
-        
+
     $ paver build_bin --python=release_env/bin/python
 
 This will build the pyinstaller binaries for whatever platform you're running this on and place them
@@ -264,15 +265,15 @@ Building data zipfiles is done by calling ``paver build_data``: ::
       -h, --help   display this help information
       --force-dev  Zip data folders even if repo version does not match the known
       state
-      
-      
+
+
       Build data zipfiles for sample data.
-      
+
       Expects that sample data zipfiles are provided in the invest-data repo.
       Data files should be stored in one directory per model, where the directory
       name matches the model name.  This creates one zipfile per folder, where
       the zipfile name matches the folder name.
-      
+
       options:
       --force-dev : Provide this option if you know that the invest-data version
                     does not match the version tracked in versions.json.  If the
@@ -286,7 +287,7 @@ This will build the data zipfiles and store them in ``dist``.
 Building Documentation
 ======================
 
-All documentation is built through ``paver build_docs`` via sphinx.  Building 
+All documentation is built through ``paver build_docs`` via sphinx.  Building
 the User's Guide requires that you have GNU make, sphinx, and LaTex installed.
 Building the API documentation requires only virtualenv and a compiler, as
 sphinx will be installed into a new virtualenv at build time.
@@ -352,7 +353,7 @@ I suppose it's probably possible to cross-compile binaries for other platforms, 
 it will work.  Try at your own risk!
 
 To build an installer, you'll first need to build the InVEST binary folder through ``paver build_bin``.
-Under normal conditions, this will save your binaries to ``dist/invest_dist``.  To build an installer 
+Under normal conditions, this will save your binaries to ``dist/invest_dist``.  To build an installer
 from this folder, execute ::
 
     $ paver build_installer --bindir=dist/invest_dist
@@ -457,7 +458,7 @@ more information if you're interested.
 Matplotlib ImportError
 ----------------------
 
-On Fedora systems, some users encounter this exception when trying to run an 
+On Fedora systems, some users encounter this exception when trying to run an
 InVEST model that uses matplotlib:
 
 ::
@@ -498,6 +499,25 @@ separately.  To install in this way:
 
 Then, download and install the gdal python package.
 
+RTREE
+-----
+
+InVEST Coastal Vulnerability relies on the rtree package for spatial indexing
+geometries. Rtree depends on the libspatialindex library from
+http://libspatialindex.github.com.
+
+To install on *nix download the libspatialindex library and run:
+    ``sudo ./configure; sudo make; sudo make install``
+    ``sudo pip install rtree``
+
+Installing on a windows computer is a little more complicated. Christoph
+Gohlke has prebuilt binaries for the Rtree at
+http://www.lfd.uci.edu/~gohlke/pythonlibs/#rtree.
+
+Please see the packages PYPI page https://pypi.python.org/pypi/Rtree/ for
+more details as well as the installation instruction page
+http://toblerity.org/rtree/install.html.
+
 
 Running Tests
 =============
@@ -508,14 +528,14 @@ To run the full suite of tests:
 
     $ paver test
 
-To specify a test (or multiple tests) to run via `paver test`, use the nosetests 
+To specify a test (or multiple tests) to run via `paver test`, use the nosetests
 format to specify test files, classes, and/or test methods to run.  For example:
 
 ::
 
     $ paver test tests/test_example.py:ExampleTest.test_regression
 
-This will only run this one test, ignoring all other tests that would normally be 
+This will only run this one test, ignoring all other tests that would normally be
 run.
 
 If you're looking for some extra verbosity (or you're building on jenkins):
