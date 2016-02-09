@@ -350,7 +350,7 @@ Var INSTALLER_DIR
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${SHORT_VERSION}"
+        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}"
         SetOutPath "$INSTDIR"
         NSISdl::download "$SERVER_PATH/${Filename}" ${Filename}
         Pop $R0 ;Get the status of the file downloaded
