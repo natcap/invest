@@ -99,7 +99,10 @@ class TestLocalPyroRecServer(unittest.TestCase):
         file_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
         file_hash = recmodel_server._hashfile(
             file_path, blocksize=2**20, fast_hash=True)
-        self.assertEqual(file_hash, '374cedfe96ad2e12_fast_hash')
+        # we can't assert the full hash since it is dependant on the file
+        # last access time and we can't reliably set that in Python.
+        # instead we just check that at the very least it ends with _fast_hash
+        self.assertTrue(file_hash.endswith('_fast_hash'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
