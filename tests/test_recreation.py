@@ -70,10 +70,10 @@ class TestBufferedFileManager(unittest.TestCase):
         with self.assertRaises(IOError):
             file_manager.read(1234)
 
-
     def tearDown(self):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
+
 
 class TestLocalPyroRecServer(unittest.TestCase):
     """Tests that set up local rec server on a port and call through."""
