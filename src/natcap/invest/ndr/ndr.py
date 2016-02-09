@@ -26,6 +26,7 @@ def execute(args):
         args['workspace_dir'] (string):  path to current workspace
         args['dem_uri'] (string): path to digital elevation map raster
         args['lulc_uri'] (string): a path to landcover map raster
+        args['runoff_proxy_uri'] (string): a path to a runoff proxy raster
         args['watersheds_uri'] (string): path to the watershed shapefile
         args['biophysical_table_uri'] (string): path to csv table on disk
             containing nutrient retention values.
