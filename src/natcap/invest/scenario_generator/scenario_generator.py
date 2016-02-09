@@ -161,10 +161,8 @@ def get_transition_set_count_from_uri(dataset_uri_list):
         unique_raster_values_count (dict): cell type with each raster value
         transitions (dict): count of cells
     """
-    cell_size = geoprocess.get_cell_size_from_uri(
-        dataset_uri_list[0])
-    lulc_nodata = int(geoprocess.get_nodata_from_uri(
-        dataset_uri_list[0]))
+    cell_size = geoprocess.get_cell_size_from_uri(dataset_uri_list[0])
+    lulc_nodata = int(geoprocess.get_nodata_from_uri(dataset_uri_list[0]))
     nodata = 0
 
     # reclass rasters to compact bit space

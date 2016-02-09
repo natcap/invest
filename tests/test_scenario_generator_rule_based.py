@@ -8,6 +8,7 @@ import tempfile
 import unittest
 import csv
 import pprint as pp
+from decimal import Decimal
 
 import numpy as np
 from osgeo import gdal, ogr, osr
@@ -36,7 +37,7 @@ transition_likelihood_table = [
 
 land_suitability_factors_table = [
     ['Id', 'Cover ID', 'Factorname', 'Layer',     'Wt', 'Suitfield', 'Dist',  'Cover'],
-    ['2',  '9', 'roads',      'roads.shp', '5',  '',          '10000', 'Smallscl']]
+    ['2',  '9',        'roads',      'roads.shp', '5',  '',          '10000', 'Smallscl']]
 
 priority_table = [
     ['Id', 'Name',        '1',   '2', '3', '4', 'Priority'],
@@ -57,6 +58,14 @@ transition_matrix = [
     ['Agriculture', '0',         '0',           '0',      '0',        '0'],
     ['Forest',      '10',        '2',           '0',      '0',        '-10%'],
     ['Baseland',    '0',         '0',           '0',      '0'         '0']]
+
+
+def read_raster(raster_uri):
+    ds = gdal.Open(raster_uri)
+    band = ds.GetRasterBand(1)
+    array = band.ReadAsArray()
+    ds = None
+    return array
 
 
 def create_raster(raster_uri, array):
@@ -177,6 +186,9 @@ class ModelTests(unittest.TestCase):
         import natcap.invest.scenario_generator as sg
         args = get_args()
         sg.scenario_generator.execute(args)
+        array = read_raster(os.path.join(
+            args['workspace_dir'], 'scenario.tif'))
+        self.assertTrue(4 in array[0])
         shutil.rmtree(args['workspace_dir'])
 
 
@@ -186,60 +198,73 @@ class UnitTests(unittest.TestCase):
 
     def test_calculate_weights(self):
         from natcap.invest import scenario_generator as sg
-        array = np.array([1, 2, 3])
+        array = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
         weights_list = sg.scenario_generator.calculate_weights(array)
+        self.assertEqual(weights_list[0], Decimal('0.3333'))
 
     def test_calculate_priority(self):
         from natcap.invest import scenario_generator as sg
         args = get_args()
-        priority_table_uri = ''
+        priority_table_uri = args['priorities_csv_uri']
         priority_dict = sg.scenario_generator.calculate_priority(
             priority_table_uri)
+        self.assertEqual(priority_dict[1], Decimal('0.6430'))
         shutil.rmtree(args['workspace_dir'])
 
     def test_calculate_distance_raster_uri(self):
         from natcap.invest import scenario_generator as sg
         args = get_args()
-        dataset_in_uri = ''
-        dataset_out_uri = ''
+        dataset_in_uri = os.path.join(args['workspace_dir'], 'dataset_in.tif')
+        array = np.array([[1., 0., 0.], [0., 0., 0.], [0., 0., 0.]])
+        create_raster(dataset_in_uri, array)
+        dataset_out_uri = os.path.join(args['workspace_dir'], 'dataset_out.tif')
         sg.scenario_generator.calculate_distance_raster_uri(
             dataset_in_uri, dataset_out_uri)
+        guess = read_raster(dataset_out_uri)
+        np.testing.assert_almost_equal(guess[0, 1], np.array([100.]))
         shutil.rmtree(args['workspace_dir'])
 
     def test_get_geometry_type_from_uri(self):
         from natcap.invest import scenario_generator as sg
         args = get_args()
-        datasource_uri = ''
+        datasource_uri = args['constraints']
         shape_type = sg.scenario_generator.get_geometry_type_from_uri(
             datasource_uri)
+        self.assertEqual(shape_type, 5)
         shutil.rmtree(args['workspace_dir'])
 
     def test_get_transition_set_count_from_uri(self):
         from natcap.invest import scenario_generator as sg
         args = get_args()
-        dataset_uri_list = ''
+        dataset_uri_list = [args['landcover'], args['landcover']]
         unique_raster_values_count, transitions = \
             sg.scenario_generator.get_transition_set_count_from_uri(
                 dataset_uri_list)
+        self.assertEqual(
+            unique_raster_values_count.values()[0],
+            {1: 4, 2: 4, 3: 4, 4: 4})
         shutil.rmtree(args['workspace_dir'])
 
     def test_generate_chart_html(self):
         from natcap.invest import scenario_generator as sg
         args = get_args()
-        cover_dict = {}
-        cover_names_dict = {}
-        workspace_dir = ''
+        cover_dict = {9.: (1., 2.)}
+        cover_names_dict = {'Cover': 'Cover'}
         chart_html = sg.scenario_generator.generate_chart_html(
-            cover_dict, cover_names_dict, workspace_dir)
+            cover_dict, cover_names_dict, args['workspace_dir'])
+        self.assertEqual(chart_html[0:5], '\n<tab')
         shutil.rmtree(args['workspace_dir'])
 
     def test_filter_fragments(self):
         from natcap.invest import scenario_generator as sg
         args = get_args()
-        input_uri = ''
-        size = None
-        output_uri = ''
-        sg.scenario_generator.filter_fragments(input_uri, size, output_uri)
+        input_uri = args['landcover']
+        size = 200.
+        output_uri = os.path.join(
+            args['workspace_dir'], 'fragments_output.tif')
+        sg.scenario_generator.filter_fragments(
+            input_uri, size, output_uri)
+        self.assertEqual(read_raster(output_uri)[0, 1], 0.)
         shutil.rmtree(args['workspace_dir'])
 
 
