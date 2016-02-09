@@ -5,7 +5,6 @@ import Queue
 import os
 import multiprocessing
 import uuid
-import csv
 import zipfile
 import glob
 import hashlib
