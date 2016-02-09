@@ -18,6 +18,11 @@
 * Habitat Quality bug fix when given land cover rasters with different pixel sizes than threat rasters. Model would use the wrong pixel distance for the convolution kernel.
 * Light refactor of Timber model. Now using CSV input attribute file instead of DBF file.
 * Fixed clipping bug in Wave Energy model that was not properly clipping polygons correctly. Found when using global data.
+* Maded the following changes / updates to the coastal vulnerability model:
+    * Fixed a bug in the model where the geomorphology ranks were not always being used correctly.
+    * Removed the HTML summary results output and replaced with a link to a dashboard that helps visualize and interpret CV results.
+    * Added a point shapefile output: 'outputs/coastal_exposure.shp' that is a shapefile representation of the corresponding CSV table.
+    * The model UI now requires the 'Relief' input. No longer optional.
 
 3.2.1
 =====
