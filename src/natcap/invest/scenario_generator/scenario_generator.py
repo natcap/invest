@@ -10,7 +10,7 @@ import numpy as np
 import scipy as sp
 from osgeo import gdal, ogr
 
-import pygeoprocessing.geoprocess as geoprocess
+import pygeoprocessing.geoprocessing as geoprocess
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -517,13 +517,7 @@ def execute(args):
 
         calculate_proximity (bool): whether to calculate proximity
         proximity_weight (float): weight given to proximity
-
         calculate_transition (bool): whether to specifiy transitions
-        transition_id (str): suitability id
-        percent_field (str): percent change
-        area_field (str): area change
-        priority_field (str): priority
-        proximity_field (str): proximity
 
         calculate_factors (bool): whether to use suitability factors
         suitability_folder (str): path to suitability folder
@@ -533,10 +527,6 @@ def execute(args):
             center points
         factors_field_container (bool): whether to use suitability factor
             inputs
-        suitability_id (str):
-        suitability_layer (str):
-        suitability_field (str):
-        distance_field (str):
 
         calculate_constraints (bool): whether to use constraint inputs
         constraints (str): filepath to constraints shapefile layer
@@ -557,23 +547,13 @@ def execute(args):
             'calculate_priorities': True,
             'priorities_csv_uri': 'path/to/csv',
             'calculate_proximity': True,
-            'proximity_weight': 0.3,
             'calculate_transition': True,
-            'transition_id': 'ID',
-            'percent_field': 'Percent Change',
-            'area_field': 'Area Change',
-            'priority_field': 'Priority',
-            'proximity_field': 'Proximity',
             'calculate_factors': True,
             'suitability_folder': 'path/to/dir',
             'suitability': 'path/to/csv',
             'weight': 0.5,
             'factor_inclusion': 0,
             'factors_field_container': True,
-            'suitability_id': '',
-            'suitability_layer': '',
-            'suitability_field': '',
-            'distance_field': '',
             'calculate_constraints': True,
             'constraints': 'path/to/shapefile',
             'constraints_field': '',
@@ -581,6 +561,21 @@ def execute(args):
             'override': 'path/to/shapefile',
             'override_field': '',
             'override_inclusion': 0
+        }
+
+    Added Afterwards::
+
+        d = {
+            'proximity_weight': 0.3,
+            'distance_field': '',
+            'transition_id': 'ID',
+            'percent_field': 'Percent Change',
+            'area_field': 'Area Change',
+            'priority_field': 'Priority',
+            'proximity_field': 'Proximity',
+            'suitability_id': '',
+            'suitability_layer': '',
+            'suitability_field': '',
         }
 
     """
@@ -816,7 +811,7 @@ def execute(args):
                 factor_id][args["suitability_field"]]
             distance = factor_dict[factor_id][args["distance_field"]]
             cover_id = int(factor_dict[factor_id][
-                           args["suitability_cover_id"]])
+                args["suitability_cover_id"]])
             weight = int(factor_dict[factor_id][args["suitability_weight"]])
 
             LOGGER.debug(

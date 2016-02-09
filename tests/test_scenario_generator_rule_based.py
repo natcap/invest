@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import unittest
 import csv
+import pprint as pp
 
 import numpy as np
 from osgeo import gdal, ogr, osr
@@ -21,45 +22,41 @@ SAMPLE_DATA = os.path.join(
 LOGGER = logging.getLogger('test_scenario_generator')
 
 land_cover_array = [
-    [1., 2., 3., 4., 5., 6.],
-    [1., 2., 3., 4., 5., 6.],
-    [1., 2., 3., 4., 5., 6.],
-    [1., 2., 3., 4., 5., 6.],
-    [1., 2., 3., 4., 5., 6.],
-    [1., 2., 3., 4., 5., 6.]]
+    [1., 2., 3., 4.],
+    [1., 2., 3., 4.],
+    [1., 2., 3., 4.],
+    [1., 2., 3., 4.]]
 
 transition_likelihood_table = [
-    ['Id', 'Name', 'Short', '1', '2', '3', '4', 'Percent Change',
-        'Area Change', 'Priority', 'Proximity', 'Patch (ha)'],
-    ['1', 'Grassland', 'Grassland', '0', '4', '0', '1', '0', '0',
-        '0', '0', '0'],
-    ['2', 'Agriculture', 'Agriculture', '0', '0', '0', '0', '0', '8000', '8',
-        '5000', '0'],
-    ['3', 'Forest', 'Forest', '0', '8', '0', '1', '0', '0', '0', '0', '0'],
-    ['4', 'Bareland', 'Bareland', '0', '0', '0', '0', '25', '0', '5',
-        '10000', '']]
+    ['Id', 'Name',        'Short',       '1', '2', '3', '4', 'Percent Change', 'Area Change', 'Priority', 'Proximity', 'Patch ha'],
+    ['1',  'Grassland',   'Grassland',   '0', '4', '0', '1', '0',              '0',           '0',        '0',         '0'],
+    ['2',  'Agriculture', 'Agriculture', '0', '0', '0', '0', '0',              '8000',        '8',        '5000',      '0'],
+    ['3',  'Forest',      'Forest',      '0', '8', '0', '1', '0',              '0',           '0',        '0',         '0'],
+    ['4',  'Bareland',    'Bareland',    '0', '0', '0', '0', '25',             '0',           '5',        '10000',     '0']]
 
 land_suitability_factors_table = [
-    ['id', 'Factorname', 'Layer', 'Wt', 'Suitfield', 'Dist', 'Cover'],
-    ['2', 'roads', 'Roads.shp', '5', '', '10000', 'Smallscl']]
+    ['Id', 'Cover ID', 'Factorname', 'Layer',     'Wt', 'Suitfield', 'Dist',  'Cover'],
+    ['2',  '9', 'roads',      'roads.shp', '5',  '',          '10000', 'Smallscl']]
 
 priority_table = [
-    ['id', 'Name', 'Cover A', 'Cover B', 'Cover C', 'Priority'],
-    ['1', 'Cover A', '1', '', '', ''],
-    ['2', 'Cover B', '0.5', '1', '', ''],
-    ['3', 'Cover C', '0.1', '5', '1', '']]
+    ['Id', 'Name',        '1',   '2', '3', '4', 'Priority'],
+    ['1',  'Grassland',   '1',   '',  '',  '',  ''],
+    ['2',  'Agriculture', '0.5', '1', '',  '',  ''],
+    ['3',  'Forest',      '0.1', '5', '1', '',  ''],
+    ['4',  'Bareland',    '0.1', '5', '1', '1', '']]
 
 pairwise_comparison_table = [
-    ['Record', 'Item', 'DistRoads', 'DistTown', 'Slope', 'PRIORITY'],
-    ['1', 'DistRoads', '1', '', '', ''],
-    ['2', 'DistTowns', '0.33', '1', '', ''],
-    ['3', 'Slope', '0.1', '5', '1', '']]
+    ['Record', 'Item',      'DistRoads', 'DistTown', 'Slope', 'PRIORITY'],
+    ['1',      'DistRoads', '1',         '',         '',      ''],
+    ['2',      'DistTowns', '0.33',      '1',        '',      ''],
+    ['3',      'Slope',     '0.1',       '5',        '1',     '']]
 
 transition_matrix = [
-    ['', 'Cover A', 'Cover B', 'Cover C', 'Change'],
-    ['Cover A', '0', '4', '0', '30%'],
-    ['Cover B', '0', '0', '0', '0'],
-    ['Cover C', '10', '2', '0', '-10%']]
+    ['',            'Grassland', 'Agriculture', 'Forest', 'Baseland', 'Change'],
+    ['Grassland',   '0',         '4',           '0',      '0'         '30%'],
+    ['Agriculture', '0',         '0',           '0',      '0',        '0'],
+    ['Forest',      '10',        '2',           '0',      '0',        '-10%'],
+    ['Baseland',    '0',         '0',           '0',      '0'         '0']]
 
 
 def create_raster(raster_uri, array):
@@ -76,18 +73,16 @@ def create_raster(raster_uri, array):
     return raster_uri
 
 
-def create_shapefile(shapefile_uri, geometry):
+def create_shapefile(shapefile_uri, geometries, fields=None):
     """Create test shapefile."""
     srs = pygeotest.sampledata.SRS_WILLAMETTE
-    geometries = [shapely.geometry.Point(0., 0.).buffer(1.0)]
-    pygeotest.create_vector_on_disk(
+    return pygeotest.create_vector_on_disk(
         geometries,
         srs.projection,
-        fields=None,
+        fields=fields,
         attributes=None,
-        vector_format='GeoJSON',
-        filename=None)
-    return shapefile_uri
+        vector_format='ESRI Shapefile',
+        filename=shapefile_uri)
 
 
 def create_csv_table(table_uri, rows_list):
@@ -100,7 +95,10 @@ def create_csv_table(table_uri, rows_list):
 
 def get_args():
     """Create test-case arguments for Scenario Generator model."""
-    workspace_dir = os.path.join(os.path.dirname(__file__), 'workspace')
+    workspace_dir = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), 'workspace')
+    if os.path.exists(workspace_dir):
+        shutil.rmtree(workspace_dir)
     if not os.path.exists(workspace_dir):
         os.mkdir(workspace_dir)
 
@@ -108,8 +106,13 @@ def get_args():
     land_cover_raster_uri = os.path.join(workspace_dir, 'lulc.tif')
     create_raster(land_cover_raster_uri, array)
 
-    transition_matrix_uri = os.path.join(workspace_dir, 'transition.csv')
-    create_csv_table(transition_matrix_uri, transition_likelihood_table)
+    transition_likelihood_uri = os.path.join(
+        workspace_dir, 'scenario_transition_likelihood.csv')
+    create_csv_table(transition_likelihood_uri, transition_likelihood_table)
+
+    scenario_transition_uri = os.path.join(
+        workspace_dir, 'scenario_transition.csv')
+    create_csv_table(scenario_transition_uri, transition_matrix)
 
     suitability_dir = os.path.join(workspace_dir, 'suitability')
     if not os.path.exists(suitability_dir):
@@ -123,49 +126,58 @@ def get_args():
     create_csv_table(
         suitability_factors_csv_uri, land_suitability_factors_table)
 
+    srs = pygeotest.sampledata.SRS_WILLAMETTE
+    x, y = srs.origin
+
     constraints_shapefile_uri = os.path.join(workspace_dir, 'constraints.shp')
-    constraints_geometry = None
+    constraints_geometry = [shapely.geometry.Point(x+20., y-20.).buffer(1.0)]
     create_shapefile(constraints_shapefile_uri, constraints_geometry)
 
     override_shapefile_uri = os.path.join(workspace_dir, 'override.shp')
-    override_geometry = None
+    override_geometry = [shapely.geometry.Point(x+240., y-240.).buffer(1.0)]
     create_shapefile(override_shapefile_uri, override_geometry)
 
+    roads_shapefile_uri = os.path.join(suitability_dir, 'roads.shp')
+    roads_geometry = [shapely.geometry.LineString(
+        [(x+100., y-0.), (x+100., y-240.)])]
+    create_shapefile(roads_shapefile_uri, roads_geometry)
+
     args = {
-        'workspace_dir': workspace_dir,
-        'suffix': '',
-        'landcover': land_cover_raster_uri,
-        'transition': transition_matrix_uri,
-        'calculate_priorities': True,
-        'priorities_csv_uri': priorities_csv_uri,
-        'calculate_proximity': True,
-        'proximity_weight': 0.3,
-        'calculate_transition': True,
-        'transition_id': 'ID',
-        'percent_field': 'Percent Change',
-        'area_field': 'Area Change',
-        'priority_field': 'Priority',
-        'proximity_field': 'Proximity',
-        'calculate_factors': True,
-        'suitability_folder': suitability_dir,
-        'suitability': suitability_factors_csv_uri,
-        'weight': 0.5,
-        'factor_inclusion': 0,
-        'factors_field_container': True,
-        'suitability_id': '',
-        'suitability_layer': '',
-        'suitability_field': '',
-        'distance_field': '',
-        'calculate_constraints': True,
-        'constraints': constraints_shapefile_uri,
-        'constraints_field': '',
-        'override_layer': True,
-        'override': override_shapefile_uri,
-        'override_field': '',
-        'override_inclusion': 0
+        'workspace_dir': workspace_dir,                  # workspace directory
+        'suffix': '',                                    #
+        'landcover': land_cover_raster_uri,              # land cover raster
+        'transition': transition_likelihood_uri,         # transition matrix
+        'calculate_priorities': True,                    # use relative priorities
+        'priorities_csv_uri': priorities_csv_uri,        #   relative priorities
+        'calculate_proximity': True,                     #
+        'calculate_transition': True,                    #
+        'calculate_factors': True,                       #
+        'suitability_folder': suitability_dir,           # suitability shapefiles folder
+        'suitability': suitability_factors_csv_uri,      # suitability factors
+        'weight': 0.5,                                   # factor weight
+        'factor_inclusion': 0,                           # all_touched=True for vectorize_datasets
+        'factors_field_container': True,                 #
+        'calculate_constraints': True,                   #
+        'constraints': constraints_shapefile_uri,        #
+        'constraints_field': 'protlevel',                #
+        'override_layer': True,                          #
+        'override': override_shapefile_uri,              #
+        'override_field': 'newclass',                    #
+        'override_inclusion': 0                          #
     }
 
     return args
+
+
+class ModelTests(unittest.TestCase):
+
+    """Test execute function in scenario generator model."""
+
+    def test_execute(self):
+        import natcap.invest.scenario_generator as sg
+        args = get_args()
+        sg.scenario_generator.execute(args)
+        shutil.rmtree(args['workspace_dir'])
 
 
 class UnitTests(unittest.TestCase):
