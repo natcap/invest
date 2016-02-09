@@ -1,5 +1,7 @@
 """InVEST Recreation model tests."""
 
+import datetime
+import glob
 import zipfile
 import socket
 import threading
@@ -42,6 +44,37 @@ def timeout(max_timeout):
     return timeout_decorator
 
 
+class TestBufferedFileManager(unittest.TestCase):
+    """Tests for BufferedFileManager."""
+    def setUp(self):
+        """Setup Pyro port."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def test_basic_operation(self):
+        """Recreation test buffered file manager basic ops w/ no buffer."""
+        from natcap.invest.recreation import buffered_file_manager
+        file_manager = buffered_file_manager.BufferedFileManager(
+            os.path.join(self.workspace_dir, 'test'), 0)
+
+        file_manager.append(1234, numpy.array([1, 2, 3, 4]))
+        file_manager.append(1234, numpy.array([1, 2, 3, 4]))
+        file_manager.append(4321, numpy.array([-4, -1, -2, 4]))
+
+        numpy.testing.assert_equal(
+            file_manager.read(1234), numpy.array([1, 2, 3, 4, 1, 2, 3, 4]))
+
+        numpy.testing.assert_equal(
+            file_manager.read(4321), numpy.array([-4, -1, -2, 4]))
+
+        file_manager.delete(1234)
+        with self.assertRaises(IOError):
+            file_manager.read(1234)
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+
 class TestLocalPyroRecServer(unittest.TestCase):
     """Tests that set up local rec server on a port and call through."""
 
@@ -50,11 +83,41 @@ class TestLocalPyroRecServer(unittest.TestCase):
         multiprocessing.freeze_support()
         self.workspace_dir = tempfile.mkdtemp()
 
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_hashfile(self):
+        """Recreation test for hash and fast hash of file."""
+        from natcap.invest.recreation import recmodel_server
+        file_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+        file_hash = recmodel_server._hashfile(
+            file_path, blocksize=2**20, fast_hash=False)
+        self.assertEqual(file_hash, 'b372f3f062afb3e8')
+
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_hashfile_fast(self):
+        """Recreation test for hash and fast hash of file."""
+        from natcap.invest.recreation import recmodel_server
+        file_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+        file_hash = recmodel_server._hashfile(
+            file_path, blocksize=2**20, fast_hash=True)
+        self.assertEqual(file_hash, '374cedfe96ad2e12_fast_hash')
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(10.0)
+    def test_year_order(self):
+        """Recreation ensure that end year < start year raise ValueError."""
+        from natcap.invest.recreation import recmodel_server
+
+        with self.assertRaises(ValueError):
+            # intentionally construct start year > end year
+            _ = recmodel_server.RecModel(
+                os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+                2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @timeout(20.0)
     def test_empty_server(self):
-        """Recreation test a client call to custom server."""
+        """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_client
 
@@ -83,10 +146,12 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
         server_thread = threading.Thread(
             target=recmodel_server.execute, args=(server_args,))
+        server_thread.daemon = True
         server_thread.start()
 
         client_args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'aoi_path': os.path.join(
+                REGRESSION_DATA, 'test_aoi_for_subset.shp'),
             'cell_size': 7000.0,
             'hostname': 'localhost',
             'port': port,
@@ -104,6 +169,205 @@ class TestLocalPyroRecServer(unittest.TestCase):
         _test_same_files(
             os.path.join(REGRESSION_DATA, 'file_list_empty_local_server.txt'),
             self.workspace_dir)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_local_aggregate_points(self):
+        """Recreation test single threaded local AOI aggregate calculation."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+
+        if not os.path.exists(self.workspace_dir):
+            os.makedirs(self.workspace_dir)
+
+        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
+
+        basename = os.path.splitext(aoi_path)[0]
+        aoi_archive_path = os.path.join(
+            self.workspace_dir, 'aoi_zipped.zip')
+        with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
+            for filename in glob.glob(basename + '.*'):
+                myzip.write(filename, os.path.basename(filename))
+
+        # convert shapefile to binary string for serialization
+        zip_file_binary = open(aoi_archive_path, 'rb').read()
+
+        # transfer zipped file to server
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+        out_vector_filename = 'test_aoi_for_subset_pud.shp'
+        zip_result, workspace_id = (
+            recreation_server.calc_photo_user_days_in_aoi(
+                zip_file_binary, date_range, out_vector_filename))
+
+        # unpack result
+        result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
+        open(result_zip_path, 'wb').write(zip_result)
+        zipfile.ZipFile(result_zip_path, 'r').extractall(self.workspace_dir)
+
+        result_vector_path = os.path.join(
+            self.workspace_dir, out_vector_filename)
+        expected_vector_path = os.path.join(
+            REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
+        pygeoprocessing.testing.assert_vectors_equal(
+            expected_vector_path, result_vector_path, 1e-5)
+
+        # ensure the remote workspace is as expected
+        workspace_zip_binary = recreation_server.fetch_workspace_aoi(
+            workspace_id)
+        out_workspace_dir = os.path.join(self.workspace_dir, 'workspace_zip')
+        os.makedirs(out_workspace_dir)
+        workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
+        open(workspace_zip_path, 'wb').write(workspace_zip_binary)
+        zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
+        pygeoprocessing.testing.assert_vectors_equal(
+            aoi_path,
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1e-5)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_local_calc_poly_pud(self):
+        """Recreation test single threaded local PUD calculation."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+
+        poly_test_queue = multiprocessing.Queue()
+        poly_test_queue.put(0)
+        poly_test_queue.put('STOP')
+        pud_poly_feature_queue = multiprocessing.Queue()
+        recmodel_server._calc_poly_pud(
+            recreation_server.qt_pickle_filename,
+            os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp'),
+            date_range, poly_test_queue, pud_poly_feature_queue)
+
+        # assert annual average PUD is the same as regression
+        self.assertEqual(
+            53.3, pud_poly_feature_queue.get()[1][0])
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_local_calc_existing_cached(self):
+        """Recreation local PUD calculation on existing quadtree."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+        recreation_server = None
+        # This will not generate a new quadtree but instead load existing one
+        recreation_server = recmodel_server.RecModel(
+            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+
+        poly_test_queue = multiprocessing.Queue()
+        poly_test_queue.put(0)
+        poly_test_queue.put('STOP')
+        pud_poly_feature_queue = multiprocessing.Queue()
+        recmodel_server._calc_poly_pud(
+            recreation_server.qt_pickle_filename,
+            os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp'),
+            date_range, poly_test_queue, pud_poly_feature_queue)
+
+        # assert annual average PUD is the same as regression
+        self.assertEqual(
+            53.3, pud_poly_feature_queue.get()[1][0])
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_parse_input_csv(self):
+        """Recreation test parsing raw CSV."""
+        from natcap.invest.recreation import recmodel_server
+
+        csv_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+        block_offset_size_queue = multiprocessing.Queue()
+        block_offset_size_queue.put((0, 2**10))
+        block_offset_size_queue.put('STOP')
+        numpy_array_queue = multiprocessing.Queue()
+        recmodel_server._parse_input_csv(
+            block_offset_size_queue, csv_path, numpy_array_queue)
+        val = numpy_array_queue.get()
+        # we know what the first date is
+        self.assertEqual(val[0][0], datetime.date(2013, 3, 17))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @timeout(100.0)
+    def test_regression_local_server(self):
+        """Recreation base regression test on sample data on local server.
+
+        Executes Recreation model with default data and default arguments.
+        """
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        pygeoprocessing.create_directories([self.workspace_dir])
+        point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': port,
+            'raw_csv_point_data_path': point_data_path,
+            'cache_workspace': self.workspace_dir,
+            'min_year': 2004,
+            'max_year': 2015,
+            'max_points_per_node': 50,
+        }
+
+        server_thread = threading.Thread(
+            target=recmodel_server.execute, args=(server_args,))
+        server_thread.daemon = True
+        server_thread.start()
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': True,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': True,
+            'grid_type': 'hexagon',
+            'predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors.csv'),
+            'results_suffix': u'',
+            'scenario_predictor_table_path': os.path.join(
+                REGRESSION_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        recmodel_client.execute(args)
+
+        RecreationRegressionTests._assert_regression_results_eq(
+            args['workspace_dir'],
+            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
+            os.path.join(args['workspace_dir'], 'scenario_results.shp'),
+            os.path.join(REGRESSION_DATA, 'scenario_results.csv'))
 
     def tearDown(self):
         """Delete workspace."""
@@ -131,7 +395,7 @@ class TestLocalRecServer(unittest.TestCase):
         date_range = (
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
-        out_vector_filename = 'pud.shp'
+        out_vector_filename = os.path.join(self.workspace_dir, 'pud.shp')
         self.recreation_server._calc_aggregated_points_in_aoi(
             aoi_path, self.workspace_dir, date_range, out_vector_filename)
 
@@ -145,44 +409,6 @@ class TestLocalRecServer(unittest.TestCase):
             raise ValueError(
                 "Output table not the same as input. "
                 "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_workspace_fetch(self):
-        """Recreation test fetching local workspace."""
-        from natcap.invest.recreation import recmodel_client
-
-        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
-        date_range = (
-            numpy.datetime64('2005-01-01'),
-            numpy.datetime64('2014-12-31'))
-        out_vector_filename = 'pud.shp'
-
-        compressed_aoi_path = os.path.join(
-            self.workspace_dir, 'compressed_aoi.zip')
-        with zipfile.ZipFile(compressed_aoi_path, 'w') as aoizip:
-            basename = os.path.splitext(aoi_path)[0]
-            for suffix in recmodel_client._ESRI_SHAPEFILE_EXTENSIONS:
-                filename = basename + suffix
-                if os.path.exists(filename):
-                    aoizip.write(filename, os.path.basename(filename))
-
-        with open(compressed_aoi_path, 'rb') as compressed_aoi_file:
-            zip_file_binary = compressed_aoi_file.read()
-        zip_result, workspace_id = (
-            self.recreation_server.calc_photo_user_days_in_aoi(
-                zip_file_binary, date_range, out_vector_filename))
-
-        workspace_zip = (
-            self.recreation_server.fetch_workspace_aoi(workspace_id))
-        with zipfile.ZipFile(compressed_aoi_path, 'r') as compressed_aoi:
-            compressed_aoi.extractall(self.workspace_dir)
-
-        # the workspace should have the same AOI as we sent
-        self.assertEqual(
-            open(os.path.join(
-                self.workspace_dir, 'test_aoi_for_subset.shp'), 'rb').read(),
-            open(aoi_path, 'rb').read())
 
     def tearDown(self):
         """Delete workspace."""
@@ -201,42 +427,6 @@ class RecreationRegressionTests(unittest.TestCase):
     def tearDown(self):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
-
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_incorrect_years(self):
-        """Recreation server should raise a value error if start>end year."""
-        from natcap.invest.recreation import recmodel_server
-
-        # here start year is 2014 and end year is 2005
-        with self.assertRaises(ValueError):
-            self.recreation_server = recmodel_server.RecModel(
-                os.path.join(REGRESSION_DATA, 'sample_data.csv'),
-                2014,  # start year > end year
-                2005,  # end year
-                os.path.join(self.workspace_dir, 'server_cache'))
-
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_file_hash(self):
-        """Recreation test for hashing a file."""
-        from natcap.invest.recreation import recmodel_server
-
-        sample_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
-        # hash constant is from regression case
-        self.assertEqual(
-            'b372f3f062afb3e8',
-            recmodel_server._hashfile(
-                sample_data_path, blocksize=2**10, fast_hash=False))
-
-    def test_file_hash_fast(self):
-        """Recreation test for fast hashing a file."""
-        from natcap.invest.recreation import recmodel_server
-
-        sample_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
-        # hash constant is from regression case
-        self.assertEqual(
-            '828c5f883a80ff38_fast_hash',
-            recmodel_server._hashfile(
-                sample_data_path, blocksize=2**10, fast_hash=True))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -577,7 +767,8 @@ class RecreationRegressionTests(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
             response_vector_path)
 
-        predictor_table_path = 'predictors.csv' # os.path.join(self.workspace_dir, 'predictors.csv')
+        predictor_table_path = os.path.join(
+            self.workspace_dir, 'predictors.csv')
 
         # these are absolute paths for predictor data
         predictor_list = [
@@ -604,28 +795,6 @@ class RecreationRegressionTests(unittest.TestCase):
             self.fail(
                 "_validate_same_projection raised ValueError unexpectedly!")
 
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_bad_grid_type(self):
-        """Recreation ensure that bad grid type raises ValueError."""
-        from natcap.invest.recreation import recmodel_client
-
-        args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 7000.0,
-            'compute_regression': False,
-            'start_year': '2005',
-            'end_year': '2014',
-            'grid_aoi': True,
-            'grid_type': 'circle',  # intentionally bad gridtype
-            'results_suffix': u'',
-            'workspace_dir': self.workspace_dir,
-        }
-
-        with self.assertRaises(ValueError):
-            recmodel_client.execute(args)
-
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_year_order(self):
@@ -645,6 +814,27 @@ class RecreationRegressionTests(unittest.TestCase):
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
                 REGRESSION_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_bad_grid_type(self):
+        """Recreation ensure that bad grid type raises ValueError."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': False,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': True,
+            'grid_type': 'circle',  # intentionally bad gridtype
+            'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
         }
 
@@ -729,7 +919,6 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # we expect a file called 'aggregated_results.shp'
         result_vector = ogr.Open(result_vector_path)
-        print result_vector_path
         result_layer = result_vector.GetLayer()
 
         # The tolerance of 3 digits after the decimal was determined by
@@ -761,7 +950,7 @@ class RecreationRegressionTests(unittest.TestCase):
                     expected_result_lookup = dict(
                         zip(headers, [float(x) for x in line.split(',')]))
                 except ValueError:
-                    print line
+                    LOGGER.error(line)
                     raise
                 feature = result_layer.GetFeature(
                     int(expected_result_lookup['FID']))

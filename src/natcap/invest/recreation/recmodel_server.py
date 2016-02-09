@@ -5,7 +5,6 @@ import Queue
 import os
 import multiprocessing
 import uuid
-import csv
 import zipfile
 import glob
 import hashlib
@@ -28,8 +27,7 @@ import shapely.prepared
 
 import natcap.versioner
 import natcap.invest.recreation.out_of_core_quadtree as out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
-from . import recmodel_client
-
+from natcap.invest.recreation import recmodel_client
 __version__ = natcap.versioner.get_version('natcap.invest.recmodel_server')
 
 BLOCKSIZE = 2 ** 21
@@ -39,6 +37,7 @@ GLOBAL_DEPTH = 10
 LOCAL_MAX_POINTS_PER_NODE = 50
 LOCAL_DEPTH = 8
 CSV_ROWS_PER_PARSE = 2 ** 10
+LOGGER_TIME_DELAY = 5.0
 
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
@@ -48,37 +47,12 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.recmodel_server')
 
 
-def execute(args):
-    """Launch recreation server and parse/generate quadtree if necessary.
-
-    A call to this function registers a Pyro RPC RecModel entry point given
-    the configuration input parameters described below.
-
-    Parameters:
-        args['raw_csv_point_data_path'] (string): path to a csv file of the
-            format
-        args['hostname'] (string): hostname to host Pyro server.
-        args['port'] (int/or string representation of int): port number to host
-            Pyro entry point.
-        args['max_year'] (int): maximum year allowed to be queries by user
-        args['min_year'] (int): minimum valid year allowed to be queried by
-            user
-
-    Returns:
-        Never returns
-    """
-    daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
-    uri = daemon.register(RecModel(
-        args['raw_csv_point_data_path'], args['min_year'], args['max_year'],
-        args['cache_workspace']), 'natcap.invest.recreation')
-    LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
-    daemon.requestLoop()
-
-
 class RecModel(object):
     """Class that manages RPCs for calculating photo user days."""
 
-    def __init__(self, raw_csv_filename, min_year, max_year, cache_workspace):
+    def __init__(
+            self, raw_csv_filename, min_year, max_year, cache_workspace,
+            max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
         """Initialize RecModel object.
 
         Parameters:
@@ -107,7 +81,8 @@ class RecModel(object):
                     "max_year is less than min_year, must be greater or "
                     "equal to")
             self.qt_pickle_filename = construct_userday_quadtree(
-                initial_bounding_box, raw_csv_filename, cache_workspace)
+                initial_bounding_box, raw_csv_filename, cache_workspace,
+                max_points_per_node)
             self.cache_workspace = cache_workspace
             self.min_year = min_year
             self.max_year = max_year
@@ -137,7 +112,14 @@ class RecModel(object):
 
     # not static so it can register in Pyro object
     def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
-        """Download the AOI of the workspace specified by workspace_id."""
+        """Download the AOI of the workspace specified by workspace_id.
+
+        Parameters:
+            workspace_id (string): unique workspace ID on server to query.
+
+        Returns:
+            zip file as a binary string of workspace.
+        """
         # try/except block so Pyro4 can receive an exception if there is one
         try:
             # make a random workspace name so we can work in parallel
@@ -189,7 +171,6 @@ class RecModel(object):
                 zip_file_disk.write(zip_file_binary)
             shapefile_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
             shapefile_archive.extractall(workspace_path)
-            LOGGER.debug(shapefile_archive.namelist())
             aoi_path = os.path.join(
                 workspace_path, os.path.splitext(
                     shapefile_archive.namelist()[0])[0]+'.shp')
@@ -208,6 +189,7 @@ class RecModel(object):
             aoi_pud_archive_path = os.path.join(
                 workspace_path, 'aoi_pud_result.zip')
             with zipfile.ZipFile(aoi_pud_archive_path, 'w') as myzip:
+                LOGGER.debug(base_pud_aoi_path)
                 for filename in glob.glob(
                         os.path.splitext(base_pud_aoi_path)[0] + '.*'):
                     myzip.write(filename, os.path.basename(filename))
@@ -293,15 +275,15 @@ class RecModel(object):
         LOGGER.info(
             'building local quadtree with %d points', len(local_points))
         last_time = time.time()
+        time_elapsed = None
         for point_list_slice_index in xrange(
                 0, len(local_points), POINTS_TO_ADD_PER_STEP):
-
+            time_elapsed = time.time() - last_time
             last_time = recmodel_client.delay_op(
-                last_time, recmodel_client.LOGGER_TIME_DELAY,
-                lambda: LOGGER.info(
+                last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                     '%d out of %d points added to local_qt so far, and '
-                    ' n_nodes in qt %d', local_qt.n_points(),
-                    len(local_points), local_qt.n_nodes()))
+                    ' n_nodes in qt %d in %.2fs', local_qt.n_points(),
+                    len(local_points), local_qt.n_nodes(), time_elapsed))
 
             projected_point_list = local_points[
                 point_list_slice_index:
@@ -388,8 +370,7 @@ class RecModel(object):
                     break
                 continue
             last_time = recmodel_client.delay_op(
-                last_time, recmodel_client.LOGGER_TIME_DELAY,
-                lambda: LOGGER.info(
+                last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                     '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
                     pud_aoi_layer.GetFeatureCount()))
             poly_id, pud_list, pud_monthly_set = result_tuple
@@ -411,48 +392,6 @@ class RecModel(object):
 
         LOGGER.info('returning out shapefile path')
         return out_aoi_pud_path, monthly_table_path
-
-
-def _read_from_disk_csv(infile_name, raw_file_lines_queue, n_readers):
-    """Read lines from the CSV and push to work queue.
-
-    Parameters:
-        infile_name (string): path to csv file
-        raw_file_lines_queue (multiprocessing.Queue): a buffer of CSV lines
-            appended to a deques will be appended to this queue.  When the
-            file is fully read `n_readers` number of 'STOP's will be pushed
-            to the queue.
-        n_readers (int): number of reader processes for inserting the sentinel
-
-    Returns:
-        None
-    """
-    original_size = os.path.getsize(infile_name)
-    bytes_left = original_size
-    last_time = time.time()
-
-    with open(infile_name, 'rb') as infile:
-        csvfile_reader = csv.reader(infile)
-        csvfile_reader.next()  # skip the header
-
-        row_deque = collections.deque()
-        for row in csvfile_reader:
-            bytes_left -= len(','.join(row))
-            last_time = recmodel_client.delay_op(
-                last_time, recmodel_client.LOGGER_TIME_DELAY,
-                lambda: LOGGER.info(
-                    '%.2f%% of %s read, text row queue size %d',
-                    100.0 * (1.0 - (float(bytes_left) / original_size)),
-                    infile_name, raw_file_lines_queue.qsize()))
-            row_deque.append(row)
-            if len(row_deque) > CSV_ROWS_PER_PARSE:
-                raw_file_lines_queue.put(row_deque)
-                row_deque = collections.deque()
-    if len(row_deque) > 0:
-        raw_file_lines_queue.put(row_deque)
-    for _ in xrange(n_readers):
-        raw_file_lines_queue.put('STOP')
-    LOGGER.info('done reading csv from disk')
 
 
 def _parse_input_csv(
@@ -520,7 +459,7 @@ def file_len(file_path):
 
 def construct_userday_quadtree(
         initial_bounding_box, raw_photo_csv_table, cache_dir,
-        max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
+        max_points_per_node):
     """Construct a spatial quadtree for fast querying of userday points.
 
     Parameters:
@@ -605,18 +544,22 @@ def construct_userday_quadtree(
 
             n_points += len(point_array)
             ooc_qt.add_points(point_array, 0, point_array.size)
-            last_time = recmodel_client.delay_op(
-                last_time, recmodel_client.LOGGER_TIME_DELAY,
-                lambda: LOGGER.info(
-                    '%.2f%% complete, %d points skipped, %d nodes in qt',
-                    (n_points + 1) * 100.0 / (total_lines + 1),
-                    n_points - ooc_qt.n_points(), ooc_qt.n_nodes()))
+            current_time = time.time()
+            time_elapsed = current_time - last_time
+            if time_elapsed > 5.0:
+                LOGGER.info(
+                    '%.2f%% complete, %d points skipped, %d nodes in qt in '
+                    'only %.2fs', n_points * 100.0 / total_lines,
+                    n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
+                    current_time-start_time)
+                last_time = time.time()
 
         # save quadtree to disk
         ooc_qt.flush()
         LOGGER.info(
-            '100.00%% complete, %d points skipped, %d nodes in qt',
-            n_points - ooc_qt.n_points(), ooc_qt.n_nodes())
+            '100.00%% complete, %d points skipped, %d nodes in qt in '
+            'only %.2fs', n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
+            time.time()-start_time)
 
         quad_tree_shapefile_name = os.path.join(
             cache_dir, 'quad_tree_shape.shp')
@@ -732,57 +675,62 @@ def _calc_poly_pud(
     pud_poly_feature_queue.put('STOP')
 
 
-def _hashfile(
-        file_path, blocksize=2**20, concurent_blocks=100, fast_hash=False):
-    """Memory efficient hash of file.
+def execute(args):
+    """Launch recreation server and parse/generate quadtree if necessary.
 
-    This function concurrently reads `blocksize` chunks from `file_path` and
-    continously aggregates a running hash of those blocks with memory
-    efficiency and IO/bound computational efficiency in mind.
+    A call to this function registers a Pyro RPC RecModel entry point given
+    the configuration input parameters described below.
+
+    Parameters:
+        args['raw_csv_point_data_path'] (string): path to a csv file of the
+            format
+        args['hostname'] (string): hostname to host Pyro server.
+        args['port'] (int/or string representation of int): port number to host
+            Pyro entry point.
+        args['max_year'] (int): maximum year allowed to be queries by user
+        args['min_year'] (int): minimum valid year allowed to be queried by
+            user
+
+    Returns:
+        Never returns
+    """
+    daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
+    max_points_per_node = GLOBAL_MAX_POINTS_PER_NODE
+    if 'max_points_per_node' in args:
+        max_points_per_node = args['max_points_per_node']
+
+    uri = daemon.register(
+        RecModel(args['raw_csv_point_data_path'], args['min_year'],
+                 args['max_year'], args['cache_workspace'],
+                 max_points_per_node=max_points_per_node),
+        'natcap.invest.recreation')
+    LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
+    daemon.requestLoop()
+
+
+def _hashfile(file_path, blocksize=2**20, fast_hash=False):
+    """Hash file with memory efficiency as a priority.
 
     Parameters:
         file_path (string): path to file to hash
-        blocksize (int): how many bytes to load from `file_path` at a time
-            for hashing
-        concurent_blocks (int): how many blocks of `file_path` to hold in
-            memory at one time.  Setting this larger allows the algorithm to
-            read ahead while the hash computes blocks as they come in.
-        fast_hash (boolean): if True computes hash of entire file, if False
-            computes hash of the first and last blocks of the file along with
-            the filename, file size, and creation time.
+        blocksize (int): largest memory block to hold in memory at once in
+            bytes
+        fast_hash (boolean): if True, hashes the first and last `blocksize` of
+            `file_path`, the file_size, file_name, and file_path which takes
+            less time on large files for a full hash.  Full hash is done if
+            this parameter is true
 
     Returns:
-        if `fast_hash` is False, returns the sha1 hash of file_path
-        if `fast_hash` is True, returns the sha1 hash of the first and last
-            blocks of file_path appended to the filename, file size, and
-            access time.  The hash is also appended with the suffix
-            "_fast_hash" to avoid confusion about the source.
+        sha1 hash of `file_path` if fast_hash is False, otherwise sha1 hash of
+        first and last memory blocks, file size, file modified, file name, and
+        appends "_fast_hash" to result.
     """
     def _read_file(file_path, file_buffer_queue, blocksize, fast_hash=False):
-        """Divide file into blocks and add to a processing queue.
-
-        Parameters:
-            file_path (string): path to desired file to hash
-            file_buffer_queue (Queue): this queue is appended `blocksize`
-                binary strings from file_path in front to back order of the
-                file. When the entire file is read the sentinal 'STOP' is
-                appended to the queue.
-            blocksize (int):
-            fast_hash (boolean): if False, the entire file is appended to
-                `file_buffer_queue`.  If True two blocksizes from the beginning
-                and end of `file_path`'s file are appended along with the
-                basefilename, date/time creation and access, and filesize.
-                This allows a potentially quick and not terribly inaccurate
-                screen for two files being different without hashing all their
-                contents.
-
-        Returns:
-            None.
-        """
+        """Read one blocksize at a time and adds to the file buffer queue."""
         with open(file_path, 'rb') as file_to_hash:
             if fast_hash:
-                # fast hash reads the first and last blocks and uses the modified
-                # stamp and filesize
+                # fast hash reads the first and last blocks and uses the
+                # modified stamp and filesize
                 buf = file_to_hash.read(blocksize)
                 file_buffer_queue.put(buf)
                 file_size = os.path.getsize(file_path)
@@ -790,7 +738,7 @@ def _hashfile(
                     file_to_hash.seek(file_size - blocksize)
                     buf = file_to_hash.read(blocksize)
                 file_buffer_queue.put(buf)
-                file_buffer_queue.put(os.path.basename(file_path))
+                file_buffer_queue.put(file_path)
                 file_buffer_queue.put(str(file_size))
                 file_buffer_queue.put(time.ctime(os.path.getmtime(file_path)))
             else:
@@ -801,7 +749,7 @@ def _hashfile(
         file_buffer_queue.put('STOP')
 
     def _hash_blocks(file_buffer_queue):
-        """Return sha1 hash of in order elements of `file_buffer_queue`."""
+        """Process file_buffer_queue one buf at a time."""
         hasher = hashlib.sha1()
         for row_buffer in iter(file_buffer_queue.get, "STOP"):
             hasher.update(row_buffer)
@@ -819,7 +767,5 @@ def _hashfile(
     hash_blocks_process.join()
     file_hash = file_buffer_queue.get()
     if fast_hash:
-        # this appends something so that a small file will have a different
-        # hash whether it's fast hash or slow hash
         file_hash += '_fast_hash'
     return file_hash
