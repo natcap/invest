@@ -44,6 +44,37 @@ def timeout(max_timeout):
     return timeout_decorator
 
 
+class TestBufferedFileManager(unittest.TestCase):
+    """Tests for BufferedFileManager."""
+    def setUp(self):
+        """Setup Pyro port."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def test_basic_operation(self):
+        """Recreation test buffered file manager basic ops w/ no buffer."""
+        from natcap.invest.recreation import buffered_file_manager
+        file_manager = buffered_file_manager.BufferedFileManager(
+            os.path.join(self.workspace_dir, 'test'), 0)
+
+        file_manager.append(1234, numpy.array([1, 2, 3, 4]))
+        file_manager.append(1234, numpy.array([1, 2, 3, 4]))
+        file_manager.append(4321, numpy.array([-4, -1, -2, 4]))
+
+        numpy.testing.assert_equal(
+            file_manager.read(1234), numpy.array([1, 2, 3, 4, 1, 2, 3, 4]))
+
+        numpy.testing.assert_equal(
+            file_manager.read(4321), numpy.array([-4, -1, -2, 4]))
+
+        file_manager.delete(1234)
+        with self.assertRaises(IOError):
+            file_manager.read(1234)
+
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
 class TestLocalPyroRecServer(unittest.TestCase):
     """Tests that set up local rec server on a port and call through."""
 

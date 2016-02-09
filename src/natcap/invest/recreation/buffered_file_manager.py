@@ -54,7 +54,7 @@ class BufferedFileManager(object):
         """Append data to the file.
 
         Parameters:
-            array_id (string): unique key to identify the array node
+            array_id (int): unique key to identify the array node
             array_data (numpy.ndarray): data to append to node.
 
         Returns:
@@ -154,7 +154,7 @@ class BufferedFileManager(object):
         return array_data
 
     def delete(self, array_id):
-        """Delete `array_id` from disk and cache."""
+        """Delete node `array_id` from disk and cache."""
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
