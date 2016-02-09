@@ -13,7 +13,8 @@ import pygeoprocessing
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('natcap.invest.recmodel_server.buffered_file_manager')
+LOGGER = logging.getLogger(
+    'natcap.invest.recmodel_server.buffered_file_manager')
 
 
 class BufferedFileManager(object):
@@ -22,7 +23,17 @@ class BufferedFileManager(object):
     _ARRAY_TUPLE_TYPE = numpy.dtype('datetime64[D],a4,f4,f4')
 
     def __init__(self, manager_filename, max_bytes_to_buffer):
-        """TODO"""
+        """Create file manager object.
+
+        Parameters:
+            manager_filename (string): path to store file manager database and
+                cache files
+            max_bytes_to_buffer (int): number of bytes to hold in memory at
+                one time.
+
+        Returns:
+            None
+        """
         self.manager_filename = manager_filename
         self.manager_directory = os.path.dirname(manager_filename)
         pygeoprocessing.create_directories([self.manager_directory])
@@ -40,9 +51,15 @@ class BufferedFileManager(object):
         self.current_bytes_in_system = 0
 
     def append(self, array_id, array_data):
-        """Appends data to the file, this may be the buffer in memory or a
-            file on disk"""
+        """Append data to the file.
 
+        Parameters:
+            array_id (string): unique key to identify the array node
+            array_data (numpy.ndarray): data to append to node.
+
+        Returns:
+            None
+        """
         self.array_cache[array_id].append(array_data.copy())
         self.current_bytes_in_system += (
             array_data.size * BufferedFileManager._ARRAY_TUPLE_TYPE.itemsize)
@@ -50,9 +67,7 @@ class BufferedFileManager(object):
             self.flush()
 
     def flush(self):
-        """Method to flush the manager.  If the file exists we append to it,
-            otherwise we write directly."""
-
+        """Method to flush data in memory to disk."""
         start_time = time.time()
         LOGGER.info(
             'Flushing %d bytes in %d arrays', self.current_bytes_in_system,
@@ -62,13 +77,13 @@ class BufferedFileManager(object):
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
 
-        #get all the array data to append at once
+        # get all the array data to append at once
         insert_list = []
 
         while len(self.array_cache) > 0:
             array_id = self.array_cache.iterkeys().next()
             array_deque = self.array_cache.pop(array_id)
-            #Try to get data if it's there
+            # try to get data if it's there
             db_cursor.execute(
                 """SELECT (array_path) FROM array_table
                     where array_id=? LIMIT 1""", [array_id])
@@ -80,17 +95,17 @@ class BufferedFileManager(object):
                 array_deque = None
                 numpy.save(array_path[0], array_data)
             else:
-                #otherwise directly write
-                #make a random filename and put it one directory deep named
-                #off the last two characters in the filename
+                # otherwise directly write
+                # make a random filename and put it one directory deep named
+                # off the last two characters in the filename
                 array_filename = uuid.uuid4().hex + '.npy'
-                #-6:-4 skips the extension and gets the last 2 characters
+                # -6:-4 skips the extension and gets the last 2 characters
                 array_directory = os.path.join(
                     self.manager_directory, array_filename[-6:-4])
                 if not os.path.isdir(array_directory):
                     os.mkdir(array_directory)
                 array_path = os.path.join(array_directory, array_filename)
-                #save the file
+                # save the file
                 array_data = numpy.concatenate(array_deque)
                 array_deque = None
                 numpy.save(array_path, array_data)
@@ -107,10 +122,17 @@ class BufferedFileManager(object):
         LOGGER.info('Completed flush in %.2fs', time.time() - start_time)
 
     def read(self, array_id):
-        """Read the entirety of the file.  Internally this might mean that
-            part of the file is read from disk and the end from the buffer
-            or any combination of those."""
+        """Read the entirety of the file.
 
+        Internally this might mean that part of the file is read from disk
+        and the end from the buffer or any combination of those.
+
+        Parameters:
+            array_id (string): unique node id to read
+
+        Returns:
+            contents of node as a numpy.ndarray.
+        """
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
@@ -132,8 +154,7 @@ class BufferedFileManager(object):
         return array_data
 
     def delete(self, array_id):
-        """Deletes the file on disk if it exists and also purges from the
-            cache"""
+        """Delete `array_id` from disk and cache."""
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
@@ -150,13 +171,13 @@ class BufferedFileManager(object):
                 # it's not empty, not a big deal
                 pass
 
-        #delete the key from the table
+        # delete the key from the table
         db_cursor.execute(
             "DELETE FROM array_table where array_id=?", [array_id])
         db_connection.close()
 
-        #delete the cache and update cache size
-        #The * 12 comes from the fact that the array is an 'a4 f4 f4'
+        # delete the cache and update cache size
+        # The * 12 comes from the fact that the array is an 'a4 f4 f4'
         self.current_bytes_in_system -= (
             sum([x.size for x in self.array_cache[array_id]]) *
             BufferedFileManager._ARRAY_TUPLE_TYPE.itemsize)
