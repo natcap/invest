@@ -197,6 +197,7 @@ def user_os_installer():
 
     return 'UNKNOWN'
 
+
 # the options object is used for global paver configuration.  It contains
 # default values for all tasks, which makes our handling of parameters much
 # easier.
@@ -1595,13 +1596,13 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     Raises:
         ImportError: If the package cannot be imported.
     """
-    # virtualenv appears to respect __import__ better than
-    # importlib.import_module, which is helpful for when running this in a
-    # virtualenv (via @paver.virtual.virtualenv)
     _ns_module_name = 'natcap.%s' % modname
-    try:
-        module = __import__(modname, fromlist=['natcap'])
-    except ImportError:
+    if hasattr(sys, 'real_prefix'):
+        # virtualenv appears to respect __import__ better than
+        # importlib.import_module, which is helpful for when running this in a
+        # virtualenv (via @paver.virtual.virtualenv)
+        module = __import__(_ns_module_name)
+    else:
         module = importlib.import_module(_ns_module_name)
 
     # Reload the module in case it's been imported before. Doing this helps to
