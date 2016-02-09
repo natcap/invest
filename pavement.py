@@ -1,4 +1,5 @@
 import argparse
+import ast
 import distutils
 import distutils.ccompiler
 import getpass
@@ -197,6 +198,7 @@ def user_os_installer():
 
     return 'UNKNOWN'
 
+
 # the options object is used for global paver configuration.  It contains
 # default values for all tasks, which makes our handling of parameters much
 # easier.
@@ -249,7 +251,7 @@ paver.easy.options(
     build_bin=Bunch(
         force_dev=False,
         python=_PYTHON,
-        fix_namespace=False
+        fix_namespace=False,
     ),
     jenkins_installer=Bunch(
         nodata='false',
@@ -1595,7 +1597,14 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     Raises:
         ImportError: If the package cannot be imported.
     """
-    module = importlib.import_module('natcap.%s' % modname)
+    _ns_module_name = 'natcap.%s' % modname
+    if hasattr(sys, 'real_prefix'):
+        # virtualenv appears to respect __import__ better than
+        # importlib.import_module, which is helpful for when running this in a
+        # virtualenv (via @paver.virtual.virtualenv)
+        module = __import__(_ns_module_name)
+    else:
+        module = importlib.import_module(_ns_module_name)
 
     # Reload the module in case it's been imported before. Doing this helps to
     # an issue with the module's __path__ attribute being updated after
@@ -1604,8 +1613,7 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     try:
         version = module.__version__
     except AttributeError:
-        packagename = 'natcap.%s' % modname
-        version = pkg_resources.require(packagename)[0].version
+        version = pkg_resources.require(_ns_module_name)[0].version
 
     is_egg = reduce(
         lambda x, y: x or y,
@@ -1634,7 +1642,36 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     return (module, return_type)
 
 
-def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True):
+def decorate_if(condition, decorator):
+    """Conditionally decorate a function.
+
+    This provides a decorator that allows a developer to define a
+    condition and a decorator.  When used on a function and the condition
+    is True, the provided decorator will be used on the target function.
+
+    Example:
+        @decorate_if(sys.platform() == 'Linux', some_other_decorator)
+        def example_func():
+            ...
+
+    Parameters:
+        condition (bool): whether to decorate the target function.
+        decorator (function): function to use as a decorator when
+            ``condition`` is True.
+
+    Returns:
+        If ``condition`` is True, the decorated function is returned.
+        Otherwise, the original function is returned.
+    """
+    def _check_condition(function):
+        if condition:
+            return decorator(function)
+        return function
+    return _check_condition
+
+
+def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
+                            use_env=None):
     """Determine how namespace packages are installed.
 
     Parameters:
@@ -1644,24 +1681,29 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True):
             package is expected to be in a flat directory with all other
             packages within the namespace.
         print_msg=True (bool): Whether to print a warning.
+        use_env=None (string or None):  If a string, the path to a virtualenv
+            directory that the natcap namespace packages should use instead.
 
     Returns:
         A tuple of (subpackages installed as eggs, subpackages installed flat)
     """
-    eggs = []
-    noneggs = []
-    ns_module = importlib.import_module(ns_pkg_name)
+    @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
+    def _get_packages():
+        eggs = []
+        noneggs = []
+        ns_module = importlib.import_module(ns_pkg_name)
 
-    for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
-        module, pkg_type = _import_namespace_pkg(modname,
-                                                 preferred=preferred,
-                                                 print_msg=print_msg)
+        for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
+            module, pkg_type = _import_namespace_pkg(modname,
+                                                    preferred=preferred,
+                                                    print_msg=print_msg)
 
-        if pkg_type == 'egg':
-            eggs.append(modname)
-        else:
-            noneggs.append(modname)
-    return (sorted(eggs), sorted(noneggs))
+            if pkg_type == 'egg':
+                eggs.append(modname)
+            else:
+                noneggs.append(modname)
+        return (sorted(eggs), sorted(noneggs))
+    return _get_packages()
 
 
 def reinstall_pkg(pkg_name, reinstall_as_egg=True):
@@ -2190,11 +2232,17 @@ def build_bin(options):
     """
     # Prefer the user's python binary if it's provided.  Otherwise, use the
     # system python.
-    if options.build_bin.python:
-        python_binary = options.build_bin.python
+    python_exe = os.path.abspath(options.build_bin.python)
+    in_virtual_python = ast.literal_eval(sh((
+        '{python} -c "import sys; '
+        'print hasattr(sys, \'real_prefix\')"').format(
+            python=python_exe), capture=True))
+
+    if in_virtual_python:
+        envdir = os.path.dirname(os.path.dirname(python_exe))
     else:
-        python_binary = sys.executable
-    python_exe = os.path.abspath(python_binary)
+        envdir = None
+
     if python_exe == sys.executable:
         print yellow('Using system python. For best results, install the '
                      'correct version of InVEST before building binaries.')
@@ -2210,8 +2258,8 @@ def build_bin(options):
     # as eggs, so we need to enforce this here.
     print bold('\nChecking natcap namespace')
     for retry in [True, False]:
-        natcap_eggs, natcap_noneggs = get_namespace_pkg_types('natcap',
-                                                              preferred='dir')
+        natcap_eggs, natcap_noneggs = get_namespace_pkg_types(
+            'natcap', preferred='dir', use_env=envdir)
         # If the package layout looks ok, break out of the loop.
         if len(natcap_eggs) == 0:
             break
