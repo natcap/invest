@@ -160,16 +160,36 @@ def execute(args):
     #Align all the input rasters
     dem_uri = pygeoprocessing.geoprocessing.temporary_filename()
     lulc_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    runoff_proxy_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    runoff_proxy_index_uri = os.path.join(
+        intermediate_dir, 'runoff_proxy_index%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.align_dataset_list(
-        [args['dem_uri'], args['lulc_uri']],
-        [dem_uri, lulc_uri], ['nearest'] * 2,
+        [args['dem_uri'], args['lulc_uri'], args['runoff_proxy_uri']],
+        [dem_uri, lulc_uri, runoff_proxy_uri], ['nearest'] * 3,
         out_pixel_size, 'dataset', dataset_to_align_index=0,
         dataset_to_bound_index=0, aoi_uri=args['watersheds_uri'])
 
     dem_row, dem_col = pygeoprocessing.get_row_col_from_uri(dem_uri)
     lulc_row, lulc_col = pygeoprocessing.get_row_col_from_uri(lulc_uri)
-    LOGGER.debug(
-        "dem_uri, lulc_uri sizes %d %d %d %d", dem_row, dem_col, lulc_row, lulc_col)
+
+    runoff_proxy_mean = pygeoprocessing.aggregate_raster_values_uri(
+        runoff_proxy_uri, args['watersheds_uri']).pixel_mean[9999]
+    runoff_proxy_index_uri = os.path.join(
+        intermediate_dir, 'runoff_proxy_index%s.tif' % file_suffix)
+    runoff_proxy_nodata = pygeoprocessing.get_nodata_from_uri(runoff_proxy_uri)
+
+    def normalize_runoff_proxy_op(val):
+        """Divide val by average runoff."""
+        valid_mask = val != runoff_proxy_nodata
+        result = numpy.empty(valid_mask.shape)
+        result[:] = runoff_proxy_nodata
+        result[valid_mask] = val[valid_mask] / runoff_proxy_mean
+        return result
+
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [runoff_proxy_uri], normalize_runoff_proxy_op, runoff_proxy_index_uri,
+        gdal.GDT_Float32, runoff_proxy_nodata, out_pixel_size,
+        "intersection", vectorize_op=False)
 
     nodata_landuse = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         lulc_uri)
@@ -537,17 +557,20 @@ def execute(args):
         export_nodata = -1.0
 
         def calculate_export(
-                load_array, ndr_array, sub_load_array, sub_ndr_array):
+                load_array, ndr_array, runoff_proxy_index, sub_load_array,
+                sub_ndr_array):
             '''combine ndr and subsurface ndr'''
             return numpy.where(
-                (load_array == load_nodata) | (ndr_array == ndr_nodata),
-                export_nodata, load_array * ndr_array +
+                (load_array == load_nodata) | (ndr_array == ndr_nodata) |
+                (runoff_proxy_index == runoff_proxy_nodata),
+                export_nodata, load_array * ndr_array * runoff_proxy_index +
                 sub_load_array * sub_ndr_array)
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [load_uri[nutrient], ndr_uri, sub_load_uri[nutrient], sub_ndr_uri],
-            calculate_export, export_uri[nutrient], gdal.GDT_Float32,
-            export_nodata, out_pixel_size, "intersection", vectorize_op=False)
+            [load_uri[nutrient], ndr_uri, runoff_proxy_uri,
+             sub_load_uri[nutrient], sub_ndr_uri], calculate_export,
+            export_uri[nutrient], gdal.GDT_Float32, export_nodata,
+            out_pixel_size, "intersection", vectorize_op=False)
 
         #Summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s", nutrient)
@@ -628,7 +651,6 @@ def _prepare(**args):
 
         args['dem_uri'] - dem layer
         args['watersheds_uri'] - layer to AOI/watersheds
-        args['suffix'] - suffix
         return a dictionary with the keys:
             'aligned_dem_uri': aligned_dem_uri,
             'thresholded_slope_uri': thresholded_slope_uri,
@@ -637,7 +659,7 @@ def _prepare(**args):
     """
 
     intermediate_dir = os.path.join(
-        args['workspace_dir'], 'prepared_data', args['results_suffix'])
+        args['workspace_dir'], 'prepared_data')
 
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
