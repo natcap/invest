@@ -293,7 +293,7 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
     lulc_trans_to_Db = {}
     lulc_trans_to_Ds = {}
     for k, sub in lulc_transition_dict.items():
-        # break before legend in csv file
+        # the line below serves to break before legend in CSV file
         if k is not '':
             continue
         for k2, v in sub.items():

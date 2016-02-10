@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for IO Functions."""
+"""Tests for Coastal Blue Carbon Functions."""
 import unittest
 import pprint
 import os
@@ -167,7 +167,7 @@ def get_preprocessor_args(args_choice):
 
 class TestIO(unittest.TestCase):
 
-    """Test io library functions."""
+    """Test Coastal Blue Carbon io library functions."""
 
     def setUp(self):
         pass
@@ -189,7 +189,7 @@ class TestIO(unittest.TestCase):
 
 class TestModel(unittest.TestCase):
 
-    """Test main model functions."""
+    """Test Coastal Blue Carbon main model functions."""
 
     def setUp(self):
         pass
@@ -216,7 +216,7 @@ class TestModel(unittest.TestCase):
 
 class TestPreprocessor(unittest.TestCase):
 
-    """Test preprocessor library functions."""
+    """Test Coastal Blue Carbon preprocessor library functions."""
 
     def setUp(self):
         pass

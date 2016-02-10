@@ -183,28 +183,20 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
 
 
 def read_from_raster(input_raster, offset_block):
+    """Read block from raster.
+
+    Args:
+        input_raster (str): filepath to raster.
+        offset_block (dict): where the block is indexed.
+
+    Returns:
+        a (np.array): the raster block.
+    """
     ds = gdal.Open(input_raster)
     band = ds.GetRasterBand(1)
     a = band.ReadAsArray(**offset_block)
     ds = None
     return a
-
-
-def get_flattened_band(raster_uri):
-    """Gets first band of raster.
-
-    Args:
-        raster_uri (str): raster filepath
-
-    Returns:
-        array (np.array): first raster band as flattened array
-    """
-    ds = gdal.Open(raster_uri)
-    band = ds.GetRasterBand(1)
-    array = band.ReadAsArray().flatten()
-    band = None
-    ds = None
-    return array
 
 
 def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
