@@ -154,8 +154,7 @@ def execute(args):
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
 
-    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(
-        args['lulc_path'])
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(args['dem_path'])
     pygeoprocessing.align_dataset_list(
         base_list, aligned_list, ['nearest'] * len(base_list), out_pixel_size,
         'intersection', 0, aoi_uri=args['watersheds_path'])
