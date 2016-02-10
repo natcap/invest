@@ -174,8 +174,6 @@ def execute(args):
 
     runoff_proxy_mean = pygeoprocessing.aggregate_raster_values_uri(
         runoff_proxy_uri, args['watersheds_uri']).pixel_mean[9999]
-    runoff_proxy_index_uri = os.path.join(
-        intermediate_dir, 'runoff_proxy_index%s.tif' % file_suffix)
     runoff_proxy_nodata = pygeoprocessing.get_nodata_from_uri(runoff_proxy_uri)
 
     def normalize_runoff_proxy_op(val):
@@ -294,6 +292,8 @@ def execute(args):
     #Build up the load and efficiency rasters from the landcover map
     load_uri = {}
     sub_load_uri = {}
+    modified_load_uri = {}
+    modified_sub_load_uri = {}
     eff_uri = {}
     crit_len_uri = {}
     sub_eff_uri = {}
@@ -301,6 +301,9 @@ def execute(args):
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
+        modified_load_uri[nutrient] = os.path.join(
+            intermediate_dir, 'modified_load_%s%s.tif' % (
+                nutrient, file_suffix))
         # Perrine says that 'n' i the only case where we could consider a prop
         # subsurface component.  So there's a special case for that.
         if nutrient == 'n':
@@ -313,12 +316,36 @@ def execute(args):
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
+        def modified_load(load, runoff_proxy_index):
+            """Multiply load by runoff proxy index to make modified load."""
+            valid_mask = (
+                (load != nodata_load) &
+                (runoff_proxy_index != runoff_proxy_nodata))
+            result = numpy.empty(valid_mask.shape)
+            result[:] = nodata_load
+            result[valid_mask] = (
+                load[valid_mask] * runoff_proxy_index[valid_mask])
+            return result
+
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [load_uri[nutrient], runoff_proxy_index_uri], modified_load,
+            modified_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection", vectorize_op=False)
+
         sub_load_uri[nutrient] = os.path.join(
             intermediate_dir, 'sub_load_%s%s.tif' % (nutrient, file_suffix))
+        modified_sub_load_uri[nutrient] = os.path.join(
+            intermediate_dir, 'modified_sub_load_%s%s.tif' % (
+                nutrient, file_suffix))
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [lulc_uri], map_subsurface_load_function(
                 'load_%s' % nutrient, subsurface_proportion_type),
             sub_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection", vectorize_op=False)
+
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [sub_load_uri[nutrient], runoff_proxy_index_uri], modified_load,
+            modified_sub_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
         sub_eff_uri[nutrient] = os.path.join(
@@ -557,18 +584,17 @@ def execute(args):
         export_nodata = -1.0
 
         def calculate_export(
-                load_array, ndr_array, runoff_proxy_index, sub_load_array,
+                modified_load_array, ndr_array, modified_sub_load_array,
                 sub_ndr_array):
             '''combine ndr and subsurface ndr'''
             return numpy.where(
-                (load_array == load_nodata) | (ndr_array == ndr_nodata) |
-                (runoff_proxy_index == runoff_proxy_nodata),
-                export_nodata, load_array * ndr_array * runoff_proxy_index +
-                sub_load_array * sub_ndr_array)
+                (modified_load_array == load_nodata) | (ndr_array == ndr_nodata),
+                export_nodata, modified_load_array * ndr_array +
+                modified_sub_load_array * sub_ndr_array)
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [load_uri[nutrient], ndr_uri, runoff_proxy_uri,
-             sub_load_uri[nutrient], sub_ndr_uri], calculate_export,
+            [modified_load_uri[nutrient], ndr_uri,
+             modified_sub_load_uri[nutrient], sub_ndr_uri], calculate_export,
             export_uri[nutrient], gdal.GDT_Float32, export_nodata,
             out_pixel_size, "intersection", vectorize_op=False)
 
