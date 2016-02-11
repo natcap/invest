@@ -24,7 +24,7 @@ LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 _OUTPUT_BASE_FILES = {
     'viewshed_valuation_path': 'vshed.tif',
     'viewshed_path': 'viewshed_counts.tif',
-    'vieshed_quality_path': 'vshed_qual.tif',
+    'viewshed_quality_path': 'vshed_qual.tif',
     'pop_stats_path': 'populationStats.html',
     'overlap_path': 'vp_overlap.shp'
     }
@@ -255,12 +255,13 @@ def execute(args):
     # them to output
     pygeoprocessing.geoprocessing.vectorize_datasets(
             [file_registry['viewshed_valuation_path']], raster_percentile,
-            viewshed_quality_path, gdal.GDT_Int32, nodata, pixel_size,
-            'intersection', assert_datasets_projected=False)
+            file_registry['viewshed_quality_path'], gdal.GDT_Int32, nodata,
+            pixel_size, 'intersection', assert_datasets_projected=False)
 
     # population html stuff
+    if 'pop_uri' in args:
 
-    if "pop_uri" in args:
+
         #tabulate population impact
         nodata_pop = geoprocessing.get_nodata_from_uri(args["pop_uri"])
         nodata_viewshed = geoprocessing.get_nodata_from_uri(viewshed_uri)
@@ -280,42 +281,65 @@ def execute(args):
         geoprocessing.reproject_dataset_uri(
             pop_clip_uri, pop_cell_size, vs_wkt, 'bilinear', pop_prj_uri)
 
-        #align and resample population
-        def copy(value1, value2):
-            if value2 == nodata_viewshed:
-                return nodata_pop
-            else:
-                return value1
+        def pop_affected_op(pop, view):
+            valid_mask = ((pop != pop_nodata) & (view != view_nodata))
 
-        LOGGER.debug("Resampling and aligning population raster.")
-        pop_prj_datatype = geoprocessing.get_datatype_from_uri(pop_prj_uri)
+            pop_places = numpy.where(view[valid_mask] > 0, pop[valid_mask], 0)
+            pop_final = numpy.empty(valid_mask.shape)
+            pop_final[:] = pop_nodata
+            pop_final[valid_mask] = pop_places
+            return pop_final
+
+        def pop_unaffected_op(pop, view):
+            valid_mask = ((pop != pop_nodata) & (view != view_nodata))
+
+            pop_places = numpy.where(view[valid_mask] == 0, pop[valid_mask], 0)
+            pop_final = numpy.empty(valid_mask.shape)
+            pop_final[:] = pop_nodata
+            pop_final[valid_mask] = pop_places
+            return pop_final
+
+        viewshed_cell_size = geoprocessing.get_cell_size_from_uri(
+            file_registry['viewshed_path'])
+
         geoprocessing.vectorize_datasets(
-            [pop_prj_uri, viewshed_uri], copy, pop_vs_uri,
-            pop_prj_datatype, nodata_pop, args["cell_size"],
-            "intersection", ["bilinear", "bilinear"], 1)
+            [file_registry['pop_proj_path'], file_registry['viewshed_path']],
+            pop_affected_op, file_registry['pop_affected_path'],
+            gdal.GDT_Float32, pop_nodata, viewshed_cell_size,
+            "intersection", resample_method_list=None,
+            dataset_to_align_index=1)
 
-        pop = gdal.Open(pop_vs_uri)
-        pop_band = pop.GetRasterBand(1)
-        vs = gdal.Open(viewshed_uri)
-        vs_band = vs.GetRasterBand(1)
+        geoprocessing.vectorize_datasets(
+            [file_registry['pop_proj_path'], file_registry['viewshed_path']],
+            pop_unaffected_op, file_registry['pop_unaffected_path'],
+            gdal.GDT_Float32, pop_nodata, viewshed_cell_size,
+            "intersection", resample_method_list=None,
+            dataset_to_align_index=1)
 
-        affected_pop = 0
-        unaffected_pop = 0
+        affected_sum = 0
+        affected_count = 0
+        for _, block in pygeoprocessing.geoprocessing.iterblocks(
+            file_registry['pop_affected_path']):
 
-        for row_index in range(vs_band.YSize):
-            pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
-            vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
+            valid_mask = (block != pop_nodata)
+            affected_count += numpy.sum(valid_mask)
+            affected_sum += numpy.sum(block[valid_mask])
 
-            pop_row[pop_row == nodata_pop]=0.0
-            vs_row[vs_row == nodata_viewshed]=-1
+        unaffected_sum = 0
+        unaffected_count = 0
+        for _, block in pygeoprocessing.geoprocessing.iterblocks(
+            file_registry['pop_unaffected_path']):
 
-            affected_pop += np.sum(pop_row[vs_row > 0])
-            unaffected_pop += np.sum(pop_row[vs_row == 0])
+            valid_mask = (block != pop_nodata)
+            unaffected_count += numpy.sum(valid_mask)
+            unaffected_sum += numpy.sum(block[valid_mask])
 
-        pop_band = None
-        pop = None
-        vs_band = None
-        vs = None
+        if args['pop_type'] == "Density":
+            affected_sum = affected_sum * (affected_count * cell_area)
+            unaffected_sum = unaffected_sum * (unaffected_count * cell_area)
+        else:
+            affected_sum = affected_sum / resample_factor
+            unaffected_sum = unaffected_sum / resample_factor
 
     if "overlap_uri" in args:
         geoprocessing.copy_datasource_uri(args["overlap_uri"], file_registry['overlap_uri'])
