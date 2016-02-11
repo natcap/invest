@@ -1,15 +1,15 @@
-"""init module for natcap.invest"""
+"""init module for natcap.invest."""
 
 import os
 import sys
-import pkg_resources
 import logging
 
+import pkg_resources
 import pygeoprocessing
 import natcap.versioner
 
 
-__all__ = ['is_release', 'local_dir', 'PYGEOPROCESSING_REQUIRED']
+__all__ = ['local_dir', 'PYGEOPROCESSING_REQUIRED']
 
 
 # Verify that the installed pygeoprocessing meets the minimum requirements.
@@ -31,14 +31,6 @@ __version__ = natcap.versioner.get_version('natcap.invest')
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-
-def is_release():
-    """Returns a boolean indicating whether this invest release is actually a
-    release or if it's a development release."""
-    if 'post' in __version__:
-        return False
-    return True
 
 
 def local_dir(source_file):
