@@ -210,13 +210,3 @@ def execute(args):
         'natcap.invest.remote_logging')
     LOGGER.info("natcap.invest.usage_logger ready. Object uri = %s", uri)
     daemon.requestLoop()
-
-
-if __name__ == '__main__':
-    DATABASE_FILEPATH = sys.argv[1]
-    HOSTNAME = sys.argv[2]
-    PORT = int(sys.argv[3])
-    execute({
-        'database_filepath': DATABASE_FILEPATH,
-        'hostname': HOSTNAME,
-        'port': PORT})
