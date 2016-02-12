@@ -26,7 +26,8 @@ class ModelLoggingTests(unittest.TestCase):
         """Usage logger test server will launch and create a database."""
         from natcap.invest.iui import usage_logger
 
-        database_path = os.path.join(self.workspace_dir, 'test_log.db')
+        database_path = os.path.join(
+            self.workspace_dir, 'subdir', 'test_log.db')
         logging_server = usage_logger.LoggingServer(database_path)
 
         db_connection = sqlite3.connect(database_path)
