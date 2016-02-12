@@ -635,8 +635,6 @@ def execute(args):
 
     # output file names
     # absolute paths
-    landcover_resample_uri = os.path.join(
-        workspace, "resample" + suffix + ".tif")
     landcover_transition_uri = os.path.join(
         workspace, "transitioned" + suffix + ".tif")
     override_dataset_uri = os.path.join(
@@ -752,7 +750,6 @@ def execute(args):
         # if point or line, integer distance field only
         # error if same factor twice for same coverage
 
-    # Resample, align and rasterize data
     if args["calculate_priorities"]:
         LOGGER.info("Calculating priorities.")
         priorities_dict = calculate_priority(args["priorities_csv_uri"])
