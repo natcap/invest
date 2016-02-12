@@ -37,7 +37,7 @@ class LoggingServer(object):
         'system_preferred_encoding',
         'system_default_language',
         ]
-    _TABLE_NAME = 'natcap_model_log_table'
+    _TABLE_NAME = 'model_log_table'
 
     def __init__(self, database_filepath):
         """Launch a logger and initialize an sqlite database.
@@ -92,9 +92,10 @@ class LoggingServer(object):
             position_format = ','.join(['?'] * len(self._FIELD_NAMES))
 
             insert_command = (
-                'INSERT OR REPLACE INTO natcap_model_log_table'
+                'INSERT OR REPLACE INTO %s'
                 '(%s) VALUES (%s)' % (
-                    ','.join(self._FIELD_NAMES), position_format))
+                    (self._TABLE_NAME,) + (
+                        ','.join(self._FIELD_NAMES), position_format)))
 
             db_connection = sqlite3.connect(self.database_filepath)
             db_cursor = db_connection.cursor()
@@ -147,8 +148,9 @@ class LoggingServer(object):
             db_cursor = db_connection.cursor()
             db_cursor.execute(
                 """SELECT model_name, bounding_box_intersection,
-count(model_name) FROM natcap_model_log_table WHERE bounding_box_intersection
-not LIKE 'None' GROUP BY model_name, bounding_box_intersection;""")
+count(model_name) FROM %s WHERE bounding_box_intersection
+not LIKE 'None' GROUP BY model_name, bounding_box_intersection;""" % (
+    self._TABLE_NAME))
 
             for line in db_cursor:
                 try:
