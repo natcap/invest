@@ -677,6 +677,7 @@ def _prepare(**args):
 
         args['dem_uri'] - dem layer
         args['watersheds_uri'] - layer to AOI/watersheds
+
         return a dictionary with the keys:
             'aligned_dem_uri': aligned_dem_uri,
             'thresholded_slope_uri': thresholded_slope_uri,
@@ -684,8 +685,7 @@ def _prepare(**args):
             'flow_direction_uri': flow_direction_uri
     """
 
-    intermediate_dir = os.path.join(
-        args['workspace_dir'], 'prepared_data')
+    intermediate_dir = os.path.join(args['workspace_dir'], 'prepared_data')
 
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
