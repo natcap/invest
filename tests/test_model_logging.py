@@ -1,5 +1,6 @@
 """InVEST Model Logging tests."""
 
+import time
 import threading
 import unittest
 import tempfile
@@ -55,17 +56,31 @@ class ModelLoggingTests(unittest.TestCase):
         sock.close()
         sock = None
 
+        database_path = os.path.join(
+            self.workspace_dir, 'subdir', 'test_log.db')
         server_args = {
             'hostname': 'localhost',
             'port': port,
-            'database_filepath': self.workspace_dir,
+            'database_filepath': database_path,
         }
 
         server_thread = threading.Thread(
             target=usage_logger.execute, args=(server_args,))
         server_thread.daemon = True
         server_thread.start()
-        raise Exception("TODO finish test")
+        time.sleep(1)
+
+        logging_server = Pyro4.Proxy(
+            "PYRO:natcap.invest.remote_logging@localhost:%d" % port)
+        # this makes for an easy expected result
+        sample_data = dict(
+            (key_field, key_field) for key_field in
+            usage_logger.LoggingServer._FIELD_NAMES)
+        logging_server.log_invest_run(sample_data)
+
+        remote_database_as_string = logging_server.get_run_summary_db()
+        local_database_as_string = open(database_path, 'rb').read()
+        self.assertEqual(local_database_as_string, remote_database_as_string)
 
     def test_add_records(self):
         """Usage logger record runs and verify they are added."""
