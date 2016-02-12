@@ -50,7 +50,7 @@ def execute(args):
             result of change. The 'yearly_accumulation' values should be given
             in terms of Megatonnes of CO2 e/ha-yr. The 'half-life' values must
             be given in terms of years. The 'disturbance' values must be given
-            as a decimal percentage of stock distrubed given a transition
+            as a decimal (e.g. 0.5 for 50%) of stock distrubed given a transition
             occurs away from a lulc-class.
         lulc_baseline_map_uri (str): a GDAL-supported raster representing the
             baseline landscape/seascape.
@@ -72,14 +72,16 @@ def execute(args):
             rate is provided and to be used instead.
         price (float): the price per Megatonne CO2 e at the base year.
         interest_rate (float): the interest rate on the price per Megatonne
-            CO2e, compounded yearly.  Provided as a percentage.
+            CO2e, compounded yearly.  Provided as a percentage (e.g. 3.0 for
+            3%).
         price_table_uri (bool): if `args['do_price_table']` is set to `True`
             the provided CSV table is used in place of the initial price and
             interest rate inputs. The table contains the price per Megatonne
             CO2e sequestered for a given year, for all years from the original
             snapshot to the analysis year, if provided.
         discount_rate (float): the discount rate on future valuations of
-            sequestered carbon, compounded yearly.  Provided as a percentage.
+            sequestered carbon, compounded yearly.  Provided as a percentage
+            (e.g. 3.0 for 3%).
 
     Example Args::
 
