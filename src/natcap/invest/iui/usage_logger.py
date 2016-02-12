@@ -114,80 +114,10 @@ class LoggingServer(object):
                 " Expected: %s Received: %s", sorted(extra_fields),
                 sorted(self._FIELD_NAMES), sorted(data_copy))
 
-    def get_run_summary_as_shapefile(self):
-        """Construct a shapefile of polygons of model run bounding boxes.
-
-        Each feature has a field with the run count, and a field with the
-        model name.
-
-        Returns:
-            a compressed zipfile of the shapefile as a binary string
-        """
-        # Large try/except block for potential Pyro4 failures so the client
-        # can see the error
+    def get_run_summary_db(self):
+        """Retrieve the raw sqlite database of runs as a binary stream."""
         try:
-            workspace_dir = tempfile.mkdtemp()
-            run_summary_shapefile_path = os.path.join(
-                workspace_dir, 'model_run_summary.shp')
-            driver = ogr.GetDriverByName('ESRI Shapefile')
-
-            if os.path.isfile(run_summary_shapefile_path):
-                os.remove(run_summary_shapefile_path)
-            datasource = driver.CreateDataSource(run_summary_shapefile_path)
-
-            lat_lng_ref = osr.SpatialReference()
-            lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
-
-            polygon_layer = datasource.CreateLayer(
-                'model_run_summary', lat_lng_ref, ogr.wkbPolygon)
-
-            polygon_layer.CreateField(ogr.FieldDefn('n_runs', ogr.OFTInteger))
-            polygon_layer.CreateField(ogr.FieldDefn('model', ogr.OFTString))
-
-            db_connection = sqlite3.connect(self.database_filepath)
-            db_cursor = db_connection.cursor()
-            db_cursor.execute(
-                """SELECT model_name, bounding_box_intersection,
-count(model_name) FROM %s WHERE bounding_box_intersection
-not LIKE 'None' GROUP BY model_name, bounding_box_intersection;""" % (
-    self._TABLE_NAME))
-
-            for line in db_cursor:
-                try:
-                    model_name, bounding_box_string, n_runs = line
-                    n_runs = int(n_runs)
-                    bounding_box = list(
-                        [float(x) for x in
-                         bounding_box_string[1:-1].split(',')])
-                    ring = ogr.Geometry(ogr.wkbLinearRing)
-                    ring.AddPoint(bounding_box[0], bounding_box[3])
-                    ring.AddPoint(bounding_box[0], bounding_box[1])
-                    ring.AddPoint(bounding_box[2], bounding_box[1])
-                    ring.AddPoint(bounding_box[2], bounding_box[3])
-                    ring.AddPoint(bounding_box[0], bounding_box[3])
-                    poly = ogr.Geometry(ogr.wkbPolygon)
-                    poly.AddGeometry(ring)
-                    feature = ogr.Feature(polygon_layer.GetLayerDefn())
-                    feature.SetGeometry(poly)
-                    feature.SetField('n_runs', n_runs)
-                    feature.SetField('model', str(model_name))
-                    polygon_layer.CreateFeature(feature)
-                except Exception:
-                    LOGGER.warn(
-                        'unable to create a bounding box for %s', line)
-
-            datasource.SyncToDisk()
-
-            model_run_summary_zip_name = os.path.join(
-                workspace_dir, 'model_run_summary.zip')
-            with zipfile.ZipFile(model_run_summary_zip_name, 'w') as myzip:
-                for filename in glob.glob(
-                        os.path.splitext(
-                            run_summary_shapefile_path)[0] + '.*'):
-                    myzip.write(filename, os.path.basename(filename))
-            model_run_summary_binary = open(
-                model_run_summary_zip_name, 'rb').read()
-            return model_run_summary_binary
+            return open(self.database_filepath, 'rb').read()
         except:
             # print something locally for our log and raise back to client
             traceback.print_exc()
