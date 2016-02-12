@@ -16,6 +16,8 @@ import pygeoprocessing.geoprocessing as geoprocess
 
 from natcap.invest.coastal_blue_carbon import io
 
+NODATA_FLOAT = -16777216  # largest negative 32-bit floating point number
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger(
@@ -374,7 +376,7 @@ def reclass(array, d, nodata=None, out_dtype=None):
     if nodata:
         reclass_array[reclass_array == ndata] = nodata
     elif np.issubdtype(array.dtype, float):
-        reclass_array[reclass_array == ndata] = np.nan
+        reclass_array[reclass_array == ndata] = NODATA_FLOAT
 
     return reclass_array
 
