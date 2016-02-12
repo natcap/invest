@@ -15,6 +15,7 @@ from osgeo import osr
 
 from pygeoprocessing import geoprocessing
 import natcap.invest.utils
+import natcap.invest.reporting
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -29,6 +30,11 @@ _OUTPUT_BASE_FILES = {
     'overlap_path': 'vp_overlap.shp'
     }
 
+_INTERMEDIATE_BASE_FILES = {
+    'pop_affected_path': 'affected_population.tif',
+    'pop_unaffected_path': 'unaffected_population.tif'
+    }
+
 _TMP_BASE_FILES = {
     'aoi_proj_dem_path' : 'aoi_proj_to_dem.shp',
     'aoi_proj_pop_path' : 'aoi_proj_to_pop.shp',
@@ -39,7 +45,8 @@ _TMP_BASE_FILES = {
     'pop_vs_path' : 'pop_vs.tif',
     'viewshed_reclass_path' : 'vshed_bool.tif',
     'viewshed_polygon_path' : 'vshed.shp',
-    'dem_below_sea_path' : 'dem_below_sea_lvl.tif'
+    'dem_below_sea_path' : 'dem_below_sea_lvl.tif',
+    'viewshed_no_zeros_path' : 'view_no_zeros.tif'
     }
 
 
@@ -70,13 +77,15 @@ def execute(args):
     curvature_correction = float(args['refraction'])
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
-    geoprocessing.create_directories([output_dir])
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    geoprocessing.create_directories([output_dir, intermediate_dir])
 
     files_suffix = utils.make_suffix_string(args, 'suffix')
 
     LOGGER.info('Building file registry')
     file_registry = natcap.invest.utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     # Clip DEM by AOI and reclass
@@ -84,7 +93,7 @@ def execute(args):
     geoprocessing.reproject_datasource_uri(
         args['aoi_path'], dem_wkt, file_registry['aoi_proj_dem_path'])
 
-    dem_nodata = geoprocessing.get_nodata_from_uri(args['dem_uri'])
+    dem_nodata = geoprocessing.get_nodata_from_uri(args['dem_path'])
 
     def below_sea_level_op(dem_value):
         """Set any value lower than 0 to 0."""
@@ -183,7 +192,7 @@ def execute(args):
         return accumulator
 
     val_raster_list = []
-    if args["valuation_function"] == "polynomial":
+    if args["valuation_function"] == "polynomial: a + bx + cx^2 + dx^3":
         val_op = polynomial_val
     else:
         val_op = log_val
@@ -194,6 +203,7 @@ def execute(args):
         # do a distance transform on each feature raster
         dist_path = geoprocessing.get_temporary_filename()
         # What is the pixel of the point? Does it have a unique value?
+        # NO, need to burn our own feature on raster. use 'viewshed_path' for base raster
         distance_transform_edt(
                 viewshed_path, dist_path, process_pool=None)
 
@@ -259,27 +269,27 @@ def execute(args):
             pixel_size, 'intersection', assert_datasets_projected=False)
 
     # population html stuff
-    if 'pop_uri' in args:
+    if 'pop_path' in args:
 
 
         #tabulate population impact
-        nodata_pop = geoprocessing.get_nodata_from_uri(args["pop_uri"])
-        nodata_viewshed = geoprocessing.get_nodata_from_uri(viewshed_uri)
+        nodata_pop = geoprocessing.get_nodata_from_uri(args["pop_path"])
+        nodata_viewshed = geoprocessing.get_nodata_from_uri(viewshed_path)
 
         #clip population
-        pop_wkt = geoprocessing.get_dataset_projection_wkt_uri(args['pop_uri'])
+        pop_wkt = geoprocessing.get_dataset_projection_wkt_uri(args['pop_path'])
         geoprocessing.reproject_datasource_uri(
-            args['aoi_uri'], pop_wkt, aoi_pop_uri)
+            args['aoi_path'], pop_wkt, aoi_pop_path)
 
         geoprocessing.clip_dataset_uri(
-            args['pop_uri'], aoi_pop_uri, pop_clip_uri, False)
+            args['pop_path'], aoi_pop_path, pop_clip_path, False)
 
         #reproject clipped population
         LOGGER.debug("Reprojecting clipped population raster.")
-        vs_wkt = geoprocessing.get_dataset_projection_wkt_uri(viewshed_uri)
-        pop_cell_size = geoprocessing.get_cell_size_from_uri(pop_clip_uri)
+        vs_wkt = geoprocessing.get_dataset_projection_wkt_uri(viewshed_path)
+        pop_cell_size = geoprocessing.get_cell_size_from_uri(pop_clip_path)
         geoprocessing.reproject_dataset_uri(
-            pop_clip_uri, pop_cell_size, vs_wkt, 'bilinear', pop_prj_uri)
+            pop_clip_path, pop_cell_size, vs_wkt, 'bilinear', pop_prj_path)
 
         def pop_affected_op(pop, view):
             valid_mask = ((pop != pop_nodata) & (view != view_nodata))
@@ -335,36 +345,68 @@ def execute(args):
             unaffected_sum += numpy.sum(block[valid_mask])
 
         if args['pop_type'] == "Density":
+            cell_area = viewshed_cell_size**2
             affected_sum = affected_sum * (affected_count * cell_area)
             unaffected_sum = unaffected_sum * (unaffected_count * cell_area)
         else:
+            resample_factor = pop_cell_size / viewshed_cell_size
             affected_sum = affected_sum / resample_factor
             unaffected_sum = unaffected_sum / resample_factor
 
-    if "overlap_uri" in args:
-        geoprocessing.copy_datasource_uri(args["overlap_uri"], file_registry['overlap_uri'])
+        header = ("<center><H1>Scenic Quality Model</H1>"
+            "<H2>(Visual Impact from Objects)</H2></center>"
+            "<br><br><HR><br><H2>Population Statistics</H2>")
+        page_header = {'type': 'text', 'section': 'head', 'text': header}
+
+        table_data = [
+            {'Number of Features Visible': 'None Visible',
+             'Population (estimate)': unaffected_sum},
+            {'Number of Features Visible': '1 or more Visible',
+             'Population (estimate)': affected_sum}]
+        table_columns = [
+            {'name': 'Number of Features Visible', 'total': False},
+            {'name': 'Population (estimate)', 'total': False}]
+        table_args = {
+            'type': 'table', 'section': 'body', 'datatype': 'dictionary',
+            'data': table_data, 'column': table_columns}
+
+        report_args = {}
+        report_args['title'] = 'Marine InVEST'
+        report_args['out_uri'] = file_registry['html_path']
+        report_args['elements'] = [table_args]
+
+        natcap.invest.reporting.generate_report(report_args)
+
+    if "overlap_path" in args:
+        geoprocessing.copy_datasource_uri(
+            args["overlap_path"], file_registry['overlap_path'])
+
+        def zero_to_nodata(view):
+            """
+            """
+            return numpy.where(view <= 0, view_nodata, view)
+
+        pygeoprocessing.geoprocessing.vectorize_datasets(
+            [file_registry['viewshed_path']], zero_to_nodata,
+            file_registry['viewshed_no_zeros_path'], gdal.GDT_Float32,
+            view_nodata, view_cell_size, 'intersection',
+            assert_datasets_projected=False)
 
         LOGGER.debug("Adding id field to overlap features.")
-        id_name = "investID"
-        add_id_feature_set_uri(overlap_uri, id_name)
-
-        LOGGER.debug("Add area field to overlap features.")
-        area_name = "overlap"
-        add_field_feature_set_uri(overlap_uri, area_name, ogr.OFTReal)
+        id_name = 'investID'
+        setup_overlap_id_fields(file_registry['overlap_path'], id_name)
 
         LOGGER.debug("Count overlapping pixels per area.")
-        values = geoprocessing.aggregate_raster_values_uri(
-            viewshed_reclass_uri, overlap_uri, id_name, ignore_nodata=True).total
+        pixel_counts = geoprocessing.aggregate_raster_values_uri(
+            file_registry['viewshed_no_zeros_path'],
+            file_registry['overlap_path'], id_name,
+            ignore_nodata=True).n_pixels
 
-        def calculate_percent(feature):
-            if feature.GetFieldAsInteger(id_name) in values:
-                return (values[feature.GetFieldAsInteger(id_name)] * \
-                aq_args["cell_size"]) / feature.GetGeometryRef().GetArea()
-            else:
-                return 0
-
-        LOGGER.debug("Set area field values.")
-        set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
+        LOGGER.debug("Add area field to overlap features.")
+        perc_field = '%_overlap'
+        add_percent_overlap(
+            file_registry['overlap_path'], perc_field, pixel_counts,
+            view_cell_size)
 
 
     LOGGER.info('deleting temporary files')
@@ -379,19 +421,49 @@ def execute(args):
             # Let it go.
             pass
 
-def calculate_percentiles_from_raster(raster_uri, percentiles):
+def setup_overlap_id_fields(shapefile_path, id_name):
+    """
+    """
+    shapefile = ogr.Open(shapefile_path, 1)
+    layer = shapefile.GetLayer()
+    id_field = ogr.FieldDefn(id_name, ogr.OFTInteger)
+    layer.CreateField(id_field)
+
+    for feature_id in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_id)
+        feature.SetField(id_name, feature_id)
+        layer.SetFeature(feature)
+
+def add_percent_overlap(
+    overlap_path, perc_name, pixel_counts, pixel_size):
+    """
+    """
+    shapefile = ogr.Open(overlap_path, 1)
+    layer = shapefile.GetLayer()
+    perc_field = ogr.FieldDefn(perc_name, ogr.OFTReal)
+    layer.CreateField(perc_field)
+
+    for feature_id in pixel_counts.keys():
+        feature = layer.GetFeature(feature_id)
+        geom = feature.GetGeometryRef()
+        geom_area = geom.GetArea()
+        pixel_area = pixel_size**2 * pixel_counts[feature_id]
+        feature.SetField(perc_name, pixel_area / geom_area)
+        layer.SetFeature(feature)
+
+def calculate_percentiles_from_raster(raster_path, percentiles):
     """Does a memory efficient sort to determine the percentiles
         of a raster. Percentile algorithm currently used is the
         nearest rank method.
 
-        raster_uri - a uri to a gdal raster on disk
+        raster_path - a path to a gdal raster on disk
         percentiles - a list of desired percentiles to lookup
             ex: [25,50,75,90]
 
         returns - a list of values corresponding to the percentiles
             from the percentiles list
     """
-    raster = gdal.Open(raster_uri, gdal.GA_ReadOnly)
+    raster = gdal.Open(raster_path, gdal.GA_ReadOnly)
 
     def numbers_from_file(fle):
         """Generates an iterator from a file by loading all the numbers
@@ -428,8 +500,8 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         # Read in raster chunk as array
         arr = band.ReadAsArray(0, row_index, n_cols, row_strides)
 
-        tmp_uri = pygeoprocessing.geoprocessing.temporary_filename()
-        tmp_file = open(tmp_uri, 'wb')
+        tmp_path = pygeoprocessing.geoprocessing.temporary_filename()
+        tmp_file = open(tmp_path, 'wb')
         # Make array one dimensional for sorting and saving
         arr = arr.flatten()
         # Remove nodata values from array and thus percentile calculation
@@ -441,7 +513,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
 
         np.save(tmp_file, arr)
         tmp_file.close()
-        tmp_file = open(tmp_uri, 'rb')
+        tmp_file = open(tmp_path, 'rb')
         tmp_file.seek(0)
         iters.append(numbers_from_file(tmp_file))
         arr = None
@@ -472,20 +544,6 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
     band = None
     raster = None
     return results
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
