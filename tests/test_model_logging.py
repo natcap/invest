@@ -1,11 +1,14 @@
 """InVEST Model Logging tests."""
 
+import threading
 import unittest
 import tempfile
 import shutil
 import os
 import sqlite3
+import socket
 
+import Pyro4
 import numpy
 from osgeo import ogr
 from pygeoprocessing.testing import scm
@@ -39,6 +42,30 @@ class ModelLoggingTests(unittest.TestCase):
         db_cursor = None
         db_connection.close()
         self.assertTrue(usage_logger.LoggingServer._TABLE_NAME in tables)
+
+    def test_pyro_server(self):
+        """Usage logger test server as an RPC."""
+        from natcap.invest.iui import usage_logger
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': port,
+            'database_filepath': self.workspace_dir,
+        }
+
+        server_thread = threading.Thread(
+            target=usage_logger.execute, args=(server_args,))
+        server_thread.daemon = True
+        server_thread.start()
+        raise Exception("TODO finish test")
 
     def test_add_records(self):
         """Usage logger record runs and verify they are added."""
