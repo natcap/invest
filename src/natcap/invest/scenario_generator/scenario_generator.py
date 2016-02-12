@@ -37,20 +37,18 @@ def calculate_weights(array, rounding=4):
         weights_list (list): list of normalized eigenvectors?
     """
     decimal_places = Decimal(10) ** -(rounding)
-
-    # get eigenvalues and vectors
-    evas, eves = sp.linalg.eig(array)
+    eigenvalues, eigenvectors = sp.linalg.eig(array)
 
     # get primary eigenvalue and vector
-    eva = max(evas)
-    eva_idx = evas.tolist().index(eva)
-    eve = eves.take((eva_idx,), axis=1)
+    max_eigenvalue = max(eigenvalues)
+    max_eigenvalue_idx = eigenvalues.tolist().index(max_eigenvalue)
+    eigenvector = eigenvectors.take((max_eigenvalue_idx,), axis=1)
 
     # priority vector = normalized primary eigenvector
-    normalized = eve / sum(eve)
+    normalized_eigenvector = eigenvector / sum(eigenvector)
 
     # turn into list of real part values
-    vector = [abs(e[0]) for e in normalized]
+    vector = [abs(e[0]) for e in normalized_eigenvector]
 
     # return nice rounded Decimal values with labels
     return [Decimal(str(v)).quantize(decimal_places) for v in vector]
