@@ -72,8 +72,9 @@ class LoggingServer(object):
         will be inserted into the record.
 
         Parameters:
-            data (dict): a flat dictionary with data about the InVEST run where
-                the keys of the dictionary are at least self._FIELD_NAMES
+            data (dict): a flat dictionary with data about the InVEST run
+                where the keys of the dictionary are at least
+                self._FIELD_NAMES
 
         Returns:
             None.
@@ -81,8 +82,11 @@ class LoggingServer(object):
         try:
             # Add info about the client's IP
             data_copy = data.copy()
-            data_copy['ip_address'] = (
-                Pyro4.current_context.client.sock.getpeername()[0])
+            if Pyro4.current_context.client is not None:
+                data_copy['ip_address'] = (
+                    Pyro4.current_context.client.sock.getpeername()[0])
+            else:
+                data_copy['ip_address'] = 'local'
             data_copy['time'] = datetime.datetime.now().isoformat(' ')
 
             # Get data into the same order as the field names
