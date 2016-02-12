@@ -82,8 +82,8 @@ class ModelLoggingTests(unittest.TestCase):
         local_database_as_string = open(database_path, 'rb').read()
         self.assertEqual(local_database_as_string, remote_database_as_string)
 
-    def test_add_records(self):
-        """Usage logger record runs and verify they are added."""
+    def test_add_extra_records(self):
+        """Usage logger record runs with an extra field."""
         from natcap.invest.iui import usage_logger
 
         database_path = os.path.join(self.workspace_dir, 'test_log.db')
@@ -94,6 +94,8 @@ class ModelLoggingTests(unittest.TestCase):
         sample_data = dict(
             (key_field, key_field) for key_field in
             usage_logger.LoggingServer._FIELD_NAMES)
+        # make an extra field which should be ignored on server side
+        sample_data['extra_field'] = -238328
 
         logging_server.log_invest_run(sample_data)
 
