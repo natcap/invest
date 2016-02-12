@@ -238,7 +238,7 @@ class UnitTests(unittest.TestCase):
         args = get_args()
         dataset_uri_list = [args['landcover'], args['landcover']]
         unique_raster_values_count, transitions = \
-            sg.scenario_generator.get_transition_set_count_from_uri(
+            sg.scenario_generator.get_transition_pairs_count_from_uri(
                 dataset_uri_list)
         self.assertEqual(
             unique_raster_values_count.values()[0],
