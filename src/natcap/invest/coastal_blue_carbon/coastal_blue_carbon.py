@@ -223,20 +223,23 @@ def execute(args):
                 V[i] = (N_biomass[i] + N_soil[0]) * d['price_t'][i]
 
         # Write outputs: T_s, A_r, E_r, N_r, NPV
-        T_s = [T[snapshot_idx_to_timestep(d['snapshot_years'], i)]
-               for i in xrange(0, len(d['snapshot_years']))]
+        s_years = d['snapshot_years']
+        num_snapshots = len(s_years)
+
+        T_s = [T[s_to_timestep(s_years, i)] for i in xrange(0, num_snapshots)]
+
         A = A_biomass + A_soil
-        A_r = [sum(A[snapshot_idx_to_timestep(d['snapshot_years'], i):
-               snapshot_idx_to_timestep(d['snapshot_years'], i+1)])
-               for i in xrange(0, len(d['snapshot_years'])-1)]
+        A_r = [sum(A[s_to_timestep(s_years, i):s_to_timestep(s_years, i+1)])
+               for i in xrange(0, num_snapshots-1)]
+
         E = E_biomass + E_soil
-        E_r = [sum(E[snapshot_idx_to_timestep(d['snapshot_years'], i):
-               snapshot_idx_to_timestep(d['snapshot_years'], i+1)])
-               for i in xrange(0, len(d['snapshot_years'])-1)]
+        E_r = [sum(E[s_to_timestep(s_years, i):s_to_timestep(s_years, i+1)])
+               for i in xrange(0, num_snapshots-1)]
+
         N = N_biomass + N_soil
-        N_r = [sum(N[snapshot_idx_to_timestep(d['snapshot_years'], i):
-               snapshot_idx_to_timestep(d['snapshot_years'], i+1)])
-               for i in xrange(0, len(d['snapshot_years'])-1)]
+        N_r = [sum(N[s_to_timestep(s_years, i):s_to_timestep(s_years, i+1)])
+               for i in xrange(0, num_snapshots-1)]
+
         N_total = sum(N)
 
         raster_tuples = [
@@ -282,8 +285,8 @@ def timestep_to_transition_idx(snapshot_years, transitions, timestep):
             return i
 
 
-def snapshot_idx_to_timestep(snapshot_years, snapshot_idx):
-    """Convert snapshot_idx to timestep.
+def s_to_timestep(snapshot_years, snapshot_idx):
+    """Convert snapshot index position to timestep.
 
     Args:
         snapshot_years (list): list of snapshot years.
