@@ -226,20 +226,18 @@ def execute(args):
         s_years = d['snapshot_years']
         num_snapshots = len(s_years)
 
-        T_s = [T[s_to_timestep(s_years, i)] for i in xrange(0, num_snapshots)]
-
         A = A_biomass + A_soil
+        E = E_biomass + E_soil
+        N = N_biomass + N_soil
+
         A_r = [sum(A[s_to_timestep(s_years, i):s_to_timestep(s_years, i+1)])
                for i in xrange(0, num_snapshots-1)]
-
-        E = E_biomass + E_soil
         E_r = [sum(E[s_to_timestep(s_years, i):s_to_timestep(s_years, i+1)])
                for i in xrange(0, num_snapshots-1)]
-
-        N = N_biomass + N_soil
         N_r = [sum(N[s_to_timestep(s_years, i):s_to_timestep(s_years, i+1)])
                for i in xrange(0, num_snapshots-1)]
 
+        T_s = [T[s_to_timestep(s_years, i)] for i in xrange(0, num_snapshots)]
         N_total = sum(N)
 
         raster_tuples = [
