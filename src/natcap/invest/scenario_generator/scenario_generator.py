@@ -835,7 +835,7 @@ def execute(args):
                 LOGGER.debug("Processing %s.", shapeTypes[shape_type])
 
                 if shape_type in [5, 15, 25, 31]:  # polygon
-                    LOGGER.info("Rasterizing %s using sutibality field %s.",
+                    LOGGER.info("Rasterizing %s using suitability field %s.",
                                 factor_stem, suitability_field_name)
                     ds_uri = os.path.join(workspace, suitability_name % (
                         factor_stem, suitability_field_name))
