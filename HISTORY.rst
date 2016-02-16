@@ -2,6 +2,7 @@
 
 3.3.0
 =====
+* Modified NDR by adding a required "Runoff Proxy" raster to the inputs.  This allows the model to vary the relative intensity of nutrient runoff based on varying precipitation variability.
 * Fixed a bug in the Area Change rule of the Rule-Based Scenario Generator, where units were being converted incorrectly. (Issue `#3472 <https://bitbucket.org/natcap/invest/issues/3472>`_) Thanks to Fosco Vesely for this fix.
 * InVEST Seasonal Water Yield model released.
 * InVEST Forest Carbon Edge Effect model released.
