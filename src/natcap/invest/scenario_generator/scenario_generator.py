@@ -867,17 +867,13 @@ def execute(args):
                     option_list = ["ALL_TOUCHED=TRUE"]
                     distance = int(distance)
 
-                    ds_uri = os.path.join(
-                        workspace, suitability_name %
+                    ds_uri = os.path.join(workspace, suitability_name %
                         (factor_stem, str(distance) + '_raw_raster'))
-                    distance_uri = os.path.join(
-                        workspace, suitability_name %
+                    distance_uri = os.path.join(workspace, suitability_name %
                         (factor_stem, str(distance) + '_raw_distance'))
-                    fdistance_uri = os.path.join(
-                        workspace, suitability_name %
+                    fdistance_uri = os.path.join(workspace, suitability_name %
                         (factor_stem, distance))
-                    normalized_uri = os.path.join(
-                        workspace, normalized_name %
+                    normalized_uri = os.path.join(workspace, normalized_name %
                         (factor_stem, distance))
 
                     burn_value = [1]
@@ -888,12 +884,9 @@ def execute(args):
                     geoprocess.new_raster_from_base_uri(
                         landcover_uri, ds_uri, raster_format, -1, gdal_format)
 
-                    landcover_nodata = \
-                        geoprocess.get_nodata_from_uri(
-                            landcover_uri)
-                    ds_nodata = \
-                        geoprocess.get_nodata_from_uri(
-                            ds_uri)
+                    landcover_nodata = geoprocess.get_nodata_from_uri(
+                        landcover_uri)
+                    ds_nodata = geoprocess.get_nodata_from_uri(ds_uri)
 
                     geoprocess.vectorize_datasets(
                         [landcover_uri],
@@ -923,15 +916,13 @@ def execute(args):
                         [distance_uri],
                         threshold,
                         fdistance_uri,
-                        geoprocess.get_datatype_from_uri(
-                            distance_uri),
+                        geoprocess.get_datatype_from_uri(distance_uri),
                         transition_nodata,
                         cell_size,
                         "union",
                         vectorize_op=False)
 
-                    geoprocess.calculate_raster_stats_uri(
-                        fdistance_uri)
+                    geoprocess.calculate_raster_stats_uri(fdistance_uri)
                     minimum, maximum, _, _ =\
                         geoprocess.get_statistics_from_uri(fdistance_uri)
 
