@@ -36,6 +36,18 @@
                   "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
                 },
                 {
+                  "id": "results_suffix",
+                  "args_id": "results_suffix",
+                  "type": "text",
+                  "dataType": "string",
+                  "label": "Results Suffix (Optional)",
+                  "defaultValue": "",
+                  "required": false,
+                  "returns": {
+                    "ifEmpty": "pass"
+                  }
+                },
+                {
                   "id": "aoi_path",
                   "args_id": "aoi_path",
                   "type": "file",

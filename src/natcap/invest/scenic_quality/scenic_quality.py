@@ -13,7 +13,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from pygeoprocessing import geoprocessing
+import pygeoprocessing
 import natcap.invest.utils
 import natcap.invest.reporting
 
@@ -38,7 +38,11 @@ _INTERMEDIATE_BASE_FILES = {
 _TMP_BASE_FILES = {
     'aoi_proj_dem_path' : 'aoi_proj_to_dem.shp',
     'aoi_proj_pop_path' : 'aoi_proj_to_pop.shp',
+    'aoi_proj_struct_path' : 'aoi_proj_to_struct.shp',
+    'structures_clipped_path' : 'structures_clipped.shp',
+    'structures_projected_path' : 'structures_projected.shp',
     'clipped_dem_path' : 'dem_clipped.tif',
+    'dem_proj_to_aoi_path' : 'dem_proj_to_aoi.tif',
     'viewshed_dem_reclass_path' : 'dem_vs_re.tif',
     'clipped_pop_path' : 'pop_clipped.tif',
     'pop_proj_path' : 'pop_proj.tif',
@@ -54,16 +58,22 @@ def execute(args):
     """Run the Scenic Quality Model.
 
     Parameters:
-        args['workspace_dir'] (string):
-        args['aoi_path'] (string):
+        args['workspace_dir'] (string): output directory for intermediate,
+            temporary, and final files
+        args['aoi_path'] (string): path to a vector that indicates the area
+            over which the model should be run.
         args['cell_size'] (int):
-        args['structure_path'] (string):
-        args['dem_path'] (string):
-        args['refraction'] (float):
-        args['population_path'] (string):
-        args['overlap_path'] (string):
-        args['suffix] (string):
-        args['valuation_function'] (string):
+        args['structure_path'] (string): path to a point vector that has
+            the features for the viewpoints.
+        args['dem_path'] (string): path to a digital elevation model raster.
+        args['refraction'] (float): (optional) number indicating the refraction coefficient
+            to use for calculating curvature of the earth.
+        args['population_path'] (string): (optional) path to a raster for population
+        args['overlap_path'] (string): (optional)
+        args['results_suffix] (string): (optional) string to append to any
+            output files
+        args['valuation_function'] (string): type of economic function to use
+            for valuation. Either 3rd degree polynomial or logarithmic.
         args['a_coef'] (string):
         args['b_coef'] (string):
         args['c_coef'] (string):
@@ -73,14 +83,14 @@ def execute(args):
     """
     LOGGER.info("Start Scenic Quality Model")
 
-    dem_cell_size = geoprocessing.get_cell_size_from_uri(args['dem_path'])
+    dem_cell_size = pygeoprocessing.get_cell_size_from_uri(args['dem_path'])
     curvature_correction = float(args['refraction'])
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    geoprocessing.create_directories([output_dir, intermediate_dir])
+    pygeoprocessing.create_directories([output_dir, intermediate_dir])
 
-    files_suffix = utils.make_suffix_string(args, 'suffix')
+    file_suffix = natcap.invest.utils.make_suffix_string(args, 'results_suffix')
 
     LOGGER.info('Building file registry')
     file_registry = natcap.invest.utils.build_file_registry(
@@ -89,51 +99,73 @@ def execute(args):
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     # Clip DEM by AOI and reclass
-    dem_wkt = geoprocessing.get_dataset_projection_wkt_uri(args['dem_path'])
-    geoprocessing.reproject_datasource_uri(
+    dem_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(args['dem_path'])
+    pygeoprocessing.reproject_datasource_uri(
         args['aoi_path'], dem_wkt, file_registry['aoi_proj_dem_path'])
 
-    dem_nodata = geoprocessing.get_nodata_from_uri(args['dem_path'])
+    dem_nodata = pygeoprocessing.get_nodata_from_uri(args['dem_path'])
 
     def below_sea_level_op(dem_value):
         """Set any value lower than 0 to 0."""
         valid_mask = (dem_value != dem_nodata)
-        below_sea_lvl = numpy.where(dem_value < 0, 0, dem_value)
+        below_sea_lvl = numpy.where(dem_value[valid_mask] < 0, 0, dem_value[valid_mask])
 
         result = numpy.empty(valid_mask.shape)
         result[:] = dem_nodata
         result[valid_mask] = below_sea_lvl
         return result
 
-    dem_data_type = geoprocessing.get_datatype_from_uri(args['dem_path'])
+    dem_data_type = pygeoprocessing.get_datatype_from_uri(args['dem_path'])
     # Set DEM values below zero to zero
-    geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         [args['dem_path']], below_sea_level_op, file_registry['dem_below_sea_path'],
         dem_data_type, dem_nodata, dem_cell_size, 'intersection',
-        vectorize_op=False, aoi_uri=file_registry['aoi_proj_dem_path'])
+        vectorize_op=False, aoi_uri=file_registry['aoi_proj_dem_path'],
+        assert_datasets_projected=False)
 
-    viewshed_dir = geoprocessing.get_temporary_directory()
+    # Clip structures by AOI
+    structures_srs = pygeoprocessing.get_spatial_ref_uri(args['structure_path'])
+    structures_wkt = structures_srs.ExportToWkt()
+    pygeoprocessing.reproject_datasource_uri(
+        args['aoi_path'], structures_wkt, file_registry['aoi_proj_struct_path'])
+
+    clip_datasource_layer(
+        args['structure_path'], file_registry['aoi_proj_struct_path'],
+        file_registry['structures_clipped_path'])
+
+    # Project Structures to DEM
+    aoi_srs = pygeoprocessing.get_spatial_ref_uri(args['aoi_path'])
+    aoi_wkt = aoi_srs.ExportToWkt()
+    pygeoprocessing.reproject_datasource_uri(
+        file_registry['structures_clipped_path'], aoi_wkt,
+        file_registry['structures_projected_path'])
+
+    pygeoprocessing.reproject_dataset_uri(
+        file_registry['dem_below_sea_path'], args['cell_size'], aoi_wkt,
+        'bilinear', file_registry['dem_proj_to_aoi_path'])
+
+    viewshed_dir = pygeoprocessing.temporary_folder()
     LOGGER.info("Calculating viewshed.")
     # Call to James's impending viewshed alg
-    geoprocessing.viewshed(
-        file_registry['dem_below_sea_path'], args['structure_path'],
+    pygeoprocessing.viewshed(
+        file_registry['dem_proj_to_aoi_path'], file_registry['structures_projected_path'],
         file_registry['viewshed_path'], curved_earth=True,
         refractivity=curvature_correction, temp_dir=viewshed_dir,
         block_size=1024, max_radius=float('inf'), skip_over_nodata=True)
 
     # Read in valuation coefficients
-    coef_a = float(args['a_coef'])
-    coef_b = float(args['b_coef'])
-    coef_c = float(args['c_coef'])
-    coef_d = float(args['d_coef'])
+    coef_a = float(args['a_coefficient'])
+    coef_b = float(args['b_coefficient'])
+    coef_c = float(args['c_coefficient'])
+    coef_d = float(args['d_coefficient'])
     max_val_radius = float(args['max_valuation_radius'])
 
-    def polynomial_val(dist_val):
+    def polynomial_val(dist):
         """Third Degree Polynomial Valuation function."""
 
         valid_mask = (dist != dist_nodata)
         max_dist_mask = (dist > max_val_radius)
-
+        # Based off of Equation 2 in the Users Guide
         dist_one = numpy.where(
             dist[valid_mask] >= 1000,
             (coef_a + coef_b * dist[valid_mask] +
@@ -154,7 +186,7 @@ def execute(args):
 
         valid_mask = (dist != dist_nodata)
         max_dist_mask = dist > max_valuation_radius
-
+        # Based off of Equation 1 in the Users Guide
         dist_one = numpy.where(
             dist[valid_mask] >= 1000,
             coef_a + coef_b * numpy.log(dist[valid_mask]),
@@ -197,35 +229,36 @@ def execute(args):
     else:
         val_op = log_val
 
-    nodata = geoprocessing.get_nodata_from_uri(file_registry['viewshed_path'])
+    nodata = pygeoprocessing.get_nodata_from_uri(file_registry['viewshed_path'])
 
-    for viewshed_path in viewshed_dir.listdir():
+    for viewshed_file in os.listdir(viewshed_dir):
+        viewshed_path = os.path.join(viewshed_dir, viewshed_file)
         # do a distance transform on each feature raster
-        dist_path = geoprocessing.get_temporary_filename()
+        dist_path = pygeoprocessing.temporary_filename()
         # What is the pixel of the point? Does it have a unique value?
         # NO, need to burn our own feature on raster. use 'viewshed_path' for base raster
-        distance_transform_edt(
-                viewshed_path, dist_path, process_pool=None)
+        pygeoprocessing.distance_transform_edt(
+            viewshed_path, dist_path, process_pool=None)
 
-        vshed_val_path = geoprocessing.get_temporary_filename()
+        vshed_val_path = pygeoprocessing.temporary_filename()
         # run valuation equation on distance raster
-        geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [dist_path], val_op, vshed_val_path, gdal.GDT_Float32, nodata,
-            dem_cell_size, 'intersection', vectorize_op=False)
+            args['cell_size'], 'intersection', vectorize_op=False)
 
-        vshed_val_final_path = geoprocessing.get_temporary_filename()
-        geoprocessing.vectorize_datasets(
+        vshed_val_final_path = pygeoprocessing.temporary_filename()
+        pygeoprocessing.vectorize_datasets(
             [vshed_val_path, viewshed_path], multiply_op, vshed_val_final_path,
-            gdal.GDT_Float32, nodata, dem_cell_size, 'intersection',
+            gdal.GDT_Float32, nodata, args['cell_size'], 'intersection',
             vectorize_op=False)
 
         val_raster_list.append(vshed_val_final_path)
         os.path.remove(dist_path)
         os.path.remove(vshed_val_path)
 
-    geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         [val_raster_list], add_op, file_registry['viewshed_valuation_path'],
-        gdal.GDT_Float32, nodata, dem_cell_size, 'intersection',
+        gdal.GDT_Float32, nodata, args['cell_size'], 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
 
     # remove all intermediate val rasters
@@ -258,12 +291,12 @@ def execute(args):
 
     # Set nodata to a very small negative number
     nodata = -9999919
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(
         file_registry['viewshed_valuation_path'])
 
     # Classify the pixels of raster_dataset into groups and write
     # them to output
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
             [file_registry['viewshed_valuation_path']], raster_percentile,
             file_registry['viewshed_quality_path'], gdal.GDT_Int32, nodata,
             pixel_size, 'intersection', assert_datasets_projected=False)
@@ -273,22 +306,22 @@ def execute(args):
 
 
         #tabulate population impact
-        nodata_pop = geoprocessing.get_nodata_from_uri(args["pop_path"])
-        nodata_viewshed = geoprocessing.get_nodata_from_uri(viewshed_path)
+        nodata_pop = pygeoprocessing.get_nodata_from_uri(args["pop_path"])
+        nodata_viewshed = pygeoprocessing.get_nodata_from_uri(viewshed_path)
 
         #clip population
-        pop_wkt = geoprocessing.get_dataset_projection_wkt_uri(args['pop_path'])
-        geoprocessing.reproject_datasource_uri(
+        pop_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(args['pop_path'])
+        pygeoprocessing.reproject_datasource_uri(
             args['aoi_path'], pop_wkt, aoi_pop_path)
 
-        geoprocessing.clip_dataset_uri(
+        pygeoprocessing.clip_dataset_uri(
             args['pop_path'], aoi_pop_path, pop_clip_path, False)
 
         #reproject clipped population
         LOGGER.debug("Reprojecting clipped population raster.")
-        vs_wkt = geoprocessing.get_dataset_projection_wkt_uri(viewshed_path)
-        pop_cell_size = geoprocessing.get_cell_size_from_uri(pop_clip_path)
-        geoprocessing.reproject_dataset_uri(
+        vs_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(viewshed_path)
+        pop_cell_size = pygeoprocessing.get_cell_size_from_uri(pop_clip_path)
+        pygeoprocessing.reproject_dataset_uri(
             pop_clip_path, pop_cell_size, vs_wkt, 'bilinear', pop_prj_path)
 
         def pop_affected_op(pop, view):
@@ -309,17 +342,17 @@ def execute(args):
             pop_final[valid_mask] = pop_places
             return pop_final
 
-        viewshed_cell_size = geoprocessing.get_cell_size_from_uri(
+        viewshed_cell_size = pygeoprocessing.get_cell_size_from_uri(
             file_registry['viewshed_path'])
 
-        geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [file_registry['pop_proj_path'], file_registry['viewshed_path']],
             pop_affected_op, file_registry['pop_affected_path'],
             gdal.GDT_Float32, pop_nodata, viewshed_cell_size,
             "intersection", resample_method_list=None,
             dataset_to_align_index=1)
 
-        geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [file_registry['pop_proj_path'], file_registry['viewshed_path']],
             pop_unaffected_op, file_registry['pop_unaffected_path'],
             gdal.GDT_Float32, pop_nodata, viewshed_cell_size,
@@ -328,7 +361,7 @@ def execute(args):
 
         affected_sum = 0
         affected_count = 0
-        for _, block in pygeoprocessing.geoprocessing.iterblocks(
+        for _, block in pygeoprocessing.iterblocks(
             file_registry['pop_affected_path']):
 
             valid_mask = (block != pop_nodata)
@@ -337,7 +370,7 @@ def execute(args):
 
         unaffected_sum = 0
         unaffected_count = 0
-        for _, block in pygeoprocessing.geoprocessing.iterblocks(
+        for _, block in pygeoprocessing.iterblocks(
             file_registry['pop_unaffected_path']):
 
             valid_mask = (block != pop_nodata)
@@ -378,7 +411,7 @@ def execute(args):
         natcap.invest.reporting.generate_report(report_args)
 
     if "overlap_path" in args:
-        geoprocessing.copy_datasource_uri(
+        pygeoprocessing.copy_datasource_uri(
             args["overlap_path"], file_registry['overlap_path'])
 
         def zero_to_nodata(view):
@@ -386,7 +419,7 @@ def execute(args):
             """
             return numpy.where(view <= 0, view_nodata, view)
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [file_registry['viewshed_path']], zero_to_nodata,
             file_registry['viewshed_no_zeros_path'], gdal.GDT_Float32,
             view_nodata, view_cell_size, 'intersection',
@@ -397,7 +430,7 @@ def execute(args):
         setup_overlap_id_fields(file_registry['overlap_path'], id_name)
 
         LOGGER.debug("Count overlapping pixels per area.")
-        pixel_counts = geoprocessing.aggregate_raster_values_uri(
+        pixel_counts = pygeoprocessing.aggregate_raster_values_uri(
             file_registry['viewshed_no_zeros_path'],
             file_registry['overlap_path'], id_name,
             ignore_nodata=True).n_pixels
@@ -500,7 +533,7 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
         # Read in raster chunk as array
         arr = band.ReadAsArray(0, row_index, n_cols, row_strides)
 
-        tmp_path = pygeoprocessing.geoprocessing.temporary_filename()
+        tmp_path = pygeoprocessing.temporary_filename()
         tmp_file = open(tmp_path, 'wb')
         # Make array one dimensional for sorting and saving
         arr = arr.flatten()
@@ -545,7 +578,50 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
     raster = None
     return results
 
+def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
+    """Clip Shapefile Layer by second Shapefile Layer.
 
+    Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
+    inherits the projection and fields from the original Shapefile.
+
+    Parameters:
+        shape_to_clip_path (string): a path to a Shapefile on disk. This is
+            the Layer to clip. Must have same spatial reference as
+            'binding_shape_path'.
+        binding_shape_path (string): a path to a Shapefile on disk. This is
+            the Layer to clip to. Must have same spatial reference as
+            'shape_to_clip_path'
+        output_path (string): a path on disk to write the clipped Shapefile
+            to. Should end with a '.shp' extension.
+
+    Returns:
+        Nothing
+    """
+
+    if os.path.isfile(output_path):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(output_path)
+
+    shape_to_clip = ogr.Open(shape_to_clip_path)
+    binding_shape = ogr.Open(binding_shape_path)
+
+    input_layer = shape_to_clip.GetLayer()
+    binding_layer = binding_shape.GetLayer()
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    ds = driver.CreateDataSource(output_path)
+    input_layer_defn = input_layer.GetLayerDefn()
+    out_layer = ds.CreateLayer(
+        input_layer_defn.GetName(), input_layer.GetSpatialRef())
+
+    input_layer.Clip(binding_layer, out_layer)
+
+    # Add in a check to make sure the intersection didn't come back
+    # empty
+    if(out_layer.GetFeatureCount() == 0):
+        raise IntersectionError('Intersection ERROR: clip_datasource_layer '
+            'found no intersection between: file - %s and file - %s.' %
+            (shape_to_clip_path, binding_shape_path))
 
 '''
 
