@@ -103,8 +103,8 @@ class LoggingServer(object):
                 table_name = self._LOG_TABLE_NAME
                 field_names = self._LOG_FIELD_NAMES
             elif mode == 'exit':
-                table_name = self._LOG_EXIT_TABLE_NAME
-                field_names = self._LOG_EXIT_TABLE_NAME
+                table_name = self._EXIT_LOG_TABLE_NAME
+                field_names = self._EXIT_LOG_FIELD_NAMES
             else:
                 raise ValueError(
                     "Unknown mode '%s', expected 'log' or 'exit'" % mode)
