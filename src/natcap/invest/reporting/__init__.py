@@ -41,10 +41,10 @@ def generate_report(reporting_args):
         reporting_args[elements] - a list of dictionaries that represent html
             elements to be added to the html page. (required) If no elements
             are provided (list is empty) a blank html page will be generated.
-            The 3 main element types are 'table', 'head', 'svg', and 'text'.
+            The 3 main element types are 'table', 'head', and 'text'.
             All elements share the following arguments:
                 'type' - a string that depicts the type of element being add.
-                    Currently 'table', 'head', 'svg', and 'text' are defined
+                    Currently 'table', 'head', and 'text' are defined
                     (required)
 
                 'section' - a string that depicts whether the element belongs
@@ -134,19 +134,6 @@ def generate_report(reporting_args):
                 'text'- a string to add as a paragraph element in the html page
                     (required)
 
-            SVG element dictionary has at least the following additional
-            arguments:
-                'svg_out_uri' - a URI path to save SVG to disk
-                'source_uri' - a URI path to an OGR shapefile (required)
-                'field_id' - a String for an attribute in 'source_uri' to
-                    display as a label (required)
-                'key_id' - a String for an attribute in 'source_uri' for the
-                    unique field for the shapefile (required)
-                'proj_type' - a String for how the image projection should be
-                    interpreted (optional)
-                'css'_uri' - a URI path to a css file (optional)
-                'size' - a Tuple for width, height in pixels (optional)
-
         returns - nothing"""
     LOGGER.info('Creating HTML Report')
     # Get the title for the html page and place it in a string with html
@@ -168,8 +155,7 @@ def generate_report(reporting_args):
     report = {
             'table': build_table,
             'text' : add_text_element,
-            'head': add_head_element,
-            'svg': add_svg_element
+            'head': add_head_element
             }
 
     LOGGER.debug('Adding default JavaScript libs')
@@ -494,47 +480,5 @@ def add_head_element(param_args):
     else:
         raise Exception('Currently this type of head element is not supported'
                 ' : %s' % form)
-
-    return html_str
-
-
-def add_svg_element(param_args):
-    """Generate an SVG file from a shapefile and read the SVG file in as a
-        html String. Return the SVG html String
-
-        param_args - a dictionary that holds the following arguments / keys:
-            'svg_out_uri' - a URI path to save SVG to disk
-            'source_uri' - a URI path to an OGR shapefile (required)
-            'field_id' - a String for an attribute in 'source_uri' to
-                display as a label (required)
-            'key_id' - a String for an attribute in 'source_uri' for the
-                unique field for the shapefile (required)
-            'proj_type' - a String for how the image projection should be
-                interpreted (optional)
-            'css'_uri' - a URI path to a css file (optional)
-            'size' - a Tuple for width, height in pixels (optional)
-
-        returns - a string representation of the html svg element"""
-
-    # Pop file URIs that are passed into the function signature
-    source_uri = param_args.pop('source_uri')
-    svg_out_uri = param_args.pop('svg_out_uri')
-    css_uri = param_args.pop('css_uri')
-    # Create SVG from shapefile
-    #style.shape_to_svg(source_uri, svg_out_uri, css_uri, param_args)
-    # Open SVG
-    #svg_file = codecs.open(svg_out_uri, 'rb', 'latin1')
-    file_str = ("<svg width='100' height='100'><circle cx='50' cy=50' r='40'"
-                " stroke='green' stroke-width='4' fill='yellow'/></svg>")
-    #file_str = svg_file.read()
-    # At the moment I think we are only interested in what lives within the
-    # svg tags from the SVG file. Search for this section.
-    svg_match = re.search(r'<svg.*/svg>', file_str)
-    if svg_match != None:
-        svg_str = svg_match.group()
-    else:
-        raise Exception('Could not load SVG from file. Could not match <svg></svg> tags')
-
-    html_str = '''%s''' % svg_str
 
     return html_str
