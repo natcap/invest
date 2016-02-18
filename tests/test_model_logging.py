@@ -39,10 +39,14 @@ class ModelLoggingTests(unittest.TestCase):
         db_cursor.execute(
             "SELECT name FROM sqlite_master "
             "WHERE type='table' ORDER BY name;")
-        tables = db_cursor.next()
+        # fetchall returns 1 element tuples, this line removes the tuple
+        tables = [x[0] for x in db_cursor.fetchall()]
         db_cursor = None
         db_connection.close()
-        self.assertTrue(usage_logger.LoggingServer._TABLE_NAME in tables)
+        self.assertTrue(
+            usage_logger.LoggingServer._LOG_TABLE_NAME in tables,
+            msg="%s not in %s" % (
+                usage_logger.LoggingServer._LOG_TABLE_NAME, tables))
 
     def test_pyro_server(self):
         """Usage logger test server as an RPC."""
@@ -75,8 +79,8 @@ class ModelLoggingTests(unittest.TestCase):
         # this makes for an easy expected result
         sample_data = dict(
             (key_field, key_field) for key_field in
-            usage_logger.LoggingServer._FIELD_NAMES)
-        logging_server.log_invest_run(sample_data)
+            usage_logger.LoggingServer._LOG_FIELD_NAMES)
+        logging_server.log_invest_run(sample_data, 'log')
 
         remote_database_as_string = logging_server.get_run_summary_db()
         local_database_as_string = open(database_path, 'rb').read()
@@ -93,11 +97,11 @@ class ModelLoggingTests(unittest.TestCase):
         # this makes for an easy expected result
         sample_data = dict(
             (key_field, key_field) for key_field in
-            usage_logger.LoggingServer._FIELD_NAMES)
+            usage_logger.LoggingServer._LOG_FIELD_NAMES)
         # make an extra field which should be ignored on server side
         sample_data['extra_field'] = -238328
 
-        logging_server.log_invest_run(sample_data)
+        logging_server.log_invest_run(sample_data, 'log')
 
         db_connection = sqlite3.connect(database_path)
         db_cursor = db_connection.cursor()
@@ -122,9 +126,9 @@ class ModelLoggingTests(unittest.TestCase):
         # this makes for an easy expected result
         sample_data = dict(
             (key_field, key_field) for key_field in
-            usage_logger.LoggingServer._FIELD_NAMES)
+            usage_logger.LoggingServer._LOG_FIELD_NAMES)
 
-        logging_server.log_invest_run(sample_data)
+        logging_server.log_invest_run(sample_data, 'log')
 
         db_connection = sqlite3.connect(database_path)
         db_cursor = db_connection.cursor()
@@ -147,9 +151,9 @@ class ModelLoggingTests(unittest.TestCase):
         # this makes for an easy expected result
         sample_data = dict(
             (key_field, key_field) for key_field in
-            usage_logger.LoggingServer._FIELD_NAMES)
+            usage_logger.LoggingServer._LOG_FIELD_NAMES)
 
-        logging_server.log_invest_run(sample_data)
+        logging_server.log_invest_run(sample_data, 'log')
         remote_database_as_string = logging_server.get_run_summary_db()
 
         local_database_as_string = open(database_path, 'rb').read()
