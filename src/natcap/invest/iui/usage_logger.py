@@ -41,6 +41,7 @@ class LoggingServer(object):
     _EXIT_LOG_FIELD_NAMES = [
         'session_id',
         'time',
+        'ip_address',
         'status',
         ]
     _LOG_TABLE_NAME = 'model_log_table'
