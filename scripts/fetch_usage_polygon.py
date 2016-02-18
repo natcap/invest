@@ -42,9 +42,8 @@ not LIKE 'None' GROUP BY model_name, bounding_box_intersection;""")
         try:
             model_name, bounding_box_string, n_runs = line
             n_runs = int(n_runs)
-            bounding_box = list(
-                [float(x) for x in
-                 bounding_box_string[1:-1].split(',')])
+            bounding_box = [
+                float(x) for x in bounding_box_string[1:-1].split(',')]
             ring = ogr.Geometry(ogr.wkbLinearRing)
             ring.AddPoint(bounding_box[0], bounding_box[3])
             ring.AddPoint(bounding_box[0], bounding_box[1])
