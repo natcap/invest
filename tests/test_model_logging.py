@@ -170,6 +170,20 @@ class ModelLoggingTests(unittest.TestCase):
         expected_result = ('status',)
         self.assertEqual(expected_result, result)
 
+    def test_unknown_mode(self):
+        """Usage logger test that an unknown mode raises an exception."""
+        from natcap.invest.iui import usage_logger
+
+        database_path = os.path.join(self.workspace_dir, 'test_log.db')
+        logging_server = usage_logger.LoggingServer(database_path)
+
+        sample_data = dict(
+            (key_field, key_field) for key_field in
+            usage_logger.LoggingServer._LOG_FIELD_NAMES)
+
+        with self.assertRaises(ValueError):
+            logging_server.log_invest_run(sample_data, 'bad_mode')
+
     def test_download_database(self):
         """Usage logger run summary db is the same as the base db."""
         from natcap.invest.iui import usage_logger
