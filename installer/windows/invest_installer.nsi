@@ -251,7 +251,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${HRA}\(1) Habitat Risk Assessment Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra_preprocessor.bat" "" "${INVEST_ICON}"
   CreateShortCut "${HRA}\(2) Habitat Risk Assessment (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Nutrient Retention (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_nutrient.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\NDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_ndr.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Scenario Generator: Rule Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator_proximity_based.bat" "" "${INVEST_ICON}"
 
@@ -380,7 +380,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   SectionGroup "Freshwater Datasets" SEC_FRESHWATER_DATA
     !insertmacro downloadData "Freshwater Base Datasets (optional for freshwater models)" "Freshwater.zip" 4710
     !insertmacro downloadData "Hydropower (optional)" "Hydropower.zip" 100
-    !insertmacro downloadData "Nutrient Retention (required to run model)" "WP_Nutrient_Retention.zip" 4
     !insertmacro downloadData "Seasonal Water Yield: (optional)" "seasonal_water_yield.zip" 500000
   SectionGroupEnd
 
