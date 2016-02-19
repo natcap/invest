@@ -106,12 +106,6 @@ def get_inputs(args):
         'transitions': None,
         'interest_rate': None,
         'price_t': None,
-        'T_s_rasters': [],
-        'A_r_rasters': [],
-        'E_r_rasters': [],
-        'N_r_rasters': [],
-        'N_total_raster': None,
-        'NPV_raster': None,
     }
 
     # Directories
@@ -200,66 +194,100 @@ def get_inputs(args):
         d['price_t'] /= (1 + discount_rate) ** np.arange(0, d['timesteps']+1)
 
     # Create Output Rasters
-    template_raster = d['C_prior_raster']
+    d['File_Registry'] = _build_file_registry(
+        d['C_prior_raster'],
+        d['snapshot_years'],
+        d['results_suffix'],
+        d['do_economic_analysis'],
+        outputs_dir)
+
+    return d
+
+
+def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
+                         do_economic_analysis, outputs_dir):
+    """Build an output file registry.
+
+    Args:
+        C_prior_raster (str): template raster
+        snapshot_years (list): years of provided snapshots to help with
+            filenames
+        results_suffix (str): the results file suffix
+        do_economic_analysis (bool): whether or not to create a NPV raster
+        outputs_dir (str): path to output directory
+
+    Returns:
+        File_Registry (dict): map to collections of output files.
+    """
+    File_Registry = {
+        'T_s_rasters': [],
+        'A_r_rasters': [],
+        'E_r_rasters': [],
+        'N_r_rasters': [],
+        'N_total_raster': None,
+        'NPV_raster': None,
+    }
+
+    template_raster = C_prior_raster
 
     # Total Carbon Stock
-    for i in range(0, len(d['snapshot_years'])):
+    for i in range(0, len(snapshot_years)):
         fn = 'carbon_stock_at_%s%s.tif' % (
-            d['snapshot_years'][i], d['results_suffix'])
+            snapshot_years[i], results_suffix)
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d['T_s_rasters'].append(filepath)
+        File_Registry['T_s_rasters'].append(filepath)
 
-    for i in range(0, len(d['snapshot_years'])-1):
+    for i in range(0, len(snapshot_years)-1):
         # Transition Accumulation
         fn = 'carbon_accumulation_between_%s_and_%s%s.tif' % (
-            d['snapshot_years'][i],
-            d['snapshot_years'][i+1],
-            d['results_suffix'])
+            snapshot_years[i],
+            snapshot_years[i+1],
+            results_suffix)
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d['A_r_rasters'].append(filepath)
+        File_Registry['A_r_rasters'].append(filepath)
 
         # Transition Emissions
         fn = 'carbon_emissions_between_%s_and_%s%s.tif' % (
-            d['snapshot_years'][i],
-            d['snapshot_years'][i+1],
-            d['results_suffix'])
+            snapshot_years[i],
+            snapshot_years[i+1],
+            results_suffix)
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d['E_r_rasters'].append(filepath)
+        File_Registry['E_r_rasters'].append(filepath)
 
         # Transition Net Sequestration
         fn = 'net_carbon_sequestration_between_%s_and_%s%s.tif' % (
-            d['snapshot_years'][i],
-            d['snapshot_years'][i+1],
-            d['results_suffix'])
+            snapshot_years[i],
+            snapshot_years[i+1],
+            results_suffix)
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d['N_r_rasters'].append(filepath)
+        File_Registry['N_r_rasters'].append(filepath)
 
     # Total Net Sequestration
     fn = 'net_carbon_sequestration_between_%s_and_%s%s.tif' % (
-        d['snapshot_years'][0], d['snapshot_years'][-1], d['results_suffix'])
+        snapshot_years[0], snapshot_years[-1], results_suffix)
     filepath = os.path.join(outputs_dir, fn)
     geoprocess.new_raster_from_base_uri(
         template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-    d['N_total_raster'] = filepath
+    File_Registry['N_total_raster'] = filepath
 
     # Net Sequestration from Base Year to Analysis Year
-    if args['do_economic_analysis']:
+    if do_economic_analysis:
         # Total Net Present Value
-        fn = 'net_present_value%s.tif' % (d['results_suffix'])
+        fn = 'net_present_value%s.tif' % (results_suffix)
         filepath = os.path.join(outputs_dir, fn)
         geoprocess.new_raster_from_base_uri(
             template_raster, filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
-        d['NPV_raster'] = filepath
+        File_Registry['NPV_raster'] = filepath
 
-    return d
+    return File_Registry
 
 
 def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,

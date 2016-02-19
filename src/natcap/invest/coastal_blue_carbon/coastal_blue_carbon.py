@@ -248,10 +248,10 @@ def execute(args):
             ('N_r_rasters', N_r)]
 
         for key, array in raster_tuples:
-            write_rasters(d[key], array, offset_dict)
+            write_rasters(d['File_Registry'][key], array, offset_dict)
 
         write_to_raster(
-            d['N_total_raster'],
+            d['File_Registry']['N_total_raster'],
             N_total,
             offset_dict['xoff'],
             offset_dict['yoff'])
@@ -259,7 +259,7 @@ def execute(args):
         if d['do_economic_analysis']:
             NPV = np.sum(V, axis=0)
             write_to_raster(
-                d['NPV_raster'],
+                d['File_Registry']['NPV_raster'],
                 NPV,
                 offset_dict['xoff'],
                 offset_dict['yoff'])
