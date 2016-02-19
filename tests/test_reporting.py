@@ -54,7 +54,6 @@ class ReportingRegressionTests(unittest.TestCase):
         }
         return args
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_csv_style(self):
         """Reporting: testing full report w/ csv table data and css file."""
@@ -81,7 +80,6 @@ class ReportingRegressionTests(unittest.TestCase):
             args['out_uri'],
             os.path.join(REGRESSION_DATA, 'report_csv_style.html'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_dict_script(self):
         """Reporting: test full report w/ dict table data and script file."""
@@ -112,7 +110,6 @@ class ReportingRegressionTests(unittest.TestCase):
             args['out_uri'],
             os.path.join(REGRESSION_DATA, 'report_dict_script.html'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_shape_json(self):
         """Reporting: testing full report w/ shape table data and json file."""
@@ -139,7 +136,6 @@ class ReportingRegressionTests(unittest.TestCase):
             args['out_uri'],
             os.path.join(REGRESSION_DATA, 'report_shape_json.html'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_tags_error(self):
         """Reporting: testing full report raises excpetion on included tags."""
@@ -163,7 +159,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
         self.assertRaises(Exception, reporting.generate_report, args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_head_error(self):
         """Reporting: test report raises exception on unknown head type."""
@@ -184,6 +179,38 @@ class ReportingRegressionTests(unittest.TestCase):
         args['elements'][1]['input_type'] = 'Text'
 
         self.assertRaises(Exception, reporting.generate_report, args)
+
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_generate_report_remove_output(self):
+        """Reporting: test full report removes html output if exists."""
+        from natcap.invest import reporting
+
+        workspace_dir = self.workspace_dir
+        args = ReportingRegressionTests.generate_base_args()
+
+        script_path = os.path.join(REGRESSION_DATA, 'sample_script.js')
+
+        dict_list = [
+            {'ws_id': 0, 'num_pixels': 47017.0, 'wyield_vol': 50390640.85},
+            {'ws_id': 1, 'num_pixels': 93339.0, 'wyield_vol': 103843576.83},
+            {'ws_id': 2, 'num_pixels': 20977.0, 'wyield_vol': 21336791.14}]
+
+        args['out_uri'] = os.path.join(
+            workspace_dir, 'report_test_remove.html')
+        args['elements'][0]['attributes'] = {'id': 'my_id'}
+        args['elements'][0]['data_type'] = 'dictionary'
+        args['elements'][0]['data'] = dict_list
+        args['elements'][1]['format'] = 'script'
+        args['elements'][1]['data_src'] = script_path
+        args['elements'][1]['input_type'] = 'File'
+
+        reporting.generate_report(args)
+        # Run again to make sure output file that was created is removed
+        reporting.generate_report(args)
+
+        pygeoprocessing.testing.assert_text_equal(
+            args['out_uri'],
+            os.path.join(REGRESSION_DATA, 'report_dict_script.html'))
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_attributes(self):
@@ -385,7 +412,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         regression_path = os.path.join(
             REGRESSION_DATA, 'table_string_no_totals.txt')
-        regression_file = codecs.open(regression_path, 'wb', 'utf-8')
+        regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
         self.assertEqual(result_str, regression_str)

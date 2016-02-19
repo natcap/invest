@@ -6,6 +6,7 @@ import logging
 import codecs
 import re
 from types import StringType
+import copy
 
 import natcap.invest
 import pygeoprocessing.geoprocessing
@@ -21,7 +22,7 @@ TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
 u = lambda string: unicode(string, 'utf-8')
 
 
-def generate_report(reporting_args):
+def generate_report(args):
     """Generate an html page from the arguments given in 'reporting_args'
 
         reporting_args[title] - a string for the title of the html page
@@ -136,6 +137,9 @@ def generate_report(reporting_args):
 
         returns - nothing"""
     LOGGER.info('Creating HTML Report')
+    # Since the dictionary being is mutated, make a copy to mutate on
+    # while keeping the integrity of the original
+    reporting_args = copy.deepcopy(args)
     # Get the title for the html page and place it in a string with html
     # title tags
     html_title = '<title>%s</title>' % reporting_args['title']
