@@ -173,6 +173,7 @@ class TestIO(unittest.TestCase):
         pass
 
     def test_get_inputs(self):
+        """Coastal Blue Carbon: Test Get Inputs"""
         from natcap.invest.coastal_blue_carbon import io
         args = get_args()
         d = io.get_inputs(args)
@@ -195,7 +196,7 @@ class TestModel(unittest.TestCase):
         pass
 
     def test_model_run(self):
-        """Test main model 'run' function."""
+        """Coastal Blue Carbon: Test main model 'run' function."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
         args = get_args()
@@ -222,6 +223,7 @@ class TestPreprocessor(unittest.TestCase):
         pass
 
     def test_preprocessor(self):
+        """Coastal Blue Carbon: Test Preprocessor"""
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = get_preprocessor_args(1)
         preprocessor.execute(args)
@@ -235,6 +237,7 @@ class TestPreprocessor(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
 
     def test_preprocessor_2(self):
+        """Coastal Blue Carbon: Test Preprocessor 2"""
         from natcap.invest.coastal_blue_carbon import preprocessor
         args2 = get_preprocessor_args(2)
         preprocessor.execute(args2)
