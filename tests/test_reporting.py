@@ -20,7 +20,7 @@ class ReportingRegressionTests(unittest.TestCase):
     """Regression Tests for the Reporting Module."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -32,7 +32,6 @@ class ReportingRegressionTests(unittest.TestCase):
     @staticmethod
     def generate_base_args():
         """Generate an args list that is consistent across regression tests."""
-
         args = {
             'title': 'Test InVEST Reporting',
             'sortable': True,
@@ -62,7 +61,6 @@ class ReportingRegressionTests(unittest.TestCase):
         from natcap.invest import reporting
 
         workspace_dir = self.workspace_dir
-        #workspace_dir = REGRESSION_DATA
         args = ReportingRegressionTests.generate_base_args()
 
         csv_path = os.path.join(REGRESSION_DATA, 'sample_csv.csv')
@@ -86,11 +84,10 @@ class ReportingRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_dict_script(self):
-        """Reporting: testing full report w/ dict table data and script file."""
+        """Reporting: test full report w/ dict table data and script file."""
         from natcap.invest import reporting
 
         workspace_dir = self.workspace_dir
-        #workspace_dir = REGRESSION_DATA
         args = ReportingRegressionTests.generate_base_args()
 
         script_path = os.path.join(REGRESSION_DATA, 'sample_script.js')
@@ -122,7 +119,6 @@ class ReportingRegressionTests(unittest.TestCase):
         from natcap.invest import reporting
 
         workspace_dir = self.workspace_dir
-        #workspace_dir = REGRESSION_DATA
         args = ReportingRegressionTests.generate_base_args()
 
         shape_path = os.path.join(REGRESSION_DATA, 'sample_shape.shp')
@@ -150,11 +146,12 @@ class ReportingRegressionTests(unittest.TestCase):
         from natcap.invest import reporting
 
         workspace_dir = self.workspace_dir
-        #workspace_dir = REGRESSION_DATA
         args = ReportingRegressionTests.generate_base_args()
 
         shape_path = os.path.join(REGRESSION_DATA, 'sample_shape.shp')
-        json_data = "<script> {'key': 0, 'data': {'door' : 1, 'room': 'kitchen'}} </script>"
+        json_data = (
+            "<script> {'key': 0, 'data': {'door' : 1,"
+            " 'room': 'kitchen'}} </script>")
 
         args['out_uri'] = os.path.join(workspace_dir, 'report_tags_error.html')
         args['elements'][0]['data_type'] = 'shapefile'
@@ -169,11 +166,10 @@ class ReportingRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_head_error(self):
-        """Reporting: testing full report raises exception on unknown head type."""
+        """Reporting: test report raises exception on unknown head type."""
         from natcap.invest import reporting
 
         workspace_dir = self.workspace_dir
-        #workspace_dir = REGRESSION_DATA
         args = ReportingRegressionTests.generate_base_args()
 
         shape_path = os.path.join(REGRESSION_DATA, 'sample_shape.shp')
@@ -218,7 +214,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         result_str = table_generator.generate_table(table_args)
 
-        regression_path = os.path.join(REGRESSION_DATA, 'table_string_attrs.txt')
+        regression_path = os.path.join(
+            REGRESSION_DATA, 'table_string_attrs.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -252,7 +249,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         result_str = table_generator.generate_table(table_args)
 
-        regression_path = os.path.join(REGRESSION_DATA, 'table_string_no_attrs.txt')
+        regression_path = os.path.join(
+            REGRESSION_DATA, 'table_string_no_attrs.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -284,7 +282,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         result_str = table_generator.generate_table(table_args)
 
-        regression_path = os.path.join(REGRESSION_DATA, 'table_string_no_checkbox.txt')
+        regression_path = os.path.join(
+            REGRESSION_DATA, 'table_string_no_checkbox.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -302,8 +301,10 @@ class ReportingRegressionTests(unittest.TestCase):
 
         cols = [
             {'name': 'ws_id', 'total': False, 'attr': {'class': 'my_class'}},
-            {'name': 'num_pixels', 'total': True, 'attr': {'class': 'my_class'}},
-            {'name': 'wyield_vol', 'total': True, 'attr': {'class': 'my_class'}}]
+            {'name': 'num_pixels', 'total': True,
+             'attr': {'class': 'my_class'}},
+            {'name': 'wyield_vol', 'total': True,
+             'attr': {'class': 'my_class'}}]
 
         table_args = {
             'cols': cols,
@@ -316,7 +317,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         result_str = table_generator.generate_table(table_args)
 
-        regression_path = os.path.join(REGRESSION_DATA, 'table_string_no_td_classes.txt')
+        regression_path = os.path.join(
+            REGRESSION_DATA, 'table_string_no_td_classes.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -348,7 +350,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         result_str = table_generator.generate_table(table_args)
 
-        regression_path = os.path.join(REGRESSION_DATA, 'table_string_no_col_attrs.txt')
+        regression_path = os.path.join(
+            REGRESSION_DATA, 'table_string_no_col_attrs.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -380,7 +383,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         result_str = table_generator.generate_table(table_args)
 
-        regression_path = os.path.join(REGRESSION_DATA, 'table_string_no_totals.txt')
+        regression_path = os.path.join(
+            REGRESSION_DATA, 'table_string_no_totals.txt')
         regression_file = codecs.open(regression_path, 'wb', 'utf-8')
         regression_str = regression_file.read()
 
