@@ -135,7 +135,6 @@ setup(
         'natcap.invest.marine_water_quality',
         'natcap.invest.ndr',
         'natcap.invest.nearshore_wave_and_erosion',
-        'natcap.invest.nutrient',
         'natcap.invest.optimization',
         'natcap.invest.overlap_analysis',
         'natcap.invest.pollination',
