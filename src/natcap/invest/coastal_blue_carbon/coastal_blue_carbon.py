@@ -15,6 +15,7 @@ from osgeo import gdal
 import pygeoprocessing.geoprocessing as geoprocess
 
 from natcap.invest.coastal_blue_carbon import io
+from natcap.invest import utils as invest_utils
 
 NODATA_FLOAT = -16777216  # largest negative 32-bit floating point number
 

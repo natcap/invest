@@ -21,6 +21,12 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
 
+_OUTPUT = {
+    'transitions': 'transitions.csv',
+    'carbon_pool_initial_template': 'carbon_pool_initial_template.csv',
+    'carbon_pool_transient_template': 'carbon_pool_transient_template.csv'
+}
+
 
 def execute(args):
     """Execute preprocessor.
@@ -56,26 +62,23 @@ def execute(args):
         vars_dict['lulc_lookup_dict'], vars_dict['lulc_snapshot_list'])
 
     # Outputs
-    filename = 'transitions%s.csv' % vars_dict['results_suffix']
-    transition_table_filepath = os.path.join(vars_dict['output_dir'], filename)
+    base_file_path_list = [(_OUTPUT, vars_dict['output_dir'])]
+    reg = invest_utils.build_file_registry(
+        base_file_path_list,
+        vars_dict['results_suffix'])
+
     _create_transition_table(
-        transition_table_filepath,
+        reg['transitions'],
         vars_dict['lulc_class_list'],
         vars_dict['transition_matrix_dict'],
         vars_dict['code_to_lulc_dict'])
 
-    filename = 'carbon_pool_initial_template%s.csv' % \
-        vars_dict['results_suffix']
-    initial_table_filepath = os.path.join(vars_dict['output_dir'], filename)
     _create_carbon_pool_initial_table_template(
-        initial_table_filepath,
+        reg['carbon_pool_initial_template'],
         vars_dict['code_to_lulc_dict'])
 
-    filename = 'carbon_pool_transient_template%s.csv' % \
-        vars_dict['results_suffix']
-    transient_table_filepath = os.path.join(vars_dict['output_dir'], filename)
     _create_carbon_pool_transient_table_template(
-        transient_table_filepath,
+        reg['carbon_pool_transient_template'],
         vars_dict['code_to_lulc_dict'])
 
     LOGGER.info('...Coastal Blue Carbon Preprocessor run complete.')
