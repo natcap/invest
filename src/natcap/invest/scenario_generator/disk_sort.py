@@ -15,8 +15,8 @@ def sort_to_disk(dataset_uri, dataset_index):
     Args:
         dataset_uri (str): a uri to a GDAL dataset
         dataset_index (int): an integer to keep track of which dataset
-            we're encoding.  This will help us later if we merge
-            several of these iterators together
+            we're encoding.  This will help us later if we merge several of
+            these iterators together
 
     Returns:
         returns an iterable that returns (-value, flat_index, dataset_index)

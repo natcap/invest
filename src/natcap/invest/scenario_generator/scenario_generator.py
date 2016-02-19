@@ -1119,6 +1119,10 @@ def execute(args):
         LOGGER.info("Calculating proximity.")
         cover_types = transition_dict.keys()
         for cover_id in transition_dict:
+            if transition_dict[cover_id][args["proximity_field"]] == u'':
+                msg = "Proximity value not provided for lulc_code %i.  Check "\
+                      "your land cover transition / attributes table."
+                raise ValueError(msg  % cover_id)
             if transition_dict[cover_id][args["proximity_field"]] > 0 and \
                     cover_id in suitability_dict:
                 distance = int(
