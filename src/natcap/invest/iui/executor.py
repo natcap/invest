@@ -793,7 +793,7 @@ def _log_exit_status(session_id, status):
     Returns:
         None
     """
-    logger = logging.getLogger('natcap.invest.iui._log_exit_status')
+    logger = logging.getLogger('natcap.invest.iui.executor._log_exit_status')
 
     try:
         payload = {
