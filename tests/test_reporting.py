@@ -62,8 +62,10 @@ class ReportingRegressionTests(unittest.TestCase):
         workspace_dir = self.workspace_dir
         args = ReportingRegressionTests.generate_base_args()
 
-        csv_path = os.path.join(REGRESSION_DATA, 'sample_csv.csv')
-        style_path = os.path.join(REGRESSION_DATA, 'sample_style.css')
+        csv_path = os.path.join(
+            REGRESSION_DATA, 'sample_input', 'sample_csv.csv')
+        style_path = os.path.join(
+            REGRESSION_DATA, 'sample_input', 'sample_style.css')
 
         args['out_uri'] = os.path.join(workspace_dir, 'report_csv_style.html')
         args['elements'][0]['attributes'] = {'class': 'my_class'}
@@ -78,7 +80,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_text_equal(
             args['out_uri'],
-            os.path.join(REGRESSION_DATA, 'report_csv_style.html'))
+            os.path.join(
+                REGRESSION_DATA, 'html_reports', 'report_csv_style.html'))
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_dict_script(self):
@@ -88,7 +91,8 @@ class ReportingRegressionTests(unittest.TestCase):
         workspace_dir = self.workspace_dir
         args = ReportingRegressionTests.generate_base_args()
 
-        script_path = os.path.join(REGRESSION_DATA, 'sample_script.js')
+        script_path = os.path.join(
+            REGRESSION_DATA, 'sample_input', 'sample_script.js')
 
         dict_list = [
             {'ws_id': 0, 'num_pixels': 47017.0, 'wyield_vol': 50390640.85},
@@ -108,7 +112,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_text_equal(
             args['out_uri'],
-            os.path.join(REGRESSION_DATA, 'report_dict_script.html'))
+            os.path.join(
+                REGRESSION_DATA, 'html_reports', 'report_dict_script.html'))
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_shape_json(self):
@@ -118,7 +123,8 @@ class ReportingRegressionTests(unittest.TestCase):
         workspace_dir = self.workspace_dir
         args = ReportingRegressionTests.generate_base_args()
 
-        shape_path = os.path.join(REGRESSION_DATA, 'sample_shape.shp')
+        shape_path = os.path.join(
+            REGRESSION_DATA, 'sample_input', 'sample_shape.shp')
         json_data = "{'key': 0, 'data': {'door' : 1, 'room': 'kitchen'}}"
 
         args['out_uri'] = os.path.join(
@@ -134,7 +140,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_text_equal(
             args['out_uri'],
-            os.path.join(REGRESSION_DATA, 'report_shape_json.html'))
+            os.path.join(
+                REGRESSION_DATA, 'html_reports', 'report_shape_json.html'))
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_tags_error(self):
@@ -144,7 +151,8 @@ class ReportingRegressionTests(unittest.TestCase):
         workspace_dir = self.workspace_dir
         args = ReportingRegressionTests.generate_base_args()
 
-        shape_path = os.path.join(REGRESSION_DATA, 'sample_shape.shp')
+        shape_path = os.path.join(
+            REGRESSION_DATA, 'sample_input', 'sample_shape.shp')
         json_data = (
             "<script> {'key': 0, 'data': {'door' : 1,"
             " 'room': 'kitchen'}} </script>")
@@ -167,7 +175,8 @@ class ReportingRegressionTests(unittest.TestCase):
         workspace_dir = self.workspace_dir
         args = ReportingRegressionTests.generate_base_args()
 
-        shape_path = os.path.join(REGRESSION_DATA, 'sample_shape.shp')
+        shape_path = os.path.join(
+            REGRESSION_DATA, 'sample_input', 'sample_shape.shp')
         json_data = "{'key': 0, 'data': {'door' : 1, 'room': 'kitchen'}}"
 
         args['out_uri'] = os.path.join(workspace_dir, 'report_head_error.html')
@@ -188,7 +197,8 @@ class ReportingRegressionTests(unittest.TestCase):
         workspace_dir = self.workspace_dir
         args = ReportingRegressionTests.generate_base_args()
 
-        script_path = os.path.join(REGRESSION_DATA, 'sample_script.js')
+        script_path = os.path.join(
+            REGRESSION_DATA, 'sample_input', 'sample_script.js')
 
         dict_list = [
             {'ws_id': 0, 'num_pixels': 47017.0, 'wyield_vol': 50390640.85},
@@ -210,7 +220,8 @@ class ReportingRegressionTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_text_equal(
             args['out_uri'],
-            os.path.join(REGRESSION_DATA, 'report_dict_script.html'))
+            os.path.join(
+                REGRESSION_DATA, 'html_reports', 'report_dict_script.html'))
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_attributes(self):
@@ -242,7 +253,7 @@ class ReportingRegressionTests(unittest.TestCase):
         result_str = table_generator.generate_table(table_args)
 
         regression_path = os.path.join(
-            REGRESSION_DATA, 'table_string_attrs.txt')
+            REGRESSION_DATA, 'table_strings', 'table_string_attrs.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -277,7 +288,7 @@ class ReportingRegressionTests(unittest.TestCase):
         result_str = table_generator.generate_table(table_args)
 
         regression_path = os.path.join(
-            REGRESSION_DATA, 'table_string_no_attrs.txt')
+            REGRESSION_DATA, 'table_strings', 'table_string_no_attrs.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -310,7 +321,7 @@ class ReportingRegressionTests(unittest.TestCase):
         result_str = table_generator.generate_table(table_args)
 
         regression_path = os.path.join(
-            REGRESSION_DATA, 'table_string_no_checkbox.txt')
+            REGRESSION_DATA, 'table_strings', 'table_string_no_checkbox.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -345,7 +356,7 @@ class ReportingRegressionTests(unittest.TestCase):
         result_str = table_generator.generate_table(table_args)
 
         regression_path = os.path.join(
-            REGRESSION_DATA, 'table_string_no_td_classes.txt')
+            REGRESSION_DATA, 'table_strings', 'table_string_no_td_classes.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -378,7 +389,7 @@ class ReportingRegressionTests(unittest.TestCase):
         result_str = table_generator.generate_table(table_args)
 
         regression_path = os.path.join(
-            REGRESSION_DATA, 'table_string_no_col_attrs.txt')
+            REGRESSION_DATA, 'table_strings', 'table_string_no_col_attrs.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
@@ -411,7 +422,7 @@ class ReportingRegressionTests(unittest.TestCase):
         result_str = table_generator.generate_table(table_args)
 
         regression_path = os.path.join(
-            REGRESSION_DATA, 'table_string_no_totals.txt')
+            REGRESSION_DATA, 'table_strings', 'table_string_no_totals.txt')
         regression_file = codecs.open(regression_path, 'rU', 'utf-8')
         regression_str = regression_file.read()
 
