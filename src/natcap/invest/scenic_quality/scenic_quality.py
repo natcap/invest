@@ -147,7 +147,7 @@ def execute(args):
     viewshed_dir = pygeoprocessing.temporary_folder()
     LOGGER.info("Calculating viewshed.")
     # Call to James's impending viewshed alg
-    pygeoprocessing.viewshed(
+    view_dict = pygeoprocessing.viewshed(
         file_registry['dem_proj_to_aoi_path'], file_registry['structures_projected_path'],
         file_registry['viewshed_path'], curved_earth=True,
         refractivity=curvature_correction, temp_dir=viewshed_dir,
@@ -231,12 +231,14 @@ def execute(args):
 
     nodata = pygeoprocessing.get_nodata_from_uri(file_registry['viewshed_path'])
 
-    for viewshed_file in os.listdir(viewshed_dir):
-        viewshed_path = os.path.join(viewshed_dir, viewshed_file)
-        # do a distance transform on each feature raster
+    for viewshed_path, feat_id in view_dict.iteritems():
+        # Need to multiply by 'weight' factor
+        weighted_view_path = pygeoprocessing.temporary_filename()
+        adjust_view_by_weighting(
+            viewshed_path, args['structure_path'], feat_id, weighted_view_path)
+
+        # do a distance transform on each viewpoint raster
         dist_path = pygeoprocessing.temporary_filename()
-        # What is the pixel of the point? Does it have a unique value?
-        # NO, need to burn our own feature on raster. use 'viewshed_path' for base raster
         pygeoprocessing.distance_transform_edt(
             viewshed_path, dist_path, process_pool=None)
 
@@ -248,9 +250,9 @@ def execute(args):
 
         vshed_val_final_path = pygeoprocessing.temporary_filename()
         pygeoprocessing.vectorize_datasets(
-            [vshed_val_path, viewshed_path], multiply_op, vshed_val_final_path,
-            gdal.GDT_Float32, nodata, args['cell_size'], 'intersection',
-            vectorize_op=False)
+            [vshed_val_path, weighted_view_path], multiply_op,
+            vshed_val_final_path, gdal.GDT_Float32, nodata,
+            args['cell_size'], 'intersection', vectorize_op=False)
 
         val_raster_list.append(vshed_val_final_path)
         os.path.remove(dist_path)
@@ -453,6 +455,27 @@ def execute(args):
         except OSError:
             # Let it go.
             pass
+
+def adjust_view_by_weighting(
+    raster_view_path, viewpoints_path, feat_id, weighted_view_path):
+    """ """
+    viewpoints = ogr.Open(viewpoints_path)
+    layer = viewpoints.GetLayer()
+    feat = layer.GetFeature(feat_id)
+    weight = feat.GetField('coeff')
+
+    nodata = pygeoprocessing.get_nodata_from_uri(raster_view_path)
+    cell_size = pygeoprocessing.get_cell_size_from_uri(raster_view_path)
+
+    def weight_factor_op(view):
+        """ """
+
+        return numpy.where(view != nodata, view * weight, nodata)
+
+    pygeoprocessing.vectorize_datasets(
+        [raster_view_path], weight_factor_op, weighted_view_path,
+        gdal.GDT_Float32, nodata, cell_size, 'intersection',
+        vectorize_op=False)
 
 def setup_overlap_id_fields(shapefile_path, id_name):
     """
