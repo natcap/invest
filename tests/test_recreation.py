@@ -29,7 +29,7 @@ REGRESSION_DATA = os.path.join(
 LOGGER = logging.getLogger('test_recreation')
 
 
-def timeout(max_timeout):
+def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
     def timeout_decorator(item):
         """Wrap the original function."""
@@ -118,7 +118,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(20.0)
+    @_timeout(20.0)
     def test_empty_server(self):
         """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
@@ -312,7 +312,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(100.0)
+    @_timeout(100.0)
     def test_regression_local_server(self):
         """Recreation base regression test on sample data on local server.
 
@@ -537,7 +537,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @timeout(100.0)
+    @_timeout(100.0)
     def test_base_regression(self):
         """Recreation base regression test on sample data.
 
