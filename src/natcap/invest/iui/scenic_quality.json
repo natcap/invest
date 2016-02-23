@@ -60,20 +60,6 @@
                   "helpText": "An OGR-supported vector file.  This AOI instructs the model where to clip the input data and the extent of analysis. Users will create a polygon feature layer that defines their area of interest. The AOI must intersect the Digital Elevation Model (DEM)."
                 },
                 {
-                  "id": "cell_size",
-                  "args_id": "cell_size",
-                  "type": "text",
-                  "label": "Cell Size (meters)",
-                  "defaultValue": "500",
-                  "validText": "[0-9]+(\\.[0-9][0-9])?",
-                  "dataType": "float",
-                  "required": false,
-                  "returns": {
-                    "ifEmpty": "pass"
-                  },
-                  "helpText": "Length (in meters) of each side of the (square) cell."
-                },
-                {
                   "id": "structure_path",
                   "args_id": "structure_path",
                   "type": "file",
@@ -84,6 +70,22 @@
                   },
                   "required": true,
                   "helpText": "An OGR-supported vector file.  The user must specify a point feature layer that indicates locations of objects that contribute to negative scenic quality, such as aquaculture netpens or wave energy facilities. In order for the viewshed analysis to run correctly, the projection of this input must be consistent with the project of the DEM input."
+                },
+                {
+                  "id": "keep_individual_viewsheds",
+                  "args_id": "keep_feat_viewsheds",
+                  "type": "checkbox",
+                  "label": "Keep Individual Viewshed Rasters?",
+                  "defaultValue": false,
+                  "helpText": "When checked the model will keep the viewshed raster created for each viewpoint feature. Depending on how many viewpoint features are used and the resolution of the DEM, these files could take up a lot of disk space. The cumulative viewshed output will always be saved to the output folder."
+                },
+                {
+                  "id": "keep_valuation_viewsheds",
+                  "args_id": "keep_val_viewsheds",
+                  "type": "checkbox",
+                  "label": "Keep Individual Valuation Viewshed Rasters?",
+                  "defaultValue": false,
+                  "helpText": "When checked the model will keep the valuation adjusted viewshed raster created for each viewpoint feature. Depending on how many viewpoint features are used and the resolution of the DEM, these files could take up a lot of disk space. The cumulative valuation viewshed output will always be saved to the output folder."
                 },
                 {
                   "id": "dem_path",

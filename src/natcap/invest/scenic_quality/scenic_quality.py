@@ -62,9 +62,13 @@ def execute(args):
             temporary, and final files
         args['aoi_path'] (string): path to a vector that indicates the area
             over which the model should be run.
-        args['cell_size'] (int):
         args['structure_path'] (string): path to a point vector that has
             the features for the viewpoints.
+        args['keep_feat_viewsheds'] : a Boolean for whether individual feature
+            viewsheds should be saved to disk.
+        args['keep_val_viewsheds'] : a Boolean for whether individual feature
+            viewsheds that have been adjusted for valuation should be saved
+            to disk.
         args['dem_path'] (string): path to a digital elevation model raster.
         args['refraction'] (float): (optional) number indicating the refraction coefficient
             to use for calculating curvature of the earth.
@@ -83,14 +87,14 @@ def execute(args):
     """
     LOGGER.info("Start Scenic Quality Model")
 
-    dem_cell_size = pygeoprocessing.get_cell_size_from_uri(args['dem_path'])
     curvature_correction = float(args['refraction'])
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     pygeoprocessing.create_directories([output_dir, intermediate_dir])
 
-    file_suffix = natcap.invest.utils.make_suffix_string(args, 'results_suffix')
+    file_suffix = natcap.invest.utils.make_suffix_string(
+        args, 'results_suffix')
 
     LOGGER.info('Building file registry')
     file_registry = natcap.invest.utils.build_file_registry(
@@ -104,6 +108,7 @@ def execute(args):
         args['aoi_path'], dem_wkt, file_registry['aoi_proj_dem_path'])
 
     dem_nodata = pygeoprocessing.get_nodata_from_uri(args['dem_path'])
+    dem_cell_size = pygeoprocessing.get_cell_size_from_uri(args['dem_path'])
 
     def below_sea_level_op(dem_value):
         """Set any value lower than 0 to 0."""
@@ -133,25 +138,37 @@ def execute(args):
         args['structure_path'], file_registry['aoi_proj_struct_path'],
         file_registry['structures_clipped_path'])
 
-    # Project Structures to DEM
+    # Project Structures and DEM to AOI
     aoi_srs = pygeoprocessing.get_spatial_ref_uri(args['aoi_path'])
     aoi_wkt = aoi_srs.ExportToWkt()
     pygeoprocessing.reproject_datasource_uri(
         file_registry['structures_clipped_path'], aoi_wkt,
         file_registry['structures_projected_path'])
 
-    pygeoprocessing.reproject_dataset_uri(
-        file_registry['dem_below_sea_path'], args['cell_size'], aoi_wkt,
-        'bilinear', file_registry['dem_proj_to_aoi_path'])
+    # Get a point from the clipped data object to use later in helping
+    # determine proper pixel size
+    raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
+        file_registry['dem_below_sea_path'])
+    point_one = (raster_gt[0], raster_gt[3])
 
-    viewshed_dir = pygeoprocessing.temporary_folder()
-    LOGGER.info("Calculating viewshed.")
-    # Call to James's impending viewshed alg
-    view_dict = pygeoprocessing.viewshed(
-        file_registry['dem_proj_to_aoi_path'], file_registry['structures_projected_path'],
-        file_registry['viewshed_path'], curved_earth=True,
-        refractivity=curvature_correction, temp_dir=viewshed_dir,
-        block_size=1024, max_radius=float('inf'), skip_over_nodata=True)
+    # Create a Spatial Reference from the rasters WKT
+    dem_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
+        file_registry['dem_below_sea_path'])
+    dem_srs = osr.SpatialReference()
+    dem_srs.ImportFromWkt(dem_wkt)
+
+    # A coordinate transformation to help get the proper pixel size of
+    # the reprojected raster
+    coord_trans = osr.CoordinateTransformation(dem_srs, aoi_srs)
+
+    pixel_size = pixel_size_based_on_coordinate_transform_uri(
+            file_registry['dem_below_sea_path'], coord_trans, point_one)
+
+    LOGGER.debug('Projected Pixel Size: %s', pixel_size[0])
+
+    pygeoprocessing.reproject_dataset_uri(
+        file_registry['dem_below_sea_path'], pixel_size[0], aoi_wkt,
+        'bilinear', file_registry['dem_proj_to_aoi_path'])
 
     # Read in valuation coefficients
     coef_a = float(args['a_coefficient'])
@@ -160,19 +177,19 @@ def execute(args):
     coef_d = float(args['d_coefficient'])
     max_val_radius = float(args['max_valuation_radius'])
 
-    def polynomial_val(dist):
+    def polynomial_val(dist, weight):
         """Third Degree Polynomial Valuation function."""
 
-        valid_mask = (dist != dist_nodata)
+        valid_mask = ((dist != dist_nodata) & (weight != nodata))
         max_dist_mask = (dist > max_val_radius)
         # Based off of Equation 2 in the Users Guide
         dist_one = numpy.where(
             dist[valid_mask] >= 1000,
             (coef_a + coef_b * dist[valid_mask] +
-             coef_c * dist[valid_mask]**2 + coef_d * dist[valid_mask]**3),
+             coef_c * dist[valid_mask]**2 + coef_d * dist[valid_mask]**3) * weight[valid_mask],
             ((coef_a + coef_b * 1000 + coef_c * 1000**2 + coef_d * 1000**3) -
              (coef_b + 2 * coef_c * 1000 + 3 * coef_d * 1000**2) *
-             (1000 - dist[valid_mask]))
+             (1000 - dist[valid_mask])) * weight[valid_mask]
         )
 
         dist_final = numpy.empty(valid_mask.shape)
@@ -181,17 +198,17 @@ def execute(args):
         dist_final[max_dist_mask] = 0.0
         return dist_final
 
-    def log_val(dist):
+    def log_val(dist, weight):
         """Logarithmic Valuation function."""
 
-        valid_mask = (dist != dist_nodata)
+        valid_mask = ((dist != dist_nodata) & (weight != nodata))
         max_dist_mask = dist > max_valuation_radius
         # Based off of Equation 1 in the Users Guide
         dist_one = numpy.where(
             dist[valid_mask] >= 1000,
-            coef_a + coef_b * numpy.log(dist[valid_mask]),
+            (coef_a + coef_b * numpy.log(dist[valid_mask])) * weight[valid_mask],
             (coef_a + coef_b * numpy.log(1000) - (coef_b / 1000) *
-             (1000 - dist[valid_mask]))
+             (1000 - dist[valid_mask])) * weight[valid_mask]
         )
 
         dist_final = numpy.empty(valid_mask.shape)
@@ -200,12 +217,7 @@ def execute(args):
         dist_final[max_dist_mask] = 0.0
         return dist_final
 
-    def multiply_op(val, view):
-        """Multiply the feature valuation by the viewshed weights."""
-        return numpy.where(
-            (val != nodata and view != nodata), val * view, nodata)
-
-    def add_op(*raster):
+    def add_op(raster_one, raster_two):
         """Aggregate valuation matrices.
 
         Sums all non-nodata values.
@@ -217,11 +229,9 @@ def execute(args):
             numpy.array where the pixel value represents the combined
                 pixel values found across all matrices."""
 
-        accumulator = numpy.zeros(raster[0].shape)
-        for array in raster:
-            array[array == nodata] = 0
-            accumulator = numpy.add(accumulator, array)
-        return accumulator
+        return numpy.where(
+            (raster_one != nodata) and (raster_two != nodata),
+            raster_one + raster_two, nodata)
 
     val_raster_list = []
     if args["valuation_function"] == "polynomial: a + bx + cx^2 + dx^3":
@@ -229,43 +239,129 @@ def execute(args):
     else:
         val_op = log_val
 
-    nodata = pygeoprocessing.get_nodata_from_uri(file_registry['viewshed_path'])
+    viewpoints_vector = ogr.Open(args['structures_projected_path'])
+    viewshed_dir = intermediate_dir
+    rasters_dict = {}
+    keep_viewsheds = args['keep_feat_viewsheds']
+    keep_val_viewsheds = args['keep_val_viewsheds']
 
-    for viewshed_path, feat_id in view_dict.iteritems():
-        # Need to multiply by 'weight' factor
-        weighted_view_path = pygeoprocessing.temporary_filename()
-        adjust_view_by_weighting(
-            viewshed_path, args['structure_path'], feat_id, weighted_view_path)
+    for layer in viewpoints_vector:
+        num_features = layer.GetFeatureCount()
 
-        # do a distance transform on each viewpoint raster
-        dist_path = pygeoprocessing.temporary_filename()
-        pygeoprocessing.distance_transform_edt(
-            viewshed_path, dist_path, process_pool=None)
+        feat_val_paths = []
+        feat_views_paths = []
+        for feat_num in xrange(num_features - 1):
+            val_path = pygeoprocessing.temporary_filename()
+            feat_val_paths.append(val_path)
+            feat_path = pygeoprocessing.temporary_filename()
+            feat_views_paths.append(feat_paths)
 
-        vshed_val_path = pygeoprocessing.temporary_filename()
-        # run valuation equation on distance raster
-        pygeoprocessing.vectorize_datasets(
-            [dist_path], val_op, vshed_val_path, gdal.GDT_Float32, nodata,
-            args['cell_size'], 'intersection', vectorize_op=False)
+        feat_val_paths.append(file_registry['viewshed_valuation_path'])
+        feat_views_paths.append(file_registry['viewshed_path'])
 
-        vshed_val_final_path = pygeoprocessing.temporary_filename()
-        pygeoprocessing.vectorize_datasets(
-            [vshed_val_path, weighted_view_path], multiply_op,
-            vshed_val_final_path, gdal.GDT_Float32, nodata,
-            args['cell_size'], 'intersection', vectorize_op=False)
+        for index, point in enumerate(layer):
+            geometry = point.GetGeometryRef()
+            feature_id = point.GetFID()
 
-        val_raster_list.append(vshed_val_final_path)
-        os.path.remove(dist_path)
-        os.path.remove(vshed_val_path)
+            # Coordinates in map units
+            geom_x, geom_y = geometry.GetX(), geometry.GetY()
 
-    pygeoprocessing.vectorize_datasets(
-        [val_raster_list], add_op, file_registry['viewshed_valuation_path'],
-        gdal.GDT_Float32, nodata, args['cell_size'], 'intersection',
-        vectorize_op=False, datasets_are_pre_aligned=True)
+            max_radius = float('inf')
+            # RADIUS is the suggested value for InVEST Scenic Quality
+            # RADIUS2 is for users coming from ArcGIS's viewshed.
+            # Assume positive infinity if neither field is provided.
+            for fieldname in ['RADIUS', 'RADIUS2']:
+                try:
+                    max_radius = math.fabs(point.GetField(fieldname))
+                    break
+                except ValueError:
+                    # When this field is not present.
+                    pass
 
-    # remove all intermediate val rasters
-    for raster_path in val_raster_list:
-        os.remove(raster_path)
+            try:
+                viewpoint_height = math.fabs(point.GetField('HEIGHT'))
+            except ValueError:
+                # When height field is not present, assume height of 0.0
+                viewpoint_height = 0.0
+
+            try:
+                weight = point.GetField('coeff')
+            except ValueError:
+                weight = 1.0
+
+            LOGGER.debug(('Processing viewpoint %s of %s (FID %s). '
+                          'Radius:%s, Height:%s, Weight:%s'),
+                         index, num_features, feature_id, max_radius,
+                         viewpoint_height, weight)
+
+            viewshed_filepath = os.path.join(
+                viewshed_dir, 'viewshed_%s.tif' % index)
+            #aux_filepath = os.path.join(dir_registry['aux'],
+            #                            'viewshed_%s_aux.tif' % index)
+            try:
+                pygeoprocessing.viewshed(
+                    file_registry['dem_proj_to_aoi_path'], (geom_x, geom_y),
+                    viewshed_filepath, None, True, curvature_correction, max_radius,
+                        viewpoint_height)
+                #rasters_dict[feature_id] = {
+                #    'visibility': viewshed_filepath
+                #}
+            except ValueError:
+                # When pixel is over nodata and we told it to skip
+                LOGGER.info('Viewpoint %s is over nodata, skipping.', index)
+
+            nodata = pygeoprocessing.get_nodata_from_uri(viewshed_filepath)
+            cell_size = pygeoprocessing.get_cell_size_from_uri(viewshed_filepath)
+            weighted_view_path = pygeoprocessing.temporary_filename()
+
+            def weight_factor_op(view):
+                """ """
+
+                return numpy.where(view != nodata, view * weight, nodata)
+
+            pygeoprocessing.vectorize_datasets(
+                [viewshed_filepath], weight_factor_op, weighted_view_path,
+                gdal.GDT_Float32, nodata, cell_size, 'intersection',
+                vectorize_op=False)
+
+            # do a distance transform on each viewpoint raster
+            dist_path = pygeoprocessing.temporary_filename()
+            pygeoprocessing.distance_transform_edt(
+                viewshed_filepath, dist_path, process_pool=None)
+
+            dist_nodata = pygeoprocessing.get_nodata_from_uri(dist_path)
+
+            vshed_val_path = os.path.join(
+                viewshed_dir, 'val_viewshed_%s.tif' % index)
+            # run valuation equation on distance raster
+            pygeoprocessing.vectorize_datasets(
+                [dist_path, weighted_view_path], val_op, vshed_val_path,
+                gdal.GDT_Float32, nodata,
+                args['cell_size'], 'intersection', vectorize_op=False)
+
+            if index - 1 == 0:
+                shutil.copy(vshed_val_path, feat_val_paths[index - 1])
+                shutil.copy(viewshed_filepath, feat_views_paths[index - 1])
+
+            else:
+                for file_path, out_list in zip([vshed_val_path,
+                                                viewshed_filepath],
+                                                [feat_val_paths,
+                                                feat_views_paths]):
+                    pygeoprocessing.vectorize_datasets(
+                        [file_path, out_list[index - 2]], add_op, out_list[index - 1],
+                        gdal.GDT_Float32, nodata, args['cell_size'], 'intersection',
+                        vectorize_op=False, datasets_are_pre_aligned=True)
+
+                    os.remove(out_list[index - 2])
+
+            os.path.remove(dist_path)
+            os.path.remove(weighted_view_path)
+
+            if not keep_val_viewsheds:
+                os.remove(vshed_val_path)
+            if not keep_viewsheds:
+                os.remove(viewshed_filepath)
 
     # Do quantiles on viewshed_uri
     percentile_list = [25, 50, 75, 100]
@@ -645,6 +741,46 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
         raise IntersectionError('Intersection ERROR: clip_datasource_layer '
             'found no intersection between: file - %s and file - %s.' %
             (shape_to_clip_path, binding_shape_path))
+
+
+def pixel_size_based_on_coordinate_transform_uri(
+        dataset_uri, coord_trans, point):
+    """Get width and height of cell in meters.
+
+    A wrapper for pixel_size_based_on_coordinate_transform that takes a dataset
+    uri as an input and opens it before sending it along.
+
+    Args:
+        dataset_uri (string): a URI to a gdal dataset
+
+        All other parameters pass along
+
+    Returns:
+        result (tuple): (pixel_width_meters, pixel_height_meters)
+    """
+    dataset = gdal.Open(dataset_uri)
+    geo_tran = dataset.GetGeoTransform()
+    pixel_size_x = geo_tran[1]
+    pixel_size_y = geo_tran[5]
+    top_left_x = point[0]
+    top_left_y = point[1]
+    # Create the second point by adding the pixel width/height
+    new_x = top_left_x + pixel_size_x
+    new_y = top_left_y + pixel_size_y
+    # Transform two points into meters
+    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
+    point_2 = coord_trans.TransformPoint(new_x, new_y)
+    # Calculate the x/y difference between two points
+    # taking the absolue value because the direction doesn't matter for pixel
+    # size in the case of most coordinate systems where y increases up and x
+    # increases to the right (right handed coordinate system).
+    pixel_diff_x = abs(point_2[0] - point_1[0])
+    pixel_diff_y = abs(point_2[1] - point_1[1])
+
+    # Close and clean up dataset
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+    return (pixel_diff_x, pixel_diff_y)
 
 '''
 
