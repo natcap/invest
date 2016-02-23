@@ -681,6 +681,18 @@ def execute(args):
     A call to this function registers a Pyro RPC RecModel entry point given
     the configuration input parameters described below.
 
+    There are many methods to launch a server, including at a Linux command
+    line as shown:
+
+    nohup python -u -c "import natcap.invest.recreation.recmodel_server;
+        args={'hostname':'$LOCALIP',
+              'port':$REC_SERVER_PORT,
+              'raw_csv_point_data_path': $POINT_DATA_PATH,
+              'max_year': $MAX_YEAR,
+              'min_year': $MIN_YEAR,
+              'cache_workspace': $CACHE_WORKSPACE_PATH'};
+        natcap.invest.recreation.recmodel_server.execute(args)"
+
     Parameters:
         args['raw_csv_point_data_path'] (string): path to a csv file of the
             format
