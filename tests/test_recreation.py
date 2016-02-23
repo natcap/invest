@@ -791,6 +791,11 @@ class RecreationRegressionTests(unittest.TestCase):
                 table_file.write(
                     '%s,%s,%s\n' % (predictor_id, path, predictor_type))
 
+        # The expected behavior here is that _validate_same_projection does
+        # not raise a ValueError.  The try/except block makes that explicit
+        # and also explictly fails the test if it does.  Note if a different
+        # exception is raised the teest will Error, thus differentating
+        # between a failed test and an error.
         try:
             recmodel_client._validate_same_projection(
                 response_vector_path, predictor_table_path)
