@@ -8,7 +8,6 @@ nose
 coverage
 paramiko
 pip>=6.0.0
-poster
 pyamg>=2.2.1
 pycrypto
 pygeoprocessing>=0.3.0a13
