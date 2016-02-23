@@ -25,6 +25,7 @@
     * Removed the HTML summary results output and replaced with a link to a dashboard that helps visualize and interpret CV results.
     * Added a point shapefile output: 'outputs/coastal_exposure.shp' that is a shapefile representation of the corresponding CSV table.
     * The model UI now requires the 'Relief' input. No longer optional.
+    * CSV outputs and Shapefile outputs based on rasters now have x, y coorinates of the center of the pixel instead of top left of the pixel.
 
 3.2.1
 =====
