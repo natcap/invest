@@ -137,7 +137,7 @@ class LoggingServer(object):
             db_connection.close()
         except:
             # print something locally for our log and raise back to client
-            traceback.print_exc()
+            LOGGER.exception(traceback.format_exc())
             raise
         extra_fields = set(data_copy).difference(self._LOG_FIELD_NAMES)
         if len(extra_fields) > 0:
@@ -152,7 +152,7 @@ class LoggingServer(object):
             return open(self.database_filepath, 'rb').read()
         except:
             # print something locally for our log and raise back to client
-            traceback.print_exc()
+            LOGGER.exception(traceback.format_exc())
             raise
 
 
