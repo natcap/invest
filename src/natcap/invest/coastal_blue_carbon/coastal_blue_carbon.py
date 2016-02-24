@@ -17,7 +17,10 @@ import pygeoprocessing.geoprocessing as geoprocess
 from . import io
 from .. import utils as invest_utils
 
-NODATA_FLOAT = -16777216  # largest negative 32-bit floating point number
+# using largest negative 32-bit floating point number
+# reasons: practical limit for 32 bit floating point and most outputs should
+#          be positive
+NODATA_FLOAT = -16777216
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
