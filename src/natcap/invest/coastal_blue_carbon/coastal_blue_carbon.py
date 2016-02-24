@@ -162,8 +162,8 @@ def execute(args):
         R_soil = np.zeros(transition_shape, dtype=np.float32)
 
         # Set Accum and Disturbance Values
+        C_list = [C_prior] + C_r
         for i in xrange(0, d['transitions']):
-            C_list = [C_prior] + C_r
             D_biomass[i] = reclass_transition(
                 C_list[i],
                 C_list[i+1],
