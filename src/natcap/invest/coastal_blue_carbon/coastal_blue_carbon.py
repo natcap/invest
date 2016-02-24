@@ -128,7 +128,6 @@ def execute(args):
             current_time = time.time()
 
         # Initialization
-        C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
         timesteps = d['timesteps']
 
         x_size, y_size = C_prior.shape
@@ -162,6 +161,7 @@ def execute(args):
         R_soil = np.zeros(transition_shape, dtype=np.float32)
 
         # Set Accum and Disturbance Values
+        C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
         C_list = [C_prior] + C_r
         for i in xrange(0, d['transitions']):
             D_biomass[i] = reclass_transition(
