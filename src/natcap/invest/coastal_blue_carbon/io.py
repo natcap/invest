@@ -380,7 +380,6 @@ def _get_price_table(price_table_uri, start_year, end_year):
         price_t (np.array): price for each year.
     """
     price_dict = geoprocess.get_lookup_from_table(price_table_uri, 'year')
-    price_t = np.zeros(end_year - start_year + 1)
 
     try:
         return np.array([price_dict[year-start_year]['price']
