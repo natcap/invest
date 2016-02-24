@@ -17,8 +17,14 @@ LOGGER = logging.getLogger(
     'natcap.invest.recmodel_server.buffered_file_manager')
 
 
-class BufferedFileManager(object):
-    """File manager to buffers reads and writes to mitigate file IO."""
+class BufferedDiskMap(object):
+    """Persistent object to append and read binary data to unique keys.
+
+    This object is abstractly a key/value pair map where the operations are
+    to append, read, and delete values given their keys.  The object attempts
+    to keep data in RAM as much as possible and saves data to files on disk
+    to manage memory and persist between instantiations.
+    """
 
     _ARRAY_TUPLE_TYPE = numpy.dtype('datetime64[D],a4,f4,f4')
 
@@ -26,8 +32,9 @@ class BufferedFileManager(object):
         """Create file manager object.
 
         Parameters:
-            manager_filename (string): path to store file manager database and
-                cache files
+            manager_filename (string): path to store file manager database.
+                Additional files will be created in this directory to store
+                binary data as needed.
             max_bytes_to_buffer (int): number of bytes to hold in memory at
                 one time.
 
@@ -62,7 +69,7 @@ class BufferedFileManager(object):
         """
         self.array_cache[array_id].append(array_data.copy())
         self.current_bytes_in_system += (
-            array_data.size * BufferedFileManager._ARRAY_TUPLE_TYPE.itemsize)
+            array_data.size * BufferedDiskMap._ARRAY_TUPLE_TYPE.itemsize)
         if self.current_bytes_in_system > self.max_bytes_to_buffer:
             self.flush()
 
@@ -144,7 +151,7 @@ class BufferedFileManager(object):
             array_data = numpy.load(array_path[0])
         else:
             array_data = numpy.empty(
-                0, dtype=BufferedFileManager._ARRAY_TUPLE_TYPE)
+                0, dtype=BufferedDiskMap._ARRAY_TUPLE_TYPE)
 
         if len(self.array_cache[array_id]) > 0:
             local_deque = collections.deque(self.array_cache[array_id])
@@ -180,5 +187,5 @@ class BufferedFileManager(object):
         # The * 12 comes from the fact that the array is an 'a4 f4 f4'
         self.current_bytes_in_system -= (
             sum([x.size for x in self.array_cache[array_id]]) *
-            BufferedFileManager._ARRAY_TUPLE_TYPE.itemsize)
+            BufferedDiskMap._ARRAY_TUPLE_TYPE.itemsize)
         del self.array_cache[array_id]
