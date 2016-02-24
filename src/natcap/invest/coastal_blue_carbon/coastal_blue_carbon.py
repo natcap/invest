@@ -236,8 +236,6 @@ def execute(args):
             A_soil[i] = Y_soil[transition_idx]
 
             # Emissions
-            E_biomass[i] = np.zeros(A_biomass[0].shape)
-            E_soil[i] = np.zeros(A_biomass[0].shape)
             for transition_idx in xrange(0, timestep_to_transition_idx(
                     d['snapshot_years'], d['transitions'], i)+1):
                 j = d['transition_years'][transition_idx] - \
