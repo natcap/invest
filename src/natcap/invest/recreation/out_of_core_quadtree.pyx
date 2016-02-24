@@ -40,16 +40,21 @@ class OutOfCoreQuadTree(object):
 
     def __init__(
             self, bounding_box, max_points_per_node, max_node_depth,
-            quad_tree_storage_dir, node_depth=0, file_manager=None,
+            quad_tree_storage_dir, node_depth=0, node_data_manager=None,
             pickle_filename=None):
-        """Make a new quadtree node with a given initial_bounding_box range
+        """Make a new quadtree node with a given initial_bounding_box range.
 
-            bounding_box - list of [x_min, y_min x_max, y_max]
-            max_points_per_node - maximum number of points before a node is
-                subdivided
-            max_node_depth - max nodes to make the quadtree
-            pickle_filename - name of file on disk which to pickle the tree to
-                during a flush"""
+            bounding_box (list): list of [x_min, y_min x_max, y_max]
+            max_points_per_node (int): maximum number of points before a node
+                is subdivided
+            max_node_depth (int): max nodes to make the quadtree
+            quad_tree_storage_dir (string): path to a directory where the
+                quadtree files can be stored
+            node_depth (int): depth of current node
+            node_data_manager (BufferedNumpyDiskMap): an object which is used
+                to store the node data across the entire quadtree
+            pickle_filename (string): name of file on disk which to pickle the
+                tree to during a flush"""
 
         self.bounding_box = list(bounding_box)  # make a copy to avoid aliasing
         self.max_points_per_node = max_points_per_node
@@ -59,11 +64,12 @@ class OutOfCoreQuadTree(object):
         self.is_leaf = True  # boolean to determine if this node stores data
         self.nodes = None  # a list of children on an internal node
         self.quad_tree_storage_dir = quad_tree_storage_dir
-        if file_manager is None:
-            self.file_manager = buffered_numpy_disk_map.BufferedNumpyDiskMap(
-                pickle_filename+'.db', MAX_BYTES_TO_BUFFER)
+        if node_data_manager is None:
+            self.node_data_manager = (
+                buffered_numpy_disk_map.BufferedNumpyDiskMap(
+                    pickle_filename+'.db', MAX_BYTES_TO_BUFFER))
         else:
-            self.file_manager = file_manager
+            self.node_data_manager = node_data_manager
 
         self.pickle_filename = pickle_filename
 
@@ -73,7 +79,7 @@ class OutOfCoreQuadTree(object):
 
     def flush(self):
         """Flushes the file manager in anticipation of a pickle"""
-        self.file_manager.flush()
+        self.node_data_manager.flush()
         if self.pickle_filename is not None:
             pickle.dump(self, open(self.pickle_filename, 'wb'))
 
@@ -108,7 +114,7 @@ class OutOfCoreQuadTree(object):
 
             returns a numpy array of the form [(data, x_coord, y_coord), ...]
             """
-        return self.file_manager.read(self.blob_id)
+        return self.node_data_manager.read(self.blob_id)
 
     def _drain_node(self):
         """Internal function called when the current node needs to split, it
@@ -120,7 +126,7 @@ class OutOfCoreQuadTree(object):
         userday_tuples = self._get_points_from_node()
 
         #delete the file because it's drained
-        self.file_manager.delete(self.blob_id)
+        self.node_data_manager.delete(self.blob_id)
         self.blob_id = None
         return userday_tuples
 
@@ -165,7 +171,7 @@ class OutOfCoreQuadTree(object):
                 self.max_node_depth,
                 self.quad_tree_storage_dir,
                 node_depth=self.node_depth+1,
-                file_manager=self.file_manager))
+                node_data_manager=self.node_data_manager))
 
         self.n_points_in_node = 0  # points are drained out of this node
         self.is_leaf = False
@@ -200,7 +206,7 @@ class OutOfCoreQuadTree(object):
                     self.node_depth == self.max_node_depth):
                 #if it's a leaf and the points fit, append to file end
                 self.n_points_in_node += point_list_len
-                self.file_manager.append(
+                self.node_data_manager.append(
                     self.blob_id, point_list[left_bound:right_bound])
                 return  # this lets us pass through the two cases below
             else:
