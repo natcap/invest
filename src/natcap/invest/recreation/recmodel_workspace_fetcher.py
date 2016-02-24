@@ -1,4 +1,4 @@
-"""InVEST Recreation Client."""
+"""InVEST recreation workspace fetcher."""
 
 import os
 import logging
