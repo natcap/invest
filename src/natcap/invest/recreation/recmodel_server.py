@@ -445,7 +445,7 @@ def _parse_input_csv(
     numpy_array_queue.put('STOP')
 
 
-def file_len(file_path):
+def _file_len(file_path):
     """Count lines in file, return -1 if not supported."""
     wc_process = subprocess.Popen(
         ['wc', '-l', file_path], stdout=subprocess.PIPE,
@@ -486,7 +486,7 @@ def construct_userday_quadtree(
         LOGGER.info(
             '%s not found, constructing quadtree', ooc_qt_picklefilename)
         LOGGER.info('counting lines in input file')
-        total_lines = file_len(raw_photo_csv_table)
+        total_lines = _file_len(raw_photo_csv_table)
         LOGGER.info('%d lines', total_lines)
         ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
             initial_bounding_box, max_points_per_node, GLOBAL_DEPTH,
