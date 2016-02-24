@@ -283,7 +283,12 @@ def execute(args):
             ('N_r_rasters', N_r)]
 
         for key, array in raster_tuples:
-            write_rasters(d['File_Registry'][key], array, offset_dict)
+            for i in xrange(0, len(d['File_Registry'][key])):
+                write_to_raster(
+                    d['File_Registry'][key][i],
+                    array[i],
+                    offset_dict['xoff'],
+                    offset_dict['yoff'])
 
         write_to_raster(
             d['File_Registry']['N_total_raster'],
@@ -478,19 +483,3 @@ def read_from_raster(input_raster, offset_block):
     array = band.ReadAsArray(**offset_block)
     ds = None
     return array
-
-
-def write_rasters(raster_list, array_list, offset_dict):
-    """Write rasters.
-
-    Args:
-        raster_list (list): list of output raster filepaths
-        array_list (np.array): arrays to write to raster
-        offset_dict (dict): information for where to write arrays to rasters
-    """
-    for i in xrange(0, len(raster_list)):
-        write_to_raster(
-            raster_list[i],
-            array_list[i],
-            offset_dict['xoff'],
-            offset_dict['yoff'])
