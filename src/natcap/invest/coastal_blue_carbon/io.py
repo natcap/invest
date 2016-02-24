@@ -113,7 +113,7 @@ def get_inputs(args):
     }
 
     # Directories
-    d['results_suffix'] = invest_utils.make_suffix_string(
+    results_suffix = invest_utils.make_suffix_string(
         args, 'results_suffix')
     d['workspace_dir'] = args['workspace_dir']
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
@@ -201,7 +201,7 @@ def get_inputs(args):
     d['File_Registry'] = _build_file_registry(
         d['C_prior_raster'],
         d['snapshot_years'],
-        d['results_suffix'],
+        results_suffix,
         d['do_economic_analysis'],
         outputs_dir)
 
