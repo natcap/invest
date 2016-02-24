@@ -34,7 +34,7 @@ LOGGER = logging.getLogger(
 
 class OutOfCoreQuadTree(object):
     """An out of core quad tree spatial indexing structure.  Define with an
-        initial range and continously add new points."""
+        initial range and continuously add new points."""
 
     next_available_blob_id = 0
 
