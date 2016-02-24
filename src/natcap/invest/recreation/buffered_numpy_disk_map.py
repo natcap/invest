@@ -14,16 +14,16 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger(
-    'natcap.invest.recmodel_server.buffered_file_manager')
+    'natcap.invest.recmodel_server.buffered_numpy_disk_map')
 
 
-class BufferedDiskMap(object):
-    """Persistent object to append and read binary data to unique keys.
+class BufferedNumpyDiskMap(object):
+    """Persistent object to append and read numpy arrays to unique keys.
 
     This object is abstractly a key/value pair map where the operations are
-    to append, read, and delete values given their keys.  The object attempts
-    to keep data in RAM as much as possible and saves data to files on disk
-    to manage memory and persist between instantiations.
+    to append, read, and delete numpy arrays associated with those keys.  The
+    object attempts to keep data in RAM as much as possible and saves data to
+    files on disk to manage memory and persist between instantiations.
     """
 
     _ARRAY_TUPLE_TYPE = numpy.dtype('datetime64[D],a4,f4,f4')
@@ -69,7 +69,7 @@ class BufferedDiskMap(object):
         """
         self.array_cache[array_id].append(array_data.copy())
         self.current_bytes_in_system += (
-            array_data.size * BufferedDiskMap._ARRAY_TUPLE_TYPE.itemsize)
+            array_data.size * BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE.itemsize)
         if self.current_bytes_in_system > self.max_bytes_to_buffer:
             self.flush()
 
@@ -151,7 +151,7 @@ class BufferedDiskMap(object):
             array_data = numpy.load(array_path[0])
         else:
             array_data = numpy.empty(
-                0, dtype=BufferedDiskMap._ARRAY_TUPLE_TYPE)
+                0, dtype=BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE)
 
         if len(self.array_cache[array_id]) > 0:
             local_deque = collections.deque(self.array_cache[array_id])
@@ -187,5 +187,5 @@ class BufferedDiskMap(object):
         # The * 12 comes from the fact that the array is an 'a4 f4 f4'
         self.current_bytes_in_system -= (
             sum([x.size for x in self.array_cache[array_id]]) *
-            BufferedDiskMap._ARRAY_TUPLE_TYPE.itemsize)
+            BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE.itemsize)
         del self.array_cache[array_id]

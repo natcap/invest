@@ -1,6 +1,5 @@
 # cython: profile=True
-"""This module defines a hierarchical spatial indexing data structure amenable
-    for fast culling of points in 2D space"""
+"""A hierarchical spatial index for fast culling of points in 2D space."""
 
 import os
 import sys
@@ -22,9 +21,9 @@ from osgeo import osr
 cimport numpy
 
 MAX_BYTES_TO_BUFFER = 2**27  # buffer a little over 128 megabytes
-import buffered_file_manager
+import buffered_numpy_disk_map
 _ARRAY_TUPLE_TYPE = (
-    buffered_file_manager.BufferedFileManager._ARRAY_TUPLE_TYPE)
+    buffered_numpy_disk_map.BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE)
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -61,7 +60,7 @@ class OutOfCoreQuadTree(object):
         self.nodes = None  # a list of children on an internal node
         self.quad_tree_storage_dir = quad_tree_storage_dir
         if file_manager is None:
-            self.file_manager = buffered_file_manager.BufferedFileManager(
+            self.file_manager = buffered_numpy_disk_map.BufferedNumpyDiskMap(
                 pickle_filename+'.db', MAX_BYTES_TO_BUFFER)
         else:
             self.file_manager = file_manager
