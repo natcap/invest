@@ -47,6 +47,8 @@ carbon_pool_transient_list = \
      ['3', 'Z', 'biomass', '1', '0.5', '1'],
      ['3', 'Z', 'soil', '1', '0.5', '1']]
 
+NODATA_INT = -1
+
 
 def create_table(uri, rows_list):
     """Create csv file from list of lists."""
@@ -58,6 +60,8 @@ def create_table(uri, rows_list):
 
 def get_args():
     band_matrices = [np.ones((2, 2))]
+    band_matrices_with_nodata = [np.ones((2, 2))]
+    band_matrices_with_nodata[0][0][0] = NODATA_INT
     srs = pygeotest.sampledata.SRS_WILLAMETTE
 
     path = os.path.dirname(os.path.realpath(__file__))
@@ -77,15 +81,15 @@ def get_args():
         os.path.join(workspace, 'carbon_pool_transient.csv'),
         carbon_pool_transient_list)
     raster_0_uri = pygeotest.create_raster_on_disk(
-        band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+        band_matrices_with_nodata, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
         datatype=gdal.GDT_Int32, filename=os.path.join(
             workspace, 'raster_0.tif'))
     raster_1_uri = pygeotest.create_raster_on_disk(
-        band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+        band_matrices, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
         datatype=gdal.GDT_Int32, filename=os.path.join(
             workspace, 'raster_1.tif'))
     raster_2_uri = pygeotest.create_raster_on_disk(
-        band_matrices, srs.origin, srs.projection, -1, srs.pixel_size(100),
+        band_matrices, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
         datatype=gdal.GDT_Int32, filename=os.path.join(
             workspace, 'raster_2.tif'))
     lulc_baseline_map_uri = raster_0_uri
@@ -208,7 +212,8 @@ class TestModel(unittest.TestCase):
         band = ds.GetRasterBand(1)
         a = band.ReadAsArray()
         ds = None
-        np.testing.assert_almost_equal(a[0, 0], 45.731491, decimal=5)
+        np.testing.assert_almost_equal(a[0, 1], 45.731491, decimal=5)
+        np.testing.assert_almost_equal(a[0, 0], np.nan, decimal=5)
         shutil.rmtree(args['workspace_dir'])
 
     def tearDown(self):

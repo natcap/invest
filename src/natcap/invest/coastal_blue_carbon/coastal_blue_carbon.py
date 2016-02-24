@@ -115,6 +115,8 @@ def execute(args):
     current_time = time.time()
 
     block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
+    C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
+
     for block_idx, (offset_dict, C_prior) in block_iterator:
         # Update User
         if time.time() - current_time >= 2.0:
@@ -160,24 +162,56 @@ def execute(args):
         for i in xrange(0, d['transitions']):
             C_list = [C_prior] + C_r
             D_biomass[i] = reclass_transition(
-                C_list[i], C_list[i+1], d['lulc_trans_to_Db'],
-                out_dtype=np.float32)
+                C_list[i],
+                C_list[i+1],
+                d['lulc_trans_to_Db'],
+                out_dtype=np.float32,
+                nodata_mask=C_nodata)
             D_soil[i] = reclass_transition(
-                C_list[i], C_list[i+1], d['lulc_trans_to_Ds'],
-                out_dtype=np.float32)
+                C_list[i],
+                C_list[i+1],
+                d['lulc_trans_to_Ds'],
+                out_dtype=np.float32,
+                nodata_mask=C_nodata)
             H_biomass[i] = reclass(
-                C_list[i], d['lulc_to_Hb'], out_dtype=np.float32)
+                C_list[i],
+                d['lulc_to_Hb'],
+                out_dtype=np.float32,
+                nodata_mask=C_nodata)
             H_soil[i] = reclass(
-                C_list[i], d['lulc_to_Hs'], out_dtype=np.float32)
+                C_list[i], d['lulc_to_Hs'],
+                out_dtype=np.float32,
+                nodata_mask=C_nodata)
+            L[i] = reclass(
+                C_r[i],
+                d['lulc_to_L'],
+                out_dtype=np.float32,
+                nodata_mask=C_nodata)
+            Y_biomass[i] = reclass(
+                C_r[i], d['lulc_to_Yb'],
+                out_dtype=np.float32,
+                nodata_mask=C_nodata)
+            Y_soil[i] = reclass(
+                C_r[i],
+                d['lulc_to_Ys'],
+                out_dtype=np.float32,
+                nodata_mask=C_nodata)
 
-            L[i] = reclass(C_r[i], d['lulc_to_L'], out_dtype=np.float32)
-            Y_biomass[i] = reclass(C_r[i], d['lulc_to_Yb'],
-                                   out_dtype=np.float32)
-            Y_soil[i] = reclass(C_r[i], d['lulc_to_Ys'], out_dtype=np.float32)
-
-        S_biomass[0] = reclass(C_prior, d['lulc_to_Sb'], out_dtype=np.float32)
-        S_soil[0] = reclass(C_prior, d['lulc_to_Ss'], out_dtype=np.float32)
-        S_litter[0] = reclass(C_prior, d['lulc_to_L'], out_dtype=np.float32)
+        S_biomass[0] = reclass(
+            C_prior,
+            d['lulc_to_Sb'],
+            out_dtype=np.float32,
+            nodata_mask=C_nodata)
+        S_soil[0] = reclass(
+            C_prior,
+            d['lulc_to_Ss'],
+            out_dtype=np.float32,
+            nodata_mask=C_nodata)
+        S_litter[0] = reclass(
+            C_prior,
+            d['lulc_to_L'],
+            out_dtype=np.float32,
+            nodata_mask=C_nodata)
         T[0] = S_biomass[0] + S_soil[0] + S_litter[0]
 
         R_biomass[0] = D_biomass[0] * S_biomass[0]
@@ -341,7 +375,7 @@ def get_num_blocks(raster_uri):
     return n_col_blocks * n_row_blocks
 
 
-def reclass(array, d, nodata=None, out_dtype=None):
+def reclass(array, d, nodata=None, out_dtype=None, nodata_mask=None):
     """Reclassify values in array.
 
     If a nodata value is not provided, the function will return an array with
@@ -375,15 +409,13 @@ def reclass(array, d, nodata=None, out_dtype=None):
     index = np.digitize(a_ravel, k, right=True)
     reclass_array = v[index].reshape(array.shape)
 
-    if nodata:
-        reclass_array[reclass_array == ndata] = nodata
-    elif np.issubdtype(array.dtype, float):
-        reclass_array[reclass_array == ndata] = NODATA_FLOAT
+    if nodata_mask and np.issubdtype(reclass_array.dtype, float):
+        reclass_array[array == nodata_mask] = np.nan
 
     return reclass_array
 
 
-def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None):
+def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None, nodata_mask=None):
     """Reclass arrays based on element-wise combinations between two arrays.
 
     Args:
@@ -407,6 +439,9 @@ def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None):
         else:
             c[index] = np.ma.masked
 
+    if nodata_mask and np.issubdtype(c.dtype, float):
+        c[a == nodata_mask] = np.nan
+
     return c.reshape(a_prev.shape)
 
 
@@ -421,6 +456,8 @@ def write_to_raster(output_raster, array, xoff, yoff):
     """
     ds = gdal.Open(output_raster, gdal.GA_Update)
     band = ds.GetRasterBand(1)
+    if np.issubdtype(array.dtype, float):
+        array[array == np.nan] = NODATA_FLOAT
     band.WriteArray(array, xoff, yoff)
     ds = None
 
@@ -433,13 +470,13 @@ def read_from_raster(input_raster, offset_block):
         offset_block (dict): dictionary of offset information
 
     Returns:
-        a (np.array): a blocked array of the input raster
+        array (np.array): a blocked array of the input raster
     """
     ds = gdal.Open(input_raster)
     band = ds.GetRasterBand(1)
-    a = band.ReadAsArray(**offset_block)
+    array = band.ReadAsArray(**offset_block)
     ds = None
-    return a
+    return array
 
 
 def write_rasters(raster_list, array_list, offset_dict):
