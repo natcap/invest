@@ -375,7 +375,6 @@ def get_num_blocks(raster_uri):
     n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
 
-    ds.FlushCache()
     ds = None
 
     return n_col_blocks * n_row_blocks
