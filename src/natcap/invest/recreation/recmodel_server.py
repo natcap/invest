@@ -85,11 +85,10 @@ class RecModel(object):
             self.cache_workspace = cache_workspace
             self.min_year = min_year
             self.max_year = max_year
-        except:
-            LOGGER.error(
+        except as exc_obj:
+            LOGGER.exception(
                 "FATAL: construct_userday_quadtree exited while "
-                "multiprocessing")
-            LOGGER.error(traceback.format_exc())
+                "multiprocessing: %s" str(exc_obj))
             raise
 
     def get_valid_year_range(self):
