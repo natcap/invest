@@ -126,9 +126,10 @@ class RecModel(object):
             out_zip_file_path = os.path.join(
                 workspace_path, str('server_in')+'.zip')
             return open(out_zip_file_path, 'rb').read()
-        except:
-            LOGGER.error('exception in calc_aggregated_points_in_aoi')
-            LOGGER.error(traceback.format_exc())
+        except as exc_obj:
+            LOGGER.exception(
+                'exception in calc_aggregated_points_in_aoi: %s' % str(
+                    exc_obj))
             raise
 
     def calc_photo_user_days_in_aoi(
