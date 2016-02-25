@@ -154,7 +154,7 @@ class RecModel(object):
 
         Parameters:
             zip_file_binary (string): a bytestring that is a zip file of an
-                OGR compatible vector.
+                ESRI shapefile.
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date as a numpy datetime64 object
             out_vector_filename (string): base filename of output vector
