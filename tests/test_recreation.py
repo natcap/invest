@@ -118,7 +118,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(20.0)
+    @_timeout(100.0)
     def test_empty_server(self):
         """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
