@@ -304,7 +304,7 @@ something like this: ::
     ::
 
     set ENV=doc_env
-    paver env --clear --system-site-packages --with-invest --envdir=%ENV% -r requirements-docs.txt
+    paver env --clear --system-site-packages --with-invest --envdir=%ENV% -r requirements-dev.txt
     call %ENV%\Scripts\activate.bat
     paver build_docs
 
@@ -317,7 +317,7 @@ look like this: ::
         --system-site-packages \
         --with-invest \
         --envdir=$ENV
-        -r requirements-docs.txt
+        -r requirements-dev.txt
     source $ENV/bin/activate
     paver build_docs
 
@@ -398,7 +398,7 @@ examples:  ::
 
     # You can also specify additional requirement to be installed with the -r
     # flag.
-    $ paver env --sytem-site-packages -r requirements-docs.txt
+    $ paver env --sytem-site-packages -r requirements-dev.txt
 
 natcap.versioner ImportError
 ----------------------------
