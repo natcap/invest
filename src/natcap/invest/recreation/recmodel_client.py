@@ -300,7 +300,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     """Convert vector to a regular grid.
 
     Here the vector is gridded such that all cells are contained within the
-    original vector.
+    original vector.  Cells that would intersect with the boundary are not
+    produced.
 
     Parameters:
         vector_path (string): path to an OGR compatible polygon vector type
