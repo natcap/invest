@@ -59,6 +59,11 @@ def create_table(uri, rows_list):
 
 
 def get_args():
+    """Create and return arguements for CBC main model.
+
+    Returns:
+        args (dict): main model arguements
+    """
     band_matrices = [np.ones((2, 2))]
     band_matrices_with_nodata = [np.ones((2, 2))]
     band_matrices_with_nodata[0][0][0] = NODATA_INT
@@ -118,6 +123,14 @@ def get_args():
 
 
 def get_preprocessor_args(args_choice):
+    """Create and return arguments for preprocessor model.
+
+    Args:
+        args_choice (int): which arguments to return
+
+    Returns:
+        args (dict): preprocessor arguments
+    """
     band_matrices_zeros = [np.zeros((2, 2))]
     band_matrices_ones = [np.ones((2, 2))]
     srs = pygeotest.sampledata.SRS_WILLAMETTE
@@ -177,7 +190,7 @@ class TestIO(unittest.TestCase):
         pass
 
     def test_get_inputs(self):
-        """Coastal Blue Carbon: Test Get Inputs"""
+        """Coastal Blue Carbon: Test get_inputs function in IO module."""
         from natcap.invest.coastal_blue_carbon import io
         args = get_args()
         d = io.get_inputs(args)
@@ -200,7 +213,7 @@ class TestModel(unittest.TestCase):
         pass
 
     def test_model_run(self):
-        """Coastal Blue Carbon: Test main model 'run' function."""
+        """Coastal Blue Carbon: Test run function in main model."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
         args = get_args()
@@ -227,8 +240,9 @@ class TestPreprocessor(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_preprocessor(self):
-        """Coastal Blue Carbon: Test Preprocessor"""
+    def test_preprocessor_ones(self):
+        """Coastal Blue Carbon: Test entire run of preprocessor with final
+        snapshot raster of ones."""
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = get_preprocessor_args(1)
         preprocessor.execute(args)
@@ -241,8 +255,9 @@ class TestPreprocessor(unittest.TestCase):
         self.assertTrue(lines[2][:].startswith('Z,,accum'))
         shutil.rmtree(args['workspace_dir'])
 
-    def test_preprocessor_2(self):
-        """Coastal Blue Carbon: Test Preprocessor 2"""
+    def test_preprocessor_zeros(self):
+        """Coastal Blue Carbon: Test entire run of preprocessor with final
+        snapshot raster of zeros."""
         from natcap.invest.coastal_blue_carbon import preprocessor
         args2 = get_preprocessor_args(2)
         preprocessor.execute(args2)
