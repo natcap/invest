@@ -193,6 +193,9 @@ def execute(args):
         aoi_vector = ogr.Open(args['aoi_path'])
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.CopyDataSource(aoi_vector, file_registry['local_aoi_path'])
+        # hard destroying the object just in case.  during testing I sometimes
+        # had issues with shapefiles being unable to delete, __swig_destroy__
+        # alleviated that
         ogr.DataSource.__swig_destroy__(aoi_vector)
         aoi_vector = None
 
