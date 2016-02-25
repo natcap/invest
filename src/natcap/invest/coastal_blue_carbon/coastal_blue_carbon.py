@@ -133,33 +133,36 @@ def execute(args):
 
         # timesteps+1 to include initial conditions
         stock_shape = (timesteps+1, x_size, y_size)
-        S_biomass = np.zeros(stock_shape, dtype=np.float32)
+        S_biomass = np.zeros(stock_shape, dtype=np.float32)  # Stock
         S_soil = np.zeros(stock_shape, dtype=np.float32)
         S_litter = np.zeros(stock_shape, dtype=np.float32)
-        T = np.zeros(stock_shape, dtype=np.float32)
+        T = np.zeros(stock_shape, dtype=np.float32)  # Total Carbon Stock
 
         timestep_shape = (timesteps, x_size, y_size)
-        A_biomass = np.zeros(timestep_shape, dtype=np.float32)
+        A_biomass = np.zeros(timestep_shape, dtype=np.float32)  # Accumulation
         A_soil = np.zeros(timestep_shape, dtype=np.float32)
-        E_biomass = np.zeros(timestep_shape, dtype=np.float32)
+        E_biomass = np.zeros(timestep_shape, dtype=np.float32)  # Emissions
         E_soil = np.zeros(timestep_shape, dtype=np.float32)
+        # Net Sequestration
         N_biomass = np.zeros(timestep_shape, dtype=np.float32)
         N_soil = np.zeros(timestep_shape, dtype=np.float32)
-        V = np.zeros(timestep_shape, dtype=np.float32)
-        P = np.zeros(timestep_shape, dtype=np.float32)
+        V = np.zeros(timestep_shape, dtype=np.float32)  # Valuation
 
         transition_shape = (d['transitions'], x_size, y_size)
-        L = np.zeros(transition_shape, dtype=np.float32)
+        L = np.zeros(transition_shape, dtype=np.float32)  # Litter
+        # Yearly Accumulation
         Y_biomass = np.zeros(transition_shape, dtype=np.float32)
         Y_soil = np.zeros(transition_shape, dtype=np.float32)
+        # Disturbance Percentage
         D_biomass = np.zeros(transition_shape, dtype=np.float32)
         D_soil = np.zeros(transition_shape, dtype=np.float32)
-        H_biomass = np.zeros(transition_shape, dtype=np.float32)
+        H_biomass = np.zeros(transition_shape, dtype=np.float32)  # Half-life
         H_soil = np.zeros(transition_shape, dtype=np.float32)
+        # Total Disturbed Carbon
         R_biomass = np.zeros(transition_shape, dtype=np.float32)
         R_soil = np.zeros(transition_shape, dtype=np.float32)
 
-        # Set Accum and Disturbance Values
+        # Set Accumulation and Disturbance Values
         C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
         C_list = [C_prior] + C_r
         for i in xrange(0, d['transitions']):
