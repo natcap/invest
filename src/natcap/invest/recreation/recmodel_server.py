@@ -47,6 +47,7 @@ LOGGER = logging.getLogger('natcap.invest.recreation.recmodel_server')
 
 LOCAL_WORKSPACE_DIR = 'rec_server_workspaces'
 
+
 def _try_except_wrapper(mesg):
     """Wrap the function in a try/except to log exception before failing.
 
