@@ -789,7 +789,20 @@ def _point_count(response_polygons_lookup, point_vector_path):
 
 
 def _ogr_to_geometry_list(vector_path):
-    """Convert an OGR type with one layer to a list of shapely geometry."""
+    """Convert an OGR type with one layer to a list of shapely geometry.
+
+    Iterates through the features in the `vector_path`'s first layer and
+    converts them to `shapely` geometry objects.  if the objects are not
+    valid geometry, an attempt is made to buffer the object by 0 units
+    before adding to the list.
+
+    Parameters:
+        vector_path (string): path to an OGR datasource
+
+    Returns:
+        list of shapely geometry objects representing the features in the
+        `vector_path` layer.
+    """
     vector = ogr.Open(vector_path)
     layer = vector.GetLayer()
     geometry_list = []
