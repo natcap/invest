@@ -74,18 +74,28 @@
                 {
                   "id": "keep_individual_viewsheds",
                   "args_id": "keep_feat_viewsheds",
-                  "type": "checkbox",
+                  "type": "dropdown",
                   "label": "Keep Individual Viewshed Rasters?",
-                  "defaultValue": false,
-                  "helpText": "When checked the model will keep the viewshed raster created for each viewpoint feature. Depending on how many viewpoint features are used and the resolution of the DEM, these files could take up a lot of disk space. The cumulative viewshed output will always be saved to the output folder."
+                  "options": [
+                    "Yes",
+                    "No"
+                  ],
+                  "returns": "strings",
+                  "defaultValue": 1,
+                  "helpText": "When 'Yes' the model will keep the viewshed raster created for each viewpoint feature. Depending on how many viewpoint features are used and the resolution of the DEM, these files could take up a lot of disk space. The cumulative viewshed output will always be saved to the output folder."
                 },
                 {
                   "id": "keep_valuation_viewsheds",
                   "args_id": "keep_val_viewsheds",
-                  "type": "checkbox",
+                  "type": "dropdown",
                   "label": "Keep Individual Valuation Viewshed Rasters?",
-                  "defaultValue": false,
-                  "helpText": "When checked the model will keep the valuation adjusted viewshed raster created for each viewpoint feature. Depending on how many viewpoint features are used and the resolution of the DEM, these files could take up a lot of disk space. The cumulative valuation viewshed output will always be saved to the output folder."
+                  "options": [
+                    "Yes",
+                    "No"
+                  ],
+                  "returns": "strings",
+                  "defaultValue": 1,
+                  "helpText": "When 'Yes' the model will keep the valuation adjusted viewshed raster created for each viewpoint feature. Depending on how many viewpoint features are used and the resolution of the DEM, these files could take up a lot of disk space. The cumulative valuation viewshed output will always be saved to the output folder."
                 },
                 {
                   "id": "dem_path",
