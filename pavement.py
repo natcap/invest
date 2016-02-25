@@ -1885,6 +1885,7 @@ def check(options):
         paver.__version__ = version.VERSION
 
         try:
+            # pywin32 is required by pyinstaller.
             requirements.append(('pywin32', required, 'pywin', None))
 
             # Get the pywin32 version here, as demonstrated by
