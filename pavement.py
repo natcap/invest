@@ -49,6 +49,17 @@ except pkg_resources.VersionConflict:
     NO_WHEEL_SH = '--no-use-wheel'
 
 
+# The requirements files used by various parts of natcap.invest and the
+# pavement infrastructure that supports it.  Packages required for
+# natcap.invest to work should be included in requirements.txt.  Anything
+# required for other functionality (such as in pavement.py) should be defined
+# in requirements-dev.txt.
+REQUIREMENTS_FILES = [
+    'requirements.txt',
+    'requirements-dev.txt',
+]
+
+
 def supports_color():
     """
     Returns True if the running system's terminal supports color, and False
@@ -823,7 +834,10 @@ def dev_env(options):
 
 
 def _read_requirements_dict():
-    """Read requirments.txt into a dict.
+    """Read requirements files into a dict.
+
+    Relys on the files listed in `REQUIREMENTS_FILES`.  If multiple files are
+    listed, the union of the sets is used.
 
     Returns:
         A dict mapping {projectname: requirement}.
@@ -833,10 +847,12 @@ def _read_requirements_dict():
         {'pygeoprocessing': 'pygeoprocessing>=0.3.0a12', ...}
     """
     reqs = {}
-    for line in open('requirements.txt'):
-        line = line.strip()
-        parsed_req = pkg_resources.Requirement.parse(line)
-        reqs[parsed_req.project_name] = line
+    for filename in REQUIREMENTS_FILES:
+        for line in open(filename):
+            parsed_req = pkg_resources.Requirement.parse(line)
+            # Casting the parsed requirement to a string strips out any
+            # formatting (like comments) allowed in requirements files.
+            reqs[parsed_req.project_name] = str(parsed_req)
     return reqs
 
 
@@ -2417,11 +2433,7 @@ def build_bin(options):
             # archive.
 
             # Get version spec from requirements.txt
-            with open('requirements.txt') as requirements_file:
-                for requirement in pkg_resources.parse_requirements(requirements_file.read()):
-                    if requirement.project_name == 'natcap.versioner':
-                        versioner_spec = str(requirement)
-                        break
+            versioner_spec = _read_requirements_dict()['natcap.versioner']
 
             # Download a valid source tarball to the dist dir.
             sh(("{python} -c "
