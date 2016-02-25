@@ -849,7 +849,13 @@ def _read_requirements_dict():
     reqs = {}
     for filename in REQUIREMENTS_FILES:
         for line in open(filename):
-            parsed_req = pkg_resources.Requirement.parse(line)
+            try:
+                parsed_req = pkg_resources.Requirement.parse(line)
+            except ValueError:
+                # Raised when no package requirement could be parsed.  Commonly
+                # happens on blank lines or lines that are only comments.
+                continue
+
             # Casting the parsed requirement to a string strips out any
             # formatting (like comments) allowed in requirements files.
             reqs[parsed_req.project_name] = str(parsed_req)

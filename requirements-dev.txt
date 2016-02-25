@@ -1,7 +1,13 @@
+# requirements-dev.txt
+# --------------------
+# This file records the packages and requirements for packages that are needed
+# by infrastructure, but not by natcap.invest.
+#
+# Note that there may be some OS-specific requirements, so be sure to run
+# `paver check` to verify you have all the required packages.
+
 pip>=6.0.0
 virtualenv>=12.0.1
-pycrypto
 nose
 sphinx==1.3.1
 paramiko
-paver
