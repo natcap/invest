@@ -389,7 +389,7 @@ class Repository(object):
             return tracked_rev[user_os]
         elif tracked_rev.startswith('REQUIREMENTS_TXT'):
             pkgname = tracked_rev.split(':')[1]
-            version =_parse_version_requirement(pkgname)
+            version = _parse_version_requirement(pkgname)
             if version is None:
                 raise ValueError((
                     'Versions.json requirement string must have the '
@@ -836,11 +836,11 @@ def dev_env(options):
 def _read_requirements_dict():
     """Read requirements files into a dict.
 
-    Relys on the files listed in `REQUIREMENTS_FILES`.  If multiple files are
-    listed, the union of the sets is used.
+    Relies on the files listed in `REQUIREMENTS_FILES`.  If multiple files
+    are listed, the union of the sets is used.
 
     Returns:
-        A dict mapping {projectname: requirement}.
+        A dict mapping {projectname: requirement string}.
 
     Example:
         >>> _read_requirements_dict()
