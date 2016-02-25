@@ -185,9 +185,7 @@ class RecModel(object):
             zip_file_disk.write(zip_file_binary)
         shapefile_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
         shapefile_archive.extractall(workspace_path)
-        aoi_path = os.path.join(
-            workspace_path, os.path.splitext(
-                shapefile_archive.namelist()[0])[0]+'.shp')
+        aoi_path = glob.glob(os.path.join(workspace_path, '*.shp'))[0]
 
         LOGGER.info('running calc user days on %s', workspace_path)
         numpy_date_range = (
