@@ -69,7 +69,7 @@ def execute(args):
 
     _create_transition_table(
         reg['transitions'],
-        vars_dict['lulc_class_list'],
+        vars_dict['lulc_to_code_dict'].keys(),
         vars_dict['transition_matrix_dict'],
         vars_dict['code_to_lulc_dict'])
 
@@ -95,11 +95,10 @@ def _get_inputs(args):
     """
     LOGGER.info('Getting inputs...')
     vars_dict = dict(args.items())
-    vars_dict['results_suffix'] = invest_utils.make_suffix_string(
-        vars_dict, 'results_suffix')
+    results_suffix = invest_utils.make_suffix_string(
+        args, 'results_suffix')
 
-    lulc_lookup_dict = get_lookup_from_csv(
-        vars_dict['lulc_lookup_uri'], 'code')
+    lulc_lookup_dict = get_lookup_from_csv(args['lulc_lookup_uri'], 'code')
 
     for code in lulc_lookup_dict.keys():
         sub_dict = lulc_lookup_dict[code]
@@ -116,18 +115,21 @@ def _get_inputs(args):
         'lulc-class'] for key in lulc_lookup_dict.keys()}
     lulc_to_code_dict = {v: k for k, v in code_to_lulc_dict.items()}
 
-    vars_dict['lulc_lookup_dict'] = lulc_lookup_dict
-    vars_dict['code_to_lulc_dict'] = code_to_lulc_dict
-    vars_dict['lulc_to_code_dict'] = lulc_to_code_dict
-    vars_dict['lulc_class_list'] = lulc_to_code_dict.keys()
-
     # Create workspace and output directories
-    vars_dict['output_dir'] = os.path.join(
-        vars_dict['workspace_dir'], 'outputs_preprocessor')
-    create_directories([vars_dict['output_dir']])
+    output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
+    create_directories([output_dir])
 
-    _validate_inputs(
-        vars_dict['lulc_snapshot_list'], vars_dict['lulc_lookup_dict'])
+    _validate_inputs(args['lulc_snapshot_list'], lulc_lookup_dict)
+
+    vars_dict = {
+        'workspace_dir': args['workspace_dir'],
+        'output_dir': output_dir,
+        'results_suffix': results_suffix,
+        'lulc_snapshot_list': args['lulc_snapshot_list'],
+        'lulc_lookup_dict': lulc_lookup_dict,
+        'code_to_lulc_dict': code_to_lulc_dict,
+        'lulc_to_code_dict': lulc_to_code_dict
+    }
 
     return vars_dict
 
