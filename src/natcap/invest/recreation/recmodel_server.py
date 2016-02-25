@@ -25,10 +25,9 @@ import shapely.wkt
 import shapely.geometry
 import shapely.prepared
 
-import natcap.versioner
+from ... import invest
 from . import out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
 from . import recmodel_client
-__version__ = natcap.versioner.get_version('natcap.invest.recmodel_server')
 
 BLOCKSIZE = 2 ** 21
 GLOBAL_MAX_POINTS_PER_NODE = 10000  # Default max points in quadtree to split
@@ -108,7 +107,7 @@ class RecModel(object):
         This string can be used to uniquely identify the PUD database and
         algorithm for publication in terms of reproducibility.
         """
-        return '%s:%s' % (__version__, self.qt_pickle_filename)
+        return '%s:%s' % (invest.__version__, self.qt_pickle_filename)
 
     # not static so it can register in Pyro object
     def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
