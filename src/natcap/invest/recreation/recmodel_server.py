@@ -65,7 +65,7 @@ def _try_except_wrapper(mesg):
             """General purpose try/except wrapper."""
             func(*args, **kwargs)
             try:
-                func(*args, **kwargs)
+                return func(*args, **kwargs)
             except Exception as exc_obj:
                 LOGGER.exception("%s\n%s", mesg, str(exc_obj))
                 raise
