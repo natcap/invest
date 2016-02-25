@@ -87,8 +87,9 @@ def execute(args):
             args['grid_aoi'] is True.  Is one of 'hexagon' or 'square' and
             indicates the style of gridding.
         args['cell_size'] (string/float): optional, but must exist if
-            `args['grid_aoi']` is True.  Indicates the long axis size of the
-            grid cells.
+            `args['grid_aoi']` is True.  Indicates the cell size of square
+            pixels and the width of the horizontal axis for the hexagonal
+            cells.
         args['compute_regression'] (boolean): if True, then process the
             predictor table and scenario table (if present).
         args['predictor_table_path'] (string): required if
@@ -302,7 +303,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         vector_path (string): path to an OGR compatible polygon vector type
         grid_type (string): one of "square" or "hexagon"
         cell_size (float): dimensions of the grid cell in the projected units
-            of `vector_path`
+            of `vector_path`; if "square" then this indicates the side length,
+            if "hexagon" indicates the width of the horizontal axis.
         out_grid_vector_path (string): path to the output ESRI shapefile
             vector that contains a gridded version of `vector_path`, this file
             should not exist before this call
