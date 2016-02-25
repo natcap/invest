@@ -10,6 +10,10 @@ import numpy as np
 from osgeo import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
+from pygeoprocessing.testing import scm
+
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data')
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -18,8 +22,8 @@ lulc_lookup_list = \
     [['lulc-class', 'code', 'is_coastal_blue_carbon_habitat'],
      ['N', '0', 'False'],
      ['X', '1', 'True'],
-     ['Y', '1', 'True'],
-     ['Z', '1', 'True']]
+     ['Y', '2', 'True'],
+     ['Z', '3', 'True']]
 
 lulc_transition_matrix_list = \
     [['lulc-class', 'N', 'X', 'Y', 'Z'],
@@ -42,8 +46,8 @@ carbon_pool_transient_list = \
      ['0', 'N', 'soil', '0', '0', '0'],
      ['1', 'X', 'biomass', '1', '0.5', '1'],
      ['1', 'X', 'soil', '1', '0.5', '1'],
-     ['2', 'Y', 'biomass', '1', '0.5', '1'],
-     ['2', 'Y', 'soil', '1', '0.5', '1'],
+     ['2', 'Y', 'biomass', '1', '0.5', '2'],
+     ['2', 'Y', 'soil', '1', '0.5', '2'],
      ['3', 'Z', 'biomass', '1', '0.5', '1'],
      ['3', 'Z', 'soil', '1', '0.5', '1']]
 
@@ -65,6 +69,7 @@ def get_args():
         args (dict): main model arguements
     """
     band_matrices = [np.ones((2, 2))]
+    band_matrices_two = [np.ones((2, 2)) * 2]
     band_matrices_with_nodata = [np.ones((2, 2))]
     band_matrices_with_nodata[0][0][0] = NODATA_INT
     srs = pygeotest.sampledata.SRS_WILLAMETTE
@@ -86,15 +91,15 @@ def get_args():
         os.path.join(workspace, 'carbon_pool_transient.csv'),
         carbon_pool_transient_list)
     raster_0_uri = pygeotest.create_raster_on_disk(
-        band_matrices_with_nodata, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
+        band_matrices, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
         datatype=gdal.GDT_Int32, filename=os.path.join(
             workspace, 'raster_0.tif'))
     raster_1_uri = pygeotest.create_raster_on_disk(
-        band_matrices, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
+        band_matrices_with_nodata, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
         datatype=gdal.GDT_Int32, filename=os.path.join(
             workspace, 'raster_1.tif'))
     raster_2_uri = pygeotest.create_raster_on_disk(
-        band_matrices, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
+        band_matrices_two, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
         datatype=gdal.GDT_Int32, filename=os.path.join(
             workspace, 'raster_2.tif'))
     lulc_baseline_map_uri = raster_0_uri
@@ -218,15 +223,65 @@ class TestModel(unittest.TestCase):
             import coastal_blue_carbon as cbc
         args = get_args()
         cbc.execute(args)
-        output_raster = os.path.join(
+        netseq_output_raster = os.path.join(
+            os.path.split(os.path.realpath(__file__))[0],
+            'workspace/outputs_core/total_net_carbon_sequestration_test.tif')
+        npv_output_raster = os.path.join(
             os.path.split(os.path.realpath(__file__))[0],
             'workspace/outputs_core/net_present_value_test.tif')
-        ds = gdal.Open(output_raster)
-        band = ds.GetRasterBand(1)
-        a = band.ReadAsArray()
-        ds = None
-        np.testing.assert_almost_equal(a[0, 1], 45.731491, decimal=5)
-        np.testing.assert_almost_equal(a[0, 0], np.nan, decimal=5)
+
+        netseq_array = read_array(netseq_output_raster)
+        npv_array = read_array(npv_output_raster)
+
+        np.testing.assert_almost_equal(netseq_array[0, 1], 30, decimal=4)
+        np.testing.assert_almost_equal(netseq_array[0, 0], np.nan, decimal=5)
+        np.testing.assert_almost_equal(npv_array[0, 1], 57.9914, decimal=4)
+        np.testing.assert_almost_equal(npv_array[0, 0], np.nan, decimal=5)
+        shutil.rmtree(args['workspace_dir'])
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_binary(self):
+        """Coastal Blue Carbon: Test main model run against InVEST-Data."""
+        sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+        workspace_dir = os.path.join(os.path.dirname(
+            os.path.realpath(__file__)), 'workspace')
+        args = {
+            'workspace_dir': workspace_dir,
+            'analysis_year': 2100,
+            'carbon_pool_initial_uri': os.path.join(
+                sample_data_path,
+                'outputs_preprocessor/carbon_pool_initial_sample.csv'),
+            'carbon_pool_transient_uri': os.path.join(
+                sample_data_path,
+                'outputs_preprocessor/carbon_pool_transient_sample.csv'),
+            'discount_rate': 6.0,
+            'do_economic_analysis': True,
+            'do_price_table': False,
+            'interest_rate': 3.0,
+            'lulc_lookup_uri': os.path.join(
+                sample_data_path,
+                'inputs/lulc_lookup.csv'),
+            'lulc_baseline_map_uri': os.path.join(
+                sample_data_path,
+                'inputs/GBJC_2004_mean_Resample.tif'),
+            'lulc_transition_maps_list': [
+                os.path.join(sample_data_path, 'inputs/GBJC_2050_mean_Resample.tif'),
+                os.path.join(sample_data_path,
+                '/Users/work/CoastalBlueCarbon/inputs/GBJC_2100_mean_Resample.tif')],
+            'lulc_transition_matrix_uri': os.path.join(
+                sample_data_path,
+                'outputs_preprocessor/transitions_sample.csv'),
+            'lulc_transition_years_list': [2004, 2050],
+            'price': 10.0,
+            'results_suffix': '150225'
+        }
+        cbc.execute(args)
+        npv_raster = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'workspace/outputs_core/net_present_value_150225.tif')
+        npv_array = read_array(npv_raster)
         shutil.rmtree(args['workspace_dir'])
 
     def tearDown(self):
@@ -252,7 +307,7 @@ class TestPreprocessor(unittest.TestCase):
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
-        self.assertTrue(lines[2][:].startswith('Z,,accum'))
+        self.assertTrue(lines[2].startswith('X,,accum'))
         shutil.rmtree(args['workspace_dir'])
 
     def test_preprocessor_zeros(self):
@@ -267,11 +322,20 @@ class TestPreprocessor(unittest.TestCase):
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
-        self.assertTrue(lines[2][:].startswith('Z,disturb,accum'))
+        self.assertTrue(lines[2][:].startswith('X,disturb,accum'))
         shutil.rmtree(args2['workspace_dir'])
 
     def tearDown(self):
         pass
+
+
+def read_array(raster_path):
+    ds = gdal.Open(raster_path)
+    band = ds.GetRasterBand(1)
+    a = band.ReadAsArray()
+    ds = None
+    return a
+
 
 
 if __name__ == '__main__':
