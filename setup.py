@@ -14,6 +14,7 @@ import sys
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
 from setuptools import setup
+import pkg_resources
 
 import numpy
 import natcap.versioner
@@ -108,6 +109,30 @@ EXTENSION_LIST = ([
 if not USE_CYTHON:
     EXTENSION_LIST = no_cythonize(EXTENSION_LIST)
 
+
+def _get_pkgreq_from_requirements(*pkgnames):
+    """Get package requirements from requirements.txt.
+
+    Parameters:
+        pkgnames (strings): Package names, provided as individual string
+            parameters.
+
+    Returns:
+        A list of package requirment strings.
+    """
+    desired_pkgnames = set(pkgnames)
+    package_specs = []
+    with open('requirements.txt') as requirements:
+        for line in requirements:
+            try:
+                package_req = pkg_resources.Requirement.parse(line)
+            except ValueError:
+                continue
+            else:
+                if package_req.project_name in desired_pkgnames:
+                    package_specs.append(str(package_req))
+    return package_specs
+
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
@@ -155,9 +180,13 @@ setup(
     version=natcap.versioner.parse_version(),
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    install_requires=open('requirements.txt').read().split('\n'),
+    # Per setuptools docs, these packages are the only ones that are required
+    # for a minimal installation of natcap.invest.  There may be other packages
+    # required for some features, but they can all be installed via pip from
+    # requirements.txt.
+    install_requires=_get_pkgreq_from_requirements('gdal', 'pygeoprocessing'),
     include_dirs=[numpy.get_include()],
-    setup_requires=['nose>=1.0'],
+    setup_requires=['nose>=1.0', 'natcap.versioner>=0.2.4'],
     license=LICENSE,
     zip_safe=False,
     keywords='invest',
