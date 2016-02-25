@@ -141,7 +141,6 @@ def execute(args):
         _validate_same_projection(
             args['aoi_path'], args['scenario_predictor_table_path'])
 
-    # append jan 1 to start and dec 31 to end
     if int(args['end_year']) < int(args['start_year']):
         raise ValueError(
             "Start year must be less than or equal to end year.\n"
@@ -174,6 +173,7 @@ def execute(args):
             "End year must be between %d and %d.\n"
             " User input: (%s)" % (min_year, max_year, args['end_year']))
 
+    # append jan 1 to start and dec 31 to end
     date_range = (args['start_year']+'-01-01', args['end_year']+'-12-31')
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
