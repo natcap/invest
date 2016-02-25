@@ -148,8 +148,10 @@ def execute(args):
         N_soil = np.zeros(timestep_shape, dtype=np.float32)
         V = np.zeros(timestep_shape, dtype=np.float32)  # Valuation
 
+        snapshot_shape = (d['transitions']+1, x_size, y_size)
+        L = np.zeros(snapshot_shape, dtype=np.float32)  # Litter
+
         transition_shape = (d['transitions'], x_size, y_size)
-        L = np.zeros(transition_shape, dtype=np.float32)  # Litter
         # Yearly Accumulation
         Y_biomass = np.zeros(transition_shape, dtype=np.float32)
         Y_soil = np.zeros(transition_shape, dtype=np.float32)
@@ -187,17 +189,12 @@ def execute(args):
                 C_list[i], d['lulc_to_Hs'],
                 out_dtype=np.float32,
                 nodata_mask=C_nodata)
-            L[i] = reclass(
-                C_r[i],
-                d['lulc_to_L'],
-                out_dtype=np.float32,
-                nodata_mask=C_nodata)
             Y_biomass[i] = reclass(
-                C_r[i], d['lulc_to_Yb'],
+                C_list[i+1], d['lulc_to_Yb'],
                 out_dtype=np.float32,
                 nodata_mask=C_nodata)
             Y_soil[i] = reclass(
-                C_r[i],
+                C_list[i+1],
                 d['lulc_to_Ys'],
                 out_dtype=np.float32,
                 nodata_mask=C_nodata)
@@ -212,12 +209,15 @@ def execute(args):
             d['lulc_to_Ss'],
             out_dtype=np.float32,
             nodata_mask=C_nodata)
-        S_litter[0] = reclass(
-            C_prior,
-            d['lulc_to_L'],
-            out_dtype=np.float32,
-            nodata_mask=C_nodata)
-        T[0] = S_biomass[0] + S_soil[0] + S_litter[0]
+
+        for i in xrange(0, len(C_list)):
+            L[i] = reclass(
+                C_list[i],
+                d['lulc_to_L'],
+                out_dtype=np.float32,
+                nodata_mask=C_nodata)
+
+        T[0] = S_biomass[0] + S_soil[0]
 
         R_biomass[0] = D_biomass[0] * S_biomass[0]
         R_soil[0] = D_soil[0] * S_soil[0]
@@ -254,7 +254,7 @@ def execute(args):
             # Next Stock
             S_biomass[i+1] = S_biomass[i] + N_biomass[i]
             S_soil[i+1] = S_soil[i] + N_soil[i]
-            T[i+1] = S_biomass[i+1] + S_soil[i+1] + S_litter[i+1]
+            T[i+1] = S_biomass[i+1] + S_soil[i+1]
 
             # Net Present Value
             if d['do_economic_analysis']:
@@ -276,6 +276,13 @@ def execute(args):
                for i in xrange(0, num_snapshots-1)]
 
         T_s = [T[s_to_timestep(s_years, i)] for i in xrange(0, num_snapshots)]
+
+        # Add litter to total carbon stock
+        if len(T_s) == len(L):
+            T_s = map(np.add, T_s, L)
+        else:
+            T_s = map(np.add, T_s, L[:-1])
+
         N_total = sum(N)
 
         raster_tuples = [
@@ -384,14 +391,14 @@ def get_num_blocks(raster_uri):
 
 def reclass(array, d, nodata=None, out_dtype=None, nodata_mask=None):
     """Reclassify values in array.
-
+​
     If a nodata value is not provided, the function will return an array with
     NaN values in its place to mark cells that could not be reclassed.
-
+​
     Args:
         array (np.array): input data
         d (dict): reclassification map
-
+​
     Returns:
         reclass_array (np.array): reclassified array
     """
@@ -399,18 +406,26 @@ def reclass(array, d, nodata=None, out_dtype=None, nodata_mask=None):
         array = array.astype(out_dtype)
     u = np.unique(array)
     has_map = np.in1d(u, d.keys())
-    if np.issubdtype(array.dtype, int):
-        ndata = np.iinfo(array.dtype).min
+    if np.issubdtype(out_dtype, int):
+        ndata = np.iinfo(out_dtype).min
     else:
-        ndata = np.finfo(array.dtype).min
+        ndata = np.finfo(out_dtype).min
 
     reclass_array = array.copy()
     for i in u[~has_map]:
         reclass_array = np.where(reclass_array == i, ndata, reclass_array)
 
+    a_ravel = reclass_array.ravel()
+    d[ndata] = ndata
+    d[np.nan] = np.nan
+    k = sorted(d.keys())
+    v = np.array([d[key] for key in k])
+    index = np.digitize(a_ravel, k, right=True)
+    reclass_array = v[index].reshape(array.shape)
 
     if nodata_mask and np.issubdtype(reclass_array.dtype, float):
         reclass_array[array == nodata_mask] = np.nan
+        reclass_array[array == ndata] = np.nan
 
     return reclass_array
 
@@ -653,10 +668,12 @@ def get_inputs(args):
         d['price_t'] /= (1 + discount_rate) ** np.arange(0, d['timesteps']+1)
 
     # Create Output Rasters
+    if args['results_suffix'] not in ['', None] and not args['results_suffix'].startswith('_'):
+        args['results_suffix'] = '_' + args['results_suffix']
     d['File_Registry'] = _build_file_registry(
         d['C_prior_raster'],
         d['snapshot_years'],
-        results_suffix,
+        args['results_suffix'],
         d['do_economic_analysis'],
         outputs_dir)
 
@@ -702,8 +719,7 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
     T_s_rasters.append(_INTERMEDIATE['carbon_stock'] % (snapshot_years[-1]))
 
     # Total Net Sequestration
-    N_total_raster = 'net_carbon_sequestration_between_%s_and_%s.tif' % (
-        snapshot_years[0], snapshot_years[-1])
+    N_total_raster = 'total_net_carbon_sequestration.tif'
 
     # Net Sequestration from Base Year to Analysis Year
     NPV_raster = None
