@@ -46,9 +46,36 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.recreation.recmodel_server')
 
 
+def _try_except_wrapper(mesg):
+    """Wrap the function in a try/except to log exception before failing.
+
+    This can be useful in places where multiprocessing crashes for some reason
+    or Pyro4 calls crash and need to report back over stdout.
+
+    Parameters:
+        mesg (string): printed to log before the exception object
+
+    Returns:
+        None
+    """
+    def try_except_decorator(func):
+        """Raw decorator function."""
+        def try_except_wrapper(*args, **kwargs):
+            """General purpose try/except wrapper."""
+            func(*args, **kwargs)
+            try:
+                func(*args, **kwargs)
+            except Exception as exc_obj:
+                LOGGER.exception("%s\n%s", mesg, str(exc_obj))
+                raise
+        return try_except_wrapper
+    return try_except_decorator
+
+
 class RecModel(object):
     """Class that manages RPCs for calculating photo user days."""
 
+    @_try_except_wrapper("RecModel construction exited while multiprocessing.")
     def __init__(
             self, raw_csv_filename, min_year, max_year, cache_workspace,
             max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
@@ -73,23 +100,17 @@ class RecModel(object):
         Returns:
             None
         """
-        try:
-            initial_bounding_box = [-180, -90, 180, 90]
-            if max_year < min_year:
-                raise ValueError(
-                    "max_year is less than min_year, must be greater or "
-                    "equal to")
-            self.qt_pickle_filename = construct_userday_quadtree(
-                initial_bounding_box, raw_csv_filename, cache_workspace,
-                max_points_per_node)
-            self.cache_workspace = cache_workspace
-            self.min_year = min_year
-            self.max_year = max_year
-        except as exc_obj:
-            LOGGER.exception(
-                "FATAL: construct_userday_quadtree exited while "
-                "multiprocessing: %s" str(exc_obj))
-            raise
+        initial_bounding_box = [-180, -90, 180, 90]
+        if max_year < min_year:
+            raise ValueError(
+                "max_year is less than min_year, must be greater or "
+                "equal to")
+        self.qt_pickle_filename = construct_userday_quadtree(
+            initial_bounding_box, raw_csv_filename, cache_workspace,
+            max_points_per_node)
+        self.cache_workspace = cache_workspace
+        self.min_year = min_year
+        self.max_year = max_year
 
     def get_valid_year_range(self):
         """Return the min and max year queriable.
@@ -109,6 +130,7 @@ class RecModel(object):
         return '%s:%s' % (invest.__version__, self.qt_pickle_filename)
 
     # not static so it can register in Pyro object
+    @_try_except_wrapper("exception in fetch_workspace_aoi")
     def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
         """Download the AOI of the workspace specified by workspace_id.
 
@@ -118,20 +140,14 @@ class RecModel(object):
         Returns:
             zip file as a binary string of workspace.
         """
-        # try/except block so Pyro4 can receive an exception if there is one
-        try:
-            # make a random workspace name so we can work in parallel
-            workspace_path = os.path.join(
-                'rec_server_workspaces', workspace_id)
-            out_zip_file_path = os.path.join(
-                workspace_path, str('server_in')+'.zip')
-            return open(out_zip_file_path, 'rb').read()
-        except as exc_obj:
-            LOGGER.exception(
-                'exception in calc_aggregated_points_in_aoi: %s' % str(
-                    exc_obj))
-            raise
+        # make a random workspace name so we can work in parallel
+        workspace_path = os.path.join(
+            'rec_server_workspaces', workspace_id)
+        out_zip_file_path = os.path.join(
+            workspace_path, str('server_in')+'.zip')
+        return open(out_zip_file_path, 'rb').read()
 
+    @_try_except_wrapper("exception in calc_photo_user_days_in_aoi")
     def calc_photo_user_days_in_aoi(
             self, zip_file_binary, date_range, out_vector_filename):
         """Calculate annual average and per monthly average photo user days.
@@ -150,60 +166,53 @@ class RecModel(object):
             workspace_id: a string that can be used to uniquely identify this
                 run on the server
         """
-        # try/except block so Pyro4 can receive an exception if there is one
-        try:
-            # make a random workspace name so we can work in parallel
-            while True:
-                workspace_id = str(uuid.uuid4())
-                workspace_path = os.path.join(
-                    'rec_server_workspaces', workspace_id)
-                if not os.path.exists(workspace_path):
-                    os.makedirs(workspace_path)
-                    break
+        # make a random workspace name so we can work in parallel
+        while True:
+            workspace_id = str(uuid.uuid4())
+            workspace_path = os.path.join(
+                'rec_server_workspaces', workspace_id)
+            if not os.path.exists(workspace_path):
+                os.makedirs(workspace_path)
+                break
 
-            # decompress zip
-            out_zip_file_filename = os.path.join(
-                workspace_path, str('server_in')+'.zip')
+        # decompress zip
+        out_zip_file_filename = os.path.join(
+            workspace_path, str('server_in')+'.zip')
 
-            LOGGER.info('decompress zip file AOI')
-            with open(out_zip_file_filename, 'wb') as zip_file_disk:
-                zip_file_disk.write(zip_file_binary)
-            shapefile_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
-            shapefile_archive.extractall(workspace_path)
-            aoi_path = os.path.join(
-                workspace_path, os.path.splitext(
-                    shapefile_archive.namelist()[0])[0]+'.shp')
+        LOGGER.info('decompress zip file AOI')
+        with open(out_zip_file_filename, 'wb') as zip_file_disk:
+            zip_file_disk.write(zip_file_binary)
+        shapefile_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
+        shapefile_archive.extractall(workspace_path)
+        aoi_path = os.path.join(
+            workspace_path, os.path.splitext(
+                shapefile_archive.namelist()[0])[0]+'.shp')
 
-            LOGGER.info('running calc user days on %s', workspace_path)
-            numpy_date_range = (
-                numpy.datetime64(date_range[0]),
-                numpy.datetime64(date_range[1]))
-            base_pud_aoi_path, monthly_table_path = (
-                self._calc_aggregated_points_in_aoi(
-                    aoi_path, workspace_path, numpy_date_range,
-                    out_vector_filename))
+        LOGGER.info('running calc user days on %s', workspace_path)
+        numpy_date_range = (
+            numpy.datetime64(date_range[0]),
+            numpy.datetime64(date_range[1]))
+        base_pud_aoi_path, monthly_table_path = (
+            self._calc_aggregated_points_in_aoi(
+                aoi_path, workspace_path, numpy_date_range,
+                out_vector_filename))
 
-            # ZIP and stream the result back
-            LOGGER.info('zipping result')
-            aoi_pud_archive_path = os.path.join(
-                workspace_path, 'aoi_pud_result.zip')
-            with zipfile.ZipFile(aoi_pud_archive_path, 'w') as myzip:
-                LOGGER.debug(base_pud_aoi_path)
-                for filename in glob.glob(
-                        os.path.splitext(base_pud_aoi_path)[0] + '.*'):
-                    myzip.write(filename, os.path.basename(filename))
-                myzip.write(
-                    monthly_table_path, os.path.basename(monthly_table_path))
-            # return the binary stream
-            LOGGER.info(
-                'calc user days complete sending binary back on %s',
-                workspace_path)
-            return open(aoi_pud_archive_path, 'rb').read(), workspace_id
-        except:
-            LOGGER.error(
-                'exception in calc_aggregated_points_in_aoi: %s',
-                traceback.format_exc())
-            raise
+        # ZIP and stream the result back
+        LOGGER.info('zipping result')
+        aoi_pud_archive_path = os.path.join(
+            workspace_path, 'aoi_pud_result.zip')
+        with zipfile.ZipFile(aoi_pud_archive_path, 'w') as myzip:
+            LOGGER.debug(base_pud_aoi_path)
+            for filename in glob.glob(
+                    os.path.splitext(base_pud_aoi_path)[0] + '.*'):
+                myzip.write(filename, os.path.basename(filename))
+            myzip.write(
+                monthly_table_path, os.path.basename(monthly_table_path))
+        # return the binary stream
+        LOGGER.info(
+            'calc user days complete sending binary back on %s',
+            workspace_path)
+        return open(aoi_pud_archive_path, 'rb').read(), workspace_id
 
     def _calc_aggregated_points_in_aoi(
             self, aoi_path, workspace_path, date_range, out_vector_filename):
