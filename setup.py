@@ -111,7 +111,11 @@ if not USE_CYTHON:
 
 
 def _get_pkgreq_from_requirements(*pkgnames):
-    """Get package requirements from requirements.txt.
+    """Get individual package requirements from requirements.txt.
+
+    This is particularly useful for keeping requirements.txt the central
+    location for a required package's version specification, so the only thing
+    that needs to be specified here in setup.py is the package name.
 
     Parameters:
         pkgnames (strings): Package names, provided as individual string
