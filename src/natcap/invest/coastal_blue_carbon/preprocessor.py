@@ -126,20 +126,22 @@ def _get_inputs(args):
         vars_dict['workspace_dir'], 'outputs_preprocessor')
     create_directories([vars_dict['output_dir']])
 
-    _validate_inputs(vars_dict)
+    _validate_inputs(
+        vars_dict['lulc_snapshot_list'], vars_dict['lulc_lookup_dict'])
 
     return vars_dict
 
 
-def _validate_inputs(vars_dict):
+def _validate_inputs(lulc_snapshot_list, lulc_lookup_dict):
     """Validate inputs.
 
     Args:
-        vars_dict (dict): processed data from args dictionary
+        lulc_snapshot_list (list): list of snapshot raster filepaths
+        lulc_lookup_dict (dict): lookup table information
     """
     LOGGER.info('Validating inputs...')
-    lulc_snapshot_list = vars_dict['lulc_snapshot_list']
-    lulc_lookup_dict = vars_dict['lulc_lookup_dict']
+    lulc_snapshot_list = lulc_snapshot_list
+    lulc_lookup_dict = lulc_lookup_dict
 
     for snapshot_idx in xrange(0, len(lulc_snapshot_list)-1):
         nodata_1 = geoprocess.get_nodata_from_uri(
@@ -281,7 +283,7 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
     LOGGER.info('Creating transition table as output...')
-    
+
     code_list = code_to_lulc_dict.keys()
     code_list.sort()
     lulc_class_list_sorted = [code_to_lulc_dict[code] for code in code_list]
