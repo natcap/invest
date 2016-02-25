@@ -1881,12 +1881,6 @@ def check(options):
             'git+https://github.com/phargogh/paver@natcap-version'
         )))
 
-        # Don't need to try/except this ... paver is imported at the top of
-        # this file so we know that paver exists.  If it doesn't have a version
-        # module, the ImportError should definitely be raised.
-        from paver import version
-        paver.__version__ = version.VERSION
-
         try:
             # pywin32 is required by pyinstaller.
             requirements.append(('pywin32', required, 'pywin', None))
@@ -1905,6 +1899,12 @@ def check(options):
         # Non-windows OSes also require wheel,just not a special installation
         # of it.
         requirements.append(('wheel', required, None, None))
+
+    # Don't need to try/except this ... paver is imported at the top of
+    # this file so we know that paver exists.  If it doesn't have a version
+    # module, the ImportError should definitely be raised.
+    from paver import version
+    paver.__version__ = version.VERSION
 
     # Compare the above-defined requirements with those in requirements.txt
     # The resulting set should be the union of the two.  Package verison
