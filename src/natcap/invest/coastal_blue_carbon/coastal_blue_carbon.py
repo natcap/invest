@@ -402,17 +402,10 @@ def reclass(array, d, nodata=None, out_dtype=None, nodata_mask=None):
     else:
         ndata = np.finfo(array.dtype).min
 
-    if not all(has_map):
-        LOGGER.info("No value provided for the following codes %s" %
-                    (str(u[~has_map])))
+    reclass_array = array.copy()
+    for i in u[~has_map]:
+        reclass_array = np.where(reclass_array == i, ndata, reclass_array)
 
-    a_ravel = array.ravel()
-    a_ravel[~has_map] = ndata
-    d[ndata] = ndata
-    k = sorted(d.keys())
-    v = np.array([d[key] for key in k])
-    index = np.digitize(a_ravel, k, right=True)
-    reclass_array = v[index].reshape(array.shape)
 
     if nodata_mask and np.issubdtype(reclass_array.dtype, float):
         reclass_array[array == nodata_mask] = np.nan

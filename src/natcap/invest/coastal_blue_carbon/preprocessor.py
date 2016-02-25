@@ -280,8 +280,8 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         transition_matrix_dict (dict): dictionary of lulc transitions
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
-
     LOGGER.info('Creating transition table as output...')
+    
     code_list = code_to_lulc_dict.keys()
     code_list.sort()
     lulc_class_list_sorted = [code_to_lulc_dict[code] for code in code_list]
