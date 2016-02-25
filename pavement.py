@@ -1824,12 +1824,9 @@ def check(options):
     requirements = [
         # requirement, level, version_getter, special_install_message
         ('setuptools', required, None, None),  # 8.0 implements pep440
-        ('virtualenv', required, None, None),
-        ('pip', required, None, None),
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
         ('paramiko', suggested, None, None),
-        ('pycrypto', suggested, 'Crypto', None),
         ('h5py', lib_needed,  None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),

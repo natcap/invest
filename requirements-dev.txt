@@ -11,3 +11,4 @@ virtualenv>=12.0.1
 nose
 sphinx==1.3.1
 paramiko
+pyyaml
