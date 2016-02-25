@@ -325,10 +325,10 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     spat_ref = vector_layer.GetSpatialRef()
 
     original_vector_shapes = []
-    for feature_id in xrange(vector_layer.GetFeatureCount()):
-        feature = vector_layer.GetFeature(feature_id)
+    for feature in vector_layer:
         wkt_feat = shapely.wkt.loads(feature.geometry().ExportToWkt())
         original_vector_shapes.append(wkt_feat)
+    vector_layer.ResetReading()
     original_polygon = shapely.prepared.prep(
         shapely.ops.cascaded_union(original_vector_shapes))
 
