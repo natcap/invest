@@ -1,6 +1,5 @@
 """InVEST Recreation Client."""
 
-import collections
 import uuid
 import os
 import zipfile
@@ -62,7 +61,6 @@ _TMP_BASE_FILES = {
     'tmp_indexed_vector_path': 'indexed_vector.shp',
     'tmp_fid_raster_path': 'vector_fid_raster.tif',
     'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
-    'tmp_scenario_fid_raster_path': 'scenario_vector_fid_raster.tif',
     }
 
 
@@ -234,7 +232,6 @@ def execute(args):
         _build_regression_coefficients(
             file_registry['pud_results_path'], args['predictor_table_path'],
             file_registry['tmp_indexed_vector_path'],
-            file_registry['tmp_fid_raster_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
 
         coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
@@ -280,7 +277,6 @@ def execute(args):
                 coefficents, predictor_id_list,
                 args['scenario_predictor_table_path'],
                 file_registry['tmp_scenario_indexed_vector_path'],
-                file_registry['tmp_scenario_fid_raster_path'],
                 file_registry['scenario_results_path'])
 
     LOGGER.info('deleting temporary files')
@@ -406,8 +402,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
 def _build_regression_coefficients(
         response_vector_path, predictor_table_path,
-        tmp_indexed_vector_path, tmp_fid_raster_path,
-        out_coefficient_vector_path, out_predictor_id_list):
+        tmp_indexed_vector_path, out_coefficient_vector_path,
+        out_predictor_id_list):
     """Calculate least squares fit for the polygons in the response vector.
 
     Build a least squares regression from the log normalized response vector,
@@ -436,9 +432,6 @@ def _build_regression_coefficients(
                     response polygon
         tmp_indexed_vector_path (string): path to temporary working file in
             case the response vector needs an index added
-        tmp_fid_raster_path (string): path to a temporary working file for an
-            indexed version of the vector to be rasterized to use in raster
-            calculations
         out_coefficient_vector_path (string): path to a copy of
             `response_vector_path` with the modified predictor variable
             responses. Overwritten if exists.
@@ -506,7 +499,7 @@ def _build_regression_coefficients(
             raster_type = predictor_type.split('_')[1]
             raster_sum_mean_results = _raster_sum_mean(
                 response_vector_path, predictor_path,
-                tmp_indexed_vector_path, tmp_fid_raster_path)
+                tmp_indexed_vector_path)
             predictor_results = raster_sum_mean_results[raster_type]
         else:
             predictor_results = predictor_functions[predictor_type](
@@ -544,8 +537,6 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
     # make a random field name
     fid_field = str(uuid.uuid4())[-8:]
     fid_field_defn = ogr.FieldDefn(str(fid_field), ogr.OFTInteger)
-    fid_field_defn.SetWidth(24)
-    fid_field_defn.SetPrecision(11)
     fid_indexed_layer.CreateField(fid_field_defn)
     for feature in fid_indexed_layer:
         fid = feature.GetFID()
@@ -560,8 +551,7 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
 
 
 def _raster_sum_mean(
-        response_vector_path, raster_path, tmp_indexed_vector_path,
-        tmp_fid_raster_path):
+        response_vector_path, raster_path, tmp_indexed_vector_path):
     """Sum all non-nodata values in the raster under each polygon.
 
     Parameters:
@@ -580,58 +570,14 @@ def _raster_sum_mean(
     fid_field = _build_temporary_indexed_vector(
         response_vector_path, tmp_indexed_vector_path)
 
-    raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
-    fid_nodata = -1
-    # create an empty raster same size as raster_path
-    pygeoprocessing.new_raster_from_base_uri(
-        raster_path, tmp_fid_raster_path, 'GTiff', fid_nodata,
-        gdal.GDT_Int32, fill_value=fid_nodata)
+    aggregate_results = pygeoprocessing.aggregate_raster_values_uri(
+        raster_path, tmp_indexed_vector_path, shapefile_field=fid_field)
 
-    fid_vector = ogr.Open(tmp_indexed_vector_path)
-    fid_layer = fid_vector.GetLayer()
-    fid_raster = gdal.Open(tmp_fid_raster_path, gdal.GA_Update)
-    gdal.RasterizeLayer(
-        fid_raster, [1], fid_layer, options=['ATTRIBUTE=%s' % fid_field])
-    fid_raster.FlushCache()
-    gdal.Dataset.__swig_destroy__(fid_raster)
-    fid_raster = None
-
-    raster = gdal.Open(raster_path)
-    band = raster.GetRasterBand(1)
     fid_raster_values = {
-        'sum': collections.defaultdict(float),
-        'mean': collections.defaultdict(float),
-        'count': collections.defaultdict(int),
+        'sum': aggregate_results.total,
+        'mean': aggregate_results.pixel_mean,
+        'count': aggregate_results.n_pixels,
         }
-    for offset_dict, fid_block in pygeoprocessing.iterblocks(
-            tmp_fid_raster_path):
-        raster_array = band.ReadAsArray(**offset_dict)
-
-        unique_ids = numpy.unique(fid_block)
-        for attribute_id in unique_ids:
-            # ignore masked values
-            if attribute_id == fid_nodata:
-                continue
-            masked_values = raster_array[fid_block == attribute_id]
-            if raster_nodata is not None:
-                valid_mask = masked_values != raster_nodata
-            else:
-                valid_mask = numpy.empty(
-                    masked_values.shape, dtype=numpy.bool)
-                valid_mask[:] = True
-            fid_raster_values['sum'][attribute_id] += numpy.sum(
-                masked_values[valid_mask])
-            fid_raster_values['count'][attribute_id] += numpy.count_nonzero(
-                valid_mask)
-
-    for attribute_id in fid_raster_values['count']:
-        if fid_raster_values['count'][attribute_id] != 0.0:
-            fid_raster_values['mean'][attribute_id] = (
-                fid_raster_values['sum'][attribute_id] /
-                fid_raster_values['count'][attribute_id])
-        else:
-            fid_raster_values['mean'][attribute_id] = 0.0
-
     return fid_raster_values
 
 
@@ -902,7 +848,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
 def _calculate_scenario(
         base_aoi_path, response_id, predictor_coefficents, predictor_id_list,
         scenario_predictor_table_path, tmp_indexed_vector_path,
-        tmp_fid_raster_path, scenario_results_path):
+        scenario_results_path):
     """Calculate the PUD of a scenario given an existing regression.
 
     It is expected that the predictor coefficients have been derived from a
@@ -945,9 +891,6 @@ def _calculate_scenario(
                 entry in `response_id` else the input is invalid.
         tmp_indexed_vector_path (string): path to temporary working file in
             case the response vector needs an index added
-        tmp_fid_raster_path (string): path to a temporary working file for an
-            indexed version of the vector to be rasterized to use in raster
-            calculations
         scenario_results_path (string): path to desired output scenario
             vector result which will be geometrically a copy of the input
             AOI but contain the base regression fields as well as the scenario
@@ -959,8 +902,8 @@ def _calculate_scenario(
     scenario_predictor_id_list = []
     _build_regression_coefficients(
         base_aoi_path, scenario_predictor_table_path,
-        tmp_indexed_vector_path, tmp_fid_raster_path,
-        scenario_results_path, scenario_predictor_id_list)
+        tmp_indexed_vector_path, scenario_results_path,
+        scenario_predictor_id_list)
 
     id_to_coefficient = dict(
         (p_id, coeff) for p_id, coeff in zip(

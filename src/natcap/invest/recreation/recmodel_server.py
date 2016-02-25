@@ -11,7 +11,6 @@ import hashlib
 import pickle
 import time
 import threading
-import traceback
 import collections
 import logging
 import StringIO

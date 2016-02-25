@@ -502,15 +502,12 @@ class RecreationRegressionTests(unittest.TestCase):
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         tmp_indexed_vector_path = os.path.join(
             self.workspace_dir, 'tmp_indexed_vector.shp')
-        tmp_fid_raster_path = os.path.join(
-            self.workspace_dir, 'tmp_fid_raster.tif')
         fid_values = recmodel_client._raster_sum_mean(
-            response_vector_path, raster_path, tmp_indexed_vector_path,
-            tmp_fid_raster_path)
+            response_vector_path, raster_path, tmp_indexed_vector_path)
 
         # These constants were calculated by hand by Rich.
-        numpy.testing.assert_equal(fid_values['count'][0], 5178)
-        numpy.testing.assert_equal(fid_values['sum'][0], 67314)
+        numpy.testing.assert_equal(fid_values['count'][0], 5065)
+        numpy.testing.assert_equal(fid_values['sum'][0], 65377)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -524,11 +521,8 @@ class RecreationRegressionTests(unittest.TestCase):
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         tmp_indexed_vector_path = os.path.join(
             self.workspace_dir, 'tmp_indexed_vector.shp')
-        tmp_fid_raster_path = os.path.join(
-            self.workspace_dir, 'tmp_fid_raster.tif')
         fid_values = recmodel_client._raster_sum_mean(
-            response_vector_path, raster_path, tmp_indexed_vector_path,
-            tmp_fid_raster_path)
+            response_vector_path, raster_path, tmp_indexed_vector_path)
 
         # These constants were calculated by hand by Rich.
         numpy.testing.assert_equal(fid_values['count'][0], 0)
@@ -734,22 +728,20 @@ class RecreationRegressionTests(unittest.TestCase):
 
         tmp_indexed_vector_path = os.path.join(
             self.workspace_dir, 'tmp_indexed_vector.shp')
-        tmp_fid_raster_path = os.path.join(
-            self.workspace_dir, 'tmp_fid_raster_path.shp')
         out_coefficient_vector_path = os.path.join(
             self.workspace_dir, 'out_coefficient_vector.shp')
         out_predictor_id_list = []
 
         recmodel_client._build_regression_coefficients(
             response_vector_path, predictor_table_path,
-            tmp_indexed_vector_path, tmp_fid_raster_path,
-            out_coefficient_vector_path, out_predictor_id_list)
+            tmp_indexed_vector_path, out_coefficient_vector_path,
+            out_predictor_id_list)
 
-        # build again to test against overwritting output
+        # build again to test against overwriting output
         recmodel_client._build_regression_coefficients(
             response_vector_path, predictor_table_path,
-            tmp_indexed_vector_path, tmp_fid_raster_path,
-            out_coefficient_vector_path, out_predictor_id_list)
+            tmp_indexed_vector_path, out_coefficient_vector_path,
+            out_predictor_id_list)
 
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')
