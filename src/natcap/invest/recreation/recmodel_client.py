@@ -96,7 +96,7 @@ def execute(args):
             args['compute_regression'] is True.  Path to a table that
             describes the regression predictors, their IDs and types.  Must
             contain the fields 'id', 'path', and 'type' where:
-                'id': is a 10 character of less ID that is used to uniquely
+                'id': is an <=10 character length ID that is used to uniquely
                     describe the predictor.  It will be added to the output
                     result shapefile attribute table which is an ESRI
                     Shapefile, thus limited to 10 characters.
@@ -922,7 +922,7 @@ def _calculate_scenario(
         scenario_predictor_table_path (string): path to a CSV table of
             regression predictors, their IDs and types.  Must contain the
             fields 'id', 'path', and 'type' where:
-                'id': is a 10 character of less ID that is used to uniquely
+                'id': is an <=10 character length ID that is used to uniquely
                     describe the predictor.  It will be added to the output
                     result shapefile attribute table which is an ESRI
                     Shapefile, thus limited to 10 characters.
@@ -1026,7 +1026,7 @@ def _validate_same_ids_and_types(
         predictor_table_path, scenario_predictor_table_path):
     """Ensure both tables have same ids and types.
 
-    Assert that both the elements of the 'id' and 'type' fields of each tables
+    Assert that both the elements of the 'id' and 'type' fields of each table
     contain the same elements and that their values are the same.  This
     ensures that a user won't get an accidentally incorrect simulation result.
 
