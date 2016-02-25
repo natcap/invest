@@ -191,9 +191,9 @@ class TestIO(unittest.TestCase):
 
     def test_get_inputs(self):
         """Coastal Blue Carbon: Test get_inputs function in IO module."""
-        from natcap.invest.coastal_blue_carbon import io
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon as cbc
         args = get_args()
-        d = io.get_inputs(args)
+        d = cbc.get_inputs(args)
         self.assertTrue(d['lulc_to_Hb'][0] == 0.0)
         self.assertTrue(d['lulc_to_Hb'][1] == 1.0)
         self.assertTrue(len(d['price_t']) == 11)
