@@ -2,17 +2,10 @@
 
 import os
 import datetime
-import sys
-import tempfile
-import traceback
 import logging
 import sqlite3
-import zipfile
-import glob
 
 import Pyro4
-from osgeo import ogr
-from osgeo import osr
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
