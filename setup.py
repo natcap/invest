@@ -110,7 +110,7 @@ if not USE_CYTHON:
     EXTENSION_LIST = no_cythonize(EXTENSION_LIST)
 
 
-def _get_pkgreq_from_requirements(*pkgnames):
+def requirements(*pkgnames):
     """Get individual package requirements from requirements.txt.
 
     This is particularly useful for keeping requirements.txt the central
@@ -118,14 +118,21 @@ def _get_pkgreq_from_requirements(*pkgnames):
     that needs to be specified here in setup.py is the package name.
 
     Parameters:
-        pkgnames (strings): Package names, provided as individual string
-            parameters.
+        pkgnames (strings): Optional.  Package names, provided as individual
+            string parameters.  If provided, only requirements matching
+            these packages will be returned.  If not provided, all package
+            requirements will be returned.
 
     Returns:
-        A list of package requirment strings.
+        A list of package requirement strings, one for each package name
+        parameter.
+
+    Raises:
+        ValueError: When a packagename requested is not in requirements.txt
     """
     desired_pkgnames = set(pkgnames)
-    package_specs = []
+
+    found_pkgnames = {}
     with open('requirements.txt') as requirements:
         for line in requirements:
             try:
@@ -133,9 +140,16 @@ def _get_pkgreq_from_requirements(*pkgnames):
             except ValueError:
                 continue
             else:
-                if package_req.project_name in desired_pkgnames:
-                    package_specs.append(str(package_req))
-    return package_specs
+                project_name = package_req.project_name
+                if project_name in desired_pkgnames:
+                    found_pkgnames[project_name] = str(package_req)
+
+    if len(desired_pkgnames) != len(found_pkgnames):
+        missing_pkgs = desired_pkgnames - set(found_pkgnames.keys())
+        raise ValueError(('Could not find package '
+                          'requirements for %s') % list(missing_pkgs))
+    return found_pkgnames.values()
+
 
 setup(
     name='natcap.invest',
@@ -184,13 +198,11 @@ setup(
     version=natcap.versioner.parse_version(),
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    # Per setuptools docs, these packages are the only ones that are required
-    # for a minimal installation of natcap.invest.  There may be other packages
-    # required for some features, but they can all be installed via pip from
-    # requirements.txt.
-    install_requires=_get_pkgreq_from_requirements('gdal', 'pygeoprocessing'),
+    install_requires=requirements(),  # fetch from requirements.txt
     include_dirs=[numpy.get_include()],
-    setup_requires=['nose>=1.0', 'natcap.versioner>=0.2.4'],
+    # Having natcap.versioner here allows pip to force installation of
+    # natcap.versioner before the natcap.invest setup.py is run.
+    setup_requires=['nose>=1.0'] + requirements('natcap.versioner', 'numpy'),
     license=LICENSE,
     zip_safe=False,
     keywords='invest',
