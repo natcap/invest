@@ -49,6 +49,17 @@ except pkg_resources.VersionConflict:
     NO_WHEEL_SH = '--no-use-wheel'
 
 
+# The requirements files used by various parts of natcap.invest and the
+# pavement infrastructure that supports it.  Packages required for
+# natcap.invest to work should be included in requirements.txt.  Anything
+# required for other functionality (such as in pavement.py) should be defined
+# in requirements-dev.txt.
+REQUIREMENTS_FILES = [
+    'requirements.txt',
+    'requirements-dev.txt',
+]
+
+
 def supports_color():
     """
     Returns True if the running system's terminal supports color, and False
@@ -378,7 +389,7 @@ class Repository(object):
             return tracked_rev[user_os]
         elif tracked_rev.startswith('REQUIREMENTS_TXT'):
             pkgname = tracked_rev.split(':')[1]
-            version =_parse_version_requirement(pkgname)
+            version = _parse_version_requirement(pkgname)
             if version is None:
                 raise ValueError((
                     'Versions.json requirement string must have the '
@@ -823,20 +834,31 @@ def dev_env(options):
 
 
 def _read_requirements_dict():
-    """Read requirments.txt into a dict.
+    """Read requirements files into a dict.
+
+    Relies on the files listed in `REQUIREMENTS_FILES`.  If multiple files
+    are listed, the union of the sets is used.
 
     Returns:
-        A dict mapping {projectname: requirement}.
+        A dict mapping {projectname: requirement string}.
 
     Example:
         >>> _read_requirements_dict()
         {'pygeoprocessing': 'pygeoprocessing>=0.3.0a12', ...}
     """
     reqs = {}
-    for line in open('requirements.txt'):
-        line = line.strip()
-        parsed_req = pkg_resources.Requirement.parse(line)
-        reqs[parsed_req.project_name] = line
+    for filename in REQUIREMENTS_FILES:
+        for line in open(filename):
+            try:
+                parsed_req = pkg_resources.Requirement.parse(line)
+            except ValueError:
+                # Raised when no package requirement could be parsed.  Commonly
+                # happens on blank lines or lines that are only comments.
+                continue
+
+            # Casting the parsed requirement to a string strips out any
+            # formatting (like comments) allowed in requirements files.
+            reqs[parsed_req.project_name] = str(parsed_req)
     return reqs
 
 
@@ -1802,12 +1824,9 @@ def check(options):
     requirements = [
         # requirement, level, version_getter, special_install_message
         ('setuptools', required, None, None),  # 8.0 implements pep440
-        ('virtualenv', required, None, None),
-        ('pip', required, None, None),
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
         ('paramiko', suggested, None, None),
-        ('pycrypto', suggested, 'Crypto', None),
         ('h5py', lib_needed,  None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
@@ -1862,13 +1881,8 @@ def check(options):
             'git+https://github.com/phargogh/paver@natcap-version'
         )))
 
-        # Don't need to try/except this ... paver is imported at the top of
-        # this file so we know that paver exists.  If it doesn't have a version
-        # module, the ImportError should definitely be raised.
-        from paver import version
-        paver.__version__ = version.VERSION
-
         try:
+            # pywin32 is required by pyinstaller.
             requirements.append(('pywin32', required, 'pywin', None))
 
             # Get the pywin32 version here, as demonstrated by
@@ -1885,6 +1899,12 @@ def check(options):
         # Non-windows OSes also require wheel,just not a special installation
         # of it.
         requirements.append(('wheel', required, None, None))
+
+    # Don't need to try/except this ... paver is imported at the top of
+    # this file so we know that paver exists.  If it doesn't have a version
+    # module, the ImportError should definitely be raised.
+    from paver import version
+    paver.__version__ = version.VERSION
 
     # Compare the above-defined requirements with those in requirements.txt
     # The resulting set should be the union of the two.  Package verison
@@ -2417,11 +2437,7 @@ def build_bin(options):
             # archive.
 
             # Get version spec from requirements.txt
-            with open('requirements.txt') as requirements_file:
-                for requirement in pkg_resources.parse_requirements(requirements_file.read()):
-                    if requirement.project_name == 'natcap.versioner':
-                        versioner_spec = str(requirement)
-                        break
+            versioner_spec = _read_requirements_dict()['natcap.versioner']
 
             # Download a valid source tarball to the dist dir.
             sh(("{python} -c "
