@@ -391,14 +391,14 @@ def get_num_blocks(raster_uri):
 
 def reclass(array, d, nodata=None, out_dtype=None, nodata_mask=None):
     """Reclassify values in array.
-​
+
     If a nodata value is not provided, the function will return an array with
-    NaN values in its place to mark cells that could not be reclassed.
-​
+    NaN values in its place to mark cells that could not be reclassed.​
+
     Args:
         array (np.array): input data
         d (dict): reclassification map
-​
+
     Returns:
         reclass_array (np.array): reclassified array
     """
@@ -629,16 +629,13 @@ def get_inputs(args):
     biomass_transient_dict, soil_transient_dict = \
         _create_transient_dict(args['carbon_pool_transient_uri'])
 
-    d['lulc_to_Yb'] = dict((lulc_to_code_dict[key.lower()],
-                           sub['yearly_accumulation'])
+    d['lulc_to_Yb'] = dict((key, sub['yearly-accumulation'])
                            for key, sub in biomass_transient_dict.items())
-    d['lulc_to_Ys'] = dict((lulc_to_code_dict[key.lower()],
-                           sub['yearly_accumulation'])
+    d['lulc_to_Ys'] = dict((key, sub['yearly-accumulation'])
                            for key, sub in soil_transient_dict.items())
-    d['lulc_to_Hb'] = dict((lulc_to_code_dict[key.lower()],
-                           sub['half-life'])
+    d['lulc_to_Hb'] = dict((key, sub['half-life'])
                            for key, sub in biomass_transient_dict.items())
-    d['lulc_to_Hs'] = dict((lulc_to_code_dict[key.lower()], sub['half-life'])
+    d['lulc_to_Hs'] = dict((key, sub['half-life'])
                            for key, sub in soil_transient_dict.items())
 
     # Parse LULC Transition CSV (Carbon Direction and Relative Magnitude)
@@ -804,37 +801,20 @@ def _create_transient_dict(carbon_pool_transient_uri):
         biomass_transient_dict (dict): transient biomass values
         soil_transient_dict (dict): transient soil values
     """
-    def to_float(x):
-        try:
-            return float(x)
-        except ValueError:
-            return x
-
-    lines = []
-    with open(carbon_pool_transient_uri, 'r') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            row = [to_float(el) for el in row]
-            lines.append(row)
-
-    lulc_class_idx = lines[0].index('lulc-class')
-    pool_idx = lines[0].index('pool')
-    header = lines[0]
-
+    transient_dict = geoprocess.get_lookup_from_table(
+        carbon_pool_transient_uri, 'code')
     biomass_transient_dict = {}
     soil_transient_dict = {}
-
-    for line in lines[1:]:
-        el_dict = dict(zip(header, line))
-        lulc = el_dict['lulc-class']
-        pool = el_dict['pool']
-        if pool == 'biomass':
-            biomass_transient_dict[lulc] = dict(zip(header, line))
-        elif pool == 'soil':
-            soil_transient_dict[lulc] = dict(zip(header, line))
-        else:
-            raise ValueError('Pools in transient value table must only be '
-                             '"biomass" or "soil".')
+    for code, subdict in transient_dict.items():
+        biomass_transient_dict[code] = {}
+        soil_transient_dict[code] = {}
+        for key, val in subdict.items():
+            if key.lower().startswith('biomass'):
+                biomass_transient_dict[code][key.lstrip('biomass')[1:]] = val
+            if key.lower().startswith('soil'):
+                soil_transient_dict[code][key.lstrip('soil')[1:]] = val
+        biomass_transient_dict[code]['lulc-class'] = subdict['lulc-class']
+        soil_transient_dict[code]['lulc-class'] = subdict['lulc-class']
 
     return biomass_transient_dict, soil_transient_dict
 
