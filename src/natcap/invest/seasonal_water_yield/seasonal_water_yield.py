@@ -14,7 +14,7 @@ from osgeo import ogr
 import pygeoprocessing
 import pygeoprocessing.routing
 import pygeoprocessing.routing.routing_core
-import natcap.invest.utils
+from  ..  import utils
 
 import seasonal_water_yield_core  #pylint: disable=import-error
 
@@ -199,8 +199,7 @@ def _execute(args):
     threshold_flow_accumulation = float(args['threshold_flow_accumulation'])
     pixel_size = pygeoprocessing.get_cell_size_from_uri(
         args['dem_raster_path'])
-    file_suffix = natcap.invest.utils.make_suffix_string(
-        args, 'results_suffix')
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = args['workspace_dir']
@@ -208,7 +207,7 @@ def _execute(args):
         [intermediate_output_dir, output_dir])
 
     LOGGER.info('Building file registry')
-    file_registry = natcap.invest.utils.build_file_registry(
+    file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
