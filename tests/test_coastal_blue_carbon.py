@@ -40,16 +40,15 @@ carbon_pool_initial_list = \
      ['3', 'Z', '20', '20', '0.5']]
 
 carbon_pool_transient_list = \
-    [['code', 'lulc-class', 'pool', 'half-life', 'med-impact-dist',
-        'yearly_accumulation'],
-     ['0', 'N', 'biomass', '0', '0', '0'],
-     ['0', 'N', 'soil', '0', '0', '0'],
-     ['1', 'X', 'biomass', '1', '0.5', '1'],
-     ['1', 'X', 'soil', '1', '0.5', '1'],
-     ['2', 'Y', 'biomass', '1', '0.5', '2'],
-     ['2', 'Y', 'soil', '1', '0.5', '2'],
-     ['3', 'Z', 'biomass', '1', '0.5', '1'],
-     ['3', 'Z', 'soil', '1', '0.5', '1']]
+    [['code', 'lulc-class', 'biomass-half-life', 'biomass-med-impact-dist',
+        'biomass-yearly-accumulation',
+        'soil-half-life',
+        'soil-med-impact-dist',
+        'soil-yearly-accumulation'],
+     ['0', 'N', '0', '0', '0', '0', '0', '0'],
+     ['1', 'X', '1', '0.5', '1', '1', '0.5', '1.1'],
+     ['2', 'Y', '1', '0.5', '2', '1', '0.5', '2.1'],
+     ['3', 'Z', '1', '0.5', '1', '1', '0.5', '1.1']]
 
 NODATA_INT = -1
 
@@ -206,6 +205,17 @@ class TestIO(unittest.TestCase):
         self.assertTrue(len(d['transition_years']) == 2)
         shutil.rmtree(args['workspace_dir'])
 
+    def test_create_transient_dict(self):
+        """Coastal Blue Carbon: Test function that reads in the table of
+        values for transient analysis."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+        args = get_args()
+        biomass_transient_dict, soil_transient_dict = \
+            cbc._create_transient_dict(args['carbon_pool_transient_uri'])
+        self.assertTrue(1 in biomass_transient_dict.keys())
+        self.assertTrue(1 in soil_transient_dict.keys())
+
     def tearDown(self):
         pass
 
@@ -233,9 +243,9 @@ class TestModel(unittest.TestCase):
         netseq_array = read_array(netseq_output_raster)
         npv_array = read_array(npv_output_raster)
 
-        np.testing.assert_almost_equal(netseq_array[0, 1], 30, decimal=4)
+        np.testing.assert_almost_equal(netseq_array[0, 1], 31, decimal=4)
         np.testing.assert_almost_equal(netseq_array[0, 0], np.nan, decimal=5)
-        np.testing.assert_almost_equal(npv_array[0, 1], 57.9914, decimal=4)
+        np.testing.assert_almost_equal(npv_array[0, 1], 60.278, decimal=4)
         np.testing.assert_almost_equal(npv_array[0, 0], np.nan, decimal=5)
         shutil.rmtree(args['workspace_dir'])
 
@@ -294,6 +304,18 @@ class TestPreprocessor(unittest.TestCase):
 
     def setUp(self):
         pass
+
+    def test_create_carbon_pool_transient_table_template(self):
+        """Coastal Blue Carbon: Test creation of transient table template."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = get_preprocessor_args(1)
+        filepath = os.path.join(args['workspace_dir'], 'transient_temp.csv')
+        code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
+        preprocessor._create_carbon_pool_transient_table_template(
+            filepath, code_to_lulc_dict)
+        transient_dict = geoprocess.get_lookup_from_csv(filepath, 'code')
+        self.assertTrue(1 in transient_dict.keys())
+        shutil.rmtree(args['workspace_dir'])
 
     def test_preprocessor_ones(self):
         """Coastal Blue Carbon: Test entire run of preprocessor with final
