@@ -337,8 +337,7 @@ def _create_carbon_pool_initial_table_template(filepath, code_to_lulc_dict):
             writer.writerow(row)
 
 
-def _create_carbon_pool_transient_table_template(
-        filepath, code_to_lulc_dict):
+def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
     """Create carbon pool transient values table.
 
     Args:
@@ -347,11 +346,12 @@ def _create_carbon_pool_transient_table_template(
     """
     with open(filepath, 'w') as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(['code', 'lulc-class', 'pool', 'half-life',
-                         'low-impact-disturb', 'med-impact-disturb',
-                         'high-impact-disturb', 'yearly_accumulation'])
+        writer.writerow(['code', 'lulc-class', 'biomass-half-life',
+                         'biomass-low-impact-disturb', 'biomass-med-impact-disturb',
+                         'biomass-high-impact-disturb', 'biomass-yearly-accumulation',
+                         'soil-half-life', 'soil-low-impact-disturb',
+                         'soil-med-impact-disturb', 'soil-high-impact-disturb',
+                         'soil-yearly-accumulation'])
         for code in code_to_lulc_dict.keys():
-            for pool in ['biomass', 'soil']:
-                row = [code, code_to_lulc_dict[code]] + \
-                    [pool, '', '', '', '', '']
-                writer.writerow(row)
+            row = [code, code_to_lulc_dict[code]] + [''] * 10
+            writer.writerow(row)
