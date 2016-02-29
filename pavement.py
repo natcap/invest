@@ -1028,22 +1028,28 @@ def after_install(options, home_dir):
         extra_params = ", %s" % ', '.join(params_as_strings)
         return extra_params
 
-    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
+    # Aything in this list will ALWAYS be installed.
+    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose')]
+
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
-            projectname = requirement.project_name  # project name w/o version req
-            if projectname in preinstalled_pkgs:
-                print ('Requirement %s from requirements.txt already '
-                       'handled by bootstrap script') % projectname
-                continue
-            try:
-                install_params = pkg_pip_params[projectname]
-                extra_params = _format_params(install_params)
-            except KeyError:
-                # No extra parameters needed for this package.
-                extra_params = ''
+            pkgs_to_be_installed.append(requirement)
 
-            install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
+    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
+    for requirement in pkgs_to_be_installed:
+        projectname = requirement.project_name  # project name w/o version req
+        if projectname in preinstalled_pkgs:
+            print ('Requirement %s from requirements.txt already '
+                    'handled by bootstrap script') % projectname
+            continue
+        try:
+            install_params = pkg_pip_params[projectname]
+            extra_params = _format_params(install_params)
+        except KeyError:
+            # No extra parameters needed for this package.
+            extra_params = ''
+
+        install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
 
     if options.env.with_invest:
         # Build an sdist and install it as an egg.  Works better with
