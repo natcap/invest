@@ -2,6 +2,7 @@ import argparse
 import ast
 import distutils
 import distutils.ccompiler
+from distutils.version import StrictVersion
 import getpass
 import glob
 import imp
@@ -1782,8 +1783,29 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
-    # verify required programs exist
     errors_found = False
+    # If we're on Windows, check that python 2.7.11 is installed.  2.7.11
+    # provides a version of multiprocessing that was patched to fix an issue
+    # occurring at runtime in our recreation server tests.  See these for
+    # details:
+    # https://bitbucket.org/natcap/invest/issues/3506
+    # https://bugs.python.org/issue10845
+    # https://hg.python.org/cpython/rev/5d88c1d413b9/
+    if platform.system() == 'Windows':
+        print bold('Checking python')
+        version_info = sys.version_info
+        python_version = '.'.join(
+            [str(getattr(version_info, key)) for key in ['major', 'minor', 'micro']])
+        if StrictVersion(python_version) < StrictVersion('2.7.11'):
+            errors_found = True
+            print red('CRITICAL:') + ('Python >= 2.7.11 required to run '
+                                      'Recreation on Windows, '
+                                       '%s found') % python_version
+        else:
+            print 'Python %s OK' % python_version
+        print ''  # add newline between this section and the next one.
+
+    # verify required programs exist
     programs = [
         ('hg', 'everything'),
         ('git', 'binaries'),
