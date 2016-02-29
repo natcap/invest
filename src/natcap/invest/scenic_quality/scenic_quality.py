@@ -28,7 +28,7 @@ _OUTPUT_BASE_FILES = {
     'viewshed_path': 'viewshed_counts.tif',
     'viewshed_quality_path': 'vshed_qual.tif',
     'pop_stats_path': 'populationStats.html',
-    'overlap_path': 'vp_overlap.shp'
+    'overlap_projected_path': 'vp_overlap.shp'
     }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -45,6 +45,8 @@ _TMP_BASE_FILES = {
     'aoi_proj_struct_path' : 'aoi_proj_to_struct.shp',
     'structures_clipped_path' : 'structures_clipped.shp',
     'structures_projected_path' : 'structures_projected.shp',
+    'aoi_proj_overlap_path' : 'aoi_proj_to_overlap.shp',
+    'overlap_clipped_path' : 'overlap_clipped.shp',
     'clipped_dem_path' : 'dem_clipped.tif',
     'dem_proj_to_aoi_path' : 'dem_proj_to_aoi.tif',
     'clipped_pop_path' : 'pop_clipped.tif',
@@ -546,8 +548,8 @@ def execute(args):
         natcap.invest.reporting.generate_report(report_args)
 
     if "overlap_path" in args:
-        pygeoprocessing.copy_datasource_uri(
-            args["overlap_path"], file_registry['overlap_path'])
+        #pygeoprocessing.copy_datasource_uri(
+        #    args["overlap_path"], file_registry['overlap_path'])
 
         #def zero_to_nodata(view):
         #    """
@@ -560,20 +562,35 @@ def execute(args):
         #    nodata, pixel_size, 'intersection',
         #    assert_datasets_projected=False, vectorize_op=False)
 
+        overlap_srs = pygeoprocessing.get_spatial_ref_uri(args['overlap_path'])
+        overlap_wkt = overlap_srs.ExportToWkt()
+        pygeoprocessing.reproject_datasource_uri(
+            args['aoi_path'], overlap_wkt, file_registry['aoi_proj_overlap_path'])
+
+        clip_datasource_layer(
+            args['overlap_path'], file_registry['aoi_proj_overlap_path'],
+            file_registry['overlap_clipped_path'])
+
+        # Project overlap and DEM to AOI
+        pygeoprocessing.reproject_datasource_uri(
+            file_registry['overlap_clipped_path'], aoi_wkt,
+            file_registry['overlap_projected_path'])
+
         LOGGER.debug("Adding id field to overlap features.")
         id_name = 'investID'
-        setup_overlap_id_fields(file_registry['overlap_path'], id_name)
+        setup_overlap_id_fields(file_registry['overlap_projected_path'], id_name)
 
         LOGGER.debug("Count overlapping pixels per area.")
         pixel_counts = pygeoprocessing.aggregate_raster_values_uri(
             file_registry['viewshed_no_zeros_path'],
-            file_registry['overlap_path'], id_name,
-            ignore_nodata=True).n_pixels
+            file_registry['overlap_projected_path'], id_name,
+            ignore_nodata=True, all_touched=True).n_pixels
 
+        LOGGER.debug("Pixel Counts: %s", pixel_counts)
         LOGGER.debug("Add area field to overlap features.")
         perc_field = '%_overlap'
         add_percent_overlap(
-            file_registry['overlap_path'], perc_field, pixel_counts,
+            file_registry['overlap_projected_path'], perc_field, pixel_counts,
             pixel_size)
 
 
@@ -616,7 +633,7 @@ def add_percent_overlap(
         geom = feature.GetGeometryRef()
         geom_area = geom.GetArea()
         pixel_area = pixel_size**2 * pixel_counts[feature_id]
-        feature.SetField(perc_name, pixel_area / geom_area)
+        feature.SetField(perc_name, float('%.2f' % (pixel_area / geom_area) * 100))
         layer.SetFeature(feature)
 
 def calculate_percentiles_from_raster(raster_path, percentiles):
