@@ -3236,6 +3236,10 @@ def test(args):
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
         call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
 
+    compiler = None
+    if parsed_args.jenkins and platform.system() == 'Windows':
+        compiler = 'msvc'
+
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _run_tests():
         """
@@ -3317,11 +3321,20 @@ def test(args):
                 sh('pip uninstall -y natcap.invest')
             except BuildFailure:
                 pass
-            sh('python setup.py install')
+
+            if compiler:
+                compile_flags = 'build_ext --compiler=' + compiler
+            else:
+                compile_flags = ''
+            sh('python setup.py {flags} install'.format(flags=compile_flags))
 
     # Build an env if needed.
     if not os.path.exists(paver.easy.options.dev_env.envname):
-        call_task('dev_env')
+        if compiler:
+            opts = {'compiler': compiler}
+        else:
+            opts = {}
+        call_task('dev_env', options=opts)
     else:
         _update_invest()
 
