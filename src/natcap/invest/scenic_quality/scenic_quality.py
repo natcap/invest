@@ -36,6 +36,7 @@ _INTERMEDIATE_BASE_FILES = {
     'pop_unaffected_path': 'unaffected_population.tif',
     'aligned_pop_path' : 'aligned_pop.tif',
     'aligned_viewshed_path' : 'aligned_viewshed.tif',
+    'viewshed_no_zeros_path' : 'view_no_zeros.tif'
     }
 
 _TMP_BASE_FILES = {
@@ -47,8 +48,7 @@ _TMP_BASE_FILES = {
     'clipped_dem_path' : 'dem_clipped.tif',
     'dem_proj_to_aoi_path' : 'dem_proj_to_aoi.tif',
     'clipped_pop_path' : 'pop_clipped.tif',
-    'pop_proj_to_aoi_path' : 'pop_proj_to_aoi.tif',
-    'viewshed_no_zeros_path' : 'view_no_zeros.tif'
+    'pop_proj_to_aoi_path' : 'pop_proj_to_aoi.tif'
     }
 
 
@@ -342,6 +342,19 @@ def execute(args):
     # Do quantiles on viewshed_uri
     percentile_list = [25, 50, 75, 100]
 
+    # Set 0 values to nodata before calculating percentiles, since 0 values
+    # indicate there was no viewpoint effects
+
+    def zero_to_nodata(view):
+        """ """
+        return numpy.where(view == 0., nodata, view)
+
+    pygeoprocessing.vectorize_datasets(
+        [file_registry['viewshed_valuation_path']], zero_to_nodata,
+        file_registry['viewshed_no_zeros_path'], gdal.GDT_Int32, nodata,
+        cell_size, 'intersection', assert_datasets_projected=False,
+        vectorize_op=False)
+
     def raster_percentile(band):
         """Operation to use in vectorize_datasets that takes
             the pixels of 'band' and groups them together based on
@@ -355,7 +368,7 @@ def execute(args):
 
     # Get the percentile values for each percentile
     percentiles = calculate_percentiles_from_raster(
-        file_registry['viewshed_valuation_path'], percentile_list)
+        file_registry['viewshed_no_zeros_path'], percentile_list)
 
     LOGGER.debug('percentiles_list : %s', percentiles)
 
@@ -371,9 +384,9 @@ def execute(args):
     # Classify the pixels of raster_dataset into groups and write
     # them to output
     pygeoprocessing.vectorize_datasets(
-            [file_registry['viewshed_valuation_path']], raster_percentile,
-            file_registry['viewshed_quality_path'], gdal.GDT_Int32, percentile_nodata,
-            pixel_size, 'intersection', assert_datasets_projected=False)
+        [file_registry['viewshed_no_zeros_path']], raster_percentile,
+        file_registry['viewshed_quality_path'], gdal.GDT_Int32, percentile_nodata,
+        pixel_size, 'intersection', assert_datasets_projected=False)
 
     # population html stuff
     if 'pop_path' in args:
@@ -536,16 +549,16 @@ def execute(args):
         pygeoprocessing.copy_datasource_uri(
             args["overlap_path"], file_registry['overlap_path'])
 
-        def zero_to_nodata(view):
-            """
-            """
-            return numpy.where(view <= 0, nodata, view)
+        #def zero_to_nodata(view):
+        #    """
+        #    """
+        #    return numpy.where(view <= 0, nodata, view)
 
-        pygeoprocessing.vectorize_datasets(
-            [file_registry['viewshed_path']], zero_to_nodata,
-            file_registry['viewshed_no_zeros_path'], gdal.GDT_Float32,
-            nodata, pixel_size, 'intersection',
-            assert_datasets_projected=False, vectorize_op=False)
+        #pygeoprocessing.vectorize_datasets(
+        #    [file_registry['viewshed_path']], zero_to_nodata,
+        #    file_registry['viewshed_no_zeros_path'], gdal.GDT_Float32,
+        #    nodata, pixel_size, 'intersection',
+        #    assert_datasets_projected=False, vectorize_op=False)
 
         LOGGER.debug("Adding id field to overlap features.")
         id_name = 'investID'
@@ -680,12 +693,16 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
         rank = math.ceil(perc/100.0 * n_elements)
         rank_list.append(int(rank))
 
+    # Need to handle 0th percentile case. 0th percentile is first element
+    if 0 in rank_list:
+        rank_list[rank_list.index(0)] = 1
+
     # A variable to burn through when doing heapq merge sort over the
     # iterators. Variable is used to check if we've iterated to a
     # specified rank spot, to grab percentile value
-    counter = 0
+    counter = 1
     # Setup a list of zeros to replace with percentile results
-    results = [0] * len(rank_list)
+    results = [float('nan')] * len(rank_list)
 
     LOGGER.debug('Percentile Rank List: %s', rank_list)
 
@@ -695,6 +712,8 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
             LOGGER.debug('percentile value is : %s', num)
             results[rank_list.index(counter)] = int(num)
         counter += 1
+
+    LOGGER.debug("Percentile Counter : %s" % counter)
 
     band = None
     raster = None
