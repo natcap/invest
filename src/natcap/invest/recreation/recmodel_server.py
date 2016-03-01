@@ -25,7 +25,7 @@ import shapely.geometry
 import shapely.prepared
 
 from ... import invest
-from . import out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
+from natcap.invest.recreation import out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
 from . import recmodel_client
 
 BLOCKSIZE = 2 ** 21

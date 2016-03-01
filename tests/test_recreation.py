@@ -4,7 +4,6 @@ import datetime
 import glob
 import zipfile
 import socket
-import threading
 import multiprocessing
 import multiprocessing.pool
 import unittest
@@ -44,16 +43,16 @@ def _timeout(max_timeout):
     return timeout_decorator
 
 
-class TestBufferedFileManager(unittest.TestCase):
-    """Tests for BufferedFileManager."""
+class TestBufferedNumpyDiskMap(unittest.TestCase):
+    """Tests for BufferedNumpyDiskMap."""
     def setUp(self):
         """Setup Pyro port."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def test_basic_operation(self):
         """Recreation test buffered file manager basic ops w/ no buffer."""
-        from natcap.invest.recreation import buffered_file_manager
-        file_manager = buffered_file_manager.BufferedFileManager(
+        from natcap.invest.recreation import buffered_numpy_disk_map
+        file_manager = buffered_numpy_disk_map.BufferedNumpyDiskMap(
             os.path.join(self.workspace_dir, 'test'), 0)
 
         file_manager.append(1234, numpy.array([1, 2, 3, 4]))
@@ -147,10 +146,9 @@ class TestLocalPyroRecServer(unittest.TestCase):
             'max_year': 2015,
         }
 
-        server_thread = threading.Thread(
+        server_process = multiprocessing.Process(
             target=recmodel_server.execute, args=(server_args,))
-        server_thread.daemon = True
-        server_thread.start()
+        server_process.start()
 
         client_args = {
             'aoi_path': os.path.join(
@@ -166,6 +164,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
         recmodel_client.execute(client_args)
+        server_process.terminate()
 
         # testing for file existence seems reasonable since mostly we are
         # testing that a local server starts and a client connects to it
@@ -343,10 +342,9 @@ class TestLocalPyroRecServer(unittest.TestCase):
             'max_points_per_node': 50,
         }
 
-        server_thread = threading.Thread(
+        server_process = multiprocessing.Process(
             target=recmodel_server.execute, args=(server_args,))
-        server_thread.daemon = True
-        server_thread.start()
+        server_process.start()
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
@@ -365,6 +363,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
         }
 
         recmodel_client.execute(args)
+        server_process.terminate()
 
         RecreationRegressionTests._assert_regression_results_eq(
             args['workspace_dir'],
@@ -914,56 +913,57 @@ class RecreationRegressionTests(unittest.TestCase):
             AssertionError if any files are missing or results are out of
             range by `tolerance_places`
         """
-        # Test that the workspace has the same files as we expect
-        _test_same_files(file_list_path, workspace_dir)
+        try:
+            # Test that the workspace has the same files as we expect
+            _test_same_files(file_list_path, workspace_dir)
 
-        # we expect a file called 'aggregated_results.shp'
-        result_vector = ogr.Open(result_vector_path)
-        result_layer = result_vector.GetLayer()
+            # we expect a file called 'aggregated_results.shp'
+            result_vector = ogr.Open(result_vector_path)
+            result_layer = result_vector.GetLayer()
 
-        # The tolerance of 3 digits after the decimal was determined by
-        # experimentation on the application with the given range of numbers.
-        # This is an apparently reasonable approach as described by ChrisF:
-        # http://stackoverflow.com/a/3281371/42897
-        # and even more reading about picking numerical tolerance (it's hard):
-        # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-        tolerance_places = 3
+            # The tolerance of 3 digits after the decimal was determined by
+            # experimentation on the application with the given range of numbers.
+            # This is an apparently reasonable approach as described by ChrisF:
+            # http://stackoverflow.com/a/3281371/42897
+            # and even more reading about picking numerical tolerance (it's hard):
+            # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+            tolerance_places = 3
 
-        headers = [
-            'FID', 'PUD_YR_AVG', 'PUD_JAN', 'PUD_FEB', 'PUD_MAR', 'PUD_APR',
-            'PUD_MAY', 'PUD_JUN', 'PUD_JUL', 'PUD_AUG', 'PUD_SEP', 'PUD_OCT',
-            'PUD_NOV', 'PUD_DEC', 'bonefish', 'airdist', 'ports', 'bathy',
-            'PUD_EST']
+            headers = [
+                'FID', 'PUD_YR_AVG', 'PUD_JAN', 'PUD_FEB', 'PUD_MAR',
+                'PUD_APR', 'PUD_MAY', 'PUD_JUN', 'PUD_JUL', 'PUD_AUG',
+                'PUD_SEP', 'PUD_OCT', 'PUD_NOV', 'PUD_DEC', 'bonefish',
+                'airdist', 'ports', 'bathy', 'PUD_EST']
 
-        with open(agg_results_path, 'rb') as agg_result_file:
-            header_line = agg_result_file.readline().strip()
-            error_in_header = False
-            for expected, actual in zip(headers, header_line.split(',')):
-                if actual != expected:
-                    error_in_header = True
-            if error_in_header:
-                raise ValueError(
-                    "Header not as expected, got\n%s\nexpected:\n%s" % (
-                        str(header_line.split(',')), headers))
-            for line in agg_result_file:
-                try:
-                    expected_result_lookup = dict(
-                        zip(headers, [float(x) for x in line.split(',')]))
-                except ValueError:
-                    LOGGER.error(line)
-                    raise
-                feature = result_layer.GetFeature(
-                    int(expected_result_lookup['FID']))
-                for field, value in expected_result_lookup.iteritems():
-                    numpy.testing.assert_almost_equal(
-                        feature.GetField(field), value,
-                        decimal=tolerance_places)
-                ogr.Feature.__swig_destroy__(feature)
-                feature = None
-
-        result_layer = None
-        ogr.DataSource.__swig_destroy__(result_vector)
-        result_vector = None
+            with open(agg_results_path, 'rb') as agg_result_file:
+                header_line = agg_result_file.readline().strip()
+                error_in_header = False
+                for expected, actual in zip(headers, header_line.split(',')):
+                    if actual != expected:
+                        error_in_header = True
+                if error_in_header:
+                    raise ValueError(
+                        "Header not as expected, got\n%s\nexpected:\n%s" % (
+                            str(header_line.split(',')), headers))
+                for line in agg_result_file:
+                    try:
+                        expected_result_lookup = dict(
+                            zip(headers, [float(x) for x in line.split(',')]))
+                    except ValueError:
+                        LOGGER.error(line)
+                        raise
+                    feature = result_layer.GetFeature(
+                        int(expected_result_lookup['FID']))
+                    for field, value in expected_result_lookup.iteritems():
+                        numpy.testing.assert_almost_equal(
+                            feature.GetField(field), value,
+                            decimal=tolerance_places)
+                    ogr.Feature.__swig_destroy__(feature)
+                    feature = None
+        finally:
+            result_layer = None
+            ogr.DataSource.__swig_destroy__(result_vector)
+            result_vector = None
 
 
 def _test_same_files(base_list_path, directory_path):
