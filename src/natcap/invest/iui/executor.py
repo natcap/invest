@@ -793,7 +793,7 @@ def _log_exit_status(session_id, status):
     Returns:
         None
     """
-    logger = logging.getLogger('natcap.invest.iui._log_exit_status')
+    logger = logging.getLogger('natcap.invest.iui.executor._log_exit_status')
 
     try:
         payload = {
@@ -802,7 +802,7 @@ def _log_exit_status(session_id, status):
         }
 
         logging_server = _get_logging_server()
-        logging_server.log_invest_exit_status(payload)
+        logging_server.log_invest_run(payload, 'exit')
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
@@ -852,7 +852,7 @@ def _log_model(model_name, model_args, session_id=None):
         }
 
         logging_server = _get_logging_server()
-        logging_server.log_invest_run(payload)
+        logging_server.log_invest_run(payload, 'log')
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(

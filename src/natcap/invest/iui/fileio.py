@@ -73,7 +73,8 @@ class LastRunHandler(JSONHandler):
             invest_version = version
         else:
             # If we aren't on a release, use a 'dev' release version for
-            # naming thelastrun json file.
+            # naming the lastrun json file so we don't lose our inputs on
+            # every version
             if 'post' in natcap.invest.__version__:
                 invest_version = 'dev'
             else:
