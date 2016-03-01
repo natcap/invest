@@ -311,7 +311,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(100.0)
+    @_timeout(200.0)
     def test_regression_local_server(self):
         """Recreation base regression test on sample data on local server.
 
@@ -530,7 +530,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(100.0)
+    @_timeout(200.0)
     def test_base_regression(self):
         """Recreation base regression test on sample data.
 
@@ -555,7 +555,6 @@ class RecreationRegressionTests(unittest.TestCase):
         }
 
         recmodel_client.execute(args)
-
         RecreationRegressionTests._assert_regression_results_eq(
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
