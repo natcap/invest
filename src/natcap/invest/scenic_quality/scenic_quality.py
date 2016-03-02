@@ -373,7 +373,7 @@ def execute(args):
             # Do a distance transform on each viewpoint raster
             dist_pixel_path = pygeoprocessing.temporary_filename()
             pygeoprocessing.distance_transform_edt(
-                viewshed_filepath, dist_path, process_pool=None)
+                viewshed_filepath, dist_pixel_path, process_pool=None)
 
             dist_nodata = pygeoprocessing.get_nodata_from_uri(dist_pixel_path)
 
@@ -530,7 +530,7 @@ def execute(args):
         pygeoprocessing.align_dataset_list(
             dataset_uri_list, dataset_out_uri_list, resample_method_list,
             out_pixel_size, 'intersection', 1,
-            dataset_to_bound_index=None, aoi_uri=rgs['aoi_path'],
+            dataset_to_bound_index=None, aoi_uri=args['aoi_path'],
             assert_datasets_projected=True, all_touched=False)
 
         pop_nodata = pygeoprocessing.get_nodata_from_uri(
@@ -538,7 +538,7 @@ def execute(args):
 
         def pop_affected_op(pop, view):
             """Compute affected population. """
-            valid_mask = ((pop != pop_nodata) | (view != nodata))
+            valid_mask = ((pop != pop_nodata) & (view != nodata))
 
             pop_places = numpy.where(view[valid_mask] > 0, pop[valid_mask], 0)
             pop_final = numpy.empty(valid_mask.shape)
@@ -692,7 +692,8 @@ def add_percent_overlap(
         geom = feature.GetGeometryRef()
         geom_area = geom.GetArea()
         pixel_area = pixel_size**2 * pixel_counts[feature_id]
-        feature.SetField(perc_name, float('%.2f' % (pixel_area / geom_area) * 100))
+        #feature.SetField(perc_name, float('%.2f' % (pixel_area / geom_area) * 100))
+        feature.SetField(perc_name, (pixel_area / geom_area) * 100)
         layer.SetFeature(feature)
 
 def calculate_percentiles_from_raster(raster_path, percentiles):
