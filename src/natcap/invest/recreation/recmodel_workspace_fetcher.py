@@ -14,8 +14,9 @@ LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
 RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'
 
-#this serializer lets us pass null bytes in strings unlike the default
+# this serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
+
 
 def execute(args):
     """Fetch workspace from remote server.
@@ -46,7 +47,7 @@ def execute(args):
     workspace_aoi_binary = recmodel_server.fetch_workspace_aoi(
         args['workspace_id'])
 
-    #unpack result
+    # unpack result
     open(os.path.join(
         output_dir, '%s.zip' % args['workspace_id']), 'wb').write(
             workspace_aoi_binary)
