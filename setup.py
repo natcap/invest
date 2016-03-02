@@ -14,6 +14,7 @@ import sys
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
 from setuptools import setup
+import pkg_resources
 
 import numpy
 import natcap.versioner
@@ -108,6 +109,48 @@ EXTENSION_LIST = ([
 if not USE_CYTHON:
     EXTENSION_LIST = no_cythonize(EXTENSION_LIST)
 
+
+def requirements(*pkgnames):
+    """Get individual package requirements from requirements.txt.
+
+    This is particularly useful for keeping requirements.txt the central
+    location for a required package's version specification, so the only thing
+    that needs to be specified here in setup.py is the package name.
+
+    Parameters:
+        pkgnames (strings): Optional.  Package names, provided as individual
+            string parameters.  If provided, only requirements matching
+            these packages will be returned.  If not provided, all package
+            requirements will be returned.
+
+    Returns:
+        A list of package requirement strings, one for each package name
+        parameter.
+
+    Raises:
+        ValueError: When a packagename requested is not in requirements.txt
+    """
+    desired_pkgnames = set(pkgnames)
+
+    found_pkgnames = {}
+    with open('requirements.txt') as requirements:
+        for line in requirements:
+            try:
+                package_req = pkg_resources.Requirement.parse(line)
+            except ValueError:
+                continue
+            else:
+                project_name = package_req.project_name
+                if project_name in desired_pkgnames:
+                    found_pkgnames[project_name] = str(package_req)
+
+    if len(desired_pkgnames) != len(found_pkgnames):
+        missing_pkgs = desired_pkgnames - set(found_pkgnames.keys())
+        raise ValueError(('Could not find package '
+                          'requirements for %s') % list(missing_pkgs))
+    return found_pkgnames.values()
+
+
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
@@ -135,7 +178,6 @@ setup(
         'natcap.invest.marine_water_quality',
         'natcap.invest.ndr',
         'natcap.invest.nearshore_wave_and_erosion',
-        'natcap.invest.nutrient',
         'natcap.invest.optimization',
         'natcap.invest.overlap_analysis',
         'natcap.invest.pollination',
@@ -156,9 +198,11 @@ setup(
     version=natcap.versioner.parse_version(),
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    install_requires=open('requirements.txt').read().split('\n'),
+    install_requires=requirements(),  # fetch from requirements.txt
     include_dirs=[numpy.get_include()],
-    setup_requires=['nose>=1.0'],
+    # Having natcap.versioner here allows pip to force installation of
+    # natcap.versioner before the natcap.invest setup.py is run.
+    setup_requires=['nose>=1.0'] + requirements('natcap.versioner', 'numpy'),
     license=LICENSE,
     zip_safe=False,
     keywords='invest',
