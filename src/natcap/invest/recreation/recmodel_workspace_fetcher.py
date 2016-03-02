@@ -21,6 +21,10 @@ Pyro4.config.SERIALIZER = 'marshal'
 def execute(args):
     """Fetch workspace from remote server.
 
+    After the call a .zip file exists at `args['workspace_dir']` named
+    `args['workspace_id'] + '.zip'` and contains the zipped workspace of that
+    model run.
+
     Parameters:
         args['workspace_dir'] (string): path to workspace directory
         args['hostname'] (string): FQDN to recreation server

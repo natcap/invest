@@ -1,5 +1,6 @@
 """InVEST Recreation model tests."""
 
+import Pyro4
 import datetime
 import glob
 import zipfile
@@ -114,6 +115,83 @@ class TestLocalPyroRecServer(unittest.TestCase):
             _ = recmodel_server.RecModel(
                 os.path.join(REGRESSION_DATA, 'sample_data.csv'),
                 2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @_timeout(100.0)
+    def test_workspace_fetcher(self):
+        """Recreation test workspace fetcher on a local Pyro4 empty server."""
+        from natcap.invest.recreation import recmodel_server
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_workspace_fetcher
+
+        pygeoprocessing.create_directories([self.workspace_dir])
+
+        sample_point_data_path = os.path.join(
+            REGRESSION_DATA, 'sample_data.csv')
+
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': port,
+            'raw_csv_point_data_path': sample_point_data_path,
+            'cache_workspace': self.workspace_dir,
+            'min_year': 2004,
+            'max_year': 2015,
+        }
+
+        server_process = multiprocessing.Process(
+            target=recmodel_server.execute, args=(server_args,))
+        server_process.start()
+
+        path = "PYRO:natcap.invest.recreation@localhost:%s" % port
+        recreation_server = Pyro4.Proxy(path)
+
+        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
+
+        basename = os.path.splitext(aoi_path)[0]
+        aoi_archive_path = os.path.join(
+            self.workspace_dir, 'aoi_zipped.zip')
+        with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
+            for filename in glob.glob(basename + '.*'):
+                myzip.write(filename, os.path.basename(filename))
+
+        # convert shapefile to binary string for serialization
+        zip_file_binary = open(aoi_archive_path, 'rb').read()
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+        out_vector_filename = 'test_aoi_for_subset_pud.shp'
+
+        zip_result, workspace_id = (
+            recreation_server.calc_photo_user_days_in_aoi(
+                zip_file_binary, date_range, out_vector_filename))
+
+        fetcher_args = {
+            'workspace_dir': self.workspace_dir,
+            'hostname': 'localhost',
+            'port': port,
+            'workspace_id': workspace_id,
+        }
+        recmodel_workspace_fetcher.execute(fetcher_args)
+        server_process.terminate()
+
+        out_workspace_dir = os.path.join(self.workspace_dir, 'workspace_zip')
+        os.makedirs(out_workspace_dir)
+        workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
+        open(workspace_zip_path, 'wb').write(workspace_zip_binary)
+        zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
+        pygeoprocessing.testing.assert_vectors_equal(
+            aoi_path,
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1e-5)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
