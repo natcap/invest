@@ -117,8 +117,8 @@
                   "defaultValue": "0.13",
                   "validText": "[0-9]+(\\.[0-9][0-9])?",
                   "dataType": "float",
-                  "required": true,
-                  "helpText": "The earth curvature correction option corrects for the curvature of the earth and refraction of visible light in air. Changes in air density curve the light downward causing an observer to see further and the earth to appear less curved. While the magnitude of this effect varies with atmospheric conditions, a standard rule of thumb is that refraction of visible light reduces the apparent curvature of the earth by one-seventh. By default, this model corrects for the curvature of the earth and sets the refractivity coefficient to 0.13."
+                  "required": false,
+                  "helpText": "The earth curvature correction option corrects for the curvature of the earth and refraction of visible light in air. Changes in air density curve the light downward causing an observer to see further and the earth to appear less curved. While the magnitude of this effect varies with atmospheric conditions, a standard rule of thumb is that refraction of visible light reduces the apparent curvature of the earth by one-seventh. By default, this model corrects for the curvature of the earth and sets the refractivity coefficient to 0.13. If left blank the model will NOT correct for curvature of the earth."
                 },
                 {
                   "id": "pop_path",
