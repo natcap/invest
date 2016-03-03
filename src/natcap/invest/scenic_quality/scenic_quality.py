@@ -23,6 +23,10 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 
+class ValuationContainerError(Exception):
+    """A custom error message for missing Valuation parameters."""
+    pass
+
 _OUTPUT_BASE_FILES = {
     'viewshed_valuation_path': 'vshed.tif',
     'viewshed_path': 'viewshed_counts.tif',
@@ -86,6 +90,17 @@ def execute(args):
 
     """
     LOGGER.info("Start Scenic Quality Model")
+
+    # Check that the Validation container is selected since the UI can not
+    val_ordinal = args['valuation_function']
+    val_containers = {
+        '0': 'polynomial_container', '1': 'log_container',
+        '2': 'exponential_container'}
+
+    if args[val_containers[val_ordinal]] == False:
+        raise ValuationContainerError(
+            'The container for the selected valuation functions '
+            'coefficients was not selected.')
 
     # Create output and intermediate directory
     output_dir = os.path.join(args['workspace_dir'], 'output')
@@ -157,10 +172,14 @@ def execute(args):
         'bilinear', file_registry['dem_proj_to_aoi_path'])
 
     # Read in valuation coefficients
-    coef_a = float(args['a_coefficient'])
-    coef_b = float(args['b_coefficient'])
-    coef_c = float(args['c_coefficient'])
-    coef_d = float(args['d_coefficient'])
+    val_coeffs = {'0': 'poly', '1': 'log', '2': 'exp'}
+    coef_a = float(args['%s_a_coeff' % val_coeffs[val_ordinal]])
+    coef_b = float(args['%s_b_coeff' % val_coeffs[val_ordinal]])
+
+    if val_ordinal == '0':
+        coef_c = float(args['poly_c_coeff'])
+        coef_d = float(args['poly_d_coeff'])
+
     max_val_radius = float(args['max_valuation_radius'])
 
 
@@ -243,6 +262,25 @@ def execute(args):
         #dist_final[max_dist_mask] = 0.0
         #return dist_final
 
+    def exp_val(dist, weight):
+        """Exponential Decay Valuation function.
+
+        This represents equation 1 in the User Guide with the added weighted
+        factor.
+
+        Parameters:
+            dist (numpy.array): pixels are distances to a viewpoint.
+            weight (numpy.array): pixels are constant weight values used to
+                scale the valuation output
+
+        Returns:
+            numpy.array
+        """
+        return numpy.where(
+            (dist != nodata) & (weight != nodata),
+            (coef_a + coef_b * numpy.log(dist)) * weight,
+            nodata)
+
     def add_op(raster_one, raster_two):
         """Aggregate valuation matrices.
 
@@ -262,10 +300,8 @@ def execute(args):
         return raster_one + raster_two
 
     # Determine which valuation operation to use based on user input
-    if args["valuation_function"] == "polynomial: a + bx + cx^2 + dx^3":
-        val_op = polynomial_val
-    else:
-        val_op = log_val
+    val_functs = {'0': polynomial_val, '1': log_val, '2': exp_val}
+    val_op = val_functs[args["valuation_function"]]
 
     viewpoints_vector = ogr.Open(file_registry['structures_projected_path'])
 

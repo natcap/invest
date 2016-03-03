@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.scenic_quality.scenic_quality",
   "modelName": "scenic_quality",
   "localDocURI": "../documentation/scenic_quality.html",
-  "height": 600,
+  "height": 700,
   "width": 700,
   "elements": [
     {
@@ -174,7 +174,7 @@
           "enabled": true,
           "elements": [
             {
-              "id": "equation_coefficient_list",
+              "id": "workspace_list",
               "type": "list",
               "elements": [
                 {
@@ -184,55 +184,12 @@
                   "label": "Valuation Function",
                   "options": [
                     "polynomial: a + bx + cx^2 + dx^3",
-                    "logarithmic: a + b ln(x)"
+                    "logarithmic: a + blog(x)",
+                    "exponential decay: a*e^-bx"
                   ],
-                  "returns": "strings",
+                  "returns": "ordinals",
                   "defaultValue": 0,
-                  "helpText": "This field indicates the functional form f(x) the model will use to value the visual impact for each viewpoint. For distances less than 1 km (x&lt;1), the model uses a linear form g(x) where the line passes through f(1) (i.e. g(1) == f(1)) and extends to zero with the same slope as f(1) (i.e. g'(x) == f'(1))."
-                },
-                {
-                  "id": "a_coefficient",
-                  "args_id": "a_coefficient",
-                  "type": "text",
-                  "label": "'a' Coefficient (polynomial/logarithmic)",
-                  "defaultValue": "1.0",
-                  "validText": "-?[0-9]+(\\.[0-9]{18})?",
-                  "dataType": "float",
-                  "required": true,
-                  "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
-                },
-                {
-                  "id": "b_coefficient",
-                  "args_id": "b_coefficient",
-                  "type": "text",
-                  "label": "'b' Coefficient (polynomial/logarithmic)",
-                  "defaultValue": "0.0",
-                  "validText": "-?[0-9]+(\\.[0-9]{18})?",
-                  "dataType": "float",
-                  "required": true,
-                  "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
-                },
-                {
-                  "id": "c_coefficient",
-                  "args_id": "c_coefficient",
-                  "type": "text",
-                  "label": "'c' Coefficient (polynomial only)",
-                  "defaultValue": "0.0",
-                  "validText": "-?[0-9]+(\\.[0-9]{18})?",
-                  "dataType": "float",
-                  "required": true,
-                  "helpText": "Third coefficient for the polynomial's quadratic term."
-                },
-                {
-                  "id": "d_coefficient",
-                  "args_id": "d_coefficient",
-                  "type": "text",
-                  "label": "'d' Coefficient (polynomial only)",
-                  "defaultValue": "0.0",
-                  "validText": "[0-9]+(\\.[0-9]{18})?",
-                  "dataType": "float",
-                  "required": true,
-                  "helpText": "Fourth coefficient for the polynomial's cubic exponent."
+                  "helpText": "This field indicates the functional form f(x) the model will use to value the visual impact for each viewpoint."
                 },
                 {
                   "id": "max_valuation_radius",
@@ -246,6 +203,133 @@
                   "helpText": "Radius beyond which the valuation is set to zero. The valuation function 'f' cannot be negative at the radius 'r' (f(r)&gt;=0)."
                 }
               ]
+            },
+            {
+              "id": "polynomial_container",
+              "args_id": "polynomial_container",
+              "type": "container",
+              "label": "Coefficients for: 3rd Degree Polynomial Valuation Function",
+              "collapsible": true,
+              "defaultValue": false,
+              "elements": [
+                {
+                  "id": "polynomial_list",
+                  "type": "list",
+                  "elements": [
+                    {
+                      "id": "poly_a_coeff",
+                      "args_id": "poly_a_coeff",
+                      "type": "text",
+                      "label": "'a' Coefficient",
+                      "defaultValue": "1.0",
+                      "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                      "dataType": "float",
+                      "required": true,
+                      "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
+                    },
+                    {
+                      "id": "poly_b_coeff",
+                      "args_id": "poly_b_coeff",
+                      "type": "text",
+                      "label": "'b' Coefficient",
+                      "defaultValue": "0.0",
+                      "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                      "dataType": "float",
+                      "required": true,
+                      "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
+                    },
+                    {
+                      "id": "poly_c_coeff",
+                      "args_id": "poly_c_coeff",
+                      "type": "text",
+                      "label": "'c' Coefficient",
+                      "defaultValue": "0.0",
+                      "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                      "dataType": "float",
+                      "required": true,
+                      "helpText": "Third coefficient for the polynomial's quadratic term."
+                    },
+                    {
+                      "id": "poly_d_coeff",
+                      "args_id": "poly_d_coeff",
+                      "type": "text",
+                      "label": "'d' CoefficientS",
+                      "defaultValue": "0.0",
+                      "validText": "[0-9]+(\\.[0-9]{18})?",
+                      "dataType": "float",
+                      "required": true,
+                      "helpText": "Fourth coefficient for the polynomial's cubic exponent."
+                    }]}]
+            },
+            {
+              "id": "log_container",
+              "args_id": "log_container",
+              "type": "container",
+              "label": "Coefficients for: logarithmic Valuation Function",
+              "collapsible": true,
+              "defaultValue": false,
+              "elements": [
+                {
+                  "id": "log_list",
+                  "type": "list",
+                  "elements": [
+                    {
+                      "id": "log_a_coeff",
+                      "args_id": "log_a_coeff",
+                      "type": "text",
+                      "label": "'a' Coefficient",
+                      "defaultValue": "1.0",
+                      "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                      "dataType": "float",
+                      "required": true,
+                      "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
+                    },
+                    {
+                      "id": "log_b_coeff",
+                      "args_id": "log_b_coeff",
+                      "type": "text",
+                      "label": "'b' Coefficient",
+                      "defaultValue": "0.0",
+                      "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                      "dataType": "float",
+                      "required": true,
+                      "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
+                    }]}]
+            },
+            {
+              "id": "exponential_container",
+              "args_id": "exponential_container",
+              "type": "container",
+              "label": "Coefficients for: Exponential Decay Valuation Function",
+              "collapsible": true,
+              "defaultValue": false,
+              "elements": [
+                {
+                  "id": "exp_list",
+                  "type": "list",
+                  "elements": [
+                    {
+                      "id": "exp_a_coeff",
+                      "args_id": "exp_a_coeff",
+                      "type": "text",
+                      "label": "'a' Coefficient",
+                      "defaultValue": "1.0",
+                      "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                      "dataType": "float",
+                      "required": true,
+                      "helpText": "First coefficient used either by the polynomial or by the logarithmic valuation function."
+                    },
+                    {
+                      "id": "exp_b_coeff",
+                      "args_id": "exp_b_coeff",
+                      "type": "text",
+                      "label": "'b' Coefficient",
+                      "defaultValue": "0.0",
+                      "validText": "-?[0-9]+(\\.[0-9]{18})?",
+                      "dataType": "float",
+                      "required": true,
+                      "helpText": "Second coefficient used either by the polynomial or by the logarithmic valuation function."
+                    }]}]
             }
           ]
         }
