@@ -145,7 +145,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_tags_error(self):
-        """Reporting: testing full report raises excpetion on included tags."""
+        """Reporting: testing module raises excpetion on included tags."""
         from natcap.invest import reporting
 
         workspace_dir = self.workspace_dir
