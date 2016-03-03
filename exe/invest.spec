@@ -1,6 +1,6 @@
 import sys
 import os
-from PyInstaller.compat import is_win
+from PyInstaller.compat import is_win, is_darwin
 
 # Global Variables
 current_dir = os.path.join(os.getcwd(), os.path.dirname(sys.argv[1]))
@@ -47,6 +47,11 @@ pyz = PYZ(a.pure)
 exename = 'invest'
 if is_win:
     exename += '.exe'
+
+if is_darwin:
+  a.binaries = a.binaries + [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib','BINARY')]
+  a.binaries = a.binaries + [('libgeos_c.dylib', '/usr/local/lib/libgeos_c.dylib','BINARY')]
+  a.binaries = a.binaries + [('libgeos-3.5.0.dylib', '/usr/local/lib/libgeos-3.5.0.dylib','BINARY')]
 
 exe = EXE(
     pyz,
