@@ -7,12 +7,11 @@
 # `paver check` to verify you have all the required packages.
 
 Pyro4
-gdal>=1.9.0,<2.0
+gdal>=1.11.2,<2.0
 h5py>=2.3.0
 matplotlib
 natcap.versioner>=0.2.4
-numpy
-poster
+numpy>=1.10.2rc1
 pyamg>=2.2.1
 pygeoprocessing>=0.3.0a13
 scipy>=0.14.0
