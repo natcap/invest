@@ -1,20 +1,20 @@
+# requirements.txt
+# --------------------
+# This file records the packages and requirements needed in order for
+# all models of natcap.invest to work as expected.
+#
+# Note that there may be some OS-specific requirements, so be sure to run
+# `paver check` to verify you have all the required packages.
+
 Pyro4
 gdal>=1.9.0,<2.0
 h5py>=2.3.0
 matplotlib
 natcap.versioner>=0.2.4
 numpy
-nose
-coverage
-paramiko
-pip>=6.0.0
 poster
 pyamg>=2.2.1
-pycrypto
 pygeoprocessing>=0.3.0a13
-pyyaml
 scipy>=0.14.0
-setuptools>=8.0
 shapely
-six>=1.3
-virtualenv>=12.0.1
+setuptools>=8.0

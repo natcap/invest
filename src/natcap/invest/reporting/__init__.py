@@ -8,13 +8,12 @@ import re
 from types import StringType
 import copy
 
-import natcap.invest
+from ... import invest
 import pygeoprocessing.geoprocessing
 import table_generator
 
 LOGGER = logging.getLogger('natcap.invest.reporting')
-REPORTING_DATA = os.path.join(
-    natcap.invest.local_dir(__file__), 'reporting_data/')
+REPORTING_DATA = os.path.join(invest.local_dir(__file__), 'reporting_data/')
 JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
 SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
 TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')

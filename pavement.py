@@ -2,6 +2,7 @@ import argparse
 import ast
 import distutils
 import distutils.ccompiler
+from distutils.version import StrictVersion
 import getpass
 import glob
 import imp
@@ -47,6 +48,17 @@ try:
 except pkg_resources.VersionConflict:
     NO_WHEEL_SUBPROCESS = "'--no-use-wheel'"
     NO_WHEEL_SH = '--no-use-wheel'
+
+
+# The requirements files used by various parts of natcap.invest and the
+# pavement infrastructure that supports it.  Packages required for
+# natcap.invest to work should be included in requirements.txt.  Anything
+# required for other functionality (such as in pavement.py) should be defined
+# in requirements-dev.txt.
+REQUIREMENTS_FILES = [
+    'requirements.txt',
+    'requirements-dev.txt',
+]
 
 
 def supports_color():
@@ -378,7 +390,7 @@ class Repository(object):
             return tracked_rev[user_os]
         elif tracked_rev.startswith('REQUIREMENTS_TXT'):
             pkgname = tracked_rev.split(':')[1]
-            version =_parse_version_requirement(pkgname)
+            version = _parse_version_requirement(pkgname)
             if version is None:
                 raise ValueError((
                     'Versions.json requirement string must have the '
@@ -823,20 +835,31 @@ def dev_env(options):
 
 
 def _read_requirements_dict():
-    """Read requirments.txt into a dict.
+    """Read requirements files into a dict.
+
+    Relies on the files listed in `REQUIREMENTS_FILES`.  If multiple files
+    are listed, the union of the sets is used.
 
     Returns:
-        A dict mapping {projectname: requirement}.
+        A dict mapping {projectname: requirement string}.
 
     Example:
         >>> _read_requirements_dict()
         {'pygeoprocessing': 'pygeoprocessing>=0.3.0a12', ...}
     """
     reqs = {}
-    for line in open('requirements.txt'):
-        line = line.strip()
-        parsed_req = pkg_resources.Requirement.parse(line)
-        reqs[parsed_req.project_name] = line
+    for filename in REQUIREMENTS_FILES:
+        for line in open(filename):
+            try:
+                parsed_req = pkg_resources.Requirement.parse(line)
+            except ValueError:
+                # Raised when no package requirement could be parsed.  Commonly
+                # happens on blank lines or lines that are only comments.
+                continue
+
+            # Casting the parsed requirement to a string strips out any
+            # formatting (like comments) allowed in requirements files.
+            reqs[parsed_req.project_name] = str(parsed_req)
     return reqs
 
 
@@ -1006,22 +1029,28 @@ def after_install(options, home_dir):
         extra_params = ", %s" % ', '.join(params_as_strings)
         return extra_params
 
-    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
+    # Aything in this list will ALWAYS be installed.
+    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose')]
+
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
-            projectname = requirement.project_name  # project name w/o version req
-            if projectname in preinstalled_pkgs:
-                print ('Requirement %s from requirements.txt already '
-                       'handled by bootstrap script') % projectname
-                continue
-            try:
-                install_params = pkg_pip_params[projectname]
-                extra_params = _format_params(install_params)
-            except KeyError:
-                # No extra parameters needed for this package.
-                extra_params = ''
+            pkgs_to_be_installed.append(requirement)
 
-            install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
+    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
+    for requirement in pkgs_to_be_installed:
+        projectname = requirement.project_name  # project name w/o version req
+        if projectname in preinstalled_pkgs:
+            print ('Requirement %s from requirements.txt already '
+                    'handled by bootstrap script') % projectname
+            continue
+        try:
+            install_params = pkg_pip_params[projectname]
+            extra_params = _format_params(install_params)
+        except KeyError:
+            # No extra parameters needed for this package.
+            extra_params = ''
+
+        install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
 
     if options.env.with_invest:
         # Build an sdist and install it as an egg.  Works better with
@@ -1754,8 +1783,29 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
-    # verify required programs exist
     errors_found = False
+    # If we're on Windows, check that python 2.7.11 is installed.  2.7.11
+    # provides a version of multiprocessing that was patched to fix an issue
+    # occurring at runtime in our recreation server tests.  See these for
+    # details:
+    # https://bitbucket.org/natcap/invest/issues/3506
+    # https://bugs.python.org/issue10845
+    # https://hg.python.org/cpython/rev/5d88c1d413b9/
+    if platform.system() == 'Windows':
+        print bold('Checking python')
+        version_info = sys.version_info
+        python_version = '.'.join(
+            [str(getattr(version_info, key)) for key in ['major', 'minor', 'micro']])
+        if StrictVersion(python_version) < StrictVersion('2.7.11'):
+            errors_found = True
+            print red('CRITICAL:') + ('Python >= 2.7.11 required to run '
+                                      'Recreation on Windows, '
+                                       '%s found') % python_version
+        else:
+            print 'Python %s OK' % python_version
+        print ''  # add newline between this section and the next one.
+
+    # verify required programs exist
     programs = [
         ('hg', 'everything'),
         ('git', 'binaries'),
@@ -1802,12 +1852,9 @@ def check(options):
     requirements = [
         # requirement, level, version_getter, special_install_message
         ('setuptools', required, None, None),  # 8.0 implements pep440
-        ('virtualenv', required, None, None),
-        ('pip', required, None, None),
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
         ('paramiko', suggested, None, None),
-        ('pycrypto', suggested, 'Crypto', None),
         ('h5py', lib_needed,  None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
@@ -1862,13 +1909,8 @@ def check(options):
             'git+https://github.com/phargogh/paver@natcap-version'
         )))
 
-        # Don't need to try/except this ... paver is imported at the top of
-        # this file so we know that paver exists.  If it doesn't have a version
-        # module, the ImportError should definitely be raised.
-        from paver import version
-        paver.__version__ = version.VERSION
-
         try:
+            # pywin32 is required by pyinstaller.
             requirements.append(('pywin32', required, 'pywin', None))
 
             # Get the pywin32 version here, as demonstrated by
@@ -1885,6 +1927,12 @@ def check(options):
         # Non-windows OSes also require wheel,just not a special installation
         # of it.
         requirements.append(('wheel', required, None, None))
+
+    # Don't need to try/except this ... paver is imported at the top of
+    # this file so we know that paver exists.  If it doesn't have a version
+    # module, the ImportError should definitely be raised.
+    from paver import version
+    paver.__version__ = version.VERSION
 
     # Compare the above-defined requirements with those in requirements.txt
     # The resulting set should be the union of the two.  Package verison
@@ -2417,11 +2465,7 @@ def build_bin(options):
             # archive.
 
             # Get version spec from requirements.txt
-            with open('requirements.txt') as requirements_file:
-                for requirement in pkg_resources.parse_requirements(requirements_file.read()):
-                    if requirement.project_name == 'natcap.versioner':
-                        versioner_spec = str(requirement)
-                        break
+            versioner_spec = _read_requirements_dict()['natcap.versioner']
 
             # Download a valid source tarball to the dist dir.
             sh(("{python} -c "
@@ -3220,6 +3264,10 @@ def test(args):
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
         call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
 
+    compiler = None
+    if parsed_args.jenkins and platform.system() == 'Windows':
+        compiler = 'msvc'
+
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _run_tests():
         """
@@ -3301,11 +3349,20 @@ def test(args):
                 sh('pip uninstall -y natcap.invest')
             except BuildFailure:
                 pass
-            sh('python setup.py install')
+
+            if compiler:
+                compile_flags = 'build_ext --compiler=' + compiler
+            else:
+                compile_flags = ''
+            sh('python setup.py {flags} install'.format(flags=compile_flags))
 
     # Build an env if needed.
     if not os.path.exists(paver.easy.options.dev_env.envname):
-        call_task('dev_env')
+        if compiler:
+            opts = {'compiler': compiler}
+        else:
+            opts = {}
+        call_task('dev_env', options=opts)
     else:
         _update_invest()
 
