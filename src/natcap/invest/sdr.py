@@ -17,7 +17,7 @@ import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import pygeoprocessing.routing.routing_core
-import natcap.invest.utils
+from . import utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -109,8 +109,7 @@ def execute(args):
     Returns:
         None.
     """
-    file_suffix = natcap.invest.utils.make_suffix_string(
-        args, 'results_suffix')
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     biophysical_table = pygeoprocessing.get_lookup_from_csv(
         args['biophysical_table_path'], 'lucode')
@@ -137,7 +136,7 @@ def execute(args):
     pygeoprocessing.create_directories(
         [output_dir, intermediate_output_dir])
 
-    f_reg = natcap.invest.utils.build_file_registry(
+    f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
@@ -154,8 +153,7 @@ def execute(args):
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
 
-    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(
-        args['lulc_path'])
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(args['dem_path'])
     pygeoprocessing.align_dataset_list(
         base_list, aligned_list, ['nearest'] * len(base_list), out_pixel_size,
         'intersection', 0, aoi_uri=args['watersheds_path'])
