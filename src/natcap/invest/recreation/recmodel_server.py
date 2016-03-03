@@ -44,8 +44,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.recreation.recmodel_server')
 
-LOCAL_WORKSPACE_DIR = 'rec_server_workspaces'
-
 
 def _try_except_wrapper(mesg):
     """Wrap the function in a try/except to log exception before failing.
@@ -135,6 +133,9 @@ class RecModel(object):
     def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
         """Download the AOI of the workspace specified by workspace_id.
 
+        Searches self.cache_workspace for the workspace specified, zips the
+        contents, then returns the result as a binary string.
+
         Parameters:
             workspace_id (string): unique workspace ID on server to query.
 
@@ -142,7 +143,7 @@ class RecModel(object):
             zip file as a binary string of workspace.
         """
         # make a random workspace name so we can work in parallel
-        workspace_path = os.path.join(LOCAL_WORKSPACE_DIR, workspace_id)
+        workspace_path = os.path.join(self.cache_workspace, workspace_id)
         out_zip_file_path = os.path.join(
             workspace_path, str('server_in')+'.zip')
         return open(out_zip_file_path, 'rb').read()
@@ -156,7 +157,7 @@ class RecModel(object):
             zip_file_binary (string): a bytestring that is a zip file of an
                 ESRI shapefile.
             date_range (string 2-tuple): a tuple that contains the inclusive
-                start and end date as a numpy datetime64 object
+                start and end date formatted as 'YYYY-MM-DD'
             out_vector_filename (string): base filename of output vector
 
         Returns:
@@ -171,7 +172,7 @@ class RecModel(object):
             # although there should never be a uuid4 collision, this loop
             # makes me feel better
             workspace_id = str(uuid.uuid4())
-            workspace_path = os.path.join(LOCAL_WORKSPACE_DIR, workspace_id)
+            workspace_path = os.path.join(self.cache_workspace, workspace_id)
             if not os.path.exists(workspace_path):
                 os.makedirs(workspace_path)
                 break
