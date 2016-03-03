@@ -1,6 +1,5 @@
 """InVEST Recreation model tests."""
 
-import Pyro4
 import datetime
 import glob
 import zipfile
@@ -14,10 +13,13 @@ import os
 import functools
 import logging
 
+import Pyro4
 import pygeoprocessing
 from pygeoprocessing.testing import scm
 import numpy
 from osgeo import ogr
+
+Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
@@ -46,8 +48,9 @@ def _timeout(max_timeout):
 
 class TestBufferedNumpyDiskMap(unittest.TestCase):
     """Tests for BufferedNumpyDiskMap."""
+
     def setUp(self):
-        """Setup Pyro port."""
+        """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def test_basic_operation(self):
@@ -75,11 +78,11 @@ class TestBufferedNumpyDiskMap(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
 
-class TestLocalPyroRecServer(unittest.TestCase):
+class TestRecServer(unittest.TestCase):
     """Tests that set up local rec server on a port and call through."""
 
     def setUp(self):
-        """Setup Pyro port."""
+        """Setup multiprocessing and workspace."""
         multiprocessing.freeze_support()
         self.workspace_dir = tempfile.mkdtemp()
 
@@ -152,46 +155,48 @@ class TestLocalPyroRecServer(unittest.TestCase):
             target=recmodel_server.execute, args=(server_args,))
         server_process.start()
 
-        path = "PYRO:natcap.invest.recreation@localhost:%s" % port
-        recreation_server = Pyro4.Proxy(path)
+        try:
+            path = "PYRO:natcap.invest.recreation@localhost:%s" % port
+            recreation_server = Pyro4.Proxy(path)
+            aoi_path = os.path.join(
+                REGRESSION_DATA, 'test_aoi_for_subset.shp')
+            basename = os.path.splitext(aoi_path)[0]
+            aoi_archive_path = os.path.join(
+                self.workspace_dir, 'aoi_zipped.zip')
+            with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
+                for filename in glob.glob(basename + '.*'):
+                    myzip.write(filename, os.path.basename(filename))
 
-        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
+            # convert shapefile to binary string for serialization
+            zip_file_binary = open(aoi_archive_path, 'rb').read()
+            date_range = (('2005-01-01'), ('2014-12-31'))
+            out_vector_filename = 'test_aoi_for_subset_pud.shp'
 
-        basename = os.path.splitext(aoi_path)[0]
-        aoi_archive_path = os.path.join(
-            self.workspace_dir, 'aoi_zipped.zip')
-        with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
-            for filename in glob.glob(basename + '.*'):
-                myzip.write(filename, os.path.basename(filename))
+            zip_result, workspace_id = (
+                recreation_server.calc_photo_user_days_in_aoi(
+                    zip_file_binary, date_range, out_vector_filename))
+            fetcher_args = {
+                'workspace_dir': self.workspace_dir,
+                'hostname': 'localhost',
+                'port': port,
+                'workspace_id': workspace_id,
+            }
+            recmodel_workspace_fetcher.execute(fetcher_args)
+            server_process.terminate()
 
-        # convert shapefile to binary string for serialization
-        zip_file_binary = open(aoi_archive_path, 'rb').read()
-        date_range = (
-            numpy.datetime64('2005-01-01'),
-            numpy.datetime64('2014-12-31'))
-        out_vector_filename = 'test_aoi_for_subset_pud.shp'
-
-        zip_result, workspace_id = (
-            recreation_server.calc_photo_user_days_in_aoi(
-                zip_file_binary, date_range, out_vector_filename))
-
-        fetcher_args = {
-            'workspace_dir': self.workspace_dir,
-            'hostname': 'localhost',
-            'port': port,
-            'workspace_id': workspace_id,
-        }
-        recmodel_workspace_fetcher.execute(fetcher_args)
-        server_process.terminate()
-
-        out_workspace_dir = os.path.join(self.workspace_dir, 'workspace_zip')
-        os.makedirs(out_workspace_dir)
-        workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
-        open(workspace_zip_path, 'wb').write(workspace_zip_binary)
-        zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
-        pygeoprocessing.testing.assert_vectors_equal(
-            aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1e-5)
+            out_workspace_dir = os.path.join(
+                self.workspace_dir, 'workspace_zip')
+            os.makedirs(out_workspace_dir)
+            workspace_zip_path = os.path.join(
+                self.workspace_dir, workspace_id + '.zip')
+            zipfile.ZipFile(workspace_zip_path, 'r').extractall(
+                out_workspace_dir)
+            pygeoprocessing.testing.assert_vectors_equal(
+                aoi_path,
+                os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'),
+                1e-5)
+        finally:
+            server_process.terminate()
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -277,9 +282,7 @@ class TestLocalPyroRecServer(unittest.TestCase):
         zip_file_binary = open(aoi_archive_path, 'rb').read()
 
         # transfer zipped file to server
-        date_range = (
-            numpy.datetime64('2005-01-01'),
-            numpy.datetime64('2014-12-31'))
+        date_range = (('2005-01-01'), ('2014-12-31'))
         out_vector_filename = 'test_aoi_for_subset_pud.shp'
         zip_result, workspace_id = (
             recreation_server.calc_photo_user_days_in_aoi(
@@ -999,10 +1002,10 @@ class RecreationRegressionTests(unittest.TestCase):
             result_layer = result_vector.GetLayer()
 
             # The tolerance of 3 digits after the decimal was determined by
-            # experimentation on the application with the given range of numbers.
-            # This is an apparently reasonable approach as described by ChrisF:
-            # http://stackoverflow.com/a/3281371/42897
-            # and even more reading about picking numerical tolerance (it's hard):
+            # experimentation on the application with the given range of
+            # numbers.  This is an apparently reasonable approach as described
+            # by ChrisF: http://stackoverflow.com/a/3281371/42897
+            # and even more reading about picking numerical tolerance
             # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
             tolerance_places = 3
 
