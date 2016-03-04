@@ -212,10 +212,11 @@ def execute(args):
     # The scale_key is used in getting the right wind energy arguments that are
     # dependent on the hub height.
     scale_key = str(hub_height)
-    if len(scale_key) <= 2:
-        scale_key = 'Ram-0' + scale_key + 'm'
-    else:
-        scale_key = 'Ram-' + scale_key + 'm'
+    scale_key = 'RAM'
+    #if len(scale_key) <= 2:
+    #    scale_key = 'Ram-0' + scale_key + 'm'
+    #else:
+    #    scale_key = 'Ram-' + scale_key + 'm'
 
     LOGGER.debug('hub_height : %s', hub_height)
     LOGGER.debug('SCALE_key : %s', scale_key)
@@ -225,8 +226,11 @@ def execute(args):
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data')
+    #wind_data = read_binary_wind_data(
+    #        args['wind_data_uri'], wind_data_field_list)
     wind_data = read_binary_wind_data(
-            args['wind_data_uri'], wind_data_field_list)
+            args['wind_data_uri'], hub_height)
+
 
     if 'aoi_uri' in args:
         LOGGER.info('AOI Provided')
@@ -395,7 +399,8 @@ def execute(args):
 
     # The String name for the shape field. So far this is a default from the
     # text file given by CK. I guess we could search for the 'K' if needed.
-    shape_key = 'K-010m'
+    #shape_key = 'K-010m'
+    shape_key = 'K'
 
     # Weibull probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
@@ -1431,7 +1436,7 @@ def mask_by_distance(
             out_nodata, cell_size, 'intersection',
             assert_datasets_projected = True, vectorize_op = False)
 
-def read_binary_wind_data(wind_data_uri, field_list):
+def read_binary_wind_data(wind_data_uri, hub_height):
     """Unpack the binary wind data into a dictionary. This function only reads
         binary files that are packed using big indian ordering '<'. Each piece
         of data is 4 bytes long and of type float. Each row of the file has data
@@ -1452,59 +1457,78 @@ def read_binary_wind_data(wind_data_uri, field_list):
 
     LOGGER.debug('Entering read_wind_data')
 
+    alpha = 0.11
     wind_dict = {}
+
+    # LONG, LATI, RAM, K, REF
+    wind_file = open(wind_data_uri, 'rU')
+    reader = csv.DictReader(wind_file)
+
+    for row in reader:
+        ref_height = float(row['REF'])
+        ref_ram = float(row['RAM'])
+        ref_k = float(row['K'])
+        ram_value = (ref_ram * (hub_height / ref_height)**alpha)
+
+        wind_dict[float(row['LATI']), float(row['LONG'])] = {
+            'LONG': float(row['LONG']), 'LATI': float(row['LATI']),
+            'RAM': ram_value, 'K': ref_k, 'REF_RAM': ref_ram}
+
+
+    wind_file.close()
+    return wind_dict
 
     # This is the expected column header list for the binary wind energy file.
     # It is expected that the data will be in this order so that we can properly
     # unpack the information into a dictionary
-    param_list = [
-            "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
+    #param_list = [
+    #        "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
+    #        "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
+    #        "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
 
     # Get the scale key from the field list to verify that the hub height given
     # is indeed a valid height handled in the wind energy point data
-    scale_key = field_list[2]
+    #scale_key = field_list[2]
 
-    if scale_key not in param_list:
-        raise HubHeightError('The Hub Height is not supported by the current '
-                'wind point data. Please make sure the hub height lies '
-                'between 10 and 150 meters')
+    #if scale_key not in param_list:
+    #    raise HubHeightError('The Hub Height is not supported by the current '
+    #            'wind point data. Please make sure the hub height lies '
+    #            'between 10 and 150 meters')
 
     # Open the file in reading and binary mode
-    wind_file = open(wind_data_uri, 'rb')
+    #wind_file = open(wind_data_uri, 'rb')
 
     # Get the length of the expected parameter list to use in unpacking
-    param_list_length = len(param_list)
+    #param_list_length = len(param_list)
 
     # For every line in the file, unpack
-    while True:
+    #while True:
         # Read in line by line where each piece of data is 4 bytes
-        line = wind_file.read(4*param_list_length)
+    #    line = wind_file.read(4*param_list_length)
 
         # If we have reached the end of the file, quit
-        if len(line) == 0:
-            break
+    #    if len(line) == 0:
+    #        break
 
         # Unpack the data. We are assuming the binary data was packed using the
         # big indian ordering '<' and that the values are floats.
-        values_list = struct.unpack('<'+'f'*param_list_length, line)
+    #    values_list = struct.unpack('<'+'f'*param_list_length, line)
 
         # The key of the output dictionary will be a tuple of the latitude,
         # longitude
-        key = (values_list[1], values_list[0])
-        wind_dict[key] = {}
+    #    key = (values_list[1], values_list[0])
+    #    wind_dict[key] = {}
 
-        for index in range(param_list_length):
+    #    for index in range(param_list_length):
             # Only add the field and values we are interested in using
-            if param_list[index] in field_list:
-                # Build up the dictionary with values
-                wind_dict[key][param_list[index]] = values_list[index]
+    #        if param_list[index] in field_list:
+    #            # Build up the dictionary with values
+    #            wind_dict[key][param_list[index]] = values_list[index]
 
-    wind_file.close()
+    #wind_file.close()
 
-    LOGGER.debug('Leaving read_wind_data')
-    return wind_dict
+    #LOGGER.debug('Leaving read_wind_data')
+    #return wind_dict
 
 def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     """Given a dictionary of the wind data create a point shapefile that
