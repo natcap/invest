@@ -6,7 +6,7 @@
 # Note that there may be some OS-specific requirements, so be sure to run
 # `paver check` to verify you have all the required packages.
 
-Pyro4
+Pyro4>=4.41
 gdal>=1.11.2,<2.0
 h5py>=2.3.0
 matplotlib
