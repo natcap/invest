@@ -26,6 +26,13 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger(
     'natcap.invest.coastal_blue_carbon.coastal_blue_carbon')
 
+_OUTPUT = {
+    'carbon_stock': 'carbon_stock_at_%s.tif',
+    'carbon_accumulation': 'carbon_accumulation_between_%s_and_%s.tif',
+    'cabon_emissions': 'carbon_emissions_between_%s_and_%s.tif',
+    'carbon_net_sequestration': 'net_carbon_sequestration_between_%s_and_%s.tif',
+}
+
 
 def execute(args):
     """Entry point for Coastal Blue Carbon model.
@@ -680,13 +687,6 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
     """
     template_raster = C_prior_raster
 
-    _INTERMEDIATE = {
-        'carbon_stock': 'carbon_stock_at_%s.tif',
-        'carbon_accumulation': 'carbon_accumulation_between_%s_and_%s.tif',
-        'cabon_emissions': 'carbon_emissions_between_%s_and_%s.tif',
-        'carbon_net_sequestration': 'net_carbon_sequestration_between_%s_and_%s.tif',
-    }
-
     T_s_rasters = []
     A_r_rasters = []
     E_r_rasters = []
@@ -695,11 +695,11 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
     for snapshot_idx in xrange(len(snapshot_years)-1):
         snapshot_year = snapshot_years[snapshot_idx]
         next_snapshot_year = snapshot_years[snapshot_idx + 1]
-        T_s_rasters.append(_INTERMEDIATE['carbon_stock'] % (snapshot_year))
-        A_r_rasters.append(_INTERMEDIATE['carbon_accumulation'] % (snapshot_year, next_snapshot_year))
-        E_r_rasters.append(_INTERMEDIATE['cabon_emissions'] % (snapshot_year, next_snapshot_year))
-        N_r_rasters.append(_INTERMEDIATE['carbon_net_sequestration'] % (snapshot_year, next_snapshot_year))
-    T_s_rasters.append(_INTERMEDIATE['carbon_stock'] % (snapshot_years[-1]))
+        T_s_rasters.append(_OUTPUT['carbon_stock'] % (snapshot_year))
+        A_r_rasters.append(_OUTPUT['carbon_accumulation'] % (snapshot_year, next_snapshot_year))
+        E_r_rasters.append(_OUTPUT['cabon_emissions'] % (snapshot_year, next_snapshot_year))
+        N_r_rasters.append(_OUTPUT['carbon_net_sequestration'] % (snapshot_year, next_snapshot_year))
+    T_s_rasters.append(_OUTPUT['carbon_stock'] % (snapshot_years[-1]))
 
     # Total Net Sequestration
     N_total_raster = 'total_net_carbon_sequestration.tif'
