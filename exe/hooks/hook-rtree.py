@@ -1,4 +1,5 @@
 from PyInstaller.compat import is_win
+
 from PyInstaller.hooks.hookutils import get_package_paths
 import os
 

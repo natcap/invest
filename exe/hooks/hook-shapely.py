@@ -1,13 +1,11 @@
-import sys
-import os
 from PyInstaller.compat import is_darwin, is_win
 
-if sys.platform.startswith('linux'):
-    from hookutils import \
-        (collect_submodules, collect_data_files, get_package_paths)
-else:
+if is_darwin:
     from PyInstaller.utils.hooks import \
         (collect_submodules, collect_data_files, get_package_paths)
+else:
+    from hookutils import \
+    (collect_submodules, collect_data_files, get_package_paths)
 
 hiddenimports = collect_submodules('shapely')
 pkg_base, pkg_dir = get_package_paths('shapely')

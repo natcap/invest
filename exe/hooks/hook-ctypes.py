@@ -1,7 +1,8 @@
-import sys
-if sys.platform.startswith('linux'):
-    from hookutils import collect_submodules
-else:
+from PyInstaller.compat import is_darwin
+
+if is_darwin:
     from PyInstaller.utils.hooks import collect_submodules
+else:
+    from hookutils import collect_submodules
 
 hiddenimports = collect_submodules('ctypes')

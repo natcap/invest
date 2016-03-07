@@ -1,11 +1,11 @@
+from PyInstaller.compat import is_win, is_darwin, is_linux
+
 # Special hook necessary for PyInstaller v2.x (our linux builds)
-import sys
-if sys.platform.startswith('linux'):
+if is_darwin:
+    from PyInstaller.utils.hooks import collect_data_files
+else:
     from PyInstaller.hooks.hookutils import collect_data_files
     datas = collect_data_files('osgeo')
-else:
-    from PyInstaller.utils.hooks import collect_data_files
-from PyInstaller.compat import is_win, is_darwin
 
 import os
 import sys
