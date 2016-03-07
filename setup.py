@@ -89,6 +89,12 @@ CMDCLASS['build_ext'] = ExtraCompilerFlagsBuilder
 
 EXTENSION_LIST = ([
     Extension(
+        name="natcap.invest.recreation.out_of_core_quadtree",
+        sources=[
+            'src/natcap/invest/recreation/out_of_core_quadtree.pyx'],
+        language="c++",
+        include_dirs=[numpy.get_include()]),
+    Extension(
         name="scenic_quality_cython_core",
         sources=[
             'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
@@ -237,11 +243,6 @@ setup(
         ],
         'natcap.invest.scenario_generator': [
             '*.js',
-        ],
-        'natcap.invest.recreation': [
-            '*.php',
-            '*.r',
-            '*.json',
         ],
         'natcap.invest.wave_energy': [
             'wave_energy_scripts/*.sh',

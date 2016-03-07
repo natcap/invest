@@ -4,12 +4,12 @@ Recreation Package
 Model Entry Point
 -----------------
 
-.. autofunction:: natcap.invest.recreation.recreation_client.execute
+.. autofunction:: natcap.invest.recreation.recmodel_client.execute
 
-Recreation Server Initial
--------------------------
+Recreation Server
+-----------------
 
-.. automodule:: natcap.invest.recreation.recreation_server_initial
+.. automodule:: natcap.invest.recreation.recmodel_server
     :members:
     :undoc-members:
     :show-inheritance:
@@ -17,31 +17,15 @@ Recreation Server Initial
 Recreation Client
 -----------------
 
-.. automodule:: natcap.invest.recreation.recreation_client
+.. automodule:: natcap.invest.recreation.recmodel_client
     :members:
     :undoc-members:
     :show-inheritance:
 
-Recreation Server Scenario
---------------------------
+Recreation Workspace Fetcher
+----------------------------
 
-.. automodule:: natcap.invest.recreation.recreation_server_scenario
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Recreation Server Core
-----------------------
-
-.. automodule:: natcap.invest.recreation.recreation_server_core
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: natcap.invest.recreation
+.. automodule:: natcap.invest.recreation.recmodel_workspace_fetcher
     :members:
     :undoc-members:
     :show-inheritance:

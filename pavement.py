@@ -2,6 +2,7 @@ import argparse
 import ast
 import distutils
 import distutils.ccompiler
+from distutils.version import StrictVersion
 import getpass
 import glob
 import imp
@@ -1028,22 +1029,28 @@ def after_install(options, home_dir):
         extra_params = ", %s" % ', '.join(params_as_strings)
         return extra_params
 
-    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
+    # Aything in this list will ALWAYS be installed.
+    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose')]
+
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
-            projectname = requirement.project_name  # project name w/o version req
-            if projectname in preinstalled_pkgs:
-                print ('Requirement %s from requirements.txt already '
-                       'handled by bootstrap script') % projectname
-                continue
-            try:
-                install_params = pkg_pip_params[projectname]
-                extra_params = _format_params(install_params)
-            except KeyError:
-                # No extra parameters needed for this package.
-                extra_params = ''
+            pkgs_to_be_installed.append(requirement)
 
-            install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
+    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
+    for requirement in pkgs_to_be_installed:
+        projectname = requirement.project_name  # project name w/o version req
+        if projectname in preinstalled_pkgs:
+            print ('Requirement %s from requirements.txt already '
+                    'handled by bootstrap script') % projectname
+            continue
+        try:
+            install_params = pkg_pip_params[projectname]
+            extra_params = _format_params(install_params)
+        except KeyError:
+            # No extra parameters needed for this package.
+            extra_params = ''
+
+        install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
 
     if options.env.with_invest:
         # Build an sdist and install it as an egg.  Works better with
@@ -1776,8 +1783,29 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
-    # verify required programs exist
     errors_found = False
+    # If we're on Windows, check that python 2.7.11 is installed.  2.7.11
+    # provides a version of multiprocessing that was patched to fix an issue
+    # occurring at runtime in our recreation server tests.  See these for
+    # details:
+    # https://bitbucket.org/natcap/invest/issues/3506
+    # https://bugs.python.org/issue10845
+    # https://hg.python.org/cpython/rev/5d88c1d413b9/
+    if platform.system() == 'Windows':
+        print bold('Checking python')
+        version_info = sys.version_info
+        python_version = '.'.join(
+            [str(getattr(version_info, key)) for key in ['major', 'minor', 'micro']])
+        if StrictVersion(python_version) < StrictVersion('2.7.11'):
+            errors_found = True
+            print red('CRITICAL:') + ('Python >= 2.7.11 required to run '
+                                      'Recreation on Windows, '
+                                       '%s found') % python_version
+        else:
+            print 'Python %s OK' % python_version
+        print ''  # add newline between this section and the next one.
+
+    # verify required programs exist
     programs = [
         ('hg', 'everything'),
         ('git', 'binaries'),
@@ -2632,7 +2660,7 @@ def _build_nsis(version, bindir, arch):
     hg_path = sh('hg paths', capture=True).rstrip()
     forkuser, forkreponame = hg_path.split('/')[-2:]
     if forkuser == 'natcap':
-        data_location = 'invest-data'
+        data_location = 'invest-data/%s' % short_version
         forkname = ''
     else:
         data_location = 'nightly-build/invest-forks/%s/data' % forkuser
@@ -3236,6 +3264,10 @@ def test(args):
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
         call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
 
+    compiler = None
+    if parsed_args.jenkins and platform.system() == 'Windows':
+        compiler = 'msvc'
+
     @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
     def _run_tests():
         """
@@ -3317,11 +3349,20 @@ def test(args):
                 sh('pip uninstall -y natcap.invest')
             except BuildFailure:
                 pass
-            sh('python setup.py install')
+
+            if compiler:
+                compile_flags = 'build_ext --compiler=' + compiler
+            else:
+                compile_flags = ''
+            sh('python setup.py {flags} install'.format(flags=compile_flags))
 
     # Build an env if needed.
     if not os.path.exists(paver.easy.options.dev_env.envname):
-        call_task('dev_env')
+        if compiler:
+            opts = {'compiler': compiler}
+        else:
+            opts = {}
+        call_task('dev_env', options=opts)
     else:
         _update_invest()
 

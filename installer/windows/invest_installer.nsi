@@ -204,7 +204,6 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
   !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
   !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
-  !define RECREATION "${SMPATH}\Recreation"
   !define OVERLAP "${SMPATH}\Overlap Analysis"
   !define HRA "${SMPATH}\Habitat Risk Assessment"
   !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
@@ -261,9 +260,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\RouteDEM (${ARCHITECTURE}).lnk" "${INVEST_DATA}\routedem.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\DelineateIt (${ARCHITECTURE}).lnk" "${INVEST_DATA}\delineateit.bat" "" "${INVEST_ICON}"
 
-  CreateDirectory "${RECREATION}"
-  CreateShortCut "${RECREATION}\(1) Recreation Initialization (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_init.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${RECREATION}\(2) Recreation Scenario (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_scenario.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Recreation (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation.bat" "" "${INVEST_ICON}"
 
   ; Write registry keys for convenient uninstallation via add/remove programs.
   ; Inspired by the example at
@@ -353,7 +350,7 @@ Var INSTALLER_DIR
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${SHORT_VERSION}"
+        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}"
         SetOutPath "$INSTDIR"
         NSISdl::download "$SERVER_PATH/${Filename}" ${Filename}
         Pop $R0 ;Get the status of the file downloaded
@@ -395,7 +392,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831620
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 4804
-    !insertmacro downloadData "Recreation (optional)" "Recreation.zip" 24
+    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 24
   SectionGroupEnd
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
