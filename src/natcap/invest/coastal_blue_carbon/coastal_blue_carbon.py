@@ -577,7 +577,7 @@ def get_inputs(args):
     }
 
     # Directories
-    results_suffix = invest_utils.make_suffix_string(
+    args['results_suffix'] = invest_utils.make_suffix_string(
         args, 'results_suffix')
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
     geoprocess.create_directories([args['workspace_dir'], outputs_dir])
@@ -658,8 +658,6 @@ def get_inputs(args):
         d['price_t'] /= (1 + discount_rate) ** np.arange(0, d['timesteps']+1)
 
     # Create Output Rasters
-    if args['results_suffix'] not in ['', None] and not args['results_suffix'].startswith('_'):
-        args['results_suffix'] = '_' + args['results_suffix']
     d['File_Registry'] = _build_file_registry(
         d['C_prior_raster'],
         d['snapshot_years'],
