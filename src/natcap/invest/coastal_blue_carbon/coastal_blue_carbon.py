@@ -564,8 +564,6 @@ def get_inputs(args):
 
     """
     d = {
-        'workspace_dir': None,
-        'border_year_list': None,
         'do_economic_analysis': False,
         'lulc_to_Sb': {'lulc': 'biomass'},
         'lulc_to_Ss': {'lulc': 'soil'},
@@ -576,15 +574,11 @@ def get_inputs(args):
         'lulc_to_Hs': {'lulc': 'hl-soil'},
         'lulc_trans_to_Db': {('lulc1', 'lulc2'): 'dist-val'},
         'lulc_trans_to_Ds': {('lulc1', 'lulc2'): 'dist-val'},
-        'C_s': [],
-        'C_prior': None,
         'C_r_rasters': [],
         'transition_years': [],
-        'analysis_year': None,
         'snapshot_years': [],
         'timesteps': None,
         'transitions': None,
-        'interest_rate': None,
         'price_t': None,
     }
 
