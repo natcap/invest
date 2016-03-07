@@ -49,9 +49,13 @@ if is_win:
     exename += '.exe'
 
 if is_darwin:
-    a.binaries = a.binaries + [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib','BINARY')]
-    a.binaries = a.binaries + [('libgeos_c.dylib', '/usr/local/lib/libgeos_c.dylib','BINARY')]
-    a.binaries = a.binaries + [('libgeos-3.5.0.dylib', '/usr/local/lib/libgeos-3.5.0.dylib','BINARY')]
+    a.binaries = filter(lambda x: x[0] != 'libgeos_c.1.dylib', a.binaries)
+    a.binaries += [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
+    a.binaries += [('libgeos_c.dylib', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
+    a.binaries += [('libgeos_c.1.dylib', '/usr/local/lib/libgeos_c.1.dylib', 'BINARY')]
+    a.binaries += [('libgeos-3.5.0.dylib', '/usr/local/lib/libgeos-3.5.0.dylib', 'BINARY')]
+    a.binaries += [('libgeotiff.dylib', '/usr/local/lib/libgeotiff.dylib', 'BINARY')]
+    a.binaries += [('libgeotiff.2.dylib', '/usr/local/lib/libgeotiff.2.dylib', 'BINARY')]
 
 exe = EXE(
     pyz,
