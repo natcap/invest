@@ -389,7 +389,7 @@ def get_num_blocks(raster_uri):
     return n_col_blocks * n_row_blocks
 
 
-def reclass(array, d, nodata=None, out_dtype=None, nodata_mask=None):
+def reclass(array, d, out_dtype=None, nodata_mask=None):
     """Reclassify values in array.
 
     If a nodata value is not provided, the function will return an array with
@@ -398,6 +398,9 @@ def reclass(array, d, nodata=None, out_dtype=None, nodata_mask=None):
     Args:
         array (np.array): input data
         d (dict): reclassification map
+        out_dtype (np.dtype): a numpy datatype for the reclass_array
+        nodata_mask (number): for floats, a nodata value that is set to np.nan
+            if provided to make reclass_array nodata values consistent
 
     Returns:
         reclass_array (np.array): reclassified array
