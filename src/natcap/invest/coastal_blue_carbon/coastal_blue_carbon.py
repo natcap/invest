@@ -591,7 +591,6 @@ def get_inputs(args):
     # Directories
     results_suffix = invest_utils.make_suffix_string(
         args, 'results_suffix')
-    d['workspace_dir'] = args['workspace_dir']
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
     geoprocess.create_directories([args['workspace_dir'], outputs_dir])
 
