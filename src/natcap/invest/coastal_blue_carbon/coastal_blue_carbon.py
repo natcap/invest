@@ -440,6 +440,9 @@ def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None, nodata_mask=N
         a_prev (np.array): previous lulc array
         a_next (np.array): next lulc array
         trans_dict (dict): reclassification map
+        out_dtype (np.dtype): a numpy datatype for the reclass_array
+        nodata_mask (number): for floats, a nodata value that is set to np.nan
+            if provided to make reclass_array nodata values consistent
 
     Returns:
         reclass_array (np.array): reclassified array
