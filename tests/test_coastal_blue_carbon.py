@@ -292,6 +292,8 @@ class TestModel(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)),
             'workspace/outputs_core/net_present_value_150225.tif')
         npv_array = read_array(npv_raster)
+        u = np.unique(npv_array)
+        self.assertTrue(35.93808746 in u)
         shutil.rmtree(args['workspace_dir'])
 
     def tearDown(self):
