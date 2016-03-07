@@ -15,5 +15,3 @@ datas = collect_data_files('shapely')
 
 if is_win:
     datas += [(os.path.join(pkg_dir, 'DLLs/geos_c.dll'), '')]
-elif is_darwin:
-    datas += [(os.path.join(pkg_dir, '.dylibs/*.dylib'), '')]
