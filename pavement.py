@@ -2660,7 +2660,7 @@ def _build_nsis(version, bindir, arch):
     hg_path = sh('hg paths', capture=True).rstrip()
     forkuser, forkreponame = hg_path.split('/')[-2:]
     if forkuser == 'natcap':
-        data_location = 'invest-data'
+        data_location = 'invest-data/%s' % short_version
         forkname = ''
     else:
         data_location = 'nightly-build/invest-forks/%s/data' % forkuser
