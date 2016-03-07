@@ -530,16 +530,9 @@ def get_inputs(args):
 
     Example Returns:
         d = {
-            'workspace_dir': <string>,
-            'transition_years': <list>,
-            'analysis_year': <int>,
-            'snapshot_years': <list>
-            'timesteps': <int>,
-            'transitions': <int>,
             'do_economic_analysis': <bool>,
-            'price_t': <dict>,
             'lulc_to_Sb': <dict>,
-            'lulc_to_Ss': <dict>,
+            'lulc_to_Ss': <dict>
             'lulc_to_L': <dict>,
             'lulc_to_Yb': <dict>,
             'lulc_to_Ys': <dict>,
@@ -547,19 +540,13 @@ def get_inputs(args):
             'lulc_to_Hs': <dict>,
             'lulc_trans_to_Db': <dict>,
             'lulc_trans_to_Ds': <dict>,
-            'C_s': <list>,
-            'Y_pr': <dict>,
-            'D_pr': <dict>,
-            'H_pr': <dict>,
-            'L_s': <list>,
-            'A_pr': <dict>,
-            'E_pr': <dict>,
-            'S_pb': <dict>,
-            'T_b': <list>,
-            'N_pr': <dict>,
-            'N_r': <list>,
-            'N': <string>,
-            'V': <string>
+            'C_r_rasters': <list>,
+            'transition_years': <list>,
+            'snapshot_years': <list>,
+            'timesteps': <int>,
+            'transitions': <list>,
+            'price_t': <list>,
+            'File_Registry': <dict>
         }
 
     """
