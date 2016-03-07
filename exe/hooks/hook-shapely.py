@@ -1,4 +1,5 @@
 from PyInstaller.compat import is_darwin, is_win
+import os
 
 if is_darwin:
     from PyInstaller.utils.hooks import \
