@@ -1,4 +1,4 @@
-from PyInstaller.compat import is_win, is_darwin, is_linux
+from PyInstaller.compat import is_darwin
 
 if is_darwin:
     from PyInstaller.utils.hooks import collect_data_files, collect_submodules
