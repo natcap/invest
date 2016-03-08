@@ -2450,7 +2450,7 @@ def build_bin(options):
         shutil.copytree, bindir, invest_dist)
 
     # Mac builds seem to need an egg placed in just the right place.
-    if platform.system() in ['Linux']:
+    if platform.system() in ['Darwin', 'Linux']:
         sitepkgs_egg_glob = os.path.join(sitepkgs, 'natcap.versioner-*.egg')
         try:
             # If natcap.versioner was installed as an egg, just take that and
