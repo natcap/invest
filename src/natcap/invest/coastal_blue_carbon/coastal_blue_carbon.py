@@ -30,7 +30,8 @@ _OUTPUT = {
     'carbon_stock': 'carbon_stock_at_%s.tif',
     'carbon_accumulation': 'carbon_accumulation_between_%s_and_%s.tif',
     'cabon_emissions': 'carbon_emissions_between_%s_and_%s.tif',
-    'carbon_net_sequestration': 'net_carbon_sequestration_between_%s_and_%s.tif',
+    'carbon_net_sequestration':
+        'net_carbon_sequestration_between_%s_and_%s.tif',
 }
 
 
@@ -62,8 +63,8 @@ def execute(args):
             result of change. The 'yearly_accumulation' values should be given
             in terms of Megatonnes of CO2 e/ha-yr. The 'half-life' values must
             be given in terms of years. The 'disturbance' values must be given
-            as a decimal (e.g. 0.5 for 50%) of stock distrubed given a transition
-            occurs away from a lulc-class.
+            as a decimal (e.g. 0.5 for 50%) of stock distrubed given a
+            transition occurs away from a lulc-class.
         lulc_baseline_map_uri (str): a GDAL-supported raster representing the
             baseline landscape/seascape.
         lulc_transition_maps_list (list): a list of GDAL-supported rasters
@@ -440,7 +441,8 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
     return reclass_array
 
 
-def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None, nodata_mask=None):
+def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None,
+                       nodata_mask=None):
     """Reclass arrays based on element-wise combinations between two arrays.
 
     Args:
@@ -612,9 +614,10 @@ def get_inputs(args):
             args['carbon_pool_initial_uri'], 'lulc-class')
 
     code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
-        in initial_dict.iteritems())
+                     in initial_dict.iteritems())
     for args_key, col_name in [('lulc_to_Sb', 'biomass'),
-        ('lulc_to_Ss', 'soil'), ('lulc_to_L', 'litter')]:
+                               ('lulc_to_Ss', 'soil'),
+                               ('lulc_to_L', 'litter')]:
             d[args_key] = dict(
                 (code, row[col_name]) for code, row in code_dict.iteritems())
 
@@ -694,9 +697,12 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
         snapshot_year = snapshot_years[snapshot_idx]
         next_snapshot_year = snapshot_years[snapshot_idx + 1]
         T_s_rasters.append(_OUTPUT['carbon_stock'] % (snapshot_year))
-        A_r_rasters.append(_OUTPUT['carbon_accumulation'] % (snapshot_year, next_snapshot_year))
-        E_r_rasters.append(_OUTPUT['cabon_emissions'] % (snapshot_year, next_snapshot_year))
-        N_r_rasters.append(_OUTPUT['carbon_net_sequestration'] % (snapshot_year, next_snapshot_year))
+        A_r_rasters.append(_OUTPUT['carbon_accumulation'] % (
+            snapshot_year, next_snapshot_year))
+        E_r_rasters.append(_OUTPUT['cabon_emissions'] % (
+            snapshot_year, next_snapshot_year))
+        N_r_rasters.append(_OUTPUT['carbon_net_sequestration'] % (
+            snapshot_year, next_snapshot_year))
     T_s_rasters.append(_OUTPUT['carbon_stock'] % (snapshot_years[-1]))
 
     # Total Net Sequestration
@@ -717,13 +723,22 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
         }, outputs_dir)], results_suffix)
 
     raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
-    for raster_filepath in itertools.chain(*[file_registry[key] for key in raster_lists]):
+    for raster_filepath in itertools.chain(
+            *[file_registry[key] for key in raster_lists]):
         geoprocess.new_raster_from_base_uri(
-            template_raster, raster_filepath, 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
+            template_raster,
+            raster_filepath,
+            'GTiff',
+            NODATA_FLOAT,
+            gdal.GDT_Float32)
     for raster_key in ['N_total_raster', 'NPV_raster']:
         if file_registry[raster_key] is not None:
             geoprocess.new_raster_from_base_uri(
-                template_raster, file_registry[raster_key], 'GTiff', NODATA_FLOAT, gdal.GDT_Float32)
+                template_raster,
+                file_registry[raster_key],
+                'GTiff',
+                NODATA_FLOAT,
+                gdal.GDT_Float32)
 
     return file_registry
 

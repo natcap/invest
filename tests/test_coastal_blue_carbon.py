@@ -90,17 +90,29 @@ def get_args():
         os.path.join(workspace, 'carbon_pool_transient.csv'),
         carbon_pool_transient_list)
     raster_0_uri = pygeotest.create_raster_on_disk(
-        band_matrices, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
-        datatype=gdal.GDT_Int32, filename=os.path.join(
-            workspace, 'raster_0.tif'))
+        band_matrices,
+        srs.origin,
+        srs.projection,
+        NODATA_INT,
+        srs.pixel_size(100),
+        datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_0.tif'))
     raster_1_uri = pygeotest.create_raster_on_disk(
-        band_matrices_with_nodata, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
-        datatype=gdal.GDT_Int32, filename=os.path.join(
-            workspace, 'raster_1.tif'))
+        band_matrices_with_nodata,
+        srs.origin,
+        srs.projection,
+        NODATA_INT,
+        srs.pixel_size(100),
+        datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_1.tif'))
     raster_2_uri = pygeotest.create_raster_on_disk(
-        band_matrices_two, srs.origin, srs.projection, NODATA_INT, srs.pixel_size(100),
-        datatype=gdal.GDT_Int32, filename=os.path.join(
-            workspace, 'raster_2.tif'))
+        band_matrices_two,
+        srs.origin,
+        srs.projection,
+        NODATA_INT,
+        srs.pixel_size(100),
+        datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_2.tif'))
     lulc_baseline_map_uri = raster_0_uri
     lulc_transition_maps_list = [raster_1_uri, raster_2_uri]
 
@@ -195,7 +207,8 @@ class TestIO(unittest.TestCase):
 
     def test_get_inputs(self):
         """Coastal Blue Carbon: Test get_inputs function in IO module."""
-        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon as cbc
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
         d = cbc.get_inputs(self.args)
         self.assertTrue(d['lulc_to_Hb'][0] == 0.0)
         self.assertTrue(d['lulc_to_Hb'][1] == 1.0)
@@ -270,9 +283,12 @@ class TestModel(unittest.TestCase):
                 sample_data_path,
                 'inputs/GBJC_2004_mean_Resample.tif'),
             'lulc_transition_maps_list': [
-                os.path.join(sample_data_path, 'inputs/GBJC_2050_mean_Resample.tif'),
                 os.path.join(sample_data_path,
-                '/Users/work/CoastalBlueCarbon/inputs/GBJC_2100_mean_Resample.tif')],
+                             'inputs/GBJC_2050_mean_Resample.tif'),
+                os.path.join(
+                    sample_data_path,
+                    '/Users/work/CoastalBlueCarbon/inputs/GBJC_2100_mean_'
+                    'Resample.tif')],
             'lulc_transition_matrix_uri': os.path.join(
                 sample_data_path,
                 'outputs_preprocessor/transitions_sample.csv'),
@@ -282,8 +298,9 @@ class TestModel(unittest.TestCase):
         }
         cbc.execute(args)
         npv_raster = os.path.join(
-            os.path.join(args['workspace_dir'],
-            'outputs_core/net_present_value_150225.tif'))
+            os.path.join(
+                args['workspace_dir'],
+                'outputs_core/net_present_value_150225.tif'))
         npv_array = read_array(npv_raster)
         u = np.unique(npv_array)
         self.assertTrue(35.93808746 in u)
@@ -325,7 +342,6 @@ class TestPreprocessor(unittest.TestCase):
             lines = f.readlines()
         self.assertTrue(lines[2].startswith('X,,accum'))
 
-
     def test_preprocessor_zeros(self):
         """Coastal Blue Carbon: Test entire run of preprocessor with final
         snapshot raster of zeros."""
@@ -352,7 +368,6 @@ def read_array(raster_path):
     a = band.ReadAsArray()
     ds = None
     return a
-
 
 
 if __name__ == '__main__':
