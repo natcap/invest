@@ -289,8 +289,8 @@ class TestModel(unittest.TestCase):
         }
         cbc.execute(args)
         npv_raster = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            'workspace/outputs_core/net_present_value_150225.tif')
+            os.path.join(args['workspace_dir'],
+            'outputs_core/net_present_value_150225.tif'))
         npv_array = read_array(npv_raster)
         u = np.unique(npv_array)
         self.assertTrue(35.93808746 in u)
