@@ -191,33 +191,30 @@ class TestIO(unittest.TestCase):
     """Test Coastal Blue Carbon io library functions."""
 
     def setUp(self):
-        pass
+        self.args = get_args()
 
     def test_get_inputs(self):
         """Coastal Blue Carbon: Test get_inputs function in IO module."""
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon as cbc
-        args = get_args()
-        d = cbc.get_inputs(args)
+        d = cbc.get_inputs(self.args)
         self.assertTrue(d['lulc_to_Hb'][0] == 0.0)
         self.assertTrue(d['lulc_to_Hb'][1] == 1.0)
         self.assertTrue(len(d['price_t']) == 11)
         self.assertTrue(len(d['snapshot_years']) == 3)
         self.assertTrue(len(d['transition_years']) == 2)
-        shutil.rmtree(args['workspace_dir'])
 
     def test_create_transient_dict(self):
         """Coastal Blue Carbon: Test function that reads in the table of
         values for transient analysis."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
-        args = get_args()
         biomass_transient_dict, soil_transient_dict = \
-            cbc._create_transient_dict(args['carbon_pool_transient_uri'])
+            cbc._create_transient_dict(self.args['carbon_pool_transient_uri'])
         self.assertTrue(1 in biomass_transient_dict.keys())
         self.assertTrue(1 in soil_transient_dict.keys())
 
     def tearDown(self):
-        pass
+        shutil.rmtree(self.args['workspace_dir'])
 
 
 class TestModel(unittest.TestCase):
@@ -225,21 +222,19 @@ class TestModel(unittest.TestCase):
     """Test Coastal Blue Carbon main model functions."""
 
     def setUp(self):
-        pass
+        self.args = get_args()
 
     def test_model_run(self):
         """Coastal Blue Carbon: Test run function in main model."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
-        args = get_args()
-        cbc.execute(args)
+        cbc.execute(self.args)
         netseq_output_raster = os.path.join(
-            os.path.split(os.path.realpath(__file__))[0],
-            'workspace/outputs_core/total_net_carbon_sequestration_test.tif')
+                self.args['workspace_dir'],
+                'outputs_core/total_net_carbon_sequestration_test.tif')
         npv_output_raster = os.path.join(
-            os.path.split(os.path.realpath(__file__))[0],
-            'workspace/outputs_core/net_present_value_test.tif')
-
+            self.args['workspace_dir'],
+            'outputs_core/net_present_value_test.tif')
         netseq_array = read_array(netseq_output_raster)
         npv_array = read_array(npv_output_raster)
 
@@ -247,18 +242,16 @@ class TestModel(unittest.TestCase):
         np.testing.assert_almost_equal(netseq_array[0, 0], np.nan, decimal=5)
         np.testing.assert_almost_equal(npv_array[0, 1], 60.278, decimal=4)
         np.testing.assert_almost_equal(npv_array[0, 0], np.nan, decimal=5)
-        shutil.rmtree(args['workspace_dir'])
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
         """Coastal Blue Carbon: Test main model run against InVEST-Data."""
-        sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
-        workspace_dir = os.path.join(os.path.dirname(
-            os.path.realpath(__file__)), 'workspace')
+
+        sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
         args = {
-            'workspace_dir': workspace_dir,
+            'workspace_dir': self.args['workspace_dir'],
             'analysis_year': 2100,
             'carbon_pool_initial_uri': os.path.join(
                 sample_data_path,
@@ -294,10 +287,9 @@ class TestModel(unittest.TestCase):
         npv_array = read_array(npv_raster)
         u = np.unique(npv_array)
         self.assertTrue(35.93808746 in u)
-        shutil.rmtree(args['workspace_dir'])
 
     def tearDown(self):
-        pass
+        shutil.rmtree(self.args['workspace_dir'])
 
 
 class TestPreprocessor(unittest.TestCase):
@@ -332,7 +324,7 @@ class TestPreprocessor(unittest.TestCase):
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
         self.assertTrue(lines[2].startswith('X,,accum'))
-        shutil.rmtree(args['workspace_dir'])
+
 
     def test_preprocessor_zeros(self):
         """Coastal Blue Carbon: Test entire run of preprocessor with final
@@ -350,7 +342,8 @@ class TestPreprocessor(unittest.TestCase):
         shutil.rmtree(args2['workspace_dir'])
 
     def tearDown(self):
-        pass
+        args = get_preprocessor_args(1)
+        shutil.rmtree(args['workspace_dir'])
 
 
 def read_array(raster_path):
