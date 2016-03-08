@@ -58,8 +58,11 @@ if is_win:
     exename += '.exe'
 
 if is_darwin:
+    # remove shapely dynamic library collision
     a.binaries = filter(lambda x: x[0] != 'libgeos_c.1.dylib', a.binaries)
+    # remove matplotlib dynamic library collision
     a.binaries = filter(lambda x: x[0] != 'libpng16.16.dylib', a.binaries)
+    # add gdal dynamic libraries from homebrew
     a.binaries += [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
     a.binaries += [('libgeos_c.dylib', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
     a.binaries += [('libgeos_c.1.dylib', '/usr/local/lib/libgeos_c.1.dylib', 'BINARY')]
