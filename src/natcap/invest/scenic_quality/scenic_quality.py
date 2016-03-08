@@ -54,7 +54,8 @@ _TMP_BASE_FILES = {
     'clipped_dem_path' : 'dem_clipped.tif',
     'dem_proj_to_aoi_path' : 'dem_proj_to_aoi.tif',
     'clipped_pop_path' : 'pop_clipped.tif',
-    'pop_proj_to_aoi_path' : 'pop_proj_to_aoi.tif'
+    'pop_proj_to_aoi_path' : 'pop_proj_to_aoi.tif',
+    'single_point_path' : 'tmp_viewpoint_path.shp'
     }
 
 
@@ -198,32 +199,11 @@ def execute(args):
             numpy.array
         """
 
-        # Mask where values are NOT nodata
-        #valid_mask = ((dist != dist_nodata) & (weight != nodata))
-        # Do not want to compute past user input maximum valuation radius
-        #max_dist_mask = (dist > max_val_radius)
         # Based off of Equation 2 in the Users Guide
-        #TODO : CONFIRM WHAT TO COMPUTE WHEN LESS THAN 1000m
-        #ROB SAYS not an issue if distances are in meters. problem only arrises with log function where value is between 0 -1. not likely to happen and get a cell size less than a meter.
-        #val_result = numpy.where(
-        #    dist[valid_mask] >= 1000,
-        #    (coef_a + coef_b * dist[valid_mask] +
-        #     coef_c * dist[valid_mask]**2 + coef_d * dist[valid_mask]**3) * weight[valid_mask],
-        #    ((coef_a + coef_b * 1000 + coef_c * 1000**2 + coef_d * 1000**3) -
-        #     (coef_b + 2 * coef_c * 1000 + 3 * coef_d * 1000**2) *
-        #     (1000 - dist[valid_mask])) * weight[valid_mask]
-        #)
-
         return numpy.where(
             (dist != nodata) & (weight != nodata),
             (coef_a + coef_b * dist + coef_c * dist**2 + coef_d * dist**3) * weight,
             nodata)
-
-        #dist_final = numpy.empty(valid_mask.shape)
-        #dist_final[:] = nodata
-        #dist_final[valid_mask] = val_result
-        #dist_final[max_dist_mask] = 0.0
-        #return dist_final
 
     def log_val(dist, weight):
         """Logarithmic Valuation function.
@@ -240,32 +220,16 @@ def execute(args):
             numpy.array
         """
 
-        #valid_mask = ((dist != dist_nodata) & (weight != nodata))
-        #max_dist_mask = (dist > max_valuation_radius)
         # Based off of Equation 1 in the Users Guide
-        #TODO : CONFIRM WHAT TO COMPUTE WHEN LESS THAN 1000m
-        #val_result = numpy.where(
-        #    dist[valid_mask] >= 1000,
-        #    (coef_a + coef_b * numpy.log(dist[valid_mask])) * weight[valid_mask],
-        #    (coef_a + coef_b * numpy.log(1000) - (coef_b / 1000) *
-        #     (1000 - dist[valid_mask])) * weight[valid_mask]
-        #)
-
         return numpy.where(
             (dist != nodata) & (weight != nodata),
             (coef_a + coef_b * numpy.log(dist)) * weight,
             nodata)
 
-        #dist_final = numpy.empty(valid_mask.shape)
-        #dist_final[:] = nodata
-        #dist_final[valid_mask] = val_result
-        #dist_final[max_dist_mask] = 0.0
-        #return dist_final
-
     def exp_val(dist, weight):
         """Exponential Decay Valuation function.
 
-        This represents equation 1 in the User Guide with the added weighted
+        This represents equation X in the User Guide with the added weighted
         factor.
 
         Parameters:
@@ -278,7 +242,7 @@ def execute(args):
         """
         return numpy.where(
             (dist != nodata) & (weight != nodata),
-            (coef_a + coef_b * numpy.log(dist)) * weight,
+            (coef_a * numpy.exp(-coef_b * dist)) * weight,
             nodata)
 
     def add_op(raster_one, raster_two):
@@ -385,6 +349,36 @@ def execute(args):
                 # When pixel is over nodata and we told it to skip
                 LOGGER.info('Viewpoint %s is over nodata, skipping.', index)
 
+            # Create temporary point shapefile from geometry of feature
+            if os.path.isfile(file_registry['single_point_path']):
+                driver = ogr.GetDriverByName('ESRI Shapefile')
+                driver.DeleteDataSource(file_registry['single_point_path'])
+
+            output_driver = ogr.GetDriverByName('ESRI Shapefile')
+            output_datasource = output_driver.CreateDataSource(
+                file_registry['single_point_path'])
+            layer_name = 'viewpoint'
+            output_layer = output_datasource.CreateLayer(
+                    layer_name, aoi_srs, ogr.wkbPoint)
+
+            output_field = ogr.FieldDefn('view_ID', ogr.OFTReal)
+            output_layer.CreateField(output_field)
+
+            tmp_geom = ogr.Geometry(ogr.wkbPoint)
+            tmp_geom.AddPoint_2D(geom_x, geom_y)
+
+            output_feature = ogr.Feature(output_layer.GetLayerDefn())
+            output_layer.CreateFeature(output_feature)
+
+            field_index = output_feature.GetFieldIndex('view_ID')
+            output_feature.SetField(field_index, 1)
+
+            output_feature.SetGeometryDirectly(tmp_geom)
+            output_layer.SetFeature(output_feature)
+            output_feature = None
+            output_layer = None
+            output_datasource = None
+
             nodata = pygeoprocessing.get_nodata_from_uri(viewshed_filepath)
             cell_size = pygeoprocessing.get_cell_size_from_uri(viewshed_filepath)
             weighted_view_path = pygeoprocessing.temporary_filename()
@@ -407,9 +401,18 @@ def execute(args):
                 vectorize_op=False)
 
             # Do a distance transform on each viewpoint raster
+            burned_feat_path = pygeoprocessing.temporary_filename()
             dist_pixel_path = pygeoprocessing.temporary_filename()
+
+            pygeoprocessing.new_raster_from_base_uri(
+                viewshed_filepath, burned_feat_path, 'GTiff', nodata,
+                gdal.GDT_Float32, fill_value=0.0)
+            pygeoprocessing.rasterize_layer_uri(
+                burned_feat_path, file_registry['single_point_path'],
+                burn_values=[1.0], option_list=["ALL_TOUCHED=TRUE"])
+
             pygeoprocessing.distance_transform_edt(
-                viewshed_filepath, dist_pixel_path, process_pool=None)
+                burned_feat_path, dist_pixel_path, process_pool=None)
 
             dist_nodata = pygeoprocessing.get_nodata_from_uri(dist_pixel_path)
 
@@ -422,8 +425,18 @@ def execute(args):
                 Returns:
                     numpy.array with distances in meters"""
 
-                return numpy.where(
-                    dist != dist_nodata, dist * cell_size, nodata)
+                valid_mask = (dist != dist_nodata)
+                # There will be a pixel of zero distance that represents the
+                # viewpoint other distances are calculated from. Set this to
+                # 1.0, to avoid valuation function calculations of 0.0
+                # CONFIRM this is the correct behavior
+                dist_cell_size = numpy.where(
+                    dist[valid_mask] != 0.0, dist[valid_mask] * cell_size, 1.0)
+
+                dist_final = numpy.empty(valid_mask.shape)
+                dist_final[:] = nodata
+                dist_final[valid_mask] = dist_cell_size
+                return dist_final
 
             dist_meters_path = pygeoprocessing.temporary_filename()
 
@@ -459,6 +472,8 @@ def execute(args):
             os.remove(dist_pixel_path)
             os.remove(dist_meters_path)
             os.remove(weighted_view_path)
+            driver = ogr.GetDriverByName('ESRI Shapefile')
+            driver.DeleteDataSource(file_registry['single_point_path'])
 
             if keep_val_viewsheds == 'No':
                 os.remove(vshed_val_path)
@@ -693,7 +708,11 @@ def execute(args):
     for file_id in _TMP_BASE_FILES:
         try:
             if isinstance(file_registry[file_id], basestring):
-                os.remove(file_registry[file_id])
+                if os.path.splitext(file_registry[file_id])[1] == '.shp':
+                    driver = ogr.GetDriverByName('ESRI Shapefile')
+                    driver.DeleteDataSource(file_registry[file_id])
+                else:
+                    os.remove(file_registry[file_id])
             elif isinstance(file_registry[file_id], list):
                 for index in xrange(len(file_registry[file_id])):
                     os.remove(file_registry[file_id][index])
