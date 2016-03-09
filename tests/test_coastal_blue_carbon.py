@@ -136,6 +136,15 @@ def get_args():
     return args
 
 
+def _create_workspace():
+    path = os.path.dirname(os.path.realpath(__file__))
+    workspace = os.path.join(path, 'workspace')
+    if os.path.exists(workspace):
+        shutil.rmtree(workspace)
+    os.mkdir(workspace)
+    return workspace
+
+
 def get_preprocessor_args(args_choice):
     """Create and return arguments for preprocessor model.
 
@@ -149,15 +158,10 @@ def get_preprocessor_args(args_choice):
     band_matrices_ones = [np.ones((2, 2))]
     srs = pygeotest.sampledata.SRS_WILLAMETTE
 
-    path = os.path.dirname(os.path.realpath(__file__))
-    workspace = os.path.join(path, 'workspace')
-    if os.path.exists(workspace):
-        shutil.rmtree(workspace)
-    os.mkdir(workspace)
+    workspace = _create_workspace()
 
     lulc_lookup_uri = create_table(
-        os.path.join(workspace, 'lulc_lookup.csv'),
-        lulc_lookup_list)
+        os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
 
     raster_0_uri = pygeotest.create_raster_on_disk(
         band_matrices_ones, srs.origin, srs.projection, -1,
@@ -299,6 +303,11 @@ class TestModel(unittest.TestCase):
                 args['workspace_dir'],
                 'outputs_core/net_present_value_150225.tif'))
         npv_array = read_array(npv_raster)
+
+        # this is just a regression test, but it will capture all values
+        # in the net present value raster.  this raster was chosen because the
+        # the values are determined by multiple inputs, and any changes in
+        # those inputs would propogate to this raster.
         u = np.unique(npv_array).sort()
         a = [0., 35.93808746, 3507.83374023, 3543.77172852].sort()
         self.assertTrue(a == u)
@@ -352,11 +361,10 @@ class TestPreprocessor(unittest.TestCase):
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
         self.assertTrue(lines[2][:].startswith('X,disturb,accum'))
-        shutil.rmtree(args2['workspace_dir'])
 
     def tearDown(self):
-        args = get_preprocessor_args(1)
-        shutil.rmtree(args['workspace_dir'])
+        workspace_dir = _create_workspace()
+        shutil.rmtree(workspace_dir)
 
 
 def read_array(raster_path):
