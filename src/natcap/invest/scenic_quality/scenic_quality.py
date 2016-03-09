@@ -110,7 +110,8 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     viewshed_dir = os.path.join(intermediate_dir, 'viewpoint_rasters')
-    pygeoprocessing.create_directories([output_dir, intermediate_dir, viewshed_dir])
+    pygeoprocessing.create_directories(
+        [output_dir, intermediate_dir, viewshed_dir])
 
     file_suffix = natcap.invest.utils.make_suffix_string(
         args, 'results_suffix')
@@ -166,12 +167,12 @@ def execute(args):
     coef_a = float(args['%s_a_coeff' % val_coeffs[val_ordinal]])
     coef_b = float(args['%s_b_coeff' % val_coeffs[val_ordinal]])
 
+    # If 3rd degree polynomial, get the other two coefficients
     if val_ordinal == '0':
         coef_c = float(args['poly_c_coeff'])
         coef_d = float(args['poly_d_coeff'])
 
     max_val_radius = float(args['max_valuation_radius'])
-
 
     def polynomial_val(dist, weight):
         """Third Degree Polynomial Valuation function.
@@ -272,6 +273,9 @@ def execute(args):
         curvature_correction = 0.0
         include_curvature = False
 
+    # An indicator if any previous viewpoints have been calculated
+    initial_viewpoint = True
+
     for layer in viewpoints_vector:
         num_features = layer.GetFeatureCount()
 
@@ -316,7 +320,7 @@ def execute(args):
                 viewpoint_height = 0.0
 
             try:
-                weight = point.GetField('coeff')
+                weight = point.GetField('WEIGHT')
             except ValueError:
                 # When no weight provided, set scale to 1
                 weight = 1.0
@@ -337,6 +341,24 @@ def execute(args):
             except ValueError:
                 # When pixel is over nodata and we told it to skip
                 LOGGER.info('Viewpoint %s is over nodata, skipping.', index)
+                # If this happens we want to continue and re-organize our
+                # file lists a bit
+                if not initial_viewpoint:
+                    if num_features - 1 == index:
+                        # Skipping last feature means our final outputs are
+                        # the previous aggregated ones. Copy to final file path
+                        shutil.copy(feat_val_paths[index - 1],
+                                    feat_val_paths[index])
+                        shutil.copy(feat_views_paths[index - 1],
+                                    feat_views_paths[index])
+                        os.remove(feat_vals_paths[index - 1])
+                        os.remove(feat_views_paths[index - 1])
+                    else:
+                        # NOTE: not removing index - 1 files because they
+                        # are empty and cleaned up on model exit
+                        feat_val_paths[index] = feat_val_paths[index - 1]
+                        feat_views_paths[index] = feat_views_paths[index - 1]
+                continue
 
             # Create temporary point shapefile from geometry of feature
             if os.path.isfile(file_registry['single_point_path']):
@@ -384,12 +406,17 @@ def execute(args):
 
                 return numpy.where(view != nodata, view * weight, nodata)
 
-            pygeoprocessing.vectorize_datasets(
-                [viewshed_filepath], weight_factor_op, weighted_view_path,
-                gdal.GDT_Float32, nodata, cell_size, 'intersection',
-                vectorize_op=False)
+            if weight != 1.0:
+                # Multiply viewpoints by the scalar weight
+                pygeoprocessing.vectorize_datasets(
+                    [viewshed_filepath], weight_factor_op, weighted_view_path,
+                    gdal.GDT_Float32, nodata, cell_size, 'intersection',
+                    vectorize_op=False)
+            else:
+                # Weight was not provided or set to 1.0
+                shutil.copy(viewshed_filepath, weighted_view_path)
 
-            # Do a distance transform on each viewpoint raster
+            # Create a new raster and burn viewpoint feature onto it
             burned_feat_path = pygeoprocessing.temporary_filename()
             dist_pixel_path = pygeoprocessing.temporary_filename()
 
@@ -399,7 +426,7 @@ def execute(args):
             pygeoprocessing.rasterize_layer_uri(
                 burned_feat_path, file_registry['single_point_path'],
                 burn_values=[1.0], option_list=["ALL_TOUCHED=TRUE"])
-
+            # Do a distance transform on viewpoint raster
             pygeoprocessing.distance_transform_edt(
                 burned_feat_path, dist_pixel_path, process_pool=None)
 
@@ -442,7 +469,10 @@ def execute(args):
                 gdal.GDT_Float32, nodata, cell_size, 'intersection',
                 vectorize_op=False)
 
-            if index == 0:
+            if initial_viewpoint:
+                # First time having computed on a viewpoint, nothing else
+                # to aggregate with yet. Copy files into the aggregate list
+                initial_viewpoint = False
                 shutil.copy(vshed_val_path, feat_val_paths[index])
                 shutil.copy(viewshed_filepath, feat_views_paths[index])
 
@@ -456,11 +486,15 @@ def execute(args):
                         gdal.GDT_Float32, nodata, cell_size, 'intersection',
                         vectorize_op=False, datasets_are_pre_aligned=True)
 
+                    # No longer need the previous raster tracking accumalation.
                     os.remove(out_list[index - 1])
 
-            os.remove(dist_pixel_path)
-            os.remove(dist_meters_path)
-            os.remove(weighted_view_path)
+            tmp_files_remove = [
+                dist_pixel_path, dist_meters_path, weighted_view_path,
+                burned_feat_path]
+            for tmp_file in tmp_files_remove:
+                os.remove(tmp_files)
+            # Remove temporary viewpoint feature shapefile
             driver = ogr.GetDriverByName('ESRI Shapefile')
             driver.DeleteDataSource(file_registry['single_point_path'])
 
@@ -468,6 +502,9 @@ def execute(args):
                 os.remove(vshed_val_path)
             if keep_viewsheds == 'No':
                 os.remove(viewshed_filepath)
+
+    layer = None
+    viewpoints_vector = None
 
     # Do quantiles on viewshed_uri
     percentile_list = [25, 50, 75, 100]
