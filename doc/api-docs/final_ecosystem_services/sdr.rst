@@ -1,21 +1,5 @@
-Sediment Delivery Ratio Package
+Sediment Delivery Ratio Model
 ===============================
-
-Model Entry Point
------------------
-
-.. autofunction:: natcap.invest.sdr.sdr.execute
-
-Sediment Delivery Ratio
------------------------
-
-.. automodule:: natcap.invest.sdr.sdr
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Module contents
----------------
 
 .. automodule:: natcap.invest.sdr
     :members:
