@@ -253,10 +253,19 @@ class TestModel(unittest.TestCase):
         netseq_array = read_array(netseq_output_raster)
         npv_array = read_array(npv_output_raster)
 
-        np.testing.assert_almost_equal(netseq_array[0, 1], 31, decimal=4)
-        np.testing.assert_almost_equal(netseq_array[0, 0], np.nan, decimal=5)
-        np.testing.assert_almost_equal(npv_array[0, 1], 60.278, decimal=4)
-        np.testing.assert_almost_equal(npv_array[0, 0], np.nan, decimal=5)
+        netseq_test = np.array(
+            [[np.nan, 31.], [31., 31.]])
+        npv_test = np.array(
+            [[np.nan, 60.27801514], [60.27801514, 60.27801514]])
+
+        # just a simple regression test.  this demonstrates that a NaN value
+        # will properly propagate across the model. the npv raster was chosen
+        # because the values are determined by multiple inputs, and any changes
+        # in those inputs would propagate to this raster.
+        np.testing.assert_array_almost_equal(
+            netseq_array, netseq_test, decimal=4)
+        np.testing.assert_array_almost_equal(
+            npv_array, npv_test, decimal=4)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
@@ -305,9 +314,9 @@ class TestModel(unittest.TestCase):
         npv_array = read_array(npv_raster)
 
         # this is just a regression test, but it will capture all values
-        # in the net present value raster.  this raster was chosen because the
+        # in the net present value raster.  the npv raster was chosen because
         # the values are determined by multiple inputs, and any changes in
-        # those inputs would propogate to this raster.
+        # those inputs would propagate to this raster.
         u = np.unique(npv_array).sort()
         a = [0., 35.93808746, 3507.83374023, 3543.77172852].sort()
         self.assertTrue(a == u)
@@ -332,7 +341,9 @@ class TestPreprocessor(unittest.TestCase):
         preprocessor._create_carbon_pool_transient_table_template(
             filepath, code_to_lulc_dict)
         transient_dict = geoprocess.get_lookup_from_csv(filepath, 'code')
-        self.assertTrue(1 in transient_dict.keys())
+        # demonstrate that table contains all land covers
+        for i in [1, 2, 3]:
+            self.assertTrue(i in transient_dict.keys())
 
     def test_preprocessor_ones(self):
         """Coastal Blue Carbon: Test entire run of preprocessor with final
