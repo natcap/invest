@@ -51,6 +51,14 @@ carbon_pool_transient_list = \
 NODATA_INT = -1
 
 
+def read_array(raster_path):
+    ds = gdal.Open(raster_path)
+    band = ds.GetRasterBand(1)
+    a = band.ReadAsArray()
+    ds = None
+    return a
+
+
 def create_table(uri, rows_list):
     """Create csv file from list of lists."""
     with open(uri, 'w') as f:
@@ -200,6 +208,65 @@ def get_preprocessor_args(args_choice):
         return args2
 
 
+class TestPreprocessor(unittest.TestCase):
+
+    """Test Coastal Blue Carbon preprocessor library functions."""
+
+    def setUp(self):
+        pass
+
+    def test_create_carbon_pool_transient_table_template(self):
+        """Coastal Blue Carbon: Test creation of transient table template."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = get_preprocessor_args(1)
+        filepath = os.path.join(args['workspace_dir'], 'transient_temp.csv')
+        code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
+        preprocessor._create_carbon_pool_transient_table_template(
+            filepath, code_to_lulc_dict)
+        transient_dict = geoprocess.get_lookup_from_csv(filepath, 'code')
+        # demonstrate that output table contains all input land cover classes
+        for i in [1, 2, 3]:
+            self.assertTrue(i in transient_dict.keys())
+
+    def test_preprocessor_ones(self):
+        """Coastal Blue Carbon: Test entire run of preprocessor with final
+        snapshot raster of ones."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = get_preprocessor_args(1)
+        preprocessor.execute(args)
+        trans_csv = os.path.join(
+            args['workspace_dir'],
+            'outputs_preprocessor',
+            'transitions_test.csv')
+        with open(trans_csv, 'r') as f:
+            lines = f.readlines()
+        # just a regression test.  this tests that an output file was
+        # successfully created, and demonstrates that one land class transition
+        # does not occur and the other is set in the right direction.
+        self.assertTrue(lines[2].startswith('X,,accum'))
+
+    def test_preprocessor_zeros(self):
+        """Coastal Blue Carbon: Test entire run of preprocessor with final
+        snapshot raster of zeros."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args2 = get_preprocessor_args(2)
+        preprocessor.execute(args2)
+        trans_csv = os.path.join(
+            args2['workspace_dir'],
+            'outputs_preprocessor',
+            'transitions_test.csv')
+        with open(trans_csv, 'r') as f:
+            lines = f.readlines()
+        # just a regression test.  this tests that an output file was
+        # successfully created, and that two particular land class transitions
+        # occur and are set in the right directions.
+        self.assertTrue(lines[2][:].startswith('X,disturb,accum'))
+
+    def tearDown(self):
+        workspace_dir = _create_workspace()
+        shutil.rmtree(workspace_dir)
+
+
 class TestIO(unittest.TestCase):
 
     """Test Coastal Blue Carbon io library functions."""
@@ -212,6 +279,8 @@ class TestIO(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
         d = cbc.get_inputs(self.args)
+        # check several items in the data dictionary to check that the inputs
+        # are properly fetched.
         self.assertTrue(d['lulc_to_Hb'][0] == 0.0)
         self.assertTrue(d['lulc_to_Hb'][1] == 1.0)
         self.assertTrue(len(d['price_t']) == 11)
@@ -225,6 +294,8 @@ class TestIO(unittest.TestCase):
             import coastal_blue_carbon as cbc
         biomass_transient_dict, soil_transient_dict = \
             cbc._create_transient_dict(self.args['carbon_pool_transient_uri'])
+        # check that function can properly parse table of transient carbon pool
+        # values.
         self.assertTrue(1 in biomass_transient_dict.keys())
         self.assertTrue(1 in soil_transient_dict.keys())
 
@@ -323,73 +394,6 @@ class TestModel(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.args['workspace_dir'])
-
-
-class TestPreprocessor(unittest.TestCase):
-
-    """Test Coastal Blue Carbon preprocessor library functions."""
-
-    def setUp(self):
-        pass
-
-    def test_create_carbon_pool_transient_table_template(self):
-        """Coastal Blue Carbon: Test creation of transient table template."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = get_preprocessor_args(1)
-        filepath = os.path.join(args['workspace_dir'], 'transient_temp.csv')
-        code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
-        preprocessor._create_carbon_pool_transient_table_template(
-            filepath, code_to_lulc_dict)
-        transient_dict = geoprocess.get_lookup_from_csv(filepath, 'code')
-        # demonstrate that table contains all land covers
-        for i in [1, 2, 3]:
-            self.assertTrue(i in transient_dict.keys())
-
-    def test_preprocessor_ones(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor with final
-        snapshot raster of ones."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = get_preprocessor_args(1)
-        preprocessor.execute(args)
-        trans_csv = os.path.join(
-            args['workspace_dir'],
-            'outputs_preprocessor',
-            'transitions_test.csv')
-        with open(trans_csv, 'r') as f:
-            lines = f.readlines()
-        # just a regression test.  this tests that an output file was
-        # successfully created, and demonstrates that one land class transition
-        # does not occur and the other is set in the right direction.
-        self.assertTrue(lines[2].startswith('X,,accum'))
-
-    def test_preprocessor_zeros(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor with final
-        snapshot raster of zeros."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args2 = get_preprocessor_args(2)
-        preprocessor.execute(args2)
-        trans_csv = os.path.join(
-            args2['workspace_dir'],
-            'outputs_preprocessor',
-            'transitions_test.csv')
-        with open(trans_csv, 'r') as f:
-            lines = f.readlines()
-        # just a regression test.  this tests that an output file was
-        # successfully created, and that two particular land class transitions
-        # occur and are set in the right directions.
-        self.assertTrue(lines[2][:].startswith('X,disturb,accum'))
-
-    def tearDown(self):
-        workspace_dir = _create_workspace()
-        shutil.rmtree(workspace_dir)
-
-
-def read_array(raster_path):
-    ds = gdal.Open(raster_path)
-    band = ds.GetRasterBand(1)
-    a = band.ReadAsArray()
-    ds = None
-    return a
 
 
 if __name__ == '__main__':
