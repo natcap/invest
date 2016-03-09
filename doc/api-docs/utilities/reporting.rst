@@ -20,7 +20,7 @@ Table Generator
 HTML
 ----
 
-.. automodule:: natcap.invest.report_generation.html
+.. automodule:: natcap.invest.reporting.html
     :members:
     :undoc-members:
     :show-inheritance:
