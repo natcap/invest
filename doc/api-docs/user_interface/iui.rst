@@ -1,14 +1,6 @@
 User Interface Package
 ======================
 
-Subpackages
------------
-
-.. toctree::
-
-    iui/dbfpy2.rst
-    iui/jsonschema.rst
-
 Base Widgets
 ------------
 
