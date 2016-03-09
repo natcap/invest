@@ -151,11 +151,11 @@ def execute(args):
     pixel_size = projected_pixel_size(
         file_registry['clipped_dem_path'], aoi_srs)
 
-    LOGGER.debug('Projected Pixel Size: %s', pixel_size[0])
+    LOGGER.debug('Projected Pixel Size: %s', pixel_size)
 
     # Project DEM to AOI
     pygeoprocessing.reproject_dataset_uri(
-        file_registry['clipped_dem_path'], pixel_size[0], aoi_wkt,
+        file_registry['clipped_dem_path'], pixel_size, aoi_wkt,
         'bilinear', file_registry['dem_proj_to_aoi_path'])
 
     # Read in valuation coefficients
@@ -531,7 +531,7 @@ def execute(args):
 
         # Project Population to AOI
         pygeoprocessing.reproject_dataset_uri(
-            file_registry['clipped_pop_path'], pop_cell_size[0], aoi_wkt,
+            file_registry['clipped_pop_path'], pop_cell_size, aoi_wkt,
             'nearest', file_registry['pop_proj_to_aoi_path'])
 
         # Dataset lists for rasters to align and the aligned paths
@@ -544,11 +544,11 @@ def execute(args):
         # Set a factor value
         cell_size_factor = 1
 
-        if cell_size > pop_cell_size[0]:
-            out_pixel_size = pop_cell_size[0]
+        if cell_size > pop_cell_size:
+            out_pixel_size = pop_cell_size
         else:
             out_pixel_size = cell_size
-            cell_size_factor = pop_cell_size[0]**2 / viewshed_cell_size**2
+            cell_size_factor = pop_cell_size**2 / viewshed_cell_size**2
 
         pygeoprocessing.align_dataset_list(
             dataset_uri_list, dataset_out_uri_list, resample_method_list,
