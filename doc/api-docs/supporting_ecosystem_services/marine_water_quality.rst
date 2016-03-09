@@ -22,14 +22,6 @@ Marine Water Quality Core
     :undoc-members:
     :show-inheritance:
 
-Create Grid
------------
-
-.. automodule:: natcap.invest.marine_water_quality.create_grid
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 Interpolate Points to Raster
 ----------------------------
 
