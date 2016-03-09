@@ -275,8 +275,7 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
 
 def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
                              code_to_lulc_dict):
-    """Create transition table representing the lulc transition effect on
-    carbon emissions or sequestration.
+    """Create transition table representing effect on emissions or sequestration.
 
     Args:
         filepath (str): output filepath
