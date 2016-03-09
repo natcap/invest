@@ -346,6 +346,9 @@ class TestPreprocessor(unittest.TestCase):
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
+        # just a regression test.  this tests that an output file was
+        # successfully created, and demonstrates that one land class transition
+        # does not occur and the other is set in the right direction.
         self.assertTrue(lines[2].startswith('X,,accum'))
 
     def test_preprocessor_zeros(self):
@@ -360,6 +363,9 @@ class TestPreprocessor(unittest.TestCase):
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
+        # just a regression test.  this tests that an output file was
+        # successfully created, and that two particular land class transitions
+        # occur and are set in the right directions.
         self.assertTrue(lines[2][:].startswith('X,disturb,accum'))
 
     def tearDown(self):
