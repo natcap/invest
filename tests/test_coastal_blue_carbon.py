@@ -15,8 +15,6 @@ from pygeoprocessing.testing import scm
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 
-pp = pprint.PrettyPrinter(indent=4)
-
 
 lulc_lookup_list = \
     [['lulc-class', 'code', 'is_coastal_blue_carbon_habitat'],
