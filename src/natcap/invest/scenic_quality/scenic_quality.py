@@ -1,3 +1,4 @@
+"""InVEST Scenic Quality Model."""
 import os
 import sys
 import math
@@ -22,8 +23,10 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 
+
 class ValuationContainerError(Exception):
     """A custom error message for missing Valuation parameters."""
+
     pass
 
 _OUTPUT_BASE_FILES = {
@@ -37,24 +40,24 @@ _OUTPUT_BASE_FILES = {
 _INTERMEDIATE_BASE_FILES = {
     'pop_affected_path': 'affected_population.tif',
     'pop_unaffected_path': 'unaffected_population.tif',
-    'aligned_pop_path' : 'aligned_pop.tif',
-    'aligned_viewshed_path' : 'aligned_viewshed.tif',
-    'viewshed_no_zeros_path' : 'view_no_zeros.tif'
+    'aligned_pop_path': 'aligned_pop.tif',
+    'aligned_viewshed_path': 'aligned_viewshed.tif',
+    'viewshed_no_zeros_path': 'view_no_zeros.tif'
     }
 
 _TMP_BASE_FILES = {
-    'aoi_proj_dem_path' : 'aoi_proj_to_dem.shp',
-    'aoi_proj_pop_path' : 'aoi_proj_to_pop.shp',
-    'aoi_proj_struct_path' : 'aoi_proj_to_struct.shp',
-    'structures_clipped_path' : 'structures_clipped.shp',
-    'structures_projected_path' : 'structures_projected.shp',
-    'aoi_proj_overlap_path' : 'aoi_proj_to_overlap.shp',
-    'overlap_clipped_path' : 'overlap_clipped.shp',
-    'clipped_dem_path' : 'dem_clipped.tif',
-    'dem_proj_to_aoi_path' : 'dem_proj_to_aoi.tif',
-    'clipped_pop_path' : 'pop_clipped.tif',
-    'pop_proj_to_aoi_path' : 'pop_proj_to_aoi.tif',
-    'single_point_path' : 'tmp_viewpoint_path.shp'
+    'aoi_proj_dem_path': 'aoi_proj_to_dem.shp',
+    'aoi_proj_pop_path': 'aoi_proj_to_pop.shp',
+    'aoi_proj_struct_path': 'aoi_proj_to_struct.shp',
+    'structures_clipped_path': 'structures_clipped.shp',
+    'structures_projected_path': 'structures_projected.shp',
+    'aoi_proj_overlap_path': 'aoi_proj_to_overlap.shp',
+    'overlap_clipped_path': 'overlap_clipped.shp',
+    'clipped_dem_path': 'dem_clipped.tif',
+    'dem_proj_to_aoi_path': 'dem_proj_to_aoi.tif',
+    'clipped_pop_path': 'pop_clipped.tif',
+    'pop_proj_to_aoi_path': 'pop_proj_to_aoi.tif',
+    'single_point_path': 'tmp_viewpoint_path.shp'
     }
 
 
@@ -74,9 +77,10 @@ def execute(args):
             viewsheds that have been adjusted for valuation should be saved
             to disk.
         args['dem_path'] (string): path to a digital elevation model raster.
-        args['refraction'] (float): (optional) number indicating the refraction coefficient
-            to use for calculating curvature of the earth.
-        args['population_path'] (string): (optional) path to a raster for population
+        args['refraction'] (float): (optional) number indicating the refraction
+            coefficient to use for calculating curvature of the earth.
+        args['population_path'] (string): (optional) path to a raster for
+            population
         args['overlap_path'] (string): (optional)
         args['results_suffix] (string): (optional) string to append to any
             output files
@@ -130,7 +134,7 @@ def execute(args):
     # Clip DEM by AOI
     pygeoprocessing.clip_dataset_uri(
         args['dem_path'], file_registry['aoi_proj_dem_path'],
-         file_registry['clipped_dem_path'], assert_projections=False)
+        file_registry['clipped_dem_path'], assert_projections=False)
 
     # Reproject AOI to viewpoint structures in order to clip
     structures_srs = pygeoprocessing.get_spatial_ref_uri(
@@ -188,11 +192,11 @@ def execute(args):
         Returns:
             numpy.array
         """
-
         # Based off of Equation 2 in the Users Guide
         return numpy.where(
             (dist != nodata) & (weight != nodata),
-            (coef_a + coef_b * dist + coef_c * dist**2 + coef_d * dist**3) * weight,
+            ((coef_a + coef_b * dist + coef_c * dist**2 +
+                coef_d * dist**3) * weight),
             nodata)
 
     def log_val(dist, weight):
@@ -209,7 +213,6 @@ def execute(args):
         Returns:
             numpy.array
         """
-
         # Based off of Equation 1 in the Users Guide
         return numpy.where(
             (dist != nodata) & (weight != nodata),
@@ -248,7 +251,6 @@ def execute(args):
             numpy.array where the pixel value represents the combined
                 pixel values found across the two matrices.
         """
-
         raster_one[raster_one == nodata] = 0
         raster_two[raster_two == nodata] = 0
         return raster_one + raster_two
@@ -391,7 +393,8 @@ def execute(args):
             output_datasource = None
 
             nodata = pygeoprocessing.get_nodata_from_uri(viewshed_filepath)
-            cell_size = pygeoprocessing.get_cell_size_from_uri(viewshed_filepath)
+            cell_size = pygeoprocessing.get_cell_size_from_uri(
+                viewshed_filepath)
             weighted_view_path = pygeoprocessing.temporary_filename()
 
             def weight_factor_op(view):
@@ -403,7 +406,6 @@ def execute(args):
                 Returns:
                     numpy.array with view values multiplied by weight
                 """
-
                 return numpy.where(view != nodata, view * weight, nodata)
 
             if weight != 1.0:
@@ -439,8 +441,8 @@ def execute(args):
                     dist (numpy.array): array of distances in pixels
 
                 Returns:
-                    numpy.array with distances in meters"""
-
+                    numpy.array with distances in meters
+                """
                 valid_mask = (dist != dist_nodata)
                 # There will be a pixel of zero distance that represents the
                 # viewpoint other distances are calculated from. Set this to
@@ -477,14 +479,15 @@ def execute(args):
                 shutil.copy(viewshed_filepath, feat_views_paths[index])
 
             else:
-                for file_path, out_list in zip([vshed_val_path,
-                                                viewshed_filepath],
-                                                [feat_val_paths,
-                                                feat_views_paths]):
+                for file_path, out_list in zip(
+                        [vshed_val_path, viewshed_filepath],
+                        [feat_val_paths, feat_views_paths]):
+
                     pygeoprocessing.vectorize_datasets(
-                        [file_path, out_list[index - 1]], add_op, out_list[index],
-                        gdal.GDT_Float32, nodata, cell_size, 'intersection',
-                        vectorize_op=False, datasets_are_pre_aligned=True)
+                        [file_path, out_list[index - 1]], add_op,
+                        out_list[index], gdal.GDT_Float32, nodata, cell_size,
+                        'intersection', vectorize_op=False,
+                        datasets_are_pre_aligned=True)
 
                     # No longer need the previous raster tracking accumalation.
                     os.remove(out_list[index - 1])
@@ -523,13 +526,14 @@ def execute(args):
         vectorize_op=False)
 
     def raster_percentile(band):
-        """Operation to use in vectorize_datasets that takes
-            the pixels of 'band' and groups them together based on
+        """Operation to use in vectorize_datasets.
+
+        Takes the pixels of 'band' and groups them together based on
             their percentile ranges.
-
-            band - A gdal raster band
-
-            returns - An integer that places each pixel into a group
+        Parameters:
+            band (numpy.array): A gdal raster band
+        Returns:
+            An integer that places each pixel into a group
         """
         return bisect(percentiles, band)
 
@@ -643,7 +647,7 @@ def execute(args):
         affected_sum = 0
         affected_count = 0
         for _, block in pygeoprocessing.iterblocks(
-            file_registry['pop_affected_path']):
+                file_registry['pop_affected_path']):
 
             valid_mask = (block != nodata)
             affected_count += numpy.sum(valid_mask)
@@ -652,7 +656,7 @@ def execute(args):
         unaffected_sum = 0
         unaffected_count = 0
         for _, block in pygeoprocessing.iterblocks(
-            file_registry['pop_unaffected_path']):
+                file_registry['pop_unaffected_path']):
 
             valid_mask = (block != nodata)
             unaffected_count += numpy.sum(valid_mask)
@@ -673,8 +677,8 @@ def execute(args):
 
         # Create output HTML file for population stats
         header = ("<center><H1>Scenic Quality Model</H1>"
-            "<H2>(Visual Impact from Objects)</H2></center>"
-            "<br><br><HR><br><H2>Population Statistics</H2>")
+                  "<H2>(Visual Impact from Objects)</H2></center>"
+                  "<br><br><HR><br><H2>Population Statistics</H2>")
         page_header = {'type': 'text', 'section': 'head', 'text': header}
 
         table_data = [
@@ -701,7 +705,8 @@ def execute(args):
         overlap_srs = pygeoprocessing.get_spatial_ref_uri(args['overlap_path'])
         overlap_wkt = overlap_srs.ExportToWkt()
         pygeoprocessing.reproject_datasource_uri(
-            args['aoi_path'], overlap_wkt, file_registry['aoi_proj_overlap_path'])
+            args['aoi_path'], overlap_wkt,
+            file_registry['aoi_proj_overlap_path'])
         # Clip overlap vector by AOI
         clip_datasource_layer(
             args['overlap_path'], file_registry['aoi_proj_overlap_path'],
@@ -714,7 +719,8 @@ def execute(args):
 
         LOGGER.debug("Adding id field to overlap features.")
         id_name = 'investID'
-        setup_overlap_id_fields(file_registry['overlap_projected_path'], id_name)
+        setup_overlap_id_fields(
+            file_registry['overlap_projected_path'], id_name)
 
         LOGGER.debug("Count overlapping pixels per area.")
         pixel_counts = pygeoprocessing.aggregate_raster_values_uri(
@@ -745,6 +751,7 @@ def execute(args):
             # Let it go.
             pass
 
+
 def setup_overlap_id_fields(shapefile_path, id_name):
     """Add field to shapefile with unique values.
 
@@ -767,8 +774,9 @@ def setup_overlap_id_fields(shapefile_path, id_name):
         layer.SetFeature(feat)
         index += 1
 
+
 def add_percent_overlap(
-    overlap_path, key_field, perc_name, pixel_counts, pixel_size):
+        overlap_path, key_field, perc_name, pixel_counts, pixel_size):
     """Add overlap percentage of pixels on polygon in a new field.
 
     Parameters:
@@ -796,25 +804,30 @@ def add_percent_overlap(
         feat.SetField(perc_name, (pixel_area / geom_area) * 100)
         layer.SetFeature(feat)
 
+
 def calculate_percentiles_from_raster(raster_path, percentiles):
-    """Does a memory efficient sort to determine the percentiles
-        of a raster. Percentile algorithm currently used is the
-        nearest rank method.
+    """A memory efficient sort to determine the percentiles of a raster.
 
-        raster_path - a path to a gdal raster on disk
-        percentiles - a list of desired percentiles to lookup
+    Percentile algorithm currently used is the nearest rank method.
+
+    Parameters:
+        raster_path (string): a path to a gdal raster on disk
+        percentiles (list): a list of desired percentiles to lookup
             ex: [25,50,75,90]
-
-        returns - a list of values corresponding to the percentiles
+    Returns:
+        a list of values corresponding to the percentiles
             from the percentiles list
     """
     raster = gdal.Open(raster_path, gdal.GA_ReadOnly)
 
     def numbers_from_file(fle):
-        """Generates an iterator from a file by loading all the numbers
+        """Generate an iterator.
+
+        Iterator generated from a file by loading all the numbers
             and yielding
 
-            fle = file object
+        Parameters:
+            fle (file object): file object
         """
         arr = numpy.load(fle)
         for num in arr:
@@ -833,12 +846,12 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
     # from. This leaves out nodata values
     n_elements = 0
 
-    #Set the row strides to be something reasonable, like 256MB blocks
+    # Set the row strides to be something reasonable, like 256MB blocks
     row_strides = max(int(2**28 / (4 * n_cols)), 1)
 
     for row_index in xrange(0, n_rows, row_strides):
-        #It's possible we're on the last set of rows and the stride
-        #is too big, update if so
+        # It's possible we're on the last set of rows and the stride
+        # is too big, update if so
         if row_index + row_strides >= n_rows:
             row_strides = n_rows - row_index
 
@@ -897,6 +910,7 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
     raster = None
     return results
 
+
 def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
     """Clip Shapefile Layer by second Shapefile Layer.
 
@@ -916,7 +930,6 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
     Returns:
         Nothing
     """
-
     if os.path.isfile(output_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(output_path)
@@ -938,9 +951,11 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
     # Add in a check to make sure the intersection didn't come back
     # empty
     if(out_layer.GetFeatureCount() == 0):
-        raise IntersectionError('Intersection ERROR: clip_datasource_layer '
+        raise IntersectionError(
+            'Intersection ERROR: clip_datasource_layer '
             'found no intersection between: file - %s and file - %s.' %
             (shape_to_clip_path, binding_shape_path))
+
 
 def projected_pixel_size(raster_path, target_spat_ref):
     """Transform source cell size to target spatial reference.
