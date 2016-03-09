@@ -316,16 +316,21 @@ class TestModel(unittest.TestCase):
             import coastal_blue_carbon as cbc
         cbc.execute(self.args)
         netseq_output_raster = os.path.join(
-                self.args['workspace_dir'],
-                'outputs_core/total_net_carbon_sequestration_test.tif')
+            self.args['workspace_dir'],
+            'outputs_core/total_net_carbon_sequestration_test.tif')
         npv_output_raster = os.path.join(
             self.args['workspace_dir'],
             'outputs_core/net_present_value_test.tif')
         netseq_array = read_array(netseq_output_raster)
         npv_array = read_array(npv_output_raster)
 
-        netseq_test = np.array(
-            [[np.nan, 31.], [31., 31.]])
+        # (Explanation for why netseq is 31.)
+        # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2,  Year 2010: 2
+        # Initial Stock from Baseline: 5+5=10
+        # Sequest:
+        #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
+        #       Total: 10.5 + 20.5 = 31.
+        netseq_test = np.array([[np.nan, 31.], [31., 31.]])
         npv_test = np.array(
             [[np.nan, 60.27801514], [60.27801514, 60.27801514]])
 
