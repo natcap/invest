@@ -493,7 +493,7 @@ def execute(args):
                 dist_pixel_path, dist_meters_path, weighted_view_path,
                 burned_feat_path]
             for tmp_file in tmp_files_remove:
-                os.remove(tmp_files)
+                os.remove(tmp_file)
             # Remove temporary viewpoint feature shapefile
             driver = ogr.GetDriverByName('ESRI Shapefile')
             driver.DeleteDataSource(file_registry['single_point_path'])
