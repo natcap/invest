@@ -673,8 +673,8 @@ def execute(args):
         LOGGER.debug("Add area field to overlap features.")
         perc_field = '%_overlap'
         add_percent_overlap(
-            file_registry['overlap_projected_path'], perc_field, pixel_counts,
-            cell_size)
+            file_registry['overlap_projected_path'], id_name, perc_field,
+            pixel_counts, cell_size)
 
     LOGGER.info('deleting temporary files')
     for file_id in _TMP_BASE_FILES:
@@ -693,35 +693,55 @@ def execute(args):
             pass
 
 def setup_overlap_id_fields(shapefile_path, id_name):
-    """
+    """Add field to shapefile with unique values.
+
+    Parameters:
+        shapefile_path (string): path to a shapefile on disk.
+        id_name (string): string of new field to add.
+
+    Returns:
+        Nothing
     """
     shapefile = ogr.Open(shapefile_path, 1)
     layer = shapefile.GetLayer()
     id_field = ogr.FieldDefn(id_name, ogr.OFTInteger)
     layer.CreateField(id_field)
 
-    for feature_id in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_id)
-        feature.SetField(id_name, feature_id)
-        layer.SetFeature(feature)
+    index = 0
+
+    for feat in layer:
+        feat.SetField(id_name, index)
+        layer.SetFeature(feat)
+        index += 1
 
 def add_percent_overlap(
-    overlap_path, perc_name, pixel_counts, pixel_size):
-    """
+    overlap_path, key_field, perc_name, pixel_counts, pixel_size):
+    """Add overlap percentage of pixels on polygon in a new field.
+
+    Parameters:
+        overlap_path (string): path to polygon shapefile on disk.
+        key_field (string): the field name for unique feature id's.
+        perc_name (string): name of new field to hold percent overlap values.
+        pixel_counts (dict): dictionary with keys mapping to 'key_field'
+            and values being number of pixels.
+        pixel_size (float): cell size for the pixels.
+
+    Returns:
+        Nothing
     """
     shapefile = ogr.Open(overlap_path, 1)
     layer = shapefile.GetLayer()
     perc_field = ogr.FieldDefn(perc_name, ogr.OFTReal)
     layer.CreateField(perc_field)
 
-    for feature_id in pixel_counts.keys():
-        feature = layer.GetFeature(feature_id)
-        geom = feature.GetGeometryRef()
+    for feat in layer:
+        key = feat.GetFieldAsInteger(key_field)
+        geom = feat.GetGeometryRef()
         geom_area = geom.GetArea()
-        pixel_area = pixel_size**2 * pixel_counts[feature_id]
-        #feature.SetField(perc_name, float('%.2f' % (pixel_area / geom_area) * 100))
+        # Compute overlap by area of pixels and area of polygon
+        pixel_area = pixel_size**2 * pixel_counts[key]
         feature.SetField(perc_name, (pixel_area / geom_area) * 100)
-        layer.SetFeature(feature)
+        layer.SetFeature(feat)
 
 def calculate_percentiles_from_raster(raster_path, percentiles):
     """Does a memory efficient sort to determine the percentiles
@@ -805,7 +825,8 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
     # iterators. Variable is used to check if we've iterated to a
     # specified rank spot, to grab percentile value
     counter = 1
-    # Setup a list of zeros to replace with percentile results
+    # Setup a list of 'nans' to replace with percentile results, modeled
+    # after scipy.stats.scoreatpercentile function
     results = [float('nan')] * len(rank_list)
 
     LOGGER.debug('Percentile Rank List: %s', rank_list)
@@ -867,7 +888,6 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
         raise IntersectionError('Intersection ERROR: clip_datasource_layer '
             'found no intersection between: file - %s and file - %s.' %
             (shape_to_clip_path, binding_shape_path))
-
 
 def projected_pixel_size(raster_path, target_spat_ref):
     """Transform source cell size to target spatial reference.
