@@ -555,7 +555,6 @@ def execute(args):
         assert_datasets_projected=False)
 
     if 'pop_path' in args:
-
         # Project AOI to Population to clip Population raster
         pop_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
             args['pop_path'])
@@ -581,13 +580,20 @@ def execute(args):
                                 file_registry['aligned_viewshed_path']]
         resample_method_list = ['nearest', 'nearest']
 
-        # Set a factor value
+        # Set a factor value which is a holder for the ratio between
+        # pop_cell_size and viewshed cell size
         cell_size_factor = 1
 
-        if cell_size > pop_cell_size:
+        if cell_size >= pop_cell_size:
+            # Viewshed cell size is bigger, so use pop cell size
+            # to resample viewshed_count raster
             out_pixel_size = pop_cell_size
         else:
+            # Viewshed cell size is smaller, so use it's cell size
+            # to resample population raster
             out_pixel_size = cell_size
+            # Set cell_size_factor to the ratio between cell sizes, so that
+            # we can later maintain population data integrity.
             cell_size_factor = pop_cell_size**2 / viewshed_cell_size**2
 
         pygeoprocessing.align_dataset_list(
@@ -600,7 +606,7 @@ def execute(args):
             file_registry['aligned_pop_path'])
 
         def pop_affected_op(pop, view):
-            """Compute affected population. """
+            """Compute affected population."""
             valid_mask = ((pop != pop_nodata) & (view != nodata))
 
             pop_places = numpy.where(view[valid_mask] > 0, pop[valid_mask], 0)
@@ -610,7 +616,7 @@ def execute(args):
             return pop_final
 
         def pop_unaffected_op(pop, view):
-            """Compute unaffected population. """
+            """Compute unaffected population."""
             valid_mask = ((pop != pop_nodata))
 
             pop_places = numpy.where(view[valid_mask] == 0, pop[valid_mask], 0)
@@ -633,6 +639,7 @@ def execute(args):
             gdal.GDT_Float32, nodata, out_pixel_size,
             "intersection", vectorize_op=False)
 
+        # Count up the affected population values
         affected_sum = 0
         affected_count = 0
         for _, block in pygeoprocessing.iterblocks(
@@ -641,7 +648,7 @@ def execute(args):
             valid_mask = (block != nodata)
             affected_count += numpy.sum(valid_mask)
             affected_sum += numpy.sum(block[valid_mask])
-
+        # Count up the unaffected population values
         unaffected_sum = 0
         unaffected_count = 0
         for _, block in pygeoprocessing.iterblocks(
@@ -652,13 +659,19 @@ def execute(args):
             unaffected_sum += numpy.sum(block[valid_mask])
 
         if args['pop_type'] == "Density":
+            # If population raster is population density per area then
+            # adjust sums to reflect as much, to get in correct units
             cell_area = out_pixel_size**2
             affected_sum = affected_sum * (affected_count * cell_area)
             unaffected_sum = unaffected_sum * (unaffected_count * cell_area)
         else:
+            # If population raster is population counts per cell then
+            # we need to adjust counts by any resampling so we don't
+            # double count
             affected_sum = affected_sum / cell_size_factor
             unaffected_sum = unaffected_sum / cell_size_factor
 
+        # Create output HTML file for population stats
         header = ("<center><H1>Scenic Quality Model</H1>"
             "<H2>(Visual Impact from Objects)</H2></center>"
             "<br><br><HR><br><H2>Population Statistics</H2>")
