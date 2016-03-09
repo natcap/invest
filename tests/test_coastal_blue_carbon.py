@@ -324,7 +324,6 @@ class TestPreprocessor(unittest.TestCase):
             filepath, code_to_lulc_dict)
         transient_dict = geoprocess.get_lookup_from_csv(filepath, 'code')
         self.assertTrue(1 in transient_dict.keys())
-        shutil.rmtree(args['workspace_dir'])
 
     def test_preprocessor_ones(self):
         """Coastal Blue Carbon: Test entire run of preprocessor with final
