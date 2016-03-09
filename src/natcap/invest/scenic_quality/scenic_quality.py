@@ -148,22 +148,8 @@ def execute(args):
         file_registry['structures_clipped_path'], aoi_wkt,
         file_registry['structures_projected_path'])
 
-    # Get a point from the clipped DEM to use later in helping
-    # determine proper pixel size for the projected DEM
-    raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
-        file_registry['clipped_dem_path'])
-    point_one = (raster_gt[0], raster_gt[3])
-
-    # Create a Spatial Reference from the DEM WKT
-    dem_srs = osr.SpatialReference()
-    dem_srs.ImportFromWkt(dem_wkt)
-
-    # A coordinate transformation to help get the proper pixel size of
-    # the reprojected raster
-    coord_trans = osr.CoordinateTransformation(dem_srs, aoi_srs)
-
-    pixel_size = pixel_size_based_on_coordinate_transform_uri(
-            file_registry['clipped_dem_path'], coord_trans, point_one)
+    pixel_size = projected_pixel_size(
+        file_registry['clipped_dem_path'], aoi_srs)
 
     LOGGER.debug('Projected Pixel Size: %s', pixel_size[0])
 
@@ -540,22 +526,8 @@ def execute(args):
             args['pop_path'], file_registry['aoi_proj_pop_path'],
             file_registry['clipped_pop_path'], False)
 
-        # Get a point from the clipped data object to use later in helping
-        # determine proper pixel size
-        pop_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
-            file_registry['clipped_pop_path'])
-        point_one = (pop_gt[0], pop_gt[3])
-
-        # Create a Spatial Reference from the rasters WKT
-        pop_srs = osr.SpatialReference()
-        pop_srs.ImportFromWkt(pop_wkt)
-
-        # A coordinate transformation to help get the proper pixel size of
-        # the reprojected raster
-        coord_trans = osr.CoordinateTransformation(pop_srs, aoi_srs)
-
-        pop_cell_size = pixel_size_based_on_coordinate_transform_uri(
-                file_registry['clipped_pop_path'], coord_trans, point_one)
+        pop_cell_size = projected_pixel_size(
+                file_registry['clipped_pop_path'], aoi_srs)
 
         # Project Population to AOI
         pygeoprocessing.reproject_dataset_uri(
@@ -897,41 +869,61 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
             (shape_to_clip_path, binding_shape_path))
 
 
-def pixel_size_based_on_coordinate_transform_uri(
-        dataset_uri, coord_trans, point):
-    """Get width and height of cell in meters.
+def projected_pixel_size(raster_path, target_spat_ref):
+    """Transform source cell size to target spatial reference.
 
-    A wrapper for pixel_size_based_on_coordinate_transform that takes a dataset
-    uri as an input and opens it before sending it along.
+    Determine what the pixel size for the raster would be if projected in
+        the target spatial reference. This is common for trying to keep
+        the same pixel size ration when reprojecting a raster.
+        Calculated by doing a Coordinate Transformation on the upper left
+        point of the raster and on the adjacent point. The difference is
+        then taken to determine the new cell size.
 
-    Args:
-        dataset_uri (string): a URI to a gdal dataset
+    Raises an exception if the raster is not square since this'll break most of
+        the pygeoprocessing algorithms.
 
-        All other parameters pass along
+    Parameters:
+        raster_path (string): path to a gdal dataset on disk.
+        target_spat_ref (string): target spatial reference for the pixel size.
 
     Returns:
-        result (tuple): (pixel_width_meters, pixel_height_meters)
+        transformed pixel size
     """
-    dataset = gdal.Open(dataset_uri)
-    geo_tran = dataset.GetGeoTransform()
+    # Create two points from the raster
+    raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
+        raster_path)
+    point_one = (raster_gt[0], raster_gt[3])
+    # Get X and Y cell size
     pixel_size_x = geo_tran[1]
     pixel_size_y = geo_tran[5]
-    top_left_x = point[0]
-    top_left_y = point[1]
-    # Create the second point by adding the pixel width/height
-    new_x = top_left_x + pixel_size_x
-    new_y = top_left_y + pixel_size_y
-    # Transform two points into meters
-    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
-    point_2 = coord_trans.TransformPoint(new_x, new_y)
+    point_two = (point_one[0] + pixel_size_x, point[1] + pixel_size_y)
+
+    raster_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(raster_path)
+    raster_srs = osr.SpatialReference()
+    raster_srs.ImportFromWkt(raster_wkt)
+    # A coordinate transformation to help get the proper pixel size
+    coord_trans = osr.CoordinateTransformation(raster_srs, target_spat_ref)
+
+    # Transform two points into new spatial reference
+    point_one_proj = coord_trans.TransformPoint(point_one)
+    point_two_proj = coord_trans.TransformPoint(point_two)
     # Calculate the x/y difference between two points
-    # taking the absolue value because the direction doesn't matter for pixel
+    # taking the absolute value because the direction doesn't matter for pixel
     # size in the case of most coordinate systems where y increases up and x
     # increases to the right (right handed coordinate system).
-    pixel_diff_x = abs(point_2[0] - point_1[0])
-    pixel_diff_y = abs(point_2[1] - point_1[1])
+    pixel_diff_x = abs(point_two_proj[0] - point_one_proj[0])
+    pixel_diff_y = abs(point_two_proj[1] - point_one_proj[1])
+
+    try:
+        numpy.testing.assert_approx_equal(
+            abs(pixel_diff_x), abs(pixel_diff_y))
+        resulting_size = abs(geotransform[1])
+    except AssertionError as e:
+        LOGGER.warn(e)
+        resulting_size = (
+            abs(pixel_diff_x) + abs(pixel_diff_y)) / 2.0
 
     # Close and clean up dataset
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
-    return (pixel_diff_x, pixel_diff_y)
+    return resulting_size
