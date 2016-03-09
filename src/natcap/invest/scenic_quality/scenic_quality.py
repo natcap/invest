@@ -4,7 +4,6 @@ import math
 import heapq
 
 import numpy
-import scipy.stats
 from bisect import bisect
 
 import shutil
@@ -81,13 +80,17 @@ def execute(args):
         args['overlap_path'] (string): (optional)
         args['results_suffix] (string): (optional) string to append to any
             output files
-        args['valuation_function'] (string): type of economic function to use
+        args['valuation_function'] (int): type of economic function to use
             for valuation. Either 3rd degree polynomial or logarithmic.
-        args['a_coef'] (string):
-        args['b_coef'] (string):
-        args['c_coef'] (string):
-        args['d_coef'] (string):
-        args['max_valuation_radius'] (string):
+        args['poly_a_coef'] (float):
+        args['poly_b_coef'] (float):
+        args['poly_c_coef'] (float):
+        args['poly_d_coef'] (float):
+        args['log_a_coef'] (float):
+        args['log_b_coef'] (float):
+        args['exp_a_coef'] (float):
+        args['exp_b_coef'] (float):
+        args['max_valuation_radius'] (float):
 
     """
     LOGGER.info("Start Scenic Quality Model")
@@ -740,7 +743,7 @@ def add_percent_overlap(
         geom_area = geom.GetArea()
         # Compute overlap by area of pixels and area of polygon
         pixel_area = pixel_size**2 * pixel_counts[key]
-        feature.SetField(perc_name, (pixel_area / geom_area) * 100)
+        feat.SetField(perc_name, (pixel_area / geom_area) * 100)
         layer.SetFeature(feat)
 
 def calculate_percentiles_from_raster(raster_path, percentiles):
@@ -914,9 +917,9 @@ def projected_pixel_size(raster_path, target_spat_ref):
         raster_path)
     point_one = (raster_gt[0], raster_gt[3])
     # Get X and Y cell size
-    pixel_size_x = geo_tran[1]
-    pixel_size_y = geo_tran[5]
-    point_two = (point_one[0] + pixel_size_x, point[1] + pixel_size_y)
+    pixel_size_x = raster_gt[1]
+    pixel_size_y = raster_gt[5]
+    point_two = (point_one[0] + pixel_size_x, point_one[1] + pixel_size_y)
 
     raster_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(raster_path)
     raster_srs = osr.SpatialReference()
@@ -925,8 +928,8 @@ def projected_pixel_size(raster_path, target_spat_ref):
     coord_trans = osr.CoordinateTransformation(raster_srs, target_spat_ref)
 
     # Transform two points into new spatial reference
-    point_one_proj = coord_trans.TransformPoint(point_one)
-    point_two_proj = coord_trans.TransformPoint(point_two)
+    point_one_proj = coord_trans.TransformPoint(point_one[0], point_one[1])
+    point_two_proj = coord_trans.TransformPoint(point_two[0], point_two[1])
     # Calculate the x/y difference between two points
     # taking the absolute value because the direction doesn't matter for pixel
     # size in the case of most coordinate systems where y increases up and x
@@ -937,13 +940,10 @@ def projected_pixel_size(raster_path, target_spat_ref):
     try:
         numpy.testing.assert_approx_equal(
             abs(pixel_diff_x), abs(pixel_diff_y))
-        resulting_size = abs(geotransform[1])
+        resulting_size = abs(pixel_diff_x)
     except AssertionError as e:
         LOGGER.warn(e)
         resulting_size = (
             abs(pixel_diff_x) + abs(pixel_diff_y)) / 2.0
 
-    # Close and clean up dataset
-    gdal.Dataset.__swig_destroy__(dataset)
-    dataset = None
     return resulting_size
