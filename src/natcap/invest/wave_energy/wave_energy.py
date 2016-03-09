@@ -20,6 +20,12 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
+class IntersectionError(Exception):
+    """A custom error message for when the AOI does not intersect any wave
+        data points.
+    """
+    pass
+
 def execute(args):
     """
     Executes both the biophysical and valuation parts of the
@@ -267,7 +273,7 @@ def execute(args):
 
         # Clip the wave data shape by the bounds provided from the
         # area of interest
-        clip_shape(projected_wave_shape_path, aoi_shape_path,
+        clip_datasource_layer(projected_wave_shape_path, aoi_shape_path,
                 clipped_wave_shape_path)
 
         aoi_proj_uri = os.path.join(
@@ -288,7 +294,7 @@ def execute(args):
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        clip_shape(
+        clip_datasource_layer(
                 aoi_proj_uri, analysis_area_extract_uri,
                 aoi_clipped_to_extract_uri)
 
@@ -459,7 +465,11 @@ def execute(args):
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
-    valuation_checked = args.pop('valuation_container', False)
+    if 'valuation_container' in args:
+        valuation_checked = args['valuation_container']
+    else:
+        valuation_checked = False
+
     if not valuation_checked:
         LOGGER.debug('Valuation not selected')
         #The rest of the function is valuation, so we can quit now
@@ -906,7 +916,6 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
         returns - A tuple of the x and y pixel sizes of the global DEM
               given in the units of what 'shape' is projected in"""
     shape = ogr.Open(shape_path)
-    global_dem = gdal.Open(ds_uri)
 
     # Get a point in the clipped shape to determine output grid size
     feat = shape.GetLayer(0).GetNextFeature()
@@ -919,11 +928,10 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
             reference_point_x, reference_point_y)
 
     # Get the size of the pixels in meters, to be used for creating rasters
-    pixel_size_tuple = pygeoprocessing.geoprocessing.pixel_size_based_on_coordinate_transform(
-            global_dem, coord_trans, reference_point_latlng)
+    pixel_size_tuple = pixel_size_based_on_coordinate_transform(
+            ds_uri, coord_trans, reference_point_latlng)
 
     return pixel_size_tuple
-
 
 def get_coordinate_transformation(source_sr, target_sr):
     """This function takes a source and target spatial reference and creates
@@ -1170,115 +1178,53 @@ def wave_power(shape_uri):
         layer.SetFeature(feat)
         feat = layer.GetNextFeature()
 
-def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
-    """Copies a polygon or point geometry shapefile, only keeping the features
-        that intersect or are within a binding polygon shape.
+def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
+    """Clip Shapefile Layer by second Shapefile Layer.
 
-        shape_to_clip_uri - A uri to a point or polygon shapefile to clip
-        binding_shape_uri - A uri to a polygon shapefile indicating the
-            bounds for the shape_to_clip features
-        output_path  - The path for the clipped output shapefile
+    Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
+    inherits the projection and fields from the original Shapefile.
 
-        returns - Nothing"""
-    shape_to_clip = ogr.Open(shape_to_clip_uri)
-    binding_shape = ogr.Open(binding_shape_uri)
+    Parameters:
+        shape_to_clip_path (string): a path to a Shapefile on disk. This is
+            the Layer to clip. Must have same spatial reference as
+            'binding_shape_path'.
+        binding_shape_path (string): a path to a Shapefile on disk. This is
+            the Layer to clip to. Must have same spatial reference as
+            'shape_to_clip_path'
+        output_path (string): a path on disk to write the clipped Shapefile
+            to. Should end with a '.shp' extension.
 
-    shape_source = output_path
-    # If the output_path is already a file, remove it
-    if os.path.isfile(shape_source):
-        os.remove(shape_source)
-    # Get the layer of points from the current point geometry shape
-    in_layer = shape_to_clip.GetLayer(0)
-    # Get the layer definition which holds needed attribute values
-    in_defn = in_layer.GetLayerDefn()
-    # Get the layer of the polygon (binding) geometry shape
-    clip_layer = binding_shape.GetLayer(0)
-    # Create a new shapefile with similar properties of the
-    # current point geometry shape
-    shp_driver = ogr.GetDriverByName('ESRI Shapefile')
-    shp_ds = shp_driver.CreateDataSource(shape_source)
-    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), in_layer.GetSpatialRef(),
-                                   in_defn.GetGeomType())
-    # Get the number of fields in the current point shapefile
-    in_field_count = in_defn.GetFieldCount()
-    # For every field, create a duplicate field and add it to the
-    # new shapefiles layer
-    for fld_index in range(in_field_count):
-        src_fd = in_defn.GetFieldDefn(fld_index)
-        fd_def = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
-        fd_def.SetWidth(src_fd.GetWidth())
-        fd_def.SetPrecision(src_fd.GetPrecision())
-        shp_layer.CreateField(fd_def)
-    LOGGER.debug('Binding Shapes Feature Count : %s',
-                 clip_layer.GetFeatureCount())
-    LOGGER.debug('Shape to be Bounds Feature Count : %s',
-                 in_layer.GetFeatureCount())
-    # Retrieve all the binding polygon features and save their cloned
-    # geometry references to a list
-    clip_feat = clip_layer.GetNextFeature()
-    clip_geom_list = []
-    while clip_feat is not None:
-        clip_geom = clip_feat.GetGeometryRef()
-        # Get the spatial reference of the geometry to use in transforming
-        source_sr = clip_geom.GetSpatialReference()
-        # Retrieve the current point shapes feature and get it's
-        # geometry reference
-        in_layer.ResetReading()
-        in_feat = in_layer.GetNextFeature()
-        geom = in_feat.GetGeometryRef()
-        # Get the spatial reference of the geometry to use in transforming
-        target_sr = geom.GetSpatialReference()
-        geom = None
-        in_feat = None
-        # Create a coordinate transformation
-        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-        # Transform the polygon geometry into the same format as the
-        # point shape geometry
-        clip_geom.Transform(coord_trans)
-        # Add geometry to list
-        clip_geom_list.append(clip_geom.Clone())
-        clip_feat = clip_layer.GetNextFeature()
+    Returns:
+        Nothing
+    """
 
-    in_layer.ResetReading()
-    in_feat = in_layer.GetNextFeature()
-    # For all the features in the current point shape (for all the points)
-    # Check to see if they Intersect with any of the binding polygons geometry
-    # and if they do, copy that point and it's fields to the new shape
-    while in_feat is not None:
-        # Check to see if the point falls in any of the polygons
-        for clip_geom in clip_geom_list:
-            geom = in_feat.GetGeometryRef()
-            # Intersection returns a new geometry if they intersect, null
-            # otherwise.
-            geom = geom.Intersection(clip_geom)
-            if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
-                # Create a new feature from the input feature and set
-                # its geometry
-                out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
-                out_feat.SetFrom(in_feat)
-                out_feat.SetGeometryDirectly(geom)
-                # For all the fields in the feature set the field values from
-                # the source field
-                for fld_index2 in range(out_feat.GetFieldCount()):
-                    src_field = in_feat.GetField(fld_index2)
-                    out_feat.SetField(fld_index2, src_field)
+    if os.path.isfile(output_path):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(output_path)
 
-                shp_layer.CreateFeature(out_feat)
-                out_feat = None
-                break
+    shape_to_clip = ogr.Open(shape_to_clip_path)
+    binding_shape = ogr.Open(binding_shape_path)
 
-        in_feat = in_layer.GetNextFeature()
+    input_layer = shape_to_clip.GetLayer()
+    binding_layer = binding_shape.GetLayer()
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    ds = driver.CreateDataSource(output_path)
+    input_layer_defn = input_layer.GetLayerDefn()
+    out_layer = ds.CreateLayer(input_layer_defn.GetName(), input_layer.GetSpatialRef())
+
+    input_layer.Clip(binding_layer, out_layer)
 
     # Add in a check to make sure the intersection didn't come back
     # empty
-    if(shp_layer.GetFeatureCount() == 0):
-        raise Exception('Intersection ERROR: clip_shape found no '
-            'intersection between: file - %s and file - %s. This '
+    if(out_layer.GetFeatureCount() == 0):
+        raise IntersectionError('Intersection ERROR: clip_datasource_layer '
+            'found no intersection between: file - %s and file - %s. This '
             'could be caused by the AOI not overlapping any Wave Energy '
             'Points. '
             'Suggestions: open workspace/intermediate/projected_wave_data.shp'
             'and the AOI to make sure AOI overlaps at least on point.' %
-            (shape_to_clip_uri, binding_shape_uri))
+            (shape_to_clip_path, binding_shape_path))
 
 def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
@@ -1591,3 +1537,51 @@ def count_pixels_groups(raster_uri, group_values):
     dataset = None
 
     return pixel_count
+
+def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
+    """Get width and height of cell in meters.
+
+    Calculates the pixel width and height in meters given a coordinate
+    transform and reference point on the dataset that's close to the
+    transform's projected coordinate sytem.  This is only necessary
+    if dataset is not already in a meter coordinate system, for example
+    dataset may be in lat/long (WGS84).
+
+    Args:
+        dataset_uri (string): a String for a GDAL path on disk, projected
+            in the form of lat/long decimal degrees
+        coord_trans (osr.CoordinateTransformation): an OSR coordinate
+            transformation from dataset coordinate system to meters
+        point (tuple): a reference point close to the coordinate transform
+            coordinate system.  must be in the same coordinate system as
+            dataset.
+
+    Returns:
+        pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
+            height in meters)
+    """
+    dataset = gdal.Open(dataset_uri)
+    # Get the first points (x, y) from geoTransform
+    geo_tran = dataset.GetGeoTransform()
+    pixel_size_x = geo_tran[1]
+    pixel_size_y = geo_tran[5]
+    top_left_x = point[0]
+    top_left_y = point[1]
+    # Create the second point by adding the pixel width/height
+    new_x = top_left_x + pixel_size_x
+    new_y = top_left_y + pixel_size_y
+    # Transform two points into meters
+    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
+    point_2 = coord_trans.TransformPoint(new_x, new_y)
+    # Calculate the x/y difference between two points
+    # taking the absolue value because the direction doesn't matter for pixel
+    # size in the case of most coordinate systems where y increases up and x
+    # increases to the right (right handed coordinate system).
+    pixel_diff_x = abs(point_2[0] - point_1[0])
+    pixel_diff_y = abs(point_2[1] - point_1[1])
+
+    # Close and clean up dataset
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+
+    return (pixel_diff_x, pixel_diff_y)

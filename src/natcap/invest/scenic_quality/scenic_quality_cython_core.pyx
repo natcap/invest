@@ -12,24 +12,22 @@ cdef extern from "stdlib.h":
     void* malloc(size_t size)
     void free(void* ptr)
 
-cdef extern from "math.h":
-    double atan2(double x, double x)
 
 def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
         viewpoint_coords.
-    
+
         Inputs:
             -array_shape: a shape tuple (rows, cols) as is created from
                 calling numpy.ndarray.shape()
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
             -max_dist: maximum viewing distance
-            
-        returns a tuple (min, center, max, I, J) with min, center and max 
-        Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
-        angles and coords as two Nx1 numpy arrays of row and column of the 
+
+        returns a tuple (min, center, max, I, J) with min, center and max
+        Nx1 numpy arrays of each raster cell's minimum, center, and maximum
+        angles and coords as two Nx1 numpy arrays of row and column of the
         coordinate of each point.
     """
     cdef:
@@ -48,12 +46,12 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         int array_cols = array_shape[1]
         # Number of cells processed
         int cell_count = 0
-        # This array stores the offset coordinates to recover the first 
-        # and last corners of a cell reached by the sweep line. Since the 
-        # line sweeps from angle 0 to angle 360, the first corner 
+        # This array stores the offset coordinates to recover the first
+        # and last corners of a cell reached by the sweep line. Since the
+        # line sweeps from angle 0 to angle 360, the first corner
         # is associated with the lowest sweep line angle (min angle), and the
-        # last corner with the highest angle (max angle). 
-        # Each group of 4 values correspond to a sweep line-related angular 
+        # last corner with the highest angle (max angle).
+        # Each group of 4 values correspond to a sweep line-related angular
         # sector:
         # -row 0: cell centers at angle a = 0 (east of viewpoint)
         # -row 1: cell centers at angle 0 < a < 90
@@ -64,8 +62,8 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
         # -row 6: cell centers at angle a = 270 (south of viewpoint)
         # -row 7: cell centers at angle 270 < a < 360
         # The 4 values encode 2 pairs of offsets:
-        #   -first 2 values: [row, col] first corner offset coordinates 
-        #   -last 2 values: [row, col] last corner offset coordinates 
+        #   -first 2 values: [row, col] first corner offset coordinates
+        #   -last 2 values: [row, col] last corner offset coordinates
         double *extreme_cell_points = [ \
         0.5, -0.5, -0.5, -0.5, \
         0.5, 0.5, -0.5, -0.5, \
@@ -112,7 +110,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     # Loop through the rows
     for row in range(array_rows):
         viewpoint_to_cell_row = row - viewpoint_row
-        # Loop through the columns    
+        # Loop through the columns
         for col in range(array_cols):
             viewpoint_to_cell_col = col - viewpoint_col
             # Skip if cell is too far
@@ -133,7 +131,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     # Loop through the rows
     for row in range(array_rows):
         viewpoint_to_cell_row = row - viewpoint_row
-        # Loop through the columns    
+        # Loop through the columns
         for col in range(array_cols):
             viewpoint_to_cell_col = col - viewpoint_col
             # Skip if cell is too far
@@ -148,7 +146,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             I_ptr[cell_id] = row
             J_ptr[cell_id] = col
             # Compute the angle of the cell center
-            angle = atan2(-(row - viewpoint_row), col - viewpoint_col)
+            angle = atan2(float(-(row - viewpoint_row)), float(col - viewpoint_col))
             a_ptr[cell_id] = (angle + two_pi) % two_pi
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
@@ -175,7 +173,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             min_angle = atan2(-min_corner_row, min_corner_col)
             max_angle = atan2(-max_corner_row, max_corner_col)
             # Save the angles in the fast C arrays
-            min_a_ptr[cell_id] = (min_angle + two_pi) % two_pi 
+            min_a_ptr[cell_id] = (min_angle + two_pi) % two_pi
             max_a_ptr[cell_id] = (max_angle + two_pi) % two_pi
             cell_id += 1
     # Copy C-array contents to numpy arrays:
@@ -229,7 +227,7 @@ cdef print_active_pixel(ActivePixel *pixel):
     print('pixel', 'NULL' if pixel is NULL else deref(pixel).distance, \
     'next', 'NULL' if pixel is NULL or deref(pixel).next is NULL else \
     deref(deref(pixel).next).distance)
-    
+
 
 cdef print_active_pixels(ActivePixel *active_pixels):
     cdef ActivePixel *pixel
@@ -248,12 +246,12 @@ cdef print_active_pixels(ActivePixel *active_pixels):
 
 def dict_to_active_pixels_to_dict(sweep_line):
     """Converts a sweep_line to an ActivePixel array and back and return it.
-        
-        Inputs: 
-            -sweep_line: a sweep line creatd with add_active_pixel in 
+
+        Inputs:
+            -sweep_line: a sweep line creatd with add_active_pixel in
             aesthetic_quality_core.
 
-        Returns a new sweep_line after being converted to ActivePixel 
+        Returns a new sweep_line after being converted to ActivePixel
         and back. For debug purposes to see if the conversion functions work
     """
     original_sweep_line_size = len(sweep_line)
@@ -274,7 +272,7 @@ def dict_to_active_pixels_to_dict(sweep_line):
     return sweep_line
 
 cdef active_pixel_to_dict(ActivePixel active_pixel):
-    """Convert a single ActivePixel object to a dictionary"""    
+    """Convert a single ActivePixel object to a dictionary"""
     pixel = {}
     pixel['index'] = active_pixel.index
     pixel['visibility'] = active_pixel.visibility
@@ -356,12 +354,12 @@ cdef int delete_active_pixels(ActivePixel *first_pixel):
 
 def find_active_pixel(sweep_line, distance):
     """Python wrapper for the cython find_active_pixel_cython function"""
-    cdef: 
+    cdef:
         ActivePixel *active_pixels
         ActivePixel *active_pixel
-    
+
     result = None
-        
+
     if 'closest' in sweep_line:
         # Convert sweep_line to ActivePixel *. Need to delete active_pixels.
         active_pixels = dict_to_active_pixels(sweep_line)
@@ -416,7 +414,7 @@ def add_active_pixel(sweep_line, index, distance, visibility):
 
     return sweep_line
 
-# What is needed: 
+# What is needed:
 #   -maintain a pool of available pixels
 #   -figure out how to deallocate the active pixels
 cdef inline ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
@@ -552,9 +550,9 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
     np.ndarray[np.int8_t, ndim = 2] visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
-    
+
             Inputs:
-                -closest: an ActivePixel pointer to a linked list 
+                -closest: an ActivePixel pointer to a linked list
                 of ActivePixel. These are nums with the following fields:
                     -distance: distance between pixel center and viewpoint
                     -visibility: an elevation/distance ratio used by the
@@ -570,14 +568,14 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
                 -visibility_map: a python array the same size as the DEM
                 with 1s for visible pixels and 0s otherwise. Viewpoint is
                 always visible.
-            
+
             Returns nothing"""
     cdef ActivePixel *pixel = NULL
     cdef ActivePixel p
     cdef double max_visibility = -1000000.
     cdef short visibility = 0
     cdef int index = -1
- 
+
     # Update visibility and create a binary map of visible pixels
     # -Look at visibility from closer pixels out, keep highest visibility
     # -A pixel is not visible if its visibility <= highest visibility so far
@@ -652,7 +650,7 @@ def sweep_through_angles( \
         center_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython(active_pixels, I, J, visibility_map)
-        
+
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
         #print('angle ' + str(a) + ' / ' + str(angle_count - 2))

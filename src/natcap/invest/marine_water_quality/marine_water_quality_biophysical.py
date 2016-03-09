@@ -229,6 +229,11 @@ def execute(args):
     concentration_array = marine_water_quality_core.diffusion_advection_solver(
         source_point_values, args['kps'], in_water_array, tide_e_array,
         adv_u_array, adv_v_array, nodata_out, cell_size, args['layer_depth'])
+    # The numerical solver might have slightly small negative values, this
+    # sets them to 0.0
+    concentration_array[
+        ~numpy.isclose(concentration_array, nodata_out) &
+        (concentration_array < 0.0)] = 0.0
 
     raster_out = gdal.Open(raster_out_uri, gdal.GA_Update)
     raster_out_band = raster_out.GetRasterBand(1)
@@ -243,7 +248,8 @@ def execute(args):
         [raster_out_uri], lambda x: x, concentration_uri, gdal.GDT_Float32,
         nodata_out, cell_size, "intersection", aoi_uri=args['aoi_poly_uri'])
 
-    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(raster_out_uri)
+    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(
+        concentration_uri)
 
     LOGGER.info("Done with marine water quality.")
     LOGGER.info("Intermediate rasters are located in %s",

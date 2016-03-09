@@ -1,5 +1,8 @@
 import argparse
+import ast
 import distutils
+import distutils.ccompiler
+from distutils.version import StrictVersion
 import getpass
 import glob
 import imp
@@ -9,6 +12,7 @@ import json
 import os
 import pkgutil
 import platform
+import re
 import shutil
 import site
 import socket
@@ -46,6 +50,131 @@ except pkg_resources.VersionConflict:
     NO_WHEEL_SH = '--no-use-wheel'
 
 
+# The requirements files used by various parts of natcap.invest and the
+# pavement infrastructure that supports it.  Packages required for
+# natcap.invest to work should be included in requirements.txt.  Anything
+# required for other functionality (such as in pavement.py) should be defined
+# in requirements-dev.txt.
+REQUIREMENTS_FILES = [
+    'requirements.txt',
+    'requirements-dev.txt',
+]
+
+
+def supports_color():
+    """
+    Returns True if the running system's terminal supports color, and False
+    otherwise.
+
+    Taken from http://stackoverflow.com/a/22254892/299084
+    """
+    plat = sys.platform
+    supported_platform = plat != 'Pocket PC' and (plat != 'win32' or
+                                                  'ANSICON' in os.environ)
+    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+    if not supported_platform or not is_a_tty:
+        return False
+    return True
+
+
+def _colorize(color_pattern, msg):
+    """
+    Apply the color pattern (likely an ANSI color escape code sequence)
+    to the message if the current terminal supports color.  If the terminal
+    does not support color, return the messge.
+    """
+    if supports_color():
+        return color_pattern % msg
+    return msg
+
+
+def green(msg):
+    """
+    Return a string that is formatted as ANSI green.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[92m%s\033[0m', msg)
+
+
+def yellow(msg):
+    """
+    Return a string that is formatted as ANSI yellow.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[93m%s\033[0m', msg)
+
+
+def red(msg):
+    """
+    Return a string that is formatted as ANSI red.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize('\033[91m%s\033[0m', msg)
+
+
+def bold(message):
+    """
+    Return a string formatted as ANSI bold.
+    If the terminal does not support color, the input message is returned.
+    """
+    return _colorize("\033[1m%s\033[0m", message)
+
+
+ERROR = red('ERROR:')
+WARNING = yellow('WARNING:')
+OK = green('OK')
+
+
+def is_exe(fpath):
+    """
+    Check whether a file is executable and that it exists.
+
+    Parameters:
+        fpath (string): The filepath to check.
+
+    Returns:
+        A boolean.
+    """
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+
+def find_executable(program):
+    """
+    Locate the provided program.
+
+    Parameters:
+        program (string): Either the absolute path to an executable or an exe
+            name (e.g. python, git).  On Windows systems, if the program name
+            does not already include '.exe', it will be appended to the
+            program name provided.
+
+    Returns:
+        The absolute path to the executable if it can be found.  Raises
+        EnvironmentError if not.
+
+    Raises:
+        EnvironmentError: When the program cannot be found.
+
+    """
+    if platform.system() == 'Windows' and not program.endswith('.exe'):
+        program += '.exe'
+
+    fpath, fname = os.path.split(program)
+    if fpath:  # fpath is not '' when an absolute path is given.
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    raise EnvironmentError(
+        "Executable not found: {program}".format(
+            program=program))
+
+
 def user_os_installer():
     """
     Determine the operating system installer.
@@ -59,11 +188,18 @@ def user_os_installer():
 
     """
     if platform.system() == 'Linux':
-        # check if we're running an RPM system approach taken from
-        # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
-        exit_code = subprocess.call(['/usr/bin/rpm', '-q', '-f', '/usr/bin/rpm'])
-        if exit_code == 0:
-            return 'rpm'
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            rpm_path = os.path.join(path, 'rpm')
+            if is_exe(rpm_path):
+                # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
+                # -q -f /path/to/rpm checks to see if RPM owns RPM.
+                # If it's not owned by RPM, we can assume it's owned by apt/dpkg.
+                exit_code = subprocess.call([rpm_path, '-q', '-f', rpm_path])
+                if exit_code == 0:
+                    return 'rpm'
+                else:
+                    break
         return 'deb'
 
     if platform.system() == 'Darwin':
@@ -73,6 +209,7 @@ def user_os_installer():
         return 'nsis'
 
     return 'UNKNOWN'
+
 
 # the options object is used for global paver configuration.  It contains
 # default values for all tasks, which makes our handling of parameters much
@@ -111,7 +248,8 @@ paver.easy.options(
         requirements='',
         bootstrap_file='bootstrap.py',
         dev=False,
-        with_pygeoprocessing=False
+        with_pygeoprocessing=False,
+        compiler=None
     ),
     build_docs=Bunch(
         force_dev=False,
@@ -124,7 +262,8 @@ paver.easy.options(
     ),
     build_bin=Bunch(
         force_dev=False,
-        python=_PYTHON
+        python=_PYTHON,
+        fix_namespace=False,
     ),
     jenkins_installer=Bunch(
         nodata='false',
@@ -137,7 +276,8 @@ paver.easy.options(
     virtualenv=Bunch(),
     dev_env=Bunch(
         envname='test_env',
-        noinvest=False
+        noinvest=False,
+        compiler=None
     ),
     check=Bunch(
         fix_namespace=False,
@@ -147,18 +287,34 @@ paver.easy.options(
 
 
 class Repository(object):
-    tip = ''
-    statedir = ''
-    cmd = ''
+    """Abstract class representing a version-controlled repository."""
+    tip = ''  # The string representing the latest revision
+    statedir = ''  # Where the SCM stores its data, relative to repo root
+    cmd = ''  # The command-line exe to call.
 
     def __init__(self, local_path, remote_url):
+        """Initialize the Repository instance
+
+        Parameters:
+            local_path (string): The filepath on disk to the repo
+                (relative to pavement.py)
+            remote_url (string): The string URL to use to identify the repo.
+                Used for clones, updates.
+
+        Returns:
+            An instance of Repository.
+        """
         self.local_path = local_path
         self.remote_url = remote_url
 
     def get(self, rev):
-        """
-        Given whatever state the repo might be in right now, update to the
-        target revision.
+        """Update to the target revision.
+
+        Parameters:
+            rev (string): The revision to update the repo to.
+
+        Returns:
+            None
         """
         if not self.ischeckedout():
             self.clone()
@@ -178,29 +334,78 @@ class Repository(object):
             print 'Repo %s not found, falling back to fresh clone and update' % self.local_path
             # When the current repo can't be updated because it doesn't know
             # the change we want to update to
-            self.pull()
-            self.update(rev)
+            self.clone(rev)
 
     def ischeckedout(self):
+        """Identify whether the repository is checked out on disk."""
         return os.path.exists(os.path.join(self.local_path, self.statedir))
 
     def clone(self, rev=None):
-        raise Exception
+        """Clone the repository from the remote URL.
 
-    def pull(self):
-        raise Exception
+        This method is to be overridden in a subclass with the SCM-specific
+        commands.
+
+        Parameters:
+            rev=None (string or None): The revision to update to.  If None,
+                the revision will be fetched from versions.json.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
     def update(self, rev=None):
-        raise Exception
+        """Update the repository to a revision.
+
+        This method is to be overridden in a subclass with the SCM-specific
+        commands.
+
+        Parameters:
+            rev=None (string or None): The revision to update to.  If None,
+                the revision will be fetched from versions.json.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
     def tracked_version(self):
+        """Get this repository's expected version from versions.json.
+
+        Returns:
+            A string representation of the tracked version.
+        """
         tracked_rev = json.load(open('versions.json'))[self.local_path]
         if type(tracked_rev) is DictType:
             user_os = platform.system()
             return tracked_rev[user_os]
+        elif tracked_rev.startswith('REQUIREMENTS_TXT'):
+            pkgname = tracked_rev.split(':')[1]
+            version = _parse_version_requirement(pkgname)
+            if version is None:
+                raise ValueError((
+                    'Versions.json requirement string must have the '
+                    'format "REQUIREMENTS_TXT:<pkgname>".  Example: '
+                    '"REQUIREMENTS_TXT:pygeoprocessing".  %s found.'
+                    ) % tracked_rev)
+            tracked_rev = version
         return tracked_rev
 
     def at_known_rev(self):
+        """Identify whether the Repository is at the expected revision.
+
+        Returns:
+            A boolean.
+        """
         if not self.ischeckedout():
             return False
 
@@ -208,13 +413,81 @@ class Repository(object):
         return self.current_rev() == tracked_version
 
     def format_rev(self, rev):
-        raise Exception
+        """Get the uniquely-identifiable commit ID of `rev`.
 
-    def current_rev(self, convert=True):
-        raise Exception
+        This is particularly useful for SCMs that have multiple ways of
+        identifying commits.
+
+        Parameters:
+            rev (string): The revision to identify.
+
+        Returns:
+            The string id of the commit.
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
+
+    def current_rev(self):
+        """Fetch the current revision of the repository on disk.
+
+        This method should be overridden in a subclass with the SCM-specific
+        command(s).
+
+        Raises:
+            NotImplementedError: When the method is not overridden in a subclass
+            BuildFailure: When an error is encountered in the clone command.
+        """
+        raise NotImplementedError
 
 
-class HgRepository(Repository):
+class DVCSRepository(Repository):
+    """Abstract class for distributed revision control system repositories."""
+    tip = ''
+    statedir = ''
+    cmd = ''
+
+    def pull(self):
+        """Pull new changes from the remote.
+
+        This should be overridden in SCM-specific subclasses.
+
+        Returns:
+            None
+        """
+        raise NotImplementedError
+
+    def pull_and_retry(self, shell_string, cwd=None):
+        """Run a command, pulling new changes if needed.
+
+        Parameters:
+            shell_string (string): The formatted command to run.
+            cwd=None(string or None): The directory from which to execute
+                the command.  If None, the current working directory will be
+                used.
+
+        Returns:
+            None
+
+        Raises:
+            BuildFailure: Raised when the shell command fails after pulling.
+        """
+        for check_again in [True, False]:
+            try:
+                return sh(shell_string, cwd=cwd, capture=True).rstrip()
+            except BuildFailure as failure:
+                if check_again is True:
+                    # Pull and try to run again
+                    # Assumes that self.pull is implemented in the DVCS
+                    # subclass.
+                    self.pull()
+                else:
+                    raise failure
+
+
+class HgRepository(DVCSRepository):
     tip = 'tip'
     statedir = '.hg'
     cmd = 'hg'
@@ -231,13 +504,14 @@ class HgRepository(Repository):
                                             'url': self.remote_url})
 
     def update(self, rev):
-        sh('hg update -R %(dest)s -r %(rev)s' % {'dest': self.local_path,
-                                                 'rev': rev})
+        update_string = 'hg update -R {dest} -r {rev}'.format(
+            dest=self.local_path, rev=rev)
+        return self.pull_and_retry(update_string)
 
     def _format_log(self, template='', rev='.'):
-        return sh('hg log -R %(dest)s -r %(rev)s --template="%(template)s"' % {
-            'dest': self.local_path, 'rev': rev, 'template': template},
-            capture=True).rstrip()
+        log_string = 'hg log -R {dest} -r {rev} --template="{template}"'.format(
+            dest=self.local_path, rev=rev, template=template)
+        return self.pull_and_retry(log_string)
 
     def format_rev(self, rev):
         return self._format_log('{node}', rev=rev)
@@ -257,14 +531,50 @@ class SVNRepository(Repository):
     statedir = '.svn'
     cmd = 'svn'
 
+    def at_known_rev(self):
+        """Determine repo status from `svn status`
+
+        Overridden from Repository.at_known_rev(...).  SVN info does not
+        correctly report the status of the repository in the version number,
+        so we must parse the output of `svn status` to see if a checkout or
+        update was interrupted.
+
+        Returns True if the repository is up-to-date.  False if not."""
+        # Parse the output of SVN status.
+        repo_status = sh('svn status', cwd=self.local_path, capture=True)
+        for line in repo_status:
+            # If the line is empty, skip it.
+            if line.strip() == '':
+                continue
+
+            if line.split()[0] in ['!', 'L']:
+                print 'Checkout or update incomplete!  Repo NOT at known rev.'
+                return False
+
+        print 'Status ok.'
+        return Repository.at_known_rev(self)
+
+    def _cleanup_and_retry(self, cmd, *args, **kwargs):
+        """Run SVN cleanup."""
+        for retry in [True, False]:
+            try:
+                cmd(*args, **kwargs)
+            except BuildFailure as failure:
+                if retry and self.ischeckedout():
+                    # We should only retry if the repo is checked out.
+                    print 'Cleaning up SVN repository %s' % self.local_path
+                    sh('svn cleanup', cwd=self.local_path)
+                    # Now we'll try the original command again!
+                else:
+                    # If there was a failure before the repo is checked out,
+                    # then the issue is probably identified in stderr.
+                    raise failure
+
     def clone(self, rev=None):
         if rev is None:
             rev = self.tracked_version()
-        paver.svn.checkout(self.remote_url, self.local_path, revision=rev)
-
-    def pull(self):
-        # svn is centralized, so there's no concept of pull without a checkout.
-        return
+        self._cleanup_and_retry(paver.svn.checkout, self.remote_url,
+                                self.local_path, revision=rev)
 
     def update(self, rev):
         # check that the repository URL hasn't changed.  If it has, update to
@@ -275,7 +585,7 @@ class SVNRepository(Repository):
                 orig_url=local_copy_info.repository_root,
                 new_url=self.remote_url), cwd=self.local_path)
 
-        paver.svn.update(self.local_path, rev)
+        self._cleanup_and_retry(paver.svn.update, self.local_path, rev)
 
     def current_rev(self):
         try:
@@ -292,7 +602,7 @@ class SVNRepository(Repository):
         return rev
 
 
-class GitRepository(Repository):
+class GitRepository(DVCSRepository):
     tip = 'master'
     statedir = '.git'
     cmd = 'git'
@@ -308,19 +618,22 @@ class GitRepository(Repository):
         sh('git fetch %(url)s' % {'url': self.remote_url}, cwd=self.local_path)
 
     def update(self, rev):
-        sh('git checkout %(rev)s' % {'rev': rev}, cwd=self.local_path)
+        update_string = 'git checkout {rev}'.format(rev=rev)
+        self.pull_and_retry(update_string, cwd=self.local_path)
 
     def current_rev(self):
-        return sh('git rev-parse --verify HEAD', cwd=self.local_path,
-                  capture=True).rstrip()
+        rev_cmd_string = 'git rev-parse --verify HEAD'
+        return self.pull_and_retry(rev_cmd_string, cwd=self.local_path)
 
     def format_rev(self, rev):
-        return sh('git log --format=format:%H -1 {rev}'.format(**{'rev': rev}),
-                  capture=True, cwd=self.local_path)
+        log_string = 'git log --format=format:%H -1 {rev}'.format(rev=rev)
+        return self.pull_and_retry(log_string, cwd=self.local_path)
+
 
 REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
+    'test-data': SVNRepository('data/invest-test-data', 'svn://scm.naturalcapitalproject.org/svn/invest-test-data'),
     'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
     'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
     'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
@@ -493,6 +806,9 @@ def version(options):
 @cmdopts([
     ('envname=', 'e', 'The name of the environment to use'),
     ('noinvest', '', 'Skip installing InVEST'),
+    ('compiler=', 'c', ('The compiler to use.  Must be a valid distutils '
+                      'compiler string. See `python setup.py build '
+                      '--help-compiler` for available compiler strings.'))
 ])
 def dev_env(options):
     """
@@ -513,8 +829,60 @@ def dev_env(options):
         'with_invest': not options.dev_env.noinvest,
         'with_pygeoprocessing': True,
         'envname': options.dev_env.envname,
+        'compiler': options.dev_env.compiler,
         'dev': True,
     })
+
+
+def _read_requirements_dict():
+    """Read requirements files into a dict.
+
+    Relies on the files listed in `REQUIREMENTS_FILES`.  If multiple files
+    are listed, the union of the sets is used.
+
+    Returns:
+        A dict mapping {projectname: requirement string}.
+
+    Example:
+        >>> _read_requirements_dict()
+        {'pygeoprocessing': 'pygeoprocessing>=0.3.0a12', ...}
+    """
+    reqs = {}
+    for filename in REQUIREMENTS_FILES:
+        for line in open(filename):
+            try:
+                parsed_req = pkg_resources.Requirement.parse(line)
+            except ValueError:
+                # Raised when no package requirement could be parsed.  Commonly
+                # happens on blank lines or lines that are only comments.
+                continue
+
+            # Casting the parsed requirement to a string strips out any
+            # formatting (like comments) allowed in requirements files.
+            reqs[parsed_req.project_name] = str(parsed_req)
+    return reqs
+
+
+def _parse_version_requirement(pkg_name):
+    """Parse a version requirement from requirements.txt.
+
+    Returns the first parsed version that meets the >= requirement.
+
+    Parameters:
+        pkg_name (string): The string package name to search for.
+
+    Returns:
+        The string version or None if no >= version requirement can be parsed.
+
+    """
+    for line in open('requirements.txt'):
+        if line.startswith(pkg_name):
+            # Assume that we only have one version spec to deal with.
+            version_specs = pkg_resources.Requirement.parse(line).specs
+            for requirement_type, version in version_specs:
+                if requirement_type == '>=':
+                    return version
+
 
 @task
 @cmdopts([
@@ -528,19 +896,15 @@ def dev_env(options):
     ('requirements=', 'r', 'Install requirements from a file'),
     ('dev', 'd', ('Install InVEST namespace packages as flat eggs instead of '
                   'in a single folder hierarchy.  Better for development, '
-                  'not so great for pyinstaller build'))
+                  'not so great for pyinstaller build')),
+    ('compiler=', 'c', ('The compiler to use.  Must be a valid distutils '
+                      'compiler string. See `python setup.py build '
+                      '--help-compiler` for available compiler strings.'))
 ])
 def env(options):
     """
     Set up a virtualenv for the project.
     """
-
-    call_task('check_repo', options={
-        'force-dev': False,
-        'repo': 'src/pygeoprocessing',
-        'fetch': True,
-    })
-
     # paver provides paver.virtual.bootstrap(), but this does not afford the
     # degree of control that we want and need with installing needed packages.
     # We therefore make our own bootstrapping function calls here.
@@ -571,14 +935,62 @@ def after_install(options, home_dir):
         "       shutil.copyfile('{src_distutils_cfg}', distutils_cfg)\n"
     ).format(src_distutils_cfg=source_file)
 
+    # Track preinstalled packages so we don't install them twice.
+    preinstalled_pkgs = set([])
+
+    if options.env.compiler:
+        _valid_compilers = distutils.ccompiler.compiler_class.keys()
+        if options.env.compiler not in _valid_compilers:
+            raise BuildFailure('Invalid compiler: %s not in %s' % (
+                options.env.compiler, _valid_compilers))
+        print 'Preferring user-defined compiler %s' % str(options.env.compiler)
+        # If the user defined a compiler to use, customize the available pip
+        # options to pass the compiler flag through to the setup.py build_ext
+        # command that precedes the install.
+        compiler_string = ("'--global-option', 'build_ext', '--global-option', "
+                           "'--compiler={compiler}', ").format(
+                               compiler=options.env.compiler)
+    else:
+        # If the user didn't specify the compiler as a command-line option,
+        # we'll default to whatever pip thinks is best.
+        compiler_string = ''
+
     if options.env.with_pygeoprocessing:
+        # Verify that natcap.versioner is present and importable.
+        # pygeoprocessing won't install properly unless this is present.
+        _import_namespace_pkg('versioner')
+
+        # Check and update the pygeoprocessing repo if needed.
+        call_task('check_repo', options={
+            'force-dev': False,
+            'repo': 'src/pygeoprocessing',
+            'fetch': True,
+        })
+
+        try:
+            # Determine the required pygeoprocessing and only install it to the
+            # env if the system version isn't suitable.
+            pygeo_version = REPOS_DICT['pygeoprocessing'].tracked_version(
+                convert=False)
+            pkg_resources.require('pygeoprocessing>=%s' % pygeo_version)
+        except (pkg_resources.DistributionNotFound,
+                pkg_resources.VersionConflict) as (required_pkg, found_pkg):
+            print yellow(('Unsuitable pygeoprocessing %s found, but %s '
+                          'required. Installing the correct version to the '
+                          'dev_env.') % (found_pkg, required_pkg))
         # install with --no-deps (will otherwise try to install numpy, gdal,
         # etc.), and -I to ignore any existing pygeoprocessing install (as
         # might exist in system-site-packages).
+        # Installing as egg grants pygeoprocessing greater precendence in the
+        # import order.  If I install as a wheel, the system install of
+        # pygeoprocessing takes precedence.  I believe this to be a bug in
+        # pygeoprocessing (poster, for example, does not have this issue!).
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
-            "'--no-deps', '-I', './src/pygeoprocessing'])\n"
-        )
+            "'--no-deps', '-I', '--egg', {compiler_flags} "
+            "'./src/pygeoprocessing'])\n"
+        ).format(compiler_flags=compiler_string)
+        preinstalled_pkgs.add('pygeoprocessing')
     else:
         print 'Skipping the installation of pygeoprocessing per user input.'
 
@@ -587,9 +999,15 @@ def after_install(options, home_dir):
         requirements_files.append(options.env.requirements)
 
     # extra parameter strings needed for installing certain packages
-    # Always install natcap.versioner to the env over whatever else is there.
+    # Always install nose, natcap.versioner to the env over whatever else
+    # is there.
     pkg_pip_params = {
-        'natcap.versioner': ['-I']
+        'nose': ['-I'],
+        'natcap.versioner': ['-I'],
+        # Pygeoprocessing wheels are compiled against specific versions of
+        # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
+        # installed numpy.  Force compilation from source to avoid this issue.
+        'pygeoprocessing': NO_WHEEL_SH.split(),
     }
     if options.env.dev:
         # I only want to install natcap namespace packages as flat wheels if
@@ -611,18 +1029,28 @@ def after_install(options, home_dir):
         extra_params = ", %s" % ', '.join(params_as_strings)
         return extra_params
 
-    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
+    # Aything in this list will ALWAYS be installed.
+    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose')]
+
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
-            projectname = requirement.project_name  # project name w/o version req
-            try:
-                install_params = pkg_pip_params[projectname]
-                extra_params = _format_params(install_params)
-            except KeyError:
-                # No extra parameters needed for this package.
-                extra_params = ''
+            pkgs_to_be_installed.append(requirement)
 
-            install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
+    pip_template = "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '{pkgname}' {extra_params}])\n"
+    for requirement in pkgs_to_be_installed:
+        projectname = requirement.project_name  # project name w/o version req
+        if projectname in preinstalled_pkgs:
+            print ('Requirement %s from requirements.txt already '
+                    'handled by bootstrap script') % projectname
+            continue
+        try:
+            install_params = pkg_pip_params[projectname]
+            extra_params = _format_params(install_params)
+        except KeyError:
+            # No extra parameters needed for this package.
+            extra_params = ''
+
+        install_string += pip_template.format(pkgname=requirement, extra_params=extra_params)
 
     if options.env.with_invest:
         # Build an sdist and install it as an egg.  Works better with
@@ -641,22 +1069,28 @@ def after_install(options, home_dir):
 
         if not options.env.dev:
             install_string += (
-                # Recent versions of pip build wheels by default before installing, but wheel
-                # has a bug preventing builds for namespace packages.  Therefore, skip wheel builds for invest.
+                # Recent versions of pip build wheels by default before
+                # installing, but wheel has a bug preventing builds for
+                # namespace packages.
+                # Therefore, skip wheel builds for invest.
                 # Pyinstaller also doesn't handle namespace packages all that
                 # well, so --egg --no-use-wheel doesn't really work in a
                 # release environment either.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', {no_wheel_flag}, "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install'"
+                ", {no_wheel_flag}, {compiler_flags}"
                 " invest_sdist])\n"
-            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS)
+            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS,
+                     compiler_flags=compiler_string)
         else:
             install_string += (
                 # If we're in a development environment, it's ok (even
                 # preferable) to install natcap namespace packages as flat
                 # eggs.
-                "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '--egg', {no_wheel_flag}, "
+                "    subprocess.call([join(home_dir, bindir, 'pip'), "
+                "'install', '--egg', {no_wheel_flag}, {compiler_flags}"
                 " invest_sdist])\n"
-            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS)
+            ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS,
+                     compiler_flags=compiler_string)
     else:
         print 'Skipping the installation of natcap.invest per user input'
 
@@ -715,11 +1149,15 @@ def fetch(args, options):
     """
 
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('repo', metavar='REPO[@rev]', nargs='+',
+    arg_parser.add_argument('repo', metavar='REPO[@rev]', nargs='*',
                             help=('The repository to fetch.  Optionally, the '
                                   'revision to update to can be specified by '
                                   'using the "@" symbol.  Example: '
-                                  ' `paver fetch data/invest-data@27`'))
+                                  ' `paver fetch data/invest-data@27`. '
+                                  'If no repos are specified, all known repos '
+                                  'will be fetched.  Specifying an argument of'
+                                  ' "*" will also cause all repos to be '
+                                  'fetched.'))
 
     # figure out which repos/revs we're hoping to update.
     # None is our internal, temp keyword representing the LATEST possible
@@ -743,6 +1181,10 @@ def fetch(args, options):
             repo_name = repo_name[:-1]
         user_repo_revs[repo_name] = repo_rev
 
+    # We include all repos if EITHER the user has not provided any arguments at
+    # all OR the one argument present is a *
+    include_all_repos = (parsed_args.repo == [] or parsed_args.repo == ['*'])
+
     # determine which known repos the user wants to operate on.
     # example: `src` would represent all repos under src/
     # example: `data` would represent all repos under data/
@@ -750,12 +1192,18 @@ def fetch(args, options):
     desired_repo_revs = {}
     known_repos = dict((repo.local_path, repo) for repo in REPOS)
     for known_repo_path, repo_obj in known_repos.iteritems():
-        for user_repo, user_rev in user_repo_revs.iteritems():
-            if user_repo in known_repo_path:
-                if known_repo_path in desired_repo_revs:
-                    raise BuildFailure('The same repo has been selected twice')
-                else:
-                    desired_repo_revs[repo_obj] = user_rev
+        if include_all_repos:
+            # If no repos were specified as input to this function, fetch them
+            # all!  Use the version in versions.json.
+            desired_repo_revs[repo_obj] = repo_obj.tracked_version()
+        else:
+            for user_repo, user_rev in user_repo_revs.iteritems():
+                if user_repo in known_repo_path:
+                    if known_repo_path in desired_repo_revs:
+                        raise BuildFailure('The same repo has been selected '
+                                           'twice')
+                    else:
+                        desired_repo_revs[repo_obj] = user_rev
 
     for user_requested_repo, target_rev in desired_repo_revs.iteritems():
         print 'Fetching {path}'.format(path=user_requested_repo.local_path)
@@ -770,7 +1218,7 @@ def fetch(args, options):
                                    '{repo}').format(repo=repo_path))
 
         if options.dry_run:
-            print 'Fetching {parh}'.format(user_requested_repo.local_path)
+            print 'Fetching {path}'.format(user_requested_repo.local_path)
             continue
         else:
             user_requested_repo.get(target_rev)
@@ -919,7 +1367,15 @@ def push(args):
 
         target_filename = _fix_path(target_filename)  # convert windows to linux paths
         print 'Transferring %s -> %s ' % (os.path.basename(transfer_file), target_filename)
-        sftp.put(transfer_file, target_filename, callback=_sftp_callback)
+        for repeat in [True, True, False]:
+            try:
+                sftp.put(transfer_file, target_filename, callback=_sftp_callback)
+            except IOError as filesize_inconsistency:
+                # IOError raised when the file on the other end reports a
+                # different filesize than what we sent.
+                if not repeat:
+                    raise filesize_inconsistency
+
 
     print 'Closing down SCP'
     sftp.close()
@@ -943,10 +1399,13 @@ def clean(options):
                      'api_env',
                      'natcap.invest.egg-info',
                      'release_env',
+                     'test_env',
                      'invest-bin',
                      ]
     files_to_rm = [
         options.env.bootstrap_file,
+        'installer/linux/*.deb',
+        'installer/linux/*.rpm',
         'installer/darwin/*.dmg',
         'installer/windows/*.exe',
     ]
@@ -1146,68 +1605,8 @@ def check_repo(options):
             print 'WARNING: %s revision differs, but --force-dev provided' % repo.local_path
     print 'Repo %s is at rev %s' % (repo.local_path, tracked_rev)
 
-def supports_color():
-    """
-    Returns True if the running system's terminal supports color, and False
-    otherwise.
 
-    Taken from http://stackoverflow.com/a/22254892/299084
-    """
-    plat = sys.platform
-    supported_platform = plat != 'Pocket PC' and (plat != 'win32' or
-                                                  'ANSICON' in os.environ)
-    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
-    if not supported_platform or not is_a_tty:
-        return False
-    return True
-
-TERM_IS_COLOR = supports_color()
-
-def _colorize(color_pattern, msg):
-    """
-    Apply the color pattern (likely an ANSI color escape code sequence)
-    to the message if the current terminal supports color.  If the terminal
-    does not support color, return the messge.
-    """
-    if TERM_IS_COLOR:
-        return color_pattern % msg
-    return msg
-
-def green(msg):
-    """
-    Return a string that is formatted as ANSI green.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[92m%s\033[0m', msg)
-
-def yellow(msg):
-    """
-    Return a string that is formatted as ANSI yellow.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[93m%s\033[0m', msg)
-
-def red(msg):
-    """
-    Return a string that is formatted as ANSI red.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize('\033[91m%s\033[0m', msg)
-
-def bold(message):
-    """
-    Return a string formatted as ANSI bold.
-    If the terminal does not support color, the input message is returned.
-    """
-    return _colorize("\033[1m%s\033[0m", message)
-
-
-ERROR = red('ERROR:')
-WARNING = yellow('WARNING:')
-OK = green('OK')
-
-
-def _import_namespace_pkg(modname, print_msg=True):
+def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     """
     Import a package within the natcap namespace and print helpful
     debug messages as packages are discovered.
@@ -1216,6 +1615,10 @@ def _import_namespace_pkg(modname, print_msg=True):
         modname (string): The natcap subpackage name.
         print_msg=True (bool): Whether to print messages about the import
             state.
+        preferred='egg' (string): One of 'egg' or 'dir'.  If 'egg', the
+            given namespace package should be installed as an egg.  If 'dir',
+            the given namespace package should be installed as a flat,
+            as happens when installing from a wheel.
 
     Returns:
         Either 'egg' or 'dir' if the package is importable.
@@ -1223,12 +1626,23 @@ def _import_namespace_pkg(modname, print_msg=True):
     Raises:
         ImportError: If the package cannot be imported.
     """
-    module = importlib.import_module('natcap.%s' % modname)
+    _ns_module_name = 'natcap.%s' % modname
+    if hasattr(sys, 'real_prefix'):
+        # virtualenv appears to respect __import__ better than
+        # importlib.import_module, which is helpful for when running this in a
+        # virtualenv (via @paver.virtual.virtualenv)
+        module = __import__(_ns_module_name)
+    else:
+        module = importlib.import_module(_ns_module_name)
+
+    # Reload the module in case it's been imported before. Doing this helps to
+    # an issue with the module's __path__ attribute being updated after
+    # reinstalling within the same process.
+    module = reload(module)
     try:
         version = module.__version__
     except AttributeError:
-        packagename = 'natcap.%s' % modname
-        version = pkg_resources.require(packagename)[0].version
+        version = pkg_resources.require(_ns_module_name)[0].version
 
     is_egg = reduce(
         lambda x, y: x or y,
@@ -1239,19 +1653,122 @@ def _import_namespace_pkg(modname, print_msg=True):
     else:
         module_path = module.__path__[0]
 
-    if not is_egg:
-        return_type = 'dir'
-        message = '{warn} natcap.{mod}=={ver} ({dir}) not an egg.'.format(
-            warn=WARNING, mod=modname, ver=version, dir=module_path)
+    return_type = 'egg' if is_egg else 'dir'
+
+    if is_egg != (preferred == 'egg'):
+        alert = "{warn} ".format(warn=WARNING)
+        message = "not installed as {fmt}".format(fmt=preferred)
     else:
-        return_type = 'egg'
-        message = "natcap.{mod}=={ver} installed as egg ({dir})".format(
-            mod=modname, ver=version, dir=module_path)
+        alert = "{ok} ".format(ok=OK)
+        message = "installed as expected"
+
+    message = "{alert}natcap.{mod}=={ver} ({dir}) {msg}".format(
+        alert=alert, mod=modname, ver=version, dir=module_path, msg=message)
 
     if print_msg:
         print message
 
     return (module, return_type)
+
+
+def decorate_if(condition, decorator):
+    """Conditionally decorate a function.
+
+    This provides a decorator that allows a developer to define a
+    condition and a decorator.  When used on a function and the condition
+    is True, the provided decorator will be used on the target function.
+
+    Example:
+        @decorate_if(sys.platform() == 'Linux', some_other_decorator)
+        def example_func():
+            ...
+
+    Parameters:
+        condition (bool): whether to decorate the target function.
+        decorator (function): function to use as a decorator when
+            ``condition`` is True.
+
+    Returns:
+        If ``condition`` is True, the decorated function is returned.
+        Otherwise, the original function is returned.
+    """
+    def _check_condition(function):
+        if condition:
+            return decorator(function)
+        return function
+    return _check_condition
+
+
+def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
+                            use_env=None):
+    """Determine how namespace packages are installed.
+
+    Parameters:
+        ns_pkg_name (string): The name of the namespace package to inspect.
+        preferred='egg' (string): The preferred format.  One of ['egg', 'dir'].
+            If 'egg' the package is expected to be an egg.  If 'dir', the
+            package is expected to be in a flat directory with all other
+            packages within the namespace.
+        print_msg=True (bool): Whether to print a warning.
+        use_env=None (string or None):  If a string, the path to a virtualenv
+            directory that the natcap namespace packages should use instead.
+
+    Returns:
+        A tuple of (subpackages installed as eggs, subpackages installed flat)
+    """
+    @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
+    def _get_packages():
+        eggs = []
+        noneggs = []
+        ns_module = importlib.import_module(ns_pkg_name)
+
+        for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
+            module, pkg_type = _import_namespace_pkg(modname,
+                                                    preferred=preferred,
+                                                    print_msg=print_msg)
+
+            if pkg_type == 'egg':
+                eggs.append(modname)
+            else:
+                noneggs.append(modname)
+        return (sorted(eggs), sorted(noneggs))
+    return _get_packages()
+
+
+def reinstall_pkg(pkg_name, reinstall_as_egg=True):
+    """Reinstall a python package via pip.
+
+    Also prints colorful messages to the command line with status updates.
+
+    Parameters:
+        pkg_name (string): The name of the package to reinstall.
+        reinstall_as_egg (bool): Whether to reinstall as an egg.  If False,
+            the package will be reinstalled as the pip default (wheel).
+
+    Returns:
+        None.
+    """
+    pkg_type = 'egg' if reinstall_as_egg else 'wheel'
+
+    print yellow('Reinstalling {pkg} as {type}'.format(pkg=pkg_name,
+                                                       type=pkg_type))
+    sh('pip uninstall -y {package} > {package}.log'.format(package=pkg_name))
+
+    flags = {
+        'egg': '--egg {no_wheel} '.format(no_wheel=NO_WHEEL_SH),
+        'wheel': ''
+    }
+
+    sh(('pip install {flags} {package} > {package}.log').format(
+        package=pkg_name, flags=flags[pkg_type]))
+
+    # If the package install fails with nonzero exit code, this line won't be
+    # reached.  If we can print this line, we can safely assume that the
+    # package installed correctly.
+    print green('Package {pkg} reinstalled successfully as {type}'.format(
+        pkg=pkg_name, type=pkg_type))
+
+
 
 @task
 @cmdopts([
@@ -1266,20 +1783,33 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
-    def is_exe(fpath):
-        """
-        Check whether a file is executable and that it exists.
-        """
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    class FoundEXE(Exception):
-        pass
+    errors_found = False
+    # If we're on Windows, check that python 2.7.11 is installed.  2.7.11
+    # provides a version of multiprocessing that was patched to fix an issue
+    # occurring at runtime in our recreation server tests.  See these for
+    # details:
+    # https://bitbucket.org/natcap/invest/issues/3506
+    # https://bugs.python.org/issue10845
+    # https://hg.python.org/cpython/rev/5d88c1d413b9/
+    if platform.system() == 'Windows':
+        print bold('Checking python')
+        version_info = sys.version_info
+        python_version = '.'.join(
+            [str(getattr(version_info, key)) for key in ['major', 'minor', 'micro']])
+        if StrictVersion(python_version) < StrictVersion('2.7.11'):
+            errors_found = True
+            print red('CRITICAL:') + ('Python >= 2.7.11 required to run '
+                                      'Recreation on Windows, '
+                                       '%s found') % python_version
+        else:
+            print 'Python %s OK' % python_version
+        print ''  # add newline between this section and the next one.
 
     # verify required programs exist
-    errors_found = False
     programs = [
         ('hg', 'everything'),
         ('git', 'binaries'),
+        ('svn', 'testing, installers'),
         ('make', 'documentation'),
         ('pdflatex', 'documentation'),
         ('pandoc', 'documentation'),
@@ -1291,33 +1821,20 @@ def check(options):
     for program, build_steps in programs:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
 
-        if platform.system() == 'Windows':
-            program += '.exe'
-
-        fpath, fname = os.path.split(program)
-        if fpath:
-            if not is_exe(program):
-                print "{error} executable not found: {program}".format(
-                    error=ERROR, program=program)
-                errors_found = True
+        try:
+            path_to_exe = find_executable(program)
+        except EnvironmentError as exception_msg:
+            errors_found = True
+            print "{error} {exe} not found. Required for {step}".format(
+                error=ERROR, exe=program, step=build_steps)
         else:
-            try:
-                for path in os.environ["PATH"].split(os.pathsep):
-                    path = path.strip('"')
-                    exe_file = os.path.join(path, program)
-                    if is_exe(exe_file):
-                        raise FoundEXE
-            except FoundEXE:
-                print "Found %-14s: %s" % (program, exe_file)
-                continue
-            else:
-                print "{error} {exe} not found. Required for {step}".format(
-                    error=ERROR, exe=program, step=build_steps)
-                errors_found = True
+            found_exe = True
+            print "Found %-14s: %s" % (program, path_to_exe)
 
     required = 'required'
     suggested = 'suggested'
     lib_needed = 'lib_needed'
+    install_managed = 'install_managed'
 
     # (requirement, level, version_getter, special_install_message)
     # requirement: This is the setuptools package requirement string.
@@ -1327,20 +1844,44 @@ def check(options):
     # special_install_message: A special installation message if needed.
     #    If None, no special message will be shown after the conflict report.
     #    This is only for use by required packages.
+    #
+    # NOTE: This list is for tracking packages with special notes, warnings or
+    # import conditions ONLY.  Version requirements should be tracked in
+    # versions.json ONLY.
     print bold("\nChecking python packages")
     requirements = [
         # requirement, level, version_getter, special_install_message
-        ('setuptools>=8.0', required, None, None),  # 8.0 implements pep440
-        ('virtualenv>=12.0.1', required, None, None),
-        ('pip>=6.0.0', required, None, None),
+        ('setuptools', required, None, None),  # 8.0 implements pep440
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
         ('paramiko', suggested, None, None),
-        ('pycrypto', suggested, 'Crypto', None),
         ('h5py', lib_needed,  None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
+        ('poster', lib_needed,  None, None),
+        ('pyyaml', required, 'yaml', None),
+        ('pygeoprocessing', install_managed, None, None),
+        ('PyQt4', lib_needed, 'PyQt4', None),
     ]
+
+    try:
+        # poster stores its version in a triple of ints
+        import poster
+        poster.__version__ = '.'.join([str(i) for i in poster.version])
+    except ImportError:
+        # If the package can't be found, this will be caught by pkg_resources
+        # below, and the error message will be formatted there.
+        pass
+
+    try:
+        # PyQt version string is also stored in an awkward place.
+        import PyQt4
+        from PyQt4.Qt import PYQT_VERSION_STR
+        PyQt4.__version__ = PYQT_VERSION_STR
+    except ImportError:
+        # If the package can't be found, this will be caught by pkg_resources
+        # below, and the error message will be formatted there.
+        pass
 
     # pywin32 is required for pyinstaller builds
     if platform.system() == 'Windows':
@@ -1356,7 +1897,20 @@ def check(options):
         requirements.append(('wheel>=0.25.0+natcap.1', required, None, (
             'pip install --upgrade hg+https://bitbucket.org/jdouglass/wheel'
         )))
+
+        # paver has a restriction within @paver.virtual.virtualenv where it
+        # (unnecessarily) always treats the activation of a virtualenv like
+        # it's on a POSIX system.  I've submitted a PR to fix this to the
+        # upstream paver repo (https://github.com/paver/paver/pull/153),
+        # which was merged, but an official release of paver that includes this
+        # version has not been made just yet.
+        requirements.append(('paver==1.2.4+natcap.1', required, None, (
+            'pip install --upgrade '
+            'git+https://github.com/phargogh/paver@natcap-version'
+        )))
+
         try:
+            # pywin32 is required by pyinstaller.
             requirements.append(('pywin32', required, 'pywin', None))
 
             # Get the pywin32 version here, as demonstrated by
@@ -1374,38 +1928,102 @@ def check(options):
         # of it.
         requirements.append(('wheel', required, None, None))
 
-    warnings_found = False
-    for requirement, severity, import_name, install_msg in requirements:
-        try:
-            pkg_resources.require(requirement)
-            pkg_req = pkg_resources.Requirement.parse(requirement)
+    # Don't need to try/except this ... paver is imported at the top of
+    # this file so we know that paver exists.  If it doesn't have a version
+    # module, the ImportError should definitely be raised.
+    from paver import version
+    paver.__version__ = version.VERSION
 
+    # Compare the above-defined requirements with those in requirements.txt
+    # The resulting set should be the union of the two.  Package verison
+    # requirements should be stored in requirements.txt.
+    pkgname_regex = '^[a-zA-Z0-9-_]*'
+    existing_reqs = set([re.findall(pkgname_regex, r[0])[0] for r in
+                         requirements])
+    requirements_txt_dict = _read_requirements_dict()
+    for reqname, req in requirements_txt_dict.iteritems():
+        if reqname not in existing_reqs:
+            requirements.append((req, required, None, None))
+
+    warnings_found = False
+    for requirement, severity, import_name, install_msg in sorted(
+        requirements, key=lambda x: x[0].lower()):
+        # We handle natcap namespace packages specially below.
+        if requirement.startswith('natcap'):
+            continue
+
+        try:
+            # If we have a required package version (defined in
+            # requirements.txt), use that string.
+            requirement = requirements_txt_dict[requirement]
+        except KeyError:
+            pass
+
+        try:
+            pkg_req = requirement
+            project_name = re.findall(pkgname_regex, requirement)[0]
             if import_name is None:
-                import_name = pkg_req.project_name
+                import_name = project_name
+            pkg_version_format_ok = True
+
+            try:
+                pkg_resources.require(requirement)
+            except pkg_resources.DistributionNotFound as missing_req:
+                # Some packages (ahem ... PyQt4) are actually importable, but
+                # cannot be found by pkg_resources.  We handle this case here
+                # by attempting to import the 'missing' package, and raising
+                # the DistributionNotFound if we can't import it.
+                try:
+                    importlib.import_module(import_name)
+                except ImportError:
+                    raise missing_req
+            except ValueError:
+                # When we have an old version of setuptools (setuptools<8.0),
+                # pep440 version strings are not compliant and raise a
+                # ValueError.  When this happens, we need to do our own version
+                # comparison that is NOT guaranteed to be correct since there
+                # isn't a defined way to compare them.
+                print yellow('WARNING: Cannot evaluate versions '
+                             'for {pkg_req. Upgrade to '
+                             'setuptools>=8.0 for accurate version '
+                             'comparison.').format(pkg_req=pkg_req)
+                pkg_version_format_ok = False
+
 
             pkg = __import__(import_name)
             print "Python package {ok}: {pkg} {ver} (meets {req})".format(
-                ok=OK,
-                pkg=pkg_req.project_name,
+                ok=OK if pkg_version_format_ok else yellow('UNKNOWN'),
+                pkg=project_name,
                 ver=pkg.__version__,
                 req=requirement)
+        except AttributeError as error:
+            print 'Could not define module ', pkg
+            raise error
         except (pkg_resources.VersionConflict,
                 pkg_resources.DistributionNotFound) as conflict:
             if not hasattr(conflict, 'report'):
+                if isinstance(conflict, pkg_resources.VersionConflict):
+                    version = __import__(import_name).__version__
+                    report = ('{pkg} {imported_version} is installed but '
+                              '{expected_version} is required').format(
+                                      pkg=project_name,
+                                      expected_version=requirement,
+                                      imported_version=version)
+                else:
+                    # When the distribution can't be found.
+                    report = ('Package not found: {pkg_req}').format(
+                        pkg_req=requirement)
+            else:
                 # Setuptools introduced report() in v6.1
-                print ('{error} Setuptools is very out of date. '
-                    'Upgrade and try again'.format(error=ERROR))
-                if not options.check.allow_errors:
-                    raise BuildFailure('Setuptools is very out of date. '
-                                    'Upgrade and try again')
+                report = conflict.report()
 
             if severity == required:
                 if install_msg is None:
-                    install_msg = ''
+                    fmt_install_msg = ''
                 else:
-                    fmt_install_msg = 'Install this package via:\n    ' + install_msg
-                print '{error} {report} \n{msg}'.format(error=ERROR,
-                                                      report=conflict.report(),
+                    fmt_install_msg = '\nInstall this package via:\n    ' + install_msg
+                print 'Python package {error} {report} {msg}'.format(error=ERROR,
+                                                      report=report,
                                                       msg=fmt_install_msg)
                 errors_found = True
             elif severity == lib_needed:
@@ -1414,16 +2032,21 @@ def check(options):
                         '{warning} {report}  This library requires appropriate '
                         'headers to compile the python '
                         'package.').format(warning=WARNING,
-                                           report=conflict.report())
+                                           report=report)
                 else:
                     print ('{warning} {report}.  You may need to upgrade your '
                            'development headers along with the python '
                            'package.').format(warning=WARNING,
-                                              report=conflict.report())
+                                              report=report)
                 warnings_found = True
+            elif severity == 'install_managed':
+                print ('{warning} {pkg} is required, but will be '
+                       'installed automatically if needed for paver.').format(
+                            warning=WARNING,
+                            pkg=requirement)
             else:  # severity is 'suggested'
                 print '{warning} {report}'.format(warning=WARNING,
-                                                  report=conflict.report())
+                                                  report=report)
                 warnings_found = True
 
         except ImportError:
@@ -1455,25 +2078,13 @@ def check(options):
             print yellow('--fix-namespace provided; Fixing issues as they are'
                          ' encountered')
 
-        import natcap
-
-        for importer, modname, ispkg in pkgutil.iter_modules(natcap.__path__):
-            module, pkg_type = _import_namespace_pkg(modname)
-
-            if pkg_type == 'egg':
-                eggs.append(modname)
-            else:
-                noneggs.append(modname)
+        eggs, noneggs = get_namespace_pkg_types('natcap', preferred='egg',
+                                                print_msg=True)
 
         if len(noneggs) > 0:
             if options.check.fix_namespace:
                 for package in noneggs:
-                    print yellow('Reinstalling natcap.%s as egg' % package)
-                    sh('pip uninstall -y natcap.{package} > natcap.{package}.log'.format(package=package))
-                    sh(('pip install --egg {no_wheel} '
-                        'natcap.{package} > natcap.{package}.log').format(
-                            package=package, no_wheel=NO_WHEEL_SH))
-                    print green('Package natcap.%s reinstalled successfully' % package)
+                    reinstall_pkg('natcap.' + package)
             else:
                 pip_inst_template = \
                     yellow("    pip install --egg {no_wheel} natcap.%s").format(
@@ -1661,12 +2272,84 @@ def build_data(options):
 @cmdopts([
     ('force-dev', '', 'Whether to allow development versions of repos to be built'),
     ('python=', '', 'The python interpreter to use'),
+    ('fix-namespace', '', 'Fix issues with the natcap namespace if found'),
 ], share_with=['check_repo'])
 def build_bin(options):
     """
     Build frozen binaries of InVEST.
     """
+    # Prefer the user's python binary if it's provided.  Otherwise, use the
+    # system python.
+    python_exe = os.path.abspath(options.build_bin.python)
+    in_virtual_python = ast.literal_eval(sh((
+        '{python} -c "import sys; '
+        'print hasattr(sys, \'real_prefix\')"').format(
+            python=python_exe), capture=True))
 
+    if in_virtual_python:
+        envdir = os.path.dirname(os.path.dirname(python_exe))
+    else:
+        envdir = None
+
+    if python_exe == sys.executable:
+        print yellow('Using system python. For best results, install the '
+                     'correct version of InVEST before building binaries.')
+    print 'Using python binary %s' % python_exe
+
+    # Verify that natcap.invest is installed
+    sh(('{python} -c "import pkg_resources; '
+        'pkg_resources.require(\'natcap.invest\')"').format(python=python_exe))
+
+    # verify that all natcap packages available to the defined python
+    # installation are installed flat (non-eggs). In practice, pyinstaller
+    # doesn't know what to do with namespace packages when they are installed
+    # as eggs, so we need to enforce this here.
+    print bold('\nChecking natcap namespace')
+    for retry in [True, False]:
+        natcap_eggs, natcap_noneggs = get_namespace_pkg_types(
+            'natcap', preferred='dir', use_env=envdir)
+        # If the package layout looks ok, break out of the loop.
+        if len(natcap_eggs) == 0:
+            break
+
+        invest_version = _invest_version(python_exe)
+        invest_install_string = (
+            "python setup.py bdist_wheel && "
+            "pip install natcap.invest=={version} "
+            "--no-index -f dist").format(
+                version=invest_version)
+
+        if options.build_bin.fix_namespace and retry:
+            for egg_name in natcap_eggs:
+                if egg_name == 'invest':
+                    print yellow('WARNING: Reinstalling natcap.invest from '
+                                 'the current state of the source tree.')
+                    sh("pip uninstall -y natcap.invest && "
+                       "{install_invest}".format(
+                           install_invest=invest_install_string))
+                else:
+                    reinstall_pkg('natcap.' + egg_name, reinstall_as_egg=False)
+        else:
+            print (
+                "\nNatcap namespace issues:\n"
+                "Building binaries requires natcap namespace packages to \n"
+                "be installed 'flat', all in the same directory.\n"
+                "These packages were installed as eggs but need to be \n"
+                "installed as wheels for pyinstaller to work as expected:")
+            for egg_name in natcap_eggs:
+                if egg_name == 'invest':
+                    install_string = invest_install_string
+                else:
+                    install_string = (
+                        'pip install natcap.{pkg}'.format(pkg=egg_name))
+
+                print yellow("    %s" % install_string)
+            print '\nOr run `paver build_bin --fix-namespace`'
+            raise BuildFailure('Invalid natcap package layout. Some packages '
+                               'are installed as eggs: {eggs}'.format(
+                                   eggs=', '.join(natcap_eggs)))
+
+    print green('Natcap namespace installed correctly')
     pyi_repo = REPOS_DICT['pyinstaller']
     call_task('check_repo', options={
         'force_dev': options.build_bin.force_dev,
@@ -1691,9 +2374,8 @@ def build_bin(options):
         dry('rm -r %s' % invest_dist_dir,
             shutil.rmtree, invest_dist_dir)
 
-    pyinstaller_file = os.path.join('..', 'src', 'pyinstaller', 'pyinstaller.py')
-
-    python_exe = os.path.abspath(options.build_bin.python)
+    pyinstaller_file = os.path.join('..', 'src', 'pyinstaller',
+                                    'pyinstaller.py')
 
     # For some reason, pyinstaller doesn't locate the natcap.versioner package
     # when it's installed and available on the system.  Placing
@@ -1703,9 +2385,10 @@ def build_bin(options):
     sitepkgs = sh('{python} -c "import distutils.sysconfig; '
                   'print distutils.sysconfig.get_python_lib()"'.format(
                       python=python_exe), capture=True).rstrip()
-    pathsep = ';' if platform.system() == 'Windows' else ':'
 
-    # env_site_pkgs should be relative to the repo root
+    # env_site_pkgs should be relative to the repo root if we are in a
+    # virtualenv.  If we are not in a virtualenv, these folders shouldn't point
+    # to anything and will be ignored.
     env_site_pkgs = os.path.abspath(
         os.path.normpath(os.path.join(options.env.envname, 'lib')))
     if platform.system() != 'Windows':
@@ -1715,21 +2398,22 @@ def build_bin(options):
         print "PYTHONPATH: %s" % os.environ['PYTHONPATH']
     except KeyError:
         print "Nothing in 'PYTHONPATH'"
-    sh('%(python)s %(pyinstaller)s --clean --noconfirm --paths=%(paths)s invest.spec' % {
+    sh('%(python)s %(pyinstaller)s --clean --noconfirm %(paths)s invest.spec' % {
         'python': python_exe,
         'pyinstaller': pyinstaller_file,
-        'paths': env_site_pkgs,
+        'paths': '--paths=%s' % env_site_pkgs if os.path.exists(env_site_pkgs) else '',
     }, cwd='exe')
 
     bindir = os.path.join('exe', 'dist', 'invest_dist')
 
     # Write the package versions to a text file for the record.
     # Assume we're in a virtualenv
-    pip_bin = os.path.join(os.path.dirname(python_exe), 'pip')
-    sh('{pip} freeze > package_versions.txt'.format(pip=pip_bin), cwd=bindir)
+    sh(('{python} -c "import pip; pip.main([\'freeze\'])" '
+        '> package_versions.txt').format(python=python_exe), cwd=bindir)
 
-    # Record the hg path, branch, sha1 of this repo to a text file. This will help us down
-    # the road to differentiate between built binaries from different forks.
+    # Record the hg path, branch, sha1 of this repo to a text file. This will
+    # help us down the road to differentiate between built binaries from
+    # different forks.
     with open(os.path.join(bindir, 'buildinfo.txt'), 'w') as buildinfo_textfile:
         hg_path = sh('hg paths', capture=True)
         buildinfo_textfile.write(hg_path)
@@ -1781,23 +2465,22 @@ def build_bin(options):
             # archive.
 
             # Get version spec from requirements.txt
-            with open('requirements.txt') as requirements_file:
-                for requirement in pkg_resources.parse_requirements(requirements_file.read()):
-                    if requirement.project_name == 'natcap.versioner':
-                        versioner_spec = str(requirement)
-                        break
+            versioner_spec = _read_requirements_dict()['natcap.versioner']
 
             # Download a valid source tarball to the dist dir.
-
-            sh('{pip_ep} install --no-deps --no-use-wheel --download {distdir} \'{versioner}\''.format(
-                pip_ep=os.path.join(os.path.dirname(python_exe), 'pip'),
-                distdir='dist',
-                versioner=versioner_spec
+            sh(("{python} -c "
+                "\"import pip; pip.main(["
+                "'install', '--no-deps', '--no-use-wheel', '--download', "
+                "'{distdir}', \'{versioner}\'])\"").format(
+                    python=python_exe,
+                    distdir='dist',
+                    versioner=versioner_spec
             ))
 
             cwd = os.getcwd()
             # Unzip the tar.gz and run bdist_egg on it.
-            versioner_tgz = os.path.abspath(glob.glob('dist/natcap.versioner-*.tar.gz')[0])
+            versioner_tgz = os.path.abspath(
+                glob.glob('dist/natcap.versioner-*.tar.gz')[0])
             os.chdir('dist')
             dry('unzip %s' % versioner_tgz,
                 lambda tgz: tarfile.open(tgz, 'r:gz').extractall('.'),
@@ -1809,8 +2492,13 @@ def build_bin(options):
 
             # Copy the new egg to the built distribution with the eggs in it.
             # Both these folders should already be absolute paths.
-            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist', 'natcap.versioner-*'))[0]
-            versioner_egg_dest = os.path.join(invest_dist, 'eggs', os.path.basename(versioner_egg))
+            versioner_egg = glob.glob(os.path.join(versioner_dir, 'dist',
+                                                   'natcap.versioner-*'))[0]
+            egg_dirname = os.path.join(invest_dist, 'eggs')
+            versioner_egg_dest = os.path.join(egg_dirname,
+                                              os.path.basename(versioner_egg))
+            if not os.path.exists(egg_dirname):
+                os.makedirs(egg_dirname)
             dry('cp %s %s' % (versioner_egg, versioner_egg_dest),
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
@@ -1972,7 +2660,7 @@ def _build_nsis(version, bindir, arch):
     hg_path = sh('hg paths', capture=True).rstrip()
     forkuser, forkreponame = hg_path.split('/')[-2:]
     if forkuser == 'natcap':
-        data_location = 'invest-data'
+        data_location = 'invest-data/%s' % short_version
         forkname = ''
     else:
         data_location = 'nightly-build/invest-forks/%s/data' % forkuser
@@ -2357,6 +3045,10 @@ def jenkins_installer(options):
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
     build_options = {}
+    if platform.system() == 'Windows':
+        # force building with msvc on jenkins on Windows
+        build_options['compiler'] = 'msvc'
+
     for opt_name, build_opts, needed_repo in [
             ('nodata', ['skip_data'], 'data/invest-data'),
             ('nodocs', ['skip_guide', 'skip_api'], 'doc/users-guide'),
@@ -2410,6 +3102,10 @@ def jenkins_installer(options):
             'username': 'dataportal',
             'host': 'data.naturalcapitalproject.org',
             'dataportal': 'public_html',
+            # Only push data zipfiles if we're on Windows.
+            # Have to pick one, as we're having issues if all slaves are trying
+            # to push the same large files.
+            'include_data': platform.system() == 'Windows',
         })
 
 
@@ -2472,6 +3168,206 @@ def forked_by(options):
     except AttributeError:
         pass
 
+@task
+@consume_args
+def compress_raster(args):
+    """
+    Compress a raster.
+
+    Call `paver compress_raster --help` for full details.
+    """
+    parser = argparse.ArgumentParser(description=(
+        'Compress a GDAL-compatible raster.'))
+    parser.add_argument('-x', '--blockxsize', default=0, type=int, help=(
+        'The block size along the X axis.  Default=inraster block'))
+    parser.add_argument('-y', '--blockysize', default=0, type=int, help=(
+        'The block size along the Y axis.  Default=inraster block'))
+    parser.add_argument('-c', '--compression', default='LZW', type=str, help=(
+        'Compress the raster.  Valid options: NONE, LZW, DEFLATE, PACKBITS. '
+        'Default: LZW'))
+    parser.add_argument('inraster', type=str, help=(
+        'The raster to compress'))
+    parser.add_argument('outraster', type=str, help=(
+        'The path to the output raster'))
+
+    parsed_args = parser.parse_args(args)
+
+    # import GDAL here because I don't want it to be a requirement to be able
+    # to run all paver functions.
+    from osgeo import gdal
+    in_raster = gdal.Open(parsed_args.inraster)
+    in_band = in_raster.GetRasterBand(1)
+    block_x, block_y = in_band.GetBlockSize()
+    if parsed_args.blockxsize == 0:
+        parsed_args.blockxsize = block_x
+    block_x_opt = '-co "BLOCKXSIZE=%s"' % parsed_args.blockxsize
+
+    if parsed_args.blockysize == 0:
+        parsed_args.blockysize = block_y
+    block_y_opt = '-co "BLOCKYSIZE=%s"' % parsed_args.blockysize
+
+    if parsed_args.blockysize % 2 == 0 and parsed_args.blockysize % 2 == 0:
+        tile_cmd = '-co "TILED=YES"'
+    else:
+        tile_cmd = ''
+
+    sh(('gdal_translate '
+        '-of "GTiff" '
+        '{tile} '
+        '{block_x} '
+        '{block_y} '
+        '-co "COMPRESS=LZW" '
+        '{in_raster} {out_raster}').format(
+            tile=tile_cmd,
+            block_x=block_x_opt,
+            block_y=block_y_opt,
+            in_raster=os.path.abspath(parsed_args.inraster),
+            out_raster=os.path.abspath(parsed_args.outraster),
+        ))
+
+
+@task
+@consume_args
+def test(args):
+    """Run the suite of InVEST tests within a virtualenv.
+
+    When run, paver will determine whether InVEST needs to be installed into
+    the active virtualenv, creating the env if needed.  InVEST will be
+    installed into the virtualenv if:
+
+        * InVEST is not already installed into the virtualenv.
+        * The version of InVEST installed into the virtualenv is older than
+          what is currently available to be installed from the source tree.
+        * There are uncommitted changes in the source tree.
+
+    Default behavior is to run all tests contained in tests/*.py and
+    src/natcap/invest/tests/*.py.
+
+    If --jenkins is provided, xunit reports and extra logging will be produced.
+    If --with-data is provided, test data repos will be cloned.
+
+    --jenkins implies --with-data.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--jenkins', default=False, action='store_true',
+            help='Use options that are useful for Jenkins reports')
+    parser.add_argument('--with-data', default=False, action='store_true',
+            help='Clone/update the data repo if needed')
+    parser.add_argument('nose_args', nargs='*',
+                        help=('Nosetests-compatible strings indicating '
+                              'filename[:classname[.testname]]'),
+                        metavar='TEST')
+    parsed_args = parser.parse_args(args)
+    print 'parsed args: ', parsed_args
+
+    if parsed_args.with_data:
+        call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
+        call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
+
+    compiler = None
+    if parsed_args.jenkins and platform.system() == 'Windows':
+        compiler = 'msvc'
+
+    @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
+    def _run_tests():
+        """
+        Run tests within a virtualenv.  If we're running with the --jenkins
+        flag, add a couple more options suitable for that environment.
+        """
+        if parsed_args.jenkins:
+            call_task('check_repo', options={
+                'repo': REPOS_DICT['test-data'].local_path,
+                'fetch': True,
+            })
+            call_task('check_repo', options={
+                'repo': REPOS_DICT['invest-data'].local_path,
+                'fetch': True,
+            })
+            jenkins_flags = (
+                '--with-xunit '
+                '--with-coverage '
+                '--cover-xml '
+                '--cover-tests '
+                '--logging-filter=None '
+                '--nologcapture '
+            )
+        else:
+            jenkins_flags = ''
+
+        if len(parsed_args.nose_args) == 0:
+            # Specifying all tests by hand here because Windows doesn't like the *
+            # wildcard operator like Linux/Mac does.
+            regression_tests = glob.glob(os.path.join('tests', '*.py'))
+            _unit_glob = glob.glob(os.path.join('src', 'natcap', 'invest',
+                                                'tests', '*.py'))
+            unit_tests = [t for t in _unit_glob
+                        if os.path.basename(t) != '__init__.py']
+            tests = regression_tests + unit_tests
+        else:
+            # If the user gave us some test names to run, run those instead!
+            tests = parsed_args.nose_args
+
+        sh(('nosetests -vs {jenkins_opts} {tests}').format(
+                jenkins_opts=jenkins_flags,
+                tests=' '.join(tests)
+            ))
+
+    @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
+    def _update_invest():
+        """
+        Determine if InVEST needs to be updated based on known version strings.
+        If so, remove the existing installation of InVEST and reinstall.
+        Runs within the virtualenv.
+        """
+        # If there are uncommitted changes, or the installed version of InVEST
+        # differs from the local version, reinstall InVEST into the virtualenv.
+        changed_files = sh((
+            'hg status -a -m -r -d '
+            'src/natcap/invest/ pavement.py setup.py setup.cfg MANIFEST.in'),
+            capture=True)
+        print 'Changed files: ' + changed_files
+        changes_uncommitted = changed_files.strip() != ''
+        if not changes_uncommitted:
+            # If no uncommitted changes, check that the versions match.
+            # If versions don't match, reinstall.
+            try:
+                installed_version = sh(('python -c "import natcap.invest;'
+                                        'print natcap.invest.__version__"'),
+                                        capture=True)
+                local_version = sh('python setup.py --version', capture=True)
+            except BuildFailure:
+                # When natcap.invest is not installed, so force reinstall
+                installed_version = False
+                local_version = True
+        else:
+            # If changes are uncommitted, force reinstall.
+            installed_version = True
+            local_version = True
+
+        if changes_uncommitted or (installed_version != local_version):
+            try:
+                sh('pip uninstall -y natcap.invest')
+            except BuildFailure:
+                pass
+
+            if compiler:
+                compile_flags = 'build_ext --compiler=' + compiler
+            else:
+                compile_flags = ''
+            sh('python setup.py {flags} install'.format(flags=compile_flags))
+
+    # Build an env if needed.
+    if not os.path.exists(paver.easy.options.dev_env.envname):
+        if compiler:
+            opts = {'compiler': compiler}
+        else:
+            opts = {}
+        call_task('dev_env', options=opts)
+    else:
+        _update_invest()
+
+    # run the tests within the virtualenv.
+    _run_tests()
 
 @task
 @might_call('push')
@@ -2483,6 +3379,7 @@ def forked_by(options):
     ('upstream=', '', 'The URL to the upstream REPO.  Use this when this repo is moved'),
     ('password', '', 'Prompt for a password'),
     ('private-key=', '', 'Use this private key to push'),
+    ('include-data', '', 'Include data zipfiles in the push'),
 ])
 def jenkins_push_artifacts(options):
     """
@@ -2507,32 +3404,33 @@ def jenkins_push_artifacts(options):
         return release_files
 
     release_files = _get_release_files()
-    if 'post' in version_string:
-        data_dirname = 'develop'
-    else:
-        data_dirname = version_string
     data_files = glob.glob('dist/release_*/data/*')
     if username == 'natcap' and reponame == 'invest':
         # We're not on a fork!  Binaries are pushed to invest-releases
         # dirnames are relative to the dataportal root
+        if 'post' in version_string:
+            data_dirname = 'develop'
+        else:
+            data_dirname = version_string
         data_dir = os.path.join('invest-data', data_dirname)
         release_dir = os.path.join('invest-releases', version_string)
     else:
         # We're on a fork!
         # Push the binaries, documentation to nightly-build
         release_dir = os.path.join('nightly-build', 'invest-forks', username)
-        data_dir = os.path.join(release_dir, 'data', data_dirname)
+        data_dir = os.path.join(release_dir, 'data')
 
     pkey = None
     if getattr(options.jenkins_push_artifacts, 'private_key', False):
         pkey = options.jenkins_push_artifacts.private_key
-    elif platform.system() == 'Windows':
-        # Assume a default private key location for jenkins builds on
-        # Windows
+    elif platform.system() in ['Windows', 'Darwin', 'Linux']:
+        # Assume a default private key location for jenkins builds
+        # On Windows, this assumes that the key is in .ssh (might be the cygwin
+        # home directory).
         pkey = os.path.join(os.path.expanduser('~'),
                             '.ssh', 'dataportal-id_rsa')
     else:
-        print ('No private key provided, and not on Windows, so not '
+        print ('No private key provided, and not on a known system, so not '
                'assuming a default private key file')
 
     push_args = {
@@ -2561,8 +3459,17 @@ def jenkins_push_artifacts(options):
     if len(release_files) > 0:
         call_task('push', args=_push(release_dir) + release_files)
 
-    if len(data_files) > 0:
-        call_task('push', args=_push(data_dir) + data_files)
+    try:
+        include_data = options.jenkins_push_artifacts.include_data
+    except AttributeError:
+        include_data = False
+    finally:
+        if len(data_files) == 0:
+            print 'No data files to push.'
+        elif not include_data:
+            print 'Excluding data files from push per user preference'
+        else:
+            call_task('push', args=_push(data_dir) + data_files)
 
     def _archive_present(substring):
         """

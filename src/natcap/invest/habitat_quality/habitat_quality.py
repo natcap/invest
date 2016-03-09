@@ -8,8 +8,9 @@ import csv
 from osgeo import gdal
 from osgeo import osr
 import numpy as np
-
 import pygeoprocessing.geoprocessing
+
+from .. import utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -224,15 +225,20 @@ def execute(args):
 
             # get the cell size from LULC to use for intermediate / output
             # rasters
-            cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+            lulc_cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
                 args['landuse_cur_uri'])
+
+            # need the cell size for the threat raster so we can create
+            # an appropriate kernel for convolution
+            threat_cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+                threat_dataset_uri)
 
             # convert max distance (given in KM) to meters
             dr_max = float(threat_data['MAX_DIST']) * 1000.0
 
             # convert max distance from meters to the number of pixels that
             # represents on the raster
-            dr_pixel = dr_max / cell_size
+            dr_pixel = dr_max / threat_cell_size
             LOGGER.debug('Max distance in pixels: %f', dr_pixel)
 
             filtered_threat_uri = os.path.join(
@@ -245,7 +251,7 @@ def execute(args):
             if decay_type == 'linear':
                 make_linear_decay_kernel_uri(dr_pixel, kernel_uri)
             elif decay_type == 'exponential':
-                make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
+                utils.exponential_decay_kernel_raster(dr_pixel, kernel_uri)
             else:
                 raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
             pygeoprocessing.geoprocessing.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
@@ -322,7 +328,7 @@ def execute(args):
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             degradation_rasters, total_degradation, deg_sum_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, "intersection",
+            gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
             vectorize_op=False)
 
         LOGGER.debug('Finished vectorize on total_degradation')
@@ -362,7 +368,7 @@ def execute(args):
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [deg_sum_uri, habitat_uri], quality_op, quality_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, "intersection",
+            gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
             vectorize_op = False)
 
         LOGGER.debug('Finished vectorize on quality_op')
@@ -419,7 +425,7 @@ def execute(args):
 
                 pygeoprocessing.geoprocessing.vectorize_datasets(
                     [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
-                    gdal.GDT_Int32, base_nodata, cell_size, "intersection",
+                    gdal.GDT_Int32, base_nodata, lulc_cell_size, "intersection",
                     vectorize_op = False)
 
                 LOGGER.debug('Finished vectorize on trim_op')
@@ -680,43 +686,6 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         key_raster_uri, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
         exception_flag=raise_error)
-
-
-def make_exponential_decay_kernel_uri(expected_distance, kernel_uri):
-    max_distance = expected_distance * 5
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1, gdal.GDT_Float32,
-        options=['BIGTIFF=IF_SAFER'])
-
-    #Make some kind of geotransform, it doesn't matter what but
-    #will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
-    srs = osr.SpatialReference()
-    srs.SetUTM( 11, 1 )
-    srs.SetWellKnownGeogCS( 'NAD27' )
-    kernel_dataset.SetProjection( srs.ExportToWkt() )
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
-
-    col_index = numpy.array(xrange(kernel_size))
-    integration = 0.0
-    for row_index in xrange(kernel_size):
-        distance_kernel_row = numpy.sqrt(
-            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
-        kernel = numpy.where(
-            distance_kernel_row > max_distance, 0.0, numpy.exp(-distance_kernel_row / expected_distance))
-        integration += numpy.sum(kernel)
-        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
-
-    for row_index in xrange(kernel_size):
-        kernel_row = kernel_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
-        kernel_row /= integration
-        kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
 def make_linear_decay_kernel_uri(max_distance, kernel_uri):

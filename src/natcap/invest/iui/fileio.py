@@ -1,5 +1,6 @@
+"InVEST fileio module"
+
 import json
-import ogr
 import platform
 import csv
 import os
@@ -8,10 +9,11 @@ import sys
 import codecs
 import datetime
 
-from PyQt4 import QtCore
+from osgeo import ogr
 
 import natcap.invest
-from dbfpy import dbf
+from natcap.invest.iui.dbfpy import dbf
+
 
 def settings_folder():
     """Return the file location of the user's settings folder.  This folder
@@ -23,6 +25,7 @@ def settings_folder():
 
     expanded_path = os.path.expanduser(config_folder)
     return expanded_path
+
 
 class JSONHandler(object):
     def __init__(self, uri):
@@ -69,9 +72,10 @@ class LastRunHandler(JSONHandler):
         if version is not None:
             invest_version = version
         else:
-            # If we aren't on a release, use a 'dev' release version for naming the
-            # lastrun json file.
-            if not natcap.invest.is_release():
+            # If we aren't on a release, use a 'dev' release version for
+            # naming the lastrun json file so we don't lose our inputs on
+            # every version
+            if 'post' in natcap.invest.__version__:
                 invest_version = 'dev'
             else:
                 invest_version = natcap.invest.__version__
@@ -248,12 +252,12 @@ class AbstractTableHandler(object):
         """Set a mask for the table's self.fieldnames.  Any fieldnames that
             match regexp will have trim number of characters stripped off the
             front.
-            
+
             regexp=None - a python string or None.  If a python string, this
                 will be a regular expression.  If None, this represents no
                 regular expression.
             trim - a python int.
-            
+
             Returns nothing."""
 
         self.mask_regexp = regexp
@@ -310,7 +314,7 @@ class AbstractTableHandler(object):
 
     def get_table_dictionary(self, key_field):
         """Returns a python dictionary mapping a key value to all values in that
-            particular row dictionary (including the key field).  If duplicate 
+            particular row dictionary (including the key field).  If duplicate
             keys are found, the are overwritten in the output dictionary.
 
             key_field - a python string of the desired field value to be used as
