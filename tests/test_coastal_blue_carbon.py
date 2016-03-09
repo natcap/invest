@@ -285,8 +285,7 @@ class TestModel(unittest.TestCase):
                              'inputs/GBJC_2050_mean_Resample.tif'),
                 os.path.join(
                     sample_data_path,
-                    '/Users/work/CoastalBlueCarbon/inputs/GBJC_2100_mean_'
-                    'Resample.tif')],
+                    'inputs/GBJC_2100_mean_Resample.tif')],
             'lulc_transition_matrix_uri': os.path.join(
                 sample_data_path,
                 'outputs_preprocessor/transitions_sample.csv'),
@@ -300,8 +299,9 @@ class TestModel(unittest.TestCase):
                 args['workspace_dir'],
                 'outputs_core/net_present_value_150225.tif'))
         npv_array = read_array(npv_raster)
-        u = np.unique(npv_array)
-        self.assertTrue(35.93808746 in u)
+        u = np.unique(npv_array).sort()
+        a = [0., 35.93808746, 3507.83374023, 3543.77172852].sort()
+        self.assertTrue(a == u)
 
     def tearDown(self):
         shutil.rmtree(self.args['workspace_dir'])
