@@ -28,13 +28,6 @@ LOGGER = logging.getLogger('natcap.invest.wind_energy.wind_energy')
 speedups.enable()
 
 
-class HubHeightError(Exception):
-    """A custom error message for a hub height that is not supported in
-        the current wind data
-    """
-    pass
-
-
 class FieldError(Exception):
     """A custom error message for fields that are missing"""
     pass
