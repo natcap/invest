@@ -39,10 +39,10 @@
           "id": "wind_data",
           "args_id": "wind_data_uri",
           "type": "file",
-          "label": "Wind Data Points (BIN)",
-          "defaultValue": "../WindEnergy/input/ECNA_EEZ_WEBPAR_Aug27_2012.bin",
+          "label": "Wind Data Points (CSV)",
+          "defaultValue": "../WindEnergy/input/ECNA_EEZ_WEBPAR_Aug27_2012.csv",
           "required": true,
-          "helpText": "A binary file that represents the wind input data (Weibull parameters). Please see the User's Guide for a description of how this file was generated."
+          "helpText": "A CSV file that represents the wind input data (Weibull parameters). Please see the User's Guide for a more detailed description of the parameters."
         },
         {
           "id": "aoi",
