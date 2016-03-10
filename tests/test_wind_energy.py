@@ -621,17 +621,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'pricetable', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-        #for vector_path in vector_results:
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', vector_path),
-        #        os.path.join(REGRESSION_DATA, 'pricetable', vector_path),
-        #        1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'pricetable', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -650,17 +650,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'noaoi', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-        #for vector_path in vector_results:
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', vector_path),
-        #        os.path.join(REGRESSION_DATA, 'noaoi', vector_path),
-        #        1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'noaoi', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -682,17 +682,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-        #for vector_path in vector_results:
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', vector_path),
-        #        os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path),
-        #        1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -716,17 +716,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'nodistances', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-        #for vector_path in vector_results:
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', vector_path),
-        #        os.path.join(REGRESSION_DATA, 'nodistances', vector_path),
-        #        1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'nodistances', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -752,17 +752,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'novaluation', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-        #for vector_path in vector_results:
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', vector_path),
-        #        os.path.join(REGRESSION_DATA, 'novaluation', vector_path),
-        #        1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'novaluation', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -797,17 +797,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'pricetablegridpts', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-        #for vector_path in vector_results:
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', vector_path),
-        #        os.path.join(REGRESSION_DATA, 'pricetablegridpts', vector_path),
-        #        1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'pricetablegridpts', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -841,17 +841,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'priceval', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-        #for vector_path in vector_results:
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', vector_path),
-        #        os.path.join(REGRESSION_DATA, 'priceval', vector_path),
-        #        1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'priceval', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -886,17 +886,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-       # for vector_path in vector_results:
-       #     pygeoprocessing.testing.assert_vectors_equal(
-       #         os.path.join(args['workspace_dir'], 'output', vector_path),
-       #         os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path),
-       #         1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -935,17 +935,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path),
-                1e-3)
+                1e-9)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
-        #for vector_path in vector_results:
-        #    pygeoprocessing.testing.assert_vectors_equal(
-        #        os.path.join(args['workspace_dir'], 'output', vector_path),
-        #        os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path),
-        #        1e-9)
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path),
+                1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)

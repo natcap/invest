@@ -48,7 +48,7 @@
                 "fieldsExist": [
                   "LONG",
                   "LATI",
-                  "RAM",
+                  "LAM",
                   "K",
                   "REF"
                 ],
@@ -72,7 +72,7 @@
                     }
                   },
                   {
-                    "field": "RAM",
+                    "field": "LAM",
                     "validateAs": {
                       "type": "number",
                       "allowedValues": {
