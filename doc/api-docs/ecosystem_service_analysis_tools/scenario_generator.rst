@@ -1,5 +1,5 @@
-Scenario Generator Package
-==========================
+Scenario Generator:Rule-Based Package
+=====================================
 
 Scenario Generator
 ------------------

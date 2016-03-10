@@ -4,9 +4,8 @@ Ecosystem Service Analysis Tools
 
 .. toctree::
     :maxdepth: 1
+    :glob:
 
-    ecosystem_service_analysis_tools/coastal_vulnerability.rst
-    ecosystem_service_analysis_tools/overlap_analysis.rst
-    ecosystem_service_analysis_tools/scenario_generator.rst
+    ecosystem_service_analysis_tools/*
 
 .. End of file

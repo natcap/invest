@@ -4,8 +4,8 @@ Utilities
 
 .. toctree::
     :maxdepth: 1
+    :glob:
 
-    utilities/utils.rst
-    utilities/reporting.rst
+    utilities/*
 
 .. End of file
