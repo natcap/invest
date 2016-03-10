@@ -36,4 +36,3 @@ doc/api-docs/build
 data/invest-data
 data/invest-test-data
 src/pyinstaller
-
