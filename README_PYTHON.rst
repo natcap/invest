@@ -30,6 +30,18 @@ For more information, see:
 Installing InVEST
 =================
 
+Python Dependencies
+-------------------
+
+Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
+
+.. include:: requirements.txt
+    :literal:
+    :start-line: 9
+
+Additionally, ``PyQt4`` is required to use the ``invest`` cli, but is not
+required for development against ``natcap.invest``.
+
 Installing from Source
 ----------------------
 
@@ -46,6 +58,13 @@ in setuptools that may cause problems when importing packages within the
 ``natcap`` namespace.  The current workaround is to use these extra pip flags::
 
     $ pip install natcap.invest --egg --no-binary :all:
+
+Installing the latest development version
+-----------------------------------------
+
+The latest development version of InVEST can be installed from our source tree::
+
+    $ pip install hg+https://bitbucket.org/natcap/invest@develop
 
 
 Usage
@@ -86,7 +105,8 @@ To list the available models::
 Development
 ===========
 
-Dependencies for developing InVEST are listed in ``requirements.txt``.
+Dependencies for developing InVEST are listed in ``requirements.txt`` and in
+``requirements-dev.txt``.
 
 Support
 =======
