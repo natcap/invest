@@ -35,18 +35,16 @@ Installing from Source
 
 If you have a compiler installed and configured for your system, and
 dependencies installed, the easiest way to install InVEST as a python package 
-is:
+is::
 
-::
     $ pip install natcap.invest
 
 If you are working within virtual environments, there is a `documented issue
 with namespaces 
 <https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version>`_
 in setuptools that may cause problems when importing packages within the
-``natcap`` namespace.  The current workaround is to use these extra pip flags:
+``natcap`` namespace.  The current workaround is to use these extra pip flags::
 
- ::
     $ pip install natcap.invest --egg --no-binary :all:
 
 
@@ -54,19 +52,16 @@ Usage
 =====
 
 To run an InVEST model from the command-line, use the ``invest`` cli single
-entry point:
+entry point::
 
-::
     $ invest --help
     usage: invest [-h] [--version] [--list] [model]
 
     Integrated Valuation of Ecosystem Services and Tradeoffs.InVEST (Integrated
     Valuation of Ecosystem Services and Tradeoffs) is a family of tools for
     quantifying the values of natural capital in clear, credible, and practical
-    ways. In promising a return (of societal benefits) on investments in
-    nature,
-    the scientific community needs to deliver knowledge and tools to quantify
-    and
+    ways. In promising a return (of societal benefits) on investments in nature,
+    the scientific community needs to deliver knowledge and tools to quantify and
     forecast this return. InVEST enables decision-makers to quantify the
     importance of natural capital, to assess the tradeoffs associated with
     alternative choices, and to integrate conservation and human development.
@@ -75,17 +70,16 @@ entry point:
     python environment.
 
     positional arguments:
-      model         The model/tool to run. Use --list to show available
-                    models/tools.
+      model       The model/tool to run. Use --list to show available
+                  models/tools. Identifiable model prefixes may also be used.
 
-      optional arguments:
-        -h, --help  show this help message and exit
-        --version   show program's version number and exit
-        --list      List available models
+    optional arguments:
+      -h, --help  show this help message and exit
+      --version   show program's version number and exit
+      --list      List available models
 
-To list the available models:
+To list the available models::
 
-::
     $ invest --list
 
 
