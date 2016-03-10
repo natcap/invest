@@ -16,7 +16,6 @@ Contents:
     ecosystem_service_analysis_tools.rst
     user_interface.rst
     utilities.rst
-    testing.rst
 
 Indices and tables
 ==================
