@@ -1,5 +1,8 @@
-natcap.invest.routing package
-=============================
+Routing Package
+===============
+
+This subpackage provides entry points for pygeoprocessing's routing 
+functionality for use in InVEST User Interfaces.
 
 Submodules
 ----------
