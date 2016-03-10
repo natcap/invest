@@ -573,7 +573,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'wind_data_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
+                'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
             'bathymetry_uri': os.path.join(
                 SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
                 'global_dem'),
@@ -956,7 +956,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1011,7 +1011,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1069,7 +1069,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1113,7 +1113,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1165,7 +1165,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'turbine_parameters_uri': os.path.join(
@@ -1221,7 +1221,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
