@@ -112,6 +112,6 @@ Support
 =======
 
 Participate in the NatCap forums here:
-`http://forums.naturalcapitalproject.org`
+http://forums.naturalcapitalproject.org
 
-Bugs may be reported at `http://bitbucket.org/natcap/invest`
+Bugs may be reported at http://bitbucket.org/natcap/invest
