@@ -48,8 +48,8 @@ def execute(args):
         workspace_dir (string): a python string which is the uri path to where
             the outputs will be saved (required)
         wind_data_uri (string): path to a CSV file with the following header:
-            ['LONG','LATI','RAM', 'K', 'REF']. Each following row is a location
-            with at least the Longitude, Latitude, Scale ('RAM'),
+            ['LONG','LATI','LAM', 'K', 'REF']. Each following row is a location
+            with at least the Longitude, Latitude, Scale ('LAM'),
             Shape ('K'), and reference height ('REF') at which the data was
             collected (required)
         aoi_uri (string): a uri to an OGR datasource that is of type polygon
@@ -199,7 +199,7 @@ def execute(args):
 
     # The scale_key is used in getting the right wind energy arguments that are
     # dependent on the hub height.
-    scale_key = 'RAM'
+    scale_key = 'LAM'
 
     LOGGER.debug('hub_height : %s', hub_height)
 
@@ -1415,7 +1415,7 @@ def read_csv_wind_data(wind_data_uri, hub_height):
 
     Parameters:
         wind_data_uri (string): a path for the csv wind data file with header
-            of: "LONG","LATI","RAM","K","REF"
+            of: "LONG","LATI","LAM","K","REF"
 
         hub_height (int): the hub height to use for calculating weibell
             parameters and wind energy values
@@ -1439,7 +1439,7 @@ def read_csv_wind_data(wind_data_uri, hub_height):
 
     for row in reader:
         ref_height = float(row['REF'])
-        ref_scale = float(row['RAM'])
+        ref_scale = float(row['LAM'])
         ref_shape = float(row['K'])
         # Calculate scale value at new hub height given reference values.
         # See equation 3 in users guide
@@ -1447,7 +1447,7 @@ def read_csv_wind_data(wind_data_uri, hub_height):
 
         wind_dict[float(row['LATI']), float(row['LONG'])] = {
             'LONG': float(row['LONG']), 'LATI': float(row['LATI']),
-            'RAM': scale_value, 'K': ref_shape, 'REF_RAM': ref_scale}
+            'LAM': scale_value, 'K': ref_shape, 'REF_LAM': ref_scale}
 
     wind_file.close()
     return wind_dict
@@ -1459,9 +1459,9 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
         dict_data - a python dictionary with the wind data, where the keys are
             tuples of the lat/long coordinates:
             {
-            (97, 43) : {'LATI':97, 'LONG':43, 'Ram-030m':6.3, 'K-010m':2.7},
-            (55, 51) : {'LATI':55, 'LONG':51, 'Ram-030m':6.2, 'K-010m':2.4},
-            (73, 47) : {'LATI':73, 'LONG':47, 'Ram-030m':6.5, 'K-010m':2.3}
+            (97, 43) : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
+            (55, 51) : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
+            (73, 47) : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
             }
 
         layer_name - a python string for the name of the layer
