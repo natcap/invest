@@ -48,9 +48,9 @@ ls -la /Volumes
 
 # UNCOMMENT THESE LINES TO CREATE A BACKGROUND IMAGE
 # ALSO, BE SURE TO INCLUDE A SNAZZY BACKGROUND IMAGE.  DO IT RIGHT IF YOU DO IT AT ALL.
-mkdir /Volumes/"${title}"/.background
-cp background.png /Volumes/"${title}"/.background/background.png
-backgroundPictureName='background.png'
+# mkdir /Volumes/"${title}"/.background
+# cp background.png /Volumes/"${title}"/.background/background.png
+# backgroundPictureName='background.png'
 
 applicationName="`basename ${2}`"
 
