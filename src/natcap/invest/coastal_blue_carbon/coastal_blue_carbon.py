@@ -606,11 +606,11 @@ def get_inputs(args):
     d['C_r_rasters'] = args['lulc_transition_maps_list']
 
     # Reclass Dictionaries
-    lulc_lookup_dict = geoprocess.get_lookup_from_csv(
+    lulc_lookup_dict = geoprocess.get_lookup_from_table(
         args['lulc_lookup_uri'], 'lulc-class')
     lulc_to_code_dict = \
         dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items())
-    initial_dict = geoprocess.get_lookup_from_csv(
+    initial_dict = geoprocess.get_lookup_from_table(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
     code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
@@ -764,9 +764,9 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
             ...
         }
     """
-    lulc_transition_dict = geoprocess.get_lookup_from_csv(
+    lulc_transition_dict = geoprocess.get_lookup_from_table(
         lulc_transition_uri, 'lulc-class')
-    lulc_lookup_dict = geoprocess.get_lookup_from_csv(
+    lulc_lookup_dict = geoprocess.get_lookup_from_table(
         lulc_lookup_uri, 'lulc-class')
     lulc_to_code_dict = \
         dict((k, v['code']) for k, v in lulc_lookup_dict.items())

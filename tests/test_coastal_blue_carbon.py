@@ -221,7 +221,7 @@ class TestPreprocessor(unittest.TestCase):
         code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
         preprocessor._create_carbon_pool_transient_table_template(
             filepath, code_to_lulc_dict)
-        transient_dict = geoprocess.get_lookup_from_csv(filepath, 'code')
+        transient_dict = geoprocess.get_lookup_from_table(filepath, 'code')
         # demonstrate that output table contains all input land cover classes
         for i in [1, 2, 3]:
             self.assertTrue(i in transient_dict.keys())

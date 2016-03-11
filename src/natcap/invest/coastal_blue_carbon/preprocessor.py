@@ -9,7 +9,7 @@ import ast
 
 from osgeo import gdal
 import pygeoprocessing.geoprocessing as geoprocess
-from pygeoprocessing.geoprocessing import get_lookup_from_csv
+from pygeoprocessing.geoprocessing import get_lookup_from_table
 from pygeoprocessing import create_directories
 
 from .. import utils as invest_utils
@@ -98,7 +98,7 @@ def _get_inputs(args):
     results_suffix = invest_utils.make_suffix_string(
         args, 'results_suffix')
 
-    lulc_lookup_dict = get_lookup_from_csv(args['lulc_lookup_uri'], 'code')
+    lulc_lookup_dict = get_lookup_from_table(args['lulc_lookup_uri'], 'code')
 
     for code in lulc_lookup_dict.keys():
         sub_dict = lulc_lookup_dict[code]
