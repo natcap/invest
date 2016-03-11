@@ -103,7 +103,7 @@ class ScenicQualityRegressionTests(unittest.TestCase):
             'keep_val_viewsheds': 'No',
             'dem_path': os.path.join(
                 SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs', 'claybark_dem'),
-            'refraction': 0.13,
+            'valuation_function': 0,
             'max_valuation_radius': 8000
         }
 
@@ -112,18 +112,152 @@ class ScenicQualityRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @nottest
-    def test_scenic_quality_no_refraction(self):
-        """SQ: testing stuff."""
+    def test_scenic_quality_baseline(self):
+        """SQ: testing with no optional features and polynomial val function."""
         from natcap.invest.scenic_quality import scenic_quality
 
         args = ScenicQualityTests.generate_base_args(self.workspace_dir)
 
+        # Check with Rob about good default values here:
+        args['poly_a_coef'] = 1.0
+        args['poly_b_coef'] = 1.0
+        args['poly_c_coef'] = 1.0
+        args['poly_d_coef'] = 1.0
+
         scenic_quality.execute(args)
 
-    def test_scenic_quality(self):
-        """SQ: testing stuff."""
+        raster_results = [
+            'vshed.tif', 'viewshed_counts.tif']
+
+        for raster_path in raster_results:
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'baseline', raster_path),
+                1e-9)
+
+    def test_scenic_quality_refraction(self):
+        """SQ: testing with refraction coeff and polynomial val function."""
         from natcap.invest.scenic_quality import scenic_quality
 
         args = ScenicQualityTests.generate_base_args(self.workspace_dir)
 
+        args['refraction'] = 0.13
+        # Check with Rob about good default values here:
+        args['poly_a_coef'] = 1.0
+        args['poly_b_coef'] = 1.0
+        args['poly_c_coef'] = 1.0
+        args['poly_d_coef'] = 1.0
+
         scenic_quality.execute(args)
+
+        raster_results = [
+            'vshed.tif', 'viewshed_counts.tif']
+
+        for raster_path in raster_results:
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'refraction', raster_path),
+                1e-9)
+
+    def test_scenic_quality_population(self):
+        """SQ: testing affected / unaffected population counts."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        args = ScenicQualityTests.generate_base_args(self.workspace_dir)
+
+        args['population_path'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Population', 'global_pop')
+        # Check with Rob about good default values here:
+        args['poly_a_coef'] = 1.0
+        args['poly_b_coef'] = 1.0
+        args['poly_c_coef'] = 1.0
+        args['poly_d_coef'] = 1.0
+
+        scenic_quality.execute(args)
+
+        raster_results = [
+            'vshed.tif', 'viewshed_counts.tif']
+
+        for raster_path in raster_results:
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'population', raster_path),
+                1e-9)
+
+        # Test population HTML output
+
+    def test_scenic_quality_overlap(self):
+        """SQ: testing percent overlap of polygons on view pixels."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        args = ScenicQualityTests.generate_base_args(self.workspace_dir)
+
+        args['overlap_path'] = os.path.join(
+            SAMPLE_DATA, 'ScenicQuality', 'Input', 'BC_parks.shp')
+        # Check with Rob about good default values here:
+        args['poly_a_coef'] = 1.0
+        args['poly_b_coef'] = 1.0
+        args['poly_c_coef'] = 1.0
+        args['poly_d_coef'] = 1.0
+
+        scenic_quality.execute(args)
+
+        raster_results = [
+            'vshed.tif', 'viewshed_counts.tif']
+
+        for raster_path in raster_results:
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'overlap', raster_path),
+                1e-9)
+
+        vector_results = ['vp_overlap.shp']
+
+        for vector_path in vector_results:
+            pygeoprocessing.testing.assert_vectors_equal(
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'overlap', vector_path),
+                1e-9)
+
+    def test_scenic_quality_log_valuation(self):
+        """SQ: testing logarithmic valuation function."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        args = ScenicQualityTests.generate_base_args(self.workspace_dir)
+
+        args['valuation_function'] = 1
+        # Check with Rob about good default values here:
+        args['log_a_coef'] = 1.0
+        args['log_b_coef'] = 1.0
+
+        scenic_quality.execute(args)
+
+        raster_results = ['vshed.tif', 'viewshed_counts.tif']
+
+        for raster_path in raster_results:
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'logarithmic', raster_path),
+                1e-9)
+
+    def test_scenic_quality_exponential_valuation(self):
+        """SQ: testing exponential decay valuation function."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        args = ScenicQualityTests.generate_base_args(self.workspace_dir)
+
+        args['valuation_function'] = 2
+        # Check with Rob about good default values here:
+        args['exp_a_coef'] = 1.0
+        args['exp_b_coef'] = 1.0
+
+        scenic_quality.execute(args)
+
+        raster_results = [
+            'vshed.tif', 'viewshed_counts.tif']
+
+        for raster_path in raster_results:
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'exponential', raster_path),
+                1e-9)
