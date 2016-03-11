@@ -17,35 +17,35 @@ SAMPLE_DATA = os.path.join(
 
 lulc_lookup_list = \
     [['lulc-class', 'code', 'is_coastal_blue_carbon_habitat'],
-     ['N', '0', 'False'],
-     ['X', '1', 'True'],
-     ['Y', '2', 'True'],
-     ['Z', '3', 'True']]
+     ['n', '0', 'False'],
+     ['x', '1', 'True'],
+     ['y', '2', 'True'],
+     ['z', '3', 'True']]
 
 lulc_transition_matrix_list = \
-    [['lulc-class', 'N', 'X', 'Y', 'Z'],
-     ['N', 'NCC', 'accum', 'accum', 'accum'],
-     ['X', 'med-impact-dist', 'accum', 'accum', 'accum'],
-     ['Y', 'med-impact-dist', 'accum', 'accum', 'accum'],
-     ['Z', 'med-impact-dist', 'accum', 'accum', 'accum']]
+    [['lulc-class', 'n', 'x', 'y', 'z'],
+     ['n', 'NCC', 'accum', 'accum', 'accum'],
+     ['x', 'med-impact-disturb', 'accum', 'accum', 'accum'],
+     ['y', 'med-impact-disturb', 'accum', 'accum', 'accum'],
+     ['z', 'med-impact-disturb', 'accum', 'accum', 'accum']]
 
 carbon_pool_initial_list = \
     [['code', 'lulc-class', 'biomass', 'soil', 'litter'],
-     ['0', 'N', '0', '0', '0'],
-     ['1', 'X', '5', '5', '0.5'],
-     ['2', 'Y', '10', '10', '0.5'],
-     ['3', 'Z', '20', '20', '0.5']]
+     ['0', 'n', '0', '0', '0'],
+     ['1', 'x', '5', '5', '0.5'],
+     ['2', 'y', '10', '10', '0.5'],
+     ['3', 'z', '20', '20', '0.5']]
 
 carbon_pool_transient_list = \
-    [['code', 'lulc-class', 'biomass-half-life', 'biomass-med-impact-dist',
+    [['code', 'lulc-class', 'biomass-half-life', 'biomass-med-impact-disturb',
         'biomass-yearly-accumulation',
         'soil-half-life',
-        'soil-med-impact-dist',
+        'soil-med-impact-disturb',
         'soil-yearly-accumulation'],
-     ['0', 'N', '0', '0', '0', '0', '0', '0'],
-     ['1', 'X', '1', '0.5', '1', '1', '0.5', '1.1'],
-     ['2', 'Y', '1', '0.5', '2', '1', '0.5', '2.1'],
-     ['3', 'Z', '1', '0.5', '1', '1', '0.5', '1.1']]
+     ['0', 'n', '0', '0', '0', '0', '0', '0'],
+     ['1', 'x', '1', '0.5', '1', '1', '0.5', '1.1'],
+     ['2', 'y', '1', '0.5', '2', '1', '0.5', '2.1'],
+     ['3', 'z', '1', '0.5', '1', '1', '0.5', '1.1']]
 
 NODATA_INT = -1
 
@@ -242,7 +242,7 @@ class TestPreprocessor(unittest.TestCase):
         # just a regression test.  this tests that an output file was
         # successfully created, and demonstrates that one land class transition
         # does not occur and the other is set in the right direction.
-        self.assertTrue(lines[2].startswith('X,,accum'))
+        self.assertTrue(lines[2].startswith('x,,accum'))
 
     def test_preprocessor_zeros(self):
         """Coastal Blue Carbon: Test entire run of preprocessor.
@@ -261,7 +261,7 @@ class TestPreprocessor(unittest.TestCase):
         # just a regression test.  this tests that an output file was
         # successfully created, and that two particular land class transitions
         # occur and are set in the right directions.
-        self.assertTrue(lines[2][:].startswith('X,disturb,accum'))
+        self.assertTrue(lines[2][:].startswith('x,disturb,accum'))
 
     def tearDown(self):
         """Remove workspace."""
@@ -299,6 +299,25 @@ class TestIO(unittest.TestCase):
         # values.
         self.assertTrue(1 in biomass_transient_dict.keys())
         self.assertTrue(1 in soil_transient_dict.keys())
+
+    def test_get_lulc_trans_to_D_dicts(self):
+        """Coastal Blue Carbon: Test function to read transient table."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+        biomass_transient_dict, soil_transient_dict = \
+            cbc._create_transient_dict(self.args['carbon_pool_transient_uri'])
+        lulc_transition_uri = self.args['lulc_transition_matrix_uri']
+        lulc_lookup_uri = self.args['lulc_lookup_uri']
+        lulc_trans_to_Db, lulc_trans_to_Ds = cbc._get_lulc_trans_to_D_dicts(
+            lulc_transition_uri,
+            lulc_lookup_uri,
+            biomass_transient_dict,
+            soil_transient_dict)
+
+        # check that function can properly parse table of transient carbon pool
+        # values.
+        self.assertTrue((3.0, 0.0) in lulc_trans_to_Db.keys())
+        self.assertTrue((3.0, 0.0) in lulc_trans_to_Ds.keys())
 
     def tearDown(self):
         """Remove workspace."""
@@ -345,6 +364,36 @@ class TestModel(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             npv_array, npv_test, decimal=4)
 
+    def test_model_run_2(self):
+        """Coastal Blue Carbon: Test run function in main model."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+        self.args['analysis_year'] = None
+        cbc.execute(self.args)
+        netseq_output_raster = os.path.join(
+            self.args['workspace_dir'],
+            'outputs_core/total_net_carbon_sequestration_test.tif')
+        npv_output_raster = os.path.join(
+            self.args['workspace_dir'],
+            'outputs_core/net_present_value_test.tif')
+        netseq_array = read_array(netseq_output_raster)
+        npv_array = read_array(npv_output_raster)
+
+        # (Explanation for why netseq is 31.)
+        # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2,  Year 2010: 2
+        # Initial Stock from Baseline: 5+5=10
+        # Sequest:
+        #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
+        #       Total: 10.5 + 20.5 = 31.
+        netseq_test = np.array([[np.nan, 10.5], [10.5, 10.5]])
+
+        # just a simple regression test.  this demonstrates that a NaN value
+        # will properly propagate across the model. the npv raster was chosen
+        # because the values are determined by multiple inputs, and any changes
+        # in those inputs would propagate to this raster.
+        np.testing.assert_array_almost_equal(
+            netseq_array, netseq_test, decimal=4)
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
         """Coastal Blue Carbon: Test main model run against InVEST-Data."""
@@ -363,7 +412,7 @@ class TestModel(unittest.TestCase):
                 'outputs_preprocessor/carbon_pool_transient_sample.csv'),
             'discount_rate': 6.0,
             'do_economic_analysis': True,
-            'do_price_table': False,
+            'do_price_table': True,
             'interest_rate': 3.0,
             'lulc_lookup_uri': os.path.join(
                 sample_data_path,
@@ -377,6 +426,8 @@ class TestModel(unittest.TestCase):
                 os.path.join(
                     sample_data_path,
                     'inputs/GBJC_2100_mean_Resample.tif')],
+            'price_table_uri': os.path.join(
+                sample_data_path, 'inputs/price_table.csv'),
             'lulc_transition_matrix_uri': os.path.join(
                 sample_data_path,
                 'outputs_preprocessor/transitions_sample.csv'),
@@ -397,7 +448,7 @@ class TestModel(unittest.TestCase):
         # those inputs would propagate to this raster.
         u = np.unique(npv_array)
         u.sort()
-        a = np.array([0., 35.93808746, 3507.83374023, 3543.77172852])
+        a = np.array([0., 11.451002, 3758.669678, 3770.12085])
         a.sort()
         np.testing.assert_array_almost_equal(u, a)
 

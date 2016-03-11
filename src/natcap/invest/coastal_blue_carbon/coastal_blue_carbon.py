@@ -128,12 +128,6 @@ def execute(args):
     C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
 
     for block_idx, (offset_dict, C_prior) in block_iterator:
-        # Update User
-        if time.time() - current_time >= 2.0:
-            LOGGER.info("Processing block %i of %i" %
-                        (block_idx+1, num_blocks))
-            current_time = time.time()
-
         # Initialization
         timesteps = d['timesteps']
 
@@ -417,10 +411,7 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
         array = array.astype(out_dtype)
     u = np.unique(array)
     has_map = np.in1d(u, d.keys())
-    if np.issubdtype(out_dtype, int):
-        ndata = np.iinfo(out_dtype).min
-    else:
-        ndata = np.finfo(out_dtype).min
+    ndata = np.finfo(out_dtype).min
 
     reclass_array = array.copy()
     for i in u[~has_map]:
@@ -773,18 +764,20 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
 
     lulc_trans_to_Db = {}
     lulc_trans_to_Ds = {}
-    for k, sub in lulc_transition_dict.items():
-        # the line below serves to break before legend in CSV file
-        if k is not '':
+    for cover1, sub in lulc_transition_dict.items():
+        if cover1 is '':
             continue
-        for k2, v in sub.items():
-            if k2 is not '' and v.endswith('disturb'):
+        # the line below serves to break before legend in CSV file
+        for cover2, v in sub.items():
+            if cover2 not in ['', 'lulc-class'] and v.endswith('disturb'):
                 lulc_trans_to_Db[(
-                    lulc_to_code_dict[k], lulc_to_code_dict[k2])] = \
-                    biomass_transient_dict[k][v]
+                    lulc_to_code_dict[cover1],
+                    lulc_to_code_dict[cover2])] = biomass_transient_dict[
+                        lulc_to_code_dict[cover1]][v]
                 lulc_trans_to_Ds[(
-                    lulc_to_code_dict[k], lulc_to_code_dict[k2])] = \
-                    soil_transient_dict[k][v]
+                    lulc_to_code_dict[cover1],
+                    lulc_to_code_dict[cover2])] = soil_transient_dict[
+                        lulc_to_code_dict[cover1]][v]
 
     return lulc_trans_to_Db, lulc_trans_to_Ds
 
@@ -832,7 +825,7 @@ def _get_price_table(price_table_uri, start_year, end_year):
     price_dict = geoprocess.get_lookup_from_table(price_table_uri, 'year')
 
     try:
-        return np.array([price_dict[year-start_year]['price']
+        return np.array([price_dict[year]['price']
                         for year in xrange(start_year, end_year+1)])
     except KeyError as missing_year:
         raise KeyError('Carbon price table does not contain a price value for '
