@@ -396,9 +396,11 @@ class TestModel(unittest.TestCase):
         # in the net present value raster.  the npv raster was chosen because
         # the values are determined by multiple inputs, and any changes in
         # those inputs would propagate to this raster.
-        u = np.unique(npv_array).sort()
-        a = [0., 35.93808746, 3507.83374023, 3543.77172852].sort()
-        self.assertTrue(a == u)
+        u = np.unique(npv_array)
+        u.sort()
+        a = np.array([0., 35.93808746, 3507.83374023, 3543.77172852])
+        a.sort()
+        np.testing.assert_array_almost_equal(u, a)
 
     def tearDown(self):
         """Remove workspace."""
