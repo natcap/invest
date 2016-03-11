@@ -30,6 +30,7 @@ Contents
     :glob:
 
     installing
+    cli
     *
 
 .. End of file
