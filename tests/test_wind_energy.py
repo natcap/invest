@@ -83,57 +83,6 @@ def _create_vertical_csv(data, fname):
 
     csv_file.close()
 
-def _csv_wind_data_to_binary(wind_data_file_path, binary_file_path):
-    """Convert and compress the wind data into binary format.
-
-    The packing is done by splitting the CSV rows on commas and packing
-        them as floats and writing that string to the binary file.
-
-    Parameters:
-        wind_data_file_path (string) - a string to a CSV file on disk
-            with the formatted wind data.
-            Data should have the following order of columns:
-            ["Latitude","Longitude","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K"]
-            (required)
-
-        binary_file_path (string) - a string to a path on disk  to write out the
-            binary file (.bin) (required)
-
-    Returns:
-        Nothing
-    """
-    # Open the wave watch three files
-    wind_file = open(wind_data_file_path, 'rU')
-    # Open the binary output file as writeable
-    bin_file = open(binary_file_path, 'wb')
-
-    # This is the expected column header list for the binary wind energy file.
-    # It is expected that the data will be in this order so that we can properly
-    # unpack the information into a dictionary
-    # ["LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-    #  "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-    #  "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
-
-    #burn header line
-    _ = wind_file.readline()
-
-    while True:
-        # Read each line of the csv file for wind data
-        line = wind_file.readline()
-
-        # If end of file, break out
-        if len(line) == 0:
-            break
-
-        # Get the data values as floats
-        float_list = [float(x) for x in line.split(',')]
-        # Swap long / lat values
-        float_list[0], float_list[1] = float_list[1], float_list[0]
-        # Pack up the data values as float types
-        packed_vals = struct.pack('f'*len(float_list), *float_list)
-        bin_file.write(packed_vals)
 
 class WindEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
@@ -413,115 +362,6 @@ class WindEnergyUnitTests(unittest.TestCase):
                 'Expected geometry %s is not equal to the result %s' %
                 (ogr_point, result))
 
-    def test_read_binary_wind_data(self):
-        """WindEnergy: testing 'read_binary_wind_data' function."""
-        from natcap.invest.wind_energy import wind_energy
-
-        temp_dir = self.workspace_dir
-        # Setup parameters for creating binary file to test against
-        fields = [
-            "LATI", "LONG", "Ram-010m", "Ram-020m", "Ram-030m",
-            "Ram-040m", "Ram-050m", "Ram-060m", "Ram-070m", "Ram-080m",
-            "Ram-090m", "Ram-100m", "Ram-110m", "Ram-120m", "Ram-130m",
-            "Ram-140m", "Ram-150m", "K"]
-        attributes = {
-            0:
-                {"LATI": 31.794439, "LONG": 123.761261,
-                 "Ram-010m": 6.355385, "Ram-020m": 6.858911, "Ram-030m": 7.171751,
-                 "Ram-040m": 7.40233, "Ram-050m": 7.586274, "Ram-060m": 7.739956,
-                 "Ram-070m": 7.872318, "Ram-080m": 7.988804, "Ram-090m": 8.092981,
-                 "Ram-100m": 8.187322, "Ram-110m": 8.27361, "Ram-120m": 8.353179,
-                 "Ram-130m": 8.427051, "Ram-140m": 8.496029, "Ram-150m": 8.560752,
-                 "K": 1.905783},
-            1:
-                {"LATI": 32.795679, "LONG": 123.814537,
-                 "Ram-010m": 6.430588, "Ram-020m": 6.940056, "Ram-030m": 7.256615,
-                 "Ram-040m": 7.489923, "Ram-050m": 7.676043, "Ram-060m": 7.831544,
-                 "Ram-070m": 7.965473, "Ram-080m": 8.083337, "Ram-090m": 8.188746,
-                 "Ram-100m": 8.284203, "Ram-110m": 8.371511, "Ram-120m": 8.452021,
-                 "Ram-130m": 8.526766, "Ram-140m": 8.596559, "Ram-150m": 8.662045,
-                 "K": 0.999436},
-            2:
-                {"LATI": 33.796978, "LONG": 123.867828,
-                 "Ram-010m": 6.53508, "Ram-020m": 7.05284, "Ram-030m": 7.374526,
-                 "Ram-040m": 7.611625, "Ram-050m": 7.80077, "Ram-060m": 7.958797,
-                 "Ram-070m": 8.094902, "Ram-080m": 8.214681, "Ram-090m": 8.321804,
-                 "Ram-100m": 8.418812, "Ram-110m": 8.50754, "Ram-120m": 8.589359,
-                 "Ram-130m": 8.665319, "Ram-140m": 8.736247, "Ram-150m": 8.8028,
-                 "K": 2.087774}}
-
-        wind_data_file_path = os.path.join(temp_dir, 'wind_data_csv.csv')
-        # Create CSV file to create binary file from
-        _create_csv(fields, attributes, wind_data_file_path)
-        binary_file_path = os.path.join(temp_dir, 'binary_file.bin')
-        # Call the function to properly convert and compress data
-        _csv_wind_data_to_binary(wind_data_file_path, binary_file_path)
-
-        field_list = ['LATI', 'LONG', 'Ram-080m', 'K-010m']
-        # Call the function to test
-        results = wind_energy.read_binary_wind_data(binary_file_path, field_list)
-
-        expected_results = {
-            (31.794439, 123.761261): {
-                'LONG': 123.761261, 'LATI': 31.794439, 'Ram-080m': 7.988804,
-                'K-010m': 1.905783},
-            (32.795679, 123.814537): {
-                'LONG': 123.814537, 'LATI': 32.795679, 'Ram-080m': 8.083337,
-                'K-010m': 0.999436},
-            (33.796978, 123.867828): {
-                'LONG': 123.867828, 'LATI': 33.7969, 'Ram-080m': 8.214681,
-                'K-010m': 2.087774}
-        }
-
-        result_keys = results.keys()
-        expected_keys = expected_results.keys()
-        result_keys.sort()
-        expected_keys.sort()
-        # Test that the unpacked binary is what we expect, tolerance of
-        # 1e-5 should be enough to test accuracy of lat/long values knowing
-        # some rounding will occur
-        for res_key, exp_key in zip(result_keys, expected_keys):
-            for val1, val2 in zip(res_key, exp_key):
-                pygeoprocessing.testing.assert_close(val1, val2, 1e-5)
-            for field in field_list:
-                pygeoprocessing.testing.assert_close(
-                    results[res_key][field], expected_results[exp_key][field],
-                    1e-5)
-
-    def test_read_binary_wind_data_exception(self):
-        """WindEnergy: testing 'read_binary_wind_data' raises HubHeightError."""
-        from natcap.invest.wind_energy import wind_energy
-
-        temp_dir = self.workspace_dir
-        # Setup parameters for creating binary file to test against
-        fields = [
-            "LATI", "LONG", "Ram-010m", "Ram-020m", "Ram-030m",
-            "Ram-040m", "Ram-050m", "Ram-060m", "Ram-070m", "Ram-080m",
-            "Ram-090m", "Ram-100m", "Ram-110m", "Ram-120m", "Ram-130m",
-            "Ram-140m", "Ram-150m", "K"]
-        attributes = {
-            0:
-                {"LATI": 31.794439, "LONG": 123.761261,
-                 "Ram-010m": 6.355385, "Ram-020m": 6.858911, "Ram-030m": 7.171751,
-                 "Ram-040m": 7.40233, "Ram-050m": 7.586274, "Ram-060m": 7.739956,
-                 "Ram-070m": 7.872318, "Ram-080m": 7.988804, "Ram-090m": 8.092981,
-                 "Ram-100m": 8.187322, "Ram-110m": 8.27361, "Ram-120m": 8.353179,
-                 "Ram-130m": 8.427051, "Ram-140m": 8.496029, "Ram-150m": 8.560752,
-                 "K": 1.905783}}
-
-        wind_data_file_path = os.path.join(temp_dir, 'wind_data_csv.csv')
-        # Create CSV file to create binary file from
-        _create_csv(fields, attributes, wind_data_file_path)
-        binary_file_path = os.path.join(temp_dir, 'binary_file.bin')
-        # Call the function to properly convert and compress data
-        _csv_wind_data_to_binary(wind_data_file_path, binary_file_path)
-
-        field_list = ['LATI', 'LONG', 'Ram-180m', 'K-010m']
-        # Call the function to test
-        self.assertRaises(
-            wind_energy.HubHeightError, wind_energy.read_binary_wind_data,
-            binary_file_path, field_list)
-
     def test_pixel_size_transform(self):
         """WindEnergy: testing pixel size transform helper function.
 
@@ -733,7 +573,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'workspace_dir': workspace_dir,
             'wind_data_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.bin'),
+                'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
             'bathymetry_uri': os.path.join(
                 SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
                 'global_dem'),
@@ -1116,7 +956,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1171,7 +1011,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1229,7 +1069,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1263,51 +1103,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_non_divisible_by_ten_hub_height_error(self):
-        """WindEnergy: raise HubHeightError when value not divisible by 10."""
-        from natcap.invest.wind_energy import wind_energy
-
-        # for testing raised exceptions, running on a set of data that was
-        # created by hand and has no numerical validity. Helps test the
-        # raised exception quicker
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000
-        }
-
-        # creating a stand in turbine parameter csv file that is missing
-        # a biophysical field / value. This should raise the exception
-        tmp, fname = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
-        os.close(tmp)
-        data = {
-            'hub_height': 83, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0,
-            'turbines_per_circuit': 8, 'rotor_diameter': 40
-        }
-
-        _create_vertical_csv(data, fname)
-
-        args['turbine_parameters_uri'] = fname
-
-        self.assertRaises(wind_energy.HubHeightError, wind_energy.execute, args)
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_missing_valuation_params(self):
         """WindEnergy: testing that FieldError is thrown when val params miss."""
         from natcap.invest.wind_energy import wind_energy
@@ -1318,7 +1113,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1370,7 +1165,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'turbine_parameters_uri': os.path.join(
@@ -1426,7 +1221,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.bin'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
@@ -1478,121 +1273,3 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_scale_key(self):
-        """WindEnergy: testing case w/ hub height >=100m."""
-        from natcap.invest.wind_energy import wind_energy
-
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['aoi_uri'] = os.path.join(
-            REGRESSION_DATA, 'small_aoi.shp')
-        args['bathymetry_uri'] = os.path.join(
-            REGRESSION_DATA, 'dem_139.tif')
-        args['number_of_turbines'] = 80
-        args['min_depth'] = 0
-        args['max_depth'] = 200
-
-        # Setup parameters for creating binary file to test against
-        fields = [
-            "LATI", "LONG", "Ram-010m", "Ram-020m", "Ram-030m",
-            "Ram-040m", "Ram-050m", "Ram-060m", "Ram-070m", "Ram-080m",
-            "Ram-090m", "Ram-100m", "Ram-110m", "Ram-120m", "Ram-130m",
-            "Ram-140m", "Ram-150m", "K"]
-
-        attributes = {
-            0:
-                {"LATI": 43.1334686, "LONG": -70.1998596,
-                 "Ram-010m": 8.83891296, "Ram-020m": 6.858911, "Ram-030m": 7.171751,
-                 "Ram-040m": 8.83891296, "Ram-050m": 7.586274, "Ram-060m": 7.739956,
-                 "Ram-070m": 8.83891296, "Ram-080m": 7.988804, "Ram-090m": 8.092981,
-                 "Ram-100m": 8.83891296, "Ram-110m": 8.83891296, "Ram-120m": 8.353179,
-                 "Ram-130m": 8.83891296, "Ram-140m": 8.83891296, "Ram-150m": 8.560752,
-                 "K": 2.07857608},
-            1:
-                {"LATI": 43.1334686, "LONG": -70.266517639,
-                 "Ram-010m": 8.83891296, "Ram-020m": 6.858911, "Ram-030m": 7.171751,
-                 "Ram-040m": 8.83891296, "Ram-050m": 7.586274, "Ram-060m": 7.739956,
-                 "Ram-070m": 8.83891296, "Ram-080m": 7.988804, "Ram-090m": 8.092981,
-                 "Ram-100m": 8.83891296, "Ram-110m": 8.83891296, "Ram-120m": 8.353179,
-                 "Ram-130m": 8.83891296, "Ram-140m": 8.83891296, "Ram-150m": 8.560752,
-                 "K": 2.07857608},
-            2:
-                {"LATI": 43.2001419, "LONG": -70.1998596,
-                 "Ram-010m": 8.83891296, "Ram-020m": 6.858911, "Ram-030m": 7.171751,
-                 "Ram-040m": 8.83891296, "Ram-050m": 7.586274, "Ram-060m": 7.739956,
-                 "Ram-070m": 8.83891296, "Ram-080m": 7.988804, "Ram-090m": 8.092981,
-                 "Ram-100m": 8.83891296, "Ram-110m": 8.83891296, "Ram-120m": 8.353179,
-                 "Ram-130m": 8.83891296, "Ram-140m": 8.83891296, "Ram-150m": 8.560752,
-                 "K": 2.07857608}}
-
-        wind_data_file_path = os.path.join(
-            args['workspace_dir'], 'wind_data_csv.csv')
-        # Create CSV file to create binary file from
-        _create_csv(fields, attributes, wind_data_file_path)
-        binary_file_path = os.path.join(args['workspace_dir'], 'tmp_bin.bin')
-        # Call the function to properly convert and compress data
-        _csv_wind_data_to_binary(wind_data_file_path, binary_file_path)
-        args['wind_data_uri'] = binary_file_path
-        # creating a stand in turbine parameter csv file that has a hub
-        # height of 100m
-        tmp_turbine_path = os.path.join(
-            args['workspace_dir'], 'temp_turbine_params.csv')
-        data = {
-            'hub_height': 100, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
-            'turbine_cost': 8.0, 'turbines_per_circuit': 8,
-            'rotor_diameter': 107
-        }
-
-        _create_vertical_csv(data, tmp_turbine_path)
-        args['turbine_parameters_uri'] = tmp_turbine_path
-
-        wind_energy.execute(args)
-
-        raster_results = [
-            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
-
-        # Expected raster output from hub height equal to 100m for depth of
-        # -139m, Ram-100m = 8.83891296, and K-10m - 2.07857608. This is based
-        # on knowing results for hub height equal to 80m with same above
-        # parameters. The only measurable difference is that hub height is
-        # used as a constant modifier in the equations. Thus one can defer
-        # the differences from 80m hub height to 100m all else equal.
-        exp_density = numpy.array(
-            [[-64329.0, -64329.0, -64329.0],
-             [-64329.0, -64329.0, 535.444458],
-             [-64329.0, 535.444458, 535.444458]], dtype=numpy.float32)
-        exp_harvested = numpy.array(
-            [[-64329.0, -64329.0, -64329.0],
-             [-64329.0, -64329.0, 898121.0],
-             [-64329.0, 898121.0, 898121.0]], dtype=numpy.float32)
-
-        exp_list = [exp_density, exp_harvested]
-        for raster_path, exp_array in zip(raster_results, exp_list):
-            result = gdal.Open(
-                os.path.join(args['workspace_dir'], 'output', raster_path))
-            res_band = result.GetRasterBand(1)
-            res_array = res_band.ReadAsArray()
-            numpy.testing.assert_array_equal(res_array, exp_array)
-
-        vector_results = ['wind_energy_points.shp']
-        exp_vector_res = [535.444458, 898121.014168]
-
-        for vector_path in vector_results:
-            shape = ogr.Open(
-                os.path.join(args['workspace_dir'], 'output', vector_path))
-            layer = shape.GetLayer()
-
-            feat = layer.GetNextFeature()
-            while feat is not None:
-                density = feat.GetField('Dens_W/m2')
-                harvested = feat.GetField('Harv_MWhr')
-
-                for res, exp_res in zip([density, harvested], exp_vector_res):
-                    pygeoprocessing.testing.assert_close(
-                        res, exp_res, 1e-7)
-
-                feat = layer.GetNextFeature()
