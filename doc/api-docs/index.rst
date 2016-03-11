@@ -29,7 +29,7 @@ Contents
     :maxdepth: 1
     :glob:
 
-    gettingstarted
+    installing
     *
 
 ==================
