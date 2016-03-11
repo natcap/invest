@@ -52,6 +52,7 @@ NODATA_INT = -1
 
 
 def read_array(raster_path):
+    """"Read raster as array."""
     ds = gdal.Open(raster_path)
     band = ds.GetRasterBand(1)
     a = band.ReadAsArray()
@@ -145,6 +146,7 @@ def get_args():
 
 
 def _create_workspace():
+    """Create workspace directory."""
     path = os.path.dirname(os.path.realpath(__file__))
     workspace = os.path.join(path, 'workspace')
     if os.path.exists(workspace):
@@ -209,11 +211,7 @@ def get_preprocessor_args(args_choice):
 
 
 class TestPreprocessor(unittest.TestCase):
-
     """Test Coastal Blue Carbon preprocessor library functions."""
-
-    def setUp(self):
-        pass
 
     def test_create_carbon_pool_transient_table_template(self):
         """Coastal Blue Carbon: Test creation of transient table template."""
@@ -229,8 +227,10 @@ class TestPreprocessor(unittest.TestCase):
             self.assertTrue(i in transient_dict.keys())
 
     def test_preprocessor_ones(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor with final
-        snapshot raster of ones."""
+        """Coastal Blue Carbon: Test entire run of preprocessor.
+
+        The final snapshot raster contains ones.
+        """
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = get_preprocessor_args(1)
         preprocessor.execute(args)
@@ -246,8 +246,10 @@ class TestPreprocessor(unittest.TestCase):
         self.assertTrue(lines[2].startswith('X,,accum'))
 
     def test_preprocessor_zeros(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor with final
-        snapshot raster of zeros."""
+        """Coastal Blue Carbon: Test entire run of preprocessor.
+
+        The final snapshot raster contains zeros.
+        """
         from natcap.invest.coastal_blue_carbon import preprocessor
         args2 = get_preprocessor_args(2)
         preprocessor.execute(args2)
@@ -263,15 +265,16 @@ class TestPreprocessor(unittest.TestCase):
         self.assertTrue(lines[2][:].startswith('X,disturb,accum'))
 
     def tearDown(self):
+        """Remove workspace."""
         workspace_dir = _create_workspace()
         shutil.rmtree(workspace_dir)
 
 
 class TestIO(unittest.TestCase):
-
     """Test Coastal Blue Carbon io library functions."""
 
     def setUp(self):
+        """Create arguments."""
         self.args = get_args()
 
     def test_get_inputs(self):
@@ -288,8 +291,7 @@ class TestIO(unittest.TestCase):
         self.assertTrue(len(d['transition_years']) == 2)
 
     def test_create_transient_dict(self):
-        """Coastal Blue Carbon: Test function that reads in the table of
-        values for transient analysis."""
+        """Coastal Blue Carbon: Test function to read transient table."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
         biomass_transient_dict, soil_transient_dict = \
@@ -300,14 +302,15 @@ class TestIO(unittest.TestCase):
         self.assertTrue(1 in soil_transient_dict.keys())
 
     def tearDown(self):
+        """Remove workspace."""
         shutil.rmtree(self.args['workspace_dir'])
 
 
 class TestModel(unittest.TestCase):
-
     """Test Coastal Blue Carbon main model functions."""
 
     def setUp(self):
+        """Create arguments."""
         self.args = get_args()
 
     def test_model_run(self):
@@ -398,6 +401,7 @@ class TestModel(unittest.TestCase):
         self.assertTrue(a == u)
 
     def tearDown(self):
+        """Remove workspace."""
         shutil.rmtree(self.args['workspace_dir'])
 
 
