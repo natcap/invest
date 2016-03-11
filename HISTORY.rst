@@ -2,6 +2,7 @@
 
 3.3.0
 =====
+* Refactored Wind Energy model to use a CSV input for wind data instead of a Binary file.
 * Redesigned InVEST recreation model for a single input streamlined interface, advanced analytics, and refactored outputs.  While the model is still based on "photo user days" old model runs are not backward compatable with the new model or interface. See the Recreation Model user's guide chapter for details.
     * The refactor of this model requires an upgrade to GDAL >=1.11.0 <2.0 and numpy >= 1.10.2.
 * Removed nutrient retention (water purification) model from InVEST suite and replaced it with the nutrient delivery ratio (NDR) model.  NDR has been available in development relseases, but has now officially been added to the set of Windows Start Menu models and the "under development" tag in its users guide has been removed.  See the InVEST user's guide for details between the differences and advantages of NDR over the old nutrient model.

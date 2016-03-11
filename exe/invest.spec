@@ -1,6 +1,6 @@
 import sys
 import os
-from PyInstaller.compat import is_win
+from PyInstaller.compat import is_win, is_darwin
 
 # Global Variables
 current_dir = os.path.join(os.getcwd(), os.path.dirname(sys.argv[1]))
@@ -27,6 +27,7 @@ if os.path.exists(env_path_base) and sys.executable.startswith(release_env_dir):
     env_path_base = os.path.abspath(env_path_base)
     path_extension.insert(0, env_path_base)
     path_extension.insert(0, os.path.join(env_path_base, 'site-packages'))
+
 print 'PATH EXT: %s' % path_extension
 
 kwargs = {
@@ -37,10 +38,10 @@ kwargs = {
         'natcap',
         'natcap.invest',
         'natcap.versioner',
-        'natcap.invest.version', 
+        'natcap.invest.version',
         'yaml',
         'distutils',
-        'distutils.dist',
+        'distutils.dist'
     ],
 }
 
@@ -56,6 +57,21 @@ exename = 'invest'
 if is_win:
     exename += '.exe'
 
+if is_darwin:
+    # remove shapely dynamic library collision
+    a.binaries = filter(lambda x: x[0] != 'libgeos_c.1.dylib', a.binaries)
+    # remove matplotlib dynamic library collision
+    a.binaries = filter(lambda x: x[0] != 'libpng16.16.dylib', a.binaries)
+    # add gdal dynamic libraries from homebrew
+    a.binaries += [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
+    a.binaries += [('libgeos_c.dylib', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
+    a.binaries += [('libgeos_c.1.dylib', '/usr/local/lib/libgeos_c.1.dylib', 'BINARY')]
+    a.binaries += [('libgeos-3.5.0.dylib', '/usr/local/lib/libgeos-3.5.0.dylib', 'BINARY')]
+    a.binaries += [('libgeotiff.dylib', '/usr/local/lib/libgeotiff.dylib', 'BINARY')]
+    a.binaries += [('libgeotiff.2.dylib', '/usr/local/lib/libgeotiff.2.dylib', 'BINARY')]
+    a.binaries += [('libpng.dylib', '/usr/local/lib/libpng.dylib', 'BINARY')]
+    a.binaries += [('libpng16.16.dylib', '/usr/local/lib/libpng16.16.dylib', 'BINARY')]
+
 exe = EXE(
     pyz,
 
@@ -67,7 +83,7 @@ exe = EXE(
     a.binaries + [
         ('msvcp90.dll', 'C:\\Windows\\System32\\msvcp90.dll', 'BINARY'),
         ('msvcr90.dll', 'C:\\Windows\\System32\\msvcr90.dll', 'BINARY')
-    ] if is_win else a.binaries, 
+    ] if is_win else a.binaries,
     a.scripts,
     name=exename,
     exclude_binaries=1,
