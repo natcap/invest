@@ -32,12 +32,4 @@ Contents
     installing
     *
 
-==================
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 .. End of file
