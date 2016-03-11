@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for Coastal Blue Carbon Functions."""
 import unittest
-import pprint
 import os
 import shutil
 import csv
@@ -266,8 +265,8 @@ class TestPreprocessor(unittest.TestCase):
 
     def tearDown(self):
         """Remove workspace."""
-        workspace_dir = _create_workspace()
-        shutil.rmtree(workspace_dir)
+        shutil.rmtree(os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), 'workspace'))
 
 
 class TestIO(unittest.TestCase):
