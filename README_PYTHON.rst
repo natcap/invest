@@ -27,6 +27,9 @@ For more information, see:
   * The `Natural Capital Project website <http://naturalcapitalproject.org>`_.
 
 
+.. Everything after this comment will be included in the API docs.
+.. START API
+
 Installing InVEST
 =================
 
