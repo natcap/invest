@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Model."""
 
-import csv
 import os
-import pprint as pp
-import shutil
 import logging
 import math
-import time
 import itertools
 
 import numpy as np
@@ -122,7 +118,6 @@ def execute(args):
 
     # Setup Logging
     num_blocks = get_num_blocks(d['C_prior_raster'])
-    current_time = time.time()
 
     block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
     C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])

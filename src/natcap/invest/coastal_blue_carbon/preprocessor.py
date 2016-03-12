@@ -3,7 +3,6 @@
 import os
 import csv
 from itertools import product
-import pprint as pp
 import logging
 import ast
 
