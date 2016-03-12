@@ -41,7 +41,8 @@ kwargs = {
         'natcap.invest.version',
         'yaml',
         'distutils',
-        'distutils.dist'
+        'distutils.dist',
+        'h5py.h5ac',
     ],
 }
 
