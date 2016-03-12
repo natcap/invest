@@ -288,8 +288,6 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         (lulc_class, {}) for lulc_class in lulc_class_list)
 
     for transition in transition_matrix_dict.keys():
-        if transition[0] not in code_list or transition[1] not in code_list:
-            continue
         top_dict = transition_by_lulc_class_dict[
             code_to_lulc_dict[transition[0]]]
         top_dict[code_to_lulc_dict[transition[1]]] = transition_matrix_dict[
