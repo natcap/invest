@@ -2,4 +2,4 @@
 from PyInstaller.compat import is_darwin
 
 if not is_darwin:
-    hiddenimports = ['_proxy', 'utils', 'defs', 'h5ac']
+    hiddenimports = ['_proxy', 'utils', 'defs', 'h5ac', 'h5py.h5ac']
