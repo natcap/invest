@@ -22,6 +22,19 @@ lulc_lookup_list = \
      ['y', '2', 'True'],
      ['z', '3', 'True']]
 
+lulc_lookup_list_unreadable = \
+    [['lulc-class', 'code', 'is_coastal_blue_carbon_habitat'],
+     ['n', '0', ''],
+     ['x', '1', 'True'],
+     ['y', '2', 'True'],
+     ['z', '3', 'True']]
+
+lulc_lookup_list_no_ones = \
+    [['lulc-class', 'code', 'is_coastal_blue_carbon_habitat'],
+     ['n', '0', 'False'],
+     ['y', '2', 'True'],
+     ['z', '3', 'True']]
+
 lulc_transition_matrix_list = \
     [['lulc-class', 'n', 'x', 'y', 'z'],
      ['n', 'NCC', 'accum', 'accum', 'accum'],
@@ -47,10 +60,10 @@ carbon_pool_transient_list = \
      ['2', 'y', '1', '0.5', '2', '1', '0.5', '2.1'],
      ['3', 'z', '1', '0.5', '1', '1', '0.5', '1.1']]
 
-NODATA_INT = -1
+NODATA_INT = -9999
 
 
-def read_array(raster_path):
+def _read_array(raster_path):
     """"Read raster as array."""
     ds = gdal.Open(raster_path)
     band = ds.GetRasterBand(1)
@@ -59,7 +72,7 @@ def read_array(raster_path):
     return a
 
 
-def create_table(uri, rows_list):
+def _create_table(uri, rows_list):
     """Create csv file from list of lists."""
     with open(uri, 'w') as f:
         writer = csv.writer(f)
@@ -67,7 +80,17 @@ def create_table(uri, rows_list):
     return uri
 
 
-def get_args():
+def _create_workspace():
+    """Create workspace directory."""
+    path = os.path.dirname(os.path.realpath(__file__))
+    workspace = os.path.join(path, 'workspace')
+    if os.path.exists(workspace):
+        shutil.rmtree(workspace)
+    os.mkdir(workspace)
+    return workspace
+
+
+def _get_args():
     """Create and return arguements for CBC main model.
 
     Returns:
@@ -79,20 +102,16 @@ def get_args():
     band_matrices_with_nodata[0][0][0] = NODATA_INT
     srs = pygeotest.sampledata.SRS_WILLAMETTE
 
-    path = os.path.dirname(os.path.realpath(__file__))
-    workspace = os.path.join(path, 'workspace')
-    if os.path.exists(workspace):
-        shutil.rmtree(workspace)
-    os.mkdir(workspace)
-    lulc_lookup_uri = create_table(
+    workspace = _create_workspace()
+    lulc_lookup_uri = _create_table(
         os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
-    lulc_transition_matrix_uri = create_table(
+    lulc_transition_matrix_uri = _create_table(
         os.path.join(workspace, 'lulc_transition_matrix.csv'),
         lulc_transition_matrix_list)
-    carbon_pool_initial_uri = create_table(
+    carbon_pool_initial_uri = _create_table(
         os.path.join(workspace, 'carbon_pool_initial.csv'),
         carbon_pool_initial_list)
-    carbon_pool_transient_uri = create_table(
+    carbon_pool_transient_uri = _create_table(
         os.path.join(workspace, 'carbon_pool_transient.csv'),
         carbon_pool_transient_list)
     raster_0_uri = pygeotest.create_raster_on_disk(
@@ -144,17 +163,7 @@ def get_args():
     return args
 
 
-def _create_workspace():
-    """Create workspace directory."""
-    path = os.path.dirname(os.path.realpath(__file__))
-    workspace = os.path.join(path, 'workspace')
-    if os.path.exists(workspace):
-        shutil.rmtree(workspace)
-    os.mkdir(workspace)
-    return workspace
-
-
-def get_preprocessor_args(args_choice):
+def _get_preprocessor_args(args_choice):
     """Create and return arguments for preprocessor model.
 
     Args:
@@ -165,27 +174,28 @@ def get_preprocessor_args(args_choice):
     """
     band_matrices_zeros = [np.zeros((2, 2))]
     band_matrices_ones = [np.ones((2, 2))]
+    band_matrices_nodata = [np.ones((2, 2)) * NODATA_INT]
     srs = pygeotest.sampledata.SRS_WILLAMETTE
 
     workspace = _create_workspace()
 
-    lulc_lookup_uri = create_table(
+    lulc_lookup_uri = _create_table(
         os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
 
     raster_0_uri = pygeotest.create_raster_on_disk(
-        band_matrices_ones, srs.origin, srs.projection, -1,
+        band_matrices_ones, srs.origin, srs.projection, NODATA_INT,
         srs.pixel_size(100), datatype=gdal.GDT_Int32,
         filename=os.path.join(workspace, 'raster_0.tif'))
     raster_1_uri = pygeotest.create_raster_on_disk(
-        band_matrices_ones, srs.origin, srs.projection, -1,
+        band_matrices_ones, srs.origin, srs.projection, NODATA_INT,
         srs.pixel_size(100), datatype=gdal.GDT_Int32,
         filename=os.path.join(workspace, 'raster_1.tif'))
     raster_2_uri = pygeotest.create_raster_on_disk(
-        band_matrices_ones, srs.origin, srs.projection, -1,
+        band_matrices_ones, srs.origin, srs.projection, NODATA_INT,
         srs.pixel_size(100), datatype=gdal.GDT_Int32,
         filename=os.path.join(workspace, 'raster_2.tif'))
     raster_3_uri = pygeotest.create_raster_on_disk(
-        band_matrices_zeros, srs.origin, srs.projection, -1,
+        band_matrices_zeros, srs.origin, srs.projection, NODATA_INT,
         srs.pixel_size(100), datatype=gdal.GDT_Int32,
         filename=os.path.join(workspace, 'raster_3.tif'))
 
@@ -205,7 +215,7 @@ def get_preprocessor_args(args_choice):
 
     if args_choice == 1:
         return args
-    else:
+    elif args_choice == 2:
         return args2
 
 
@@ -215,7 +225,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_create_carbon_pool_transient_table_template(self):
         """Coastal Blue Carbon: Test creation of transient table template."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = get_preprocessor_args(1)
+        args = _get_preprocessor_args(1)
         filepath = os.path.join(args['workspace_dir'], 'transient_temp.csv')
         code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
         preprocessor._create_carbon_pool_transient_table_template(
@@ -231,7 +241,7 @@ class TestPreprocessor(unittest.TestCase):
         The final snapshot raster contains ones.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = get_preprocessor_args(1)
+        args = _get_preprocessor_args(1)
         preprocessor.execute(args)
         trans_csv = os.path.join(
             args['workspace_dir'],
@@ -250,7 +260,7 @@ class TestPreprocessor(unittest.TestCase):
         The final snapshot raster contains zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args2 = get_preprocessor_args(2)
+        args2 = _get_preprocessor_args(2)
         preprocessor.execute(args2)
         trans_csv = os.path.join(
             args2['workspace_dir'],
@@ -263,6 +273,88 @@ class TestPreprocessor(unittest.TestCase):
         # occur and are set in the right directions.
         self.assertTrue(lines[2][:].startswith('x,disturb,accum'))
 
+    def test_lookup_parsing_exception(self):
+        """Coastal Blue Carbon: Test lookup table parsing exception."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = _get_preprocessor_args(1)
+        _create_table(args['lulc_lookup_uri'], lulc_lookup_list_unreadable)
+        with self.assertRaises(ValueError):
+            preprocessor.execute(args)
+
+    def test_raster_validation(self):
+        """Coastal Blue Carbon: Test raster validation."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = _get_preprocessor_args(1)
+        OTHER_NODATA = -1
+        srs = pygeotest.sampledata.SRS_WILLAMETTE
+        band_matrices_with_nodata = [np.ones((2, 2)) * OTHER_NODATA]
+        raster_wrong_nodata = pygeotest.create_raster_on_disk(
+            band_matrices_with_nodata,
+            srs.origin,
+            srs.projection,
+            OTHER_NODATA,
+            srs.pixel_size(100),
+            datatype=gdal.GDT_Int32,
+            filename=os.path.join(
+                args['workspace_dir'], 'raster_wrong_nodata.tif'))
+        args['lulc_snapshot_list'][0] = raster_wrong_nodata
+        with self.assertRaises(ValueError):
+            preprocessor.execute(args)
+
+    def test_raster_values_not_in_lookup_table(self):
+        """Coastal Blue Carbon: Test raster values not in lookup table."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = _get_preprocessor_args(1)
+        _create_table(args['lulc_lookup_uri'], lulc_lookup_list_no_ones)
+        with self.assertRaises(ValueError):
+            preprocessor.execute(args)
+
+    def test_mark_transition_type(self):
+        """Coastal Blue Carbon: Test mark_transition_type."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = _get_preprocessor_args(1)
+
+        band_matrices_zero = [np.zeros((2, 2))]
+        srs = pygeotest.sampledata.SRS_WILLAMETTE
+        raster_zeros = pygeotest.create_raster_on_disk(
+            band_matrices_zero,
+            srs.origin,
+            srs.projection,
+            NODATA_INT,
+            srs.pixel_size(100),
+            datatype=gdal.GDT_Int32,
+            filename=os.path.join(
+                args['workspace_dir'], 'raster_1.tif'))
+        args['lulc_snapshot_list'][0] = raster_zeros
+
+        preprocessor.execute(args)
+        trans_csv = os.path.join(
+            args['workspace_dir'],
+            'outputs_preprocessor',
+            'transitions_test.csv')
+        with open(trans_csv, 'r') as f:
+            lines = f.readlines()
+        self.assertTrue(lines[1][:].startswith('n,NCC,accum'))
+
+    def test_mark_transition_type(self):
+        """Coastal Blue Carbon: Test mark_transition_type."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = _get_preprocessor_args(1)
+
+        band_matrices_zero = [np.zeros((2, 2))]
+        srs = pygeotest.sampledata.SRS_WILLAMETTE
+        raster_zeros = pygeotest.create_raster_on_disk(
+            band_matrices_zero,
+            srs.origin,
+            srs.projection,
+            NODATA_INT,
+            srs.pixel_size(100),
+            datatype=gdal.GDT_Int32,
+            filename=os.path.join(
+                args['workspace_dir'], 'raster_1.tif'))
+        args['lulc_snapshot_list'][0] = raster_zeros
+        preprocessor.execute(args)
+
     def tearDown(self):
         """Remove workspace."""
         shutil.rmtree(os.path.join(
@@ -274,7 +366,7 @@ class TestIO(unittest.TestCase):
 
     def setUp(self):
         """Create arguments."""
-        self.args = get_args()
+        self.args = _get_args()
 
     def test_get_inputs(self):
         """Coastal Blue Carbon: Test get_inputs function in IO module."""
@@ -288,6 +380,22 @@ class TestIO(unittest.TestCase):
         self.assertTrue(len(d['price_t']) == 11)
         self.assertTrue(len(d['snapshot_years']) == 3)
         self.assertTrue(len(d['transition_years']) == 2)
+
+    def test_chronological_order_exception(self):
+        """Coastal Blue Carbon: Test exception checking chronological order."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+        self.args['lulc_transition_years_list'] = [2005, 2000]
+        with self.assertRaises(ValueError):
+            cbc.get_inputs(self.args)
+
+    def test_chronological_order_exception_analysis_year(self):
+        """Coastal Blue Carbon: Test exception checking analysis year order."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+        self.args['analysis_year'] = 2000
+        with self.assertRaises(ValueError):
+            cbc.get_inputs(self.args)
 
     def test_create_transient_dict(self):
         """Coastal Blue Carbon: Test function to read transient table."""
@@ -329,7 +437,7 @@ class TestModel(unittest.TestCase):
 
     def setUp(self):
         """Create arguments."""
-        self.args = get_args()
+        self.args = _get_args()
 
     def test_model_run(self):
         """Coastal Blue Carbon: Test run function in main model."""
@@ -342,8 +450,8 @@ class TestModel(unittest.TestCase):
         npv_output_raster = os.path.join(
             self.args['workspace_dir'],
             'outputs_core/net_present_value_test.tif')
-        netseq_array = read_array(netseq_output_raster)
-        npv_array = read_array(npv_output_raster)
+        netseq_array = _read_array(netseq_output_raster)
+        npv_array = _read_array(npv_output_raster)
 
         # (Explanation for why netseq is 31.)
         # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2,  Year 2010: 2
@@ -376,15 +484,14 @@ class TestModel(unittest.TestCase):
         npv_output_raster = os.path.join(
             self.args['workspace_dir'],
             'outputs_core/net_present_value_test.tif')
-        netseq_array = read_array(netseq_output_raster)
-        npv_array = read_array(npv_output_raster)
+        netseq_array = _read_array(netseq_output_raster)
+        npv_array = _read_array(npv_output_raster)
 
-        # (Explanation for why netseq is 31.)
-        # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2,  Year 2010: 2
+        # (Explanation for why netseq is 10.5.)
+        # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2
         # Initial Stock from Baseline: 5+5=10
         # Sequest:
-        #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
-        #       Total: 10.5 + 20.5 = 31.
+        #    2000-->2005: (1+1.1)*5=10.5
         netseq_test = np.array([[np.nan, 10.5], [10.5, 10.5]])
 
         # just a simple regression test.  this demonstrates that a NaN value
@@ -440,7 +547,7 @@ class TestModel(unittest.TestCase):
             os.path.join(
                 args['workspace_dir'],
                 'outputs_core/net_present_value_150225.tif'))
-        npv_array = read_array(npv_raster)
+        npv_array = _read_array(npv_raster)
 
         # this is just a regression test, but it will capture all values
         # in the net present value raster.  the npv raster was chosen because
@@ -448,9 +555,11 @@ class TestModel(unittest.TestCase):
         # those inputs would propagate to this raster.
         u = np.unique(npv_array)
         u.sort()
-        a = np.array([0., 11.451002, 3758.669678, 3770.12085])
+        a = np.array([-3.935801e+04, -2.052500e+04, -1.788486e+04,
+                      -1.787341e+04, 0.0, 1.145100e+01, 3.724291e+03,
+                      3.743750e+03, 3.770121e+03])
         a.sort()
-        np.testing.assert_array_almost_equal(u, a)
+        np.testing.assert_array_almost_equal(u, a, decimal=2)
 
     def tearDown(self):
         """Remove workspace."""

@@ -217,24 +217,22 @@ def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
     Returns:
         carbon (str): direction of carbon flow
     """
-    from_is_habitat = bool(
-        lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat'])
-    to_is_habitat = bool(
-        lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat'])
-
     if (lulc_from == NODATA_INT) or (lulc_to == NODATA_INT):
-        pass
-    elif from_is_habitat and to_is_habitat:
+        return None
+
+    from_is_habitat = \
+        lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']
+    to_is_habitat = \
+        lookup_dict[lulc_to]['is_coastal_blue_carbon_habitat']
+
+    if from_is_habitat and to_is_habitat:
         return 'accum'  # veg --> veg
     elif not from_is_habitat and to_is_habitat:
         return 'accum'  # non-veg --> veg
     elif from_is_habitat and not to_is_habitat:
         return 'disturb'  # veg --> non-veg
-    elif not from_is_habitat and not to_is_habitat:
-        return 'NCC'  # non-veg --> non-veg
     else:
-        raise Exception('Unknown land cover transition.  Please check '
-                        'that your lulc lookup table is formatted correctly.')
+        return 'NCC'  # non-veg --> non-veg
 
 
 def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
@@ -259,12 +257,6 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
         transition_set = _get_land_cover_transitions(
             lulc_snapshot_list[snapshot_idx],
             lulc_snapshot_list[snapshot_idx+1])
-
-        # make sure that no lulc transitions interact with nodata values
-        for t in transition_set:
-            if t[0] == NODATA_INT ^ t[1] != NODATA_INT:
-                raise AssertionError(
-                    'invalid transition from nodata value to lulc-code')
 
         for transition_tuple in transition_set:
             transition_matrix_dict[transition_tuple] = _mark_transition_type(
@@ -293,6 +285,8 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         (lulc_class, {}) for lulc_class in lulc_class_list)
 
     for transition in transition_matrix_dict.keys():
+        if transition[0] not in code_list or transition[1] not in code_list:
+            continue
         top_dict = transition_by_lulc_class_dict[
             code_to_lulc_dict[transition[0]]]
         top_dict[code_to_lulc_dict[transition[1]]] = transition_matrix_dict[

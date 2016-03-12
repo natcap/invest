@@ -760,24 +760,24 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
     lulc_lookup_dict = geoprocess.get_lookup_from_table(
         lulc_lookup_uri, 'lulc-class')
     lulc_to_code_dict = \
-        dict((k, v['code']) for k, v in lulc_lookup_dict.items())
+        dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items())
 
     lulc_trans_to_Db = {}
     lulc_trans_to_Ds = {}
     for cover1, sub in lulc_transition_dict.items():
-        if cover1 is '':
-            continue
         # the line below serves to break before legend in CSV file
         for cover2, v in sub.items():
-            if cover2 not in ['', 'lulc-class'] and v.endswith('disturb'):
+            if cover2.lower() not in ['', 'lulc-class'] and \
+                    v.endswith('disturb'):
                 lulc_trans_to_Db[(
-                    lulc_to_code_dict[cover1],
-                    lulc_to_code_dict[cover2])] = biomass_transient_dict[
-                        lulc_to_code_dict[cover1]][v]
+                    lulc_to_code_dict[cover1.lower()],
+                    lulc_to_code_dict[cover2.lower()])] = \
+                        biomass_transient_dict[
+                            lulc_to_code_dict[cover1.lower()]][v]
                 lulc_trans_to_Ds[(
-                    lulc_to_code_dict[cover1],
-                    lulc_to_code_dict[cover2])] = soil_transient_dict[
-                        lulc_to_code_dict[cover1]][v]
+                    lulc_to_code_dict[cover1.lower()],
+                    lulc_to_code_dict[cover2.lower()])] = soil_transient_dict[
+                        lulc_to_code_dict[cover1.lower()]][v]
 
     return lulc_trans_to_Db, lulc_trans_to_Ds
 
