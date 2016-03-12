@@ -1519,7 +1519,7 @@ def build_docs(options):
     Compilation of the guides uses sphinx and requires that all needed
     libraries are installed for compiling html, latex and pdf.
 
-    Requires make and sed.
+    Requires make.
     """
 
     invest_version = _invest_version(options.build_docs.python)
@@ -1536,11 +1536,29 @@ def build_docs(options):
             'fetch': True,
         })
 
+        # Run the sphinx build with a virtual python.
+        # Prefer a virtualenv sphinx install.  If it's not there, fall back
+        # to a global install.  If that doesn't exist, EnvironmentError
+        # will be raised by find_executable.
+        user_python = os.path.abspath(paver.easy.options.build_docs.python)
+        if user_python != _PYTHON:
+            sphinx_install = os.path.join(
+                os.path.dirname(user_python), 'sphinx-build')
+            if not os.path.exists(sphinx_install):
+                sphinx_install = find_executable('sphinx-build')
+            sphinxbuild_opt = "SPHINXBUILD='{sphinx}'".format(
+                sphinx=sphinx_install)
+        else:
+            # If we're not in a virtualenv, use the Makefile defaults for
+            # sphinx-build.
+            sphinxbuild_opt = ''
+
         guide_dir = os.path.join('doc', 'users-guide')
         latex_dir = os.path.join(guide_dir, 'build', 'latex')
-        sh('make html', cwd=guide_dir)
-        sh('make latex', cwd=guide_dir)
-        sh('make all-pdf > latex-warnings.log', cwd=latex_dir)
+        sh('make html %s' % sphinxbuild_opt, cwd=guide_dir)
+        sh('make latex %s' % sphinxbuild_opt, cwd=guide_dir)
+        sh('make all-pdf %s> latex-warnings.log' % sphinxbuild_opt,
+           cwd=latex_dir)
 
         archive_name = archive_template % 'userguide'
         build_dir = os.path.join(guide_dir, 'build', 'html')
@@ -2868,7 +2886,7 @@ def build(options):
 
     # build the env with our custom args for this context, but only if the user
     # has not already specified a python interpreter to use.
-    if options.build.python == _PYTHON:
+    if options.build.python ==_PYTHON:
         call_task('env', options={
             'system_site_packages': True,
             'clear': True,
