@@ -216,9 +216,6 @@ def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
     Returns:
         carbon (str): direction of carbon flow
     """
-    if (lulc_from == NODATA_INT) or (lulc_to == NODATA_INT):
-        return None
-
     from_is_habitat = \
         lookup_dict[lulc_from]['is_coastal_blue_carbon_habitat']
     to_is_habitat = \

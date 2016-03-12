@@ -60,6 +60,10 @@ carbon_pool_transient_list = \
      ['2', 'y', '1', '0.5', '2', '1', '0.5', '2.1'],
      ['3', 'z', '1', '0.5', '1', '1', '0.5', '1.1']]
 
+price_table_list = \
+    [['year', 'price'],
+     [2000, 20]]
+
 NODATA_INT = -9999
 
 
@@ -336,7 +340,7 @@ class TestPreprocessor(unittest.TestCase):
             lines = f.readlines()
         self.assertTrue(lines[1][:].startswith('n,NCC,accum'))
 
-    def test_mark_transition_type(self):
+    def test_mark_transition_type_nodata_check(self):
         """Coastal Blue Carbon: Test mark_transition_type."""
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1)
@@ -353,6 +357,29 @@ class TestPreprocessor(unittest.TestCase):
             filename=os.path.join(
                 args['workspace_dir'], 'raster_1.tif'))
         args['lulc_snapshot_list'][0] = raster_zeros
+        preprocessor.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_binary(self):
+        """Coastal Blue Carbon: Test main model run against InVEST-Data."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+
+        sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
+        raster_0_uri = os.path.join(
+            sample_data_path,
+            'inputs/GBJC_2004_mean_Resample.tif')
+        raster_1_uri = os.path.join(
+            sample_data_path, 'inputs/GBJC_2050_mean_Resample.tif')
+        raster_2_uri = os.path.join(
+            sample_data_path, 'inputs/GBJC_2100_mean_Resample.tif')
+        args = {
+            'workspace_dir': _create_workspace(),
+            'results_suffix': '',
+            'lulc_lookup_uri': os.path.join(
+                sample_data_path,
+                'inputs/lulc_lookup.csv'),
+            'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
+        }
         preprocessor.execute(args)
 
     def tearDown(self):
@@ -380,6 +407,18 @@ class TestIO(unittest.TestCase):
         self.assertTrue(len(d['price_t']) == 11)
         self.assertTrue(len(d['snapshot_years']) == 3)
         self.assertTrue(len(d['transition_years']) == 2)
+
+    def test_get_price_table_exception(self):
+        """Coastal Blue Carbon: Test price table exception."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+        self.args['price_table_uri'] = os.path.join(
+            self.args['workspace_dir'], 'price.csv')
+        self.args['do_price_table'] = True
+        self.args['price_table_uri'] = _create_table(
+            self.args['price_table_uri'], price_table_list)
+        with self.assertRaises(KeyError):
+            cbc.get_inputs(self.args)
 
     def test_chronological_order_exception(self):
         """Coastal Blue Carbon: Test exception checking chronological order."""
