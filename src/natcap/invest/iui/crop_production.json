@@ -44,7 +44,7 @@
           "args_id": "crop_lookup_table_uri",
           "type": "file",
           "label": "Crop Lookup Table (CSV)",
-          "defaultValue": "../CropProduction/input/crop_lookup_table.csv",
+          "defaultValue": "../CropProduction/input/lookup.csv",
           "required": true,
           "validateAs": {
             "type": "CSV"
@@ -56,7 +56,7 @@
           "args_id": "lulc_map_uri",
           "type": "file",
           "label": "Land Use Map (Raster)",
-          "defaultValue": "../CropProduction/input/lulc_raster.tif",
+          "defaultValue": "../CropProduction/input/willamette_lulc_map.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -167,7 +167,7 @@
 		              "args_id": "modeled_irrigation_map_uri",
 		              "type": "file",
 		              "label": "Irrigation Map (Raster)",
-		              "defaultValue": "../CropProduction/input/irrigation_raster.tif",
+		              "defaultValue": "../CropProduction/input/willamette_irrigation_map.tif",
 		              "required": true,
 		              "validateAs": {
 		                "type": "GDAL"
@@ -197,7 +197,7 @@
               "args_id": "nutrition_table_uri",
               "type": "file",
               "label": "Nutritional Contents Table (CSV)",
-              "defaultValue": "../CropProduction/input/nutrient_contents_table.csv",
+              "defaultValue": "../CropProduction/input/nutrient_contents.csv",
               "required": true,
               "validateAs": {
                 "type": "CSV"
@@ -225,7 +225,7 @@
               "args_id": "economics_table_uri",
               "type": "file",
               "label": "Economics Table (CSV)",
-              "defaultValue": "../CropProduction/input/economics_table.csv",
+              "defaultValue": "../CropProduction/input/economics.csv",
               "required": true,
               "validateAs": {
                 "type": "CSV"
