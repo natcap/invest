@@ -44,7 +44,7 @@
           "args_id": "crop_lookup_table_uri",
           "type": "file",
           "label": "Crop Lookup Table (CSV)",
-          "defaultValue": "../CropProduction/input/lookup.csv",
+          "defaultValue": "../CropProduction/input/crop_lookup_table.csv",
           "required": true,
           "validateAs": {
             "type": "CSV"
@@ -90,7 +90,7 @@
       "args_id": "do_fertilizer_maps",
       "label": "Use Fertilizer Maps",
       "type": "container",
-      "defaultValue": true,
+      "defaultValue": false,
       "collapsible": true,
       "elements": [
         {
