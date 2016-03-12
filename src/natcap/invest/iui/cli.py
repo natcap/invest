@@ -24,6 +24,8 @@ TOOLS_IN_DEVELOPMENT = set([
     'habitat_suitability',
 ])
 
+_CLI_CONFIG_FILENAME = 'cli_config'
+
 
 def iui_dir():
     """
@@ -51,7 +53,7 @@ def load_config():
     """
 
     try:
-        config_file = os.path.join(iui_dir(), 'cli_config.json')
+        config_file = os.path.join(iui_dir(), _CLI_CONFIG_FILENAME + '.json')
         user_config = json.load(open(config_file))
     except IOError:
         # Raised when the cli config file hasn't been defined or can't be
@@ -71,12 +73,18 @@ def load_config():
 def list_models():
     """
     List all models that have .json files defined in the iui dir.
+
+    Returns:
+        A sorted list of model names.
     """
     model_names = []
     json_files = os.path.join(iui_dir(), '*.json')
     for json_file in glob.glob(json_files):
         json_name, _ = os.path.splitext(json_file)
         json_name = os.path.basename(json_name)
+
+        if json_name == _CLI_CONFIG_FILENAME:
+            continue
 
         model_names.append(json_name)
     return sorted(model_names)
