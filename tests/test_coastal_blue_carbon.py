@@ -202,6 +202,10 @@ def _get_preprocessor_args(args_choice):
         band_matrices_zeros, srs.origin, srs.projection, NODATA_INT,
         srs.pixel_size(100), datatype=gdal.GDT_Int32,
         filename=os.path.join(workspace, 'raster_3.tif'))
+    raster_nodata_uri = pygeotest.create_raster_on_disk(
+        band_matrices_nodata, srs.origin, srs.projection, NODATA_INT,
+        srs.pixel_size(100), datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_4.tif'))
 
     args = {
         'workspace_dir': workspace,
@@ -217,10 +221,19 @@ def _get_preprocessor_args(args_choice):
         'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_3_uri]
     }
 
+    args3 = {
+        'workspace_dir': workspace,
+        'results_suffix': 'test',
+        'lulc_lookup_uri': lulc_lookup_uri,
+        'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_3_uri]
+    }
+
     if args_choice == 1:
         return args
     elif args_choice == 2:
         return args2
+    else:
+        return args3
 
 
 class TestPreprocessor(unittest.TestCase):
@@ -242,7 +255,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_preprocessor_ones(self):
         """Coastal Blue Carbon: Test entire run of preprocessor.
 
-        The final snapshot raster contains ones.
+        All rasters contain ones.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1)
@@ -261,7 +274,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_preprocessor_zeros(self):
         """Coastal Blue Carbon: Test entire run of preprocessor.
 
-        The final snapshot raster contains zeros.
+        First two rasters contain ones, last contains zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
         args2 = _get_preprocessor_args(2)
@@ -272,10 +285,30 @@ class TestPreprocessor(unittest.TestCase):
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
             lines = f.readlines()
+
         # just a regression test.  this tests that an output file was
         # successfully created, and that two particular land class transitions
         # occur and are set in the right directions.
         self.assertTrue(lines[2][:].startswith('x,disturb,accum'))
+
+    def test_preprocessor_nodata(self):
+        """Coastal Blue Carbon: Test entire run of preprocessor.
+
+        First raster contains ones, second nodata, third zeros.
+        """
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = _get_preprocessor_args(3)
+        preprocessor.execute(args)
+        trans_csv = os.path.join(
+            args['workspace_dir'],
+            'outputs_preprocessor',
+            'transitions_test.csv')
+        with open(trans_csv, 'r') as f:
+            lines = f.readlines()
+        # just a regression test.  this tests that an output file was
+        # successfully created, and that two particular land class transitions
+        # occur and are set in the right directions.
+        self.assertTrue(lines[2][:].startswith('x,,'))
 
     def test_lookup_parsing_exception(self):
         """Coastal Blue Carbon: Test lookup table parsing exception."""

@@ -5,6 +5,7 @@ import csv
 from itertools import product
 import logging
 import ast
+import copy
 
 from osgeo import gdal
 import pygeoprocessing.geoprocessing as geoprocess
@@ -184,6 +185,12 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
         a2 = read_from_raster(raster_t2_uri, d)
         transition_list = zip(a1.flatten(), a2.flatten())
         transition_set = transition_set.union(set(transition_list))
+
+    # Remove transitions to or from cells with NODATA values
+    s = copy.copy(transition_set)
+    for i in s:
+        if NODATA_INT in i:
+            transition_set.remove(i)
 
     return transition_set
 
