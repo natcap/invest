@@ -29,7 +29,7 @@ cp -r "$2" "$invest_bindir"
 for sh_file in `ls "$invest_bindir"/*.sh`
 do
     new_name="`echo "$sh_file" | sed 's/\.sh/.command/g'`"
-    mv "$sh_file" "$tempdir/`basename $new_name`"
+    mv "$sh_file" "$tempdir"/`basename "$new_name"`
 done
 
 # Allow the scripts to be run by a single line of bash.
