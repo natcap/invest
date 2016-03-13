@@ -169,7 +169,7 @@ setup(
         'natcap',
         'natcap.invest',
         'natcap.invest.crop_production',
-        'natcap.invest.blue_carbon',
+        'natcap.invest.coastal_blue_carbon',
         'natcap.invest.carbon',
         'natcap.invest.coastal_vulnerability',
         'natcap.invest.dbfpy',
