@@ -28,7 +28,7 @@ cp -r "$2" "$invest_bindir"
 # .command extension makes the scripts runnable by the user.
 for sh_file in `ls "$invest_bindir"/*.sh`
 do
-    new_name=`echo "$sh_file" | sed 's/\.sh/.command/g'`
+    new_name="`echo "$sh_file" | sed 's/\.sh/.command/g'`"
     mv "$sh_file" "$tempdir/`basename $new_name`"
 done
 
