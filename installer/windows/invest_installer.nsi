@@ -206,7 +206,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
   !define OVERLAP "${SMPATH}\Overlap Analysis"
   !define HRA "${SMPATH}\Habitat Risk Assessment"
-  !define BLUECARBON "${SMPATH}\Blue Carbon"
+  !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
   !define FISHERIES "${SMPATH}\Fisheries"
   !define HYDROPOWER "${SMPATH}\Hydropower"
 
@@ -238,9 +238,9 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\Wind Energy (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_wind_energy.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Coastal Vulnerability (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_vulnerability.bat" "" "${INVEST_ICON}"
 
-  CreateDirectory "${BLUECARBON}"
-  CreateShortCut "${BLUECARBON}\(1) Blue Carbon Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_blue_carbon_preprocessor.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${BLUECARBON}\(2) Blue Carbon Calculator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_blue_carbon.bat" "" "${INVEST_ICON}"
+  CreateDirectory "${COASTALBLUECARBON}"
+  CreateShortCut "${COASTALBLUECARBON}\(1) Coastal Blue Carbon Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_blue_carbon_preprocessor.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${COASTALBLUECARBON}\(2) Coastal Blue Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_blue_carbon.bat" "" "${INVEST_ICON}"
 
   CreateDirectory "${FISHERIES}"
   CreateShortCut "${FISHERIES}\(1) Fisheries (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_fisheries.bat" "" "${INVEST_ICON}"
@@ -383,7 +383,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   SectionGroup "Marine Datasets" SEC_MARINE_DATA
     !insertmacro downloadData "Marine Base Datasets (required for many marine models)" "Marine.zip" 1784696
     !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 856
-    !insertmacro downloadData "Blue Carbon (optional)" "BlueCarbon.zip" 856
+    !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 856
     !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 117760
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 784
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 8116
