@@ -22,19 +22,19 @@ fi
 # prepare a local temp dir for a filesystem
 mkdir -p $tempdir
 invest_bindir=$tempdir/`basename $2`
-cp -r $2 $invest_bindir
+cp -r "$2" "$invest_bindir"
 
 # copy out all the shell files and fixup the paths.
 # .command extension makes the scripts runnable by the user.
-for sh_file in `ls $invest_bindir/*.sh`
+for sh_file in `ls "$invest_bindir"/*.sh`
 do
     new_name=`echo $sh_file | sed 's/\.sh/.command/g'`
-    mv $sh_file $tempdir/`basename $new_name`
+    mv "$sh_file" "$tempdir/`basename $new_name`"
 done
 
 # Allow the scripts to be run by a single line of bash.
-sed -i '' 's/.\/invest/`dirname $0`\/invest_dist\/invest/g' $tempdir/*.command
-chmod u+x $tempdir/*.command
+sed -i '' 's/.\/invest/`dirname $0`\/invest_dist\/invest/g' "$tempdir/*.command"
+chmod u+x "$tempdir/*.command"
 
 source=temp
 
