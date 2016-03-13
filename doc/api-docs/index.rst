@@ -31,6 +31,7 @@ Contents
 
     installing
     cli
+    changelog
     *
 
 .. End of file
