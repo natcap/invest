@@ -31,7 +31,7 @@ do
     new_name=`echo "$sh_file" | sed 's/\.sh/.command/g'`
     new_command_file="$tempdir"/`basename "$new_name"`
     mv "$sh_file" "$new_command_file"
-    sed -i '' "s/.\/invest/`dirname $0`\/$2\/invest/g" "$new_command_file"
+    sed -i '' 's/.\/invest/`dirname $0`\/invest_dist\/invest/g' "$new_command_file"
 done
 
 chmod u+x "$tempdir"/*.command
