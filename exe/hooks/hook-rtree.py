@@ -1,8 +1,10 @@
-from PyInstaller.compat import is_win
-from PyInstaller.hooks.hookutils import get_package_paths
+from PyInstaller.compat import is_win, is_darwin
 import os
 
 if is_win:
+    # Windows and linux are still on pyinstaller 2.x, so the imports differ
+    # from 3.x
+    from PyInstaller.hooks.hookutils import get_package_paths
     files = [
         'spatialindex_c.dll',
         'spatialindex.dll',
