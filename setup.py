@@ -42,7 +42,7 @@ except ImportError:
     USE_CYTHON = False
 
 readme = open('README_PYTHON.rst').read()
-history = open('HISTORY.rst').read().replace('.. :changelog:', 'Changes\n=======')
+history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 LICENSE = open('LICENSE.txt').read()
 
 
@@ -211,7 +211,7 @@ setup(
     setup_requires=['nose>=1.0'] + requirements('natcap.versioner', 'numpy'),
     license=LICENSE,
     zip_safe=False,
-    keywords='invest',
+    keywords='gis invest',
     classifiers=[
         'Intended Audience :: Developers',
         'Development Status :: 5 - Production/Stable',

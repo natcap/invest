@@ -1,5 +1,8 @@
 .. :changelog:
 
+Changes
+=======
+
 3.3.0 (2016-03-14)
 ------------------
 * Refactored Wind Energy model to use a CSV input for wind data instead of a Binary file.
