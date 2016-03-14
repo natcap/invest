@@ -9,6 +9,7 @@ import imp
 import importlib
 import inspect
 import json
+import logging
 import os
 import pkgutil
 import platform
@@ -33,6 +34,10 @@ from paver.easy import task, cmdopts, consume_args, might_call,\
     dry, sh, call_task, BuildFailure, no_help, Bunch
 import virtualenv
 import yaml
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('pavement')
 
 
 # Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
@@ -258,7 +263,8 @@ paver.easy.options(
         python=_PYTHON
     ),
     build_data=Bunch(
-        force_dev=False
+        force_dev=False,
+        single_archive=False
     ),
     build_bin=Bunch(
         force_dev=False,
@@ -2235,7 +2241,11 @@ def check(options):
 
 @task
 @cmdopts([
-    ('force-dev', '', 'Zip data folders even if repo version does not match the known state')
+    ('force-dev', '', 'Zip data folders even if repo version does not match the known state'),
+    ('single-archive', '', ('Construct a single data archive for the '
+                            '"advanced" input on the NSIS installer. '
+                            'If provided, individual data zipfiles will not '
+                            'be built.')),
 ])
 def build_data(options):
     """
@@ -2251,6 +2261,12 @@ def build_data(options):
                       does not match the version tracked in versions.json.  If the
                       versions do not match and the flag is not provided, the task
                       will print an error and quit.
+        --single-archive: Zip all data into a single archive, suitable for
+                          passing to the NSIS installer's 'Advanced' option
+                          on the front/introductory panel. Normal data
+                          archives will not be created. The output archive
+                          will have a filename of
+                          'dist/InVEST <version> Sample Data.zip'.
     """
 
     data_repo = REPOS_DICT['invest-data']
@@ -2264,33 +2280,57 @@ def build_data(options):
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
 
-    data_folders = os.listdir(data_repo.local_path)
-    for data_dirname in data_folders:
-        out_zipfile = os.path.abspath(os.path.join(
-            dist_dir, os.path.basename(data_dirname) + ".zip"))
+    if options.build_data.single_archive:
+        archive_name = os.path.join(
+                'dist', 'InVEST_{version}_sample_data.zip').format(
+             version=_invest_version())
+        # shutil.make_archive does not allow for us to skip files, so we need
+        # custom zipping functionality here in order to skip it.
+        with zipfile.ZipFile(archive_name, 'w',
+                             compression=zipfile.ZIP_DEFLATED,
+                             allowZip64=False) as archive:
+            for root, dirnames, filenames in os.walk(data_repo.local_path):
+                # exclude all the local SVN repo data.
+                if '.svn' in root:
+                    continue
 
-        # Only zip up directories in the data repository.
-        if not os.path.isdir(os.path.join(data_repo.local_path, data_dirname)):
-            continue
+                for filename in filenames:
+                    local_filepath = os.path.join(root, filename)
+                    rel_filepath = os.path.relpath(local_filepath,
+                                                   data_repo.local_path)
+                    LOGGER.info('Zipping %s as %s', local_filepath,
+                                rel_filepath)
+                    archive.write(local_filepath, rel_filepath)
+    else:
+        data_folders = os.listdir(data_repo.local_path)
+        for data_dirname in data_folders:
+            out_zipfile = os.path.abspath(os.path.join(
+                dist_dir, os.path.basename(data_dirname) + ".zip"))
 
-        # Don't zip up .svn folders in the data repo.
-        if data_dirname == data_repo.statedir:
-            continue
+            # Only zip up directories in the data repository.
+            if not os.path.isdir(os.path.join(data_repo.local_path, data_dirname)):
+                continue
 
-        # We don't want Base_Data to be a big ol' zipfile, so we ignore it
-        # for now and add its subdirectories (Freshwater, Marine,
-        # Terrestrial) as their own zipfiles.
-        if data_dirname == 'Base_Data':
-            for basedata_subdir in os.listdir(os.path.join(data_repo.local_path, data_dirname)):
-                data_folders.append(os.path.join(data_dirname, basedata_subdir))
-            continue
+            # Don't zip up .svn folders in the data repo.
+            if data_dirname == data_repo.statedir:
+                continue
 
-        dry('zip -r %s %s' % (out_zipfile, data_dirname),
-            shutil.make_archive, **{
-                'base_name': os.path.splitext(out_zipfile)[0],
-                'format': 'zip',
-                'root_dir': data_repo.local_path,
-                'base_dir': data_dirname})
+            # We don't want Base_Data to be a big ol' zipfile, so we ignore it
+            # for now and add its subdirectories (Freshwater, Marine,
+            # Terrestrial) as their own zipfiles.
+            if data_dirname == 'Base_Data':
+                for basedata_subdir in os.listdir(os.path.join(data_repo.local_path, data_dirname)):
+                    data_folders.append(os.path.join(data_dirname, basedata_subdir))
+                continue
+
+            dry('zip -r %s %s' % (out_zipfile, data_dirname),
+                shutil.make_archive, **{
+                    'base_name': os.path.splitext(out_zipfile)[0],
+                    'format': 'zip',
+                    'root_dir': data_repo.local_path,
+                    'base_dir': data_dirname,
+                    'logger': LOGGER})
+
 
 
 @task
