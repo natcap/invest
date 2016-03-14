@@ -19,7 +19,7 @@ InVEST is licensed under a permissive, modified BSD license.
 
 For more information, see:
   * InVEST on `bitbucket <https://bitbucket.org/natcap/invest>`_
-  * The `Natural Capital Project website <http://naturalcapitalproject.org>`_.
+  * The `Natural Capital Project website <http://naturalcapitalproject.org/invest>`_.
 
 
 Contents

@@ -1,6 +1,6 @@
 
-natcap.invest API Reference
-===========================
+API Reference
+=============
 
 Contents:
 
