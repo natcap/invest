@@ -269,15 +269,28 @@ def execute(args):
 
         os.makedirs(folder)
 
+    # Habitat, Species and Stressor directory paths in the sample data are
+    # given as relative paths.  These paths are assumed to be relative to the
+    # CSV directory if they are relative paths.  This addresses an issue with
+    # the sample data's compatibility with Mac binaries and assumptions about
+    # what the CWD is when run from a Windows .bat script (CWD=directory
+    # containing the .bat file) and a mac .command script (CWD=the user's home
+    # directory, or wherever #!/bin/bash defaults to for the user).
+    def _check_relative(path):
+        """Verify `path` is relative to the CSV directory or absolute."""
+        if not os.path.isabs(path):
+            return os.path.abspath(os.path.join(args['csv_uri'], path))
+        return path
+
     # Habitats
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
-            hab_names = listdir(hra_args[ele])
+            hab_names = listdir(_check_relative(hra_args[ele]))
             hab_list += fnmatch.filter(hab_names, '*.shp')
 
     # Get all stressor URI's
-    stress_names = listdir(hra_args['stressors_dir'])
+    stress_names = listdir(_check_relative(hra_args['stressors_dir']))
     stress_list = fnmatch.filter(stress_names, '*.shp')
 
     # Get the unioned bounding box of all the incoming shapefiles which
