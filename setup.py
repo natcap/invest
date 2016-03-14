@@ -42,7 +42,7 @@ except ImportError:
     USE_CYTHON = False
 
 readme = open('README_PYTHON.rst').read()
-history = open('HISTORY.rst').read().replace('.. :changelog:', '')
+history = open('HISTORY.rst').read().replace('.. :changelog:', 'Changes\n=======')
 LICENSE = open('LICENSE.txt').read()
 
 

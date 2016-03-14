@@ -1,7 +1,7 @@
 .. :changelog:
 
-3.3.0
-=====
+3.3.0 (2016-03-14)
+------------------
 * Refactored Wind Energy model to use a CSV input for wind data instead of a Binary file.
 * Redesigned InVEST recreation model for a single input streamlined interface, advanced analytics, and refactored outputs.  While the model is still based on "photo user days" old model runs are not backward compatable with the new model or interface. See the Recreation Model user's guide chapter for details.
     * The refactor of this model requires an upgrade to ``GDAL >=1.11.0 <2.0`` and ``numpy >= 1.10.2``.
