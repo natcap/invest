@@ -7,6 +7,8 @@ import os
 import collections
 import math
 import datetime
+import matplotlib
+matplotlib.use('AGG')  # Use the Anti-Grain Geometry backend (for PNG files)
 from matplotlib import pyplot as plt
 import re
 import random
