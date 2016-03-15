@@ -22,16 +22,29 @@ For more information, see:
   * The `Natural Capital Project website <http://naturalcapitalproject.org/invest>`_.
 
 
-Contents
---------
+Getting Started
+---------------
 
 .. toctree::
     :maxdepth: 1
-    :glob:
 
     installing
     cli
     changelog
-    *
+
+API Reference
+-------------
+
+.. toctree::
+    :maxdepth: 1
+
+    Full API Reference <api>
+    ecosystem_service_analysis_tools
+    final_ecosystem_services
+    supporting_ecosystem_services
+    testing
+    user_interface
+    utilities
+
 
 .. End of file
