@@ -2926,7 +2926,7 @@ def build(options):
 
     # build the env with our custom args for this context, but only if the user
     # has not already specified a python interpreter to use.
-    if options.build.python ==_PYTHON:
+    if options.build.python == _PYTHON:
         call_task('env', options={
             'system_site_packages': True,
             'clear': True,
