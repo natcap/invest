@@ -311,7 +311,22 @@ def set_cycle_func(vars_dict, rec_func):
 
         N_prev_xsa = N_prev.swapaxes(0, 2)
         N_next_0_xsa, spawners = rec_func(N_prev_xsa)
-        N_next[0] = N_next_0_xsa.swapaxes(0, 2)
+        try:
+            N_next[0] = N_next_0_xsa.swapaxes(0, 2)
+        except ValueError:
+            # When numpy>=1.10.0 is installed numpy.swapaxes complains when
+            # axis 2 is invalid:
+            # >>> numpy.array([0, 1, 2, 3, 4]).swapaxes(0, 2)
+            # ValueError: bad axis2 argument to swapaxes
+            #
+            # However, when numpy<1.10.0 is installed, the same operation
+            # returns the input array instead of raising a ValueError:
+            # >>> numpy.array([0, 1, 2, 3, 4]).swapaxes(0, 2)
+            # array([0, 1, 2, 3, 4])
+            #
+            # This exception should only arise when numpy >= 1.10.0 is
+            # used.
+            N_next[0] = N_next_0_xsa
 
         for i in range(1, num_classes):
             N_next[i] = np.array(map(lambda x: Migration[i-1].dot(

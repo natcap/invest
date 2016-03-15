@@ -30,7 +30,7 @@
                     "type": "folder"
                   },
                   "args_id": "workspace_dir",
-                  "defaultValue": "../nearshore_wave_and_erosion",
+                  "defaultValue": "~/Documents/nearshore_wave_and_erosion_workspace",
                   "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
                 },
                 {

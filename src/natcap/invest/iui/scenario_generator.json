@@ -1,0 +1,394 @@
+{
+  "id": "window",
+  "label": "Scenario Generator",
+  "targetScript": "natcap.invest.scenario_generator.scenario_generator",
+  "modelName": "scenario_generator",
+  "localDocURI": "../documentation/scenario_generator.html",
+  "height": 850,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "defaultValue": "~/Documents/scenario_generator_workspace",
+          "label": "Workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "suffix",
+          "args_id": "suffix",
+          "type": "text",
+          "defaultValue": "",
+          "label": "Results Suffix",
+          "required": false,
+          "helpText": "A suffix to append to results."
+        },
+        {
+          "id": "landcover",
+          "args_id": "landcover",
+          "type": "file",
+          "defaultValue": "../ScenarioGenerator/input/landcover.tif",
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "label": "Land Cover (Raster)",
+          "required": true,
+          "helpText": "A GDAL-supported raster file representing land-use/land-cover."
+        },
+        {
+          "id": "transition",
+          "args_id": "transition",
+          "type": "file",
+          "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
+          "label": "Transition Table (CSV)",
+          "required": false,
+          "helpText": "This table contains the land-cover transition likelihoods, priority of transitions, area change, proximity suitiblity, proximity effect distance, seed size, short name, and patch size."
+        },
+        {
+          "id": "calculate_priorities",
+          "args_id": "calculate_priorities",
+          "type": "checkbox",
+          "label": "Calculate Priorities",
+          "enabledBy": "transition",
+          "defaultValue": false,
+          "helpText": "This option enables calculation of the land-cover priorities using analytical hierarchical processing. A matrix table must be entered below. Optionally, the priorities can manually be entered in the priority column of the land attributes table."
+        },
+        {
+          "id": "priorities_csv_uri",
+          "args_id": "priorities_csv_uri",
+          "label": "Priorities Table (CSV)",
+          "type": "file",
+          "required": true,
+          "defaultValue": "../ScenarioGenerator/input/prioritymatrix.csv",
+          "enabledBy": "calculate_priorities",
+          "helpText": "This table contains a matrix of land-cover type pairwise priorities used to calculate land-cover priorities."
+        }
+      ]
+    },
+    {
+      "id": "calculate_proximity",
+      "args_id": "calculate_proximity",
+      "type": "container",
+      "collapsible": true,
+      "label": "Proximity",
+      "defaultValue": true,
+      "enabledBy": "transition",
+      "elements": [
+        {
+          "id": "calculate_proximity_list",
+          "type": "hiddenElement",
+          "elements": [
+            {
+              "id": "proximity_weight",
+              "args_id": "proximity_weight",
+              "label": "Weight",
+              "type": "text",
+              "defaultValue": "0.3",
+              "validText": "[0-9]*(\\.[0-9]*)?",
+              "dataType": "float",
+              "required": true,
+              "helpText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "calculate_transition",
+      "args_id": "calculate_transition",
+      "type": "container",
+      "collapsible": true,
+      "label": "Specify Transitions",
+      "defaultValue": true,
+      "enabledBy": "transition",
+      "elements": [
+        {
+          "id": "calculate_transition_list",
+          "type": "hiddenElement",
+          "elements": []
+        },
+        {
+          "id": "transition_fields",
+          "args_id": "transition_fields",
+          "type": "hiddenElement",
+          "collapsible": true,
+          "label": "Non-Standard Field Names",
+          "defaultValue": true,
+          "elements": [
+            {
+              "id": "transition_field_list",
+              "type": "list",
+              "elements": [
+                {
+                  "id": "transition_id",
+                  "args_id": "transition_id",
+                  "type": "OGRFieldDropdown",
+                  "label": "Suitability ID",
+                  "enabledBy": "transition",
+                  "returns": "strings",
+                  "defaultValue": "ID",
+                  "required": true
+                },
+                {
+                  "id": "percent_field",
+                  "args_id": "change_field",
+                  "type": "OGRFieldDropdown",
+                  "label": "Change Field",
+                  "enabledBy": "transition",
+                  "returns": "strings",
+                  "defaultValue": "Percent Change",
+                  "required": true
+                },
+                {
+                  "id": "area_field",
+                  "args_id": "area_field",
+                  "type": "OGRFieldDropdown",
+                  "label": "Area Field",
+                  "enabledBy": "transition",
+                  "returns": "strings",
+                  "defaultValue": "Area Change",
+                  "required": true
+                },
+                {
+                  "id": "priority_field",
+                  "args_id": "priority_field",
+                  "type": "OGRFieldDropdown",
+                  "label": "Priority Field",
+                  "enabledBy": "transition",
+                  "returns": "strings",
+                  "defaultValue": "Priority",
+                  "required": false
+                },
+                {
+                  "id": "proximity_field",
+                  "args_id": "proximity_field",
+                  "type": "OGRFieldDropdown",
+                  "label": "Proximity Distance Field",
+                  "enabledBy": "transition",
+                  "returns": "strings",
+                  "defaultValue": "Proximity",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "calculate_factors",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "calculate_factors",
+      "label": "Use Factors",
+      "defaultValue": true,
+      "elements": [
+        {
+          "id": "factors_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "suitability_folder",
+              "args_id": "suitability_folder",
+              "type": "folder",
+              "defaultValue": "../ScenarioGenerator/input",
+              "label": "Factors Folder",
+              "required": true
+            },
+            {
+              "id": "suitability",
+              "args_id": "suitability",
+              "type": "file",
+              "defaultValue": "../ScenarioGenerator/input/scenario_suitability_factors.csv",
+              "label": "Factors Table",
+              "required": false,
+              "helpText": "This table lists the factors that determine suitability of the land-cover for change, and includes: the factor name, layer name, distance of influence, suitability value, weight of the factor, distance breaks, and applicable land-cover."
+            },
+            {
+              "id": "weight",
+              "args_id": "weight",
+              "label": "Factor Weight",
+              "type": "text",
+              "validText": "[0](\\.[0-9][0-9])?",
+              "dataType": "float",
+              "defaultValue": "0.5",
+              "required": true,
+              "helpText": "The factor weight is a value between 0 and 1 which determines the weight given to the factors vs. the expert opinion likelihood rasters.  For example, if a weight of 0.3 is entered then 30% of the final suitability is contributed by the factors and the likelihood matrix contributes 70%.  This value is entered on the tool interface."
+            },
+            {
+              "id": "factor_inclusion",
+              "args_id": "factor_inclusion",
+              "type": "dropdown",
+              "label": "Rasterization Method",
+              "options": [
+                "All touched pixels",
+                "Only pixels with covered center points"
+              ],
+              "returns": {
+                "mapValues": {
+                  "All touched pixels": 0,
+                  "Only pixels with covered center points": 1
+                }
+              },
+              "defaultValue": 0,
+              "required": true,
+              "enabledBy": "calculate_factors",
+              "helpText": ""
+            }
+          ]
+        },
+        {
+          "id": "factors_field_container",
+          "args_id": "factors_field_container",
+          "type": "hiddenElement",
+          "collapsible": true,
+          "label": "Non-standard Fields",
+          "elements": [
+            {
+              "id": "factors_field_list",
+              "type": "list",
+              "elements": [
+                {
+                  "id": "suitability_id",
+                  "args_id": "suitability_id",
+                  "type": "OGRFieldDropdown",
+                  "label": "Suitability ID",
+                  "enabledBy": "suitability",
+                  "returns": "strings",
+                  "required": true
+                },
+                {
+                  "id": "suitability_layer",
+                  "args_id": "suitability_layer",
+                  "type": "OGRFieldDropdown",
+                  "label": "Suitability Layer",
+                  "enabledBy": "suitability",
+                  "returns": "strings",
+                  "required": true
+                },
+                {
+                  "id": "suitability_field",
+                  "args_id": "suitability_field",
+                  "type": "OGRFieldDropdown",
+                  "label": "Suitability Field",
+                  "enabledBy": "suitability",
+                  "returns": "strings",
+                  "required": true
+                },
+                {
+                  "id": "distance_field",
+                  "args_id": "distance_field",
+                  "type": "OGRFieldDropdown",
+                  "label": "Distance Field",
+                  "enabledBy": "suitability",
+                  "returns": "strings",
+                  "required": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "calculate_constraints",
+      "args_id": "calculate_constraints",
+      "type": "container",
+      "collapsible": true,
+      "label": "Constraints Layer",
+      "defaultsValue": true,
+      "elements": [
+        {
+          "id": "constraints_layer_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "constraints",
+              "args_id": "constraints",
+              "label": "Constraints Layer (Vector)",
+              "type": "file",
+              "defaultValue": "../ScenarioGenerator/input/constraints.shp",
+              "validateAs": {
+                "type": "OGR"
+              },
+              "required": false,
+              "helpText": "An OGR-supported vector file.  This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land-cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
+            },
+            {
+              "id": "constraints_field",
+              "args_id": "constraints_field",
+              "type": "OGRFieldDropdown",
+              "label": "Constraints Field",
+              "enabledBy": "constraints",
+              "helpText": "The field from the override table that contains the value for the override.",
+              "returns": "strings"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "override_layer",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "override_layer",
+      "label": "Override Layer",
+      "defaultValue": true,
+      "elements": [
+        {
+          "id": "workspace2_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "override",
+              "args_id": "override",
+              "label": "Override Layer (Vector)",
+              "type": "file",
+              "defaultValue": "../ScenarioGenerator/input/override.shp",
+              "validateAs": {
+                "type": "OGR"
+              },
+              "required": false,
+              "helpText": "An OGR-supported vector file. This is a vector (polygon) layer with land-cover types in the same scale and projection as the input land-cover. This layer is used to override all the changes and is applied after the rule conversion is complete."
+            },
+            {
+              "id": "override_field",
+              "args_id": "override_field",
+              "type": "OGRFieldDropdown",
+              "label": "Override Field",
+              "enabledBy": "override",
+              "helpText": "The field from the override table that contains the value for the override.",
+              "returns": "strings"
+            },
+            {
+              "id": "override_inclusion",
+              "args_id": "override_inclusion",
+              "type": "dropdown",
+              "label": "Rasterization Method",
+              "options": [
+                "All touched pixels",
+                "Only pixels with covered center points"
+              ],
+              "returns": {
+                "mapValues": {
+                  "All touched pixels": 0,
+                  "Only pixels with covered center points": 1
+                }
+              },
+              "defaultValue": 0,
+              "required": true,
+              "enabledBy": "override_field",
+              "helpText": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

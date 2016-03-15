@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+.pyc
+.pyd
+.pyo
+
+# C extensions
+.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+sdist/
+natcap.invest.egg-info/
+.egg
+src/natcap/invest/version.py
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Sphinx documentation
+doc/api-docs/build
+
+# Repositories (tracked in their own SCMs)
+data/invest-data
+data/invest-test-data
+src/pyinstaller

@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../Aquaculture",
+          "defaultValue": "~/Documents/aquaculture_workspace",
           "required": true,
           "validateAs": {
             "type": "folder"

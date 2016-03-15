@@ -1,5 +1,12 @@
 {
-    "src/pygeoprocessing": "0.3.0a1",
-    "data/invest-data": "3",
-    "doc/users-guide": "a24fe291fda5"
+    "data/invest-data": "94",
+    "data/invest-test-data": "55",
+    "doc/users-guide": "6e38346b3f3f",
+    "src/invest-natcap.default": "f18244edcff0f68871b9f839a904bc98b5a50b82",
+    "src/pygeoprocessing": "REQUIREMENTS_TXT:pygeoprocessing",
+    "src/pyinstaller": {
+        "Darwin": "v3.1.1",
+        "Windows": "v2.1",
+        "Linux": "064388440f8ed6b592b1c6a2f980e9cb378c7d6f"
+    }
 }

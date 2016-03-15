@@ -1,0 +1,72 @@
+{
+  "id": "window",
+  "label": "Coastal Blue Carbon Preprocessor",
+  "targetScript": "natcap.invest.coastal_blue_carbon.preprocessor",
+  "modelName": "coastal_blue_carbon_preprocessor",
+  "localDocURI": "../documentation/coastal_blue_carbon.html",
+  "height": 600,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "~/Documents/coastal_blue_carbon_workspace",
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b> <p>For more information, see 'Data Needs' section in the model's documentation",
+          "required": true
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false,
+          "helpText": "This text will be appended to the end of the yield function output folders to help seperate outputs from multiple runs."
+        },
+        {
+          "id": "lulc_lookup_uri",
+          "args_id": "lulc_lookup_uri",
+          "type": "file",
+          "label": "LULC Lookup Table (CSV)",
+          "defaultValue": "../CoastalBlueCarbon/inputs/lulc_lookup.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lulc-class"
+            ]
+          },
+          "helpText": "A CSV table used to map lulc classes to their values in a raster, as well as to indicate whether or not the lulc class is a coastal blue carbon habitat."
+        }
+      ]
+    },
+    {
+      "id": "lulc_snapshot_list",
+      "type": "multi",
+      "args_id": "lulc_snapshot_list",
+      "label": "Land Use/Land Cover Rasters (GDAL-supported)",
+      "sampleElement": {
+        "id": "sample_id",
+        "type": "file",
+        "label": "Input",
+        "validateAs": {
+          "type": "GDAL"
+        }
+      },
+      "defaultValue": [
+        "../CoastalBlueCarbon/inputs/GBJC_2004_mean_Resample.tif",
+        "../CoastalBlueCarbon/inputs/GBJC_2050_mean_Resample.tif",
+        "../CoastalBlueCarbon/inputs/GBJC_2100_mean_Resample.tif"
+      ],
+      "linkText": "Add Another",
+      "helpText": "A set of GDAL-supported rasters representing the land/seascape at particular points in time. Provided in chronological order."
+    }
+  ]
+}

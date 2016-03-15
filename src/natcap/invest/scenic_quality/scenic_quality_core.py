@@ -1157,10 +1157,11 @@ def compute_viewshed(input_array, nodata, coordinates, obs_elev, \
     angles = cell_angles(perimeter_cells, coordinates)
     angles = np.append(angles, 2.0 * math.pi)
     # 3- compute information on raster cells
-    row_max = np.amax(perimeter_cells[0])
-    row_min = np.amin(perimeter_cells[0])
-    col_max = np.amax(perimeter_cells[1])
-    col_min = np.amin(perimeter_cells[1])
+    # {row,col}_{min,max} are ints, but they come out of amin, amax as float64
+    row_max = np.amax(perimeter_cells[0]).astype(np.int32)
+    row_min = np.amin(perimeter_cells[0]).astype(np.int32)
+    col_max = np.amax(perimeter_cells[1]).astype(np.int32)
+    col_min = np.amin(perimeter_cells[1]).astype(np.int32)
     # Shape of the viewshed
     viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
     # Viewer's coordiantes relative to the viewshed

@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../NDR",
+          "defaultValue": "~/Documents/ndr_workspace",
           "required": true,
           "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
         },
@@ -58,6 +58,18 @@
           "helpText": "A GDAL-supported raster file containing integer values representing the LULC code for each cell. The LULC code should be an integer."
         },
         {
+          "id": "runoff_proxy",
+          "args_id": "runoff_proxy_uri",
+          "type": "file",
+          "label": "Nutrient Runoff Proxy (Raster)",
+          "defaultValue": "../Base_Data/Freshwater/precip",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "Weighting factor to nutrient loads.  Internally this value is normalized by its average values so a variety of data can be used including precipitation or quickflow."
+        },
+        {
           "id": "watersheds_uri",
           "args_id": "watersheds_uri",
           "type": "file",
@@ -88,7 +100,7 @@
           "args_id": "biophysical_table_uri",
           "type": "file",
           "label": "Biophysical Table (CSV)",
-          "defaultValue": "../WP_Nutrient_Retention/Input/water_biophysical_table.csv",
+          "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
@@ -96,7 +108,7 @@
               "lucode"
             ]
           },
-          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'load_n' (or p), 'eff_n' (or p), and 'crit_len_n' (or p) depending on which nutrients are selected."
         },
         {
           "id": "calc_p",

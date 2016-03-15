@@ -28,13 +28,6 @@ LOGGER = logging.getLogger('natcap.invest.wind_energy.wind_energy')
 speedups.enable()
 
 
-class HubHeightError(Exception):
-    """A custom error message for a hub height that is not supported in
-        the current wind data
-    """
-    pass
-
-
 class FieldError(Exception):
     """A custom error message for fields that are missing"""
     pass
@@ -54,9 +47,11 @@ def execute(args):
     Args:
         workspace_dir (string): a python string which is the uri path to where
             the outputs will be saved (required)
-        wind_data_uri (string): a text file where each row is a location with
-            at least the Longitude, Latitude, Scale and Shape parameters
-            (required)
+        wind_data_uri (string): path to a CSV file with the following header:
+            ['LONG','LATI','LAM', 'K', 'REF']. Each following row is a location
+            with at least the Longitude, Latitude, Scale ('LAM'),
+            Shape ('K'), and reference height ('REF') at which the data was
+            collected (required)
         aoi_uri (string): a uri to an OGR datasource that is of type polygon
             and projected in linear units of meters. The polygon specifies the
             area of interest for the wind data points. If limiting the wind
@@ -199,34 +194,18 @@ def execute(args):
         'Please make sure all the necessary fields are present and spelled '
         'correctly.')
 
-    # Using the hub height to generate the proper field name for the scale
-    # value that is found in the wind data file
+    # Hub Height to use for setting weibell paramaters
     hub_height = int(bio_parameters_dict['hub_height'])
 
-    if hub_height % 10 != 0:
-        raise HubHeightError('An Error occurred processing the Hub Height. '
-                'Please make sure the Hub Height is between the ranges of 10 '
-                'and 150 meters and is a multiple of 10. ex: 10,20,...70,80...')
-
     # The scale_key is used in getting the right wind energy arguments that are
-    # dependent on the hub height. The scale_key has a specific signature and we
-    # need to build up that signature from the hub_height given by the user
-    scale_key = str(hub_height)
-    if len(scale_key) <= 2:
-        scale_key = 'Ram-0' + scale_key + 'm'
-    else:
-        scale_key = 'Ram-' + scale_key + 'm'
+    # dependent on the hub height.
+    scale_key = 'LAM'
 
     LOGGER.debug('hub_height : %s', hub_height)
-    LOGGER.debug('SCALE_key : %s', scale_key)
-
-    # Define a list of the fields that are of interest in the wind data file
-    wind_data_field_list = ['LATI', 'LONG', scale_key, 'K-010m']
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data')
-    wind_data = read_binary_wind_data(
-            args['wind_data_uri'], wind_data_field_list)
+    wind_data = read_csv_wind_data(args['wind_data_uri'], hub_height)
 
     if 'aoi_uri' in args:
         LOGGER.info('AOI Provided')
@@ -395,7 +374,7 @@ def execute(args):
 
     # The String name for the shape field. So far this is a default from the
     # text file given by CK. I guess we could search for the 'K' if needed.
-    shape_key = 'K-010m'
+    shape_key = 'K'
 
     # Weibull probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
@@ -669,9 +648,10 @@ def execute(args):
 
     farm_poly_uri = os.path.join(out_dir,
         'example_size_and_orientation_of_a_possible_wind_farm%s.shp' % suffix)
-
+    # If the file path already exist, remove it.
     if os.path.isfile(farm_poly_uri):
-        os.remove(farm_poly_uri)
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(farm_poly_uri)
 
     # Create the actual polygon
     LOGGER.info('Creating Example Farm Polygon')
@@ -679,7 +659,11 @@ def execute(args):
 
     LOGGER.info('Wind Energy Biophysical Model Complete')
 
-    valuation_checked = args.pop('valuation_container', False)
+    if 'valuation_container' in args:
+        valuation_checked = args['valuation_container']
+    else:
+        valuation_checked = False
+
     if not valuation_checked:
         LOGGER.debug('Valuation Not Selected')
         return
@@ -760,9 +744,6 @@ def execute(args):
             land_exists = True
         else:
             land_exists = False
-
-        LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
-        LOGGER.debug('Land_Points_Dict : %s', land_dict)
 
         grid_ds_uri = os.path.join(inter_dir, 'val_grid_points%s.shp' % suffix)
 
@@ -1142,78 +1123,6 @@ def execute(args):
                 vectorize_op=False)
     LOGGER.info('Wind Energy Valuation Model Complete')
 
-def get_shapefile_feature_count(shape_uri):
-    """Get the feature count for a shapefile
-
-        shape_uri - a URI to an OGR datasource
-
-        returns - the feature count"""
-    shape_ds = ogr.Open(shape_uri)
-    layer = shape_ds.GetLayer()
-    feat_count = layer.GetFeatureCount()
-    return feat_count
-
-def get_dictionary_from_shape(shape_uri):
-    """This function takes a shapefile URI and for each feature retrieves
-        the X and Y value from it's geometry. The X and Y value are stored in
-        a numpy array as a point [x_location,y_location], which is returned
-        when all the features have been iterated through.
-
-        shape_uri - a URI to an OGR shapefile datasource
-
-        returns - A numpy array of points, which represent the shape's feature's
-              geometries.
-    """
-    shape = ogr.Open(shape_uri)
-    layer = shape.GetLayer()
-    # Dictionary to store the X,Y (lat,long) location and fields / values
-    feat_dict = {}
-
-    for feat in layer:
-        geom = feat.GetGeometryRef()
-        x_location = geom.GetX()
-        y_location = geom.GetY()
-        # Set the key as the X,Y / Lat, Long as a tuple
-        feat_dict[(x_location, y_location)] = {}
-        for field_index in range(feat.GetFieldCount()):
-            field_defn = feat.GetFieldDefnRef(field_index)
-            field_name = field_defn.GetNameRef()
-            feat_dict[(x_location, y_location)][field_name] = feat.GetField(
-                    field_index)
-
-    shape = None
-    return feat_dict
-
-def get_points_geometries(shape_uri):
-    """This function takes a shapefile URI and for each feature retrieves
-        the X and Y value from it's geometry. The X and Y value are stored in
-        a numpy array as a point [x_location,y_location], which is returned
-        when all the features have been iterated through.
-
-        shape_uri - A URI to an OGR shapefile datasource
-
-        returns - A numpy array of points, which represent the shape's feature's
-              geometries.
-    """
-    shape = ogr.Open(shape_uri)
-    layer = shape.GetLayer()
-    # Get the number of features or points in the shapefile
-    feat_count = layer.GetFeatureCount()
-    # Create a 2D numpy array of zeros with length of feature count
-    points = np.zeros((feat_count, 2))
-    # Initiate an index to use to iterate through the numpy array
-    index = 0
-
-    for feat in layer:
-        geom = feat.GetGeometryRef()
-        x_location = geom.GetX()
-        y_location = geom.GetY()
-        points[index] = [x_location, y_location]
-        index = index + 1
-
-    shape = None
-    return np.array(points)
-
 def add_field_to_shape_given_list(shape_ds_uri, value_list, field_name):
     """Adds a field and a value to a given shapefile from a list of values. The
         list of values must be the same size as the number of features in the
@@ -1501,79 +1410,46 @@ def mask_by_distance(
             out_nodata, cell_size, 'intersection',
             assert_datasets_projected = True, vectorize_op = False)
 
-def read_binary_wind_data(wind_data_uri, field_list):
-    """Unpack the binary wind data into a dictionary. This function only reads
-        binary files that are packed using big indian ordering '<'. Each piece
-        of data is 4 bytes long and of type float. Each row of the file has data
-        that corresponds to the following fields:
+def read_csv_wind_data(wind_data_uri, hub_height):
+    """Unpack the csv wind data into a dictionary.
 
-            "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"
+    Parameters:
+        wind_data_uri (string): a path for the csv wind data file with header
+            of: "LONG","LATI","LAM","K","REF"
 
-        wind_data_uri - a uri for the binary wind data file
+        hub_height (int): the hub height to use for calculating weibell
+            parameters and wind energy values
 
-        field_list - a list of strings referring to the column headers from
-            the text file that are to be included in the dictionary.
-            ['LONG', 'LATI', scale_key, 'K-010m']
-
-        returns - a dictionary where the keys are lat/long tuples which point
-            to dictionaries that hold wind data at that location"""
+    Returns:
+        A dictionary where the keys are lat/long tuples which point
+            to dictionaries that hold wind data at that location.
+    """
 
     LOGGER.debug('Entering read_wind_data')
 
+    # Constant used in getting Scale value at hub height from reference height
+    # values. See equation 3 in the users guide.
+    alpha = 0.11
+
     wind_dict = {}
 
-    # This is the expected column header list for the binary wind energy file.
-    # It is expected that the data will be in this order so that we can properly
-    # unpack the information into a dictionary
-    param_list = [
-            "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
+    # LONG, LATI, RAM, K, REF
+    wind_file = open(wind_data_uri, 'rU')
+    reader = csv.DictReader(wind_file)
 
-    # Get the scale key from the field list to verify that the hub height given
-    # is indeed a valid height handled in the wind energy point data
-    scale_key = field_list[2]
+    for row in reader:
+        ref_height = float(row['REF'])
+        ref_scale = float(row['LAM'])
+        ref_shape = float(row['K'])
+        # Calculate scale value at new hub height given reference values.
+        # See equation 3 in users guide
+        scale_value = (ref_scale * (hub_height / ref_height)**alpha)
 
-    if scale_key not in param_list:
-        raise HubHeightError('The Hub Height is not supported by the current '
-                'wind point data. Please make sure the hub height lies '
-                'between 10 and 150 meters')
-
-    # Open the file in reading and binary mode
-    wind_file = open(wind_data_uri, 'rb')
-
-    # Get the length of the expected parameter list to use in unpacking
-    param_list_length = len(param_list)
-
-    # For every line in the file, unpack
-    while True:
-        # Read in line by line where each piece of data is 4 bytes
-        line = wind_file.read(4*param_list_length)
-
-        # If we have reached the end of the file, quit
-        if len(line) == 0:
-            break
-
-        # Unpack the data. We are assuming the binary data was packed using the
-        # big indian ordering '<' and that the values are floats.
-        values_list = struct.unpack('<'+'f'*param_list_length, line)
-
-        # The key of the output dictionary will be a tuple of the latitude,
-        # longitude
-        key = (values_list[1], values_list[0])
-        wind_dict[key] = {}
-
-        for index in range(param_list_length):
-            # Only add the field and values we are interested in using
-            if param_list[index] in field_list:
-                # Build up the dictionary with values
-                wind_dict[key][param_list[index]] = values_list[index]
+        wind_dict[float(row['LATI']), float(row['LONG'])] = {
+            'LONG': float(row['LONG']), 'LATI': float(row['LATI']),
+            'LAM': scale_value, 'K': ref_shape, 'REF_LAM': ref_scale}
 
     wind_file.close()
-
-    LOGGER.debug('Leaving read_wind_data')
     return wind_dict
 
 def wind_data_to_point_shape(dict_data, layer_name, output_uri):
@@ -1583,9 +1459,9 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
         dict_data - a python dictionary with the wind data, where the keys are
             tuples of the lat/long coordinates:
             {
-            (97, 43) : {'LATI':97, 'LONG':43, 'Ram-030m':6.3, 'K-010m':2.7},
-            (55, 51) : {'LATI':55, 'LONG':51, 'Ram-030m':6.2, 'K-010m':2.4},
-            (73, 47) : {'LATI':73, 'LONG':47, 'Ram-030m':6.5, 'K-010m':2.3}
+            (97, 43) : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
+            (55, 51) : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
+            (73, 47) : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
             }
 
         layer_name - a python string for the name of the layer
@@ -1598,7 +1474,8 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
 
     # If the output_uri exists delete it
     if os.path.isfile(output_uri):
-        os.remove(output_uri)
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(output_uri)
 
     LOGGER.debug('Creating new datasource')
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -1694,7 +1571,7 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
     # the reprojected raster
     coord_trans = osr.CoordinateTransformation(raster_sr, aoi_sr)
 
-    pixel_size = pygeoprocessing.geoprocessing.pixel_size_based_on_coordinate_transform_uri(
+    pixel_size = pixel_size_based_on_coordinate_transform_uri(
             clipped_uri, coord_trans, point_one)
 
     LOGGER.debug('Reprojecting dataset')
@@ -1766,10 +1643,6 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
 
     orig_layer = orig_ds.GetLayer()
     aoi_layer = aoi_ds.GetLayer()
-
-    # If the file already exists remove it
-    if os.path.isfile(output_uri):
-        os.remove(output_uri)
 
     LOGGER.debug('Creating new datasource')
     # Create a new shapefile from the orginal_datasource
@@ -2025,3 +1898,43 @@ def calculate_distances_grid(land_shape_uri, harvested_masked_uri, tmp_dist_fina
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [tmp_dist_uri], dist_meters_op, tmp_dist_final_uri, gdal.GDT_Float32,
         out_nodata, pixel_size, 'intersection', vectorize_op=False)
+
+
+def pixel_size_based_on_coordinate_transform_uri(
+        dataset_uri, coord_trans, point):
+    """Get width and height of cell in meters.
+
+    A wrapper for pixel_size_based_on_coordinate_transform that takes a dataset
+    uri as an input and opens it before sending it along.
+
+    Args:
+        dataset_uri (string): a URI to a gdal dataset
+
+        All other parameters pass along
+
+    Returns:
+        result (tuple): (pixel_width_meters, pixel_height_meters)
+    """
+    dataset = gdal.Open(dataset_uri)
+    geo_tran = dataset.GetGeoTransform()
+    pixel_size_x = geo_tran[1]
+    pixel_size_y = geo_tran[5]
+    top_left_x = point[0]
+    top_left_y = point[1]
+    # Create the second point by adding the pixel width/height
+    new_x = top_left_x + pixel_size_x
+    new_y = top_left_y + pixel_size_y
+    # Transform two points into meters
+    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
+    point_2 = coord_trans.TransformPoint(new_x, new_y)
+    # Calculate the x/y difference between two points
+    # taking the absolue value because the direction doesn't matter for pixel
+    # size in the case of most coordinate systems where y increases up and x
+    # increases to the right (right handed coordinate system).
+    pixel_diff_x = abs(point_2[0] - point_1[0])
+    pixel_diff_y = abs(point_2[1] - point_1[1])
+
+    # Close and clean up dataset
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+    return (pixel_diff_x, pixel_diff_y)

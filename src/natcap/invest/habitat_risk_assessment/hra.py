@@ -5,6 +5,7 @@ import os
 import shutil
 import logging
 import fnmatch
+import functools
 import math
 import numpy as np
 
@@ -268,30 +269,126 @@ def execute(args):
 
         os.makedirs(folder)
 
+    # Habitat, Species and Stressor directory paths in the sample data are
+    # given as relative paths.  These paths are assumed to be relative to the
+    # CSV directory if they are relative paths.  This addresses an issue with
+    # the sample data's compatibility with Mac binaries and assumptions about
+    # what the CWD is when run from a Windows .bat script (CWD=directory
+    # containing the .bat file) and a mac .command script (CWD=the user's home
+    # directory, or wherever #!/bin/bash defaults to for the user).
+    def _check_relative(path):
+        """Verify `path` is relative to the CSV directory or absolute."""
+        if not os.path.isabs(path):
+            return os.path.abspath(os.path.join(args['csv_uri'], path))
+        return path
+
     # Habitats
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
-            hab_names = listdir(hra_args[ele])
+            hab_names = listdir(_check_relative(hra_args[ele]))
             hab_list += fnmatch.filter(hab_names, '*.shp')
+
+    # Get all stressor URI's
+    stress_names = listdir(_check_relative(hra_args['stressors_dir']))
+    stress_list = fnmatch.filter(stress_names, '*.shp')
+
+    # Get the unioned bounding box of all the incoming shapefiles which
+    # will be used to define a raster to use for burning vectors onto.
+    bounding_box = reduce(
+        functools.partial(merge_bounding_boxes, mode="union"),
+        [pygeoprocessing.geoprocessing.get_datasource_bounding_box(vector_uri)
+            for vector_uri in hab_list + stress_list])
+
+    # If there is an AOI, we want to limit the bounding box to its extents.
+    if 'aoi_tables' in args:
+        bounding_box = merge_bounding_boxes(
+            bounding_box,
+            pygeoprocessing.geoprocessing.get_datasource_bounding_box(
+                args['aoi_tables']), "intersection")
+
+    # Determine what the maximum buffer is to use in deciding how much
+    # a future rasters extents should be expanded below. This will allow for
+    # adequate pixel space when running decay functions later.
+    max_buffer = reduce(lambda x, y: max(float(x), float(y)),
+        hra_args['buffer_dict'].itervalues())
+
+    def _create_raster_from_bb(bbox, pixel_size, wkt_str, out_uri, buff):
+        """Create a raster given a bounding box and spatial reference.
+
+        Parameters:
+            bbox (list) - a list of values 4 numbers representing a geographic
+                bounding box.
+            pixel_size (float) - a float value for the size of raster pixels.
+            wkt_str (string) - a Well Known Text format for a spatial reference
+                to use in setting the rasters projection.
+            out_uri (string) - a path on disk for the output raster.
+
+        Returns:
+            Nothing
+        """
+        # The bounding box coming in was set up with the form:
+        # [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
+        # Convert back into normal Shapefile extent format
+        extents = [bbox[0], bbox[2], bbox[3], bbox[1]]
+
+        # Need to create a larger base than the extent that would normally
+        # surround the raster, because of some shapefiles needing buffer
+        # space for decay equations from stressors on habitat.
+
+        # These have to be expanded by 2 * buffer to account for both sides
+        width = abs(extents[1] - extents[0]) + 2 * buff
+        height = abs(extents[3] - extents[2]) + 2 * buff
+        tiff_width = int(math.ceil(width / pixel_size))
+        tiff_height = int(math.ceil(height / pixel_size))
+
+        nodata = -1.0
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(
+            grid_raster_path, tiff_width, tiff_height, 1, gdal.GDT_Float32,
+            options=['BIGTIFF=IF_SAFER', 'TILED=YES'])
+        raster.GetRasterBand(1).SetNoDataValue(nodata)
+        # Set the transform based on the upper left corner and given pixel
+        # dimensions increasing everything by buffer size
+        raster_transform = [
+            extents[0] - buff, pixel_size, 0.0, extents[3] + buff, 0.0,
+            -pixel_size]
+
+        raster.SetGeoTransform(raster_transform)
+        # Use the same projection on the raster as one of the provided vectors
+        raster.SetProjection(wkt_str)
+        # Initialize everything to nodata
+        raster.GetRasterBand(1).Fill(nodata)
+        raster.GetRasterBand(1).FlushCache()
+        band = None
+        raster = None
+
+    grid_raster_path = os.path.join(inter_dir, 'raster_grid_base.tif')
+    # Use the first habitat shapefile to set the spatial reference / projection
+    spat_ref = pygeoprocessing.geoprocessing.get_spatial_ref_uri(hab_list[0])
+    wkt_str = spat_ref.ExportToWkt()
+
+    # Create a raster that has a bounding box which is the UNION of all
+    # the incoming shapefiles to be vectorized. This will act as the base
+    # base raster to burn all the shapefiles onto, so that they are
+    # guaranteed to be aligned upfront.
+    _create_raster_from_bb(
+        bounding_box, args['grid_size'], wkt_str, grid_raster_path,
+        max_buffer)
 
     LOGGER.info('Rasterizing shapefile layers.')
 
-    add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
-
-    # Get all stressor URI's
-    stress_names = listdir(hra_args['stressors_dir'])
-    stress_list = fnmatch.filter(stress_names, '*.shp')
+    # Burn habitat shapefiles onto rasters
+    add_hab_rasters(
+        hab_dir, hra_args['habitats'], hab_list, args['grid_size'],
+        grid_raster_path)
 
     # Want a super simple dictionary of the stressor rasters we will use for
     # overlap. The local var stress_dir is the location that should be used
     # for rasterized stressor shapefiles.
     stress_dict = make_stress_rasters(
-        stress_dir,
-        stress_list,
-        args['grid_size'],
-        args['decay_eq'],
-        hra_args['buffer_dict'])
+        stress_dir, stress_list, args['grid_size'], args['decay_eq'],
+        hra_args['buffer_dict'], grid_raster_path)
 
     # H_S_C and H_S_E
     # Just add the DS's at the same time to the two dictionaries,
@@ -310,22 +407,40 @@ def execute(args):
             hra_args['criteria_dir'])
 
         add_crit_rasters(
-            crit_dir,
-            c_shape_dict,
-            hra_args['habitats'],
-            hra_args['h_s_e'],
-            hra_args['h_s_c'],
-            args['grid_size'])
+            crit_dir, c_shape_dict, hra_args['habitats'], hra_args['h_s_e'],
+            hra_args['h_s_c'], args['grid_size'])
 
     # No reason to hold the directory paths in memory since all info is now
     # within dictionaries. Can remove them here before passing to core.
-    for name in ('habitats_dir',
-                 'species_dir', 'stressors_dir', 'criteria_dir'):
+    for name in (
+        'habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
         if name in hra_args:
             del hra_args[name]
 
     hra_core.execute(hra_args)
 
+
+def merge_bounding_boxes(bb1, bb2, mode):
+    """Merge two bounding boxes through union or intersection.
+
+    Parameters:
+        bb1 (list) - a list of values for a geographic bounding box set up as:
+            [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
+        bb2 (list) - a list of values for a geographic bounding box set up as:
+            [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
+        mode (string) - either 'intersection' or 'union'.
+
+    Returns:
+        A list of the merged bounding boxes.
+    """
+
+    if mode == "union":
+        comparison_ops = [min, max, max, min]
+    if mode == "intersection":
+        comparison_ops = [max, min, min, max]
+
+    bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
+    return bb_out
 
 def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
     '''
@@ -391,21 +506,34 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
     Returns nothing.
     '''
     for pair in h_s_c:
+        # Check to see if the user has determined this habitat / stressor
+        # pair should have no interaction. This means setting no overlap
+        compute_overlap = all(h_s_e[pair]['overlap_list'] +
+                              h_s_c[pair]['overlap_list'])
+        LOGGER.debug("Compute Overlap is set to %s, for pair %s",
+                     compute_overlap, pair)
 
         h, s = pair
-        h_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(habitats[h]['DS'])
-        s_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(stress_dict[s])
+        h_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+            habitats[h]['DS'])
+        s_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+            stress_dict[s])
 
         files = [habitats[h]['DS'], stress_dict[s]]
 
         def add_h_s_pixels(h_pix, s_pix):
             '''Since the stressor is buffered, we actually want to make sure to
             preserve that value. If there is an overlap, return s value.'''
-
-            if h_pix != h_nodata and s_pix != s_nodata:
-                return s_pix
+            if compute_overlap:
+                # If there is an overlap return the stressor value
+                return np.where(
+                    ((h_pix != h_nodata) & (s_pix != s_nodata)),
+                    s_pix, h_nodata)
             else:
-                return h_nodata
+                # Even if there is an overlap, return h_nodata
+                return np.where(
+                    ((h_pix != h_nodata) & (s_pix != s_nodata)),
+                    h_nodata, h_nodata)
 
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 
@@ -419,13 +547,13 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             "union",
             resample_method_list=None,
             dataset_to_align_index=None,
-            aoi_uri=None)
+            aoi_uri=None,
+            vectorize_op=False)
 
         h_s_c[pair]['DS'] = out_uri
         h_s_e[pair]['DS'] = out_uri
 
-
-def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
+def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, grid_path):
     '''
     Creating a simple dictionary that will map stressor name to a rasterized
     version of that stressor shapefile. The key will be a string containing
@@ -442,6 +570,9 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         buffer_dict- A dictionary that holds desired buffer sizes for each
             stressors. The key is the name of the stressor, and the value is an
             int which correlates to desired buffer size.
+        grid_path- A string for a raster file path on disk. Used as a
+            universal base raster to create other rasters which to burn
+            vectors onto.
 
     Output:
         A potentially buffered and rasterized version of each stressor
@@ -465,51 +596,16 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         name = os.path.splitext(os.path.split(shape)[1])[0]
         out_uri = os.path.join(dir, name + '.tif')
 
-        datasource = ogr.Open(shape)
-        layer = datasource.GetLayer()
-
         buff = buffer_dict[name]
 
         # Want to set this specifically to make later overlap easier.
         nodata = -1.
 
-        # Need to create a larger base than the envelope that would normally
-        # surround the raster, since we know that we can be expanding by at
-        # least buffer size more. For reference, look to
-        # "~/workspace/Examples/expand_raster.py"
-        shp_extent = layer.GetExtent()
-
-        # These have to be expanded by 2 * buffer to account for both sides
-        width = abs(shp_extent[1] - shp_extent[0]) + 2*buff
-        height = abs(shp_extent[3] - shp_extent[2]) + 2*buff
-        p_width = int(np.ceil(width / grid_size))
-        p_height = int(np.ceil(height / grid_size))
-
-        driver = gdal.GetDriverByName('GTiff')
-        raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32)
-
-        # increase everything by buffer size
-        transform = [shp_extent[0] - buff,
-                     grid_size,
-                     0.0,
-                     shp_extent[3] + buff,
-                     0.0,
-                     -grid_size]
-        raster.SetGeoTransform(transform)
-
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(layer.GetSpatialRef().__str__())
-        raster.SetProjection(srs.ExportToWkt())
-
-        band = raster.GetRasterBand(1)
-        band.SetNoDataValue(nodata)
-        band.Fill(nodata)
-        band.FlushCache()
-
-        band = None
-        raster = None
-        layer = None
-        datasource = None
+        # Create a base raster for burning vectors onto from a raster that
+        # was set up such that each shapefile is burned onto a consistant
+        # grid, ensuring alignment.
+        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+            grid_path, out_uri, 'GTiff', -1., gdal.GDT_Float32, fill_value=nodata)
 
         # Burn polygon land values onto newly constructed raster
         pygeoprocessing.geoprocessing.rasterize_layer_uri(
@@ -540,9 +636,11 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
             vectorize_op=False)
 
         dist_trans_uri = pygeoprocessing.geoprocessing.temporary_filename()
-        pygeoprocessing.geoprocessing.distance_transform_edt(nodata_to_zero_uri, dist_trans_uri)
+        pygeoprocessing.geoprocessing.distance_transform_edt(
+            nodata_to_zero_uri, dist_trans_uri)
 
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
+
         # Do buffering protocol specified
         if buff == 0:
             make_zero_buff_decay_array(dist_trans_uri, new_buff_uri, nodata)
@@ -558,7 +656,6 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         stress_dict[name] = new_buff_uri
 
     return stress_dict
-
 
 def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
     '''
@@ -584,8 +681,7 @@ def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
         """
         # Since we know anything that is land is currently represented as 0's,
         # want to turn that back into 1's. everything else will just be nodata
-        swap = np.where(chunk == 0., 1, chunk)
-        return np.where(swap > 1., nodata, swap)
+        return np.where(chunk == 0., 1, nodata)
 
     cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
     pygeoprocessing.geoprocessing.vectorize_datasets(
@@ -732,8 +828,7 @@ def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
         "intersection",
         vectorize_op=False)
 
-
-def add_hab_rasters(dir, habitats, hab_list, grid_size):
+def add_hab_rasters(dir, habitats, hab_list, grid_size, grid_path):
     '''
     Want to get all shapefiles within any directories in hab_list, and burn
     them to a raster.
@@ -747,6 +842,9 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
             both.
         grid_size- Int representing the desired pixel dimensions of
             both intermediate and ouput rasters.
+        grid_path- A string for a raster file path on disk. Used as a
+            universal base raster to create other rasters which to burn
+            vectors onto.
 
     Output:
         A modified version of habitats, into which we have placed the URI to
@@ -764,21 +862,16 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         name = os.path.splitext(os.path.split(shape)[1])[0]
 
         out_uri = os.path.join(dir, name + '.tif')
-
-        pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
-            shape,
-            grid_size,
-            gdal.GDT_Float32,
-            -1.,
-            out_uri)
+        # Create a base raster for burning vectors onto from a raster that
+        # was set up such that each shapefile is burned onto a consistent
+        # grid, ensuring alignment.
+        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+            grid_path, out_uri, 'GTiff', -1., gdal.GDT_Float32, fill_value=-1.)
 
         pygeoprocessing.geoprocessing.rasterize_layer_uri(
-            out_uri,
-            shape,
-            burn_values=[1],
-            option_list=['ALL_TOUCHED=TRUE'])
-        habitats[name]['DS'] = out_uri
+            out_uri, shape, burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
 
+        habitats[name]['DS'] = out_uri
 
 def calc_max_rating(risk_eq, max_rating):
     '''
@@ -943,11 +1036,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 # If there is no overlap, just return whatever is underneath.
                 # It will either be the value of that patial region or nodata
-                if base_pix != base_nodata:
-                    return spat_pix
-
-                else:
-                    return base_nodata
+                return np.where(
+                    (base_pix != base_nodata), spat_pix, base_nodata)
 
             out_uri = os.path.join(dir, filename + '.tif')
 
@@ -961,7 +1051,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 "union",
                 resample_method_list=None,
                 dataset_to_align_index=0,
-                aoi_uri=None)
+                aoi_uri=None,
+                vectorize_op=False)
 
             if c_name in h_s_c[pair]['Crit_Rasters']:
                 h_s_c[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
@@ -1020,11 +1111,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 # If there is no overlap, just return whatever is underneath.
                 # It will either be the value of that patial region or nodata
-                if base_pix != base_nodata:
-                    return spat_pix
-
-                else:
-                    return base_nodata
+                return np.where(
+                    (base_pix != base_nodata), spat_pix, base_nodata)
 
             out_uri = os.path.join(dir, filename + '.tif')
 
@@ -1037,7 +1125,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 grid_size,
                 "union",
                 resample_method_list=None,
-                dataset_to_align_index=0, aoi_uri=None)
+                dataset_to_align_index=0, aoi_uri=None,
+                vectorize_op=False)
 
             if c_name in habitats[h]['Crit_Rasters']:
                 habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
@@ -1095,11 +1184,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
                 # If there is no overlap, just return whatever is underneath.
                 # It will either be the value of that patial region or nodata
-                if base_pix != base_nodata:
-                    return spat_pix
-
-                else:
-                    return base_nodata
+                return np.where(
+                    (base_pix != base_nodata), spat_pix, base_nodata)
 
             out_uri = os.path.join(dir, filename + '.tif')
 
@@ -1112,7 +1198,8 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 grid_size,
                 "union",
                 resample_method_list=None,
-                dataset_to_align_index=0, aoi_uri=None)
+                dataset_to_align_index=0, aoi_uri=None,
+                vectorize_op=False)
 
             if c_name in h_s_e[pair]['Crit_Rasters']:
                 h_s_e[pair]['Crit_Rasters'][c_name]['DS'] = out_uri

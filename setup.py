@@ -4,18 +4,20 @@ InVEST - Integrated Valuation of Ecosystem Services and Tradeoffs
 
 Common functionality provided by setup.py:
     build_sphinx
+
+For other commands, try `python setup.py --help-commands`
 """
 
 import os
 import sys
 
-from setuptools.command.sdist import sdist as _sdist
-from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
 from setuptools import setup
+import pkg_resources
 
 import numpy
+import natcap.versioner
 
 # Monkeypatch os.link to prevent hard lnks from being formed.  Useful when
 # running tests across filesystems, like in our test docker containers.
@@ -39,12 +41,7 @@ try:
 except ImportError:
     USE_CYTHON = False
 
-# Defining the command classes for sdist and build_py here so we can access
-# the commandclasses in the setup function.
-CMDCLASS['sdist'] = _sdist
-CMDCLASS['build_py'] = _build_py
-
-readme = open('README.rst').read()
+readme = open('README_PYTHON.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 LICENSE = open('LICENSE.txt').read()
 
@@ -92,9 +89,16 @@ CMDCLASS['build_ext'] = ExtraCompilerFlagsBuilder
 
 EXTENSION_LIST = ([
     Extension(
+        name="natcap.invest.recreation.out_of_core_quadtree",
+        sources=[
+            'src/natcap/invest/recreation/out_of_core_quadtree.pyx'],
+        language="c++",
+        include_dirs=[numpy.get_include()]),
+    Extension(
         name="scenic_quality_cython_core",
         sources=[
-        'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
+            'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
+        language="c++",
         include_dirs=[numpy.get_include()]),
     Extension(
         name="ndr_core",
@@ -111,20 +115,47 @@ EXTENSION_LIST = ([
 if not USE_CYTHON:
     EXTENSION_LIST = no_cythonize(EXTENSION_LIST)
 
-REQUIREMENTS = [
-    'numpy',
-    'scipy',
-    'gdal',
-    'matplotlib',
-    'shapely',
-    'poster',
-    'h5py',
-    'psycopg2',
-    'pyamg',
-    'pygeoprocessing',
-    'setuptools',
-    'setuptools_scm',
-    ]
+
+def requirements(*pkgnames):
+    """Get individual package requirements from requirements.txt.
+
+    This is particularly useful for keeping requirements.txt the central
+    location for a required package's version specification, so the only thing
+    that needs to be specified here in setup.py is the package name.
+
+    Parameters:
+        pkgnames (strings): Optional.  Package names, provided as individual
+            string parameters.  If provided, only requirements matching
+            these packages will be returned.  If not provided, all package
+            requirements will be returned.
+
+    Returns:
+        A list of package requirement strings, one for each package name
+        parameter.
+
+    Raises:
+        ValueError: When a packagename requested is not in requirements.txt
+    """
+    desired_pkgnames = set(pkgnames)
+
+    found_pkgnames = {}
+    with open('requirements.txt') as requirements:
+        for line in requirements:
+            try:
+                package_req = pkg_resources.Requirement.parse(line)
+            except ValueError:
+                continue
+            else:
+                project_name = package_req.project_name
+                if project_name in desired_pkgnames:
+                    found_pkgnames[project_name] = str(package_req)
+
+    if len(desired_pkgnames) != len(found_pkgnames):
+        missing_pkgs = desired_pkgnames - set(found_pkgnames.keys())
+        raise ValueError(('Could not find package '
+                          'requirements for %s') % list(missing_pkgs))
+    return found_pkgnames.values()
+
 
 setup(
     name='natcap.invest',
@@ -132,19 +163,18 @@ setup(
     long_description=readme + '\n\n' + history,
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
-    url='http://bitbucket.org/jdouglass/invest-py',
+    url='http://bitbucket.org/natcap/invest',
     namespace_packages=['natcap'],
     packages=[
         'natcap',
         'natcap.invest',
         'natcap.invest.crop_production',
-        'natcap.invest.blue_carbon',
+        'natcap.invest.coastal_blue_carbon',
         'natcap.invest.carbon',
         'natcap.invest.coastal_vulnerability',
         'natcap.invest.dbfpy',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
-        'natcap.invest.globio',
         'natcap.invest.habitat_quality',
         'natcap.invest.habitat_risk_assessment',
         'natcap.invest.habitat_suitability',
@@ -154,7 +184,6 @@ setup(
         'natcap.invest.marine_water_quality',
         'natcap.invest.ndr',
         'natcap.invest.nearshore_wave_and_erosion',
-        'natcap.invest.nutrient',
         'natcap.invest.optimization',
         'natcap.invest.overlap_analysis',
         'natcap.invest.pollination',
@@ -163,7 +192,6 @@ setup(
         'natcap.invest.routing',
         'natcap.invest.scenario_generator',
         'natcap.invest.scenic_quality',
-        'natcap.invest.sdr',
         'natcap.invest.seasonal_water_yield',
         'natcap.invest.testing',
         'natcap.invest.timber',
@@ -173,17 +201,17 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
+    version=natcap.versioner.parse_version(),
+    natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    install_requires=REQUIREMENTS,
+    install_requires=requirements(),  # fetch from requirements.txt
     include_dirs=[numpy.get_include()],
-    setup_requires=['nose>=1.0'],
-    use_scm_version={
-        'write_to': 'src/natcap/invest/version.py',
-    },
-    cmdclass=CMDCLASS,
+    # Having natcap.versioner here allows pip to force installation of
+    # natcap.versioner before the natcap.invest setup.py is run.
+    setup_requires=['nose>=1.0'] + requirements('natcap.versioner', 'numpy'),
     license=LICENSE,
     zip_safe=False,
-    keywords='invest',
+    keywords='gis invest',
     classifiers=[
         'Intended Audience :: Developers',
         'Development Status :: 5 - Production/Stable',
@@ -196,4 +224,29 @@ setup(
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,
+    entry_points={
+        'console_scripts': [
+            'invest = natcap.invest.iui.cli:main'
+        ],
+    },
+    cmdclass=CMDCLASS,
+    package_data={
+        'natcap.invest.iui': [
+            '*.png',
+            '*.json',
+            'iui_resources/resources.json',
+            'iui_resources/images/*.png',
+        ],
+        'natcap.invest.reporting': [
+            'reporting_data/*.js',
+            'reporting_data/*.css',
+        ],
+        'natcap.invest.scenario_generator': [
+            '*.js',
+        ],
+        'natcap.invest.wave_energy': [
+            'wave_energy_scripts/*.sh',
+            'wave_energy_scripts/*.txt'
+        ],
+    }
 )

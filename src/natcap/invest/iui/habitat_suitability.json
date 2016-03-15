@@ -2,11 +2,16 @@
   "id": "window",
   "label": "Habitat Suitability",
   "targetScript": "natcap.invest.habitat_suitability.habitat_suitability",
-  "modelName": "hra_preprocess",
+  "modelName": "habitat_suitability",
   "localDocURI": "../documentation/habitat_suitability.html",
   "height": 700,
   "width": 700,
   "elements": [
+    {
+      "id": "beta_only",
+      "label": "This tool is considered UNSTABLE.  Users may experience performance issues and unexpected errors.",
+      "type": "label"
+    },
     {
       "id": "output_container",
       "label": "Output Parameters",
@@ -26,7 +31,7 @@
                 "type": "folder"
               },
               "args_id": "workspace_dir",
-              "defaultValue": "../HabitatSuitability",
+              "defaultValue": "~/Documents/habitat_suitability_workspace",
               "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
             },
             {

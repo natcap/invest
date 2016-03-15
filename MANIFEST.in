@@ -1,0 +1,6 @@
+include README.rst
+include README_PYTHON.rst
+include HISTORY.rst
+include LICENSE.txt
+include requirements.txt
+recursive-include src/natcap/invest *.cpp *.c *.txt *.r *.php *.js *.png *.json *.css *.sh *.txt

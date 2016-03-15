@@ -1,5 +1,4 @@
 import sys
-import imp
 import os
 import platform
 import time
@@ -12,11 +11,11 @@ from PyQt4 import QtGui, QtCore
 
 import base_widgets
 import executor
-import iui_validator
 
 CMD_FOLDER = '.'
 
 # Set up logging for the modelUI
+import natcap.invest
 import natcap.invest.iui
 LOGGER = natcap.invest.iui.get_ui_logger('modelUI')
 
@@ -42,7 +41,7 @@ class ModelUI(base_widgets.ExecRoot):
 
             returns an instance of DynamicUI."""
 
-        #the top buttonbox needs to be initialized before super() is called, 
+        #the top buttonbox needs to be initialized before super() is called,
         #since super() also creates all elements based on the user's JSON config
         #this is important because QtGui displays elements in the order in which
         #they are added.
@@ -72,9 +71,7 @@ class ModelUI(base_widgets.ExecRoot):
     def addLinks(self):
         links = []
         try:
-            import natcap.invest
-            from natcap.invest import build_utils
-            architecture = build_utils.invest_version(attribute='py_arch')
+            architecture = platform.architecture()[0]
             links.append('InVEST Version %s (%s)' % (natcap.invest.__version__,
                 architecture))
         except AttributeError:
