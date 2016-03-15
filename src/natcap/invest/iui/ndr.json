@@ -100,7 +100,7 @@
           "args_id": "biophysical_table_uri",
           "type": "file",
           "label": "Biophysical Table (CSV)",
-          "defaultValue": "../WP_Nutrient_Retention/Input/water_biophysical_table.csv",
+          "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",

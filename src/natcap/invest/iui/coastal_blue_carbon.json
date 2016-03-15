@@ -16,7 +16,7 @@
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",
-          "defaultValue": "../CoastalBlueCarbon/",
+          "defaultValue": "~/Documents/coastal_blue_carbon_workspace",
           "helpText": "The selected folder is used as the workspace where all intermediate and final output files will be written. If the selected folder does not exist, it will be created. If datasets already exist in the selected folder, they will be overwritten.",
           "required": true
         },

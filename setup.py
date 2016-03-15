@@ -211,7 +211,7 @@ setup(
     setup_requires=['nose>=1.0'] + requirements('natcap.versioner', 'numpy'),
     license=LICENSE,
     zip_safe=False,
-    keywords='invest',
+    keywords='gis invest',
     classifiers=[
         'Intended Audience :: Developers',
         'Development Status :: 5 - Production/Stable',
