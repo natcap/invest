@@ -1,7 +1,11 @@
+In this license, "Natural Capital Project" is defined as the parties of
+Stanford University, The Nature Conservancy, World Wildlife Fund Inc.,
+and University of Minnesota.
+
 This tool has an open license. All people are invited to use the tool
 under the following conditions and terms:
 
-Copyright (c) 2015, The Natural Capital Project
+Copyright (c) 2016, Natural Capital Project
 
 All rights reserved.
 
@@ -17,7 +21,7 @@ met:
    documentation and/or other materials provided with the
    distribution.
 
- * Neither the name of the Natural Capital Project nor the names of
+ * Neither the name of Natural Capital Project nor the names of
    its contributors may be used to endorse or promote products derived
    from this software without specific prior written permission.
 
