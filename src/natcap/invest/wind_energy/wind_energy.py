@@ -28,13 +28,6 @@ LOGGER = logging.getLogger('natcap.invest.wind_energy.wind_energy')
 speedups.enable()
 
 
-class HubHeightError(Exception):
-    """A custom error message for a hub height that is not supported in
-        the current wind data
-    """
-    pass
-
-
 class FieldError(Exception):
     """A custom error message for fields that are missing"""
     pass
@@ -54,9 +47,11 @@ def execute(args):
     Args:
         workspace_dir (string): a python string which is the uri path to where
             the outputs will be saved (required)
-        wind_data_uri (string): a text file where each row is a location with
-            at least the Longitude, Latitude, Scale and Shape parameters
-            (required)
+        wind_data_uri (string): path to a CSV file with the following header:
+            ['LONG','LATI','LAM', 'K', 'REF']. Each following row is a location
+            with at least the Longitude, Latitude, Scale ('LAM'),
+            Shape ('K'), and reference height ('REF') at which the data was
+            collected (required)
         aoi_uri (string): a uri to an OGR datasource that is of type polygon
             and projected in linear units of meters. The polygon specifies the
             area of interest for the wind data points. If limiting the wind
@@ -199,34 +194,18 @@ def execute(args):
         'Please make sure all the necessary fields are present and spelled '
         'correctly.')
 
-    # Using the hub height to generate the proper field name for the scale
-    # value that is found in the wind data file
+    # Hub Height to use for setting weibell paramaters
     hub_height = int(bio_parameters_dict['hub_height'])
-
-    if hub_height % 10 != 0:
-        raise HubHeightError('An Error occurred processing the Hub Height. '
-                'Please make sure the Hub Height is between the ranges of 10 '
-                'and 150 meters and is a multiple of 10. ex: 10,20,...70,80...')
-
 
     # The scale_key is used in getting the right wind energy arguments that are
     # dependent on the hub height.
-    scale_key = str(hub_height)
-    if len(scale_key) <= 2:
-        scale_key = 'Ram-0' + scale_key + 'm'
-    else:
-        scale_key = 'Ram-' + scale_key + 'm'
+    scale_key = 'LAM'
 
     LOGGER.debug('hub_height : %s', hub_height)
-    LOGGER.debug('SCALE_key : %s', scale_key)
-
-    # Define a list of the fields that are of interest in the wind data file
-    wind_data_field_list = ['LATI', 'LONG', scale_key, 'K-010m']
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data')
-    wind_data = read_binary_wind_data(
-            args['wind_data_uri'], wind_data_field_list)
+    wind_data = read_csv_wind_data(args['wind_data_uri'], hub_height)
 
     if 'aoi_uri' in args:
         LOGGER.info('AOI Provided')
@@ -395,7 +374,7 @@ def execute(args):
 
     # The String name for the shape field. So far this is a default from the
     # text file given by CK. I guess we could search for the 'K' if needed.
-    shape_key = 'K-010m'
+    shape_key = 'K'
 
     # Weibull probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
@@ -1431,79 +1410,46 @@ def mask_by_distance(
             out_nodata, cell_size, 'intersection',
             assert_datasets_projected = True, vectorize_op = False)
 
-def read_binary_wind_data(wind_data_uri, field_list):
-    """Unpack the binary wind data into a dictionary. This function only reads
-        binary files that are packed using big indian ordering '<'. Each piece
-        of data is 4 bytes long and of type float. Each row of the file has data
-        that corresponds to the following fields:
+def read_csv_wind_data(wind_data_uri, hub_height):
+    """Unpack the csv wind data into a dictionary.
 
-            "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"
+    Parameters:
+        wind_data_uri (string): a path for the csv wind data file with header
+            of: "LONG","LATI","LAM","K","REF"
 
-        wind_data_uri - a uri for the binary wind data file
+        hub_height (int): the hub height to use for calculating weibell
+            parameters and wind energy values
 
-        field_list - a list of strings referring to the column headers from
-            the text file that are to be included in the dictionary.
-            ['LONG', 'LATI', scale_key, 'K-010m']
-
-        returns - a dictionary where the keys are lat/long tuples which point
-            to dictionaries that hold wind data at that location"""
+    Returns:
+        A dictionary where the keys are lat/long tuples which point
+            to dictionaries that hold wind data at that location.
+    """
 
     LOGGER.debug('Entering read_wind_data')
 
+    # Constant used in getting Scale value at hub height from reference height
+    # values. See equation 3 in the users guide.
+    alpha = 0.11
+
     wind_dict = {}
 
-    # This is the expected column header list for the binary wind energy file.
-    # It is expected that the data will be in this order so that we can properly
-    # unpack the information into a dictionary
-    param_list = [
-            "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
-            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
-            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
+    # LONG, LATI, RAM, K, REF
+    wind_file = open(wind_data_uri, 'rU')
+    reader = csv.DictReader(wind_file)
 
-    # Get the scale key from the field list to verify that the hub height given
-    # is indeed a valid height handled in the wind energy point data
-    scale_key = field_list[2]
+    for row in reader:
+        ref_height = float(row['REF'])
+        ref_scale = float(row['LAM'])
+        ref_shape = float(row['K'])
+        # Calculate scale value at new hub height given reference values.
+        # See equation 3 in users guide
+        scale_value = (ref_scale * (hub_height / ref_height)**alpha)
 
-    if scale_key not in param_list:
-        raise HubHeightError('The Hub Height is not supported by the current '
-                'wind point data. Please make sure the hub height lies '
-                'between 10 and 150 meters')
-
-    # Open the file in reading and binary mode
-    wind_file = open(wind_data_uri, 'rb')
-
-    # Get the length of the expected parameter list to use in unpacking
-    param_list_length = len(param_list)
-
-    # For every line in the file, unpack
-    while True:
-        # Read in line by line where each piece of data is 4 bytes
-        line = wind_file.read(4*param_list_length)
-
-        # If we have reached the end of the file, quit
-        if len(line) == 0:
-            break
-
-        # Unpack the data. We are assuming the binary data was packed using the
-        # big indian ordering '<' and that the values are floats.
-        values_list = struct.unpack('<'+'f'*param_list_length, line)
-
-        # The key of the output dictionary will be a tuple of the latitude,
-        # longitude
-        key = (values_list[1], values_list[0])
-        wind_dict[key] = {}
-
-        for index in range(param_list_length):
-            # Only add the field and values we are interested in using
-            if param_list[index] in field_list:
-                # Build up the dictionary with values
-                wind_dict[key][param_list[index]] = values_list[index]
+        wind_dict[float(row['LATI']), float(row['LONG'])] = {
+            'LONG': float(row['LONG']), 'LATI': float(row['LATI']),
+            'LAM': scale_value, 'K': ref_shape, 'REF_LAM': ref_scale}
 
     wind_file.close()
-
-    LOGGER.debug('Leaving read_wind_data')
     return wind_dict
 
 def wind_data_to_point_shape(dict_data, layer_name, output_uri):
@@ -1513,9 +1459,9 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
         dict_data - a python dictionary with the wind data, where the keys are
             tuples of the lat/long coordinates:
             {
-            (97, 43) : {'LATI':97, 'LONG':43, 'Ram-030m':6.3, 'K-010m':2.7},
-            (55, 51) : {'LATI':55, 'LONG':51, 'Ram-030m':6.2, 'K-010m':2.4},
-            (73, 47) : {'LATI':73, 'LONG':47, 'Ram-030m':6.5, 'K-010m':2.3}
+            (97, 43) : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
+            (55, 51) : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
+            (73, 47) : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
             }
 
         layer_name - a python string for the name of the layer

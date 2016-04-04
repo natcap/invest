@@ -1,43 +1,45 @@
 #!/bin/bash
 #
 # Arguments:
-#  $1 = the version string to use 
+#  $1 = the version string to use
 #  $2 = the path to the binary dir to package.
 #
 # Script adapted from http://stackoverflow.com/a/1513578/299084
 # TODO: unmount any existing disk images with the same name.
 
-title="InVEST ${1}"
-finalDMGName="InVEST ${1}"
+appdirname="InVEST_${1}_unstable"  # the name of the folder the user will drag from the DMG to their applications folder.
+title="InVEST ${1}"  # the name of the volume the DMG provides.
+finalDMGName="InVEST ${1}"  # the name of the final DMG file.
 
 # remove temp files that can get in the way
+tempdir=temp/"$appdirname"
 rm *.dmg
-if [ -d "temp/InVEST" ]
+if [ -d "$tempdir" ]
 then
-    rm -rfd temp/InVEST
+    rm -rfd "$tempdir"
 fi
 
 # prepare a local temp dir for a filesystem
-mkdir -p temp/InVEST
-invest_bindir=temp/InVEST/`basename $2`
-cp -r $2 $invest_bindir
+mkdir -p "$tempdir"
+invest_bindir="$tempdir"/`basename $2`
+cp -r "$2" "$invest_bindir"
 
 # copy out all the shell files and fixup the paths.
 # .command extension makes the scripts runnable by the user.
-for sh_file in `ls $invest_bindir/*.sh`
+find "$invest_bindir" -iname "*.sh" | while read sh_file
 do
-    new_name=`echo $sh_file | sed 's/\.sh/.command/g'`
-    mv $sh_file temp/InVEST/`basename $new_name`
+    new_name=`echo "$sh_file" | sed 's/\.sh/.command/g'`
+    new_command_file="$tempdir"/`basename "$new_name"`
+    mv "$sh_file" "$new_command_file"
+    sed -i '' 's/.\/invest/`dirname $0`\/invest_dist\/invest/g' "$new_command_file"
 done
 
-# Allow the scripts to be run by a single line of bash.
-sed -i '' 's/.\/invest/`dirname $0`\/invest_dist\/invest/g' temp/InVEST/*.command
-chmod u+x temp/InVEST/*.command
+chmod u+x "$tempdir"/*.command
 
 source=temp
 
 dir_size_k=`du -k -d 0 $source | awk -F ' ' '{print $1}'`
-new_disk_size=`python -c "print $dir_size_k + 1024*5"`
+new_disk_size=`python -c "print $dir_size_k + 1024*10"`
 tempdmgname=pack.temp.dmg
 hdiutil create -srcfolder "${source}" -volname "${title}" -fs HFS+ \
     -fsargs "-c c=64,a=16,e=16" -format UDRW -size ${new_disk_size}k $tempdmgname
@@ -48,9 +50,9 @@ ls -la /Volumes
 
 # UNCOMMENT THESE LINES TO CREATE A BACKGROUND IMAGE
 # ALSO, BE SURE TO INCLUDE A SNAZZY BACKGROUND IMAGE.  DO IT RIGHT IF YOU DO IT AT ALL.
-mkdir /Volumes/"${title}"/.background
-cp background.png /Volumes/"${title}"/.background/background.png
-backgroundPictureName='background.png'
+# mkdir /Volumes/"${title}"/.background
+# cp background.png /Volumes/"${title}"/.background/background.png
+# backgroundPictureName='background.png'
 
 applicationName="`basename ${2}`"
 

@@ -204,10 +204,9 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
   !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
   !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
-  !define RECREATION "${SMPATH}\Recreation"
   !define OVERLAP "${SMPATH}\Overlap Analysis"
   !define HRA "${SMPATH}\Habitat Risk Assessment"
-  !define BLUECARBON "${SMPATH}\Blue Carbon"
+  !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
   !define FISHERIES "${SMPATH}\Fisheries"
   !define HYDROPOWER "${SMPATH}\Hydropower"
 
@@ -239,9 +238,9 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\Wind Energy (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_wind_energy.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Coastal Vulnerability (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_vulnerability.bat" "" "${INVEST_ICON}"
 
-  CreateDirectory "${BLUECARBON}"
-  CreateShortCut "${BLUECARBON}\(1) Blue Carbon Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_blue_carbon_preprocessor.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${BLUECARBON}\(2) Blue Carbon Calculator (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_blue_carbon.bat" "" "${INVEST_ICON}"
+  CreateDirectory "${COASTALBLUECARBON}"
+  CreateShortCut "${COASTALBLUECARBON}\(1) Coastal Blue Carbon Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_blue_carbon_preprocessor.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${COASTALBLUECARBON}\(2) Coastal Blue Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_blue_carbon.bat" "" "${INVEST_ICON}"
 
   CreateDirectory "${FISHERIES}"
   CreateShortCut "${FISHERIES}\(1) Fisheries (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_fisheries.bat" "" "${INVEST_ICON}"
@@ -253,7 +252,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\NDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_ndr.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Scenario Generator: Rule Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator_proximity_based.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_gen_proximity.bat" "" "${INVEST_ICON}"
 
   CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Seasonal Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_seasonal_water_yield.bat" "" "${INVEST_ICON}"
@@ -261,9 +260,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\RouteDEM (${ARCHITECTURE}).lnk" "${INVEST_DATA}\routedem.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\DelineateIt (${ARCHITECTURE}).lnk" "${INVEST_DATA}\delineateit.bat" "" "${INVEST_ICON}"
 
-  CreateDirectory "${RECREATION}"
-  CreateShortCut "${RECREATION}\(1) Recreation Initialization (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_init.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${RECREATION}\(2) Recreation Scenario (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation_client_scenario.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Recreation (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation.bat" "" "${INVEST_ICON}"
 
   ; Write registry keys for convenient uninstallation via add/remove programs.
   ; Inspired by the example at
@@ -353,7 +350,7 @@ Var INSTALLER_DIR
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${SHORT_VERSION}"
+        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}"
         SetOutPath "$INSTDIR"
         NSISdl::download "$SERVER_PATH/${Filename}" ${Filename}
         Pop $R0 ;Get the status of the file downloaded
@@ -386,7 +383,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   SectionGroup "Marine Datasets" SEC_MARINE_DATA
     !insertmacro downloadData "Marine Base Datasets (required for many marine models)" "Marine.zip" 1784696
     !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 856
-    !insertmacro downloadData "Blue Carbon (optional)" "BlueCarbon.zip" 856
+    !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 856
     !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 117760
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 784
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 8116
@@ -395,7 +392,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831620
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 4804
-    !insertmacro downloadData "Recreation (optional)" "Recreation.zip" 24
+    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 24
   SectionGroupEnd
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA

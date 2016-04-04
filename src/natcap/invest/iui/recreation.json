@@ -1,0 +1,157 @@
+{
+  "id": "window",
+  "label": "Recreation Model",
+  "targetScript": "natcap.invest.recreation.recmodel_client",
+  "modelName": "recreation",
+  "localDocURI": "../documentation/recreation.html",
+  "height": 750,
+  "width": 700,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+            "id": "internet_warning",
+            "type": "label",
+            "label": "Note, this computer must have an Internet connection in order to run this model."
+        },
+        {
+          "id": "workspace_dir",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "~/Documents/recreation_workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "required": false
+        },
+        {
+          "id": "aoi_path",
+          "args_id": "aoi_path",
+          "type": "file",
+          "label": "Area of Interest (Vector)",
+          "defaultValue": "../recreation/andros_aoi.shp",
+          "validateAs": {
+            "type": "OGR"
+          },
+          "required": true,
+          "helpText": "An OGR-supported vector file representing the area of interest where the model will run the analysis."
+        },
+        {
+          "id": "start_year",
+          "args_id": "start_year",
+          "type": "text",
+          "label": "Start Year (inclusive, must be >= 2005)",
+          "defaultValue": "2005",
+          "validText": "[0-9]{4}",
+          "required": true,
+          "helpText": "Year to start PUD calculations, date starts on Jan 1st."
+        },
+        {
+          "id": "end_year",
+          "args_id": "end_year",
+          "type": "text",
+          "label": "End Year (inclusive, must be <= 2014)",
+          "defaultValue": "2014",
+          "validText": "[0-9]{4}",
+          "required": true,
+          "helpText": "Year to end PUD calculations, date ends and includes Dec 31st."
+        }
+      ]
+    },
+    {
+      "id": "regression_container",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "compute_regression",
+      "label": "Compute Regression",
+      "defaultValue": true,
+      "elements": [
+        {
+          "id": "regression_element_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "predictor_table_path",
+              "args_id": "predictor_table_path",
+              "type": "file",
+              "label": "Predictor Table",
+              "defaultValue": "../recreation/predictors.csv",
+              "validateAs": {
+                "type": "CSV"
+              },
+              "required": true,
+              "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
+            },
+            {
+              "id": "scenario_predictor_table_path",
+              "args_id": "scenario_predictor_table_path",
+              "type": "file",
+              "label": "Scenario Predictor Table (optional)",
+              "defaultValue": "../recreation/predictors_scenario.csv",
+              "validateAs": {
+                "type": "CSV"
+              },
+              "required": false,
+              "helpText": "A table that maps predictor IDs to files and their types with required headers of 'id', 'path', and 'type'.  The file paths can be absolute, or relative to the table."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "grid_container",
+      "type": "container",
+      "collapsible": true,
+      "defaultValue": true,
+      "args_id": "grid_aoi",
+      "label": "Grid the AOI",
+      "elements": [
+        {
+          "id": "grid_element_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "grid_type",
+              "args_id": "grid_type",
+              "type": "dropdown",
+              "label": "Grid Type",
+              "options": [
+                "square",
+                "hexagon"
+              ],
+              "returns": {
+                "mapValues": {
+                  "square": "square",
+                  "hexagon": "hexagon"
+                }
+              },
+              "defaultValue": "hexagon",
+              "required": true
+            },
+            {
+              "id": "cell_size",
+              "args_id": "cell_size",
+              "type": "text",
+              "label": "Cell Size",
+              "validText": "[0-9]+(\\.[0-9][0-9])?",
+              "dataType": "float",
+              "required": true,
+              "defaultValue": "7000",
+              "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

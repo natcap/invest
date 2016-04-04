@@ -5,7 +5,7 @@ Final Ecosystem Services
 .. toctree::
     :maxdepth: 1
 
-    final_ecosystem_services/blue_carbon.rst
+    final_ecosystem_services/coastal_blue_carbon.rst
     final_ecosystem_services/carbon.rst
     final_ecosystem_services/crop_production.rst
     final_ecosystem_services/finfish_aquaculture.rst
