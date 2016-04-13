@@ -39,6 +39,7 @@ SetCompressor zlib
 !include "x64.nsh"
 !include "FileFunc.nsh"
 !include "nsDialogs.nsh"
+!include "WinVer.nsh"
 
 ; MUI Settings
 !define MUI_ABORTWARNING
@@ -310,6 +311,11 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   Push $0
   Call DumpLog
 
+SectionEnd
+
+Section "Visual Studio 2008 Redistribtable"
+  File vc_redist.exe
+  ExecWait "vc_redist.exe /q"
 SectionEnd
 
 Section "uninstall"
