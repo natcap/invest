@@ -185,21 +185,6 @@ Function DumpLog
         Exch $5
 FunctionEnd
 
-Function .onInit
- System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
- Pop $R0
-
- StrCmp $R0 0 +3
-   MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
-   Abort
-
-  ${ifNot} ${AtMostWin7}
-    ; disable the section if we're not running on Windows 7 or earlier.
-    ; This section should not execute for Windows 8 or later.
-    SectionSetText ${Section_VCRedist2008} ""
-  ${endIf}
-FunctionEnd
-
 Function Un.onInit
     !insertmacro CheckProgramRunning "invest"
 FunctionEnd
@@ -322,7 +307,7 @@ SectionEnd
 ; Only add this section if we're running the installer on Windows 7 or below.
 ; See InVEST Issue #3515.
 ; This section is disabled in .onInit if we're running Windows 8 or later.
-Section "Visual Studio 2008 Redistributable" Section_VCRedist2008
+Section "MSVCRT 2008 Runtime" Sec_VCRedist2008
     File vcredist_x86.exe
     ExecWait "vcredist_x86.exe /q"
     Delete vcredist_x86.exe
@@ -424,3 +409,18 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd
 SectionGroupEnd
+
+Function .onInit
+ System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
+ Pop $R0
+
+ StrCmp $R0 0 +3
+   MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
+   Abort
+
+  ${ifNot} ${AtMostWin7}
+    ; disable the section if we're not running on Windows 7 or earlier.
+    ; This section should not execute for Windows 8 or later.
+    SectionSetText ${Sec_VCRedist2008} ""
+  ${endIf}
+FunctionEnd
