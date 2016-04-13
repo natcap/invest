@@ -25,6 +25,7 @@ import time
 import warnings
 import zipfile
 from types import DictType
+import urllib
 
 import pkg_resources
 import paver.svn
