@@ -192,6 +192,12 @@ Function .onInit
  StrCmp $R0 0 +3
    MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
    Abort
+
+  ${ifNot} ${AtMostWin7}
+    ; disable the section if we're not running on Windows 7 or earlier.
+    ; This section should not execute for Windows 8 or later.
+    SectionSetText {SEC_2} ""
+  ${endIf}
 FunctionEnd
 
 Function Un.onInit
@@ -315,16 +321,11 @@ SectionEnd
 
 ; Only add this section if we're running the installer on Windows 7 or below.
 ; See InVEST Issue #3515.
+; This section is disabled in .onInit if we're running Windows 8 or later.
 Section "Visual Studio 2008 Redistributable"
-    ${if} ${AtMostWin7}
-      File vcredist_x86.exe
-      ExecWait "vcredist_x86.exe /q"
-      Delete vcredist_x86.exe
-    ${else}
-      ; disable the section if we're not running on Windows 7 or earlier.
-      ; This section should not execute for Windows 8 or later.
-      SectionSetText {SEC_2} ""
-    ${endIf}
+    File vcredist_x86.exe
+    ExecWait "vcredist_x86.exe /q"
+    Delete vcredist_x86.exe
 SectionEnd
 
 Section "uninstall"
