@@ -315,10 +315,10 @@ SectionEnd
 
 ; Only add this section if we're running the installer on Windows 7 or below.
 ; See InVEST Issue #3515.
-Section "Visual Studio 2008 Redistribtable"
+Section "Visual Studio 2008 Redistributable"
     ${if} ${AtMostWin7}
       File vc_redist.exe
-      ExecWait "vc_redist.exe /q"
+      ExecWait "vcredist_x86.exe /q"
     ${else}
       ; disable the section if we're not running on Windows 7 or earlier.
       ; This section should not execute for Windows 8 or later.
