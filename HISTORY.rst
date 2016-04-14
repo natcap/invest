@@ -3,6 +3,13 @@
 Changes
 =======
 
+Unreleased Features
+-------------------
+* InVEST NSIS installer will now optionally install the Microsoft Visual C++ 2008 redistributable on Windows 7 or earlier.  This addresses a known issue on Windows 7 systems when importing GDAL binaries (Issue `#3515 <https://bitbucket.org/natcap/invest/issues/3515>`_).  Users opting to install this redistributable agree to abide by the terms and conditions therein.
+* Removed the deprecated subpackage ``natcap.invest.optimization``.
+* Updated the InVEST license to legally define the Natural Capital Project.
+* Corrected an issue in Coastal Vulnerability where an output shapefile was being recreated for each row, and where field values were not being stored correctly.
+
 3.3.0 (2016-03-14)
 ------------------
 * Refactored Wind Energy model to use a CSV input for wind data instead of a Binary file.
