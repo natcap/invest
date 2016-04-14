@@ -307,7 +307,7 @@ SectionEnd
 ; Only add this section if we're running the installer on Windows 7 or below.
 ; See InVEST Issue #3515.
 ; This section is disabled in .onInit if we're running Windows 8 or later.
-Section "MSVCRT 2008 Runtime" Sec_VCRedist2008
+Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
     File vcredist_x86.exe
     ExecWait "vcredist_x86.exe /q"
     Delete vcredist_x86.exe
