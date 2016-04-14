@@ -421,6 +421,7 @@ Function .onInit
   ${ifNot} ${AtMostWin7}
     ; disable the section if we're not running on Windows 7 or earlier.
     ; This section should not execute for Windows 8 or later.
+    SectionSetFlags ${Sec_VCRedist2008} ${SECTION_OFF}
     SectionSetText ${Sec_VCRedist2008} ""
   ${endIf}
 FunctionEnd
