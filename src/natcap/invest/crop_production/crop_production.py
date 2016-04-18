@@ -1,6 +1,4 @@
-"""
-The Crop Production module excutes the Crop Production model.
-"""
+"""The Crop Production module excutes the Crop Production model."""
 
 import logging
 import pprint as pp
@@ -61,14 +59,14 @@ def execute(args):
         irrigation occurs.  If any other values are provided, irrigation is
         assumed to occur within that cell area.
 
-    :param boolean args['compute_nutritional_contents']: if true, calculates nutrition from
-        crop production and creates associated outputs.
+    :param boolean args['compute_nutritional_contents']: if true, calculates
+        nutrition from crop production and creates associated outputs.
 
     :param str args['nutrient_table']: filepath to a CSV table containing
         information about the nutrient contents of each crop.
 
-    :param boolean args['compute_financial_analysis']: if true, calculates economic
-        returns from crop production and creates associated outputs.
+    :param boolean args['compute_financial_analysis']: if true, calculates
+        economic returns from crop production and creates associated outputs.
 
     :param str args['economics_table']: filepath to a CSV table containing
         information related to market price of a given crop and the costs
@@ -130,7 +128,8 @@ def execute(args):
     elif args['yield_function'] == 'regression':
         LOGGER.info("Calculating Yield from Regression Model with "
                     "Climate-based Parameters...")
-        fertilizer_dict = get_fertilizer_rasters(args['fertilizer_dir'], cache_dir, aoi_raster)
+        fertilizer_dict = get_fertilizer_rasters(
+            args['fertilizer_dir'], cache_dir, aoi_raster)
         yield_map, yield_dict = run_regression_yield(
             global_dataset_dict['climate_bin_maps'],
             global_dataset_dict['regression'],
@@ -152,7 +151,12 @@ def execute(args):
     if args['compute_financial_analysis'] == 'true':
         LOGGER.info("Calculating Financial Analysis...")
         compute_financial_analysis(
-            yield_dict, args['economics_table'], aoi_raster, lookup_dict, fertilizer_dict, output_dir)
+            yield_dict,
+            args['economics_table'],
+            aoi_raster,
+            lookup_dict,
+            fertilizer_dict,
+            output_dir)
 
     shutil.rmtree(cache_dir)
     LOGGER.info("...Model Run Complete.")
@@ -172,7 +176,8 @@ def get_files_in_dir(path):
         files_dict (dict): dict([(filename, filepath), ...]).
     """
     base_dir = os.path.dirname(path)
-    files = list(filter(lambda x: x.endswith('tif') or x.endswith('csv'), os.listdir(path)))
+    files = list(filter(
+        lambda x: x.endswith('tif') or x.endswith('csv'), os.listdir(path)))
     return dict([(f.split('_')[0], os.path.join(path, f)) for f in files])
 
 
@@ -192,7 +197,8 @@ def get_global_dataset(dataset_dir):
         'percentile': 'climate_percentile_yield',
         'regression': 'climate_regression_yield',
     }
-    return dict([(k, get_files_in_dir(os.path.join(dataset_dir, v))) for k, v in subdirs.items()])
+    return dict([(k, get_files_in_dir(os.path.join(dataset_dir, v)))
+                 for k, v in subdirs.items()])
 
 
 def get_lookup_dict(aoi_raster, lookup_table):
@@ -252,7 +258,8 @@ def reproject_raster(src_path, template_path, dst_path):
 
     # Destination
     block_size = [256, 256]
-    opt = ['TILED=YES', 'BLOCKXSIZE=%d' % block_size[0], 'BLOCKYSIZE=%d' % block_size[1]]
+    opt = ['TILED=YES', 'BLOCKXSIZE=%d' % block_size[0],
+           'BLOCKYSIZE=%d' % block_size[1]]
     driver = gdal.GetDriverByName('GTiff')
     dst = driver.Create(dst_path, wide, high, 1, gdal.GDT_Float32, options=opt)
     dst.SetGeoTransform(match_geotrans)
@@ -276,14 +283,17 @@ def create_raster(template_path, dst_path):
     wide = match_ds.RasterXSize
     high = match_ds.RasterYSize
     block_size = [256, 256]
-    opt = ['TILED=YES', 'BLOCKXSIZE=%d' % block_size[0], 'BLOCKYSIZE=%d' % block_size[1]]
+    opt = ['TILED=YES',
+           'BLOCKXSIZE=%d' % block_size[0],
+           'BLOCKYSIZE=%d' % block_size[1]]
     driver = gdal.GetDriverByName('GTiff')
     dst = driver.Create(dst_path, wide, high, 1, gdal.GDT_Float32, options=opt)
     dst.SetGeoTransform(match_geotrans)
     dst.SetProjection(match_proj)
 
 
-def reproject_global_rasters(global_dataset_dict, cache_dir, aoi_raster, lookup_dict):
+def reproject_global_rasters(global_dataset_dict, cache_dir, aoi_raster,
+                             lookup_dict):
     """Reproject global rasters.
 
     Args:
@@ -298,7 +308,8 @@ def reproject_global_rasters(global_dataset_dict, cache_dir, aoi_raster, lookup_
         observed_yield_dict (dict): mapping of crops to observed yield rasters.
     """
     crops = [v['name'] for v in lookup_dict.values() if v['is_crop'] == 'true']
-    crop_to_code_dict = dict([(val['name'], code) for code, val in lookup_dict.items()])
+    crop_to_code_dict = dict(
+        [(val['name'], code) for code, val in lookup_dict.items()])
 
     observed_yield_dict = {}
     for crop in crops:
@@ -345,7 +356,8 @@ def read_from_raster(input_raster, offset_block):
     return array
 
 
-def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict, output_dir):
+def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict,
+                           output_dir):
     """Compute observed yield.
 
     Args:
@@ -366,7 +378,8 @@ def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict, output_
     ha_per_m2 = 0.0001
     ha_per_cell = ha_per_m2 * m2_per_cell
 
-    crop_to_code_dict = dict([(val['name'], code) for code, val in lookup_dict.items()])
+    crop_to_code_dict = dict(
+        [(val['name'], code) for code, val in lookup_dict.items()])
     iterate_aoi = geoprocess.iterblocks(aoi_raster)
 
     yield_dict = Counter()
@@ -386,7 +399,11 @@ def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict, output_
             yield_ = aoi_mask * observed_yield_block * ha_per_cell
             yield_dict[code] += yield_.sum()
             accum_block += yield_
-        write_to_raster(yield_map, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
+        write_to_raster(
+            yield_map,
+            accum_block,
+            aoi_offset['xoff'],
+            aoi_offset['yoff'])
 
     return yield_map, yield_dict
 
@@ -436,7 +453,8 @@ def get_percentile_yields(percentile_tables, lookup_dict):
             information.
     """
     crops = [v['name'] for v in lookup_dict.values() if v['is_crop'] == 'true']
-    crop_to_code_dict = dict([(val['name'], code) for code, val in lookup_dict.items()])
+    crop_to_code_dict = dict(
+        [(val['name'], code) for code, val in lookup_dict.items()])
 
     percentile_yields_dict = {}
     for crop in crops:
@@ -450,7 +468,9 @@ def get_percentile_yields(percentile_tables, lookup_dict):
     return percentile_yields_dict
 
 
-def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict, percentile_yield_dict, output_dir, percentile_yield):
+def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict,
+                             percentile_yield_dict, output_dir,
+                             percentile_yield):
     """Compute yield using percentile method.
 
     Args:
@@ -469,7 +489,8 @@ def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict, percenti
     """
     reclass_dict = {}
     for code, yield_dict in percentile_yield_dict.items():
-        reclass_dict[code] = dict([(bin_, v[percentile_yield]) for bin_, v in yield_dict.items()])
+        reclass_dict[code] = dict(
+            [(bin_, v[percentile_yield]) for bin_, v in yield_dict.items()])
 
     yield_map = os.path.join(output_dir, 'percentile_yield.tif')
     create_raster(aoi_raster, yield_map)
@@ -478,14 +499,16 @@ def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict, percenti
     ha_per_m2 = 0.0001
     ha_per_cell = ha_per_m2 * m2_per_cell
 
-    crop_to_code_dict = dict([(val['name'], code) for code, val in lookup_dict.items()])
+    crop_to_code_dict = dict(
+        [(val['name'], code) for code, val in lookup_dict.items()])
     iterate_aoi = geoprocess.iterblocks(aoi_raster)
 
     yield_dict = Counter()
     for aoi_offset, aoi_block in iterate_aoi:
         accum_block = np.zeros(aoi_block.shape)
         for code, climate_bin_raster in climate_bin_dict.items():
-            climate_bin_block = read_from_raster(climate_bin_raster, aoi_offset)
+            climate_bin_block = read_from_raster(
+                climate_bin_raster, aoi_offset)
             yield_block = reclass(climate_bin_block, reclass_dict[code])
 
             aoi_mask = copy.copy(aoi_block)
@@ -499,7 +522,8 @@ def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict, percenti
             yield_ = aoi_mask * yield_block * ha_per_cell
             yield_dict[code] += yield_.sum()
             accum_block += yield_
-        write_to_raster(yield_map, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
+        write_to_raster(
+            yield_map, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
 
     return yield_map, yield_dict
 
@@ -531,7 +555,8 @@ def get_regression_coefficients(regression_tables, lookup_dict):
             coefficients for each crop code.
     """
     crops = [v['name'] for v in lookup_dict.values() if v['is_crop'] == 'true']
-    crop_to_code_dict = dict([(val['name'], code) for code, val in lookup_dict.items()])
+    crop_to_code_dict = dict(
+        [(val['name'], code) for code, val in lookup_dict.items()])
 
     regression_coefficients_dict = {}
     for crop in crops:
@@ -544,7 +569,8 @@ def get_regression_coefficients(regression_tables, lookup_dict):
                     if v2 == '':
                         v[k2] = np.nan
                 regression_coefficients[k] = v
-            regression_coefficients_dict[crop_to_code_dict[crop]] = regression_coefficients
+            regression_coefficients_dict[crop_to_code_dict[crop]] = \
+                regression_coefficients
         except KeyError:
             pass
 
@@ -564,8 +590,10 @@ def get_fertilizer_rasters(fertilizer_dir, cache_dir, aoi_raster):
             raster paths.
     """
     fertilizer_types = set(['potash', 'phosphorus', 'nitrogen'])
-    files = list(filter(lambda x: x.endswith('tif'), os.listdir(fertilizer_dir)))
-    orig_fertilizer_dict = dict([(f.split('.')[0], os.path.join(fertilizer_dir, f)) for f in files])
+    files = list(filter(
+        lambda x: x.endswith('tif'), os.listdir(fertilizer_dir)))
+    orig_fertilizer_dict = dict(
+        [(f.split('.')[0], os.path.join(fertilizer_dir, f)) for f in files])
     fertilizer_dict = {}
     for fertilizer, fertilizer_raster in orig_fertilizer_dict.items():
         if fertilizer in fertilizer_types:
@@ -575,7 +603,9 @@ def get_fertilizer_rasters(fertilizer_dir, cache_dir, aoi_raster):
     return fertilizer_dict
 
 
-def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict, regression_coefficient_dict, fertilizer_dict, irrigation_raster, output_dir):
+def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict,
+                             regression_coefficient_dict, fertilizer_dict,
+                             irrigation_raster, output_dir):
     """Compute regression yield.
 
     Args:
@@ -600,35 +630,48 @@ def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict, regressi
     ha_per_m2 = 0.0001
     ha_per_cell = ha_per_m2 * m2_per_cell
 
-    crop_to_code_dict = dict([(val['name'], code) for code, val in lookup_dict.items()])
+    crop_to_code_dict = dict(
+        [(val['name'], code) for code, val in lookup_dict.items()])
     iterate_aoi = geoprocess.iterblocks(aoi_raster)
 
     yield_dict = Counter()
     for aoi_offset, aoi_block in iterate_aoi:
         accum_block = np.zeros(aoi_block.shape)
         for code, climate_bin_raster in climate_bin_dict.items():
-            climate_bin_block = read_from_raster(climate_bin_raster, aoi_offset)
-            yc = reclass(climate_bin_block, create_map(regression_coefficient_dict[code], 'yield_ceiling'))
-            yc_rf = reclass(climate_bin_block, create_map(regression_coefficient_dict[code], 'yield_ceiling_rf'))
-            b_nut = reclass(climate_bin_block, create_map(regression_coefficient_dict[code], 'b_nut'))
-            b_K2O = reclass(climate_bin_block, create_map(regression_coefficient_dict[code], 'b_k2o'))
-            c_N = reclass(climate_bin_block, create_map(regression_coefficient_dict[code], 'c_n'))
-            c_P2O5 = reclass(climate_bin_block, create_map(regression_coefficient_dict[code], 'c_p2o5'))
-            c_K2O = reclass(climate_bin_block, create_map(regression_coefficient_dict[code], 'c_k2o'))
+            climate_bin_block = read_from_raster(
+                climate_bin_raster, aoi_offset)
+            yc = reclass(climate_bin_block, create_map(
+                regression_coefficient_dict[code], 'yield_ceiling'))
+            yc_rf = reclass(climate_bin_block, create_map(
+                regression_coefficient_dict[code], 'yield_ceiling_rf'))
+            b_nut = reclass(climate_bin_block, create_map(
+                regression_coefficient_dict[code], 'b_nut'))
+            b_K2O = reclass(climate_bin_block, create_map(
+                regression_coefficient_dict[code], 'b_k2o'))
+            c_N = reclass(climate_bin_block, create_map(
+                regression_coefficient_dict[code], 'c_n'))
+            c_P2O5 = reclass(climate_bin_block, create_map(
+                regression_coefficient_dict[code], 'c_p2o5'))
+            c_K2O = reclass(climate_bin_block, create_map(
+                regression_coefficient_dict[code], 'c_k2o'))
             N_block = read_from_raster(fertilizer_dict['nitrogen'], aoi_offset)
-            P_block = read_from_raster(fertilizer_dict['phosphorus'], aoi_offset)
+            P_block = read_from_raster(
+                fertilizer_dict['phosphorus'], aoi_offset)
             K_block = read_from_raster(fertilizer_dict['potash'], aoi_offset)
-            Is_Irr_block = read_from_raster(irrigation_raster, aoi_offset).astype(int)
+            Is_Irr_block = read_from_raster(
+                irrigation_raster, aoi_offset).astype(int)
             Is_Irr_block[Is_Irr_block != 0] = 1
             PctMaxYield_N = 1 - (b_nut * (np.e ** (-c_N * N_block)))
             PctMaxYield_P = 1 - (b_nut * (np.e ** (-c_P2O5 * P_block)))
             PctMaxYield_K = 1 - (b_K2O * (np.e ** (-c_K2O * K_block)))
-            PercentMaxYield = np.fmax(np.fmin(np.fmin(PctMaxYield_N, PctMaxYield_P), PctMaxYield_K), 0)
+            PercentMaxYield = np.fmax(np.fmin(np.fmin(
+                PctMaxYield_N, PctMaxYield_P), PctMaxYield_K), 0)
             MaxYield = PercentMaxYield * yc
             MaxYield = np.fmin(MaxYield, yc)
             MaxYieldRainFed = np.fmin(yc_rf, MaxYield)
-            Is_RF_block = reclass(Is_Irr_block, {1:0, 0:1})
-            Yield_block = (MaxYieldRainFed * Is_RF_block) + (MaxYield * Is_Irr_block)
+            Is_RF_block = reclass(Is_Irr_block, {1: 0, 0: 1})
+            Yield_block = (MaxYieldRainFed * Is_RF_block) + (
+                MaxYield * Is_Irr_block)
 
             aoi_mask = copy.copy(aoi_block)
             if code == 0:
@@ -643,12 +686,14 @@ def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict, regressi
             yield_dict[code] += Yield_.sum()
             accum_block += Yield_
 
-        write_to_raster(yield_map, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
+        write_to_raster(
+            yield_map, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
 
     return yield_map, yield_dict
 
 
-def run_observed_yield(global_dataset_dict, cache_dir, aoi_raster, lookup_dict, output_dir):
+def run_observed_yield(
+        global_dataset_dict, cache_dir, aoi_raster, lookup_dict, output_dir):
     """Run observed yield model.
 
     Args:
@@ -671,10 +716,13 @@ def run_observed_yield(global_dataset_dict, cache_dir, aoi_raster, lookup_dict, 
         observed_cache_dir,
         aoi_raster,
         lookup_dict)
-    return compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict, output_dir)
+    return compute_observed_yield(
+        aoi_raster, lookup_dict, observed_yield_dict, output_dir)
 
 
-def run_percentile_yield(climate_bin_maps, percentile_tables, cache_dir, aoi_raster, lookup_dict, output_dir, percentile_yield):
+def run_percentile_yield(climate_bin_maps, percentile_tables, cache_dir,
+                         aoi_raster, lookup_dict, output_dir,
+                         percentile_yield):
     """Run percentile yield model.
 
     Args:
@@ -699,12 +747,20 @@ def run_percentile_yield(climate_bin_maps, percentile_tables, cache_dir, aoi_ras
         percentile_cache_dir,
         aoi_raster,
         lookup_dict)
-    percentile_yield_dict = get_percentile_yields(percentile_tables, lookup_dict)
+    percentile_yield_dict = get_percentile_yields(
+        percentile_tables, lookup_dict)
     return compute_percentile_yield(
-        aoi_raster, lookup_dict, climate_bin_dict, percentile_yield_dict, output_dir, percentile_yield)
+        aoi_raster,
+        lookup_dict,
+        climate_bin_dict,
+        percentile_yield_dict,
+        output_dir,
+        percentile_yield)
 
 
-def run_regression_yield(climate_bin_maps, regression_tables, cache_dir, aoi_raster, fertilizer_dict, orig_irrigation_raster, lookup_dict, output_dir):
+def run_regression_yield(climate_bin_maps, regression_tables, cache_dir,
+                         aoi_raster, fertilizer_dict, orig_irrigation_raster,
+                         lookup_dict, output_dir):
     """Run regression yield model.
 
     Args:
@@ -731,7 +787,8 @@ def run_regression_yield(climate_bin_maps, regression_tables, cache_dir, aoi_ras
         regression_cache_dir,
         aoi_raster,
         lookup_dict)
-    regression_coefficient_dict = get_regression_coefficients(regression_tables, lookup_dict)
+    regression_coefficient_dict = get_regression_coefficients(
+        regression_tables, lookup_dict)
     irrigation_raster = os.path.join(cache_dir, 'irrigation.tif')
     reproject_raster(orig_irrigation_raster, aoi_raster, irrigation_raster)
     return compute_regression_yield(
@@ -744,7 +801,8 @@ def run_regression_yield(climate_bin_maps, regression_tables, cache_dir, aoi_ras
         output_dir)
 
 
-def compute_nutritional_contents(yield_dict, lookup_dict, nutrient_table, output_dir):
+def compute_nutritional_contents(yield_dict, lookup_dict, nutrient_table,
+                                 output_dir):
     """Compute nutritional contents of crop yields.
 
     Args:
@@ -755,10 +813,12 @@ def compute_nutritional_contents(yield_dict, lookup_dict, nutrient_table, output
             nutrient contents of each crop.
         output_dir (str): path to output directory.
     """
-    nutritional_contents_table = os.path.join(output_dir, 'nutritional_contents.csv')
+    nutritional_contents_table = os.path.join(
+        output_dir, 'nutritional_contents.csv')
 
     codes = yield_dict.keys()
-    crop_to_code_dict = dict([(val['name'], code) for code, val in lookup_dict.items()])
+    crop_to_code_dict = dict(
+        [(val['name'], code) for code, val in lookup_dict.items()])
     code_to_crop_dict = dict([(v, k) for k, v in crop_to_code_dict.items()])
 
     nutrients_dict = geoprocess.get_lookup_from_table(nutrient_table, 'crop')
@@ -852,36 +912,42 @@ def calc_area_costs(code, code_dict, aoi_raster):
     return area_costs
 
 
-def compute_financial_analysis(yield_dict, economics_table, aoi_raster, lookup_dict, fertilizer_dict, output_dir):
+def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
+                               lookup_dict, fertilizer_dict, output_dir):
     """Compute financial analysis.
 
     Args:
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
-        economics_table (str): path to table containing economic information for
-            each crop.
+        economics_table (str): path to table containing economic information
+            for each crop.
         aoi_raster (str): path to aoi raster.
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
         fertilizer_dict (dict): mapping of fertilizers to their respective
             raster paths.
         output_dir (str): path to output directory.
     """
-    financial_analysis_table = os.path.join(output_dir, 'financial_analysis.csv')
+    financial_analysis_table = os.path.join(
+        output_dir, 'financial_analysis.csv')
 
     codes = yield_dict.keys()
-    crop_to_code_dict = dict([(val['name'], code) for code, val in lookup_dict.items()])
+    crop_to_code_dict = dict(
+        [(val['name'], code) for code, val in lookup_dict.items()])
     code_to_crop_dict = dict([(v, k) for k, v in crop_to_code_dict.items()])
 
     economics_dict = geoprocess.get_lookup_from_table(economics_table, 'crop')
     for k, v in economics_dict.items():
         del v['crop']
-    economics_dict = dict([(crop_to_code_dict[k], v) for k, v in economics_dict.items() if crop_to_code_dict[k] in yield_dict])
+    economics_dict = dict([
+        (crop_to_code_dict[k], v) for k, v in economics_dict.items()
+        if crop_to_code_dict[k] in yield_dict])
 
     financial_analysis_dict = {}
     for code, code_dict in economics_dict.items():
         fertilizer_cost = 0
         if fertilizer_dict:
-            fertilizer_cost = calc_fertilizer_costs(code, code_dict, aoi_raster, fertilizer_dict)
+            fertilizer_cost = calc_fertilizer_costs(
+                code, code_dict, aoi_raster, fertilizer_dict)
         area_cost = calc_area_costs(code, code_dict, aoi_raster)
         costs = fertilizer_cost + area_cost
         revenues = code_dict['price_per_ton'] * yield_dict[code]
@@ -894,7 +960,8 @@ def compute_financial_analysis(yield_dict, economics_table, aoi_raster, lookup_d
     for i in financial_analysis_dict.keys():
         financial_analysis_dict[i]['crop'] = code_to_crop_dict[i]
     csvfile = open(financial_analysis_table, 'w')
-    fieldnames = financial_analysis_dict[financial_analysis_dict.keys()[0]].keys()
+    fieldnames = \
+        financial_analysis_dict[financial_analysis_dict.keys()[0]].keys()
     fieldnames.remove('crop')
     fieldnames.sort()
     fieldnames.insert(0, 'crop')
