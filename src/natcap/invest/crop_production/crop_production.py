@@ -560,19 +560,16 @@ def get_regression_coefficients(regression_tables, lookup_dict):
 
     regression_coefficients_dict = {}
     for crop in crops:
-        try:
-            regression_coefficients = geoprocess.get_lookup_from_table(
-                regression_tables[crop], 'climate_bin')
-            for k, v in regression_coefficients.items():
-                del v['climate_bin']
-                for k2, v2 in v.items():
-                    if v2 == '':
-                        v[k2] = np.nan
-                regression_coefficients[k] = v
-            regression_coefficients_dict[crop_to_code_dict[crop]] = \
-                regression_coefficients
-        except KeyError:
-            pass
+        regression_coefficients = geoprocess.get_lookup_from_table(
+            regression_tables[crop], 'climate_bin')
+        for k, v in regression_coefficients.items():
+            del v['climate_bin']
+            for k2, v2 in v.items():
+                if v2 == '':
+                    v[k2] = np.nan
+            regression_coefficients[k] = v
+        regression_coefficients_dict[crop_to_code_dict[crop]] = \
+            regression_coefficients
 
     return regression_coefficients_dict
 
