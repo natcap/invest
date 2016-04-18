@@ -24,28 +24,29 @@ lookup_table_list = \
      ['maize', '3', 'true'],
      ['parks', '4', 'false']]
 nutrient_table_list = \
-    [['crop','fraction_refuse','Protein','Lipid','Energy'],
-     ['apple','0.5','100.1','50.5','20000.'],
-     ['wheat','0.5','100.1','50.5','20000.'],
-     ['maize','0.5','100.1','50.5','20000.']]
+    [['crop', 'fraction_refuse', 'Protein', 'Lipid', 'Energy'],
+     ['apple', '0.5', '100.1', '50.5', '20000.'],
+     ['wheat', '0.5', '100.1', '50.5', '20000.'],
+     ['maize', '0.5', '100.1', '50.5', '20000.']]
 economics_table_list = \
-    [['crop','price_per_ton','cost_nitrogen_per_kg','cost_phosphorus_per_kg',\
-        'cost_potash_per_kg','cost_labor_per_ha','cost_machine_per_ha',\
-        'cost_seed_per_ha','cost_irrigation_per_ha'],
-     ['apple','10','1','1','1','1','1','1','1'],
-     ['wheat','10','1','1','1','1','1','1','1'],
-     ['maize','10','1','1','1','1','1','1','1']]
+    [['crop', 'price_per_ton', 'cost_nitrogen_per_kg',
+        'cost_phosphorus_per_kg', 'cost_potash_per_kg', 'cost_labor_per_ha',
+        'cost_machine_per_ha', 'cost_seed_per_ha', 'cost_irrigation_per_ha'],
+     ['apple', '10', '1', '1', '1', '1', '1', '1', '1'],
+     ['wheat', '10', '1', '1', '1', '1', '1', '1', '1'],
+     ['maize', '10', '1', '1', '1', '1', '1', '1', '1']]
 percentile_yield_table_list = \
-    [['climate_bin','yield_25th','yield_50th','yield_75th','yield_95th'],
-     ['0','1.','1.','1.','1.'],
-     ['1','1.','1.','1.','2.'],
-     ['2','1.','1.','1.','3.'],
-     ['3','1.','1.','1.','4.']]
+    [['climate_bin', 'yield_25th', 'yield_50th', 'yield_75th', 'yield_95th'],
+     ['0', '1.', '1.', '1.', '1.'],
+     ['1', '1.', '1.', '1.', '2.'],
+     ['2', '1.', '1.', '1.', '3.'],
+     ['3', '1.', '1.', '1.', '4.']]
 regression_yield_table_list = \
-    [['climate_bin','yield_ceiling','b_nut','b_K2O','c_N','c_P2O5','c_K2O','yield_ceiling_rf'],
-     ['1','3','0.64','0.44654','0.03563','0.17544','0.34482','2.7366'],
-     ['2','3','0.64','0.44654','0.03563','0.17544','0.34482','2.7366'],
-     ['3','3','0.64','0.44654','0.03563','0.17544','0.34482','2.7366']]
+    [['climate_bin', 'yield_ceiling', 'b_nut', 'b_K2O', 'c_N', 'c_P2O5',
+      'c_K2O', 'yield_ceiling_rf'],
+     ['1', '3', '0.64', '0.44654', '0.03563', '0.17544', '0.34482', '2.7366'],
+     ['2', '3', '0.64', '0.44654', '0.03563', '0.17544', '0.34482', '2.7366'],
+     ['3', '3', '0.64', '0.44654', '0.03563', '0.17544', '0.34482', '2.7366']]
 
 
 def _read_array(raster_path):
@@ -78,7 +79,9 @@ def _create_raster(template_path, dst_path):
     wide = match_ds.RasterXSize
     high = match_ds.RasterYSize
     block_size = [256, 256]
-    opt = ['TILED=YES', 'BLOCKXSIZE=%d' % block_size[0], 'BLOCKYSIZE=%d' % block_size[1]]
+    opt = ['TILED=YES',
+           'BLOCKXSIZE=%d' % block_size[0],
+           'BLOCKYSIZE=%d' % block_size[1]]
     driver = gdal.GetDriverByName('GTiff')
     dst = driver.Create(dst_path, wide, high, 1, gdal.GDT_Float32, options=opt)
     dst.SetGeoTransform(match_geotrans)
@@ -123,8 +126,9 @@ def _create_fertilizer_rasters(workspace_dir, aoi_raster):
         dst_path = os.path.join(fertilizer_dir, fert)
         _create_raster(aoi_raster, dst_path)
         for offset_dict, block in geoprocess.iterblocks(dst_path):
-            block[block==block] = app_rate
-            _write_to_raster(dst_path, block, offset_dict['xoff'], offset_dict['yoff'])
+            block[block == block] = app_rate
+            _write_to_raster(
+                dst_path, block, offset_dict['xoff'], offset_dict['yoff'])
 
     return fertilizer_dir
 
@@ -136,8 +140,10 @@ def _create_global_maps(path, lookup_table_path, aoi_raster):
             dst_path = os.path.join(path, v['name'] + '_.tif')
             _create_raster(aoi_raster, dst_path)
             for offset_dict, block in geoprocess.iterblocks(dst_path):
-                block[block==block] = float(v['code']) if float(v['code']) != 0 else 1.
-                _write_to_raster(dst_path, block, offset_dict['xoff'], offset_dict['yoff'])
+                block[block == block] = float(
+                    v['code']) if float(v['code']) != 0 else 1.
+                _write_to_raster(
+                    dst_path, block, offset_dict['xoff'], offset_dict['yoff'])
 
 
 def _create_global_tables(path, lookup_table_path, table):
@@ -183,7 +189,7 @@ def _get_args():
     Returns:
         args (dict): main model arguments.
     """
-    band = np.ones((4, 4)) * [1,0,2,3]
+    band = np.ones((4, 4)) * [1, 0, 2, 3]
     band[0, 0] = 5
     band_matrices = [band]
     srs = pygeotest.sampledata.SRS_WILLAMETTE
@@ -191,10 +197,10 @@ def _get_args():
     workspace_dir = _create_workspace()
     lookup_table_path = _create_table(
         os.path.join(workspace_dir, 'lookup.csv'), lookup_table_list)
-    nutrient_table_path = _create_table(
-        os.path.join(workspace_dir, 'nutrient_contents.csv'), nutrient_table_list)
-    economics_table_path = _create_table(
-        os.path.join(workspace_dir, 'economics_table.csv'), economics_table_list)
+    nutrient_table_path = _create_table(os.path.join(
+        workspace_dir, 'nutrient_contents.csv'), nutrient_table_list)
+    economics_table_path = _create_table(os.path.join(
+        workspace_dir, 'economics_table.csv'), economics_table_list)
 
     aoi_raster_path = pygeotest.create_raster_on_disk(
         band_matrices,
@@ -206,7 +212,7 @@ def _get_args():
         filename=os.path.join(workspace_dir, 'aoi_raster.tif'))
 
     irrigation_raster_path = pygeotest.create_raster_on_disk(
-        [np.ones((4,4))],
+        [np.ones((4, 4))],
         srs.origin,
         srs.projection,
         NODATA_INT,
@@ -215,7 +221,8 @@ def _get_args():
         filename=os.path.join(workspace_dir, 'irrigation_raster.tif'))
 
     fertilizer_dir = _create_fertilizer_rasters(workspace_dir, aoi_raster_path)
-    dataset_dir = _create_dataset(workspace_dir, aoi_raster_path, lookup_table_path)
+    dataset_dir = _create_dataset(
+        workspace_dir, aoi_raster_path, lookup_table_path)
 
     args = {
         'workspace_dir': workspace_dir,
@@ -299,8 +306,8 @@ class TestModel(unittest.TestCase):
         crop_production.execute(self.args)
         a = _read_array(os.path.join(
             self.args['workspace_dir'], 'output', 'regression_yield.tif'))
-        b = a[:,1:]
-        np.testing.assert_array_almost_equal(b, np.ones((4,3)) * 1.14720523)
+        b = a[:, 1:]
+        np.testing.assert_array_almost_equal(b, np.ones((4, 3)) * 1.14720523)
 
     def test_model_run_clear_cache_dir(self):
         """Crop Production: Test main model for observed yield."""
