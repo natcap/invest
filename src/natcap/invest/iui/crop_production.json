@@ -8,12 +8,6 @@
   "width": 800,
   "elements": [
     {
-      "id": "alpha_only",
-      "label": "This tool is in an ALPHA testing stage.",
-      "type": "label",
-      "helpText": "Alpha tools are considered unstable."
-    },
-    {
       "id": "workspace_list",
       "type": "list",
       "elements": [
