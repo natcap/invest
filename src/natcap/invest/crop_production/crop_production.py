@@ -224,7 +224,6 @@ def get_lookup_dict(aoi_raster, lookup_table):
 
     t = set(lookup_dict.keys())
 
-    # REMOVE?  Check logic here.
     if set() != s-t:
         LOGGER.warn("raster contains values not in lookup table.")
 
