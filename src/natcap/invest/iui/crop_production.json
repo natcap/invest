@@ -76,9 +76,9 @@
             "defaultValue": "Observed",
             "required": true,
             "options": [
-              "Observed",
-              "Percentile",
-              "Regression"
+              "observed",
+              "percentile",
+              "regression"
             ],
             "returns": "strings",
             "dataType": "string",
@@ -89,8 +89,8 @@
             "args_id": "percentile_column",
             "type": "text",
             "dataType": "string",
-            "label": "Percentile Column",
-            "defaultValue": "",
+            "label": "If Percentile Yield: Percentile Column",
+            "defaultValue": "yield_95th",
             "required": false,
             "enabledBy": "yield_function",
             "helpText": ""
@@ -99,8 +99,9 @@
             "id": "fertilizer_dir",
             "args_id": "fertilizer_dir",
             "type": "folder",
-            "label": "Fertilizer Raster Folder",
-            "required": true,
+            "label": "If Regression Yield: Fertilizer Raster Folder",
+            "required": false,
+            "defaultValue": "../CropProduction/input/fertilizers",
             "validateAs": {
               "type": "folder"
             },
@@ -111,9 +112,9 @@
             "id": "irrigation_raster",
             "args_id": "irrigation_raster",
             "type": "file",
-            "label": "Irrigation Map (Raster)",
-            "defaultValue": "../CropProduction/input/willamette_is_irrigated.tif",
-            "required": true,
+            "label": "If Regression Yield: Irrigation Map (Raster)",
+            "defaultValue": "../CropProduction/input/willamette_irrigation.tif",
+            "required": false,
             "validateAs": {
               "type": "GDAL"
             },
@@ -134,7 +135,7 @@
             "args_id": "nutrient_table",
             "type": "file",
             "label": "Crop Nutrient Information (CSV)",
-            "defaultValue": "../CropProduction/input/crop_nutrient_info.csv",
+            "defaultValue": "../CropProduction/input/crop_nutrient_data.csv",
             "required": true,
             "validateAs": {
               "type": "CSV"
@@ -156,7 +157,7 @@
             "args_id": "economics_table",
             "type": "file",
             "label": "Crop Economic Information (CSV)",
-            "defaultValue": "../CropProduction/input/crop_economic_info.csv",
+            "defaultValue": "../CropProduction/input/crop_financial_data.csv",
             "required": true,
             "validateAs": {
               "type": "CSV"
