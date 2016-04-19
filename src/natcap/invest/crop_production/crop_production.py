@@ -244,7 +244,7 @@ def get_lookup_dict(aoi_raster, lookup_table):
         u = np.unique(block)
         for i in u:
             s.add(i)
-    lookup_dict = geoprocess.get_lookup_from_csv(lookup_table, 'code')
+    lookup_dict = geoprocess.get_lookup_from_table(lookup_table, 'code')
     for code in lookup_dict.keys():
         lookup_dict[code]['name'] = lookup_dict[code]['name'].lower()
         lookup_dict[code]['is_crop'] = lookup_dict[code]['is_crop'].lower()
