@@ -47,6 +47,12 @@ regression_yield_table_list = \
      ['1', '3', '0.64', '0.44654', '0.03563', '0.17544', '0.34482', '2.7366'],
      ['2', '3', '0.64', '0.44654', '0.03563', '0.17544', '0.34482', '2.7366'],
      ['3', '3', '0.64', '0.44654', '0.03563', '0.17544', '0.34482', '2.7366']]
+regression_yield_table_list_partially_empty = \
+    [['climate_bin', 'yield_ceiling', 'b_nut', 'b_K2O', 'c_N', 'c_P2O5',
+      'c_K2O', 'yield_ceiling_rf'],
+     ['1', '3', '0.64', '', '', '', '0.34482', '2.7366'],
+     ['2', '3', '0.64', '', '', '', '0.34482', '2.7366'],
+     ['3', '3', '0.64', '', '', '', '0.34482', '2.7366']]
 
 
 def _read_array(raster_path):
@@ -58,12 +64,12 @@ def _read_array(raster_path):
     return a
 
 
-def _create_table(uri, rows_list):
+def _create_table(filepath, rows_list):
     """Create csv file from list of lists."""
-    with open(uri, 'w') as f:
+    with open(filepath, 'w') as f:
         writer = csv.writer(f)
         writer.writerows(rows_list)
-    return uri
+    return filepath
 
 
 def _create_raster(template_path, dst_path):
@@ -243,6 +249,141 @@ def _get_args():
     return args
 
 
+def _get_args_maize():
+    """Create and return arguments for CBC main model.
+
+    Returns:
+        args (dict): main model arguments.
+    """
+    band = np.ones((4, 4)) * 3
+    band_matrices = [band]
+    srs = pygeotest.sampledata.SRS_WILLAMETTE
+
+    workspace_dir = _create_workspace()
+    lookup_table_path = _create_table(
+        os.path.join(workspace_dir, 'lookup.csv'), lookup_table_list)
+    nutrient_table_path = _create_table(os.path.join(
+        workspace_dir, 'nutrient_contents.csv'), nutrient_table_list)
+    economics_table_path = _create_table(os.path.join(
+        workspace_dir, 'economics_table.csv'), economics_table_list)
+
+    aoi_raster_path = pygeotest.create_raster_on_disk(
+        band_matrices,
+        srs.origin,
+        srs.projection,
+        NODATA_INT,
+        srs.pixel_size(100),
+        datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace_dir, 'aoi_raster.tif'))
+
+    irrigation_raster_path = pygeotest.create_raster_on_disk(
+        [np.ones((4, 4))],
+        srs.origin,
+        srs.projection,
+        NODATA_INT,
+        srs.pixel_size(100),
+        datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace_dir, 'irrigation_raster.tif'))
+
+    fertilizer_dir = _create_fertilizer_rasters(workspace_dir, aoi_raster_path)
+    dataset_dir = _create_dataset(
+        workspace_dir, aoi_raster_path, lookup_table_path)
+
+    args = {
+        'workspace_dir': workspace_dir,
+        'results_suffix': 'scenario_name',
+        'lookup_table': lookup_table_path,
+        'aoi_raster': aoi_raster_path,
+        'dataset_dir': dataset_dir,
+        'yield_function': 'regression',
+        'percentile_column': 'yield_95th',
+        'fertilizer_dir': fertilizer_dir,
+        'irrigation_raster': irrigation_raster_path,
+        'compute_nutritional_contents': True,
+        'nutrient_table': nutrient_table_path,
+        'compute_financial_analysis': True,
+        'economics_table': economics_table_path
+    }
+
+    return args
+
+
+class TestFunctions(unittest.TestCase):
+    """Test Crop Production functions."""
+
+    def setUp(self):
+        """Create arguments."""
+        self.args = _get_args()
+
+    def test_get_regression_coefficients(self):
+        """Crop Production: test get_regression_coefficients function."""
+        from natcap.invest.crop_production import crop_production as cp
+        maize_table = os.path.join(
+            'workspace', 'dataset', 'climate_regression_yield', 'maize_.csv')
+        _create_table(maize_table, regression_yield_table_list_partially_empty)
+        regression_tables = {'maize': maize_table}
+        lookup_dict = {1: {'is_crop': 'true', 'code': 1, 'name': 'maize'}}
+        regression_coefficients_dict = cp.get_regression_coefficients(
+            regression_tables, lookup_dict)
+        self.assertTrue(
+            np.nan in regression_coefficients_dict[1][1.0].values())
+
+    def test_reclass(self):
+        """Crop Production: test reclass function."""
+        from natcap.invest.crop_production import crop_production
+        array = np.array([1., 0.])
+        d = {1.: 2.}
+        guess = crop_production.reclass(array, d)
+        check = np.array([2., 0.])
+        np.testing.assert_array_almost_equal(guess, check)
+
+    def tearDown(self):
+        """Remove workspace."""
+        shutil.rmtree(self.args['workspace_dir'])
+
+
+class TestModelMath(unittest.TestCase):
+    """Test Crop Production model."""
+
+    def setUp(self):
+        """Create arguments."""
+        self.args = _get_args_maize()
+
+    def test_check_math_observed(self):
+        """Crop Production: Check math for observed yield."""
+        from natcap.invest.crop_production import crop_production
+        self.args['yield_function'] = 'observed'
+        crop_production.execute(self.args)
+        guess = _read_array(os.path.join(
+            self.args['workspace_dir'], 'output', 'observed_yield.tif'))
+        check = 48.
+        np.testing.assert_array_almost_equal(guess.sum(), check)
+
+    def test_check_math_percentile(self):
+        """Crop Production: Check math for percentile yield."""
+        from natcap.invest.crop_production import crop_production
+        self.args['yield_function'] = 'percentile'
+        crop_production.execute(self.args)
+        guess = _read_array(os.path.join(
+            self.args['workspace_dir'], 'output', 'percentile_yield.tif'))
+        check = 64.
+        np.testing.assert_array_almost_equal(guess.sum(), check)
+
+    def test_check_math_regression(self):
+        """Crop Production: Check math for regression yield."""
+        from natcap.invest.crop_production import crop_production
+        self.args['yield_function'] = 'regression'
+        crop_production.execute(self.args)
+        guess = _read_array(os.path.join(
+            self.args['workspace_dir'], 'output', 'regression_yield.tif'))
+        check = 18.3552836681
+        np.testing.assert_array_almost_equal(guess.sum(), check)
+
+    def tearDown(self):
+        """Remove workspace."""
+        shutil.rmtree(self.args['workspace_dir'])
+
+
 class TestModel(unittest.TestCase):
     """Test Crop Production model."""
 
@@ -257,7 +398,9 @@ class TestModel(unittest.TestCase):
         crop_production.execute(self.args)
         a = _read_array(os.path.join(
             self.args['workspace_dir'], 'output', 'observed_yield.tif'))
-        np.testing.assert_array_almost_equal(a[0], [0, 1., 2., 3.])
+        guess = a[0]
+        check = [0, 1., 2., 3.]
+        np.testing.assert_array_almost_equal(guess, check)
 
     def test_model_run_percentile(self):
         """Crop Production: Test main model for percentile yield."""
@@ -266,7 +409,9 @@ class TestModel(unittest.TestCase):
         crop_production.execute(self.args)
         a = _read_array(os.path.join(
             self.args['workspace_dir'], 'output', 'percentile_yield.tif'))
-        np.testing.assert_array_almost_equal(a[0], [0, 2., 3., 4.])
+        guess = a[0]
+        check = [0, 2., 3., 4.]
+        np.testing.assert_array_almost_equal(guess, check)
 
     def test_model_run_regression(self):
         """Crop Production: Test main model for regression yield."""
@@ -275,8 +420,9 @@ class TestModel(unittest.TestCase):
         crop_production.execute(self.args)
         a = _read_array(os.path.join(
             self.args['workspace_dir'], 'output', 'regression_yield.tif'))
-        b = a[:, 1:]
-        np.testing.assert_array_almost_equal(b, np.ones((4, 3)) * 1.14720523)
+        guess = a[:, 1:]
+        check = np.ones((4, 3)) * 1.14720523
+        np.testing.assert_array_almost_equal(guess, check)
 
     def test_model_run_clear_cache_dir(self):
         """Crop Production: Test that model clears intermediate directory."""
