@@ -94,33 +94,45 @@ def _create_raster(template_path, dst_path):
     dst.SetProjection(match_proj)
 
 
-def _write_to_raster(output_raster, array, xoff, yoff):
+def _write_to_raster(raster_path, array, xoff, yoff):
     """Write numpy array to raster block.
 
     Args:
-        output_raster (str): filepath to output raster
+        raster_path (str): filepath to output raster
         array (np.array): block to save to raster
         xoff (int): offset index for x-dimension
         yoff (int): offset index for y-dimension
     """
-    ds = gdal.Open(output_raster, gdal.GA_Update)
+    ds = gdal.Open(raster_path, gdal.GA_Update)
     band = ds.GetRasterBand(1)
     band.WriteArray(array, xoff, yoff)
     ds = None
 
 
 def _create_workspace():
-    """Create workspace directory."""
+    """Create workspace directory.
+
+    Returns:
+        workspace_dir (str): path to workspace directory.
+    """
     path = os.path.dirname(os.path.realpath(__file__))
-    workspace = os.path.join(path, 'workspace')
-    if os.path.exists(workspace):
-        shutil.rmtree(workspace)
-    os.mkdir(workspace)
-    return workspace
+    workspace_dir = os.path.join(path, 'workspace')
+    if os.path.exists(workspace_dir):
+        shutil.rmtree(workspace_dir)
+    os.mkdir(workspace_dir)
+    return workspace_dir
 
 
 def _create_fertilizer_rasters(workspace_dir, aoi_raster):
-    """Create fertilizer rasters."""
+    """Create fertilizer rasters.
+
+    Args:
+        workspace_dir (str): path to workspace directory.
+        aoi_raster (str): path to aoi raster.
+
+    Returns:
+        fertilizer_dir (str): path to directory of fertilizer rasters.
+    """
     fertilizer_dir = os.path.join(workspace_dir, 'fertilizers')
     if os.path.exists(fertilizer_dir):
         shutil.rmtree(fertilizer_dir)
@@ -140,6 +152,13 @@ def _create_fertilizer_rasters(workspace_dir, aoi_raster):
 
 
 def _create_global_maps(path, lookup_table_path, aoi_raster):
+    """Create global dataset maps.
+
+    Args:
+        path (str): directory path.
+        lookup_table_path (str): lookup table filepath.
+        aoi_raster (str): raster filepath.
+    """
     lookup_dict = geoprocess.get_lookup_from_table(lookup_table_path, 'code')
     for k, v in lookup_dict.items():
         if v['is_crop'] == 'true':
@@ -152,15 +171,31 @@ def _create_global_maps(path, lookup_table_path, aoi_raster):
                     dst_path, block, offset_dict['xoff'], offset_dict['yoff'])
 
 
-def _create_global_tables(path, lookup_table_path, table):
+def _create_global_tables(path, lookup_table_path, table_list):
+    """Create global dataset tables.
+
+    Args:
+        path (str): directory path.
+        lookup_table_path (str): lookup table filepath.
+        table_list (list): table template.
+    """
     lookup_dict = geoprocess.get_lookup_from_table(lookup_table_path, 'code')
     for k, v in lookup_dict.items():
         if v['is_crop'] == 'true':
-            _create_table(os.path.join(path, v['name'] + '_.csv'), table)
+            _create_table(os.path.join(path, v['name'] + '_.csv'), table_list)
 
 
 def _create_dataset(workspace_dir, aoi_raster, lookup_table_path):
-    """Create global dataset."""
+    """Create global dataset.
+
+    Args:
+        workspace_dir (str): path to workspace directory.
+        aoi_raster (str): raster filepath.
+        lookup_table_path (str): lookup table filepath.
+
+    Returns:
+        dataset_dir (str): path to global dataset directory.
+    """
     dataset_dir = os.path.join(workspace_dir, 'dataset')
     if os.path.exists(dataset_dir):
         shutil.rmtree(dataset_dir)
@@ -190,7 +225,7 @@ def _create_dataset(workspace_dir, aoi_raster, lookup_table_path):
 
 
 def _get_args():
-    """Create and return arguments for CBC main model.
+    """Create and return dictionary of model arguments.
 
     Returns:
         args (dict): main model arguments.
@@ -250,7 +285,7 @@ def _get_args():
 
 
 def _get_args_maize():
-    """Create and return arguments for CBC main model.
+    """Create and return model arguments dictionary for tests to check math.
 
     Returns:
         args (dict): main model arguments.
