@@ -234,9 +234,9 @@ def _get_args():
         'percentile_column': 'yield_95th',
         'fertilizer_dir': fertilizer_dir,
         'irrigation_raster': irrigation_raster_path,
-        'compute_nutritional_contents': 'true',
+        'compute_nutritional_contents': True,
         'nutrient_table': nutrient_table_path,
-        'compute_financial_analysis': 'true',
+        'compute_financial_analysis': True,
         'economics_table': economics_table_path
     }
 
