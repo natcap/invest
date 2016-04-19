@@ -243,37 +243,6 @@ def _get_args():
     return args
 
 
-# class TestFunctions(unittest.TestCase):
-#     """Test Crop Production model functions.
-#
-#
-#     """
-#
-#     def setUp(self):
-#         """Create arguments."""
-#         self.args = _get_args()
-#
-#     def test_func(self):
-#         """Crop Production: Test ___."""
-#         pass
-#
-#     def test_func(self):
-#         """Crop Production: Test ___."""
-#         pass
-#
-#     def test_func(self):
-#         """Crop Production: Test ___."""
-#         pass
-#
-#     def test_func(self):
-#         """Crop Production: Test ___."""
-#         pass
-#
-#     def tearDown(self):
-#         """Remove workspace."""
-#         shutil.rmtree(self.args['workspace_dir'])
-
-
 class TestModel(unittest.TestCase):
     """Test Crop Production model."""
 
@@ -310,7 +279,7 @@ class TestModel(unittest.TestCase):
         np.testing.assert_array_almost_equal(b, np.ones((4, 3)) * 1.14720523)
 
     def test_model_run_clear_cache_dir(self):
-        """Crop Production: Test main model for observed yield."""
+        """Crop Production: Test that model clears intermediate directory."""
         from natcap.invest.crop_production import crop_production
         self.args['yield_function'] = 'observed'
         os.makedirs(os.path.join(self.args['workspace_dir'], 'intermediate'))
@@ -319,10 +288,29 @@ class TestModel(unittest.TestCase):
     # @scm.skip_if_data_missing(SAMPLE_DATA)
     # def test_binary(self):
     #     """Crop Production: Test main model run against InVEST-Data."""
-    #     from natcap.invest.crop_production \
-    #         import crop_production
+    #     from natcap.invest.crop_production import crop_production
     #     sample_data_path = os.path.join(SAMPLE_DATA, 'CropProduction')
-    #     args = {}
+    #     args = {
+    #         'workspace_dir': self.args['workspace_dir'],
+    #         'results_suffix': 'scenario_name',
+    #         'lookup_table': os.path.join(
+    #             sample_data_path, 'input', 'lookup.csv'),
+    #         'aoi_raster': os.path.join(
+    #             sample_data_path, 'input', 'willamette.tif'),
+    #         'dataset_dir': '',
+    #         'yield_function': 'regression',
+    #         'percentile_column': 'yield_95th',
+    #         'fertilizer_dir': os.path.join(
+    #             sample_data_path, 'input', 'fertilizers'),
+    #         'irrigation_raster': os.path.join(
+    #             sample_data_path, 'input', 'willamette_irrigation.tif'),
+    #         'compute_nutritional_contents': True,
+    #         'nutrient_table': os.path.join(
+    #             sample_data_path, 'input', 'crop_nutrient_data.csv'),
+    #         'compute_financial_analysis': True,
+    #         'economics_table': os.path.join(
+    #             sample_data_path, 'input', 'crop_financial_data.csv')
+    #     }
     #     crop_production.execute(args)
 
     def tearDown(self):
