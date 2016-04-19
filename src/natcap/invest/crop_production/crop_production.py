@@ -84,9 +84,9 @@ def execute(args):
             'percentile_column': 'yield_95th',
             'fertilizer_dir':'path/to/fertilizer_rasters_dir/',
             'irrigation_raster': 'path/to/is_irrigated_raster',
-            'compute_nutritional_contents': 'true',
+            'compute_nutritional_contents': True,
             'nutrient_table': 'path/to/nutrition_table',
-            'compute_financial_analysis': 'true',
+            'compute_financial_analysis': True,
             'economics_table': 'path/to/economics_table'
         }
     """
@@ -140,7 +140,7 @@ def execute(args):
             lookup_dict,
             output_dir)
 
-    if args['compute_nutritional_contents'] == 'true':
+    if args['compute_nutritional_contents'] == True:
         LOGGER.info("Calculating Nutritional Contents...")
         compute_nutritional_contents(
             yield_dict,
@@ -148,7 +148,7 @@ def execute(args):
             args['nutrient_table'],
             output_dir)
 
-    if args['compute_financial_analysis'] == 'true':
+    if args['compute_financial_analysis'] == True:
         LOGGER.info("Calculating Financial Analysis...")
         compute_financial_analysis(
             yield_dict,
@@ -937,7 +937,7 @@ def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
         del v['crop']
     economics_dict = dict([
         (crop_to_code_dict[k], v) for k, v in economics_dict.items()
-        if crop_to_code_dict[k] in yield_dict])
+        if k in crop_to_code_dict])
 
     financial_analysis_dict = {}
     for code, code_dict in economics_dict.items():
