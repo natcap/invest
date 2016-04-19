@@ -167,7 +167,7 @@ def check_inputs(args):
     """Check user provides inputs necessary for particular yield functions.
 
     Args:
-        yield_function (str): selected yield function.
+        args (dict): user-provided arguments dictionary.
     """
     if args['yield_function'] == 'percentile':
         if 'percentile_column' not in args or \
@@ -440,11 +440,10 @@ def reclass(array, d, nodata=0.):
     Values in array that are not in d are reclassed to np.nan.
 
     Args:
-        array (np.array): input data
-        d (dict): reclassification map
-        out_dtype (np.dtype): a numpy datatype for the reclass_array
-        nodata_mask (number): for floats, a nodata value that is set to np.nan
-            if provided to make reclass_array nodata values consistent
+        array (np.array): input data.
+        d (dict): reclassification map.
+        nodata (float): reclass value for number not provided in
+            reclassification map.
 
     Returns:
         reclass_array (np.array): reclassified array
