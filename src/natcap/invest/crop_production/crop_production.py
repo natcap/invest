@@ -407,11 +407,10 @@ def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict,
     return yield_map, yield_dict
 
 
-def reclass(array, d):
+def reclass(array, d, nodata=0.):
     """Reclassify values in numpy ndarray.
 
-    If a nodata value is not provided, the function will return an array with
-    NaN values in its place to mark cells that could not be reclassed.
+    Values in array that are not in d are reclassed to np.nan.
 
     Args:
         array (np.array): input data
@@ -428,8 +427,8 @@ def reclass(array, d):
 
     reclass_array = array.copy()
     for i in u[~has_map]:
-        reclass_array = np.where(reclass_array == i, 0, reclass_array)
-
+        reclass_array = np.where(array == i, nodata, reclass_array)
+    d[nodata] = nodata
     a_ravel = reclass_array.ravel()
     k = sorted(d.keys())
     v = np.array([d[key] for key in k])
@@ -828,7 +827,8 @@ def compute_nutritional_contents(yield_dict, lookup_dict, nutrient_table,
         crop_nutrients_dict = nutrients_dict[name]
         for nutrient, nutrient_amount in crop_nutrients_dict.items():
             contents = total_yield * nutrient_amount
-            crop_nutritional_contents_dict[nutrient] = contents
+            crop_nutritional_contents_dict[nutrient] = ("%.2f" % contents)
+        crop_nutritional_contents_dict['total_yield'] = ("%.2f" % total_yield)
         d[name] = crop_nutritional_contents_dict
 
     for i in d.keys():
@@ -836,7 +836,9 @@ def compute_nutritional_contents(yield_dict, lookup_dict, nutrient_table,
     csvfile = open(nutritional_contents_table, 'w')
     fieldnames = d[d.keys()[0]].keys()
     fieldnames.remove('crop')
+    fieldnames.remove('total_yield')
     fieldnames.sort()
+    fieldnames.insert(0, 'total_yield')
     fieldnames.insert(0, 'crop')
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
@@ -949,6 +951,8 @@ def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
         revenues = code_dict['price_per_ton'] * yield_dict[code]
         returns = revenues - costs
         financial_analysis_dict[code] = {}
+        financial_analysis_dict[code]['total_yield'] = (
+            "%.2f" % yield_dict[code])
         financial_analysis_dict[code]['costs'] = ("%.2f" % costs)
         financial_analysis_dict[code]['revenues'] = ("%.2f" % revenues)
         financial_analysis_dict[code]['returns'] = ("%.2f" % returns)
@@ -959,7 +963,9 @@ def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
     fieldnames = \
         financial_analysis_dict[financial_analysis_dict.keys()[0]].keys()
     fieldnames.remove('crop')
+    fieldnames.remove('total_yield')
     fieldnames.sort()
+    fieldnames.insert(0, 'total_yield')
     fieldnames.insert(0, 'crop')
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
