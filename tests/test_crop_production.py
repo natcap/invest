@@ -337,6 +337,30 @@ class TestFunctions(unittest.TestCase):
         check = np.array([2., 0.])
         np.testing.assert_array_almost_equal(guess, check)
 
+    def test_check_inputs_percentile(self):
+        """Crop Production: test check_inputs function, 1."""
+        from natcap.invest.crop_production import crop_production
+        self.args['yield_function'] = 'percentile'
+        del self.args['percentile_column']
+        with self.assertRaises(ValueError):
+            crop_production.check_inputs(self.args)
+
+    def test_check_inputs_regression_fertilizer(self):
+        """Crop Production: test check_inputs function, 2."""
+        from natcap.invest.crop_production import crop_production
+        self.args['yield_function'] = 'regression'
+        del self.args['fertilizer_dir']
+        with self.assertRaises(ValueError):
+            crop_production.check_inputs(self.args)
+
+    def test_check_inputs_regression_irrigation(self):
+        """Crop Production: test check_inputs function, 3."""
+        from natcap.invest.crop_production import crop_production
+        self.args['yield_function'] = 'regression'
+        del self.args['irrigation_raster']
+        with self.assertRaises(ValueError):
+            crop_production.check_inputs(self.args)
+
     def tearDown(self):
         """Remove workspace."""
         shutil.rmtree(self.args['workspace_dir'])
