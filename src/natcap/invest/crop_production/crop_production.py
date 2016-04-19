@@ -92,6 +92,7 @@ def execute(args):
     """
     LOGGER.info("Beginning Model Run...")
 
+    check_inputs(args)
     cache_dir = os.path.join(args['workspace_dir'], 'intermediate')
     if os.path.exists(cache_dir):
         shutil.rmtree(cache_dir)
@@ -160,6 +161,32 @@ def execute(args):
 
     shutil.rmtree(cache_dir)
     LOGGER.info("...Model Run Complete.")
+
+
+def check_inputs(args):
+    """Check user provides inputs necessary for particular yield functions.
+
+    Args:
+        yield_function (str): selected yield function.
+    """
+    if args['yield_function'] == 'percentile':
+        if 'percentile_column' not in args or \
+                args['percentile_column'] in ['', None]:
+            LOGGER.error('User must provide a percentile column for the '
+                         'percentile yield function.')
+            raise ValueError('percentile column must be provided.')
+    elif args['yield_function'] == 'regression':
+        if 'fertilizer_dir' not in args or not os.path.exists(
+                args['fertilizer_dir']):
+            LOGGER.error('User must provide a set of fertilizer application '
+                         'rate rasters for the regression yield function.')
+            raise ValueError('fertilizer directory must be provided.')
+        if 'irrigation_raster' not in args or not os.path.exists(
+                args['irrigation_raster']):
+            LOGGER.error('User must provide an raster indicating whether cell '
+                         'is irrigated or not  for the regression yield '
+                         'function.')
+            raise ValueError('irrigation raster must be provided.')
 
 
 def get_files_in_dir(path):
