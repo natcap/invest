@@ -353,8 +353,11 @@ class TestFunctions(unittest.TestCase):
     def test_get_regression_coefficients(self):
         """Crop Production: test get_regression_coefficients function."""
         from natcap.invest.crop_production import crop_production as cp
-        maize_table = os.path.join(
-            'workspace', 'dataset', 'climate_regression_yield', 'maize_.csv')
+        maize_dir = os.path.join(
+            self.args['workspace_dir'], 'dataset', 'climate_regression_yield')
+        if not os.path.exists(maize_dir):
+            os.makedirs(maize_dir)
+        maize_table = os.path.join(maize_dir, 'maize_.csv')
         _create_table(maize_table, regression_yield_table_list_partially_empty)
         regression_tables = {'maize': maize_table}
         lookup_dict = {1: {'is_crop': 'true', 'code': 1, 'name': 'maize'}}
