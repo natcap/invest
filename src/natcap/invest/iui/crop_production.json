@@ -31,7 +31,7 @@
             "label": "Results Suffix (Optional)",
             "defaultValue": "",
             "required": false,
-            "helpText": "This text will be appended to the end of the yield function output folders to help seperate outputs from multiple runs."
+            "helpText": "This text will be appended to the end of output file to help seperate outputs from multiple runs."
           },
           {
             "id": "lookup_table",
@@ -43,7 +43,7 @@
             "validateAs": {
               "type": "CSV"
             },
-            "helpText": "The provided CSV table is used to convert the crop code provided in the Crop Map to the crop name that can be used for searching through inputs and formatting outputs.<br><br>The table should contain three columns: a 'name' column, a 'code' column, and an 'is_crop' column."
+            "helpText": "The table should contain three columns: a 'name' column, a 'code' column, and an 'is_crop' column."
           },
           {
             "id": "aoi_raster",
@@ -93,7 +93,7 @@
             "defaultValue": "yield_95th",
             "required": false,
             "enabledBy": "yield_function",
-            "helpText": ""
+            "helpText": "Required for Percentile Yield Function.  This input is used to select the column of yield values from the tables in the climate_percentile_yield folder of the global dataset."
           },
           {
             "id": "fertilizer_dir",
@@ -106,7 +106,7 @@
               "type": "folder"
             },
             "enabledBy": "yield_function",
-            "helpText": "Required for Regression Yield Function."
+            "helpText": "Required for Regression Yield Function.  The folder should contain three rasters: 'nitrogen.tif', 'potash.tif', and 'phosphorus.tif' representing the kilograms of fertilizer applied per hectare to each cell.  Please see the model's User Guide for more details."
           },
           {
             "id": "irrigation_raster",
@@ -119,16 +119,16 @@
               "type": "GDAL"
             },
             "enabledBy": "yield_function",
-            "helpText": "Required for Regression Yield Function."
+            "helpText": "Required for Regression Yield Function.  The raster should contain 1s for cells that are irrigated and 0s for cells that are rainfed.  Please see the model's User Guide for more details."
           },
           {
             "id": "compute_nutritional_contents",
             "args_id": "compute_nutritional_contents",
             "type": "checkbox",
-            "label": "Compute Nutritional Contents",
+            "label": "Compute Nutrient Contents",
             "required": true,
             "defaultValue": false,
-            "helpText": ""
+            "helpText": "If yes, a table of nutrient contents is generated based on total yield of each crop and data provided in table below."
           },
           {
             "id": "nutrient_table",
@@ -141,7 +141,7 @@
               "type": "CSV"
             },
             "enabledBy": "compute_nutritional_contents",
-            "helpText": ""
+            "helpText": "A table containing data related to the nutrient contents of each crop by weight.  Please see the model's User Guide for more details."
           },
           {
             "id": "compute_financial_analysis",
@@ -150,7 +150,7 @@
             "label": "Compute Financial Analysis",
             "required": true,
             "defaultValue": false,
-            "helpText": ""
+            "helpText": "If yes, a financial analysis table is generated based on total yield of each crop, fertilizer application rates, and data provided in table below."
           },
           {
             "id": "economics_table",
@@ -163,7 +163,7 @@
               "type": "CSV"
             },
             "enabledBy": "compute_financial_analysis",
-            "helpText": ""
+            "helpText": "A table containing data related to price and costs associated with each crop.  Please see the model's User Guide for more details."
           }
       ]
     }
