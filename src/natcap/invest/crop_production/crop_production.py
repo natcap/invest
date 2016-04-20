@@ -13,12 +13,19 @@ import numpy as np
 from osgeo import gdal
 
 import pygeoprocessing.geoprocessing as geoprocess
+from .. import utils as invest_utils
 
 ZERO_REPLACEMENT = -9998
 
 LOGGER = logging.getLogger('natcap.invest.crop_production.crop_production')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+_OUTPUT = {
+    'nutrient_contents_table': 'nutritional_analysis.csv',
+    'financial_analysis_table': 'financial_analysis.csv',
+    'yield_raster': 'yield.tif'
+}
 
 
 def execute(args):
@@ -93,6 +100,7 @@ def execute(args):
     LOGGER.info("Beginning Model Run...")
 
     check_inputs(args)
+
     cache_dir = os.path.join(args['workspace_dir'], 'intermediate')
     if os.path.exists(cache_dir):
         shutil.rmtree(cache_dir)
@@ -100,6 +108,9 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'output')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+
+    file_registry = invest_utils.build_file_registry(
+        [(_OUTPUT, output_dir)], args['results_suffix'])
 
     aoi_raster = os.path.join(cache_dir, 'aoi')
     reproject_raster(args['aoi_raster'], args['aoi_raster'], aoi_raster)
@@ -109,29 +120,29 @@ def execute(args):
     fertilizer_dict = None
     if args['yield_function'] == 'observed':
         LOGGER.info("Calculating Yield from Observed Regional Data...")
-        yield_map, yield_dict = run_observed_yield(
+        yield_dict = run_observed_yield(
             global_dataset_dict['observed'],
             cache_dir,
             aoi_raster,
             lookup_dict,
-            output_dir)
+            file_registry['yield_raster'])
     elif args['yield_function'] == 'percentile':
         LOGGER.info("Calculating Yield from Climate-based Distribution of "
                     "Observed Yields...")
-        yield_map, yield_dict = run_percentile_yield(
+        yield_dict = run_percentile_yield(
             global_dataset_dict['climate_bin_maps'],
             global_dataset_dict['percentile'],
             cache_dir,
             aoi_raster,
             lookup_dict,
-            output_dir,
+            file_registry['yield_raster'],
             args['percentile_column'])
     elif args['yield_function'] == 'regression':
         LOGGER.info("Calculating Yield from Regression Model with "
                     "Climate-based Parameters...")
         fertilizer_dict = get_fertilizer_rasters(
             args['fertilizer_dir'], cache_dir, aoi_raster)
-        yield_map, yield_dict = run_regression_yield(
+        yield_dict = run_regression_yield(
             global_dataset_dict['climate_bin_maps'],
             global_dataset_dict['regression'],
             cache_dir,
@@ -139,7 +150,7 @@ def execute(args):
             fertilizer_dict,
             args['irrigation_raster'],
             lookup_dict,
-            output_dir)
+            file_registry['yield_raster'])
 
     if args['compute_nutritional_contents'] == True:
         LOGGER.info("Calculating Nutritional Contents...")
@@ -147,7 +158,7 @@ def execute(args):
             yield_dict,
             lookup_dict,
             args['nutrient_table'],
-            output_dir)
+            file_registry['nutrient_contents_table'])
 
     if args['compute_financial_analysis'] == True:
         LOGGER.info("Calculating Financial Analysis...")
@@ -157,7 +168,7 @@ def execute(args):
             aoi_raster,
             lookup_dict,
             fertilizer_dict,
-            output_dir)
+            file_registry['financial_analysis_table'])
 
     shutil.rmtree(cache_dir)
     LOGGER.info("...Model Run Complete.")
@@ -383,22 +394,20 @@ def read_from_raster(input_raster, offset_block):
 
 
 def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict,
-                           output_dir):
+                           yield_raster):
     """Compute observed yield.
 
     Args:
         aoi_raster (str): path to aoi raster.
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
         observed_yield_dict (dict): mapping of crops to observed yield rasters.
-        output_dir (str): path to output directory.
+        yield_raster (str): path to output directory.
 
     Returns:
-        yield_map (str): path to yield raster.
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
     """
-    yield_map = os.path.join(output_dir, 'observed_yield.tif')
-    create_raster(aoi_raster, yield_map)
+    create_raster(aoi_raster, yield_raster)
     cell_size = geoprocess.get_cell_size_from_uri(aoi_raster)
     m2_per_cell = cell_size ** 2
     ha_per_m2 = 0.0001
@@ -426,12 +435,12 @@ def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict,
             yield_dict[code] += yield_.sum()
             accum_block += yield_
         write_to_raster(
-            yield_map,
+            yield_raster,
             accum_block,
             aoi_offset['xoff'],
             aoi_offset['yoff'])
 
-    return yield_map, yield_dict
+    return yield_dict
 
 
 def reclass(array, d, nodata=0.):
@@ -493,7 +502,7 @@ def get_percentile_yields(percentile_tables, lookup_dict):
 
 
 def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict,
-                             percentile_yield_dict, output_dir,
+                             percentile_yield_dict, yield_raster,
                              percentile_yield):
     """Compute yield using percentile method.
 
@@ -503,11 +512,10 @@ def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict,
         climate_bin_dict (dict): mapping of codes to climate bin rasters.
         percentile_yields_dict (dict): mapping of crops to their respective
             information.
-        output_dir (str): path to output directory.
+        yield_raster (str): path to output raster.
         percentile_yield (str): selected yield percentile.
 
     Returns:
-        yield_map (str): path to yield raster.
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
     """
@@ -516,8 +524,7 @@ def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict,
         reclass_dict[code] = dict(
             [(bin_, v[percentile_yield]) for bin_, v in yield_dict.items()])
 
-    yield_map = os.path.join(output_dir, 'percentile_yield.tif')
-    create_raster(aoi_raster, yield_map)
+    create_raster(aoi_raster, yield_raster)
     cell_size = geoprocess.get_cell_size_from_uri(aoi_raster)
     m2_per_cell = cell_size ** 2
     ha_per_m2 = 0.0001
@@ -547,9 +554,9 @@ def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict,
             yield_dict[code] += yield_.sum()
             accum_block += yield_
         write_to_raster(
-            yield_map, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
+            yield_raster, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
 
-    return yield_map, yield_dict
+    return yield_dict
 
 
 def create_map(d, sub_dict_key):
@@ -626,7 +633,7 @@ def get_fertilizer_rasters(fertilizer_dir, cache_dir, aoi_raster):
 
 def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict,
                              regression_coefficient_dict, fertilizer_dict,
-                             irrigation_raster, output_dir):
+                             irrigation_raster, yield_raster):
     """Compute regression yield.
 
     Args:
@@ -637,15 +644,13 @@ def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict,
         regression_coefficients_dict (dict): nested dictionary of regression
             coefficients for each crop code.
         irrigation_raster (str): path to is_irrigated raster.
-        output_dir (str): path to output directory.
+        yield_raster (str): path to output raster.
 
     Returns:
-        yield_map (str): path to yield raster.
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
     """
-    yield_map = os.path.join(output_dir, 'regression_yield.tif')
-    create_raster(aoi_raster, yield_map)
+    create_raster(aoi_raster, yield_raster)
     cell_size = geoprocess.get_cell_size_from_uri(aoi_raster)
     m2_per_cell = cell_size ** 2
     ha_per_m2 = 0.0001
@@ -708,13 +713,13 @@ def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict,
             accum_block += Yield_
 
         write_to_raster(
-            yield_map, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
+            yield_raster, accum_block, aoi_offset['xoff'], aoi_offset['yoff'])
 
-    return yield_map, yield_dict
+    return yield_dict
 
 
 def run_observed_yield(
-        global_dataset_dict, cache_dir, aoi_raster, lookup_dict, output_dir):
+        global_dataset_dict, cache_dir, aoi_raster, lookup_dict, yield_raster):
     """Run observed yield model.
 
     Args:
@@ -723,10 +728,9 @@ def run_observed_yield(
         cache_dir (str): path to cache directory.
         aoi_raster (str): path to aoi raster.
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
-        output_dir (str): path to output directory.
+        yield_raster (str): path to output raster.
 
     Returns:
-        yield_map (str): path to yield raster.
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
     """
@@ -738,11 +742,11 @@ def run_observed_yield(
         aoi_raster,
         lookup_dict)
     return compute_observed_yield(
-        aoi_raster, lookup_dict, observed_yield_dict, output_dir)
+        aoi_raster, lookup_dict, observed_yield_dict, yield_raster)
 
 
 def run_percentile_yield(climate_bin_maps, percentile_tables, cache_dir,
-                         aoi_raster, lookup_dict, output_dir,
+                         aoi_raster, lookup_dict, yield_raster,
                          percentile_yield):
     """Run percentile yield model.
 
@@ -753,11 +757,10 @@ def run_percentile_yield(climate_bin_maps, percentile_tables, cache_dir,
         cache_dir (str): path to cache directory.
         aoi_raster (str): path to aoi raster.
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
-        output_dir (str): path to output directory.
+        yield_raster (str): path to output raster.
         percentile_yield (str): selected yield percentile.
 
     Returns:
-        yield_map (str): path to yield raster.
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
     """
@@ -775,13 +778,13 @@ def run_percentile_yield(climate_bin_maps, percentile_tables, cache_dir,
         lookup_dict,
         climate_bin_dict,
         percentile_yield_dict,
-        output_dir,
+        yield_raster,
         percentile_yield)
 
 
 def run_regression_yield(climate_bin_maps, regression_tables, cache_dir,
                          aoi_raster, fertilizer_dict, orig_irrigation_raster,
-                         lookup_dict, output_dir):
+                         lookup_dict, yield_raster):
     """Run regression yield model.
 
     Args:
@@ -794,10 +797,9 @@ def run_regression_yield(climate_bin_maps, regression_tables, cache_dir,
             raster paths.
         orig_irrigation_raster (str): path to is_irrigated raster.
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
-        output_dir (str): path to output directory.
+        yield_raster (str): path to output raster.
 
     Returns:
-        yield_map (str): path to yield raster.
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
     """
@@ -819,11 +821,11 @@ def run_regression_yield(climate_bin_maps, regression_tables, cache_dir,
         regression_coefficient_dict,
         fertilizer_dict,
         irrigation_raster,
-        output_dir)
+        yield_raster)
 
 
 def compute_nutritional_contents(yield_dict, lookup_dict, nutrient_table,
-                                 output_dir):
+                                 nutritional_contents_table):
     """Compute nutritional contents of crop yields.
 
     Args:
@@ -832,11 +834,8 @@ def compute_nutritional_contents(yield_dict, lookup_dict, nutrient_table,
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
         nutrient_table (str): path to table containing information about the
             nutrient contents of each crop.
-        output_dir (str): path to output directory.
+        nutritional_contents_table (str): path to output table.
     """
-    nutritional_contents_table = os.path.join(
-        output_dir, 'nutritional_contents.csv')
-
     codes = yield_dict.keys()
     crop_to_code_dict = dict(
         [(val['name'], code) for code, val in lookup_dict.items()])
@@ -937,7 +936,8 @@ def calc_area_costs(code, code_dict, aoi_raster):
 
 
 def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
-                               lookup_dict, fertilizer_dict, output_dir):
+                               lookup_dict, fertilizer_dict,
+                               financial_analysis_table):
     """Compute financial analysis.
 
     Args:
@@ -949,11 +949,8 @@ def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
         fertilizer_dict (dict): mapping of fertilizers to their respective
             raster paths.
-        output_dir (str): path to output directory.
+        financial_analysis_table (str): path to output table.
     """
-    financial_analysis_table = os.path.join(
-        output_dir, 'financial_analysis.csv')
-
     codes = yield_dict.keys()
     crop_to_code_dict = dict(
         [(val['name'], code) for code, val in lookup_dict.items()])
