@@ -267,7 +267,7 @@ def _get_args():
 
     args = {
         'workspace_dir': workspace_dir,
-        'results_suffix': 'scenario_name',
+        'results_suffix': '',
         'lookup_table': lookup_table_path,
         'aoi_raster': aoi_raster_path,
         'dataset_dir': dataset_dir,
@@ -326,7 +326,7 @@ def _get_args_maize():
 
     args = {
         'workspace_dir': workspace_dir,
-        'results_suffix': 'scenario_name',
+        'results_suffix': '',
         'lookup_table': lookup_table_path,
         'aoi_raster': aoi_raster_path,
         'dataset_dir': dataset_dir,
@@ -417,7 +417,7 @@ class TestModelMath(unittest.TestCase):
         self.args['yield_function'] = 'observed'
         crop_production.execute(self.args)
         guess = _read_array(os.path.join(
-            self.args['workspace_dir'], 'output', 'observed_yield.tif'))
+            self.args['workspace_dir'], 'output', 'yield.tif'))
         check = 48.
         np.testing.assert_array_almost_equal(guess.sum(), check)
 
@@ -427,7 +427,7 @@ class TestModelMath(unittest.TestCase):
         self.args['yield_function'] = 'percentile'
         crop_production.execute(self.args)
         guess = _read_array(os.path.join(
-            self.args['workspace_dir'], 'output', 'percentile_yield.tif'))
+            self.args['workspace_dir'], 'output', 'yield.tif'))
         check = 64.
         np.testing.assert_array_almost_equal(guess.sum(), check)
 
@@ -437,7 +437,7 @@ class TestModelMath(unittest.TestCase):
         self.args['yield_function'] = 'regression'
         crop_production.execute(self.args)
         guess = _read_array(os.path.join(
-            self.args['workspace_dir'], 'output', 'regression_yield.tif'))
+            self.args['workspace_dir'], 'output', 'yield.tif'))
         check = 18.3552836681
         np.testing.assert_array_almost_equal(guess.sum(), check)
 
@@ -459,7 +459,7 @@ class TestModel(unittest.TestCase):
         self.args['yield_function'] = 'observed'
         crop_production.execute(self.args)
         a = _read_array(os.path.join(
-            self.args['workspace_dir'], 'output', 'observed_yield.tif'))
+            self.args['workspace_dir'], 'output', 'yield.tif'))
         guess = a[0]
         check = [0, 1., 2., 3.]
         np.testing.assert_array_almost_equal(guess, check)
@@ -470,7 +470,7 @@ class TestModel(unittest.TestCase):
         self.args['yield_function'] = 'percentile'
         crop_production.execute(self.args)
         a = _read_array(os.path.join(
-            self.args['workspace_dir'], 'output', 'percentile_yield.tif'))
+            self.args['workspace_dir'], 'output', 'yield.tif'))
         guess = a[0]
         check = [0, 2., 3., 4.]
         np.testing.assert_array_almost_equal(guess, check)
@@ -481,7 +481,7 @@ class TestModel(unittest.TestCase):
         self.args['yield_function'] = 'regression'
         crop_production.execute(self.args)
         a = _read_array(os.path.join(
-            self.args['workspace_dir'], 'output', 'regression_yield.tif'))
+            self.args['workspace_dir'], 'output', 'yield.tif'))
         guess = a[:, 1:]
         check = np.ones((4, 3)) * 1.14720523
         np.testing.assert_array_almost_equal(guess, check)
