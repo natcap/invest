@@ -12,6 +12,7 @@ import unittest
 import csv
 import pprint as pp
 from decimal import Decimal
+import hashlib
 
 import numpy as np
 from osgeo import gdal, ogr, osr
@@ -299,11 +300,17 @@ class UnitTests(unittest.TestCase):
     def test_generate_chart_html(self):
         """Scenario Generator: test generate chart html."""
         from natcap.invest import scenario_generator as sg
+        hash_md5 = hashlib.md5()
+
         cover_dict = {9.: (1., 2.)}
         cover_names_dict = {'Cover': 'Cover'}
         chart_html = sg.scenario_generator.generate_chart_html(
             cover_dict, cover_names_dict, self.args['workspace_dir'])
-        self.assertEqual(chart_html[0:5], '\n<tab')
+        chart_html = ''.join(format(ord(x), 'b') for x in chart_html)
+
+        hash_md5.update(chart_html)
+        self.assertEqual(
+            hash_md5.hexdigest(), '4b77891d5f88dd02621350fa16b95891')
 
     def test_filter_fragments(self):
         """Scenario Generator: test filter fragments."""
