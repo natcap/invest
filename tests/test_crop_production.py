@@ -4,6 +4,7 @@ import unittest
 import os
 import shutil
 import csv
+import tempfile
 
 import numpy as np
 from osgeo import gdal
@@ -93,8 +94,7 @@ def _create_workspace():
     Returns:
         workspace_dir (str): path to workspace directory.
     """
-    path = os.path.dirname(os.path.realpath(__file__))
-    workspace_dir = os.path.join(path, 'workspace')
+    workspace_dir = tempfile.mkdtemp()
     if os.path.exists(workspace_dir):
         shutil.rmtree(workspace_dir)
     os.mkdir(workspace_dir)
