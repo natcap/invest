@@ -277,7 +277,7 @@ def generate_chart_html(cover_dict, cover_names_dict, workspace_dir):
 
     Args:
         cover_dict (dict): land cover {'cover_id': [before, after]}
-        cover_names_dict (dict): land cover names
+        cover_names_dict (dict): land cover names {'cover_id': 'cover_name'}
         workspace_dir (str): path to workspace directory
 
     Returns:
