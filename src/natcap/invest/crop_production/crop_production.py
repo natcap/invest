@@ -346,7 +346,7 @@ def reproject_global_rasters(global_dataset_dict, cache_dir, aoi_raster,
     """
     crops = [v['name'] for v in lookup_dict.values() if v['is_crop'] == 'true']
     crop_to_code_dict = dict(
-        [(val['name'], code) for code, val in lookup_dict.items()])
+        (val['name'], code) for code, val in lookup_dict.items())
 
     observed_yield_dict = {}
     for crop in crops:
