@@ -68,17 +68,32 @@ transition_matrix = [
     ['Baseland',    '0',         '0',           '0',      '0'         '0']]
 
 
-def read_raster(raster_uri):
-    """Read raster as array."""
-    ds = gdal.Open(raster_uri)
+def read_raster(raster_path):
+    """"Read raster as array.
+
+    Args:
+        raster_path (str): file path to raster.
+
+    Returns:
+        a (np.array): raster's first band as an array.
+    """
+    ds = gdal.Open(raster_path)
     band = ds.GetRasterBand(1)
     array = band.ReadAsArray()
     ds = None
     return array
 
 
-def create_raster(raster_uri, array):
-    """Create test raster."""
+def create_raster(raster_path, array):
+    """Create test raster.
+
+    Args:
+        raster_path (str): path to output raster.
+        array (np.array): input array.
+
+    Returns:
+        raster_path (str): path to output raster.
+    """
     srs = pygeotest.sampledata.SRS_WILLAMETTE
     pygeotest.create_raster_on_disk(
         [array],
@@ -87,12 +102,17 @@ def create_raster(raster_uri, array):
         -1,
         srs.pixel_size(100),
         datatype=gdal.GDT_Int32,
-        filename=raster_uri)
-    return raster_uri
+        filename=raster_path)
+    return raster_path
 
 
-def create_shapefile(shapefile_uri, geometries, fields=None):
-    """Create test shapefile."""
+def create_shapefile(shapefile_path, geometries, fields=None):
+    """Create test shapefile.
+
+    Args:
+        shapefile_path (str): path to shapefile.
+        geometries (list): list of shapely geometry objects
+    """
     srs = pygeotest.sampledata.SRS_WILLAMETTE
     return pygeotest.create_vector_on_disk(
         geometries,
@@ -100,19 +120,31 @@ def create_shapefile(shapefile_uri, geometries, fields=None):
         fields=fields,
         attributes=None,
         vector_format='ESRI Shapefile',
-        filename=shapefile_uri)
+        filename=shapefile_path)
 
 
-def create_csv_table(table_uri, rows_list):
-    """Create csv file from list of lists."""
-    with open(table_uri, 'w') as f:
+def create_csv_table(table_path, rows_list):
+    """Create csv file from list of lists.
+
+    Args:
+        table_path (str): file path to table.
+        rows_list (list): nested list of elements to write to table.
+
+    Returns:
+        table_path (str): filepath to table.
+    """
+    with open(table_path, 'w') as f:
         writer = csv.writer(f)
         writer.writerows(rows_list)
-    return table_uri
+    return table_path
 
 
 def get_args():
-    """Create test-case arguments for Scenario Generator model."""
+    """Create test-case arguments for Scenario Generator model.
+
+    Returns:
+        args (dict): main model arguments.
+    """
     workspace_dir = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), 'workspace')
     if os.path.exists(workspace_dir):
@@ -192,19 +224,29 @@ def get_args():
 class ModelTests(unittest.TestCase):
     """Test execute function in scenario generator model."""
 
+    def setUp(self):
+        """Setup."""
+        self.args = get_args()
+
     def test_execute(self):
         """Scenario Generator: Test Execute."""
         import natcap.invest.scenario_generator as sg
-        args = get_args()
-        sg.scenario_generator.execute(args)
+        sg.scenario_generator.execute(self.args)
         array = read_raster(os.path.join(
-            args['workspace_dir'], 'scenario.tif'))
+            self.args['workspace_dir'], 'scenario.tif'))
         self.assertTrue(4 in array[0])
-        shutil.rmtree(args['workspace_dir'])
+
+    def tearDown(self):
+        """Tear Down."""
+        shutil.rmtree(self.args['workspace_dir'])
 
 
 class UnitTests(unittest.TestCase):
     """Test functions in scenario generator model."""
+
+    def setUp(self):
+        """Setup."""
+        self.args = get_args()
 
     def test_calculate_weights(self):
         """Scenario Generator: test calculate weights."""
@@ -216,74 +258,67 @@ class UnitTests(unittest.TestCase):
     def test_calculate_priority(self):
         """Scenario Generator: test calculate priority."""
         from natcap.invest import scenario_generator as sg
-        args = get_args()
-        priority_table_uri = args['priorities_csv_uri']
+        priority_table_uri = self.args['priorities_csv_uri']
         priority_dict = sg.scenario_generator.calculate_priority(
             priority_table_uri)
         self.assertEqual(priority_dict[1], Decimal('0.6430'))
-        shutil.rmtree(args['workspace_dir'])
 
     def test_calculate_distance_raster_uri(self):
         """Scenario Generator: test calculate distance raster."""
         from natcap.invest import scenario_generator as sg
-        args = get_args()
-        dataset_in_uri = os.path.join(args['workspace_dir'], 'dataset_in.tif')
+        dataset_in_uri = os.path.join(
+            self.args['workspace_dir'], 'dataset_in.tif')
         array = np.array([[1., 0., 0.], [0., 0., 0.], [0., 0., 0.]])
         create_raster(dataset_in_uri, array)
         dataset_out_uri = os.path.join(
-            args['workspace_dir'], 'dataset_out.tif')
+            self.args['workspace_dir'], 'dataset_out.tif')
         sg.scenario_generator.calculate_distance_raster_uri(
             dataset_in_uri, dataset_out_uri)
         guess = read_raster(dataset_out_uri)
         np.testing.assert_almost_equal(guess[0, 1], np.array([100.]))
-        shutil.rmtree(args['workspace_dir'])
 
     def test_get_geometry_type_from_uri(self):
         """Scenario Generator: test get geometry type."""
         from natcap.invest import scenario_generator as sg
-        args = get_args()
-        datasource_uri = args['constraints']
+        datasource_uri = self.args['constraints']
         shape_type = sg.scenario_generator.get_geometry_type_from_uri(
             datasource_uri)
         self.assertEqual(shape_type, 5)
-        shutil.rmtree(args['workspace_dir'])
 
     def test_get_transition_set_count_from_uri(self):
         """Scenario Generator: test get transition set count."""
         from natcap.invest import scenario_generator as sg
-        args = get_args()
-        dataset_uri_list = [args['landcover'], args['landcover']]
+        dataset_uri_list = [self.args['landcover'], self.args['landcover']]
         unique_raster_values_count, transitions = \
             sg.scenario_generator.get_transition_pairs_count_from_uri(
                 dataset_uri_list)
         self.assertEqual(
             unique_raster_values_count.values()[0],
             {1: 4, 2: 4, 3: 4, 4: 4})
-        shutil.rmtree(args['workspace_dir'])
 
     def test_generate_chart_html(self):
         """Scenario Generator: test generate chart html."""
         from natcap.invest import scenario_generator as sg
-        args = get_args()
         cover_dict = {9.: (1., 2.)}
         cover_names_dict = {'Cover': 'Cover'}
         chart_html = sg.scenario_generator.generate_chart_html(
-            cover_dict, cover_names_dict, args['workspace_dir'])
+            cover_dict, cover_names_dict, self.args['workspace_dir'])
         self.assertEqual(chart_html[0:5], '\n<tab')
-        shutil.rmtree(args['workspace_dir'])
 
     def test_filter_fragments(self):
         """Scenario Generator: test filter fragments."""
         from natcap.invest import scenario_generator as sg
-        args = get_args()
-        input_uri = args['landcover']
+        input_uri = self.args['landcover']
         size = 200.
         output_uri = os.path.join(
-            args['workspace_dir'], 'fragments_output.tif')
+            self.args['workspace_dir'], 'fragments_output.tif')
         sg.scenario_generator.filter_fragments(
             input_uri, size, output_uri)
         self.assertEqual(read_raster(output_uri)[0, 1], 0.)
-        shutil.rmtree(args['workspace_dir'])
+
+    def tearDown(self):
+        """Tear Down."""
+        shutil.rmtree(self.args['workspace_dir'])
 
 
 if __name__ == '__main__':
