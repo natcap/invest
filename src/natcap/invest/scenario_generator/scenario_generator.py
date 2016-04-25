@@ -11,6 +11,7 @@ import scipy as sp
 from osgeo import gdal, ogr
 
 import pygeoprocessing.geoprocessing as geoprocess
+from .. import utils as invest_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -23,6 +24,16 @@ shapeTypes = {0: "Null Shape", 1: "Point", 3: "PolyLine", 5: "Polygon",
               15: "PolygonZ", 18: "MultiPointZ", 21: "PointM",
               23: "PolyLineM", 25: "PolygonM", 28: "MultiPointM",
               31: "MultiPatch"}
+
+_OUTPUT = {
+    'landcover_transition_uri': 'transitioned.tif',
+    'override_dataset_uri': 'override.tif',
+    'landcover_htm_uri': 'scenario-output-summary.html'
+}
+
+_INTERMEDIATE = {
+    'scenario_uri': 'scenario.tif'
+}
 
 
 def calculate_weights(array, rounding=4):
@@ -614,12 +625,6 @@ def execute(args):
     # Exercise fields
     args["returns_cover_id"] = "Cover ID"
 
-    # Get parameters, set outputs
-    workspace = args["workspace_dir"]
-
-    if not os.path.exists(workspace):
-        os.makedirs(workspace)
-
     landcover_uri = args["landcover"]
 
     if len(args["suffix"]) > 0:
@@ -627,10 +632,17 @@ def execute(args):
     else:
         suffix = ""
 
-    intermediate_dir = "intermediate"
+    # Get parameters, set outputs
+    workspace = args["workspace_dir"]
+    if not os.path.exists(workspace):
+        os.makedirs(workspace)
+    intermediate_dir = os.path.join(workspace, "intermediate")
+    if not os.path.exists(intermediate_dir):
+        os.makedirs(intermediate_dir)
 
-    if not os.path.exists(os.path.join(workspace, intermediate_dir)):
-        os.makedirs(os.path.join(workspace, intermediate_dir))
+    file_registry = invest_utils.build_file_registry(
+        [(_OUTPUT, workspace), (_INTERMEDIATE, intermediate_dir)],
+        args['suffix'])
 
     proximity_weight = float(args["proximity_weight"])
 
@@ -643,12 +655,9 @@ def execute(args):
         physical_suitability_weight = 0.5
 
     # output file names
-    landcover_transition_uri = os.path.join(
-        workspace, "transitioned" + suffix + ".tif")
-    override_dataset_uri = os.path.join(
-        workspace, "override" + suffix + ".tif")
-    landcover_htm_uri = os.path.join(
-        workspace, "scenario-output-summary" + suffix + ".html")
+    landcover_transition_uri = file_registry['landcover_transition_uri']
+    override_dataset_uri = file_registry['override_dataset_uri']
+    landcover_htm_uri = file_registry['landcover_htm_uri']
 
     geoprocess.create_directories([workspace])
 
@@ -675,7 +684,6 @@ def execute(args):
         intermediate_dir, "proximity_norm_%s" + suffix + ".tif")
     adjusted_suitability_name = os.path.join(
         intermediate_dir, "adjusted_suitability_%s" + suffix + ".tif")
-    scenario_name = "scenario" + suffix + ".tif"
 
     # Constants
     raster_format = "GTiff"
@@ -1284,7 +1292,7 @@ def execute(args):
     ###
 
     # copy initial LULC
-    scenario_uri = os.path.join(workspace, scenario_name)
+    scenario_uri = file_registry['scenario_uri']
 
     src_ds = gdal.Open(landcover_uri)
     n_cols = src_ds.RasterXSize
