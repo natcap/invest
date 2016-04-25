@@ -88,8 +88,7 @@ def calculate_priority(priority_table_uri):
 
 
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri):
-    """Calculate the distance to non-zero cell for all zero-value cells of
-    input raster.
+    """Calculate distance to non-zero cell for all input zero-value cells.
 
     Args:
         dataset_in_uri (str): the input mask raster. Distances calculated from
@@ -154,8 +153,7 @@ def get_geometry_type_from_uri(datasource_uri):
 
 
 def get_transition_pairs_count_from_uri(dataset_uri_list):
-    """Finding transition summary statistics between original and scenario
-    land-cover rasters.
+    """Find transition summary statistics between lulc rasters.
 
     Args:
         dataset_uri_list (list): list of paths to rasters
@@ -867,13 +865,17 @@ def execute(args):
                     option_list = ["ALL_TOUCHED=TRUE"]
                     distance = int(distance)
 
-                    ds_uri = os.path.join(workspace, suitability_name %
+                    ds_uri = os.path.join(
+                        workspace, suitability_name %
                         (factor_stem, str(distance) + '_raw_raster'))
-                    distance_uri = os.path.join(workspace, suitability_name %
+                    distance_uri = os.path.join(
+                        workspace, suitability_name %
                         (factor_stem, str(distance) + '_raw_distance'))
-                    fdistance_uri = os.path.join(workspace, suitability_name %
+                    fdistance_uri = os.path.join(
+                        workspace, suitability_name %
                         (factor_stem, distance))
-                    normalized_uri = os.path.join(workspace, normalized_name %
+                    normalized_uri = os.path.join(
+                        workspace, normalized_name %
                         (factor_stem, distance))
 
                     burn_value = [1]
@@ -1122,7 +1124,7 @@ def execute(args):
             if transition_dict[cover_id][args["proximity_field"]] == u'':
                 msg = "Proximity value not provided for lulc_code %i.  Check "\
                       "your land cover transition / attributes table."
-                raise ValueError(msg  % cover_id)
+                raise ValueError(msg % cover_id)
             if transition_dict[cover_id][args["proximity_field"]] > 0 and \
                     cover_id in suitability_dict:
                 distance = int(
@@ -1237,7 +1239,7 @@ def execute(args):
                     "Combining suitability and constraints for %i.", cover_id)
 
                 uri_list = [suitability_dict[cover_id],
-                constraints_ds_uri]
+                            constraints_ds_uri]
                 LOGGER.info("Vectorizing: %s", ", ".join(uri_list))
                 geoprocess.vectorize_datasets(
                     uri_list,
@@ -1513,7 +1515,6 @@ def execute(args):
         dataset.FlushCache()
         datasource = None
         dataset = None
-
 
     # THIS SHOULD BE OWN FUNCTION
     LOGGER.info("Generating results...")
