@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Tests for Scenario Generator model."""
+
 import importlib
 import itertools
 import logging
@@ -29,15 +32,20 @@ land_cover_array = [
     [1., 2., 3., 4.]]
 
 transition_likelihood_table = [
-    ['Id', 'Name',        'Short',       '1', '2', '3', '4', 'Percent Change', 'Area Change', 'Priority', 'Proximity', 'Patch ha'],
-    ['1',  'Grassland',   'Grassland',   '0', '4', '0', '1', '0',              '0',           '0',        '0',         '0'],
-    ['2',  'Agriculture', 'Agriculture', '0', '0', '0', '0', '0',              '8000',        '8',        '5000',      '0'],
-    ['3',  'Forest',      'Forest',      '0', '8', '0', '1', '0',              '0',           '0',        '0',         '0'],
-    ['4',  'Bareland',    'Bareland',    '0', '0', '0', '0', '25',             '0',           '5',        '10000',     '0']]
+    ['Id', 'Name', 'Short', '1', '2', '3', '4', 'Percent Change',
+        'Area Change', 'Priority', 'Proximity', 'Patch ha'],
+    ['1', 'Grassland', 'Grassland', '0', '4', '0', '1', '0', '0', '0', '0',
+        '0'],
+    ['2', 'Agriculture', 'Agriculture', '0', '0', '0', '0', '0', '8000', '8',
+        '5000', '0'],
+    ['3', 'Forest', 'Forest', '0', '8', '0', '1', '0', '0', '0', '0', '0'],
+    ['4', 'Bareland', 'Bareland', '0', '0', '0', '0', '25', '0', '5', '10000',
+        '0']]
 
 land_suitability_factors_table = [
-    ['Id', 'Cover ID', 'Factorname', 'Layer',     'Wt', 'Suitfield', 'Dist',  'Cover'],
-    ['2',  '9',        'roads',      'roads.shp', '5',  '',          '10000', 'Smallscl']]
+    ['Id', 'Cover ID', 'Factorname', 'Layer', 'Wt', 'Suitfield', 'Dist',
+        'Cover'],
+    ['2', '9', 'roads', 'roads.shp', '5',  '', '10000', 'Smallscl']]
 
 priority_table = [
     ['Id', 'Name',        '1',   '2', '3', '4', 'Priority'],
@@ -53,7 +61,7 @@ pairwise_comparison_table = [
     ['3',      'Slope',     '0.1',       '5',        '1',     '']]
 
 transition_matrix = [
-    ['',            'Grassland', 'Agriculture', 'Forest', 'Baseland', 'Change'],
+    ['', 'Grassland', 'Agriculture', 'Forest', 'Baseland', 'Change'],
     ['Grassland',   '0',         '4',           '0',      '0'         '30%'],
     ['Agriculture', '0',         '0',           '0',      '0',        '0'],
     ['Forest',      '10',        '2',           '0',      '0',        '-10%'],
@@ -61,6 +69,7 @@ transition_matrix = [
 
 
 def read_raster(raster_uri):
+    """Read raster as array."""
     ds = gdal.Open(raster_uri)
     band = ds.GetRasterBand(1)
     array = band.ReadAsArray()
@@ -152,37 +161,39 @@ def get_args():
     create_shapefile(roads_shapefile_uri, roads_geometry)
 
     args = {
-        'workspace_dir': workspace_dir,                  # workspace directory
-        'suffix': '',                                    #
-        'landcover': land_cover_raster_uri,              # land cover raster
-        'transition': transition_likelihood_uri,         # transition matrix
-        'calculate_priorities': True,                    # use relative priorities
-        'priorities_csv_uri': priorities_csv_uri,        #   relative priorities
-        'calculate_proximity': True,                     #
-        'calculate_transition': True,                    #
-        'calculate_factors': True,                       #
-        'suitability_folder': suitability_dir,           # suitability shapefiles folder
-        'suitability': suitability_factors_csv_uri,      # suitability factors
-        'weight': 0.5,                                   # factor weight
-        'factor_inclusion': 0,                           # all_touched=True for vectorize_datasets
-        'factors_field_container': True,                 #
-        'calculate_constraints': True,                   #
-        'constraints': constraints_shapefile_uri,        #
-        'constraints_field': 'protlevel',                #
-        'override_layer': True,                          #
-        'override': override_shapefile_uri,              #
-        'override_field': 'newclass',                    #
-        'override_inclusion': 0                          #
+        'workspace_dir': workspace_dir,              # workspace directory
+        'suffix': '',                                #
+        'landcover': land_cover_raster_uri,          # land cover raster
+        'transition': transition_likelihood_uri,     # transition matrix
+        'calculate_priorities': True,                # use relative priorities
+        'priorities_csv_uri': priorities_csv_uri,    # relative priorities
+        'calculate_proximity': True,                 #
+        'calculate_transition': True,                #
+        'calculate_factors': True,                   #
+        'suitability_folder': suitability_dir,       # suitability shapefiles
+                                                     # folder
+        'suitability': suitability_factors_csv_uri,  # suitability factors
+        'weight': 0.5,                               # factor weight
+        'factor_inclusion': 0,                       # all_touched=True for
+                                                     # vectorize_datasets
+        'factors_field_container': True,             #
+        'calculate_constraints': True,               #
+        'constraints': constraints_shapefile_uri,    #
+        'constraints_field': 'protlevel',            #
+        'override_layer': True,                      #
+        'override': override_shapefile_uri,          #
+        'override_field': 'newclass',                #
+        'override_inclusion': 0                      #
     }
 
     return args
 
 
 class ModelTests(unittest.TestCase):
-
     """Test execute function in scenario generator model."""
 
     def test_execute(self):
+        """Scenario Generator: Test Execute."""
         import natcap.invest.scenario_generator as sg
         args = get_args()
         sg.scenario_generator.execute(args)
@@ -193,16 +204,17 @@ class ModelTests(unittest.TestCase):
 
 
 class UnitTests(unittest.TestCase):
-
     """Test functions in scenario generator model."""
 
     def test_calculate_weights(self):
+        """Scenario Generator: test calculate weights."""
         from natcap.invest import scenario_generator as sg
         array = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
         weights_list = sg.scenario_generator.calculate_weights(array)
         self.assertEqual(weights_list[0], Decimal('0.3333'))
 
     def test_calculate_priority(self):
+        """Scenario Generator: test calculate priority."""
         from natcap.invest import scenario_generator as sg
         args = get_args()
         priority_table_uri = args['priorities_csv_uri']
@@ -212,12 +224,14 @@ class UnitTests(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
 
     def test_calculate_distance_raster_uri(self):
+        """Scenario Generator: test calculate distance raster."""
         from natcap.invest import scenario_generator as sg
         args = get_args()
         dataset_in_uri = os.path.join(args['workspace_dir'], 'dataset_in.tif')
         array = np.array([[1., 0., 0.], [0., 0., 0.], [0., 0., 0.]])
         create_raster(dataset_in_uri, array)
-        dataset_out_uri = os.path.join(args['workspace_dir'], 'dataset_out.tif')
+        dataset_out_uri = os.path.join(
+            args['workspace_dir'], 'dataset_out.tif')
         sg.scenario_generator.calculate_distance_raster_uri(
             dataset_in_uri, dataset_out_uri)
         guess = read_raster(dataset_out_uri)
@@ -225,6 +239,7 @@ class UnitTests(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
 
     def test_get_geometry_type_from_uri(self):
+        """Scenario Generator: test get geometry type."""
         from natcap.invest import scenario_generator as sg
         args = get_args()
         datasource_uri = args['constraints']
@@ -234,6 +249,7 @@ class UnitTests(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
 
     def test_get_transition_set_count_from_uri(self):
+        """Scenario Generator: test get transition set count."""
         from natcap.invest import scenario_generator as sg
         args = get_args()
         dataset_uri_list = [args['landcover'], args['landcover']]
@@ -246,6 +262,7 @@ class UnitTests(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
 
     def test_generate_chart_html(self):
+        """Scenario Generator: test generate chart html."""
         from natcap.invest import scenario_generator as sg
         args = get_args()
         cover_dict = {9.: (1., 2.)}
@@ -256,6 +273,7 @@ class UnitTests(unittest.TestCase):
         shutil.rmtree(args['workspace_dir'])
 
     def test_filter_fragments(self):
+        """Scenario Generator: test filter fragments."""
         from natcap.invest import scenario_generator as sg
         args = get_args()
         input_uri = args['landcover']
