@@ -72,28 +72,6 @@ def _create_table(filepath, rows_list):
     return filepath
 
 
-def _create_raster(template_path, dst_path):
-    """Create raster.
-
-    Args:
-        template_path (str): path to template raster.
-        dst_path (str): path to destination raster.
-    """
-    match_ds = gdal.Open(template_path, 0)
-    match_proj = match_ds.GetProjection()
-    match_geotrans = match_ds.GetGeoTransform()
-    wide = match_ds.RasterXSize
-    high = match_ds.RasterYSize
-    block_size = [256, 256]
-    opt = ['TILED=YES',
-           'BLOCKXSIZE=%d' % block_size[0],
-           'BLOCKYSIZE=%d' % block_size[1]]
-    driver = gdal.GetDriverByName('GTiff')
-    dst = driver.Create(dst_path, wide, high, 1, gdal.GDT_Float32, options=opt)
-    dst.SetGeoTransform(match_geotrans)
-    dst.SetProjection(match_proj)
-
-
 def _write_to_raster(raster_path, array, xoff, yoff):
     """Write numpy array to raster block.
 
@@ -142,7 +120,8 @@ def _create_fertilizer_rasters(workspace_dir, aoi_raster):
         ('nitrogen.tif', 1.), ('potash.tif', 2.), ('phosphorus.tif', 3.)]
     for fert, app_rate in fert_list:
         dst_path = os.path.join(fertilizer_dir, fert)
-        _create_raster(aoi_raster, dst_path)
+        geoprocess.new_raster_from_base_uri(
+            aoi_raster, dst_path, 'GTiff', -9999, gdal.GDT_Float32)
         for offset_dict, block in geoprocess.iterblocks(dst_path):
             block[:] = app_rate
             _write_to_raster(
@@ -163,7 +142,8 @@ def _create_global_maps(path, lookup_table_path, aoi_raster):
     for k, v in lookup_dict.items():
         if v['is_crop'] == 'true':
             dst_path = os.path.join(path, v['name'] + '_.tif')
-            _create_raster(aoi_raster, dst_path)
+            geoprocess.new_raster_from_base_uri(
+                aoi_raster, dst_path, 'GTiff', -9999, gdal.GDT_Float32)
             for offset_dict, block in geoprocess.iterblocks(dst_path):
                 block[:] = float(
                     v['code']) if float(v['code']) != 0 else 1.
