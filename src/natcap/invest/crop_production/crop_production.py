@@ -250,11 +250,8 @@ def get_lookup_dict(aoi_raster, lookup_table):
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
     """
     iterblocks = geoprocess.iterblocks(aoi_raster)
-    s = set()
-    for offset_dict, block in iterblocks:
-        u = np.unique(block)
-        for i in u:
-            s.add(i)
+    s = set(geoprocess.unique_raster_values_uri(aoi_raster))
+
     lookup_dict = geoprocess.get_lookup_from_table(lookup_table, 'code')
     for code in lookup_dict.keys():
         lookup_dict[code]['name'] = lookup_dict[code]['name'].lower()
