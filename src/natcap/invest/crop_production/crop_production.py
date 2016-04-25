@@ -304,28 +304,6 @@ def reproject_raster(src_path, template_path, dst_path):
     dst = None
 
 
-def create_raster(template_path, dst_path):
-    """Create raster.
-
-    Args:
-        template_path (str): path to template raster.
-        dst_path (str): path to destination raster.
-    """
-    match_ds = gdal.Open(template_path, 0)
-    match_proj = match_ds.GetProjection()
-    match_geotrans = match_ds.GetGeoTransform()
-    wide = match_ds.RasterXSize
-    high = match_ds.RasterYSize
-    block_size = [256, 256]
-    opt = ['TILED=YES',
-           'BLOCKXSIZE=%d' % block_size[0],
-           'BLOCKYSIZE=%d' % block_size[1]]
-    driver = gdal.GetDriverByName('GTiff')
-    dst = driver.Create(dst_path, wide, high, 1, gdal.GDT_Float32, options=opt)
-    dst.SetGeoTransform(match_geotrans)
-    dst.SetProjection(match_proj)
-
-
 def reproject_global_rasters(global_dataset_dict, cache_dir, aoi_raster,
                              lookup_dict):
     """Reproject global rasters.
@@ -405,7 +383,8 @@ def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict,
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
     """
-    create_raster(aoi_raster, yield_raster)
+    geoprocess.new_raster_from_base_uri(
+        aoi_raster, yield_raster, 'GTiff', -9999, gdal.GDT_Float32)
     cell_size = geoprocess.get_cell_size_from_uri(aoi_raster)
     m2_per_cell = cell_size ** 2
     ha_per_m2 = 0.0001
@@ -522,7 +501,8 @@ def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict,
         reclass_dict[code] = dict(
             [(bin_, v[percentile_yield]) for bin_, v in yield_dict.items()])
 
-    create_raster(aoi_raster, yield_raster)
+    geoprocess.new_raster_from_base_uri(
+        aoi_raster, yield_raster, 'GTiff', -9999, gdal.GDT_Float32)
     cell_size = geoprocess.get_cell_size_from_uri(aoi_raster)
     m2_per_cell = cell_size ** 2
     ha_per_m2 = 0.0001
@@ -648,7 +628,8 @@ def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict,
         yield_dict (collections.Counter): mapping from crop code to total
             yield.
     """
-    create_raster(aoi_raster, yield_raster)
+    geoprocess.new_raster_from_base_uri(
+        aoi_raster, yield_raster, 'GTiff', -9999, gdal.GDT_Float32)
     cell_size = geoprocess.get_cell_size_from_uri(aoi_raster)
     m2_per_cell = cell_size ** 2
     ha_per_m2 = 0.0001
