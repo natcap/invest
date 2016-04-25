@@ -39,6 +39,7 @@ SetCompressor zlib
 !include "x64.nsh"
 !include "FileFunc.nsh"
 !include "nsDialogs.nsh"
+!include "WinVer.nsh"
 
 ; MUI Settings
 !define MUI_ABORTWARNING
@@ -184,15 +185,6 @@ Function DumpLog
         Exch $5
 FunctionEnd
 
-Function .onInit
- System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
- Pop $R0
-
- StrCmp $R0 0 +3
-   MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
-   Abort
-FunctionEnd
-
 Function Un.onInit
     !insertmacro CheckProgramRunning "invest"
 FunctionEnd
@@ -312,6 +304,15 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
 
 SectionEnd
 
+; Only add this section if we're running the installer on Windows 7 or below.
+; See InVEST Issue #3515.
+; This section is disabled in .onInit if we're running Windows 8 or later.
+Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
+    File vcredist_x86.exe
+    ExecWait "vcredist_x86.exe /q"
+    Delete vcredist_x86.exe
+SectionEnd
+
 Section "uninstall"
   ; Need to enforce execution level as admin.  See
   ; nsis.sourceforge.net/Shortcuts_removal_fails_on_Windows_Vista
@@ -408,3 +409,21 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd
 SectionGroupEnd
+
+Function .onInit
+ System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
+ Pop $R0
+
+ StrCmp $R0 0 +3
+   MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
+   Abort
+
+  ${ifNot} ${AtMostWin7}
+    ; disable the section if we're not running on Windows 7 or earlier.
+    ; This section should not execute for Windows 8 or later.
+    SectionGetFlags ${Sec_VCRedist2008} $0
+    IntOp $0 $0 & ${SECTION_OFF}
+    SectionSetFlags ${Sec_VCRedist2008} $0
+    SectionSetText ${Sec_VCRedist2008} ""
+  ${endIf}
+FunctionEnd

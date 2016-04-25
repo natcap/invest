@@ -25,6 +25,7 @@ import time
 import warnings
 import zipfile
 from types import DictType
+import urllib
 
 import pkg_resources
 import paver.svn
@@ -2732,6 +2733,23 @@ def _build_nsis(version, bindir, arch):
         data_location = 'nightly-build/invest-forks/%s/data' % forkuser
         forkname = forkuser
 
+    # download a version of the MSVC redistributable installer that we
+    # know works so that we can install it as part of the NSIS installer.
+    # This is intended to address issue #3515
+    # (https://bitbucket.org/natcap/invest/issues/3515) by installing a version
+    # of the MSVC redist that the binaries require to work.  As far as I can
+    # tell, this fix is only required for Windows 7 computers.  Winodws 8, 8.1,
+    # 10 appear to work as expected.
+    installer_dir = os.path.join('installer', 'windows')
+    vc_redist = os.path.join(installer_dir, 'vcredist_x86.exe')
+    if not os.path.exists(vc_redist):
+        response = urllib.urlretrieve((
+            'https://download.microsoft.com/download/5/D/8/'
+            '5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe'),
+            vc_redist)
+    else:
+        print 'VCRedist for Windows 7 already exists at %s' % vc_redist
+
     nsis_params = [
         '/DVERSION=%s' % version,
         '/DVERSION_DISK=%s' % version,
@@ -2743,7 +2761,7 @@ def _build_nsis(version, bindir, arch):
         'invest_installer.nsi'
     ]
     makensis += ' ' + ' '.join(nsis_params)
-    sh(makensis, cwd=os.path.join('installer', 'windows'))
+    sh(makensis, cwd=installer_dir)
 
     # copy the completd NSIS installer file into dist/
     for exe_file in glob.glob('installer/windows/*.exe'):
