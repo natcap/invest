@@ -26,6 +26,11 @@ _OUTPUT = {
     'yield_raster': 'yield.tif'
 }
 
+_INTERMEDIATE = {
+    'aoi_raster': 'aoi.tif',
+    'irrigation_raster': 'irrigation.tif'
+}
+
 
 def execute(args):
     """
@@ -109,12 +114,14 @@ def execute(args):
         os.makedirs(output_dir)
 
     file_registry = invest_utils.build_file_registry(
-        [(_OUTPUT, output_dir)], args['results_suffix'])
+        [(_OUTPUT, output_dir), (_INTERMEDIATE, cache_dir)],
+        args['results_suffix'])
 
-    aoi_raster = os.path.join(cache_dir, 'aoi')
-    reproject_raster(args['aoi_raster'], args['aoi_raster'], aoi_raster)
+    reproject_raster(
+        args['aoi_raster'], args['aoi_raster'], file_registry['aoi_raster'])
     global_dataset_dict = get_global_dataset(args['dataset_dir'])
-    lookup_dict = get_lookup_dict(aoi_raster, args['lookup_table'])
+    lookup_dict = get_lookup_dict(
+        file_registry['aoi_raster'], args['lookup_table'])
 
     fertilizer_dict = None
     if args['yield_function'] == 'observed':
@@ -122,7 +129,7 @@ def execute(args):
         yield_dict = run_observed_yield(
             global_dataset_dict['observed'],
             cache_dir,
-            aoi_raster,
+            file_registry['aoi_raster'],
             lookup_dict,
             file_registry['yield_raster'])
     elif args['yield_function'] == 'percentile':
@@ -132,22 +139,26 @@ def execute(args):
             global_dataset_dict['climate_bin_maps'],
             global_dataset_dict['percentile'],
             cache_dir,
-            aoi_raster,
+            file_registry['aoi_raster'],
             lookup_dict,
             file_registry['yield_raster'],
             args['percentile_column'])
     elif args['yield_function'] == 'regression':
         LOGGER.info("Calculating Yield from Regression Model with "
                     "Climate-based Parameters...")
+        reproject_raster(
+            args['irrigation_raster'],
+            file_registry['aoi_raster'],
+            file_registry['irrigation_raster'])
         fertilizer_dict = get_fertilizer_rasters(
-            args['fertilizer_dir'], cache_dir, aoi_raster)
+            args['fertilizer_dir'], cache_dir, file_registry['aoi_raster'])
         yield_dict = run_regression_yield(
             global_dataset_dict['climate_bin_maps'],
             global_dataset_dict['regression'],
             cache_dir,
-            aoi_raster,
+            file_registry['aoi_raster'],
             fertilizer_dict,
-            args['irrigation_raster'],
+            file_registry['irrigation_raster'],
             lookup_dict,
             file_registry['yield_raster'])
 
@@ -164,7 +175,7 @@ def execute(args):
         compute_financial_analysis(
             yield_dict,
             args['economics_table'],
-            aoi_raster,
+            file_registry['aoi_raster'],
             lookup_dict,
             fertilizer_dict,
             file_registry['financial_analysis_table'])
@@ -737,7 +748,7 @@ def run_percentile_yield(climate_bin_maps, percentile_tables, cache_dir,
 
 
 def run_regression_yield(climate_bin_maps, regression_tables, cache_dir,
-                         aoi_raster, fertilizer_dict, orig_irrigation_raster,
+                         aoi_raster, fertilizer_dict, irrigation_raster,
                          lookup_dict, yield_raster):
     """Run regression yield model.
 
@@ -749,7 +760,7 @@ def run_regression_yield(climate_bin_maps, regression_tables, cache_dir,
         aoi_raster (str): path to aoi raster.
         fertilizer_dict (dict): mapping of fertilizers to their respective
             raster paths.
-        orig_irrigation_raster (str): path to is_irrigated raster.
+        irrigation_raster (str): path to intermediate is_irrigated raster.
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
         yield_raster (str): path to output raster.
 
@@ -766,8 +777,6 @@ def run_regression_yield(climate_bin_maps, regression_tables, cache_dir,
         lookup_dict)
     regression_coefficient_dict = get_regression_coefficients(
         regression_tables, lookup_dict)
-    irrigation_raster = os.path.join(cache_dir, 'irrigation.tif')
-    reproject_raster(orig_irrigation_raster, aoi_raster, irrigation_raster)
     return compute_regression_yield(
         aoi_raster,
         lookup_dict,
