@@ -144,7 +144,7 @@ def _create_fertilizer_rasters(workspace_dir, aoi_raster):
         dst_path = os.path.join(fertilizer_dir, fert)
         _create_raster(aoi_raster, dst_path)
         for offset_dict, block in geoprocess.iterblocks(dst_path):
-            block[block == block] = app_rate
+            block[:] = app_rate
             _write_to_raster(
                 dst_path, block, offset_dict['xoff'], offset_dict['yoff'])
 
@@ -165,7 +165,7 @@ def _create_global_maps(path, lookup_table_path, aoi_raster):
             dst_path = os.path.join(path, v['name'] + '_.tif')
             _create_raster(aoi_raster, dst_path)
             for offset_dict, block in geoprocess.iterblocks(dst_path):
-                block[block == block] = float(
+                block[:] = float(
                     v['code']) if float(v['code']) != 0 else 1.
                 _write_to_raster(
                     dst_path, block, offset_dict['xoff'], offset_dict['yoff'])
