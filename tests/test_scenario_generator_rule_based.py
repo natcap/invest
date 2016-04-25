@@ -236,6 +236,7 @@ class ModelTests(unittest.TestCase):
         array = read_raster(os.path.join(
             self.args['workspace_dir'], 'scenario.tif'))
         self.assertTrue(4 in array[0])
+        self.assertTrue(2 in array)
 
     def tearDown(self):
         """Tear Down."""
