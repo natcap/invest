@@ -365,10 +365,10 @@ def write_to_raster(output_raster, array, xoff, yoff):
     """Write numpy array to raster block.
 
     Args:
-        output_raster (str): filepath to output raster
-        array (np.array): block to save to raster
-        xoff (int): offset index for x-dimension
-        yoff (int): offset index for y-dimension
+        output_raster (str): filepath to output raster.
+        array (np.array): block to save to raster.
+        xoff (int): offset index for x-dimension.
+        yoff (int): offset index for y-dimension.
     """
     ds = gdal.Open(output_raster, gdal.GA_Update)
     band = ds.GetRasterBand(1)
@@ -380,11 +380,12 @@ def read_from_raster(input_raster, offset_block):
     """Read numpy array from raster block.
 
     Args:
-        input_raster (str): filepath to input raster
-        offset_block (dict): dictionary of offset information
+        input_raster (str): filepath to input raster.
+        offset_block (dict): dictionary of offset information.  Keys in the
+            dictionary include 'xoff', 'yoff', 'win_xsize', and 'win_ysize'.
 
     Returns:
-        array (np.array): a blocked array of the input raster
+        array (np.array): a blocked array of the input raster.
     """
     ds = gdal.Open(input_raster)
     band = ds.GetRasterBand(1)
@@ -455,7 +456,7 @@ def reclass(array, d, nodata=0.):
             reclassification map.
 
     Returns:
-        reclass_array (np.array): reclassified array
+        reclass_array (np.array): reclassified array.
     """
     u = np.unique(array)
     has_map = np.in1d(u, d.keys())
