@@ -234,7 +234,7 @@ class ModelTests(unittest.TestCase):
         import natcap.invest.scenario_generator as sg
         sg.scenario_generator.execute(self.args)
         array = read_raster(os.path.join(
-            self.args['workspace_dir'], 'scenario.tif'))
+            self.args['workspace_dir'], 'intermediate', 'scenario.tif'))
         self.assertTrue(4 in array[0])
         self.assertTrue(2 in array)
 
