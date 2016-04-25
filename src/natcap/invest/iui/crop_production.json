@@ -41,7 +41,12 @@
             "defaultValue": "../CropProduction/input/lookup.csv",
             "required": true,
             "validateAs": {
-              "type": "CSV"
+              "type": "CSV",
+              "fieldsExist": [
+                "name",
+                "code",
+                "is_crop"
+              ]
             },
             "helpText": "The table should contain three columns: a 'name' column, a 'code' column, and an 'is_crop' column."
           },
@@ -138,7 +143,10 @@
             "defaultValue": "../CropProduction/input/crop_nutrient_data.csv",
             "required": true,
             "validateAs": {
-              "type": "CSV"
+              "type": "CSV",
+              "fieldsExist": [
+                "crop"
+              ]
             },
             "enabledBy": "compute_nutritional_contents",
             "helpText": "A table containing data related to the nutrient contents of each crop by weight.  Please see the model's User Guide for more details."
@@ -160,7 +168,18 @@
             "defaultValue": "../CropProduction/input/crop_financial_data.csv",
             "required": true,
             "validateAs": {
-              "type": "CSV"
+              "type": "CSV",
+              "fieldsExist": [
+                "crop",
+                "price_per_ton",
+                "cost_nitrogen_per_kg",
+                "cost_phosphorus_per_kg",
+                "cost_potash_per_kg",
+                "cost_labor_per_ha",
+                "cost_machine_per_ha",
+                "cost_seed_per_ha",
+                "cost_irrigation_per_ha"
+              ]
             },
             "enabledBy": "compute_financial_analysis",
             "helpText": "A table containing data related to price and costs associated with each crop.  Please see the model's User Guide for more details."
