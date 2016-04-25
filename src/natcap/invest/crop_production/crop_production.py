@@ -15,7 +15,6 @@ from osgeo import gdal
 import pygeoprocessing.geoprocessing as geoprocess
 from .. import utils as invest_utils
 
-ZERO_REPLACEMENT = -9998
 
 LOGGER = logging.getLogger('natcap.invest.crop_production.crop_production')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -400,14 +399,7 @@ def compute_observed_yield(aoi_raster, lookup_dict, observed_yield_dict,
         for code, crop_raster in observed_yield_dict.items():
             observed_yield_block = read_from_raster(crop_raster, aoi_offset)
             observed_yield_block[observed_yield_block < 0] = 0.
-            aoi_mask = copy.copy(aoi_block)
-            if code == 0:
-                aoi_mask[aoi_mask == code] = ZERO_REPLACEMENT
-                aoi_mask[aoi_mask != ZERO_REPLACEMENT] = 0.
-                aoi_mask[aoi_mask == ZERO_REPLACEMENT] = 1.
-            else:
-                aoi_mask[aoi_mask != code] = 0.
-                aoi_mask[aoi_mask == code] = 1.
+            aoi_mask = np.where(aoi_block == code, 1., 0.)
             yield_ = aoi_mask * observed_yield_block * ha_per_cell
             yield_dict[code] += yield_.sum()
             accum_block += yield_
@@ -519,15 +511,7 @@ def compute_percentile_yield(aoi_raster, lookup_dict, climate_bin_dict,
             climate_bin_block = read_from_raster(
                 climate_bin_raster, aoi_offset)
             yield_block = reclass(climate_bin_block, reclass_dict[code])
-
-            aoi_mask = copy.copy(aoi_block)
-            if code == 0:
-                aoi_mask[aoi_mask == code] = ZERO_REPLACEMENT
-                aoi_mask[aoi_mask != ZERO_REPLACEMENT] = 0.
-                aoi_mask[aoi_mask == ZERO_REPLACEMENT] = 1.
-            else:
-                aoi_mask[aoi_mask != code] = 0.
-                aoi_mask[aoi_mask == code] = 1.
+            aoi_mask = np.where(aoi_block == code, 1., 0.)
             yield_ = aoi_mask * yield_block * ha_per_cell
             yield_dict[code] += yield_.sum()
             accum_block += yield_
@@ -677,16 +661,7 @@ def compute_regression_yield(aoi_raster, lookup_dict, climate_bin_dict,
             Is_RF_block = reclass(Is_Irr_block, {1: 0, 0: 1})
             Yield_block = (MaxYieldRainFed * Is_RF_block) + (
                 MaxYield * Is_Irr_block)
-
-            aoi_mask = copy.copy(aoi_block)
-            if code == 0:
-                aoi_mask[aoi_mask == code] = ZERO_REPLACEMENT
-                aoi_mask[aoi_mask != ZERO_REPLACEMENT] = 0.
-                aoi_mask[aoi_mask == ZERO_REPLACEMENT] = 1.
-            else:
-                aoi_mask[aoi_mask != code] = 0.
-                aoi_mask[aoi_mask == code] = 1.
-
+            aoi_mask = np.where(aoi_block == code, 1., 0.)
             Yield_ = Yield_block * aoi_mask * ha_per_cell
             yield_dict[code] += Yield_.sum()
             accum_block += Yield_
