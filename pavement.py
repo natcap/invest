@@ -3310,6 +3310,34 @@ def compress_raster(args):
         ))
 
 
+def fetch_crop_data():
+    """Fetch InVEST Crop Model data and extract to data directory.
+
+    Args:
+        extract_path (str): path to store global dataset.
+        url (str): remote location of data.
+    """
+    print "Fetching data/crop-model-data"
+    extract_path = os.path.abspath('data/crop-model-data')
+    if os.path.exists(extract_path):
+        print "Data data/crop-model-data exists"
+        return
+
+    url = 'http://data.naturalcapitalproject.org/invest_crop_production/' \
+          'global_dataset_20151210.zip'
+    tmp_path = os.path.join(os.path.abspath('tmp'), 'global_dataset.zip')
+    try:
+        dry('mkdir -p %s' % 'tmp', os.makedirs, os.path.abspath('tmp'))
+    except OSError:
+        # Folder already exists.  Skipping.
+        pass
+
+    rsp = urllib.urlretrieve(url, tmp_path)
+    zf = zipfile.ZipFile(tmp_path, 'r')
+    zf.extractall(path=extract_path)
+    os.remove(tmp_path)
+
+
 @task
 @consume_args
 def test(args):
@@ -3347,6 +3375,7 @@ def test(args):
     if parsed_args.with_data:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
         call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
+        fetch_crop_data()
 
     compiler = None
     if parsed_args.jenkins and platform.system() == 'Windows':
