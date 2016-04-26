@@ -617,24 +617,24 @@ def execute(args):
             args['transition'] + '. The model expects different tables.'
 
     # Transition table fields
-    args["transition_id"] = "Id"
-    args["percent_field"] = "Percent Change"
-    args["area_field"] = "Area Change"
-    args["priority_field"] = "Priority"
-    args["proximity_field"] = "Proximity"
+    args["transition_id"] = "id"
+    args["percent_field"] = "percent change"
+    args["area_field"] = "area change"
+    args["priority_field"] = "priority"
+    args["proximity_field"] = "proximity"
     args["proximity_weight"] = "0.3"
-    args["patch_field"] = "Patch ha"
+    args["patch_field"] = "patch ha"
 
     # Suitability factors table fields
-    args["suitability_id"] = "Id"
-    args["suitability_layer"] = "Layer"
-    args["suitability_weight"] = "Wt"
-    args["suitability_field"] = "Suitfield"
-    args["distance_field"] = "Dist"
-    args["suitability_cover_id"] = "Cover ID"
+    args["suitability_id"] = "id"
+    args["suitability_layer"] = "layer"
+    args["suitability_weight"] = "wt"
+    args["suitability_field"] = "suitfield"
+    args["distance_field"] = "dist"
+    args["suitability_cover_id"] = "cover id"
 
     # Exercise fields
-    args["returns_cover_id"] = "Cover ID"
+    args["returns_cover_id"] = "cover id"
 
     landcover_uri = args["landcover"]
 
@@ -724,7 +724,7 @@ def execute(args):
 
     transition_dict = {}
     if args["calculate_transition"] or args["calculate_factors"]:
-        transition_dict = geoprocess.get_lookup_from_csv(
+        transition_dict = geoprocess.get_lookup_from_table(
             args["transition"],
             args["transition_id"])
         landcover_count_dict = geoprocess.unique_raster_values_count(
@@ -779,7 +779,7 @@ def execute(args):
             reclass_dict = {}
             all_zeros = True
             for this_lulc in transition_dict:
-                value = int(transition_dict[this_lulc][str(next_lulc)])
+                value = int(transition_dict[this_lulc][str(int(next_lulc))])
                 reclass_dict[this_lulc] = value * transition_scale
                 all_zeros = all_zeros and (value == 0)
 
@@ -804,7 +804,7 @@ def execute(args):
     suitability_factors_dict = {}
     if args["calculate_factors"]:
         LOGGER.info("Calculating suitability factors...")
-        factor_dict = geoprocess.get_lookup_from_csv(
+        factor_dict = geoprocess.get_lookup_from_table(
             args["suitability"],
             args["suitability_id"])
         factor_uri_dict = {}
@@ -1056,7 +1056,6 @@ def execute(args):
                         "Combining suitability for cover %i.", cover_id)
                     ds_uri = os.path.join(workspace, factors_name % cover_id)
 
-                    print('cover_ids', suitability_dict.keys())
                     geoprocess.vectorize_datasets(
                         [suitability_transition_dict[cover_id],
                             suitability_factors_dict[cover_id]],
@@ -1605,11 +1604,11 @@ def execute(args):
 
     cover_names_dict = {}
 
-    transition_dict = geoprocess.get_lookup_from_csv(
+    transition_dict = geoprocess.get_lookup_from_table(
         args["transition"], args["transition_id"])
     cover_names_dict = {}
     for cover in transition_dict:
-        cover_names_dict[cover] = transition_dict[cover]["Name"]
+        cover_names_dict[cover] = transition_dict[cover]["name"]
 
     htm.write(generate_chart_html(cover_dict, cover_names_dict, workspace))
 
