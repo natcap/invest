@@ -14,6 +14,8 @@ from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
+CROP_SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'crop-model-data')
 
 NODATA_INT = -9999
 
@@ -331,7 +333,7 @@ class TestFunctions(unittest.TestCase):
         self.args = _get_args()
 
     def test_get_regression_coefficients(self):
-        """Crop Production: test get_regression_coefficients function."""
+        """Crop Production: Test get_regression_coefficients function."""
         from natcap.invest.crop_production import crop_production as cp
         maize_dir = os.path.join(
             self.args['workspace_dir'], 'dataset', 'climate_regression_yield')
@@ -347,7 +349,7 @@ class TestFunctions(unittest.TestCase):
             np.nan in regression_coefficients_dict[1][1.0].values())
 
     def test_reclass(self):
-        """Crop Production: test reclass function."""
+        """Crop Production: Test reclass function."""
         from natcap.invest.crop_production import crop_production
         array = np.array([1., 0.])
         d = {1.: 2.}
@@ -356,7 +358,7 @@ class TestFunctions(unittest.TestCase):
         np.testing.assert_array_almost_equal(guess, check)
 
     def test_check_inputs_percentile(self):
-        """Crop Production: test check_inputs function, 1."""
+        """Crop Production: Test check_inputs function, 1."""
         from natcap.invest.crop_production import crop_production
         self.args['yield_function'] = 'percentile'
         del self.args['percentile_column']
@@ -364,7 +366,7 @@ class TestFunctions(unittest.TestCase):
             crop_production.check_inputs(self.args)
 
     def test_check_inputs_regression_fertilizer(self):
-        """Crop Production: test check_inputs function, 2."""
+        """Crop Production: Test check_inputs function, 2."""
         from natcap.invest.crop_production import crop_production
         self.args['yield_function'] = 'regression'
         del self.args['fertilizer_dir']
@@ -372,7 +374,7 @@ class TestFunctions(unittest.TestCase):
             crop_production.check_inputs(self.args)
 
     def test_check_inputs_regression_irrigation(self):
-        """Crop Production: test check_inputs function, 3."""
+        """Crop Production: Test check_inputs function, 3."""
         from natcap.invest.crop_production import crop_production
         self.args['yield_function'] = 'regression'
         del self.args['irrigation_raster']
@@ -473,33 +475,47 @@ class TestModel(unittest.TestCase):
         os.makedirs(os.path.join(self.args['workspace_dir'], 'intermediate'))
         crop_production.execute(self.args)
 
-    # @scm.skip_if_data_missing(SAMPLE_DATA)
-    # def test_binary(self):
-    #     """Crop Production: Test main model run against InVEST-Data."""
-    #     from natcap.invest.crop_production import crop_production
-    #     sample_data_path = os.path.join(SAMPLE_DATA, 'CropProduction')
-    #     args = {
-    #         'workspace_dir': self.args['workspace_dir'],
-    #         'results_suffix': 'scenario_name',
-    #         'lookup_table': os.path.join(
-    #             sample_data_path, 'input', 'lookup.csv'),
-    #         'aoi_raster': os.path.join(
-    #             sample_data_path, 'input', 'willamette.tif'),
-    #         'dataset_dir': '',
-    #         'yield_function': 'regression',
-    #         'percentile_column': 'yield_95th',
-    #         'fertilizer_dir': os.path.join(
-    #             sample_data_path, 'input', 'fertilizers'),
-    #         'irrigation_raster': os.path.join(
-    #             sample_data_path, 'input', 'willamette_irrigation.tif'),
-    #         'compute_nutritional_contents': True,
-    #         'nutrient_table': os.path.join(
-    #             sample_data_path, 'input', 'crop_nutrient_data.csv'),
-    #         'compute_financial_analysis': True,
-    #         'economics_table': os.path.join(
-    #             sample_data_path, 'input', 'crop_financial_data.csv')
-    #     }
-    #     crop_production.execute(args)
+    @scm.skip_if_data_missing(CROP_SAMPLE_DATA)
+    def test_binary(self):
+        """Crop Production: Test main model run against InVEST-Data."""
+        from natcap.invest.crop_production import crop_production
+        sample_data_path = os.path.join(SAMPLE_DATA, 'CropProduction')
+        global_dataset_path = os.path.join(CROP_SAMPLE_DATA, 'global_dataset')
+        args = {
+            'workspace_dir': self.args['workspace_dir'],
+            'results_suffix': '_1',
+            'lookup_table': os.path.join(
+                sample_data_path, 'input', 'lookup.csv'),
+            'aoi_raster': os.path.join(
+                sample_data_path, 'input', 'willamette.tif'),
+            'dataset_dir': global_dataset_path,
+            'yield_function': 'observed',
+            'percentile_column': 'yield_95th',
+            'fertilizer_dir': os.path.join(
+                sample_data_path, 'input', 'fertilizers'),
+            'irrigation_raster': os.path.join(
+                sample_data_path, 'input', 'willamette_irrigation.tif'),
+            'compute_nutritional_contents': True,
+            'nutrient_table': os.path.join(
+                sample_data_path, 'input', 'crop_nutrient_data.csv'),
+            'compute_financial_analysis': True,
+            'economics_table': os.path.join(
+                sample_data_path, 'input', 'crop_financial_data.csv')
+        }
+        crop_production.execute(args)
+        yield_raster_path = os.path.join(
+            self.args['workspace_dir'], 'output', 'yield_1.tif')
+        np.testing.assert_array_almost_equal(
+            np.unique(_read_array(yield_raster_path)),
+            np.array([0.00000000e+00,   9.00000014e-05,   1.80000003e-04,
+                      4.49999992e-04,   6.30000024e-04,   7.20000011e-04,
+                      1.07999996e-03,   1.26000005e-03,   1.34999992e-03,
+                      1.44000002e-03,   1.61999988e-03,   1.79999997e-03,
+                      2.06999993e-03,   2.34000012e-03,   2.69999984e-03,
+                      3.23999976e-03,   3.32999998e-03,   3.77999991e-03,
+                      3.87000013e-03,   5.48999989e-03,   1.03500001e-01,
+                      3.16350013e-01,   3.51900011e-01,   8.68860006e-01,
+                      1.61658001e+00,   2.44286990e+00]))
 
     def tearDown(self):
         """Remove workspace."""
