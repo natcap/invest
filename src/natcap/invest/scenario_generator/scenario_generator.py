@@ -32,7 +32,18 @@ _OUTPUT = {
 }
 
 _INTERMEDIATE = {
-    'scenario_uri': 'scenario.tif'
+    'scenario_uri': 'scenario.tif',
+    'transition_name': "transition_%i.tif",
+    'suitability_name': '%s_%s.tif',
+    'normalized_name': '%s_%s_norm.tif',
+    'combined_name': 'factors_%s.tif',
+    'constraints_name': 'constraints.tif',
+    'filter_name': 'filter_%i.tif',
+    'factors_name': 'suitability_%s.tif',
+    'cover_name': 'cover_%i.tif',
+    'proximity_name': 'proximity_%s.tif',
+    'normalized_proximity_name': 'proximity_norm_%s.tif',
+    'adjusted_suitability_name': 'adjusted_suitability_%s.tif'
 }
 
 
@@ -662,28 +673,17 @@ def execute(args):
     geoprocess.create_directories([workspace])
 
     # relative paths, or with patterned name
-    transition_name = os.path.join(
-        intermediate_dir, "transition_%i" + suffix + ".tif")
-    suitability_name = os.path.join(
-        intermediate_dir, "%s_%s" + suffix + ".tif")
-    normalized_name = os.path.join(
-        intermediate_dir, "%s_%s_norm" + suffix + ".tif")
-    combined_name = os.path.join(
-        intermediate_dir, "factors_%s" + suffix + ".tif")
-    constraints_name = os.path.join(
-        intermediate_dir, "constraints" + suffix + ".tif")
-    filter_name = os.path.join(
-        intermediate_dir, "filter_%i" + suffix + ".tif")
-    factors_name = os.path.join(
-        intermediate_dir, "suitability_%s" + suffix + ".tif")
-    cover_name = os.path.join(
-        intermediate_dir, "cover_%i" + suffix + ".tif")
-    proximity_name = os.path.join(
-        intermediate_dir, "proximity_%s" + suffix + ".tif")
-    normalized_proximity_name = os.path.join(
-        intermediate_dir, "proximity_norm_%s" + suffix + ".tif")
-    adjusted_suitability_name = os.path.join(
-        intermediate_dir, "adjusted_suitability_%s" + suffix + ".tif")
+    transition_name = file_registry['transition_name']
+    suitability_name = file_registry['suitability_name']
+    normalized_name = file_registry['normalized_name']
+    combined_name = file_registry['combined_name']
+    constraints_name = file_registry['constraints_name']
+    filter_name = file_registry['filter_name']
+    factors_name = file_registry['factors_name']
+    cover_name = file_registry['cover_name']
+    proximity_name = file_registry['proximity_name']
+    normalized_proximity_name = file_registry['normalized_proximity_name']
+    adjusted_suitability_name = file_registry['adjusted_suitability_name']
 
     # Constants
     raster_format = "GTiff"
