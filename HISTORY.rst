@@ -10,6 +10,7 @@ Unreleased Features
 * Updated the InVEST license to legally define the Natural Capital Project.
 * Corrected an issue in Coastal Vulnerability where an output shapefile was being recreated for each row, and where field values were not being stored correctly.
 * Updated Scenario Generator model to add basic testing, file registry support, PEP8 and PEP257 compliance, and to fix several bugs.
+* Updated Crop Production model to add a simplified UI, faster runtime, and more testing.
 
 3.3.0 (2016-03-14)
 ------------------
