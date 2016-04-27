@@ -3335,6 +3335,8 @@ def fetch_crop_data():
     rsp = urllib.urlretrieve(url, tmp_path)
     zf = zipfile.ZipFile(tmp_path, 'r')
     zf.extractall(path=extract_path)
+    del rsp
+    del zf
     os.remove(tmp_path)
 
 
