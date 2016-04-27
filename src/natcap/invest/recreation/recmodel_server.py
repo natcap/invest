@@ -251,28 +251,32 @@ class RecModel(object):
         to_lat_trans = osr.CoordinateTransformation(aoi_ref, lat_lng_ref)
         from_lat_trans = osr.CoordinateTransformation(lat_lng_ref, aoi_ref)
 
-        # calculate x_min transformed
+        # calculate x_min transformed by comparing the x coordinate at both
+        # the top and bottom of the aoi extent and taking the minimum
         x_min_y_min, _, _ = to_lat_trans.TransformPoint(
             aoi_extent[0], aoi_extent[2])
         x_min_y_max, _, _ = to_lat_trans.TransformPoint(
             aoi_extent[0], aoi_extent[3])
         x_min = min(x_min_y_min, x_min_y_max)
 
-        # calculate x_max transformed
+        # calculate x_max transformed by comparing the x coordinate at both
+        # the top and bottom of the aoi extent and taking the maximum
         x_max_y_min, _, _ = to_lat_trans.TransformPoint(
             aoi_extent[1], aoi_extent[2])
         x_max_y_max, _, _ = to_lat_trans.TransformPoint(
             aoi_extent[1], aoi_extent[3])
         x_max = max(x_max_y_min, x_max_y_max)
 
-        # calculate y_min transformed
+        # calculate y_min transformed by comparing the y coordinate at both
+        # the top and bottom of the aoi extent and taking the minimum
         _, y_min_x_min, _ = to_lat_trans.TransformPoint(
             aoi_extent[0], aoi_extent[2])
         _, y_min_x_max, _ = to_lat_trans.TransformPoint(
             aoi_extent[1], aoi_extent[2])
         y_min = min(y_min_x_min, y_min_x_max)
 
-        # calculate y_max transformed
+        # calculate y_max transformed by comparing the y coordinate at both
+        # the top and bottom of the aoi extent and taking the maximum
         _, y_max_x_min, _ = to_lat_trans.TransformPoint(
             aoi_extent[0], aoi_extent[3])
         _, y_max_x_max, _ = to_lat_trans.TransformPoint(
