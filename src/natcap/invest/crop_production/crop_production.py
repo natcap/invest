@@ -260,20 +260,25 @@ def get_lookup_dict(aoi_raster, lookup_table):
         lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
     """
     iterblocks = geoprocess.iterblocks(aoi_raster)
-    s = set(geoprocess.unique_raster_values_uri(aoi_raster))
-
     lookup_dict = geoprocess.get_lookup_from_table(lookup_table, 'code')
-    for code in lookup_dict.keys():
-        lookup_dict[code]['name'] = lookup_dict[code]['name'].lower()
-        lookup_dict[code]['is_crop'] = lookup_dict[code]['is_crop'].lower()
 
+    s = set(geoprocess.unique_raster_values_uri(aoi_raster))
     t = set(lookup_dict.keys())
 
     if set() != s-t:
         LOGGER.warn("raster contains values not in lookup table:", s-t)
 
+    # delete lookup items not in raster
     for i in (t-s):
         del lookup_dict[i]
+
+    for code in lookup_dict.keys():
+        lookup_dict[code]['name'] = lookup_dict[code]['name'].lower()
+        lookup_dict[code]['is_crop'] = lookup_dict[code]['is_crop'].lower()
+
+        # delete lookup items that are not crops
+        if lookup_dict[code]['is_crop'] != 'true':
+            del lookup_dict[code]
 
     return lookup_dict
 
@@ -868,34 +873,41 @@ def calc_fertilizer_costs(code, code_dict, aoi_raster, fertilizer_dict):
     return fertilizer_costs
 
 
-def calc_area_costs(code, code_dict, aoi_raster):
+def calc_area_costs(lookup_dict, economics_dict, aoi_raster):
     """Calculate area-related costs (e.g. labor, seed, machine, irrigation).
 
     Args:
-        code (int): crop code.
-        code_dict (dict): economic information of crop.
+        lookup_dict (dict): mapping of codes to lookup info for crops in aoi.
+        economics_dict (dict): economic information.
         aoi_raster (str): path to aoi raster.
 
     Returns:
-        area_costs (float): total of area-related costs for a given crop.
+        area_cost_dict (dict): {<code>: <total of area-related costs>}
     """
+    # find num cells per code
+    cells_per_code = dict((code, 0,) for code in lookup_dict.keys())
+    iterblock = geoprocess.iterblocks(aoi_raster)
+    for block_dict, block in iterblock:
+        cells_per_code = dict((code, cells + len(block[block == code]))
+                              for code, cells in cells_per_code.items())
+
+    # find total hectares per code
     cell_size = geoprocess.get_cell_size_from_uri(aoi_raster)
     m2_per_cell = cell_size ** 2
     ha_per_m2 = 0.0001
     ha_per_cell = ha_per_m2 * m2_per_cell
+    ha_per_code = dict((code, num_cells * ha_per_cell)
+                       for code, num_cells in cells_per_code.items())
 
-    iterblock = geoprocess.iterblocks(aoi_raster)
-    num_cells = 0
-    for block_dict, block in iterblock:
-        num_cells += len(block[block == code])
-    hectares = ha_per_cell * num_cells
+    # find area cost per code
+    area_costs_dict = dict((code, 0.) for code in lookup_dict.keys())
+    for code in lookup_dict.keys():
+        sub_dict = economics_dict[code]
+        for column, amount in sub_dict.items():
+            if column.endswith('per_ha'):
+                area_costs_dict[code] = amount * ha_per_code[code]
 
-    area_costs = 0
-    for column, amount in code_dict.items():
-        if column.endswith('per_ha'):
-            area_costs += amount * hectares
-
-    return area_costs
+    return area_costs_dict
 
 
 def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
@@ -916,15 +928,15 @@ def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
     """
     codes = yield_dict.keys()
     crop_to_code_dict = dict(
-        [(val['name'], code) for code, val in lookup_dict.items()])
-    code_to_crop_dict = dict([(v, k) for k, v in crop_to_code_dict.items()])
+        (val['name'], code) for code, val in lookup_dict.items())
+    code_to_crop_dict = dict((v, k) for k, v in crop_to_code_dict.items())
 
     economics_dict = geoprocess.get_lookup_from_table(economics_table, 'crop')
-    for k, v in economics_dict.items():
-        del v['crop']
-    economics_dict = dict([
-        (crop_to_code_dict[k], v) for k, v in economics_dict.items()
-        if k in crop_to_code_dict])
+    economics_dict = dict((crop_to_code_dict[k], v)
+                          for k, v in economics_dict.items()
+                          if k in crop_to_code_dict)
+
+    area_cost_dict = calc_area_costs(lookup_dict, economics_dict, aoi_raster)
 
     financial_analysis_dict = {}
     for code, code_dict in economics_dict.items():
@@ -932,8 +944,7 @@ def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
         if fertilizer_dict:
             fertilizer_cost = calc_fertilizer_costs(
                 code, code_dict, aoi_raster, fertilizer_dict)
-        area_cost = calc_area_costs(code, code_dict, aoi_raster)
-        costs = fertilizer_cost + area_cost
+        costs = fertilizer_cost + area_cost_dict[code]
         revenues = code_dict['price_per_ton'] * yield_dict[code]
         returns = revenues - costs
         financial_analysis_dict[code] = {}
