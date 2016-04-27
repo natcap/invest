@@ -1,2 +1,0 @@
-def execute(args):
-    pass

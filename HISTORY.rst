@@ -9,6 +9,7 @@ Unreleased Features
 * Removed the deprecated subpackage ``natcap.invest.optimization``.
 * Updated the InVEST license to legally define the Natural Capital Project.
 * Corrected an issue in Coastal Vulnerability where an output shapefile was being recreated for each row, and where field values were not being stored correctly.
+* Updated Scenario Generator model to add basic testing, file registry support, PEP8 and PEP257 compliance, and to fix several bugs.
 
 3.3.0 (2016-03-14)
 ------------------
