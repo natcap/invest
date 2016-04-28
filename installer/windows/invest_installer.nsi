@@ -95,7 +95,7 @@ Function AddAdvancedOptions
     pop $AdvCheckbox
     ${NSD_OnClick} $AdvCheckbox EnableAdvFileSelect
 
-    ${NSD_CreateFileRequest} 175u -18u 36% 12u ""
+    ${NSD_CreateFileRequest} 175u -18u 36% 12u $LocalDataZipFile
     pop $AdvFileField
     ShowWindow $AdvFileField 0
 
@@ -103,6 +103,12 @@ Function AddAdvancedOptions
     pop $AdvZipFile
     ${NSD_OnClick} $AdvZipFile GetZipFile
     ShowWindow $AdvZipFile 0
+
+    ; if $LocalDataZipFile has a value, check the 'advanced' checkbox by default.
+    ${If} $LocalDataZipFile != ""
+        ${NSD_Check} $AdvCheckbox
+        Call EnableAdvFileSelect
+    ${EndIf}
 FunctionEnd
 
 Function EnableAdvFileSelect
@@ -115,7 +121,7 @@ Function GetZipFile
     nsDialogs::SelectFileDialog "open" "" "Zipfiles *.zip"
     pop $0
     ${GetFileExt} $0 $1
-    ${If} "$1" != "zip"
+    ${If} $1 != "zip"
         MessageBox MB_OK "File must be a zipfile"
         Abort
     ${EndIf}
@@ -132,11 +138,16 @@ FunctionEnd
 Function ValidateAdvZipFile
     ${NSD_GetText} $AdvFileField $0
     ${If} $0 != ""
-        ${GetFileExt} $1 $0
+        ${GetFileExt} $0 $1
         ${If} $1 != "zip"
-            MessageBox MB_OK "File must be a zipfile"
+            MessageBox MB_OK "File must be a zipfile $1"
+            Abort
         ${EndIf}
+        IfFileExists $0 +3 0
+        MessageBox MB_OK "File not found or not accessible: $0"
+        Abort
     ${Else}
+        ; Save the value in the advanced filefield as $LocalDataZipFile
         strcpy $LocalDataZipFile $0
     ${EndIf}
 FunctionEnd
@@ -294,7 +305,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
 
   ; If the user has provided a custom data zipfile, unzip the data.
   ${If} $LocalDataZipFile != ""
-    nsisunz::UnzipToLog "$LocalDataZipFile" "$INSTDIR"
+    nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
   ${EndIf}
 
   ; Write the install log to a text file on disk.
@@ -426,4 +437,9 @@ Function .onInit
     SectionSetFlags ${Sec_VCRedist2008} $0
     SectionSetText ${Sec_VCRedist2008} ""
   ${endIf}
+
+  ; If the user has defined the /DATAZIP flag, set the 'advanced' option
+  ; to the user's defined value.
+  ${GetOptions} $CMDLINE "/DATAZIP=" $0
+  strcpy $LocalDataZipFile $0
 FunctionEnd
