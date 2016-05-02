@@ -69,8 +69,9 @@ SetCompressor zlib
 
 ; MUI end ------
 
+!define INSTALLER_NAME "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
+OutFile ${INSTALLER_NAME}
 InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
 ShowInstDetails show
 
@@ -422,6 +423,23 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 SectionGroupEnd
 
 Function .onInit
+ ${GetOptions} $CMDLINE "/?" $0
+ IfErrors skiphelp showhelp
+ showhelp:
+     MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
+     $\r$\n\
+     For more information about InVEST or the Natural Capital Project, visit our \
+     website: http://naturalcapitalproject.org/invest$\r$\n\
+     $\r$\n\
+     Command-Line Options:$\r$\n\
+         /?$\t$\t=$\tDisplay this help and exit$\r$\n\
+         /S$\t$\t=$\tSilently install InVEST.$\r$\n\
+         /D=$\t$\t=$\tSet the installation directory.$\r$\n\
+         /DATAZIP=$\t=$\tUse this sample data zipfile.$\r$\n\
+         "
+     abort
+ skiphelp:
+
  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
  Pop $R0
 
