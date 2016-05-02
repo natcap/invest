@@ -98,9 +98,13 @@ def execute(args):
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     # determine the minimum cell size
-    cell_size = min(
-        [pygeoprocessing.get_cell_size_from_uri(entry['raster_path'])
-         for entry in args['hsi_ranges'].itervalues()])
+    if 'output_cell_size' in args:
+        output_cell_size = args['output_cell_size']
+    else:
+        # cell size is the min cell size of all the biophysical inputs
+        output_cell_size = min(
+            [pygeoprocessing.get_cell_size_from_uri(entry['raster_path'])
+             for entry in args['hsi_ranges'].itervalues()])
 
     algined_raster_stack = {}
     out_aligned_raster_list = []
@@ -114,7 +118,7 @@ def execute(args):
     pygeoprocessing.geoprocessing.align_dataset_list(
         base_raster_list, out_aligned_raster_list,
         ['nearest'] * len(base_raster_list),
-        cell_size, 'intersection', 0, aoi_uri=args['aoi_uri'])
+        output_cell_size, 'intersection', 0, aoi_uri=args['aoi_uri'])
 
     return
 
