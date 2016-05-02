@@ -106,6 +106,7 @@ def execute(args):
             [pygeoprocessing.get_cell_size_from_uri(entry['raster_path'])
              for entry in args['hsi_ranges'].itervalues()])
 
+    # align the raster stack
     algined_raster_stack = {}
     out_aligned_raster_list = []
     base_raster_list = []
@@ -118,8 +119,55 @@ def execute(args):
     pygeoprocessing.geoprocessing.align_dataset_list(
         base_raster_list, out_aligned_raster_list,
         ['nearest'] * len(base_raster_list),
-        output_cell_size, 'intersection', 0, aoi_uri=args['aoi_uri'])
+        output_cell_size, 'intersection', 0, aoi_uri=args['aoi_path'])
 
+    # map biophysical to individual habitat suitability index
+    base_nodata = None
+    out_nodata = -1.0
+    suitability_range = None
+    suitability_raster_list = []
+    for key, entry in args['hsi_ranges'].iteritems():
+        base_raster_path = algined_raster_stack[key]
+        base_nodata = pygeoprocessing.get_nodata_from_uri(base_raster_path)
+        suitability_range = entry['suitability_range']
+        suitability_raster = os.path.join(
+            intermediate_output_dir, key+'_suitability.tif')
+        suitability_raster_list.append(suitability_raster)
+
+        def local_map(biophysical_values):
+            """Map biophysical values to suitability index values."""
+            # the following condition and function lists capture the following
+            # ranges in order:
+            #   1) range[0] to range[1] noninclusive (linear interp 0-1)
+            #   2) range[1] to range[2] inclusive (exactly 1.0)
+            #   3) range[2] to range[3] noninclusive (linaer interp 1-0)
+            #   4) nodata -> nodata
+            #   5) 0.0 everywhere else
+
+            condlist = [
+                (suitability_range[0] < biophysical_values) &
+                (biophysical_values < suitability_range[1]),
+                (suitability_range[1] <= biophysical_values) &
+                (biophysical_values <= suitability_range[2]),
+                (suitability_range[2] < biophysical_values) &
+                (biophysical_values < suitability_range[3]),
+                biophysical_values == base_nodata]
+            funclist = [
+                lambda x: (
+                    (x-suitability_range[0]) /
+                    (suitability_range[1]-suitability_range[0])),
+                1.0,
+                lambda x: 1.0 - (
+                    (x-suitability_range[2]) /
+                    (suitability_range[3]-suitability_range[2])),
+                out_nodata,
+                0.0]
+            return numpy.piecewise(biophysical_values, condlist, funclist)
+
+        pygeoprocessing.vectorize_datasets(
+            [base_raster_path], local_map, suitability_raster,
+            gdal.GDT_Float32, out_nodata, output_cell_size, 'intersection',
+            vectorize_op=False)
     return
 
 ##################
