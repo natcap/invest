@@ -69,8 +69,9 @@ SetCompressor zlib
 
 ; MUI end ------
 
+!define INSTALLER_NAME "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
+OutFile ${INSTALLER_NAME}
 InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
 ShowInstDetails show
 
@@ -95,7 +96,7 @@ Function AddAdvancedOptions
     pop $AdvCheckbox
     ${NSD_OnClick} $AdvCheckbox EnableAdvFileSelect
 
-    ${NSD_CreateFileRequest} 175u -18u 36% 12u ""
+    ${NSD_CreateFileRequest} 175u -18u 36% 12u $LocalDataZipFile
     pop $AdvFileField
     ShowWindow $AdvFileField 0
 
@@ -103,6 +104,12 @@ Function AddAdvancedOptions
     pop $AdvZipFile
     ${NSD_OnClick} $AdvZipFile GetZipFile
     ShowWindow $AdvZipFile 0
+
+    ; if $LocalDataZipFile has a value, check the 'advanced' checkbox by default.
+    ${If} $LocalDataZipFile != ""
+        ${NSD_Check} $AdvCheckbox
+        Call EnableAdvFileSelect
+    ${EndIf}
 FunctionEnd
 
 Function EnableAdvFileSelect
@@ -115,7 +122,7 @@ Function GetZipFile
     nsDialogs::SelectFileDialog "open" "" "Zipfiles *.zip"
     pop $0
     ${GetFileExt} $0 $1
-    ${If} "$1" != "zip"
+    ${If} $1 != "zip"
         MessageBox MB_OK "File must be a zipfile"
         Abort
     ${EndIf}
@@ -132,11 +139,16 @@ FunctionEnd
 Function ValidateAdvZipFile
     ${NSD_GetText} $AdvFileField $0
     ${If} $0 != ""
-        ${GetFileExt} $1 $0
+        ${GetFileExt} $0 $1
         ${If} $1 != "zip"
-            MessageBox MB_OK "File must be a zipfile"
+            MessageBox MB_OK "File must be a zipfile $1"
+            Abort
         ${EndIf}
+        IfFileExists $0 +3 0
+        MessageBox MB_OK "File not found or not accessible: $0"
+        Abort
     ${Else}
+        ; Save the value in the advanced filefield as $LocalDataZipFile
         strcpy $LocalDataZipFile $0
     ${EndIf}
 FunctionEnd
@@ -294,7 +306,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
 
   ; If the user has provided a custom data zipfile, unzip the data.
   ${If} $LocalDataZipFile != ""
-    nsisunz::UnzipToLog "$LocalDataZipFile" "$INSTDIR"
+    nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
   ${EndIf}
 
   ; Write the install log to a text file on disk.
@@ -411,6 +423,23 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 SectionGroupEnd
 
 Function .onInit
+ ${GetOptions} $CMDLINE "/?" $0
+ IfErrors skiphelp showhelp
+ showhelp:
+     MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
+     $\r$\n\
+     For more information about InVEST or the Natural Capital Project, visit our \
+     website: http://naturalcapitalproject.org/invest$\r$\n\
+     $\r$\n\
+     Command-Line Options:$\r$\n\
+         /?$\t$\t=$\tDisplay this help and exit$\r$\n\
+         /S$\t$\t=$\tSilently install InVEST.$\r$\n\
+         /D=$\t$\t=$\tSet the installation directory.$\r$\n\
+         /DATAZIP=$\t=$\tUse this sample data zipfile.$\r$\n\
+         "
+     abort
+ skiphelp:
+
  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
  Pop $R0
 
@@ -426,4 +455,9 @@ Function .onInit
     SectionSetFlags ${Sec_VCRedist2008} $0
     SectionSetText ${Sec_VCRedist2008} ""
   ${endIf}
+
+  ; If the user has defined the /DATAZIP flag, set the 'advanced' option
+  ; to the user's defined value.
+  ${GetOptions} $CMDLINE "/DATAZIP=" $0
+  strcpy $LocalDataZipFile $0
 FunctionEnd
