@@ -104,6 +104,8 @@ def execute(args):
     out_aligned_raster_list = []
     base_raster_list = []
     for key, entry in args['hsi_ranges'].iteritems():
+        # create a new name for aligned raster and register with both the
+        # temporary base file and regular registry so it can be deleted later
         aligned_path = os.path.join(output_dir, key + file_suffix + '.tif')
         algined_raster_stack[key] = aligned_path
         f_reg[key] = aligned_path
@@ -162,8 +164,8 @@ def execute(args):
 
         pygeoprocessing.vectorize_datasets(
             [base_raster_path], local_map, suitability_raster,
-            gdal.GDT_Float32, reclass_nodata, output_cell_size, 'intersection',
-            vectorize_op=False)
+            gdal.GDT_Float32, reclass_nodata, output_cell_size,
+            'intersection', vectorize_op=False)
 
     # calculate geometric mean
     LOGGER.info("Calculate geometric mean of HSIs.")
