@@ -5,8 +5,6 @@ import tempfile
 import shutil
 import os
 
-import numpy
-from osgeo import ogr
 from pygeoprocessing.testing import scm
 import pygeoprocessing.testing.assertions
 
@@ -23,12 +21,11 @@ class HabitatSuitabilityTests(unittest.TestCase):
 
     def setUp(self):
         """Initialize SDRRegression tests."""
-        self.workspace_dir = 'habitat_suitability_workspace' # tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Clean up remaining files."""
-
-        # shutil.rmtree(self.workspace_dir)
+        shutil.rmtree(self.workspace_dir)
 
     def test_base_regression(self):
         """Habitat suitability base regression test on sample data.
@@ -51,10 +48,33 @@ class HabitatSuitabilityTests(unittest.TestCase):
             [os.path.join(args['workspace_dir'], 'hsi.tif'),
              os.path.join(args['workspace_dir'], 'hsi_threshold.tif'),
              os.path.join(args['workspace_dir'],
-                'hsi_threshold_screened.tif')],
+                          'hsi_threshold_screened.tif')],
             [os.path.join(REGRESSION_DATA, 'hsi.tif'),
              os.path.join(REGRESSION_DATA, 'hsi_threshold.tif'),
              os.path.join(REGRESSION_DATA, 'hsi_threshold_screened.tif')])
+
+    def test_regression_cell_size(self):
+        """Habitat suitability regression test on cell size set to 500m."""
+        from natcap.invest import habitat_suitability
+
+        # use predefined directory so test can clean up files during teardown
+        args = HabitatSuitabilityTests._generate_base_args(
+            self.workspace_dir)
+        args['output_cell_size'] = 500
+        args['results_suffix'] = '500'
+        # make args explicit that this is a base run of SWY
+        habitat_suitability.execute(args)
+
+        HabitatSuitabilityTests._assert_regression_results_equal(
+            args['workspace_dir'],
+            os.path.join(REGRESSION_DATA, 'file_list_500.txt'),
+            [os.path.join(args['workspace_dir'], 'hsi_500.tif'),
+             os.path.join(args['workspace_dir'], 'hsi_threshold_500.tif'),
+             os.path.join(args['workspace_dir'],
+                          'hsi_threshold_screened_500.tif')],
+            [os.path.join(REGRESSION_DATA, 'hsi_500.tif'),
+             os.path.join(REGRESSION_DATA, 'hsi_threshold_500.tif'),
+             os.path.join(REGRESSION_DATA, 'hsi_threshold_screened_500.tif')])
 
     @staticmethod
     def _generate_base_args(workspace_dir):
