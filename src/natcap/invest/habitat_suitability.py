@@ -20,13 +20,14 @@ LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
 _OUTPUT_BASE_FILES = {
     'suitability_path': 'hsi.tif',
     'threshold_suitability_path': 'hsi_threshold.tif',
-    'screened_suitability_path': 'hsi_screened.tif',
+    'screened_suitability_path': 'hsi_threshold_screened.tif',
     }
 
 _INTERMEDIATE_BASE_FILES = {
     }
 
 _TMP_BASE_FILES = {
+    'screened_mask_path': 'exclusion_mask.tif',
     }
 
 
@@ -176,7 +177,8 @@ def execute(args):
 
     # calculate geometric mean
     LOGGER.info("Calculate geometric mean of HSIs.")
-    def geo_mean(*suitability_values):
+
+    def geo_mean_op(*suitability_values):
         """Geometric mean of input suitability_values."""
         running_product = suitability_values[0].astype(numpy.float32)
         running_mask = suitability_values[0] == reclass_nodata
@@ -191,9 +193,51 @@ def execute(args):
         return result
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        suitability_raster_list, geo_mean, f_reg['suitability_path'],
+        suitability_raster_list, geo_mean_op, f_reg['suitability_path'],
         gdal.GDT_Float32, reclass_nodata, output_cell_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
+
+    LOGGER.info(
+        "Masking HSI to threshold value of %s", args['habitat_threshold'])
+
+    def threshold_op(hsi_values):
+        """Threshold HSI values to user defined value."""
+        result = hsi_values[:]
+        invalid_mask = (
+            (hsi_values == reclass_nodata) |
+            (hsi_values < args['habitat_threshold']))
+        result[invalid_mask] = reclass_nodata
+        return result
+
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [f_reg['suitability_path']], threshold_op,
+        f_reg['threshold_suitability_path'], gdal.GDT_Float32, reclass_nodata,
+        output_cell_size, "intersection", vectorize_op=False)
+
+    # mask away any exclusion types
+    pygeoprocessing.new_raster_from_base_uri(
+        f_reg['threshold_suitability_path'],
+        f_reg['screened_mask_path'], 'GTiff', reclass_nodata,
+        gdal.GDT_Byte, fill_value=0)
+    for exclusion_mask_path in args['exclusion_path_list']:
+        LOGGER.info("Building raster mask for %s", exclusion_mask_path)
+        pygeoprocessing.rasterize_layer_uri(
+            f_reg['screened_mask_path'], exclusion_mask_path,
+            burn_values=[1])
+
+    LOGGER.info("Masking threshold by exclusions.")
+
+    def mask_exclusion_op(base_values, mask_values):
+        """Mask the base values to nodata where mask == 1."""
+        result = base_values[:]
+        result[mask_values == 1] = reclass_nodata
+        return result
+
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [f_reg['threshold_suitability_path'],
+         f_reg['screened_mask_path']], mask_exclusion_op,
+        f_reg['screened_suitability_path'], gdal.GDT_Float32, reclass_nodata,
+        output_cell_size, "intersection", vectorize_op=False)
 
     return
 
