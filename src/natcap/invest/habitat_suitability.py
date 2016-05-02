@@ -18,6 +18,9 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
 
 _OUTPUT_BASE_FILES = {
+    'suitability_path': 'hsi.tif',
+    'threshold_suitability_path': 'hsi_threshold.tif',
+    'screened_suitability_path': 'hsi_screened.tif',
     }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -116,6 +119,7 @@ def execute(args):
         out_aligned_raster_list.append(aligned_path)
         base_raster_list.append(entry['raster_path'])
 
+    LOGGER.info("Aligning base biophysical raster list.")
     pygeoprocessing.geoprocessing.align_dataset_list(
         base_raster_list, out_aligned_raster_list,
         ['nearest'] * len(base_raster_list),
@@ -123,10 +127,11 @@ def execute(args):
 
     # map biophysical to individual habitat suitability index
     base_nodata = None
-    out_nodata = -1.0
+    reclass_nodata = -1.0
     suitability_range = None
     suitability_raster_list = []
     for key, entry in args['hsi_ranges'].iteritems():
+        LOGGER.info("Mapping biophysical values to HSI on %s", key)
         base_raster_path = algined_raster_stack[key]
         base_nodata = pygeoprocessing.get_nodata_from_uri(base_raster_path)
         suitability_range = entry['suitability_range']
@@ -160,14 +165,36 @@ def execute(args):
                 lambda x: 1.0 - (
                     (x-suitability_range[2]) /
                     (suitability_range[3]-suitability_range[2])),
-                out_nodata,
+                reclass_nodata,
                 0.0]
             return numpy.piecewise(biophysical_values, condlist, funclist)
 
         pygeoprocessing.vectorize_datasets(
             [base_raster_path], local_map, suitability_raster,
-            gdal.GDT_Float32, out_nodata, output_cell_size, 'intersection',
+            gdal.GDT_Float32, reclass_nodata, output_cell_size, 'intersection',
             vectorize_op=False)
+
+    # calculate geometric mean
+    LOGGER.info("Calculate geometric mean of HSIs.")
+    def geo_mean(*suitability_values):
+        """Geometric mean of input suitability_values."""
+        running_product = suitability_values[0].astype(numpy.float32)
+        running_mask = suitability_values[0] == reclass_nodata
+        for index in range(1, len(suitability_values)):
+            running_product *= suitability_values[index]
+            running_mask = running_mask | (
+                suitability_values[index] == reclass_nodata)
+        result = numpy.empty(running_mask.shape, dtype=numpy.float32)
+        result[:] = reclass_nodata
+        result[~running_mask] = (
+            running_product[~running_mask]**(1./len(suitability_values)))
+        return result
+
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        suitability_raster_list, geo_mean, f_reg['suitability_path'],
+        gdal.GDT_Float32, reclass_nodata, output_cell_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
+
     return
 
 ##################
