@@ -8,19 +8,28 @@ from osgeo import osr
 from osgeo import ogr
 import numpy
 import scipy
-
 import pygeoprocessing.geoprocessing
+
+from . import utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
 
+_OUTPUT_BASE_FILES = {
+    }
+
+_INTERMEDIATE_BASE_FILES = {
+    }
+
+_TMP_BASE_FILES = {
+    }
+
 
 def execute(args):
     """
-    Calculate habitat suitability indexes and patches given biophysical
-    rasters and classification curves.
+    Calculate habitat suitability indexes given biophysical parameters.
 
     The objective of a habitat suitability index (HSI) is to help users
     identify areas within their AOI that would be most suitable for habitat
@@ -34,58 +43,83 @@ def execute(args):
     suitability map.
 
     Parameters:
-        args['workspace_dir'] (string): path to workspace directory for output
-            files.
-        args['habitat_threshold'] (float): (optional) size of output cells.
-        args['output_cell_size'] (float): a value to threshold the habitat
+        args['workspace_dir'] (string): directory path to workspace directory
+            for output files.
+        args['results_suffix'] (string): (optional) string to append to any
+            output file names.
+        args['aoi_path'] (string): file path to an area of interest shapefile.
+        args['exclusion_path_list'] (list): (optional) a list of file paths to
+            shapefiles which define areas which the HSI should be masked out
+            in a final output.
+        args['output_cell_size'] (float): (optional) size of output cells.
+            If not present, the output size will snap to the smallest cell
+            size in the HSI range rasters.
+        args['habitat_threshold'] (float): a value to threshold the habitat
             score values to 0 and 1.
-
-
-        temperature_biophysical_uri (string): uri to temperature raster
-        salinity_biophysical_uri (string): uri to salinity raster
-        depth_biophysical_uri (string): uri to a depth raster
-        oyster_habitat_suitability_temperature_table_uri (string): uri to a csv
-            table that has that has columns "Suitability" in (0,1) and
-            "Temperature" in range(temperature_biophysical_uri)
-        oyster_habitat_suitability_salinity_table_uri (string): uri to a csv
-            table that has that has columns "Suitability" in (0,1) and
-            "Salinity" in range(salinity_biophysical_uri)
-        oyster_habitat_suitability_depth_table_uri (string): uri to a csv
-            table that has that has columns "Suitability" in (0,1) and "Depth"
-            in range(depth_biophysical_uri)
-
-    Example Args Dictionary::
-
-        {
-            'workspace_dir': 'path/to/workspace_dir',
-            'habitat_threshold': 'example',
-            'output_cell_size': 'example',
-            'temperature_biophysical_uri': 'path/to/raster',
-            'salinity_biophysical_uri': 'path/to/raster',
-            'depth_biophysical_uri': 'path/to/raster',
-            'oyster_habitat_suitability_temperature_table_uri': 'path/to/csv',
-            'oyster_habitat_suitability_salinity_table_uri': 'path/to/csv',
-            'oyster_habitat_suitability_depth_table_uri': 'path/to/csv',
-        }
-
+        args['hsi_ranges'] (dict): a dictionary that describes the habitat
+            biophysical base rasters as well as the ranges for optimal and
+            tolerable values.  Each biophysical value has a unique key in the
+            dictionary that is used to name the mapping of biophysical to
+            local HSI value.  Each value is dictionary with keys:
+                'raster_path': path to disk for biophysical raster.
+                'range': a 4-tuple in non-decreasing order describing
+                    the "tolerable" to "optimal" ranges for those biophysical
+                    values.  The endpoints non-inclusively define where the
+                    suitability score is 0.0, the two midpoints inclusively
+                    define the range where the suitability is 1.0, and the
+                    ranges above and below are linearly interpolated between
+                    0.0 and 1.0.
+                Example:
+                    {
+                        'depth':
+                            {
+                                'raster_path': r'C:/path/to/depth.tif',
+                                'range': (-50, -30, -10, -10),
+                            },
+                        'temperature':
+                            {
+                                'temperature_path': (
+                                    r'C:/path/to/temperature.tif'),
+                                'range': (5, 7, 12.5, 16),
+                            }
+                    }
     """
-    try:
-        file_suffix = args['suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    output_dir = os.path.join(args['workspace_dir'], 'output')
+    intermediate_output_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_outputs')
+    output_dir = os.path.join(args['workspace_dir'])
+    pygeoprocessing.create_directories(
+        [output_dir, intermediate_output_dir])
 
-    #Sets up the intermediate and output directory structure for the workspace
-    for directory in [output_dir, intermediate_dir]:
-        if not os.path.exists(directory):
-            LOGGER.info('creating directory %s', directory)
-            os.makedirs(directory)
+    f_reg = utils.build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
+         (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    #align the raster lists
+    # determine the minimum cell size
+    cell_size = min(
+        [pygeoprocessing.get_cell_size_from_uri(entry['raster_path'])
+         for entry in args['hsi_ranges'].itervalues()])
+
+    algined_raster_stack = {}
+    out_aligned_raster_list = []
+    base_raster_list = []
+    for key, entry in args['hsi_ranges'].iteritems():
+        aligned_path = os.path.join(intermediate_output_dir, key + '.tif')
+        algined_raster_stack[key] = aligned_path
+        out_aligned_raster_list.append(aligned_path)
+        base_raster_list.append(entry['raster_path'])
+
+    pygeoprocessing.geoprocessing.align_dataset_list(
+        base_raster_list, out_aligned_raster_list,
+        ['nearest'] * len(base_raster_list),
+        cell_size, 'intersection', 0, aoi_uri=args['aoi_uri'])
+
+    return
+
+##################
+    # align the raster lists
     aligned_raster_stack = {
         'salinity_biophysical_uri': os.path.join(
             intermediate_dir, 'aligned_salinity.tif'),
