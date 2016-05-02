@@ -23,11 +23,8 @@ _OUTPUT_BASE_FILES = {
     'screened_suitability_path': 'hsi_threshold_screened.tif',
     }
 
-_INTERMEDIATE_BASE_FILES = {
-    }
-
 _TMP_BASE_FILES = {
-    'screened_mask_path': 'exclusion_mask.tif',
+    'screened_mask_path': 'screened_mask.tif',
     }
 
 
@@ -88,17 +85,13 @@ def execute(args):
                             }
                     }
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
+    LOGGER.info('Creating output directories and file registry.')
     output_dir = os.path.join(args['workspace_dir'])
-    pygeoprocessing.create_directories(
-        [output_dir, intermediate_output_dir])
+    pygeoprocessing.create_directories([output_dir])
 
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     # determine the minimum cell size
@@ -110,34 +103,35 @@ def execute(args):
             [pygeoprocessing.get_cell_size_from_uri(entry['raster_path'])
              for entry in args['hsi_ranges'].itervalues()])
 
-    # align the raster stack
+    LOGGER.info("Aligning base biophysical raster list.")
     algined_raster_stack = {}
     out_aligned_raster_list = []
     base_raster_list = []
     for key, entry in args['hsi_ranges'].iteritems():
-        aligned_path = os.path.join(intermediate_output_dir, key + '.tif')
+        aligned_path = os.path.join(output_dir, key + file_suffix + '.tif')
         algined_raster_stack[key] = aligned_path
+        f_reg[key] = aligned_path
+        _TMP_BASE_FILES[key] = f_reg[key]
         out_aligned_raster_list.append(aligned_path)
         base_raster_list.append(entry['raster_path'])
-
-    LOGGER.info("Aligning base biophysical raster list.")
     pygeoprocessing.geoprocessing.align_dataset_list(
         base_raster_list, out_aligned_raster_list,
         ['nearest'] * len(base_raster_list),
         output_cell_size, 'intersection', 0, aoi_uri=args['aoi_path'])
 
     # map biophysical to individual habitat suitability index
+    LOGGER.info('Starting biophysical to HSI mapping.')
     base_nodata = None
     reclass_nodata = -1.0
     suitability_range = None
     suitability_raster_list = []
     for key, entry in args['hsi_ranges'].iteritems():
-        LOGGER.info("Mapping biophysical values to HSI on %s", key)
+        LOGGER.info("Mapping biophysical to HSI on %s", key)
         base_raster_path = algined_raster_stack[key]
         base_nodata = pygeoprocessing.get_nodata_from_uri(base_raster_path)
         suitability_range = entry['suitability_range']
         suitability_raster = os.path.join(
-            intermediate_output_dir, key+'_suitability.tif')
+            output_dir, key+'_suitability%s.tif' % file_suffix)
         suitability_raster_list.append(suitability_raster)
 
         def local_map(biophysical_values):
@@ -214,7 +208,7 @@ def execute(args):
         f_reg['threshold_suitability_path'], gdal.GDT_Float32, reclass_nodata,
         output_cell_size, "intersection", vectorize_op=False)
 
-    # mask away any exclusion types
+    LOGGER.info("Masking threshold by exclusions.")
     pygeoprocessing.new_raster_from_base_uri(
         f_reg['threshold_suitability_path'],
         f_reg['screened_mask_path'], 'GTiff', reclass_nodata,
@@ -224,8 +218,6 @@ def execute(args):
         pygeoprocessing.rasterize_layer_uri(
             f_reg['screened_mask_path'], exclusion_mask_path,
             burn_values=[1])
-
-    LOGGER.info("Masking threshold by exclusions.")
 
     def mask_exclusion_op(base_values, mask_values):
         """Mask the base values to nodata where mask == 1."""
@@ -239,144 +231,11 @@ def execute(args):
         f_reg['screened_suitability_path'], gdal.GDT_Float32, reclass_nodata,
         output_cell_size, "intersection", vectorize_op=False)
 
-    return
-
-##################
-    # align the raster lists
-    aligned_raster_stack = {
-        'salinity_biophysical_uri': os.path.join(
-            intermediate_dir, 'aligned_salinity.tif'),
-        'temperature_biophysical_uri': os.path.join(
-            intermediate_dir, 'aligned_temperature.tif'),
-        'depth_biophysical_uri':  os.path.join(
-            intermediate_dir, 'algined_depth.tif')
-    }
-    biophysical_keys = [
-        'salinity_biophysical_uri', 'temperature_biophysical_uri',
-        'depth_biophysical_uri']
-    dataset_uri_list = [args[x] for x in biophysical_keys]
-    dataset_out_uri_list = [aligned_raster_stack[x] for x in biophysical_keys]
-
-    out_pixel_size = min(
-        [pygeoprocessing.geoprocessing.get_cell_size_from_uri(x) for x in dataset_uri_list])
-
-    pygeoprocessing.geoprocessing.align_dataset_list(
-        dataset_uri_list, dataset_out_uri_list,
-        ['nearest'] * len(dataset_out_uri_list),
-        out_pixel_size, 'intersection', 0)
-
-
-    #build up the interpolation functions for the habitat
-    biophysical_to_table = {
-        'salinity_biophysical_uri':
-            ('oyster_habitat_suitability_salinity_table_uri', 'salinity'),
-        'temperature_biophysical_uri':
-            ('oyster_habitat_suitability_temperature_table_uri', 'temperature'),
-        'depth_biophysical_uri':
-            ('oyster_habitat_suitability_depth_table_uri', 'depth'),
-        }
-    biophysical_to_interp = {}
-    for biophysical_uri_key, (habitat_suitability_table_uri, key) in \
-            biophysical_to_table.iteritems():
-        csv_dict_reader = csv.DictReader(
-            open(args[habitat_suitability_table_uri], 'rU'))
-        suitability_list = []
-        value_list = []
-        for row in csv_dict_reader:
-            #convert keys to lowercase
-            row = {k.lower().rstrip():v for k, v in row.items()}
-            suitability_list.append(float(row['suitability']))
-            value_list.append(float(row[key]))
-        biophysical_to_interp[biophysical_uri_key] = scipy.interpolate.interp1d(
-            value_list, suitability_list, kind='linear',
-            bounds_error=False, fill_value=0.0)
-    biophysical_to_habitat_quality = {
-        'salinity_biophysical_uri': os.path.join(
-            intermediate_dir, 'oyster_salinity_suitability.tif'),
-        'temperature_biophysical_uri': os.path.join(
-            intermediate_dir, 'oyster_temperature_suitability.tif'),
-        'depth_biophysical_uri':  os.path.join(
-            intermediate_dir, 'oyster_depth_suitability.tif'),
-    }
-    #classify the biophysical maps into habitat quality maps
-    reclass_nodata = -1.0
-    for biophysical_uri_key, interpolator in biophysical_to_interp.iteritems():
-        biophysical_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
-            aligned_raster_stack[biophysical_uri_key])
-        LOGGER.debug(aligned_raster_stack[biophysical_uri_key])
-        def reclass_op(values):
-            """reclasses a value into an interpolated value"""
-            nodata_mask = values == biophysical_nodata
-            return numpy.where(
-                nodata_mask, reclass_nodata,
-                interpolator(values))
-        pygeoprocessing.geoprocessing.vectorize_datasets(
-            [aligned_raster_stack[biophysical_uri_key]], reclass_op,
-            biophysical_to_habitat_quality[biophysical_uri_key],
-            gdal.GDT_Float32, reclass_nodata, out_pixel_size, "intersection",
-            dataset_to_align_index=0, vectorize_op=False)
-
-    #calculate the geometric mean of the suitability rasters
-    oyster_suitability_uri = os.path.join(
-        output_dir, 'oyster_habitat_suitability.tif')
-
-    def geo_mean(*values):
-        """Geometric mean of input values"""
-        running_product = values[0]
-        running_mask = values[0] == reclass_nodata
-        for index in range(1, len(values)):
-            running_product *= values[index]
-            running_mask = running_mask | (values[index] == reclass_nodata)
-        return numpy.where(
-            running_mask, reclass_nodata, running_product**(1./len(values)))
-
-    pygeoprocessing.geoprocessing.vectorize_datasets(
-        biophysical_to_habitat_quality.values(), geo_mean,
-        oyster_suitability_uri, gdal.GDT_Float32, reclass_nodata,
-        out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
-
-     #calculate the geometric mean of the suitability rasters
-    oyster_suitability_mask_uri = os.path.join(
-        output_dir, 'oyster_habitat_suitability_mask.tif')
-
-    def threshold(value):
-        """Threshold the values to args['habitat_threshold']"""
-
-        threshold_value = value >= args['habitat_threshold']
-        return numpy.where(
-            value == reclass_nodata, reclass_nodata, threshold_value)
-
-    pygeoprocessing.geoprocessing.vectorize_datasets(
-        [oyster_suitability_uri], threshold,
-        oyster_suitability_mask_uri, gdal.GDT_Float32, reclass_nodata,
-        out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
-
-    #polygonalize output mask
-    output_mask_ds = gdal.Open(oyster_suitability_mask_uri)
-    output_mask_band = output_mask_ds.GetRasterBand(1)
-    output_mask_wkt = output_mask_ds.GetProjection()
-
-    output_sr = osr.SpatialReference()
-    output_sr.ImportFromWkt(output_mask_wkt)
-
-
-    oyster_suitability_datasource_uri = os.path.join(
-        output_dir, 'oyster_habitat_suitability_mask.shp')
-
-    if os.path.isfile(oyster_suitability_datasource_uri):
-        os.remove(oyster_suitability_datasource_uri)
-
-
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    oyster_suitability_datasource = output_driver.CreateDataSource(
-        oyster_suitability_datasource_uri)
-    oyster_suitability_layer = oyster_suitability_datasource.CreateLayer(
-            'oyster', output_sr, ogr.wkbPolygon)
-
-    field = ogr.FieldDefn('pixel_value', ogr.OFTReal)
-    oyster_suitability_layer.CreateField(field)
-
-    gdal.Polygonize(
-        output_mask_band, output_mask_band, oyster_suitability_layer, 0)
+    LOGGER.info('Removing temporary files.')
+    for tmp_filename_key in _TMP_BASE_FILES:
+        try:
+            os.remove(f_reg[tmp_filename_key])
+        except OSError as os_error:
+            LOGGER.warn(
+                "Can't remove temporary file: %s\nOriginal Exception:\n%s",
+                f_reg[tmp_filename_key], os_error)
