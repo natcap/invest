@@ -1,13 +1,9 @@
 """Habitat suitability model."""
 import os
 import logging
-import csv
 
-from osgeo import gdal
-from osgeo import osr
-from osgeo import ogr
 import numpy
-import scipy
+from osgeo import gdal
 import pygeoprocessing.geoprocessing
 
 from . import utils
