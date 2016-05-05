@@ -3382,7 +3382,7 @@ def test(args):
     if parsed_args.with_data or parsed_args.jenkins:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
         call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
-        if not parser.skip_crop_data:
+        if not parsed_args.skip_crop_data:
             fetch_crop_data()
         else:
             print 'Skipping crop data download'
