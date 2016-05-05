@@ -3484,6 +3484,7 @@ def test(args):
     # run the tests within the virtualenv.
     _run_tests()
 
+
 @task
 @might_call('push')
 @cmdopts([
@@ -3491,7 +3492,8 @@ def test(args):
     ('username=', '', 'Remote username'),
     ('host=', '', 'URL of the remote server'),
     ('dataportal=', '', 'Path to the dataportal'),
-    ('upstream=', '', 'The URL to the upstream REPO.  Use this when this repo is moved'),
+    ('upstream=', '', ('The URL to the upstream REPO.  Use this when this '
+                       'repo is moved')),
     ('password', '', 'Prompt for a password'),
     ('private-key=', '', 'Use this private key to push'),
     ('include-data', '', 'Include data zipfiles in the push'),
@@ -3509,7 +3511,8 @@ def jenkins_push_artifacts(options):
 
     username, reponame = hg_path.split('/')[-2:]
 
-    version_string = _invest_version(getattr(options.jenkins_push_artifacts, 'python', sys.executable))
+    version_string = _invest_version(getattr(options.jenkins_push_artifacts,
+                                             'python', sys.executable))
 
     def _get_release_files():
         release_files = []
