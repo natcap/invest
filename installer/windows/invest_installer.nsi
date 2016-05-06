@@ -288,6 +288,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   File ..\..\src\invest-natcap.default\*.tbx
   File ..\..\src\invest-natcap.default\docs\release_notes\*.txt
   File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
+  file ..\..\HISTORY.rst
 
   SetOutPath "$INSTDIR\invest_helper_utils\"
   File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\utils\*
