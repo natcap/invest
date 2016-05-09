@@ -166,8 +166,8 @@ def main():
         print_models()
         return 0
 
-    # args.model is '' when the user provided no input.
-    if args.model == '':
+    # args.model is '' or None when the user provided no input.
+    if args.model in ['', None]:
         parser.print_help()
         print ''
         print_models()
