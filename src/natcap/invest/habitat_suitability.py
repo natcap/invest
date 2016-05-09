@@ -108,6 +108,11 @@ def execute(args):
         # temporary base file and regular registry so it can be deleted later
         aligned_path = os.path.join(output_dir, key + file_suffix + '.tif')
         algined_raster_stack[key] = aligned_path
+
+        # sanity check to ensure key is not already defined in the registry
+        if key in f_reg:
+            raise ValueError(
+                '%s key already defined in f_reg' % suitability_key)
         f_reg[key] = aligned_path
         _TMP_BASE_FILES[key] = f_reg[key]
         out_aligned_raster_list.append(aligned_path)
