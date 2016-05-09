@@ -5,16 +5,20 @@ Changes
 
 Unreleased Features
 -------------------
+* Fixed a crash in the InVEST CLI where calling ``invest`` without a parameter would raise an exception on linux-based systems.  (Issue `#3528 <https://bitbucket.org/natcap/invest/issues/3515>`_)
+* Patched an issue in Seasonal Water Yield model where a nodata value in the landcover map that was equal to "MAX_INT" would cause an overflow error/crash.
 * InVEST NSIS installer will now optionally install the Microsoft Visual C++ 2008 redistributable on Windows 7 or earlier.  This addresses a known issue on Windows 7 systems when importing GDAL binaries (Issue `#3515 <https://bitbucket.org/natcap/invest/issues/3515>`_).  Users opting to install this redistributable agree to abide by the terms and conditions therein.
 * Removed the deprecated subpackage ``natcap.invest.optimization``.
 * Updated the InVEST license to legally define the Natural Capital Project.
 * Corrected an issue in Coastal Vulnerability where an output shapefile was being recreated for each row, and where field values were not being stored correctly.
 * Issue in Recreation model fixed where the bounding box was not sufficiently distorted when unprojecting to lat/lng coordinates for an initial global cull of points.  Users might now see more visitation with regions close to the boundary of the AOI.
+* Updated Scenario Generator model to add basic testing, file registry support, PEP8 and PEP257 compliance, and to fix several bugs.
+* Updated Crop Production model to add a simplified UI, faster runtime, and more testing.
 
 3.3.0 (2016-03-14)
 ------------------
 * Refactored Wind Energy model to use a CSV input for wind data instead of a Binary file.
-* Redesigned InVEST recreation model for a single input streamlined interface, advanced analytics, and refactored outputs.  While the model is still based on "photo user days" old model runs are not backward compatable with the new model or interface. See the Recreation Model user's guide chapter for details.
+* Redesigned InVEST recreation model for a single input streamlined interface, advanced analytics, and refactored outputs.  While the model is still based on "photo user days" old model runs are not backward compatible with the new model or interface. See the Recreation Model user's guide chapter for details.
     * The refactor of this model requires an upgrade to ``GDAL >=1.11.0 <2.0`` and ``numpy >= 1.10.2``.
 * Removed nutrient retention (water purification) model from InVEST suite and replaced it with the nutrient delivery ratio (NDR) model.  NDR has been available in development relseases, but has now officially been added to the set of Windows Start Menu models and the "under development" tag in its users guide has been removed.  See the InVEST user's guide for details between the differences and advantages of NDR over the old nutrient model.
 * Modified NDR by adding a required "Runoff Proxy" raster to the inputs.  This allows the model to vary the relative intensity of nutrient runoff based on varying precipitation variability.

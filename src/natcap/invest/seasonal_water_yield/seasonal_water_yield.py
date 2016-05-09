@@ -664,13 +664,15 @@ def _calculate_curve_number_raster(
                     biophysical_table[lucode][soil_column])
                 lulc_to_soil[soil_id]['lulc_values'].append(lucode)
             else:
-                #handle the lulc nodata with cn nodata
+                # handle the lulc nodata with cn nodata
                 lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
                 lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
 
+        # Making the array an int64 to make sure it's big enough to handle
+        # both signed and unsigned int32 values
         lulc_to_soil[soil_id]['lulc_values'] = (
             numpy.array(lulc_to_soil[soil_id]['lulc_values'],
-                        dtype=numpy.int32))
+                        dtype=numpy.int64))
         lulc_to_soil[soil_id]['cn_values'] = (
             numpy.array(lulc_to_soil[soil_id]['cn_values'],
                         dtype=numpy.float32))

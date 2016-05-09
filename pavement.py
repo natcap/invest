@@ -2743,7 +2743,7 @@ def _build_nsis(version, bindir, arch):
     installer_dir = os.path.join('installer', 'windows')
     vc_redist = os.path.join(installer_dir, 'vcredist_x86.exe')
     if not os.path.exists(vc_redist):
-        response = urllib.urlretrieve((
+        urllib.urlretrieve((
             'https://download.microsoft.com/download/5/D/8/'
             '5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe'),
             vc_redist)
@@ -3310,6 +3310,38 @@ def compress_raster(args):
         ))
 
 
+def fetch_crop_data():
+    """Fetch InVEST Crop Model data and extract to data directory.
+
+    Args:
+        extract_path (str): path to store global dataset.
+        url (str): remote location of data.
+    """
+    print "Fetching data/crop-model-data"
+    extract_path = os.path.abspath('data/crop-model-data')
+    if os.path.exists(extract_path):
+        print "Data data/crop-model-data exists"
+        return
+
+    url = 'http://data.naturalcapitalproject.org/invest_crop_production/' \
+          'global_dataset_20151210.zip'
+    tmp_path = os.path.join(os.path.abspath('tmp'), 'global_dataset.zip')
+    try:
+        dry('mkdir -p %s' % 'tmp', os.makedirs, os.path.abspath('tmp'))
+    except OSError:
+        # Folder already exists.  Skipping.
+        pass
+
+    print 'Downloading Crop Model data to %s' % tmp_path
+    rsp = urllib.urlretrieve(url, tmp_path)
+    zf = zipfile.ZipFile(tmp_path, 'r')
+    print 'Extracting crop data to %s' % extract_path
+    zf.extractall(path=extract_path)
+    del rsp
+    del zf
+    os.remove(tmp_path)
+
+
 @task
 @consume_args
 def test(args):
@@ -3334,9 +3366,12 @@ def test(args):
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--jenkins', default=False, action='store_true',
-            help='Use options that are useful for Jenkins reports')
+                        help='Use options that are useful for Jenkins reports')
     parser.add_argument('--with-data', default=False, action='store_true',
-            help='Clone/update the data repo if needed')
+                        help=('Clone/update the data repo if needed. '
+                              'Also downloads crop data if needed'))
+    parser.add_argument('--skip-crop-data', default=False, action='store_true',
+                        help="Don't download crop data.")
     parser.add_argument('nose_args', nargs='*',
                         help=('Nosetests-compatible strings indicating '
                               'filename[:classname[.testname]]'),
@@ -3344,9 +3379,13 @@ def test(args):
     parsed_args = parser.parse_args(args)
     print 'parsed args: ', parsed_args
 
-    if parsed_args.with_data:
+    if parsed_args.with_data or parsed_args.jenkins:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
         call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
+        if not parsed_args.skip_crop_data:
+            fetch_crop_data()
+        else:
+            print 'Skipping crop data download'
 
     compiler = None
     if parsed_args.jenkins and platform.system() == 'Windows':
@@ -3359,14 +3398,6 @@ def test(args):
         flag, add a couple more options suitable for that environment.
         """
         if parsed_args.jenkins:
-            call_task('check_repo', options={
-                'repo': REPOS_DICT['test-data'].local_path,
-                'fetch': True,
-            })
-            call_task('check_repo', options={
-                'repo': REPOS_DICT['invest-data'].local_path,
-                'fetch': True,
-            })
             jenkins_flags = (
                 '--with-xunit '
                 '--with-coverage '
@@ -3453,6 +3484,7 @@ def test(args):
     # run the tests within the virtualenv.
     _run_tests()
 
+
 @task
 @might_call('push')
 @cmdopts([
@@ -3460,7 +3492,8 @@ def test(args):
     ('username=', '', 'Remote username'),
     ('host=', '', 'URL of the remote server'),
     ('dataportal=', '', 'Path to the dataportal'),
-    ('upstream=', '', 'The URL to the upstream REPO.  Use this when this repo is moved'),
+    ('upstream=', '', ('The URL to the upstream REPO.  Use this when this '
+                       'repo is moved')),
     ('password', '', 'Prompt for a password'),
     ('private-key=', '', 'Use this private key to push'),
     ('include-data', '', 'Include data zipfiles in the push'),
@@ -3478,7 +3511,8 @@ def jenkins_push_artifacts(options):
 
     username, reponame = hg_path.split('/')[-2:]
 
-    version_string = _invest_version(getattr(options.jenkins_push_artifacts, 'python', sys.executable))
+    version_string = _invest_version(getattr(options.jenkins_push_artifacts,
+                                             'python', sys.executable))
 
     def _get_release_files():
         release_files = []
