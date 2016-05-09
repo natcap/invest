@@ -9,6 +9,7 @@ Unreleased Features
 * Removed the deprecated subpackage ``natcap.invest.optimization``.
 * Updated the InVEST license to legally define the Natural Capital Project.
 * Corrected an issue in Coastal Vulnerability where an output shapefile was being recreated for each row, and where field values were not being stored correctly.
+* Issue in Recreation model fixed where the bounding box was not sufficiently distorted when unprojecting to lat/lng coordinates for an initial global cull of points.  Users might now see more visitation with regions close to the boundary of the AOI.
 
 3.3.0 (2016-03-14)
 ------------------
