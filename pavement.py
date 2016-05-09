@@ -2585,7 +2585,7 @@ def build_bin(options):
                 continue
 
             json_basename = os.path.splitext(filename)[0]
-            testall_script.write('.\runmodel {modelname}\n'.format(
+            testall_script.write('call runmodel {modelname}\n'.format(
                 modelname=json_basename))
         testall_script.close()
 
