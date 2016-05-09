@@ -877,6 +877,17 @@ InVEST 3.0 Timber:
     based on user's previous run.
 
 
+2.1.1 (2011-10-17)
+------------------
+Changes in InVEST 2.1.1
+
+General:
+
+This is a minor release which fixes the following defects: 
+
+-A truncation error was fixed on nutrient retention and sedimentation model that involved division by the number of cells in a watershed.  Now correctly calculates floating point division.
+-Minor typos were fixed across the user's guide. 
+
 2.1 Beta (2011-05-11)
 ---------------------
 Updates to InVEST Beta
@@ -963,16 +974,6 @@ Sedimentation:
 
 
 
-2.1.1 (2011-10-17)
-------------------
-Changes in InVEST 2.1.1
-
-General:
-
-This is a minor release which fixes the following defects: 
-
--A truncation error was fixed on nutrient retention and sedimentation model that involved division by the number of cells in a watershed.  Now correctly calculates floating point division.
--Minor typos were fixed across the user's guide. 
 
 
 2.0 Beta (2011-02-14)
