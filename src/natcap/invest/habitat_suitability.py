@@ -111,8 +111,7 @@ def execute(args):
 
         # sanity check to ensure key is not already defined in the registry
         if key in f_reg:
-            raise ValueError(
-                '%s key already defined in f_reg' % suitability_key)
+            raise ValueError('%s key already defined in f_reg' % key)
         f_reg[key] = aligned_path
         _TMP_BASE_FILES[key] = f_reg[key]
         out_aligned_raster_list.append(aligned_path)
@@ -223,11 +222,12 @@ def execute(args):
         f_reg['threshold_suitability_path'],
         f_reg['screened_mask_path'], 'GTiff', reclass_nodata,
         gdal.GDT_Byte, fill_value=0)
-    for exclusion_mask_path in args['exclusion_path_list']:
-        LOGGER.info("Building raster mask for %s", exclusion_mask_path)
-        pygeoprocessing.rasterize_layer_uri(
-            f_reg['screened_mask_path'], exclusion_mask_path,
-            burn_values=[1])
+    if 'exclusion_path_list' in args:
+        for exclusion_mask_path in args['exclusion_path_list']:
+            LOGGER.info("Building raster mask for %s", exclusion_mask_path)
+            pygeoprocessing.rasterize_layer_uri(
+                f_reg['screened_mask_path'], exclusion_mask_path,
+                burn_values=[1])
 
     def mask_exclusion_op(base_values, mask_values):
         """Mask the base values to nodata where mask == 1."""
