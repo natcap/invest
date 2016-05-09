@@ -4,8 +4,8 @@ import unittest
 import tempfile
 import shutil
 import os
+import mock
 
-from pygeoprocessing.testing import scm
 import pygeoprocessing.testing.assertions
 
 SAMPLE_DATA = os.path.join(
@@ -42,7 +42,7 @@ class HabitatSuitabilityTests(unittest.TestCase):
         # make args explicit that this is a base run of SWY
         habitat_suitability.execute(args)
 
-        HabitatSuitabilityTests._assert_regression_results_equal(
+        HabitatSuitabilityTests._assert_regression_results_eq(
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list.txt'),
             [os.path.join(args['workspace_dir'], 'hsi.tif'),
@@ -65,7 +65,7 @@ class HabitatSuitabilityTests(unittest.TestCase):
         # make args explicit that this is a base run of SWY
         habitat_suitability.execute(args)
 
-        HabitatSuitabilityTests._assert_regression_results_equal(
+        HabitatSuitabilityTests._assert_regression_results_eq(
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_500.txt'),
             [os.path.join(args['workspace_dir'], 'hsi_500.tif'),
@@ -111,17 +111,17 @@ class HabitatSuitabilityTests(unittest.TestCase):
         return args
 
     @staticmethod
-    def _assert_regression_results_equal(
-            workspace_dir, file_list_path, result_raster_path_list,
-            expected_result_raster_path_list):
+    def _assert_regression_results_eq(
+            workspace_dir, file_list_path, result_path_list,
+            expected_result_path_list):
         """Test workspace state against expected aggregate results.
 
         Parameters:
             workspace_dir (string): path to the completed model workspace
             file_list_path (string): path to a file that has a list of all
                 the expected files relative to the workspace base
-            result_raster_path_list (list): list of raster paths.
-            expected_result_raster_path_list (list): list of raster paths
+            result_path_list (list): list of raster paths.
+            expected_result_path_list (list): list of raster paths
                 with values expected.
 
         Returns:
@@ -139,7 +139,7 @@ class HabitatSuitabilityTests(unittest.TestCase):
         tolerance = 1e-6
 
         for result_path, expected_path in zip(
-                result_raster_path_list, expected_result_raster_path_list):
+                result_path_list, expected_result_path_list):
             pygeoprocessing.testing.assertions.assert_rasters_equal(
                 result_path, expected_path, tolerance)
 
