@@ -135,7 +135,7 @@ def main(uri, use_gui=True):
         window.show()
         result = app.exec_()
     else:
-        orig_args = json.loads(open(json_args).read())
+        orig_args = json.loads(open(uri).read())
         args = getFlatDefaultArgumentsDictionary(orig_args)
         thread = executor.Executor()
         thread.addOperation('model', args, orig_args['targetScript'])
@@ -147,6 +147,11 @@ def main(uri, use_gui=True):
             if message != None:
                 print(message.rstrip())
             time.sleep(0.005)
+
+        # exit not-so-peacefully if we're running in test mode AND the thread
+        # failed.  I'm assuming this is not an oft-used option!
+        if thread.isThreadFailed():
+            sys.exit(1)
 
 if __name__ == '__main__':
     #Optparse module is deprecated since python 2.7.  Using here since OSGeo4W

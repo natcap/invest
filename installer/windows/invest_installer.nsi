@@ -297,6 +297,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
 
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
   File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
+  ; runmodel.bat is here to help automate testing the UIs.
+  File runmodel.bat
 
 ;  SetOutPath "$INSTDIR\${INVEST_3_FOLDER_x64}\"
 ;  File /r /x *.hg* /x *.svn* ..\${INVEST_3_FOLDER_x64}\*

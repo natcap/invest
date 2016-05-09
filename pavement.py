@@ -1,5 +1,6 @@
 import argparse
 import ast
+import codecs
 import distutils
 import distutils.ccompiler
 from distutils.version import StrictVersion
@@ -2572,6 +2573,22 @@ def build_bin(options):
     if platform.system() == 'Windows':
         binary = os.path.join(invest_dist, 'invest.exe')
         _write_console_files(binary, 'bat')
+
+        # Using codecs to open the file, to ensure that the script is in
+        # latin-1 (codepage-1252)
+        testall_script = codecs.open(os.path.join(invest_dist, 'testall.bat'),
+                                     'w', encoding='cp1252')
+        for filename in os.listdir(os.path.join(os.path.dirname(__file__),
+                                                'src', 'natcap', 'invest',
+                                                'iui')):
+            if not filename.endswith('.json'):
+                continue
+
+            json_basename = os.path.splitext(filename)[0]
+            codecs.write('.\runmodel {modelname}\n'.format(
+                modelname=json_basename))
+        testall_script.close()
+
     else:
         binary = os.path.join(invest_dist, 'invest')
         _write_console_files(binary, 'sh')

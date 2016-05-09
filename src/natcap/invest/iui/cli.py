@@ -155,6 +155,8 @@ def main():
                         version=natcap.invest.__version__)
     parser.add_argument('--list', action='store_true',
                         help='List available models')
+    parser.add_argument('--test', action='store_false',
+                         help='Run in headless mode with default args.')
     parser.add_argument('model', nargs='?', help=(
         'The model/tool to run. Use --list to show available models/tools. '
         'Identifiable model prefixes may also be used.'))
@@ -200,7 +202,7 @@ def main():
             print '    %s' % ' '.join(matching_models)
             return 2
 
-        natcap.invest.iui.modelui.main(modelname + '.json')
+        natcap.invest.iui.modelui.main(modelname + '.json', args.test)
 
 if __name__ == '__main__':
     main()
