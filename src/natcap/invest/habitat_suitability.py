@@ -13,16 +13,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
 
-_OUTPUT_BASE_FILES = {
-    'suitability_path': 'hsi.tif',
-    'threshold_suitability_path': 'hsi_threshold.tif',
-    'screened_suitability_path': 'hsi_threshold_screened.tif',
-    }
-
-_TMP_BASE_FILES = {
-    'screened_mask_path': 'screened_mask.tif',
-    }
-
 
 def execute(args):
     """
@@ -81,14 +71,24 @@ def execute(args):
                             }
                     }
     """
+    _output_base_files = {
+        'suitability_path': 'hsi.tif',
+        'threshold_suitability_path': 'hsi_threshold.tif',
+        'screened_suitability_path': 'hsi_threshold_screened.tif',
+        }
+
+    _tmp_base_files = {
+        'screened_mask_path': 'screened_mask.tif',
+        }
+
     LOGGER.info('Creating output directories and file registry.')
     output_dir = os.path.join(args['workspace_dir'])
     pygeoprocessing.create_directories([output_dir])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     f_reg = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+        [(_output_base_files, output_dir),
+         (_tmp_base_files, output_dir)], file_suffix)
 
     # determine the minimum cell size
     if 'output_cell_size' in args:
@@ -113,7 +113,7 @@ def execute(args):
         if key in f_reg:
             raise ValueError('%s key already defined in f_reg' % key)
         f_reg[key] = aligned_path
-        _TMP_BASE_FILES[key] = f_reg[key]
+        _tmp_base_files[key] = f_reg[key]
         out_aligned_raster_list.append(aligned_path)
         base_raster_list.append(entry['raster_path'])
     pygeoprocessing.geoprocessing.align_dataset_list(
@@ -242,7 +242,7 @@ def execute(args):
         output_cell_size, "intersection", vectorize_op=False)
 
     LOGGER.info('Removing temporary files.')
-    for tmp_filename_key in _TMP_BASE_FILES:
+    for tmp_filename_key in _tmp_base_files:
         try:
             os.remove(f_reg[tmp_filename_key])
         except OSError as os_error:
