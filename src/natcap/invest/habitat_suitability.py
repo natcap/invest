@@ -128,9 +128,16 @@ def execute(args):
         base_raster_path = algined_raster_stack[key]
         base_nodata = pygeoprocessing.get_nodata_from_uri(base_raster_path)
         suitability_range = entry['suitability_range']
-        suitability_raster = os.path.join(
-            output_dir, key+'_suitability%s.tif' % file_suffix)
-        suitability_raster_list.append(suitability_raster)
+        suitability_key = key+'_suitability%s' % file_suffix
+
+        # sanity check that we aren't overwriting an f_reg entry
+        if suitability_key in f_reg:
+            raise ValueError(
+                '%s key already defined in f_reg' % suitability_key)
+
+        f_reg[suitability_key] = os.path.join(
+            output_dir, suitability_key + '.tif')
+        suitability_raster_list.append(f_reg[suitability_key])
 
         def local_map(biophysical_values):
             """Map biophysical values to suitability index values."""
@@ -163,7 +170,7 @@ def execute(args):
             return numpy.piecewise(biophysical_values, condlist, funclist)
 
         pygeoprocessing.vectorize_datasets(
-            [base_raster_path], local_map, suitability_raster,
+            [base_raster_path], local_map, f_reg[suitability_key],
             gdal.GDT_Float32, reclass_nodata, output_cell_size,
             'intersection', vectorize_op=False)
 
