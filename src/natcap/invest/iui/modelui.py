@@ -132,26 +132,24 @@ def main(uri, use_gui=True):
 
     window = base_widgets.MainWindow(ModelUI, uri)
     window.ui.resetParametersToDefaults()
-    if use_gui == True:
-        window.show()
+    window.show()
+    if use_gui:
         result = app.exec_()
     else:
-        orig_args = json.loads(open(uri).read())
-        args = getFlatDefaultArgumentsDictionary(orig_args)
-        thread = executor.Executor()
-        thread.addOperation('model', args, orig_args['targetScript'])
+        from PyQt4.QtTest import QTest
+        window.ui.runButton.click()
+        while not window.ui.operationDialog.backButton.isEnabled():
+            QTest.qWait(50)
 
-        thread.start()
+        thread_failed = False
+        if window.ui.operationDialog.exec_controller.thread_failed:
+            thread_failed = True
 
-        while thread.isAlive() or thread.hasMessages():
-            message = thread.getMessage()
-            if message != None:
-                print(message.rstrip())
-            time.sleep(0.005)
+        window.ui.operationDialog.closeWindow()
 
         # exit not-so-peacefully if we're running in test mode AND the thread
         # failed.  I'm assuming this is not an oft-used option!
-        if thread.isThreadFailed():
+        if thread_failed:
             sys.exit(1)
 
 if __name__ == '__main__':
