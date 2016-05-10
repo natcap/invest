@@ -131,6 +131,7 @@ def main(uri, use_gui=True):
             raise Exception('Can\'t find the file %s.'%uri)
 
     window = base_widgets.MainWindow(ModelUI, uri)
+    window.ui.resetParametersToDefaults()
     if use_gui == True:
         window.show()
         result = app.exec_()

@@ -10,6 +10,9 @@ set logfile=invest_bintest_results.txt
 call .\invest --test %*
 if errorlevel 1 goto failed
     echo "Success: %*" >> %logfile%
+    goto :end
 :failed
     echo "Failure: %*" >> %logfile%
+
+:end
 exit /B 0

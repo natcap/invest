@@ -2587,6 +2587,11 @@ def build_bin(options):
             json_basename = os.path.splitext(filename)[0]
             testall_script.write('call runmodel {modelname}\n'.format(
                 modelname=json_basename))
+
+        # the script writes run statuses to `invest_bintest_results.txt`,
+        # so print the run statuses at the end of the script.
+        # runmodel script is at installer/windows/runmodel.bat
+        testall_script.write('type invest_bintest_results.txt\n')
         testall_script.close()
 
     else:
