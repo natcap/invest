@@ -1,16 +1,14 @@
 import sys
 import os
 import platform
-import time
-import json
 from optparse import OptionParser
 import logging
 import multiprocessing
+import tempfile
 
 from PyQt4 import QtGui, QtCore
 
 import base_widgets
-import executor
 
 CMD_FOLDER = '.'
 
@@ -137,6 +135,16 @@ def main(uri, use_gui=True):
         result = app.exec_()
     else:
         from PyQt4.QtTest import QTest
+        # check to see if the model's target default workspace exists.  If it
+        # does, set a new workspace.
+        workspace_element = window.ui.allElements['workspace']
+        target_workspace = workspace_element.value()
+        if os.path.exists(target_workspace):
+            new_path = tempfile.mkdtemp(
+                dir=os.path.dirname(target_workspace),
+                prefix="%s_" % os.path.basename(target_workspace))
+            workspace_element.setValue(new_path)
+
         window.ui.runButton.click()
         while not window.ui.operationDialog.backButton.isEnabled():
             QTest.qWait(50)
