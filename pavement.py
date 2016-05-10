@@ -2581,7 +2581,8 @@ def build_bin(options):
         for filename in os.listdir(os.path.join(os.path.dirname(__file__),
                                                 'src', 'natcap', 'invest',
                                                 'iui')):
-            if not filename.endswith('.json'):
+            if not filename.endswith('.json') or\
+                    filename.startswith('nearshore'):
                 continue
 
             json_basename = os.path.splitext(filename)[0]
