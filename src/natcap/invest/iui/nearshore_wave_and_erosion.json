@@ -22,7 +22,7 @@
               "type": "list",
               "elements": [
                 {
-                  "id": "output_dir",
+                  "id": "workspace",
                   "type": "folder",
                   "label": "Workspace",
                   "required": true,
