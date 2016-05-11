@@ -150,6 +150,9 @@ def main(uri, use_gui=True):
         if window.ui.attributes['modelName'] == 'nutrient':
             phosphorus_element = window.ui.allElements['calc_p']
             phosphorus_element.setValue(True)
+        elif window.ui.attributes['modelName'] == 'wind_energy':
+            window.ui.allElements['foundation_cost'].setValue('12')
+            window.ui.allElements['discount_rate'].setValue('0.12')
 
 
         # wait for 100ms for events to process before clicking run.
