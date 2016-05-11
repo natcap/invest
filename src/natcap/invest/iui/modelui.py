@@ -175,8 +175,11 @@ def main(uri, use_gui=True):
         window.ui.operationDialog.closeWindow()
 
         # exit not-so-peacefully if we're running in test mode AND the thread
-        # failed.  I'm assuming this is not an oft-used option!
-        if thread_failed:
+        # failed.  I'm assuming --test is not an oft-used option!
+        # The other possible case for failure is if there are validation errors
+        # and the application was quit.  We should display a failure if this is
+        # the case.
+        if thread_failed or window.ui.errors_exist():
             sys.exit(1)
 
 if __name__ == '__main__':
