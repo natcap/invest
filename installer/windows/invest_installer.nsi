@@ -393,9 +393,25 @@ Section "uninstall"
   DeleteRegKey HKLM "${REGISTRY_PATH}"
 SectionEnd
 
-Var SERVER_PATH
 Var LocalDataZip
 Var INSTALLER_DIR
+
+!macro downloadFile RemoteFilepath LocalFilepath
+    NSISdl::download "${RemoteFilepath}" ${LocalFilepath}
+    Pop $R0 ;Get the status of the file downloaded
+    StrCmp $R0 "success" got_it failed
+    got_it:
+       nsisunz::UnzipToLog ${LocalFilepath} "."
+       Delete ${LocalFilepath}
+       goto done
+    failed:
+       MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
+    done:
+       ; Write the install log to a text file on disk.
+       StrCpy $0 "$INSTDIR\install_data_${LocalFilepath}_log.txt"
+       Push $0
+       Call DumpLog
+!macroend
 
 !macro downloadData Title Filename AdditionalSize
   Section "${Title}"
@@ -411,6 +427,7 @@ Var INSTALLER_DIR
     ; Use a local zipfile if it exists in ./sample_data
     ${GetExePath} $INSTALLER_DIR
     StrCpy $LocalDataZip "$INSTALLER_DIR\sample_data\${Filename}"
+
 ;    MessageBox MB_OK "zip: $LocalDataZip"
     IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
     LocalFileExists:
@@ -419,22 +436,8 @@ Var INSTALLER_DIR
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}"
         SetOutPath "$INSTDIR"
-        NSISdl::download "$SERVER_PATH/${Filename}" ${Filename}
-        Pop $R0 ;Get the status of the file downloaded
-        StrCmp $R0 "success" got_it failed
-        got_it:
-           nsisunz::UnzipToLog ${Filename} "."
-           Delete ${Filename}
-           goto done
-        failed:
-           MessageBox MB_OK "Download failed: $R0 $SERVER_PATH/${Filename}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${Filename} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
-  done:
-      ; Write the install log to a text file on disk.
-      StrCpy $0 "$INSTDIR\install_data_${Title}_log.txt"
-      Push $0
-      Call DumpLog
+        !insertmacro downloadFile "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${Filename}" "${Filename}"
       end_of_section:
       SectionEnd
 !macroend
@@ -466,6 +469,14 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
     !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 0
+
+    ; Custom download for the Crop Production Global Datasets.
+    Section "Crop Production Global Datasets (Required for Crop Production)"
+        AddSize "138000"
+        SetOutPath "$INSTDIR\CropProduction"
+        !insertmacro downloadFile "http://data.naturalcapitalproject.org/invest_crop_production/global_dataset_20151210.zip" "crop_data.zip"
+        SetOutPath "$INSTDIR"
+    SectionEnd
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776

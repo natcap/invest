@@ -68,6 +68,7 @@
             "type": "folder",
             "label": "Global Dataset Folder",
             "required": true,
+            "defaultValue": "../CropProduction/global_dataset",
             "validateAs": {
               "type": "folder"
             },
