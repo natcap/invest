@@ -10,6 +10,59 @@
 ; FORKNAME        - The username of the InVEST fork we're building off of.
 ; DATA_LOCATION   - Where (relative to datportal) the data should be downloaded
 ;                   from.
+;
+; NOTE ON INSTALLING SAMPLE DATA:
+; ===============================
+; There are three ways to install sample data with this installer:
+;
+; 1) Through the Installer's GUI.
+;    This approach requires users to interact with the GUI of the installer,
+;    where the user will select the data zipfile he/she would like to have
+;    installed as part of the installation. If the user does not have an active
+;    internet connection (or if there are problems with a download), an error
+;    dialog will be presented for each failed download.
+;
+; 2) Through the 'Advanced' input on the front pane of the installer.
+;    This approach is particularly convenient for users wishing to distribute
+;    sample data as a single zipfile with the installer, as might be the case
+;    for sysadmins installing on many computers, or Natcappers installing on
+;    user's computers at a training.  To make this work, a specially formatted
+;    zipfile must be used.  This zipfile may be created with paver by calling:
+;
+;        $ paver build_data --single-archive
+;
+;    Alternately, this zipfile may be assembled by hand, so long as the
+;    zipfile has all sample data folders at the top level.  Whatever is in the
+;    archive will be unzipped to the install directory.
+;
+;    It's also worth noting that this 'Advanced' install may be used at the
+;    command-line, optionally as part of a silent install.  If we assume that
+;    the InVEST 3.3.1 installer and the advanced sampledata zipfile are copied
+;    to the same directory, and we open a cmd prompt within that same
+;    directory:
+;
+;        > .\InVEST_3.3.1_Setup_x86.exe /S /DATAZIP=%CD%\sampledata.zip
+;
+;    This will execute the installer silently, and extract the contents of
+;    sampledata.zip to the installation directory.
+;
+; 3) By having the installer and sample data archives in the right places
+;    This approach is an alternative to the silent install with the 'advanced'
+;    input functionality, and is useful when the user has control over the
+;    location of the installer and the sampledata zipfiles on the local
+;    computer. The gist is that if the installer finds the sample data zipfile
+;    it's looking for in the right place, it'll use that instead of going to
+;    the network.
+;
+;    To use this, the following folder structure must exist:
+;
+;    some directory/
+;        InVEST_<version>_Setup.exe
+;        sample_data/
+;           Marine.zip
+;           Pollination.zip
+;           Base_Data.zip
+;           <other zipfiles, as desired, downloaded from our website>
 
 !include nsProcess.nsh
 !include LogicLib.nsh
@@ -355,6 +408,7 @@ Var INSTALLER_DIR
         goto end_of_section
     ${EndIf}
 
+    ; Use a local zipfile if it exists in ./sample_data
     ${GetExePath} $INSTALLER_DIR
     StrCpy $LocalDataZip "$INSTALLER_DIR\sample_data\${Filename}"
 ;    MessageBox MB_OK "zip: $LocalDataZip"
