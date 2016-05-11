@@ -5,6 +5,7 @@ Changes
 
 Unreleased Features
 -------------------
+* Habitat suitability model is generalized and released as an API only accessible model.  It can be found at natcap.invest.habitat_suitability.execute.  This model replaces the oyster habitat suitability model.
 * Fixed a crash in the InVEST CLI where calling ``invest`` without a parameter would raise an exception on linux-based systems.  (Issue `#3528 <https://bitbucket.org/natcap/invest/issues/3515>`_)
 * Patched an issue in Seasonal Water Yield model where a nodata value in the landcover map that was equal to "MAX_INT" would cause an overflow error/crash.
 * InVEST NSIS installer will now optionally install the Microsoft Visual C++ 2008 redistributable on Windows 7 or earlier.  This addresses a known issue on Windows 7 systems when importing GDAL binaries (Issue `#3515 <https://bitbucket.org/natcap/invest/issues/3515>`_).  Users opting to install this redistributable agree to abide by the terms and conditions therein.
@@ -31,7 +32,7 @@ Unreleased Features
 * GLOBIO outputs modified so core outputs are in workspace and intermediate outputs are in a subdirectory called 'intermediate_outputs'.
 * Fixed a crash with the NDR model that could occur if the DEM and landcover maps were different resolutions.
 * Refactored all the InVEST model user interfaces so that Workspace defaults to the user's home "Documents" directory.
-* Fixed an HRA bug where stessors with a buffer of zero were being buffered by 1 pixel
+* Fixed an HRA bug where stressors with a buffer of zero were being buffered by 1 pixel
 * HRA enhancement which creates a common raster to burn all input shapefiles onto, ensuring consistent alignment.
 * Fixed an issue in SDR model where a landcover map that was smaller than the DEM would create extraneous "0" valued cells.
 * New HRA feature which allows for "NA" values to be entered into the "Ratings" column for a habitat / stressor pair in the Criteria Ratings CSV. If ALL ratings are set to NA, the habitat / stressor will be treated as having no interaction. This means in the model, that there will be no overlap between the two sources. All rows parameters with an NA rating will not be used in calculating results.
@@ -44,7 +45,7 @@ Unreleased Features
     * Removed the HTML summary results output and replaced with a link to a dashboard that helps visualize and interpret CV results.
     * Added a point shapefile output: 'outputs/coastal_exposure.shp' that is a shapefile representation of the corresponding CSV table.
     * The model UI now requires the 'Relief' input. No longer optional.
-    * CSV outputs and Shapefile outputs based on rasters now have x, y coorinates of the center of the pixel instead of top left of the pixel.
+    * CSV outputs and Shapefile outputs based on rasters now have x, y coordinates of the center of the pixel instead of top left of the pixel.
 * Turning setuptools' zip_safe to False for consistency across the Natcap Namespace.
 * GLOBIO no longer requires user to specify a keyfield in the AOI.
 * New feature to GLOBIO to summarize MSA by AOI.
