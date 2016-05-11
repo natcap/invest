@@ -145,8 +145,27 @@ def main(uri, use_gui=True):
                 prefix="%s_" % os.path.basename(target_workspace))
             workspace_element.setValue(new_path)
 
+        # if we're running NDR, we need to check one (or both) of the nutrient
+        # checkboxes.
+        if window.ui.attributes['modelName'] == 'nutrient':
+            phosphorus_element = window.ui.allElements['calc_p']
+            phosphorus_element.setValue(True)
+
+
+        # wait for 100ms for events to process before clicking run.
+        # Validation will be the most common event that the Qt main loop will
+        # need to process, but other events include dynamic updating of element
+        # interactivity and the extraction of fieldnames from tables and
+        # vectors to use in a TableDropdown.
+        # 100ms was chosen through experimentation.
+        QTest.qWait(100)
         window.ui.runButton.click()
-        while not window.ui.operationDialog.backButton.isEnabled():
+
+        # When operations finish (whether on success or failure), the back
+        # button of the run dialog is enabled.  If the application has been
+        # exited, the main window will not be visible.
+        while not window.ui.operationDialog.backButton.isEnabled() \
+                and window.isVisible():
             QTest.qWait(50)
 
         thread_failed = False
