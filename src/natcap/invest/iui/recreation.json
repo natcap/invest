@@ -17,7 +17,7 @@
             "label": "Note, this computer must have an Internet connection in order to run this model."
         },
         {
-          "id": "workspace_dir",
+          "id": "workspace",
           "args_id": "workspace_dir",
           "type": "folder",
           "label": "Workspace",

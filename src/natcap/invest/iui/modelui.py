@@ -1,16 +1,14 @@
 import sys
 import os
 import platform
-import time
-import json
 from optparse import OptionParser
 import logging
 import multiprocessing
+import tempfile
 
 from PyQt4 import QtGui, QtCore
 
 import base_widgets
-import executor
 
 CMD_FOLDER = '.'
 
@@ -131,22 +129,61 @@ def main(uri, use_gui=True):
             raise Exception('Can\'t find the file %s.'%uri)
 
     window = base_widgets.MainWindow(ModelUI, uri)
-    if use_gui == True:
-        window.show()
+    window.ui.resetParametersToDefaults()
+    window.show()
+    if use_gui:
         result = app.exec_()
     else:
-        orig_args = json.loads(open(json_args).read())
-        args = getFlatDefaultArgumentsDictionary(orig_args)
-        thread = executor.Executor()
-        thread.addOperation('model', args, orig_args['targetScript'])
+        from PyQt4.QtTest import QTest
+        # check to see if the model's target default workspace exists.  If it
+        # does, set a new workspace.
+        workspace_element = window.ui.allElements['workspace']
+        target_workspace = workspace_element.value()
+        if os.path.exists(target_workspace):
+            new_path = tempfile.mkdtemp(
+                dir=os.path.dirname(target_workspace),
+                prefix="%s_" % os.path.basename(target_workspace))
+            workspace_element.setValue(new_path)
 
-        thread.start()
+        # if we're running NDR, we need to check one (or both) of the nutrient
+        # checkboxes.
+        if window.ui.attributes['modelName'] == 'nutrient':
+            phosphorus_element = window.ui.allElements['calc_p']
+            phosphorus_element.setValue(True)
+        elif window.ui.attributes['modelName'] == 'wind_energy':
+            window.ui.allElements['foundation_cost'].setValue('12')
+            window.ui.allElements['discount_rate'].setValue('0.12')
 
-        while thread.isAlive() or thread.hasMessages():
-            message = thread.getMessage()
-            if message != None:
-                print(message.rstrip())
-            time.sleep(0.005)
+
+        # wait for 100ms for events to process before clicking run.
+        # Validation will be the most common event that the Qt main loop will
+        # need to process, but other events include dynamic updating of element
+        # interactivity and the extraction of fieldnames from tables and
+        # vectors to use in a TableDropdown.
+        # 100ms was chosen through experimentation.
+        QTest.qWait(100)
+        window.ui.runButton.click()
+
+        # When operations finish (whether on success or failure), the back
+        # button of the run dialog is enabled.  If the application has been
+        # exited, the main window will not be visible.
+        while not window.ui.operationDialog.backButton.isEnabled() \
+                and window.isVisible():
+            QTest.qWait(50)
+
+        thread_failed = False
+        if window.ui.operationDialog.exec_controller.thread_failed:
+            thread_failed = True
+
+        window.ui.operationDialog.closeWindow()
+
+        # exit not-so-peacefully if we're running in test mode AND the thread
+        # failed.  I'm assuming --test is not an oft-used option!
+        # The other possible case for failure is if there are validation errors
+        # and the application was quit.  We should display a failure if this is
+        # the case.
+        if thread_failed or window.ui.errors_exist():
+            sys.exit(1)
 
 if __name__ == '__main__':
     #Optparse module is deprecated since python 2.7.  Using here since OSGeo4W
