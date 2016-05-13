@@ -40,6 +40,7 @@ import yaml
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('pavement')
+logging.getLogger('pip').setLevel(logging.ERROR)
 
 
 # Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
