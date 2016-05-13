@@ -44,9 +44,9 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
     h5py>=2.3.0
     matplotlib
     natcap.versioner>=0.2.4
-    numpy>=1.10.2rc1
+    numpy>=1.11.0
     pyamg>=2.2.1
-    pygeoprocessing>=0.3.0a14
+    pygeoprocessing>=0.3.0a15
     rtree>=0.8.2
     scipy>=0.14.0
     shapely
