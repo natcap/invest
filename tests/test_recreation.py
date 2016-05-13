@@ -198,7 +198,6 @@ class TestRecServer(unittest.TestCase):
         finally:
             server_process.terminate()
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @_timeout(100.0)
     def test_empty_server(self):

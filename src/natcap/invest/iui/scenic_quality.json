@@ -27,7 +27,7 @@
               "type": "list",
               "elements": [
                 {
-                  "id": "workspace_dir",
+                  "id": "workspace",
                   "args_id": "workspace_dir",
                   "type": "folder",
                   "label": "Workspace",
