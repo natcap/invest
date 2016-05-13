@@ -7,6 +7,7 @@ Unreleased Features
 -------------------
 * InVEST Windows installer now includes HISTORY.rst as the changelog instead of the old ``InVEST_Updates_<version>`` files.
 * Habitat suitability model is generalized and released as an API only accessible model.  It can be found at natcap.invest.habitat_suitability.execute.  This model replaces the oyster habitat suitability model.
+    * The refactor of this model requires an upgrade to ``numpy >= 1.11.0``.
 * Fixed a crash in the InVEST CLI where calling ``invest`` without a parameter would raise an exception on linux-based systems.  (Issue `#3528 <https://bitbucket.org/natcap/invest/issues/3515>`_)
 * Patched an issue in Seasonal Water Yield model where a nodata value in the landcover map that was equal to "MAX_INT" would cause an overflow error/crash.
 * InVEST NSIS installer will now optionally install the Microsoft Visual C++ 2008 redistributable on Windows 7 or earlier.  This addresses a known issue on Windows 7 systems when importing GDAL binaries (Issue `#3515 <https://bitbucket.org/natcap/invest/issues/3515>`_).  Users opting to install this redistributable agree to abide by the terms and conditions therein.
