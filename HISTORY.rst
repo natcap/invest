@@ -97,9 +97,9 @@ There are side effects that result in sometimes large changes to un calibrated r
 
 * Added a suffix parameter to the timber and marine water quality models that append a user defined string to the output files; consistent with most of the other InVEST models.
 
-* Fixed a user interface issue where sometimes the InVEST model run would not open a windows explorer to the userâ..s workspace.  Instead it would open to C:\User[..]\My Documents.  This would often happen if there were spaces in the the workspace name or â../â.. characters in the path.
+* Fixed a user interface issue where sometimes the InVEST model run would not open a windows explorer to the user's workspace.  Instead it would open to C:\User[..]\My Documents.  This would often happen if there were spaces in the the workspace name or "/" characters in the path.
 
-* Fixed an error across all InVEST models where a specific combination of rasters of different cell sizes and alignments and unsigned data types could create errors in internal interpolation of the raster stacks.  Often these would appear as â..KeyError: 0â.. across a variety of contexts.  Usually the â..0â.. was an erroneous value introduced by a faulty interpolation scheme.
+* Fixed an error across all InVEST models where a specific combination of rasters of different cell sizes and alignments and unsigned data types could create errors in internal interpolation of the raster stacks.  Often these would appear as 'KeyError: 0' across a variety of contexts.  Usually the '0' was an erroneous value introduced by a faulty interpolation scheme.
 
 * Fixed a MemoryError that could occur in the pollination and habitat quality models when the the base landcover map was large and the biophysical properties table allowed the effect to be on the order of that map.  Now can use any raster or range values with only a minor hit to runtime performance.
 
@@ -116,7 +116,7 @@ There are side effects that result in sometimes large changes to un calibrated r
 
 * Fixed a potential memory inefficiency in Wave Energy Model when computing the percentile rasters. Implemented a new memory efficient percentile algorithm and updated the outputs to reflect the new open source framework of the model. Now outputting csv files that describe the ranges and meaning of the percentile raster outputs.
 
-* Fixed a bug in Habitat Quality where the future output â..quality_out_f.tifâ.. was not reflecting the habitat value given in the sensitivity table for the specified landcover types.
+* Fixed a bug in Habitat Quality where the future output "quality_out_f.tif" was not reflecting the habitat value given in the sensitivity table for the specified landcover types.
 
 
 3.1.0 (2014-11-19)
@@ -160,15 +160,15 @@ InVEST 3.1.0 (http://www.naturalcapitalproject.org/download.html) is a major sof
 
 * HRA now accepts CSVs for ratings scoring that are semicolon separated as well as comma separated.
 
-* Fixed a minor bug in InVESTâ..s geoprocessing aggregate core that now consistently outputs correct zonal stats from the underlying pixel level hydro outputs which affects the water yield, sediment, and nutrient models.
+* Fixed a minor bug in InVEST's geoprocessing aggregate core that now consistently outputs correct zonal stats from the underlying pixel level hydro outputs which affects the water yield, sediment, and nutrient models.
 
 * Added compression to InVEST output geotiff files.  In most cases this reduces output disk usage by a factor of 5.
 
-* Fixed an issue where CSVs in the sediment model werenâ..t open in universal line read mode.
+* Fixed an issue where CSVs in the sediment model weren't open in universal line read mode.
 
 * Fixed an issue where approximating whether pixel edges were the same size was not doing an approximately equal function.
 
-* Fixed an issue that made the CV model crash when the coastline computed from the landmass didnâ..t align perfectly with that defined in the geomorphology layer.
+* Fixed an issue that made the CV model crash when the coastline computed from the landmass didn't align perfectly with that defined in the geomorphology layer.
 
 * Fixed an issue in the CV model where the intensity of local wave exposure was very low, and yielded zero local wave power for the majority of coastal segments.
 
@@ -184,7 +184,7 @@ InVEST 3.1.0 (http://www.naturalcapitalproject.org/download.html) is a major sof
 
 * Updated the pollination model to conform with the latest InVEST geoprocessing standards, resulting in an approximately 33% speedup.
 
-* Improved the UIâ..s ability to remember the last folder visited, and to have all file and folder selection dialogs have access to this information.
+* Improved the UI's ability to remember the last folder visited, and to have all file and folder selection dialogs have access to this information.
   
 * Fixed an issue in Marine Water Quality where the UV points were supposed to be optional, but instead raised an exception when not passed in.
 
@@ -242,17 +242,17 @@ This release also addresses minor bugs, documentation updates, performance tweak
 
 * Fixed an issue where the model would try to move the logfile to the workspace after the model run was complete and Windows would erroneously report that the move failed.
 
-* Removed the separation between marine and freshwater terrestrial models in the userâ..s guide.  Now just a list of models.
+* Removed the separation between marine and freshwater terrestrial models in the user's guide.  Now just a list of models.
 
-* Changed the name of InVEST â..Biodiversityâ.. model to â..Habitat Qualityâ.. in the module names, start menu, userâ..s guide, and sample data folders.
+* Changed the name of InVEST "Biodiversity" model to "Habitat Quality" in the module names, start menu, user's guide, and sample data folders.
 
 * Minor bug fixes, performance enhancements, and better error reporting in the internal infrastructure.
 
-* HRA risk in the unstable standalone is calculated differently from the last release. If there is no spatial overlap within a cell, there is automatically a risk of 0. This also applies to the E and C intermediate files for a given pairing. If there is no spatial overlap, E and C will be 0 where there is only habitat. However, we still create a recovery potential raster which has habitat- specific risk values, even without spatial overlap of a stressor. HRA shapefile outputs for high, medium, low risk areas are now calculated using a user-defined maximum number of overlapping stressors, rather than all potential stressors. In the HTML subregion averaged output, we now attribute what portion of risk to a habitat comes from each habitat-stressor pairing. Any pairings which donâ..t overlap will have an automatic risk of 0.
+* HRA risk in the unstable standalone is calculated differently from the last release. If there is no spatial overlap within a cell, there is automatically a risk of 0. This also applies to the E and C intermediate files for a given pairing. If there is no spatial overlap, E and C will be 0 where there is only habitat. However, we still create a recovery potential raster which has habitat- specific risk values, even without spatial overlap of a stressor. HRA shapefile outputs for high, medium, low risk areas are now calculated using a user-defined maximum number of overlapping stressors, rather than all potential stressors. In the HTML subregion averaged output, we now attribute what portion of risk to a habitat comes from each habitat-stressor pairing. Any pairings which don't overlap will have an automatic risk of 0.
 
-* Major changes to Water Yield : Reservoir Hydropower Production. Changes include an alternative equation for calculating Actual Evapotranspiration (AET) for non-vegetated land cover types including wetlands. This allows for a more accurate representation of processes on land covers such as urban, water, wetlands, where root depth values arenâ..t applicable. To differentiate between the two equations a column â..LULC_vegâ.. has been added to the Biophysical table in Hydropower/input/biophysical_table.csv. In this column a 1 indicates vegetated and 0 indicates non-vegetated.
+* Major changes to Water Yield : Reservoir Hydropower Production. Changes include an alternative equation for calculating Actual Evapotranspiration (AET) for non-vegetated land cover types including wetlands. This allows for a more accurate representation of processes on land covers such as urban, water, wetlands, where root depth values aren't applicable. To differentiate between the two equations a column 'LULC_veg' has been added to the Biophysical table in Hydropower/input/biophysical_table.csv. In this column a 1 indicates vegetated and 0 indicates non-vegetated.
 
-* The output structure and outputs have also change in Water Yield : Reservoir Hydropower Production. There is now a folder â..outputâ.. that contains all output files including a sub directory â..per_pixelâ.. which has three pixel raster outputs. The subwatershed results are only calculated for the water yield portion and those results can be found as a shapefile, â..subwatershed_results.shpâ.., and CSV file, â..subwatershed_results.csvâ... The watershed results can be found in similar files: watershed_results.shp and watershed_results.csv. These two files for the watershed outputs will aggregate the Scarcity and Valuation results as well.
+* The output structure and outputs have also change in Water Yield : Reservoir Hydropower Production. There is now a folder 'output' that contains all output files including a sub directory 'per_pixel' which has three pixel raster outputs. The subwatershed results are only calculated for the water yield portion and those results can be found as a shapefile, 'subwatershed_results.shp', and CSV file, 'subwatershed_results.csv'. The watershed results can be found in similar files: watershed_results.shp and watershed_results.csv. These two files for the watershed outputs will aggregate the Scarcity and Valuation results as well.
 
 * The evapotranspiration coefficients for crops, Kc, has been changed to a decimal input value in the biophysical table. These values used to be multiplied by 1000 so that they were in integer format, that pre processing step is no longer necessary.
 
@@ -274,7 +274,7 @@ Including:
 * Replaced sample data in overlap analysis that was causing the model
   to crash.
 
-* Updates to the overlap analysis userâ..s guide.
+* Updates to the overlap analysis user's guide.
 
 * Added preprocessing toolkit available under 
   C:\{InVEST install directory}\utils
@@ -293,8 +293,8 @@ Including:
 * PET_mn for Water Yield is now Ref Evapotranspiration times Kc
   (evapotranspiration coefficient).
 
-* The soil depth field has been renamed â..depth to root restricting
-  layerâ.. in both the hydropower and nutrient retention models.
+* The soil depth field has been renamed 'depth to root restricting
+  layer' in both the hydropower and nutrient retention models.
 
 * ETK column in biophysical table for Water Yield is now Kc.
 
@@ -303,7 +303,7 @@ Including:
 * Changed the behavior of nutrient retention to return nodata values
   when the mean runoff index is zero.
 
-* Fixed an issue where the hydropower model didnâ..t use the suffix
+* Fixed an issue where the hydropower model didn't use the suffix
   inputs.
 
 * Fixed a bug in Biodiversity that did not allow for numerals in the
@@ -312,15 +312,15 @@ Including:
 * Updated routing algorithm to use a modern algorithm for plateau
   direction resolution.
 
-* Fixed an issue in HRA where individual risk pixels werenâ..t being
+* Fixed an issue in HRA where individual risk pixels weren't being
   calculated correctly.
 
 * HRA will now properly detect in the preprocessed CSVs when criteria
   or entire habitat-stressor pairs are not desired within an
-  assessment..
+  assessment.
 
 * Added an infrastructure feature so that temporary files are created
-  in the userâ..s workspace rather than at the system level
+  in the user's workspace rather than at the system level
   folder. Â This lets users work in a secondary workspace on a USB
   attached hard drive and use the space of that drive, rather than the
   primary operating system drive.
@@ -798,7 +798,7 @@ See the "Marine Models" and "InVEST 3.0 Beta" sections below for more details.
 
    - Wave Exposure: In this version of the model, we define wave exposure for 
      sites facing the open ocean as the maximum of the weighted average of 
-     waveâ..s power coming from the ocean or generated by local winds.  We 
+     wave's power coming from the ocean or generated by local winds.  We 
      weight wave power coming from each of the 16 equiangular sector by the 
      percent of time that waves occur in that sector, and based on whether or 
      not fetch in that sector exceeds 20km.  For sites that are sheltered, wave
@@ -828,7 +828,7 @@ See the "Marine Models" and "InVEST 3.0 Beta" sections below for more details.
    recommended to run the Profile Generator before the Nearshore Waves and 
    Erosion model.
 
-   Step 1) Profile Generator â.. This tool helps the user generate a 1-dimensional
+   Step 1) Profile Generator:  This tool helps the user generate a 1-dimensional
    bathymetric and topographic profile perpendicular to the shoreline at the 
    user-defined location.  This model provides plenty of guidance for building 
    backshore profiles for beaches, marshes and mangroves.  It will help users 
@@ -839,7 +839,7 @@ See the "Marine Models" and "InVEST 3.0 Beta" sections below for more details.
    can be later used in the Nearshore Waves and Erosion model, based on 
    computed fetch values and default Wave Watch III data.
 
-   Step 2) Nearshore Waves and Erosion â.. This model estimates profiles of beach
+   Step 2) Nearshore Waves and Erosion: This model estimates profiles of beach
    erosion or values of rates of consolidated bed scour at a site as a function
    of the type of habitats present in the area of interest.  The model takes 
    into account the protective effects of vegetation, coral and oyster reefs, 
