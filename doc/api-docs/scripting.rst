@@ -8,7 +8,10 @@ Introduction
 
 These are the steps that will need to be taken in order to use the batch scripting framework for InVEST 3.0 models.
 
-* Note:* InVEST executables are currently only supported in Python 2.7.  Other versions of python may be supported at a later date.
+.. note::
+
+    The ``natcap.invest`` python package is currently only supported in Python
+    2.7.  Other versions of python may be supported at a later date.
 
 ==================
 Installation Steps

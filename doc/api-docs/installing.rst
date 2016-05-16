@@ -2,6 +2,15 @@
 Installing InVEST
 =================
 
+.. note::
+
+    The ``natcap.invest`` python package is currently only supported in Python
+    2.7.  Other versions of python may be supported at a later date.
+
+.. warning::
+
+    Python 2.7.11 or later is required to be able to use the InVEST
+    Recreation model on Windows.
 
 
 Binary Dependencies
@@ -27,7 +36,7 @@ commands will install only the libararies and binaries that are needed, allowing
 Ubuntu & Debian
 ^^^^^^^^^^^^^^^
 
-.. note::
+.. attention::
     The package versions in the debian:stable repositories often lag far
     behind the latest releases.  It may be necessary to install a later
     version of a libarary from a different package repository, or else build
@@ -103,6 +112,22 @@ in setuptools that may cause problems when importing packages within the
 
 Installing the latest development version
 -----------------------------------------
+
+
+Pre-built binaries for Windows
+******************************
+
+Pre-built installers and wheels of development versions of ``natcap.invest``
+for 32-bit Windows python installations are available from
+http://data.naturalcapitalproject.org/invest-releases/#dev, along with other
+distributions of InVEST.  Once downloaded, wheels can be installed locally via
+pip::
+
+    > pip install .\\natcap.invest-3.3.0.post89+nfc4a8d4de776-cp27-none-win32.whl
+
+
+Installing from our source tree
+*******************************
 
 The latest development version of InVEST can be installed from our source tree::
 
