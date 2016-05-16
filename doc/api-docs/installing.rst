@@ -2,6 +2,74 @@
 Installing InVEST
 =================
 
+
+
+Binary Dependencies
+-------------------
+
+InVEST itself depends only on python packages, but many of these package 
+dependencies depend on low-level libraries or have complex build processes.
+In recent history, some of these packages (notably, numpy and scipy) have
+started to release precompiled binary packages of their own, removing the
+need to install these packages through a system package manager.  Others,
+however, remain easiest to install through a package manager.
+
+
+Linux
+*****
+
+Linux users have it easy, as almost every package required to use
+natcap.invest is available in the package repositories. The provided
+commands will install only the libararies and binaries that are needed, allowing
+``pip`` to install the rest.
+
+
+Ubuntu & Debian
+^^^^^^^^^^^^^^^
+
+.. note::
+    The package versions in the debian:stable repositories often lag far
+    behind the latest releases.  It may be necessary to install a later
+    version of a libarary from a different package repository, or else build
+    the library from source.
+
+
+::
+
+    $ sudo apt-get install python-setuptools python-yaml python-gdal python-h5py python-rtree python-shapely python-matplotlib python-qt4
+
+
+Fedora
+^^^^^^
+
+::
+
+    $ sudo yum install python-setuptools libyaml gdal-python h5py python-rtree python-shapely python-matplotlib PyQt4
+   
+
+
+Mac OS X
+********
+
+The easiest way to install binary packages on Mac OS X is through a package
+manager such as `Homebrew <http://brew.sh>`_::
+
+    $ brew install gdal libyaml hdf5 spatialindex pyqt matplotlib
+
+The GDAL, PyQt and matplotlib packages include their respective python packages.
+The others will allow their corresponding python packages to be compiled
+against these binaries via ``pip``.
+
+
+Windows
+*******
+
+While many packages are available for Windows on the Python Package Index, some
+may need to be fetched from a different source. Many are available from
+Christogh Gohlke's unofficial build page: 
+http://www.lfd.uci.edu/~gohlke/pythonlibs/
+
+
 Python Dependencies
 -------------------
 
@@ -14,10 +82,11 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 Additionally, ``PyQt4`` is required to use the ``invest`` cli, but is not
 required for development against ``natcap.invest``.
 
+
 Installing from Source
 ----------------------
 
-If you have a compiler installed and configured for your system, and
+Assuming you have a C/C++ compiler installed and configured for your system, and
 dependencies installed, the easiest way to install InVEST as a python package 
 is::
 
@@ -30,6 +99,7 @@ in setuptools that may cause problems when importing packages within the
 ``natcap`` namespace.  The current workaround is to use these extra pip flags::
 
     $ pip install natcap.invest --egg --no-binary :all:
+
 
 Installing the latest development version
 -----------------------------------------
