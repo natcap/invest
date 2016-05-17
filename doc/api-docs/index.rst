@@ -31,6 +31,7 @@ Getting Started
     installing
     cli
     changelog
+    scripting
 
 API Reference
 -------------
