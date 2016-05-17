@@ -94,8 +94,18 @@ Additionally, ``PyQt4`` is required to use the ``invest`` cli, but is not
 required for development against ``natcap.invest``.
 
 
+.. _installing-from-source:
+
 Installing from Source
 ----------------------
+
+.. note::
+
+    Windows users will find best compilation results by using the MSVC
+    compiler, which can be downloaded from 
+    `the Microsoft website <https://www.microsoft.com/download/details.aspx?id=44266>`_.
+    See the `python wiki page on compilation under Windows <https://wiki.python.org/moin/WindowsCompilers>`_
+    for more information.
 
 Assuming you have a C/C++ compiler installed and configured for your system, and
 dependencies installed, the easiest way to install InVEST as a python package 

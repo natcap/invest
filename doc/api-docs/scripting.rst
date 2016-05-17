@@ -17,9 +17,9 @@ package.
     The ``natcap.invest`` python package is currently only supported in Python
     2.7.  Other versions of python may be supported at a later date.
 
-==================
-Installation Steps
-==================
+==================================
+Setting up your Python environment
+==================================
 
 1. **Install Python 2.7.11 or later.**
 
@@ -30,7 +30,7 @@ Installation Steps
 2. **Put pip on the PATH.**
 
    The ``pip`` utility for installing python packages is already included with 
-   Python 2.7.9 and later,  Be sure to add ``C:\Python27\Scripts`` to the Windows
+   Python 2.7.9 and later. Be sure to add ``C:\Python27\Scripts`` to the Windows
    PATH environment variable so that ``pip`` can be called from the command line
    without needing to use its full path.
 
@@ -45,6 +45,9 @@ Installation Steps
    wheels from `Christoph Gohlke's build page <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_.
    Others should be able to be installed via ``pip install <packagename>``.
 
+    .. This ..include:: part will automatically pull the contents of requirements.txt
+    and include the file from line 9 through the end.
+
     .. include:: ../../requirements.txt
         :literal:
         :start-line: 9
@@ -52,17 +55,22 @@ Installation Steps
 
 4. **Install the InVEST python package**
 
-   * `Development ("nightly") builds <http://data.naturalcapitalproject.org/invest-releases/#dev>`_
-   * `Releases on the python package index <https://pypi.python.org/pypi/natcap.invest>`_
+   4a. Download a release of the ``natcap.invest`` python package.
+       
+       * `Development ("nightly") builds <http://data.naturalcapitalproject.org/invest-releases/#dev>`_
+       * `Releases on the python package index <https://pypi.python.org/pypi/natcap.invest>`_
 
-   If you download a file with the ``.whl`` extension, this file is a
-   precompiled binary of ``natcap.invest``.  It can be installed by pointing
-   ``pip`` to that file.  For example, let's say that you downloaded a dev
-   build wheel to ``C:\Users\Test\Downloads``.  You might install that file
-   by opening up a ``cmd`` or PowerShell window and typing::
+   4b. Install the downloaded python package..
 
-    > cd C:\Users\Test\Downloads
-    > pip install .\natcap.invest-3.3.0.post89+nfc4a8d4de776-cp27-none-win32.whl
+       * ``win32.whl`` files are prebuilt binary distributions and can be
+         installed via pip.
+         See the `pip docs for installing a package from a wheel
+         <https://pip.pypa.io/en/stable/user_guide/#installing-from-wheels>`_
+       * ``win32-py2.7.exe`` files are also prebuilt binary distributions,
+         but *cannot* be installed by pip.  Instead, double-click the downloaded file
+         to launch an installer.
+       * ``.zip`` and ``.tar.gz`` files are source archives.
+         See :ref:`installing-from-source` for details.
 
 
 ==============================
