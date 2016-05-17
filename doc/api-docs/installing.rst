@@ -135,13 +135,14 @@ http://data.naturalcapitalproject.org/invest-releases/#dev, along with other
 distributions of InVEST.  Once downloaded, wheels can be installed locally via
 pip::
 
-    > pip install .\\natcap.invest-3.3.0.post89+nfc4a8d4de776-cp27-none-win32.whl
+    > pip install .\natcap.invest-3.3.0.post89+nfc4a8d4de776-cp27-none-win32.whl
 
 
 Installing from our source tree
 *******************************
 
-The latest development version of InVEST can be installed from our source tree::
+The latest development version of InVEST can be installed from our
+Mercurial source tree::
 
     $ pip install hg+https://bitbucket.org/natcap/invest@develop
 
