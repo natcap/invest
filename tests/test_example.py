@@ -55,9 +55,7 @@ class InVESTImportTest(unittest.TestCase):
                 pkgutil.iter_modules(**iteration_args)):  # catch modules
             try:
                 importlib.import_module(name)
-            except (ImportError, ValueError) as exception:
-                # ImportError happens when the package cannot be found
-                # ValueError happens when using intra-package references. This
-                # should ideally not break at all, but I can't seem to find a
-                # workaround at the moment.
-                LOGGER.exception(exception)
+            except Exception:
+                # If we encounter an exception when importing a module, log it
+                # but continue.
+                LOGGER.exception('Error importing %s', name)
