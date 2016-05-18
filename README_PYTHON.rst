@@ -48,7 +48,7 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
     gdal>=1.11.2,<2.0
     h5py>=2.3.0
     matplotlib
-    natcap.versioner>=0.2.4
+    natcap.versioner>=0.4.0
     numpy>=1.11.0
     pyamg>=2.2.1
     pygeoprocessing>=0.3.0a15
