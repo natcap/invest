@@ -1894,7 +1894,6 @@ def check(options):
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
         ('poster', lib_needed,  None, None),
-        ('pyyaml', required, 'yaml', None),
         ('pygeoprocessing', install_managed, None, None),
         ('PyQt4', lib_needed, 'PyQt4', None),
     ]
