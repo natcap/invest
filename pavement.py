@@ -2863,25 +2863,17 @@ def _write_console_files(binary, mode):
         'bat': windows_template,
         'sh': posix_template,
     }
-    filename_template = "{prefix}{modelname}.{extension}"
-
-    exclude_prefix = set([
-        'delineateit',
-        'routedem',
-    ])
+    filename_template = "invest_{modelname}.{extension}"
 
     bindir = os.path.dirname(binary)
-    for line in sh('{bin} --list'.format(bin=binary), capture=True).split('\n'):
+    for line in sh('{bin} --list'.format(bin=binary),
+                   capture=True).split('\n'):
+        # Models always preceded by 4 spaces in printout.
         if line.startswith('    '):
             model_name = line.replace('UNSTABLE', '').lstrip().rstrip()
 
-            if model_name not in exclude_prefix:
-                prefix = 'invest_'
-            else:
-                prefix = ''
-
             console_filename = os.path.join(bindir, filename_template).format(
-                modelname=model_name, extension=mode, prefix=prefix)
+                modelname=model_name, extension=mode)
             print 'Writing console %s' % console_filename
 
             with open(console_filename, 'w') as console_file:

@@ -24,9 +24,10 @@ mkdir -p "$tempdir"
 invest_bindir="$tempdir"/`basename $2`
 cp -r "$2" "$invest_bindir"
 
-# copy out all the shell files and fixup the paths.
+# copy out all the invest shell files and fixup the paths.
 # .command extension makes the scripts runnable by the user.
-find "$invest_bindir" -iname "*.sh" | while read sh_file
+# Shell files without the `invest_` prefix will be left alone.
+find "$invest_bindir" -iname "invest_*.sh" | while read sh_file
 do
     new_name=`echo "$sh_file" | sed 's/\.sh/.command/g'`
     new_command_file="$tempdir"/`basename "$new_name"`
