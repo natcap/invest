@@ -3,15 +3,21 @@ import pkgutil
 import importlib
 import logging
 import os
+import argparse
+import sys
 
 import natcap.invest
 
 LOGGER = logging.getLogger('list-models.py')
 
-if __name__ == '__main__':
+def main(args):
+    parser = argparse.ArgumentParser(description=(
+        'List all models that have an execute function in RST'))
+    parser.add_argument('outfile', type=str, nargs='?', default='models.rst')
+
+    parsed_args = parser.parse_args(args)
 
     all_modules = {}
-
     iteration_args = {
         'path': natcap.invest.__path__,
         'prefix': 'natcap.invest.',
@@ -43,7 +49,11 @@ if __name__ == '__main__':
 
     print '\n\n'
 
-    filename = os.path.join(os.path.dirname(__file__), 'models.rst')
+    if os.path.isabs(parsed_args.outfile):
+        filename = parsed_args.outfile
+    else:
+        filename = os.path.join(os.path.dirname(__file__), parsed_args.outfile)
+
     with open(filename, 'w') as models_rst:
         models_rst.write(
             '=========================\n'
@@ -73,3 +83,6 @@ if __name__ == '__main__':
                 )
             )
 
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
