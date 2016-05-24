@@ -15,7 +15,8 @@ LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
 
 
 def execute(args):
-    """
+    """Habitat Suitability.
+
     Calculate habitat suitability indexes given biophysical parameters.
 
     The objective of a habitat suitability index (HSI) is to help users

@@ -23,7 +23,8 @@ class MissingFields(ValueError): pass
 
 
 def execute(args):
-    """
+    """Pollinator Abundance: Crop Pollination.
+
     Execute the pollination model from the topmost, user-accessible level.
 
     Args:

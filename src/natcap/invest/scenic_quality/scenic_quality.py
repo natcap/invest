@@ -434,7 +434,7 @@ def get_count_feature_set_uri(fs_uri):
     return count
 
 def execute(args):
-    """DOCSTRING"""
+    """Scenic Quality."""
     LOGGER.info("Start Scenic Quality Model")
 
     #create copy of args

@@ -13,6 +13,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.routing.delineateit')
 
 def execute(args):
+    """Delineateit: Watershed Delineation."""
 
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)

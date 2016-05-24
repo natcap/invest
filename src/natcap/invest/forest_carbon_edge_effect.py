@@ -26,7 +26,9 @@ CARBON_MAP_NODATA = -9999
 
 
 def execute(args):
-    """InVEST Carbon Edge Model calculates the carbon due to edge effects in
+    """Forest Carbon Edge Effect.
+
+    InVEST Carbon Edge Model calculates the carbon due to edge effects in
     tropical forest pixels.
 
     Parameters:

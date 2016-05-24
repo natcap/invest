@@ -472,7 +472,12 @@ def hdf5_is_gzip_capable():
 
 
 def execute(args):
-    """This function invokes the coastal protection model given uri inputs
+    """Nearshore Wave and Erosion.
+
+    .. warning::
+        This model is a development preview and is considered unstable.
+
+    This function invokes the coastal protection model given uri inputs
         specified by the user's guide.
 
     args - a dictionary object of arguments

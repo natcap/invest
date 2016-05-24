@@ -15,8 +15,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args, create_outputs=True):
-    '''
-    Entry point into the Fisheries Model
+    '''Fisheries.
 
     :param str args['workspace_dir']: location into which all intermediate
         and output files should be placed.

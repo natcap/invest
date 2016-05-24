@@ -22,8 +22,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
-    '''
-    Entry point into the Fisheries Habitat Scenario Tool
+    '''Fisheries: Habitat Scenario Tool.
 
     The Fisheries Habitat Scenario Tool generates a new Population Parameters
     CSV File with modified survival attributes across classes and regions

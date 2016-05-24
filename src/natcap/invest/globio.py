@@ -24,7 +24,7 @@ SIGMA = 9.0
 
 
 def execute(args):
-    """Main entry point for GLOBIO model.
+    """GLOBIO.
 
     The model operates in two modes.  Mode (a) generates a landcover map
     based on a base landcover map and information about crop yields,

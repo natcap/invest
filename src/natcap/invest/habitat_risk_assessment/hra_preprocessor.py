@@ -78,7 +78,8 @@ class NA_RatingsError(Exception):
     pass
 
 def execute(args):
-    """
+    """Habitat Risk Assessment Preprocessor.
+
     Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
 

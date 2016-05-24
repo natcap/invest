@@ -15,7 +15,9 @@ import pygeoprocessing.geoprocessing
 LOGGER = logging.getLogger('natcap.invest.hydropower.hydropower_water_yield')
 
 def execute(args):
-    """Executes the hydropower/water_yield model
+    """Annual Water Yield: Reservoir Hydropower Production.
+
+    Executes the hydropower/water_yield model
 
         args - a python dictionary with at least the following possible entries:
 

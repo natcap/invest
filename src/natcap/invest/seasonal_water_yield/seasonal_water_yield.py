@@ -75,7 +75,7 @@ _TMP_BASE_FILES = {
 
 
 def execute(args):
-    """InVEST seasonal water yield model.
+    """Seasonal Water Yield.
 
     This function invokes the InVEST seasonal water yield model described in
     "Spatial attribution of baseflow generation at the parcel level for

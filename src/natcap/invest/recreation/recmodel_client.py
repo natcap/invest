@@ -65,7 +65,9 @@ _TMP_BASE_FILES = {
 
 
 def execute(args):
-    """Execute recreation client model on remote server.
+    """Recreation.
+
+    Execute recreation client model on remote server.
 
     Parameters:
         args['workspace_dir'] (string): path to workspace directory

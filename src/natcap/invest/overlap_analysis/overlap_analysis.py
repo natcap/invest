@@ -19,7 +19,8 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
-    '''
+    '''Overlap Analysis.
+
     This function will take care of preparing files passed into the overlap
     analysis model. It will handle all files/inputs associated with
     calculations and manipulations. It may write log, warning, or error

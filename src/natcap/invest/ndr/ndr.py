@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
-    """Nutrient delivery ratio model:
+    """Nutrient Delivery Ratio.
 
     Parameters:
         args['workspace_dir'] (string):  path to current workspace
