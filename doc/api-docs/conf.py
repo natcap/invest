@@ -281,3 +281,8 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+# Specify the imports that must be mocked out in order to generate the docs.
+autodoc_mock_imports = [
+    'sextante', 'matplotlib', 'osgeo', 'PyQt4', 'h5py', 'pygeoprocessing',
+    'shapely', 'rtree', 'scipy', 'numpy']
