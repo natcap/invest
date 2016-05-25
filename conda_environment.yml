@@ -2,5 +2,3 @@ gdal<2.0
 shapely
 pyamg
 cython
-natcap.versioner
-pygeoprocessing>=0.3.0a15
