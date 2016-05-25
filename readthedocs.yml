@@ -1,6 +1,6 @@
 python:
     version: 2
-    pip_install: True
+    setup_py_install: True
 
 requirements_file: requirements-docs.txt
 
