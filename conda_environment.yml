@@ -1,1 +1,5 @@
-osgeo=1.11.4
+gdal=1.11.4
+shapely
+h5py
+pyamg
+
