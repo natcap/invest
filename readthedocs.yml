@@ -1,3 +1,7 @@
+python:
+    version: 2
+    pip_install: True
+
 requirements_file: requirements-docs.txt
 
 conda:
