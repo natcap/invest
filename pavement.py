@@ -1578,7 +1578,9 @@ def build_docs(options):
     skip_api = getattr(options, 'skip_api', False)
     if not skip_api:
         apidoc_args = [
-            "'--module-first'",
+            #"'--module-first'",
+            "'--separate'",
+            "'-E'",
             "'--force'",
             "'-o doc/api-docs/api'",
             "'src/natcap'",

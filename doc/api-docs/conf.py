@@ -100,6 +100,7 @@ pygments_style = 'sphinx'
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
+keep_warnings = True
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -284,5 +285,9 @@ texinfo_documents = [
 
 # Specify the imports that must be mocked out in order to generate the docs.
 autodoc_mock_imports = [
-    'sextante', 'matplotlib', 'osgeo', 'PyQt4', 'h5py', 'pygeoprocessing',
-    'shapely', 'rtree', 'scipy', 'numpy']
+    'sextante', 'matplotlib', 'matplotlib.pyplot', 'matplotlib.pylab',
+    'pylab', 'pyamg', 'osgeo', 'PyQt4', 'h5py', 'shapely', 'shapely.wkb', 'rtree',
+    'pygeoprocessing.routing.routing_core', 'seasonal_water_yield_core',
+
+]
+

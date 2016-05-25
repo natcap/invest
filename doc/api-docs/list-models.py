@@ -61,6 +61,7 @@ def main(args):
             '=========================\n'
             '\n'
             '.. contents::\n'
+            '\n'
         )
 
         for name, module in sorted(all_modules.iteritems(), key=lambda x: x[0]):
