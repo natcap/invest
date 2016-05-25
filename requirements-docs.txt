@@ -1,0 +1,3 @@
+cython
+sphinx-rtd-theme
+natcap.versioner
