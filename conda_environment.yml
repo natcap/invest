@@ -1,4 +1,3 @@
-gdal=1.11.4
+gdal
 shapely
-h5py
 pyamg
