@@ -1,4 +1,5 @@
+sphinx
 cython
 sphinx-rtd-theme
 natcap.versioner
-pygeoprocessing>=0.3.0a15
+mock
