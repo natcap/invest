@@ -18,7 +18,7 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../../src/'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 # -- General configuration ------------------------------------------------
 
@@ -56,7 +56,8 @@ copyright = u'2015, The Natural Capital Project'
 #
 # The short X.Y version.
 import natcap.versioner
-_version = natcap.versioner.parse_version('../..')
+_version = natcap.versioner.parse_version(
+    root=os.path.join(os.path.dirname(__file__), '..', '..'))
 version = _version.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = _version
@@ -287,11 +288,11 @@ texinfo_documents = [
 # Specify the imports that must be mocked out in order to generate the docs.
 autodoc_mock_imports = [
     'sextante', 'matplotlib', 'matplotlib.pyplot', 'matplotlib.pylab',
-    'pylab', 'pyamg', 'osgeo', 'PyQt4', 'h5py', 'shapely', 'shapely.wkb', 'rtree',
-    'seasonal_water_yield_core', 'Pyro4', 'PyQt4.QtGui.QWidget', 'numpy', 'scipy',
-    'scipy.sparse', 'scipy.sparse.linalg', 'scipy.special', 'shapely.geometry',
-    'scipy.sparse.csgraph', 'osgeo.osr', 'scipy.stats', 'scipy.spatial',
-    'scipy.ndimage',
+    'pylab', 'pyamg', 'osgeo', 'PyQt4', 'h5py', 'shapely', 'shapely.wkb',
+    'rtree', 'seasonal_water_yield_core', 'Pyro4', 'PyQt4.QtGui.QWidget',
+    'numpy', 'scipy', 'scipy.sparse', 'scipy.sparse.linalg', 'scipy.special',
+    'shapely.geometry', 'scipy.sparse.csgraph', 'osgeo.osr', 'scipy.stats',
+    'scipy.spatial', 'scipy.ndimage',
 ]
 
 # Mock out pygeoprocessing here so I can manually set the version attribute to
@@ -302,4 +303,25 @@ _pygeoprocessing.__version__ = '100.0.0'
 sys.modules['pygeoprocessing'] = _pygeoprocessing
 sys.modules['pygeoprocessing.geoprocessing'] = mock.Mock()
 sys.modules['pygeoprocessing.routing'] = mock.Mock()
+
+
+# Mock class with attribute handling.  As suggested by:
+# http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+class Mock(mock.Mock):
+    def __getattr__(self, name):
+        return Mock()
+
+# Any time we run a sphinx operation, also generate the API documentation.
+# This should work OK, so long as the required modules (above) are sufficiently
+# mocked up.
+for name in autodoc_mock_imports:
+    sys.modules[name] = Mock()
+from sphinx import apidoc
+apidoc.main([
+    '--separate',
+    '-E',
+    '-o %s' % os.path.join(os.path.dirname(__file__), 'api'),
+    os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'natcap')
+])
+
 
