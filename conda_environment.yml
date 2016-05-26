@@ -1,5 +1,0 @@
-gdal<2.0
-shapely
-pyamg
-cython
-pip

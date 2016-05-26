@@ -1,5 +1,4 @@
 sphinx
-cython
 sphinx-rtd-theme
 natcap.versioner
 mock
