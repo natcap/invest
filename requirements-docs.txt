@@ -14,6 +14,6 @@ sphinx-rtd-theme
 nose
 cython
 mock
-hg+https://bitbucket.org/richpsharp/pygeoprocessing@develop
+hg+https://bitbucket.org/jdouglass/pygeoprocessing@develop
 natcap.versioner
 .
