@@ -12,8 +12,6 @@
 sphinx
 sphinx-rtd-theme
 nose
-numpy
-scipy
 cython
 mock
 hg+https://bitbucket.org/richpsharp/pygeoprocessing@develop
