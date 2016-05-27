@@ -201,11 +201,9 @@ setup(
     version=natcap.versioner.parse_version(),
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    install_requires=requirements(),  # fetch from requirements.txt
+    install_requires=requirements('pygeoprocessing', 'natcap.versioner', 'numpy'),
+    setup_requires=['cython'] + requirements('pygeoprocessing', 'natcap.versioner', 'numpy'),
     include_dirs=[numpy.get_include()],
-    # Having natcap.versioner here allows pip to force installation of
-    # natcap.versioner before the natcap.invest setup.py is run.
-    setup_requires=['nose>=1.0'] + requirements('natcap.versioner', 'numpy'),
     license=LICENSE,
     zip_safe=False,
     keywords='gis invest',

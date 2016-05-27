@@ -1,5 +1,21 @@
+# requirements-docs.txt
+# ---------------------
+# This file records the packages *required* to build documentation
+# for the natcap.invest package. Building documentation does not
+# require that all packages needed to actually execute the packages
+# are available.  Missing packages will be mocked out for the sphinx
+# build.
+#
+# This build script is maintained primarily for a build on
+# readthedocs.org.
+
 sphinx
 sphinx-rtd-theme
-natcap.versioner
+nose
+numpy
+scipy
+cython
 mock
-hg+https://bitbucket.org/jdouglass/versioner@develop
+hg+https://bitbucket.org/richpsharp/pygeoprocessing@develop
+natcap.versioner
+.
