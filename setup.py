@@ -16,7 +16,6 @@ from setuptools.extension import Extension
 from setuptools import setup
 import pkg_resources
 
-import numpy
 import natcap.versioner
 
 # Monkeypatch os.link to prevent hard lnks from being formed.  Useful when
@@ -75,13 +74,20 @@ class ExtraCompilerFlagsBuilder(build_ext):
     this is only for windows ports of GNU GCC compilers.
     """
     def build_extensions(self):
+        import numpy
+        numpy_include_dirs = numpy.get_include()
         compiler_type = self.compiler.compiler_type
-        if compiler_type in ['mingw32', 'cygwin']:
-            for ext in self.extensions:
+
+        for ext in self.extensions:
+            if compiler_type in ['mingw32', 'cygwin']:
                 ext.extra_link_args = [
                     '-static-libgcc',
                     '-static-libstdc++',
                 ]
+            try:
+                ext.include_dirs.append(numpy_include_dirs)
+            except AttributeError:
+                ext.include_dirs = [numpy_include_dirs]
         build_ext.build_extensions(self)
 
 CMDCLASS['build_ext'] = ExtraCompilerFlagsBuilder
@@ -91,24 +97,20 @@ EXTENSION_LIST = ([
         name="natcap.invest.recreation.out_of_core_quadtree",
         sources=[
             'src/natcap/invest/recreation/out_of_core_quadtree.pyx'],
-        language="c++",
-        include_dirs=[numpy.get_include()]),
+        language="c++"),
     Extension(
         name="scenic_quality_cython_core",
         sources=[
             'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
-        language="c++",
-        include_dirs=[numpy.get_include()]),
+        language="c++"),
     Extension(
         name="ndr_core",
         sources=['src/natcap/invest/ndr/ndr_core.pyx'],
-        language="c++",
-        include_dirs=[numpy.get_include()]),
+        language="c++"),
     Extension(
         name="seasonal_water_yield_core",
         sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
-        language="c++",
-        include_dirs=[numpy.get_include()]),
+        language="c++"),
     ])
 
 if not USE_CYTHON:
@@ -203,7 +205,6 @@ setup(
     include_package_data=True,
     install_requires=requirements('pygeoprocessing', 'natcap.versioner', 'numpy'),
     setup_requires=['cython'] + requirements('pygeoprocessing', 'natcap.versioner', 'numpy'),
-    include_dirs=[numpy.get_include()],
     license=LICENSE,
     zip_safe=False,
     keywords='gis invest',
