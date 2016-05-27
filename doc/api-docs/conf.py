@@ -305,6 +305,7 @@ sys.modules['pygeoprocessing.geoprocessing'] = mock.Mock()
 sys.modules['pygeoprocessing.routing'] = mock.Mock()
 
 
+
 # Mock class with attribute handling.  As suggested by:
 # http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
 class Mock(mock.Mock):
@@ -320,7 +321,7 @@ from sphinx import apidoc
 apidoc.main([
     '--separate',
     '-E',
-    '-o %s' % os.path.join(os.path.dirname(__file__), 'api'),
+    '-o', os.path.join(os.path.dirname(__file__), 'api'),
     os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'natcap')
 ])
 

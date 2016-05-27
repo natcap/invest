@@ -2,3 +2,4 @@ sphinx
 sphinx-rtd-theme
 natcap.versioner
 mock
+hg+https://bitbucket.org/jdouglass/versioner@develop
