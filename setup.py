@@ -16,8 +16,6 @@ from setuptools.extension import Extension
 from setuptools import setup
 import pkg_resources
 
-import natcap.versioner
-
 # Monkeypatch os.link to prevent hard lnks from being formed.  Useful when
 # running tests across filesystems, like in our test docker containers.
 # Only an issue pre python 2.7.9.
@@ -200,11 +198,12 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
-    version=natcap.versioner.parse_version(),
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    install_requires=['numpy'] + requirements('pygeoprocessing', 'natcap.versioner'),
-    setup_requires=['cython', 'numpy'] + requirements('pygeoprocessing', 'natcap.versioner'),
+    install_requires=['numpy'] + requirements('pygeoprocessing',
+                                              'natcap.versioner'),
+    setup_requires=['cython', 'numpy'] + requirements('pygeoprocessing',
+                                                      'natcap.versioner'),
     license=LICENSE,
     zip_safe=False,
     keywords='gis invest',
