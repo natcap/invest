@@ -1582,7 +1582,7 @@ def build_docs(options):
             "'--separate'",
             "'-E'",
             "'--force'",
-            "'-o doc/api-docs/api'",
+            "'--output-dir=doc/api-docs/api'",
             "'src/natcap'",
             ]
         sh('{python} -c "from sphinx.apidoc import main; main([{args}])"'.format(
