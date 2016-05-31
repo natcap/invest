@@ -9,6 +9,7 @@ import json
 import csv
 import h5py
 from h5py import h5z
+import warnings
 
 from osgeo import gdal
 from osgeo import ogr
@@ -474,6 +475,8 @@ def hdf5_is_gzip_capable():
 def execute(args):
     """Nearshore Wave and Erosion.
 
+    .. deprecated:: 3.4.0
+
     .. warning::
         This model is a development preview and is considered unstable.
 
@@ -485,6 +488,10 @@ def execute(args):
     args['workspace_dir']     - The file location where the outputs will
                                 be written (Required)
     """
+
+    warnings.warn(('Nearshore Wave and Erosion ("Coastal Protection") '
+                   'Will be deprecated as of InVEST 3.4.0.'),
+                  DeprecationWarning, stacklevel=2)
 
     if not hdf5_is_gzip_capable():
         anaconda_gzip_issue = \
