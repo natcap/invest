@@ -1577,16 +1577,6 @@ def build_docs(options):
 
     skip_api = getattr(options, 'skip_api', False)
     if not skip_api:
-        apidoc_args = [
-            #"'--module-first'",
-            "'--separate'",
-            "'-E'",
-            "'--force'",
-            "'--output-dir=doc/api-docs/api'",
-            "'src/natcap'",
-            ]
-        sh('{python} -c "from sphinx.apidoc import main; main([{args}])"'.format(
-            python=options.build_docs.python, args=", ".join(apidoc_args)))
         sh('{python} setup.py build_sphinx'.format(python=options.build_docs.python))
         archive_name = archive_template % 'apidocs'
         call_task('zip', args=[archive_name, 'build/sphinx/html', 'apidocs'])

@@ -254,7 +254,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'invest3', u'InVEST 3 Documentation',
+    ('index', 'invest', u'InVEST Documentation',
      [u'The Natural Capital Project'], 1)
 ]
 
@@ -304,8 +304,6 @@ sys.modules['pygeoprocessing'] = _pygeoprocessing
 sys.modules['pygeoprocessing.geoprocessing'] = mock.Mock()
 sys.modules['pygeoprocessing.routing'] = mock.Mock()
 
-
-
 # Mock class with attribute handling.  As suggested by:
 # http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
 class Mock(mock.Mock):
@@ -317,6 +315,7 @@ class Mock(mock.Mock):
 # mocked up.
 for name in autodoc_mock_imports:
     sys.modules[name] = Mock()
+
 from sphinx import apidoc
 apidoc.main([
     '--separate',
@@ -324,5 +323,3 @@ apidoc.main([
     '-o', os.path.join(os.path.dirname(__file__), 'api'),
     os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'natcap')
 ])
-
-
