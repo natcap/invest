@@ -18,7 +18,8 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+DOCS_SOURCE_DIR = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src'))
 
 # -- General configuration ------------------------------------------------
 
@@ -57,7 +58,7 @@ copyright = u'2015, The Natural Capital Project'
 # The short X.Y version.
 import natcap.versioner
 _version = natcap.versioner.parse_version(
-    root=os.path.join(os.path.dirname(__file__), '..', '..'))
+    root=os.path.join(DOCS_SOURCE_DIR, '..', '..'))
 version = _version.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = _version
@@ -320,6 +321,6 @@ from sphinx import apidoc
 apidoc.main([
     '--separate',
     '-E',
-    '-o', os.path.join(os.path.dirname(__file__), 'api'),
-    os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'natcap')
+    '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),
+    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
 ])
