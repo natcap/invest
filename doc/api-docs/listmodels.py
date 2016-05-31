@@ -8,9 +8,30 @@ import sys
 
 import natcap.invest
 
-LOGGER = logging.getLogger('list-models.py')
+LOGGER = logging.getLogger('listmodels.py')
 
-def main(args):
+
+def main(args=None):
+    """List out all InVEST model entrypoints in RST.
+
+    This is a main function and is intended to be used as a CLI.  For the
+    full list of options, use ``listmodels --help``.  Parameters may also
+    be provided as a list of strings.
+
+    Writes a file (defaults to ``models.rst``) with the list of models and
+    their automodule documentation directives for processing by sphinx.
+
+    Arguments:
+        args (list): Optional. A list of string command-line parameters to
+            parse.  If not provided, ``sys.argv[1:]`` will be used.
+
+    Returns:
+        None
+
+    """
+    if not args:
+        args = sys.argv[1:]
+
     parser = argparse.ArgumentParser(description=(
         'List all models that have an execute function in RST'))
     parser.add_argument('outfile', type=str, nargs='?', default='models.rst')
@@ -45,6 +66,7 @@ def main(args):
         'usage_logger',
         'recmodel_server',
         'recmodel_workspace_fetcher',
+        'nearshore_wave_and_erosion', '3p0', 'WaveModel'
     ]
 
     print '\n\n'
@@ -64,7 +86,8 @@ def main(args):
             '\n'
         )
 
-        for name, module in sorted(all_modules.iteritems(), key=lambda x: x[0]):
+        for name, module in sorted(all_modules.iteritems(),
+                                   key=lambda x: x[0]):
             if any([name.endswith(x) for x in excluded_modules]):
                 continue
             try:
@@ -86,4 +109,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
