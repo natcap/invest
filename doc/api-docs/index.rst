@@ -40,6 +40,7 @@ API Reference
 .. toctree::
     :maxdepth: 1
 
+    InVEST Model Entry Points <models>
     Full API Reference <api>
     ecosystem_service_analysis_tools
     final_ecosystem_services

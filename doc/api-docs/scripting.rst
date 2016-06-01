@@ -73,6 +73,8 @@ Setting up your Python environment
          See :ref:`installing-from-source` for details.
 
 
+.. _CreatingSamplePythonScripts:
+
 ==============================
 Creating Sample Python Scripts
 ==============================
