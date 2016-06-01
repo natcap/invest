@@ -11,7 +11,7 @@ import json
 import pkg_resources
 import natcap.versioner
 import natcap.invest
-import natcap.invest.iui.modelui
+
 
 TOOLS_IN_DEVELOPMENT = set([
     'seasonal_water_yield',
@@ -202,6 +202,7 @@ def main():
             print '    %s' % ' '.join(matching_models)
             return 2
 
+        import natcap.invest.iui.modelui
         natcap.invest.iui.modelui.main(modelname + '.json', args.test)
 
 if __name__ == '__main__':
