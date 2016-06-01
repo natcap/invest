@@ -46,7 +46,7 @@ Setting up your Python environment
    Others should be able to be installed via ``pip install <packagename>``.
 
     .. This ..include:: part will automatically pull the contents of requirements.txt
-    and include the file from line 9 through the end.
+       and include the file from line 9 through the end.
 
     .. include:: ../../requirements.txt
         :literal:
