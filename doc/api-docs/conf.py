@@ -291,26 +291,16 @@ texinfo_documents = [
 autodoc_mock_imports = [
     'sextante', 'matplotlib', 'matplotlib.pyplot', 'matplotlib.pylab',
     'pylab', 'pyamg', 'osgeo', 'PyQt4', 'h5py', 'shapely', 'shapely.wkb',
-    'rtree', 'seasonal_water_yield_core', 'Pyro4', 'PyQt4.QtGui.QWidget',
-    'numpy', 'scipy', 'scipy.sparse', 'scipy.sparse.linalg', 'scipy.special',
-    'shapely.geometry', 'scipy.sparse.csgraph', 'osgeo.osr', 'scipy.stats',
-    'scipy.spatial', 'scipy.ndimage', 'shapely.wkt', 'shapely.ops',
+    'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
+    'shapely.geometry', 'osgeo.osr',
+    'shapely.wkt', 'shapely.ops',
     'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
     'PyQt4.QtCore',
 ]
 
-# Mock out pygeoprocessing here so I can manually set the version attribute to
-# an acceptable string.
-import mock
-_pygeoprocessing = mock.Mock()
-_pygeoprocessing.__version__ = '100.0.0'
-sys.modules['pygeoprocessing'] = _pygeoprocessing
-sys.modules['pygeoprocessing.geoprocessing'] = mock.Mock()
-sys.modules['pygeoprocessing.routing'] = mock.Mock()
-sys.modules['pygeoprocessing.routing.routing_core'] = mock.Mock()
-
 # Mock class with attribute handling.  As suggested by:
 # http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+import mock
 class Mock(mock.Mock):
     def __getattr__(self, name):
         return Mock()
@@ -332,4 +322,4 @@ apidoc.main([
 
 # list out all the models that conform to the InVEST API standard.
 listmodels = imp.load_source('listmodels', os.path.join(DOCS_SOURCE_DIR, 'listmodels.py'))
-listmodels.main()
+listmodels.main([])
