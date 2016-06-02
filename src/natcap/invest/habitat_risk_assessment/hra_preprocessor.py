@@ -83,7 +83,7 @@ def execute(args):
     Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
 
-    Input:
+    Parameters:
         args['workspace_dir'] - The directory to dump the output CSV files to.
         args['habitats_dir'] - A directory of shapefiles that are habitats.
             This is not required, and may not exist if there is a species layer
@@ -106,20 +106,19 @@ def execute(args):
             needs to be in a VERY specific format, which shall be described in
             the user's guide.
 
-    Output:
-        Creation of a series of CSVs within workspace_dir. There will be one
-            CSV for every habitat/species. These files will contain information
-            relevant to each habitat or species, including all criteria. The
-            criteria will be broken up into those which apply to only the
-            habitat, and those which apply to the overlap of that habitat, and
-            each stressor.
+    Returns:
+        None
 
-        JSON file containing vars that need to be passed on to hra non-core
-          when that gets run. Should live inside the preprocessor folder which
-          will be created in 'workspace_dir'. It will contain habitats_dir,
-          species_dir, stressors_dir, and criteria_dir.
+    This function creates a series of CSVs within ``args['workspace_dir']``.
+    There will be one CSV for every habitat/species. These files will contain information
+    relevant to each habitat or species, including all criteria. The criteria
+    will be broken up into those which apply to only the habitat, and those
+    which apply to the overlap of that habitat, and each stressor.
 
-    Returns nothing.
+    JSON file containing vars that need to be passed on to hra non-core
+    when that gets run. Should live inside the preprocessor folder which
+    will be created in ``args['workspace_dir']``. It will contain habitats_dir,
+    species_dir, stressors_dir, and criteria_dir.
     """
     #Create two booleans to indicate which of the layers we should be using in
     #this model run.
