@@ -26,12 +26,16 @@ class InVESTImportTest(unittest.TestCase):
             'path': natcap.invest.__path__,
             'prefix': 'natcap.invest.',
         }
-        for _, name, _ in itertools.chain(
-                pkgutil.walk_packages(**iteration_args),  # catch packages
-                pkgutil.iter_modules(**iteration_args)):  # catch modules
+        package_iterator = itertools.chain(
+            pkgutil.walk_packages(**iteration_args),  # catch packages
+            pkgutil.iter_modules(**iteration_args))
+        while True:
             try:
+                _, name, _ = package_iterator.next()
                 importlib.import_module(name)
-            except ImportError:
+            except (ImportError, TypeError):
                 # If we encounter an exception when importing a module, log it
                 # but continue.
                 LOGGER.exception('Error importing %s', name)
+            except StopIteration:
+                break
