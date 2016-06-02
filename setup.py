@@ -205,7 +205,7 @@ setup(
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
     install_requires=BUILD_REQUIREMENTS,
-    setup_requires=BUILD_REQUIREMENTS,
+    setup_requires=requirements('natcap.versioner'),
     license=LICENSE,
     zip_safe=False,
     keywords='gis invest',
