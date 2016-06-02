@@ -51,7 +51,7 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
     natcap.versioner>=0.4.0
     numpy>=1.11.0
     pyamg>=2.2.1
-    pygeoprocessing>=0.3.0a15
+    pygeoprocessing>=0.3.0a17
     rtree>=0.8.2
     scipy>=0.14.0
     shapely
