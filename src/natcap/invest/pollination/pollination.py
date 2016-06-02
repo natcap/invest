@@ -79,6 +79,7 @@ def execute(args):
 
     The following args dictionary entries are optional, and
     will affect the behavior of the model if provided:
+
         1. landuse_fut_uri
         2. ag_classes
         3. results_suffix
@@ -86,6 +87,7 @@ def execute(args):
 
     If args['do_valuation'] is set to True, the following args dictionary
     entries are also required:
+
         1. half_saturation
         2. wild_pollination_proportion
 

@@ -13,21 +13,19 @@ from natcap.invest.overlap_analysis import overlap_core
 def execute(args):
     '''Overlap Analysis: Management Zones.
 
-    Input:
-        args: A python dictionary created by the UI and passed to this method.
-            It will contain the following data.
-        args['workspace_dir']- The directory in which to place all resulting
-            files, will come in as a string.
-        args['zone_layer_loc']- A URI pointing to a shapefile with the analysis
-            zones on it.
-        args['overlap_data_dir_loc']- URI pointing to a directory where
-            multiple shapefiles are located. Each shapefile represents an
-            activity of interest for the model.
-    Output:
-        mz_args- The dictionary of all arguments that are needed by the
-            overlap_analysis_mz_core.py class. This list of processed inputs
-            will be directly passed to the core in order to create model
-            outputs.
+    Parameters:
+        args: A python dictionary created by the UI and passed to this
+            method. It will contain the following data.
+        args['workspace_dir'] (string): The directory in which to place all
+            resulting files, will come in as a string. (required)
+        args['zone_layer_loc'] (string): A URI pointing to a shapefile with
+            the analysis zones on it. (required)
+        args['overlap_data_dir_loc'] (string): URI pointing to a directory
+            where multiple shapefiles are located. Each shapefile represents
+            an activity of interest for the model. (required)
+
+    Returns:
+        ``None``
     '''
 
     mz_args = {}
