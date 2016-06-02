@@ -38,8 +38,13 @@ try:
 except ImportError:
     USE_CYTHON = False
 
-readme = open('README_PYTHON.rst').read()
-LICENSE = open('LICENSE.txt').read()
+
+# Read in requirements.txt and populate the python readme with the non-comment
+# contents.
+_REQUIREMENTS = filter(lambda x: not x.startswith('#'),
+                       open('requirements.txt').read().split('\n'))
+README = open('README_PYTHON.rst').read().format(
+    requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
 
 
 def no_cythonize(extensions, **_):
@@ -163,7 +168,7 @@ BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
-    long_description=readme,
+    long_description=README,
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
     url='http://bitbucket.org/natcap/invest',
@@ -206,7 +211,7 @@ setup(
     include_package_data=True,
     install_requires=BUILD_REQUIREMENTS,
     setup_requires=requirements('natcap.versioner'),
-    license=LICENSE,
+    license=open('LICENSE.txt').read(),
     zip_safe=False,
     keywords='gis invest',
     classifiers=[

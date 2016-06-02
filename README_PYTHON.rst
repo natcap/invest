@@ -44,6 +44,8 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 
 .. code-block::
 
+{requirements}
+
     Pyro4>=4.41
     gdal>=1.11.2,<2.0
     h5py>=2.3.0
