@@ -104,11 +104,13 @@ def execute(args):
         args['soil_group_path'] (string): required if
             args['user_defined_local_recharge'] is  False. A path to a raster
             indicating SCS soil groups where integer values are mapped to soil
-            types:
+            types::
+
                 1: A
                 2: B
                 3: C
                 4: D
+
         args['aoi_path'] (string): path to a vector that indicates the area
             over which the model should be run, as well as the area in which to
             aggregate over when calculating the output Qb.
@@ -148,6 +150,9 @@ def execute(args):
         args['monthly_alpha'] (boolean): if True, use the alpha
         args['monthly_alpha_path'] (string): required if args['monthly_alpha']
             is True.
+
+    Returns:
+        ``None``
     """
     # This upgrades warnings to exceptions across this model.
     # I found this useful to catch all kinds of weird inputs to the model

@@ -57,7 +57,7 @@ def main(filename):
         for word in helptext.split(' '):
             if not first_line_satisfied:
                 if (len(formatted_helptext) > max_firstline_len):
-                    formatted_helptext += '\n           '
+                    formatted_helptext += '\n            ' + word
                     first_line_satisfied = True
                 else:
                     formatted_helptext += (' ' + word)

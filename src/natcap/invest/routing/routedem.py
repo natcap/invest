@@ -16,7 +16,51 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.routing.routedem')
 
 def execute(args):
-    """RouteDEM: D-Infinity Routing."""
+    """RouteDEM: D-Infinity Routing.
+
+    This model exposes the pygeoprocessing d-infinity routing functionality in
+    the InVEST model API.
+
+    Parameters:
+        workspace_dir (string):  The selected folder is used as the workspace
+            where all intermediate and output files will be written. If the
+            selected folder does not exist, it will be created. If
+            datasets already exist in the selected folder, they will be
+            overwritten. (required)
+        dem_uri (string):  A GDAL-supported raster file containing a base
+            Digital Elevation Model to execute the routing functionality
+            across. (required)
+        pit_filled_filename (string):  The filename of the output raster
+            with pits filled in. It will go in the project workspace.
+            (required)
+        flow_direction_filename (string):  The filename of the flow direction
+            raster. It will go in the project workspace. (required)
+        flow_accumulation_filename (string):  The filename of the flow
+            accumulation raster. It will go in the project workspace.
+            (required)
+        threshold_flow_accumulation (int):  The number of upstream cells
+            that must flow into a cell before it's classified as a stream.
+            (required)
+        multiple_stream_thresholds (bool):  Set to ``True`` to calculate
+            multiple maps. If enabled, set stream threshold to the lowest
+            amount, then set upper and step size thresholds. (optional)
+        threshold_flow_accumulation_upper (int):  The number of upstream
+            pixels that must flow into a cell before it's classified as a
+            stream. (required)
+        threshold_flow_accumulation_stepsize (int):  The number of cells
+            to step up from lower to upper threshold range. (required)
+        calculate_slope (bool):  Set to ``True`` to output a slope raster.
+            (optional)
+        slope_filename (string):  The filename of the output slope raster.
+            This will go in the project workspace. (required)
+        calculate_downstream_distance (bool):  Select to calculate a distance
+            stream raster, based on uppper threshold limit. (optional)
+        downstream_distance_filename (string):  The filename of the output
+            raster. It will go in the project workspace. (required)
+
+    Returns:
+        ``None``
+    """
 
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)
