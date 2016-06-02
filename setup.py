@@ -156,6 +156,10 @@ def requirements(*pkgnames):
     return found_pkgnames.values()
 
 
+BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
+                                                        'natcap.versioner')
+
+
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
@@ -200,9 +204,8 @@ setup(
     },
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    install_requires=['numpy'] + requirements('natcap.versioner'),
-    setup_requires=['cython', 'numpy'] + requirements('pygeoprocessing',
-                                                      'natcap.versioner'),
+    install_requires=BUILD_REQUIREMENTS,
+    setup_requires=BUILD_REQUIREMENTS,
     license=LICENSE,
     zip_safe=False,
     keywords='gis invest',
