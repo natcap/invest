@@ -42,7 +42,6 @@ except ImportError:
     USE_CYTHON = False
 
 readme = open('README_PYTHON.rst').read()
-history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 LICENSE = open('LICENSE.txt').read()
 
 
@@ -160,7 +159,7 @@ def requirements(*pkgnames):
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
-    long_description=readme + '\n\n' + history,
+    long_description=readme,
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
     url='http://bitbucket.org/natcap/invest',
