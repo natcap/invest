@@ -48,7 +48,7 @@ def execute(args):
             all output files
         args['threshold_flow_accumulation']: a number representing the flow
             accumulation in terms of upstream pixels.
-        args['_prepare'] - (optional) The preprocessed set of data created by
+        args['_prepare']: (optional) The preprocessed set of data created by
             the ndr._prepare call.  This argument could be used in cases where
             the call to this function is scripted and can save a significant
             amount DEM processing runtime.

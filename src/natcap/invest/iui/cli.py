@@ -10,7 +10,6 @@ import json
 
 import pkg_resources
 import natcap.versioner
-import natcap.invest
 
 
 TOOLS_IN_DEVELOPMENT = set([
@@ -151,6 +150,7 @@ def main():
         'open-source python environment.'),
         prog='invest'
     )
+    import natcap.invest
     parser.add_argument('--version', action='version',
                         version=natcap.invest.__version__)
     parser.add_argument('--list', action='store_true',

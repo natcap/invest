@@ -26,39 +26,41 @@ def execute(args):
     calculations and manipulations. It may write log, warning, or error
     messages to stdout.
 
-    Input:
+    Parameters:
         args: A python dictionary created by the UI and passed to this method.
             It will contain the following data.
-        args['workspace_dir']- The directory in which to place all resulting
-            files, will come in as a string.
-        args['zone_layer_uri']- A URI pointing to a shapefile with the analysis
-            zones on it.
-        args['grid_size']- This is an int specifying how large the gridded
-            squares over the shapefile should be.
-        args['overlap_data_dir_uri']- URI pointing to a directory where
-            multiple shapefiles are located. Each shapefile represents an
-            activity of interest for the model.
-        args['do-inter']-Boolean that indicates whether or not inter-activity
-            weighting is desired. This will decide if the overlap table will be
-            created.
-        args['do_intra']- Boolean which indicates whether or not intra-activity
-            weighting is desired. This will will pull attributes from
-            shapefiles passed in in 'zone_layer_uri'
-        args['do_hubs']- Boolean which indicates if human use hubs are desired.
+        args['workspace_dir'] (string): The directory in which to place all
+            resulting files, will come in as a string. (required)
+        args['zone_layer_uri'] (string): A URI pointing to a shapefile with
+            the analysis zones on it. (required)
+        args['grid_size'] (int): This is an int specifying how large the
+            gridded squares over the shapefile should be. (required)
+        args['overlap_data_dir_uri'] (string): URI pointing to a directory
+            where multiple shapefiles are located. Each shapefile represents
+            an activity of interest for the model. (required)
+        args['do-inter'] (bool): Boolean that indicates whether or not
+            inter-activity weighting is desired. This will decide if
+            the overlap table will be created. (required)
+        args['do_intra'] (bool): Boolean which indicates whether or not
+            intra-activity weighting is desired. This will will pull
+            attributes from shapefiles passed in in 'zone_layer_uri'.
+            (required)
+        args['do_hubs'] (bool): Boolean which indicates if human use hubs are
+            desired. (required)
+        args['overlap_layer_tbl'] (string): URI to a CSV file that holds
+            relational data and identifier data for all layers being passed
+            in within the overlap analysis directory. (optional)
+        args['intra_name'] (string): string which corresponds to a field
+            within the layers being passed in within overlap analysis
+            directory. This is the intra-activity importance for each
+            activity. (optional)
+        args['hubs_uri'] (string): The location of the shapefile containing
+            points for human use hub calculations. (optional)
+        args['decay_amt'] (float): A double representing the decay rate of
+            value from the human use hubs. (optional)
 
-        --Optional--
-        args['overlap_layer_tbl'] URI to a CSV file that holds relational data
-            and identifier data for all layers being passed in within the
-            overlap analysis directory.
-        args['intra_name']- string which corresponds to a field within the
-            layers being passed in within overlap analysis directory. This is
-            the intra-activity importance for each activity.
-        args['hubs_uri']- The location of the shapefile containing points for
-            human use hub calculations.
-        args['decay_amt']- A double representing the decay rate of value from
-            the human use hubs.
-
-    Returns nothing.'''
+    Returns:
+        ``None``'''
 
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
