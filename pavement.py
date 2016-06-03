@@ -966,10 +966,6 @@ def after_install(options, home_dir):
         compiler_string = ''
 
     if options.env.with_pygeoprocessing:
-        # Verify that natcap.versioner is present and importable.
-        # pygeoprocessing won't install properly unless this is present.
-        _import_namespace_pkg('versioner')
-
         # Check and update the pygeoprocessing repo if needed.
         call_task('check_repo', options={
             'force-dev': False,
