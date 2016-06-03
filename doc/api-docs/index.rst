@@ -46,7 +46,6 @@ API Reference
     final_ecosystem_services
     supporting_ecosystem_services
     testing
-    user_interface
     utilities
 
 
