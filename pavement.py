@@ -1744,6 +1744,8 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
     Returns:
         A tuple of (subpackages installed as eggs, subpackages installed flat)
     """
+    print 'Using environment: %s' % use_env
+
     @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
     def _get_packages():
         eggs = []
