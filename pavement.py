@@ -233,7 +233,8 @@ paver.easy.options(
         skip_bin=False,
         python=_PYTHON,
         envname=_ENVNAME,
-        skip_python=False
+        skip_python=False,
+        fix_namespace=False
     ),
     build_installer=Bunch(
         force_dev=False,
@@ -2902,6 +2903,7 @@ def selftest():
     ('skip-bin', '', "Don't build the binaries"),
     ('envname=', 'e', ('The name of the environment to use')),
     ('python=', '', "The python interpreter to use.  If not provided, an env will be built for you."),
+    ('fix-namespace', '', 'Fix namespace issues if needed'),
 ], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files', 'check_repo'])
 @might_call('check')
 @might_call('env')
@@ -2973,6 +2975,7 @@ def build(options):
         call_task('build_bin', options={
             'python': _python(),
             'force_dev': options.build.force_dev,
+            'fix_namespace': options.build.fix_namespace,
         })
     else:
         print 'Skipping binaries per user request'
@@ -3135,7 +3138,7 @@ def jenkins_installer(options):
 
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
-    build_options = {}
+    build_options = {'fix_namespace': True}
     if platform.system() == 'Windows':
         # force building with msvc on jenkins on Windows
         build_options['compiler'] = 'msvc'
