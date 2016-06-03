@@ -12,6 +12,8 @@ import natcap.invest
 LOGGER = logging.getLogger('listmodels.py')
 
 MODEL_RST_TEMPLATE = """
+.. _models:
+
 =========================
 InVEST Model Entry Points
 =========================
