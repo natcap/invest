@@ -1,10 +1,7 @@
 .. :changelog:
 
-Changes
-=======
-
-Unreleased Features
--------------------
+Unreleased Changes
+------------------
 * InVEST Windows installer now includes HISTORY.rst as the changelog instead of the old ``InVEST_Updates_<version>`` files.
 * Habitat suitability model is generalized and released as an API only accessible model.  It can be found at natcap.invest.habitat_suitability.execute.  This model replaces the oyster habitat suitability model.
     * The refactor of this model requires an upgrade to ``numpy >= 1.11.0``.
