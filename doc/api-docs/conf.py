@@ -313,7 +313,7 @@ for name in autodoc_mock_imports:
 
 from sphinx import apidoc
 apidoc.main([
-    '--no-headings',
+    '--force',
     '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),
     os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
 ])
