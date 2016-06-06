@@ -1763,6 +1763,7 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
             else:
                 noneggs.append(modname)
         return (sorted(eggs), sorted(noneggs))
+    print '_get_packages points to: %s' % _get_packages
     return _get_packages()
 
 
