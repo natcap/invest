@@ -1753,7 +1753,6 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
 
     @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
     def _get_packages():
-        pkgutil = reload(pkgutil)
         eggs = []
         noneggs = []
         ns_module = importlib.import_module(ns_pkg_name)
@@ -1771,7 +1770,6 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
         return (sorted(eggs), sorted(noneggs))
     print '_get_packages points to: %s' % _get_packages
     found_packages = _get_packages()
-    pkgutil = reload(pkgutil)
     return found_packages
 
 
