@@ -2379,6 +2379,8 @@ def build_bin(options):
     for retry in [True, False]:
         natcap_eggs, natcap_noneggs = get_namespace_pkg_types(
             'natcap', preferred='dir', use_env=envdir)
+        print 'Eggs: %s' % natcap_eggs
+        print 'Non-eggs: %s' % natcap_noneggs
         # If the package layout looks ok, break out of the loop.
         if len(natcap_eggs) == 0:
             break
