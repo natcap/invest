@@ -1651,6 +1651,11 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
         ImportError: If the package cannot be imported.
     """
     _ns_module_name = 'natcap.%s' % modname
+
+    # reload the module if it's already been imported
+    if _ns_module_name in sys.modules:
+        sys.modules[_ns_module_name] = reload(sys.modules[_ns_module_name])
+
     if hasattr(sys, 'real_prefix'):
         # virtualenv appears to respect __import__ better than
         # importlib.import_module, which is helpful for when running this in a
@@ -1748,6 +1753,7 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
 
     @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
     def _get_packages():
+        pkgutil = reload(pkgutil)
         eggs = []
         noneggs = []
         ns_module = importlib.import_module(ns_pkg_name)
@@ -1764,7 +1770,9 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
                 noneggs.append(modname)
         return (sorted(eggs), sorted(noneggs))
     print '_get_packages points to: %s' % _get_packages
-    return _get_packages()
+    found_packages = _get_packages()
+    pkgutil = reload(pkgutil)
+    return found_packages
 
 
 def reinstall_pkg(pkg_name, reinstall_as_egg=True):
