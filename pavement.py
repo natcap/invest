@@ -1718,7 +1718,9 @@ def decorate_if(condition, decorator):
     """
     def _check_condition(function):
         if condition:
+            print 'Condition is True, decorating.'
             return decorator(function)
+        print 'Condition is False, not decorating.'
         return function
     return _check_condition
 
@@ -1741,6 +1743,8 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
         A tuple of (subpackages installed as eggs, subpackages installed flat)
     """
     print 'Using environment: %s' % use_env
+    print 'Checking namespace package "%s" for pkg format"%s"' % (ns_pkg_name,
+                                                                  preferred)
 
     @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
     def _get_packages():
@@ -1749,6 +1753,7 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
         ns_module = importlib.import_module(ns_pkg_name)
 
         for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
+            print 'Checking natcap namespace package: %s' % modname
             module, pkg_type = _import_namespace_pkg(modname,
                                                     preferred=preferred,
                                                     print_msg=print_msg)
