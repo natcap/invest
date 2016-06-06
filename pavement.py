@@ -1797,7 +1797,7 @@ def reinstall_pkg(pkg_name, reinstall_as_egg=True):
         'wheel': ''
     }
 
-    sh(('pip install {flags} {package} > {package}.log').format(
+    sh(('pip install -I {flags} {package} > {package}.log').format(
         package=pkg_name, flags=flags[pkg_type]))
 
     # If the package install fails with nonzero exit code, this line won't be
