@@ -1654,9 +1654,17 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
     """
     _ns_module_name = 'natcap.%s' % modname
 
-    # reload the module if it's already been imported
-    if _ns_module_name in sys.modules:
-        sys.modules[_ns_module_name] = reload(sys.modules[_ns_module_name])
+    # _import_namespace_pkg will sometimes be called within a virtualenv.  When
+    # this happens, we need to force python to reload natcap.versioner using
+    # the virtualenv-modified sys.path.  Unfortunately, this requires that we
+    # remove the module itself from sys.path, since the built-in reload()
+    # function reloads an already-loaded module from source ... and NOT after
+    # locating it again from sys.path.
+    for _path, _module in sys.modules.items():
+        if _path.startswith('natcap'):
+            LOGGER.debug('Removing %s (%s) from sys.modules',
+                         _path, _module)
+            del sys.modules[_path]
 
     if hasattr(sys, 'real_prefix'):
         # virtualenv appears to respect __import__ better than
