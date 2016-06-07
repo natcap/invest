@@ -1011,7 +1011,6 @@ def after_install(options, home_dir):
         'nose': ['-I'],
         'paver': ['-I'],
         'natcap.versioner': ['-I'],
-        'setuptools': ['--upgrade'],
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
         # installed numpy.  Force compilation from source to avoid this issue.
