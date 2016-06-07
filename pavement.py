@@ -1039,7 +1039,6 @@ def after_install(options, home_dir):
 
     # Aything in this list will ALWAYS be installed.
     pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose'),
-                            pkg_resources.Requirement.parse('paver'),
                             ]
 
     for reqs_file in requirements_files:
