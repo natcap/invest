@@ -993,7 +993,7 @@ def after_install(options, home_dir):
         # pygeoprocessing (poster, for example, does not have this issue!).
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
-            "'--no-deps', '-I', '--egg', {compiler_flags} "
+            "'--no-deps', '-I', '--upgrade', {compiler_flags} "
             "'./src/pygeoprocessing'])\n"
         ).format(compiler_flags=compiler_string)
         preinstalled_pkgs.add('pygeoprocessing')
@@ -1664,7 +1664,7 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
         # virtualenv appears to respect __import__ better than
         # importlib.import_module, which is helpful for when running this in a
         # virtualenv (via @paver.virtual.virtualenv)
-        module = __import__(_ns_module_name)
+        module = __import__(_ns_module_name, fromlist=['natcap'])
     else:
         module = importlib.import_module(_ns_module_name)
 
