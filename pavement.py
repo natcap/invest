@@ -1757,9 +1757,9 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
     Returns:
         A tuple of (subpackages installed as eggs, subpackages installed flat)
     """
-    print 'Using environment: %s' % use_env
-    print 'Checking namespace package "%s" for pkg format"%s"' % (ns_pkg_name,
-                                                                  preferred)
+    LOGGER.debug('Using environment: %s', use_env)
+    LOGGER.debug('Checking namespace package "%s" for pkg format "%s"',
+                 ns_pkg_name, preferred)
 
     @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
     def _get_packages():
@@ -1768,7 +1768,7 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
         ns_module = importlib.import_module(ns_pkg_name)
 
         for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
-            print 'Checking natcap namespace package: %s' % modname
+            LOGGER.debug('Checking natcap namespace package: %s', modname)
             module, pkg_type = _import_namespace_pkg(modname,
                                                     preferred=preferred,
                                                     print_msg=print_msg)
@@ -1778,7 +1778,6 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
             else:
                 noneggs.append(modname)
         return (sorted(eggs), sorted(noneggs))
-    print '_get_packages points to: %s' % _get_packages
     found_packages = _get_packages()
     return found_packages
 
@@ -1831,6 +1830,10 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
+    # Silence any log messages less critical than ERROR.
+    previous_level = LOGGER.level
+    LOGGER.setLevel(logging.ERROR)
+
     errors_found = False
     # If we're on Windows, check that python 2.7.11 is installed.  2.7.11
     # provides a version of multiprocessing that was patched to fix an issue
@@ -2195,7 +2198,7 @@ def check(options):
                 print warn
 
     except ImportError:
-        print 'No natcap installations found.'
+        LOGGER.warn('No natcap installations found.')
 
 
     # Check if we need to have versioner installed for setup.py
@@ -2252,6 +2255,9 @@ def check(options):
         print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
         print green("All's well.")
+
+    # Reset warnings to what they were before we ran paver check.
+    LOGGER.setLevel(previous_level)
 
 
 @task
