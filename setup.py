@@ -41,7 +41,7 @@ except ImportError:
 
 # Read in requirements.txt and populate the python readme with the non-comment
 # contents.
-_REQUIREMENTS = filter(lambda x: not x.startswith('#'),
+_REQUIREMENTS = filter(lambda x: not x.startswith('#') and len(x) > 0,
                        open('requirements.txt').read().split('\n'))
 README = open('README_PYTHON.rst').read().format(
     requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
