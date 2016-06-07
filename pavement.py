@@ -1009,7 +1009,9 @@ def after_install(options, home_dir):
     # is there.
     pkg_pip_params = {
         'nose': ['-I'],
+        'paver': ['-I'],
         'natcap.versioner': ['-I'],
+        'setuptools': ['-I'],
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
         # installed numpy.  Force compilation from source to avoid this issue.
@@ -1036,7 +1038,10 @@ def after_install(options, home_dir):
         return extra_params
 
     # Aything in this list will ALWAYS be installed.
-    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose')]
+    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose'),
+                            pkg_resources.Requirement.parse('paver'),
+                            pkg_resources.Requirement.parse('setuptools'),
+                            ]
 
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
