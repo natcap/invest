@@ -1734,9 +1734,9 @@ def decorate_if(condition, decorator):
     """
     def _check_condition(function):
         if condition:
-            print 'Condition is True, decorating.'
+            LOGGER.debug('Condition is True, decorating.')
             return decorator(function)
-        print 'Condition is False, not decorating.'
+        LOGGER.debug('Condition is False, not decorating.')
         return function
     return _check_condition
 
@@ -1758,8 +1758,8 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
     Returns:
         A tuple of (subpackages installed as eggs, subpackages installed flat)
     """
-    LOGGER.debug('Using environment: %s', use_env)
-    LOGGER.debug('Checking namespace package "%s" for pkg format "%s"',
+    LOGGER.info('Using environment: %s', use_env)
+    LOGGER.info('Checking namespace package "%s" for pkg format "%s"',
                  ns_pkg_name, preferred)
 
     @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
@@ -1769,7 +1769,7 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
         ns_module = importlib.import_module(ns_pkg_name)
 
         for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
-            LOGGER.debug('Checking natcap namespace package: %s', modname)
+            LOGGER.info('Checking natcap namespace package: %s', modname)
             module, pkg_type = _import_namespace_pkg(modname,
                                                     preferred=preferred,
                                                     print_msg=print_msg)
@@ -2396,8 +2396,8 @@ def build_bin(options):
     for retry in [True, False]:
         natcap_eggs, natcap_noneggs = get_namespace_pkg_types(
             'natcap', preferred='dir', use_env=envdir)
-        print 'Eggs: %s' % natcap_eggs
-        print 'Non-eggs: %s' % natcap_noneggs
+        LOGGER.debug('Eggs: %s', natcap_eggs)
+        LOGGER.debug('Non-eggs: %s', natcap_noneggs)
         # If the package layout looks ok, break out of the loop.
         if len(natcap_eggs) == 0:
             break
