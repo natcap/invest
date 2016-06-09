@@ -29,7 +29,7 @@ def execute(args):
             Used for determining soil retention and other biophysical
             properties of the landscape. (required)
 
-        args['depth_to_root_rest_layer_uri'] (string)- a uri to an input
+        args['depth_to_root_rest_layer_uri'] (string): a uri to an input
             raster describing the depth of "good" soil before reaching this
             restrictive layer (required)
 
