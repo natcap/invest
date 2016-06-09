@@ -1037,8 +1037,9 @@ def after_install(options, home_dir):
         return extra_params
 
     # Aything in this list will ALWAYS be installed.
-    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose'),
-                            ]
+    pkgs_to_be_installed = [
+        pkg_resources.Requirement.parse('nose'),
+    ]
 
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
