@@ -2,7 +2,10 @@
 API Reference
 =============
 
-Contents:
+.. Note::
+
+    For the function documentation of available models,
+    see :ref:`models`.
 
 .. toctree::
     :maxdepth: 2

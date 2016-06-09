@@ -20,7 +20,7 @@ def execute(args):
     execute_30(**args)
 
 def execute_30(**args):
-    """Run the carbon model.
+    """Carbon Storage and Sequestration.
 
     This can include the biophysical model, the valuation model, or both.
 
@@ -129,6 +129,11 @@ def execute_30(**args):
         valuation_outputs = None
 
     _create_HTML_report(args, biophysical_outputs, valuation_outputs)
+
+
+# Copy the execute_30() docstring to execute()
+execute.__doc__ = execute_30.__doc__
+
 
 def _package_valuation_args(args, biophysical_outputs):
     if not biophysical_outputs:

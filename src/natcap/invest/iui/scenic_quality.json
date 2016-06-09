@@ -83,7 +83,7 @@
                     "type": "GDAL"
                   },
                   "required": true,
-                  "helpText": "A GDAL-supported raster file. An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI’s land-seascape where point features contributing to negative scenic quality are visible."
+                  "helpText": "A GDAL-supported raster file. An elevation raster layer is required to conduct viewshed analysis. Elevation data allows the model to determine areas within the AOI's land-seascape where point features contributing to negative scenic quality are visible."
                 },
                 {
                   "id": "refraction",
@@ -109,7 +109,7 @@
                   "returns": {
                     "ifEmpty": "pass"
                   },
-                  "helpText": "A GDAL-supported raster file.  A population raster layer is required to determine population within the AOI’s land-seascape where point features contributing to negative scenic quality are visible and not visible."
+                  "helpText": "A GDAL-supported raster file.  A population raster layer is required to determine population within the AOI's land-seascape where point features contributing to negative scenic quality are visible and not visible."
                 },
                 {
                   "id": "overlap_uri",
@@ -151,7 +151,7 @@
                   ],
                   "returns": "strings",
                   "defaultValue": 0,
-                  "helpText": "This field indicates the functional form f(x) the model will use to value the visual impact for each viewpoint. For distances less than 1 km (x&lt;1), the model uses a linear form g(x) where the line passes through f(1) (i.e. g(1) == f(1)) and extends to zero with the same slope as f(1) (i.e. g'(x) == f'(1))."
+                  "helpText": "This field indicates the functional form f(x) the model will use to value the visual impact for each viewpoint. For distances less than 1 km (x<1), the model uses a linear form g(x) where the line passes through f(1) (i.e. g(1) == f(1)) and extends to zero with the same slope as f(1) (i.e. g'(x) == f'(1))."
                 },
                 {
                   "id": "a_coefficient",
@@ -206,7 +206,7 @@
                   "validText": "-?[0-9]+(\\.[0-9]{18})?",
                   "dataType": "float",
                   "required": true,
-                  "helpText": "Radius beyond which the valuation is set to zero. The valuation function 'f' cannot be negative at the radius 'r' (f(r)&gt;=0)."
+                  "helpText": "Radius beyond which the valuation is set to zero. The valuation function 'f' cannot be negative at the radius 'r' (f(r)>=0)."
                 }
               ]
             }
