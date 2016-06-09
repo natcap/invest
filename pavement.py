@@ -2571,6 +2571,8 @@ def build_bin(options):
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
     if platform.system() == 'Windows':
+        # If we're on Windows, write out a batfile to testall.bat that will run
+        # each model UI in sequence and record model success or failure.
         binary = os.path.join(invest_dist, 'invest.exe')
         _write_console_files(binary, 'bat')
 
@@ -2581,8 +2583,7 @@ def build_bin(options):
         for filename in os.listdir(os.path.join(os.path.dirname(__file__),
                                                 'src', 'natcap', 'invest',
                                                 'iui')):
-            if not filename.endswith('.json') or\
-                    filename.startswith('nearshore'):
+            if not filename.endswith('.json'):
                 continue
 
             json_basename = os.path.splitext(filename)[0]
