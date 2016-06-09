@@ -46,7 +46,6 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 
     Pyro4>=4.41
     gdal>=1.11.2,<2.0
-    h5py>=2.3.0
     matplotlib
     natcap.versioner>=0.4.0
     numpy>=1.11.0
