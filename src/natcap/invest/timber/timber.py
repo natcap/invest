@@ -8,7 +8,8 @@ from osgeo import ogr
 
 
 def execute(args):
-    """
+    """Managed Timber Production.
+
     Invoke the timber model given uri inputs specified by the user guide.
 
     Args:

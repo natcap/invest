@@ -29,7 +29,7 @@ _OUTPUT = {
 
 
 def execute(args):
-    """Execute preprocessor.
+    """Coastal Blue Carbon Preprocessor.
 
     The preprocessor accepts a list of rasters and checks for cell-transitions
     across the rasters.  The preprocessor outputs a CSV file representing a

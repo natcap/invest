@@ -14,45 +14,49 @@ import pygeoprocessing.geoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.hydropower.hydropower_water_yield')
 
+
 def execute(args):
-    """Executes the hydropower/water_yield model
+    """Annual Water Yield: Reservoir Hydropower Production.
 
-        args - a python dictionary with at least the following possible entries:
+    Executes the hydropower/water_yield model
 
-        args['workspace_dir'] - a uri to the directory that will write output
-            and other temporary files during calculation. (required)
+    Parameters:
+        args['workspace_dir'] (string): a uri to the directory that will write
+            output and other temporary files during calculation. (required)
 
-        args['lulc_uri'] - a uri to a land use/land cover raster whose
+        args['lulc_uri'] (string): a uri to a land use/land cover raster whose
             LULC indexes correspond to indexes in the biophysical table input.
             Used for determining soil retention and other biophysical
             properties of the landscape. (required)
 
-        args['depth_to_root_rest_layer_uri'] - a uri to an input raster describing the
-            depth of "good" soil before reaching this restrictive layer (required)
+        args['depth_to_root_rest_layer_uri'] (string): a uri to an input
+            raster describing the depth of "good" soil before reaching this
+            restrictive layer (required)
 
-        args['precipitation_uri'] - a uri to an input raster describing the
-            average annual precipitation value for each cell (mm) (required)
+        args['precipitation_uri'] (string): a uri to an input raster
+            describing the average annual precipitation value for each cell
+            (mm) (required)
 
-        args['pawc_uri'] - a uri to an input raster describing the
+        args['pawc_uri'] (string): a uri to an input raster describing the
             plant available water content value for each cell. Plant Available
             Water Content fraction (PAWC) is the fraction of water that can be
             stored in the soil profile that is available for plants' use.
             PAWC is a fraction from 0 to 1 (required)
 
-        args['eto_uri'] - a uri to an input raster describing the
+        args['eto_uri'] (string): a uri to an input raster describing the
             annual average evapotranspiration value for each cell. Potential
             evapotranspiration is the potential loss of water from soil by
             both evaporation from the soil and transpiration by healthy Alfalfa
             (or grass) if sufficient water is available (mm) (required)
 
-        args['watersheds_uri'] - a uri to an input shapefile of the watersheds
-            of interest as polygons. (required)
+        args['watersheds_uri'] (string): a uri to an input shapefile of the
+            watersheds of interest as polygons. (required)
 
-        args['sub_watersheds_uri'] - a uri to an input shapefile of the
-            subwatersheds of interest that are contained in the
-            'watersheds_uri' shape provided as input. (optional)
+        args['sub_watersheds_uri'] (string): a uri to an input shapefile of
+            the subwatersheds of interest that are contained in the
+            ``args['watersheds_uri']`` shape provided as input. (optional)
 
-        args['biophysical_table_uri'] - a uri to an input CSV table of
+        args['biophysical_table_uri'] (string): a uri to an input CSV table of
             land use/land cover classes, containing data on biophysical
             coefficients such as root_depth (mm) and Kc, which are required.
             A column with header LULC_veg is also required which should
@@ -61,24 +65,26 @@ def execute(args):
             NOTE: these data are attributes of each LULC class rather than
             attributes of individual cells in the raster map (required)
 
-        args['seasonality_constant'] - floating point value between 1 and 10
-            corresponding to the seasonal distribution of precipitation
-            (required)
+        args['seasonality_constant'] (float): floating point value between
+            1 and 10 corresponding to the seasonal distribution of
+            precipitation (required)
 
-        args['results_suffix'] - a string that will be concatenated onto the
-           end of file names (optional)
+        args['results_suffix'] (string): a string that will be concatenated
+            onto the end of file names (optional)
 
-        args['demand_table_uri'] - a uri to an input CSV table of LULC classes,
-            showing consumptive water use for each landuse / land-cover type
-            (cubic meters per year) (required for water scarcity)
+        args['demand_table_uri'] (string): a uri to an input CSV table of
+            LULC classes, showing consumptive water use for each landuse /
+            land-cover type (cubic meters per year) (required for water
+            scarcity)
 
-        args['valuation_table_uri'] - a uri to an input CSV table of
+        args['valuation_table_uri'] (string): a uri to an input CSV table of
             hydropower stations with the following fields (required for
             valuation):
             ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
             'cost', 'height', 'kw_price')
 
-        returns - nothing"""
+    Returns:
+        None"""
 
     LOGGER.info('Starting Water Yield Core Calculations')
 

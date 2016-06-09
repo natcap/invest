@@ -26,7 +26,9 @@ CARBON_MAP_NODATA = -9999
 
 
 def execute(args):
-    """InVEST Carbon Edge Model calculates the carbon due to edge effects in
+    """Forest Carbon Edge Effect.
+
+    InVEST Carbon Edge Model calculates the carbon due to edge effects in
     tropical forest pixels.
 
     Parameters:
@@ -40,33 +42,34 @@ def execute(args):
             shapefile that will be used to aggregate carbon stock results at
             the end of the run.
         args['biophysical_table_uri'] (string): a path to a CSV table that has
-            at least a header for an 'lucode' and 'c_above'. If
-            args['compute_forest_edge_effects'] is True, table must also
-            contain an 'is_tropical_forest' header.  If
-            args['pools_to_calculate'] if 'all' must contain headers 'c_below',
-            'c_dead', and 'c_soil'.
-                'lucode': an integer that corresponds to landcover codes in
-                    the raster args['lulc_uri']
-                'is_tropical_forest': either 0 or 1 indicating whether the
-                    landcover type is forest (1) or not (0).  If 1, the value
-                    in 'c_above' is ignored and instead calculated from the
-                    edge regression model.
-                'c_above': floating point number indicating tons of above
-                    ground carbon per hectare for that landcover type
-                {'c_below', 'c_dead', 'c_soil'}: three other optional carbon
-                    pools that will statically map landcover types to the
-                    carbon densities in the table.
+            at least the fields 'lucode' and 'c_above'. If
+            ``args['compute_forest_edge_effects'] == True``, table must
+            also contain an 'is_tropical_forest' field.  If
+            ``args['pools_to_calculate'] == 'all'``, this table must contain
+            the fields 'c_below', 'c_dead', and 'c_soil'.
 
-                Example:
+                * ``lucode``: an integer that corresponds to landcover codes in
+                  the raster ``args['lulc_uri']``
+                * ``is_tropical_forest``: either 0 or 1 indicating whether the
+                  landcover type is forest (1) or not (0).  If 1, the value
+                  in ``c_above`` is ignored and instead calculated from the
+                  edge regression model.
+                * ``c_above``: floating point number indicating tons of above
+                  ground carbon per hectare for that landcover type
+                * ``{'c_below', 'c_dead', 'c_soil'}``: three other optional carbon
+                  pools that will statically map landcover types to the
+                  carbon densities in the table.
+
+                Example::
+
                     lucode,is_tropical_forest,c_above,c_soil,c_dead,c_below
                     0,0,32.8,5,5.2,2.1
                     1,1,n/a,2.5,0.0,0.0
                     2,1,n/a,1.8,1.0,0.0
                     16,0,28.1,4.3,0.0,2.0
 
-                    Note the "n/a" in 'c_above' are optional since that field
-                    is ignored when is_tropical_forest==1.
-
+                Note the "n/a" in ``c_above`` are optional since that field
+                is ignored when ``is_tropical_forest==1``.
         args['lulc_uri'] (string): path to a integer landcover code raster
         args['pools_to_calculate'] (string): one of "all" or "above_ground".
             If "all" model expects 'c_above', 'c_below', 'c_dead', 'c_soil'
@@ -85,12 +88,17 @@ def execute(args):
             that have different meanings depending on the 'method' parameter.
             Specifically,
 
-                method 1 asymptotic model:
+                * method 1 (asymptotic model)::
+
                     biomass = theta1 - theta2 * exp(-theta3 * edge_dist_km)
-                method 2 logarithmic model:
+
+                * method 2 (logarithmic model)::
+
+                    # NOTE: theta3 is ignored for this method
                     biomass = theta1 + theta2 * numpy.log(edge_dist_km)
-                     (theta3 is ignored for this method)
-                method 3 linear regression:
+
+                * method 3 (linear regression)::
+
                     biomass = theta1 + theta2 * edge_dist_km
 
         args['biomass_to_carbon_conversion_factor'] (string/float): Number by

@@ -10,6 +10,59 @@
 ; FORKNAME        - The username of the InVEST fork we're building off of.
 ; DATA_LOCATION   - Where (relative to datportal) the data should be downloaded
 ;                   from.
+;
+; NOTE ON INSTALLING SAMPLE DATA:
+; ===============================
+; There are three ways to install sample data with this installer:
+;
+; 1) Through the Installer's GUI.
+;    This approach requires users to interact with the GUI of the installer,
+;    where the user will select the data zipfile he/she would like to have
+;    installed as part of the installation. If the user does not have an active
+;    internet connection (or if there are problems with a download), an error
+;    dialog will be presented for each failed download.
+;
+; 2) Through the 'Advanced' input on the front pane of the installer.
+;    This approach is particularly convenient for users wishing to distribute
+;    sample data as a single zipfile with the installer, as might be the case
+;    for sysadmins installing on many computers, or Natcappers installing on
+;    user's computers at a training.  To make this work, a specially formatted
+;    zipfile must be used.  This zipfile may be created with paver by calling:
+;
+;        $ paver build_data --single-archive
+;
+;    Alternately, this zipfile may be assembled by hand, so long as the
+;    zipfile has all sample data folders at the top level.  Whatever is in the
+;    archive will be unzipped to the install directory.
+;
+;    It's also worth noting that this 'Advanced' install may be used at the
+;    command-line, optionally as part of a silent install.  If we assume that
+;    the InVEST 3.3.1 installer and the advanced sampledata zipfile are copied
+;    to the same directory, and we open a cmd prompt within that same
+;    directory:
+;
+;        > .\InVEST_3.3.1_Setup_x86.exe /S /DATAZIP=%CD%\sampledata.zip
+;
+;    This will execute the installer silently, and extract the contents of
+;    sampledata.zip to the installation directory.
+;
+; 3) By having the installer and sample data archives in the right places
+;    This approach is an alternative to the silent install with the 'advanced'
+;    input functionality, and is useful when the user has control over the
+;    location of the installer and the sampledata zipfiles on the local
+;    computer. The gist is that if the installer finds the sample data zipfile
+;    it's looking for in the right place, it'll use that instead of going to
+;    the network.
+;
+;    To use this, the following folder structure must exist:
+;
+;    some directory/
+;        InVEST_<version>_Setup.exe
+;        sample_data/
+;           Marine.zip
+;           Pollination.zip
+;           Base_Data.zip
+;           <other zipfiles, as desired, downloaded from our website>
 
 !include nsProcess.nsh
 !include LogicLib.nsh
@@ -39,6 +92,7 @@ SetCompressor zlib
 !include "x64.nsh"
 !include "FileFunc.nsh"
 !include "nsDialogs.nsh"
+!include "WinVer.nsh"
 
 ; MUI Settings
 !define MUI_ABORTWARNING
@@ -68,8 +122,9 @@ SetCompressor zlib
 
 ; MUI end ------
 
+!define INSTALLER_NAME "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
+OutFile ${INSTALLER_NAME}
 InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
 ShowInstDetails show
 
@@ -94,7 +149,7 @@ Function AddAdvancedOptions
     pop $AdvCheckbox
     ${NSD_OnClick} $AdvCheckbox EnableAdvFileSelect
 
-    ${NSD_CreateFileRequest} 175u -18u 36% 12u ""
+    ${NSD_CreateFileRequest} 175u -18u 36% 12u $LocalDataZipFile
     pop $AdvFileField
     ShowWindow $AdvFileField 0
 
@@ -102,6 +157,12 @@ Function AddAdvancedOptions
     pop $AdvZipFile
     ${NSD_OnClick} $AdvZipFile GetZipFile
     ShowWindow $AdvZipFile 0
+
+    ; if $LocalDataZipFile has a value, check the 'advanced' checkbox by default.
+    ${If} $LocalDataZipFile != ""
+        ${NSD_Check} $AdvCheckbox
+        Call EnableAdvFileSelect
+    ${EndIf}
 FunctionEnd
 
 Function EnableAdvFileSelect
@@ -114,7 +175,7 @@ Function GetZipFile
     nsDialogs::SelectFileDialog "open" "" "Zipfiles *.zip"
     pop $0
     ${GetFileExt} $0 $1
-    ${If} "$1" != "zip"
+    ${If} $1 != "zip"
         MessageBox MB_OK "File must be a zipfile"
         Abort
     ${EndIf}
@@ -131,11 +192,16 @@ FunctionEnd
 Function ValidateAdvZipFile
     ${NSD_GetText} $AdvFileField $0
     ${If} $0 != ""
-        ${GetFileExt} $1 $0
+        ${GetFileExt} $0 $1
         ${If} $1 != "zip"
-            MessageBox MB_OK "File must be a zipfile"
+            MessageBox MB_OK "File must be a zipfile $1"
+            Abort
         ${EndIf}
+        IfFileExists $0 +3 0
+        MessageBox MB_OK "File not found or not accessible: $0"
+        Abort
     ${Else}
+        ; Save the value in the advanced filefield as $LocalDataZipFile
         strcpy $LocalDataZipFile $0
     ${EndIf}
 FunctionEnd
@@ -182,15 +248,6 @@ Function DumpLog
         Pop $1
         Pop $0
         Exch $5
-FunctionEnd
-
-Function .onInit
- System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
- Pop $R0
-
- StrCmp $R0 0 +3
-   MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
-   Abort
 FunctionEnd
 
 Function Un.onInit
@@ -257,8 +314,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Seasonal Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_seasonal_water_yield.bat" "" "${INVEST_ICON}"
 
-  CreateShortCut "${SMPATH}\RouteDEM (${ARCHITECTURE}).lnk" "${INVEST_DATA}\routedem.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\DelineateIt (${ARCHITECTURE}).lnk" "${INVEST_DATA}\delineateit.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\RouteDEM (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_routedem.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\DelineateIt (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_delineateit.bat" "" "${INVEST_ICON}"
 
   CreateShortCut "${SMPATH}\Recreation (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation.bat" "" "${INVEST_ICON}"
 
@@ -282,8 +339,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   SetOutPath "$INSTDIR"
   File license.txt
   File ..\..\src\invest-natcap.default\*.tbx
-  File ..\..\src\invest-natcap.default\docs\release_notes\*.txt
   File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
+  file ..\..\HISTORY.rst
 
   SetOutPath "$INSTDIR\invest_helper_utils\"
   File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\utils\*
@@ -293,6 +350,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
 
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
   File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
+  ; runmodel.bat is here to help automate testing the UIs.
+  File runmodel.bat
 
 ;  SetOutPath "$INSTDIR\${INVEST_3_FOLDER_x64}\"
 ;  File /r /x *.hg* /x *.svn* ..\${INVEST_3_FOLDER_x64}\*
@@ -302,7 +361,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
 
   ; If the user has provided a custom data zipfile, unzip the data.
   ${If} $LocalDataZipFile != ""
-    nsisunz::UnzipToLog "$LocalDataZipFile" "$INSTDIR"
+    nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
   ${EndIf}
 
   ; Write the install log to a text file on disk.
@@ -310,6 +369,15 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   Push $0
   Call DumpLog
 
+SectionEnd
+
+; Only add this section if we're running the installer on Windows 7 or below.
+; See InVEST Issue #3515.
+; This section is disabled in .onInit if we're running Windows 8 or later.
+Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
+    File vcredist_x86.exe
+    ExecWait "vcredist_x86.exe /q"
+    Delete vcredist_x86.exe
 SectionEnd
 
 Section "uninstall"
@@ -325,9 +393,25 @@ Section "uninstall"
   DeleteRegKey HKLM "${REGISTRY_PATH}"
 SectionEnd
 
-Var SERVER_PATH
 Var LocalDataZip
 Var INSTALLER_DIR
+
+!macro downloadFile RemoteFilepath LocalFilepath
+    NSISdl::download "${RemoteFilepath}" ${LocalFilepath}
+    Pop $R0 ;Get the status of the file downloaded
+    StrCmp $R0 "success" got_it failed
+    got_it:
+       nsisunz::UnzipToLog ${LocalFilepath} "."
+       Delete ${LocalFilepath}
+       goto done
+    failed:
+       MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
+    done:
+       ; Write the install log to a text file on disk.
+       StrCpy $0 "$INSTDIR\install_data_${LocalFilepath}_log.txt"
+       Push $0
+       Call DumpLog
+!macroend
 
 !macro downloadData Title Filename AdditionalSize
   Section "${Title}"
@@ -340,8 +424,10 @@ Var INSTALLER_DIR
         goto end_of_section
     ${EndIf}
 
+    ; Use a local zipfile if it exists in ./sample_data
     ${GetExePath} $INSTALLER_DIR
     StrCpy $LocalDataZip "$INSTALLER_DIR\sample_data\${Filename}"
+
 ;    MessageBox MB_OK "zip: $LocalDataZip"
     IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
     LocalFileExists:
@@ -350,22 +436,8 @@ Var INSTALLER_DIR
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        StrCpy $SERVER_PATH "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}"
         SetOutPath "$INSTDIR"
-        NSISdl::download "$SERVER_PATH/${Filename}" ${Filename}
-        Pop $R0 ;Get the status of the file downloaded
-        StrCmp $R0 "success" got_it failed
-        got_it:
-           nsisunz::UnzipToLog ${Filename} "."
-           Delete ${Filename}
-           goto done
-        failed:
-           MessageBox MB_OK "Download failed: $R0 $SERVER_PATH/${Filename}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${Filename} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
-  done:
-      ; Write the install log to a text file on disk.
-      StrCpy $0 "$INSTDIR\install_data_${Title}_log.txt"
-      Push $0
-      Call DumpLog
+        !insertmacro downloadFile "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${Filename}" "${Filename}"
       end_of_section:
       SectionEnd
 !macroend
@@ -397,6 +469,14 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
     !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 0
+
+    ; Custom download for the Crop Production Global Datasets.
+    Section "Crop Production Global Datasets (Required for Crop Production)"
+        AddSize "138000"
+        SetOutPath "$INSTDIR\CropProduction"
+        !insertmacro downloadFile "http://data.naturalcapitalproject.org/invest_crop_production/global_dataset_20151210.zip" "crop_data.zip"
+        SetOutPath "$INSTDIR"
+    SectionEnd
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
@@ -408,3 +488,43 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd
 SectionGroupEnd
+
+Function .onInit
+ ${GetOptions} $CMDLINE "/?" $0
+ IfErrors skiphelp showhelp
+ showhelp:
+     MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
+     $\r$\n\
+     For more information about InVEST or the Natural Capital Project, visit our \
+     website: http://naturalcapitalproject.org/invest$\r$\n\
+     $\r$\n\
+     Command-Line Options:$\r$\n\
+         /?$\t$\t=$\tDisplay this help and exit$\r$\n\
+         /S$\t$\t=$\tSilently install InVEST.$\r$\n\
+         /D=$\t$\t=$\tSet the installation directory.$\r$\n\
+         /DATAZIP=$\t=$\tUse this sample data zipfile.$\r$\n\
+         "
+     abort
+ skiphelp:
+
+ System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
+ Pop $R0
+
+ StrCmp $R0 0 +3
+   MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
+   Abort
+
+  ${ifNot} ${AtMostWin7}
+    ; disable the section if we're not running on Windows 7 or earlier.
+    ; This section should not execute for Windows 8 or later.
+    SectionGetFlags ${Sec_VCRedist2008} $0
+    IntOp $0 $0 & ${SECTION_OFF}
+    SectionSetFlags ${Sec_VCRedist2008} $0
+    SectionSetText ${Sec_VCRedist2008} ""
+  ${endIf}
+
+  ; If the user has defined the /DATAZIP flag, set the 'advanced' option
+  ; to the user's defined value.
+  ${GetOptions} $CMDLINE "/DATAZIP=" $0
+  strcpy $LocalDataZipFile $0
+FunctionEnd

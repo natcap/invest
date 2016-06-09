@@ -77,7 +77,7 @@ NODATA_USLE = -1.0
 
 
 def execute(args):
-    """InvEST SDR model.
+    """Sediment Delivery Ratio.
 
     This function calculates the sediment export and retention of a landscape
     using the sediment delivery ratio model described in the InVEST user's

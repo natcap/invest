@@ -10,8 +10,7 @@ import json
 
 import pkg_resources
 import natcap.versioner
-import natcap.invest
-import natcap.invest.iui.modelui
+
 
 TOOLS_IN_DEVELOPMENT = set([
     'seasonal_water_yield',
@@ -151,10 +150,13 @@ def main():
         'open-source python environment.'),
         prog='invest'
     )
+    import natcap.invest
     parser.add_argument('--version', action='version',
                         version=natcap.invest.__version__)
     parser.add_argument('--list', action='store_true',
                         help='List available models')
+    parser.add_argument('--test', action='store_false',
+                         help='Run in headless mode with default args.')
     parser.add_argument('model', nargs='?', help=(
         'The model/tool to run. Use --list to show available models/tools. '
         'Identifiable model prefixes may also be used.'))
@@ -166,8 +168,8 @@ def main():
         print_models()
         return 0
 
-    # args.model is '' when the user provided no input.
-    if args.model == '':
+    # args.model is '' or None when the user provided no input.
+    if args.model in ['', None]:
         parser.print_help()
         print ''
         print_models()
@@ -200,7 +202,8 @@ def main():
             print '    %s' % ' '.join(matching_models)
             return 2
 
-        natcap.invest.iui.modelui.main(modelname + '.json')
+        import natcap.invest.iui.modelui
+        natcap.invest.iui.modelui.main(modelname + '.json', args.test)
 
 if __name__ == '__main__':
     main()

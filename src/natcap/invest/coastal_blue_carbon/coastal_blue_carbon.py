@@ -32,7 +32,7 @@ _OUTPUT = {
 
 
 def execute(args):
-    """Entry point for Coastal Blue Carbon model.
+    """Coastal Blue Carbon.
 
     Args:
         workspace_dir (str): location into which all intermediate and

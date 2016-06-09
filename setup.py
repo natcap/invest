@@ -16,9 +16,6 @@ from setuptools.extension import Extension
 from setuptools import setup
 import pkg_resources
 
-import numpy
-import natcap.versioner
-
 # Monkeypatch os.link to prevent hard lnks from being formed.  Useful when
 # running tests across filesystems, like in our test docker containers.
 # Only an issue pre python 2.7.9.
@@ -41,9 +38,13 @@ try:
 except ImportError:
     USE_CYTHON = False
 
-readme = open('README_PYTHON.rst').read()
-history = open('HISTORY.rst').read().replace('.. :changelog:', '')
-LICENSE = open('LICENSE.txt').read()
+
+# Read in requirements.txt and populate the python readme with the non-comment
+# contents.
+_REQUIREMENTS = filter(lambda x: not x.startswith('#') and len(x) > 0,
+                       open('requirements.txt').read().split('\n'))
+README = open('README_PYTHON.rst').read().format(
+    requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
 
 
 def no_cythonize(extensions, **_):
@@ -76,13 +77,20 @@ class ExtraCompilerFlagsBuilder(build_ext):
     this is only for windows ports of GNU GCC compilers.
     """
     def build_extensions(self):
+        import numpy
+        numpy_include_dirs = numpy.get_include()
         compiler_type = self.compiler.compiler_type
-        if compiler_type in ['mingw32', 'cygwin']:
-            for ext in self.extensions:
+
+        for ext in self.extensions:
+            if compiler_type in ['mingw32', 'cygwin']:
                 ext.extra_link_args = [
                     '-static-libgcc',
                     '-static-libstdc++',
                 ]
+            try:
+                ext.include_dirs.append(numpy_include_dirs)
+            except AttributeError:
+                ext.include_dirs = [numpy_include_dirs]
         build_ext.build_extensions(self)
 
 CMDCLASS['build_ext'] = ExtraCompilerFlagsBuilder
@@ -92,24 +100,20 @@ EXTENSION_LIST = ([
         name="natcap.invest.recreation.out_of_core_quadtree",
         sources=[
             'src/natcap/invest/recreation/out_of_core_quadtree.pyx'],
-        language="c++",
-        include_dirs=[numpy.get_include()]),
+        language="c++"),
     Extension(
         name="scenic_quality_cython_core",
         sources=[
             'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
-        language="c++",
-        include_dirs=[numpy.get_include()]),
+        language="c++"),
     Extension(
         name="ndr_core",
         sources=['src/natcap/invest/ndr/ndr_core.pyx'],
-        language="c++",
-        include_dirs=[numpy.get_include()]),
+        language="c++"),
     Extension(
         name="seasonal_water_yield_core",
         sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
-        language="c++",
-        include_dirs=[numpy.get_include()]),
+        language="c++"),
     ])
 
 if not USE_CYTHON:
@@ -157,10 +161,14 @@ def requirements(*pkgnames):
     return found_pkgnames.values()
 
 
+BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
+                                                        'natcap.versioner')
+
+
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
-    long_description=readme + '\n\n' + history,
+    long_description=README,
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
     url='http://bitbucket.org/natcap/invest',
@@ -177,14 +185,12 @@ setup(
         'natcap.invest.fisheries',
         'natcap.invest.habitat_quality',
         'natcap.invest.habitat_risk_assessment',
-        'natcap.invest.habitat_suitability',
         'natcap.invest.hydropower',
         'natcap.invest.iui',
         'natcap.invest.iui.dbfpy',
         'natcap.invest.marine_water_quality',
         'natcap.invest.ndr',
         'natcap.invest.nearshore_wave_and_erosion',
-        'natcap.invest.optimization',
         'natcap.invest.overlap_analysis',
         'natcap.invest.pollination',
         'natcap.invest.recreation',
@@ -201,15 +207,11 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
-    version=natcap.versioner.parse_version(),
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    install_requires=requirements(),  # fetch from requirements.txt
-    include_dirs=[numpy.get_include()],
-    # Having natcap.versioner here allows pip to force installation of
-    # natcap.versioner before the natcap.invest setup.py is run.
-    setup_requires=['nose>=1.0'] + requirements('natcap.versioner', 'numpy'),
-    license=LICENSE,
+    install_requires=BUILD_REQUIREMENTS,
+    setup_requires=requirements('natcap.versioner'),
+    license=open('LICENSE.txt').read(),
     zip_safe=False,
     keywords='gis invest',
     classifiers=[

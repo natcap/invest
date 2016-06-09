@@ -1,5 +1,6 @@
 import argparse
 import ast
+import codecs
 import distutils
 import distutils.ccompiler
 from distutils.version import StrictVersion
@@ -25,6 +26,7 @@ import time
 import warnings
 import zipfile
 from types import DictType
+import urllib
 
 import pkg_resources
 import paver.svn
@@ -38,6 +40,7 @@ import yaml
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('pavement')
+logging.getLogger('pip').setLevel(logging.ERROR)
 
 
 # Pip 6.0 introduced the --no-use-wheel option.  Pip 7.0.0 deprecated
@@ -230,7 +233,8 @@ paver.easy.options(
         skip_bin=False,
         python=_PYTHON,
         envname=_ENVNAME,
-        skip_python=False
+        skip_python=False,
+        fix_namespace=False
     ),
     build_installer=Bunch(
         force_dev=False,
@@ -962,10 +966,6 @@ def after_install(options, home_dir):
         compiler_string = ''
 
     if options.env.with_pygeoprocessing:
-        # Verify that natcap.versioner is present and importable.
-        # pygeoprocessing won't install properly unless this is present.
-        _import_namespace_pkg('versioner')
-
         # Check and update the pygeoprocessing repo if needed.
         call_task('check_repo', options={
             'force-dev': False,
@@ -993,7 +993,7 @@ def after_install(options, home_dir):
         # pygeoprocessing (poster, for example, does not have this issue!).
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
-            "'--no-deps', '-I', '--egg', {compiler_flags} "
+            "'--no-deps', '-I', '--upgrade', {compiler_flags} "
             "'./src/pygeoprocessing'])\n"
         ).format(compiler_flags=compiler_string)
         preinstalled_pkgs.add('pygeoprocessing')
@@ -1009,6 +1009,7 @@ def after_install(options, home_dir):
     # is there.
     pkg_pip_params = {
         'nose': ['-I'],
+        'paver': ['-I'],
         'natcap.versioner': ['-I'],
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
@@ -1036,7 +1037,9 @@ def after_install(options, home_dir):
         return extra_params
 
     # Aything in this list will ALWAYS be installed.
-    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose')]
+    pkgs_to_be_installed = [
+        pkg_resources.Requirement.parse('nose'),
+    ]
 
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
@@ -1574,14 +1577,6 @@ def build_docs(options):
 
     skip_api = getattr(options, 'skip_api', False)
     if not skip_api:
-        apidoc_args = [
-            "'--module-first'",
-            "'--force'",
-            "'-o doc/api-docs/api'",
-            "'src/natcap'",
-            ]
-        sh('{python} -c "from sphinx.apidoc import main; main([{args}])"'.format(
-            python=options.build_docs.python, args=", ".join(apidoc_args)))
         sh('{python} setup.py build_sphinx'.format(python=options.build_docs.python))
         archive_name = archive_template % 'apidocs'
         call_task('zip', args=[archive_name, 'build/sphinx/html', 'apidocs'])
@@ -1659,11 +1654,24 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
         ImportError: If the package cannot be imported.
     """
     _ns_module_name = 'natcap.%s' % modname
+
+    # _import_namespace_pkg will sometimes be called within a virtualenv.  When
+    # this happens, we need to force python to reload natcap.versioner using
+    # the virtualenv-modified sys.path.  Unfortunately, this requires that we
+    # remove the module itself from sys.path, since the built-in reload()
+    # function reloads an already-loaded module from source ... and NOT after
+    # locating it again from sys.path.
+    for _path, _module in sys.modules.items():
+        if _path.startswith('natcap'):
+            LOGGER.debug('Removing %s (%s) from sys.modules',
+                         _path, _module)
+            del sys.modules[_path]
+
     if hasattr(sys, 'real_prefix'):
         # virtualenv appears to respect __import__ better than
         # importlib.import_module, which is helpful for when running this in a
         # virtualenv (via @paver.virtual.virtualenv)
-        module = __import__(_ns_module_name)
+        module = __import__(_ns_module_name, fromlist=['natcap'])
     else:
         module = importlib.import_module(_ns_module_name)
 
@@ -1726,7 +1734,9 @@ def decorate_if(condition, decorator):
     """
     def _check_condition(function):
         if condition:
+            LOGGER.debug('Condition is True, decorating.')
             return decorator(function)
+        LOGGER.debug('Condition is False, not decorating.')
         return function
     return _check_condition
 
@@ -1748,6 +1758,10 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
     Returns:
         A tuple of (subpackages installed as eggs, subpackages installed flat)
     """
+    LOGGER.info('Using environment: %s', use_env)
+    LOGGER.info('Checking namespace package "%s" for pkg format "%s"',
+                 ns_pkg_name, preferred)
+
     @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
     def _get_packages():
         eggs = []
@@ -1755,6 +1769,7 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
         ns_module = importlib.import_module(ns_pkg_name)
 
         for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
+            LOGGER.info('Checking natcap namespace package: %s', modname)
             module, pkg_type = _import_namespace_pkg(modname,
                                                     preferred=preferred,
                                                     print_msg=print_msg)
@@ -1764,7 +1779,8 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
             else:
                 noneggs.append(modname)
         return (sorted(eggs), sorted(noneggs))
-    return _get_packages()
+    found_packages = _get_packages()
+    return found_packages
 
 
 def reinstall_pkg(pkg_name, reinstall_as_egg=True):
@@ -1791,7 +1807,7 @@ def reinstall_pkg(pkg_name, reinstall_as_egg=True):
         'wheel': ''
     }
 
-    sh(('pip install {flags} {package} > {package}.log').format(
+    sh(('pip install -I {flags} {package} > {package}.log').format(
         package=pkg_name, flags=flags[pkg_type]))
 
     # If the package install fails with nonzero exit code, this line won't be
@@ -1815,6 +1831,10 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
+    # Silence any log messages less critical than ERROR.
+    previous_level = LOGGER.level
+    LOGGER.setLevel(logging.ERROR)
+
     errors_found = False
     # If we're on Windows, check that python 2.7.11 is installed.  2.7.11
     # provides a version of multiprocessing that was patched to fix an issue
@@ -1891,7 +1911,6 @@ def check(options):
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
         ('poster', lib_needed,  None, None),
-        ('pyyaml', required, 'yaml', None),
         ('pygeoprocessing', install_managed, None, None),
         ('PyQt4', lib_needed, 'PyQt4', None),
     ]
@@ -2180,7 +2199,7 @@ def check(options):
                 print warn
 
     except ImportError:
-        print 'No natcap installations found.'
+        LOGGER.warn('No natcap installations found.')
 
 
     # Check if we need to have versioner installed for setup.py
@@ -2237,6 +2256,9 @@ def check(options):
         print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
         print green("All's well.")
+
+    # Reset warnings to what they were before we ran paver check.
+    LOGGER.setLevel(previous_level)
 
 
 @task
@@ -2374,6 +2396,8 @@ def build_bin(options):
     for retry in [True, False]:
         natcap_eggs, natcap_noneggs = get_namespace_pkg_types(
             'natcap', preferred='dir', use_env=envdir)
+        LOGGER.debug('Eggs: %s', natcap_eggs)
+        LOGGER.debug('Non-eggs: %s', natcap_noneggs)
         # If the package layout looks ok, break out of the loop.
         if len(natcap_eggs) == 0:
             break
@@ -2571,6 +2595,28 @@ def build_bin(options):
     if platform.system() == 'Windows':
         binary = os.path.join(invest_dist, 'invest.exe')
         _write_console_files(binary, 'bat')
+
+        # Using codecs to open the file, to ensure that the script is in
+        # latin-1 (codepage-1252)
+        testall_script = codecs.open(os.path.join(invest_dist, 'testall.bat'),
+                                     'w', encoding='cp1252')
+        for filename in os.listdir(os.path.join(os.path.dirname(__file__),
+                                                'src', 'natcap', 'invest',
+                                                'iui')):
+            if not filename.endswith('.json') or\
+                    filename.startswith('nearshore'):
+                continue
+
+            json_basename = os.path.splitext(filename)[0]
+            testall_script.write('call runmodel {modelname}\n'.format(
+                modelname=json_basename))
+
+        # the script writes run statuses to `invest_bintest_results.txt`,
+        # so print the run statuses at the end of the script.
+        # runmodel script is at installer/windows/runmodel.bat
+        testall_script.write('type invest_bintest_results.txt\n')
+        testall_script.close()
+
     else:
         binary = os.path.join(invest_dist, 'invest')
         _write_console_files(binary, 'sh')
@@ -2732,6 +2778,23 @@ def _build_nsis(version, bindir, arch):
         data_location = 'nightly-build/invest-forks/%s/data' % forkuser
         forkname = forkuser
 
+    # download a version of the MSVC redistributable installer that we
+    # know works so that we can install it as part of the NSIS installer.
+    # This is intended to address issue #3515
+    # (https://bitbucket.org/natcap/invest/issues/3515) by installing a version
+    # of the MSVC redist that the binaries require to work.  As far as I can
+    # tell, this fix is only required for Windows 7 computers.  Winodws 8, 8.1,
+    # 10 appear to work as expected.
+    installer_dir = os.path.join('installer', 'windows')
+    vc_redist = os.path.join(installer_dir, 'vcredist_x86.exe')
+    if not os.path.exists(vc_redist):
+        urllib.urlretrieve((
+            'https://download.microsoft.com/download/5/D/8/'
+            '5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe'),
+            vc_redist)
+    else:
+        print 'VCRedist for Windows 7 already exists at %s' % vc_redist
+
     nsis_params = [
         '/DVERSION=%s' % version,
         '/DVERSION_DISK=%s' % version,
@@ -2743,7 +2806,7 @@ def _build_nsis(version, bindir, arch):
         'invest_installer.nsi'
     ]
     makensis += ' ' + ' '.join(nsis_params)
-    sh(makensis, cwd=os.path.join('installer', 'windows'))
+    sh(makensis, cwd=installer_dir)
 
     # copy the completd NSIS installer file into dist/
     for exe_file in glob.glob('installer/windows/*.exe'):
@@ -2821,25 +2884,17 @@ def _write_console_files(binary, mode):
         'bat': windows_template,
         'sh': posix_template,
     }
-    filename_template = "{prefix}{modelname}.{extension}"
-
-    exclude_prefix = set([
-        'delineateit',
-        'routedem',
-    ])
+    filename_template = "invest_{modelname}.{extension}"
 
     bindir = os.path.dirname(binary)
-    for line in sh('{bin} --list'.format(bin=binary), capture=True).split('\n'):
+    for line in sh('{bin} --list'.format(bin=binary),
+                   capture=True).split('\n'):
+        # Models always preceded by 4 spaces in printout.
         if line.startswith('    '):
             model_name = line.replace('UNSTABLE', '').lstrip().rstrip()
 
-            if model_name not in exclude_prefix:
-                prefix = 'invest_'
-            else:
-                prefix = ''
-
             console_filename = os.path.join(bindir, filename_template).format(
-                modelname=model_name, extension=mode, prefix=prefix)
+                modelname=model_name, extension=mode)
             print 'Writing console %s' % console_filename
 
             with open(console_filename, 'w') as console_file:
@@ -2877,6 +2932,7 @@ def selftest():
     ('skip-bin', '', "Don't build the binaries"),
     ('envname=', 'e', ('The name of the environment to use')),
     ('python=', '', "The python interpreter to use.  If not provided, an env will be built for you."),
+    ('fix-namespace', '', 'Fix namespace issues if needed'),
 ], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files', 'check_repo'])
 @might_call('check')
 @might_call('env')
@@ -2948,6 +3004,7 @@ def build(options):
         call_task('build_bin', options={
             'python': _python(),
             'force_dev': options.build.force_dev,
+            'fix_namespace': options.build.fix_namespace,
         })
     else:
         print 'Skipping binaries per user request'
@@ -3110,7 +3167,7 @@ def jenkins_installer(options):
 
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
-    build_options = {}
+    build_options = {'fix_namespace': True}
     if platform.system() == 'Windows':
         # force building with msvc on jenkins on Windows
         build_options['compiler'] = 'msvc'
@@ -3292,6 +3349,38 @@ def compress_raster(args):
         ))
 
 
+def fetch_crop_data():
+    """Fetch InVEST Crop Model data and extract to data directory.
+
+    Args:
+        extract_path (str): path to store global dataset.
+        url (str): remote location of data.
+    """
+    print "Fetching data/crop-model-data"
+    extract_path = os.path.abspath('data/crop-model-data')
+    if os.path.exists(extract_path):
+        print "Data data/crop-model-data exists"
+        return
+
+    url = 'http://data.naturalcapitalproject.org/invest_crop_production/' \
+          'global_dataset_20151210.zip'
+    tmp_path = os.path.join(os.path.abspath('tmp'), 'global_dataset.zip')
+    try:
+        dry('mkdir -p %s' % 'tmp', os.makedirs, os.path.abspath('tmp'))
+    except OSError:
+        # Folder already exists.  Skipping.
+        pass
+
+    print 'Downloading Crop Model data to %s' % tmp_path
+    rsp = urllib.urlretrieve(url, tmp_path)
+    zf = zipfile.ZipFile(tmp_path, 'r')
+    print 'Extracting crop data to %s' % extract_path
+    zf.extractall(path=extract_path)
+    del rsp
+    del zf
+    os.remove(tmp_path)
+
+
 @task
 @consume_args
 def test(args):
@@ -3316,9 +3405,12 @@ def test(args):
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--jenkins', default=False, action='store_true',
-            help='Use options that are useful for Jenkins reports')
+                        help='Use options that are useful for Jenkins reports')
     parser.add_argument('--with-data', default=False, action='store_true',
-            help='Clone/update the data repo if needed')
+                        help=('Clone/update the data repo if needed. '
+                              'Also downloads crop data if needed'))
+    parser.add_argument('--skip-crop-data', default=False, action='store_true',
+                        help="Don't download crop data.")
     parser.add_argument('nose_args', nargs='*',
                         help=('Nosetests-compatible strings indicating '
                               'filename[:classname[.testname]]'),
@@ -3326,9 +3418,13 @@ def test(args):
     parsed_args = parser.parse_args(args)
     print 'parsed args: ', parsed_args
 
-    if parsed_args.with_data:
+    if parsed_args.with_data or parsed_args.jenkins:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
         call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
+        if not parsed_args.skip_crop_data:
+            fetch_crop_data()
+        else:
+            print 'Skipping crop data download'
 
     compiler = None
     if parsed_args.jenkins and platform.system() == 'Windows':
@@ -3341,14 +3437,6 @@ def test(args):
         flag, add a couple more options suitable for that environment.
         """
         if parsed_args.jenkins:
-            call_task('check_repo', options={
-                'repo': REPOS_DICT['test-data'].local_path,
-                'fetch': True,
-            })
-            call_task('check_repo', options={
-                'repo': REPOS_DICT['invest-data'].local_path,
-                'fetch': True,
-            })
             jenkins_flags = (
                 '--with-xunit '
                 '--with-coverage '
@@ -3435,6 +3523,7 @@ def test(args):
     # run the tests within the virtualenv.
     _run_tests()
 
+
 @task
 @might_call('push')
 @cmdopts([
@@ -3442,7 +3531,8 @@ def test(args):
     ('username=', '', 'Remote username'),
     ('host=', '', 'URL of the remote server'),
     ('dataportal=', '', 'Path to the dataportal'),
-    ('upstream=', '', 'The URL to the upstream REPO.  Use this when this repo is moved'),
+    ('upstream=', '', ('The URL to the upstream REPO.  Use this when this '
+                       'repo is moved')),
     ('password', '', 'Prompt for a password'),
     ('private-key=', '', 'Use this private key to push'),
     ('include-data', '', 'Include data zipfiles in the push'),
@@ -3460,7 +3550,8 @@ def jenkins_push_artifacts(options):
 
     username, reponame = hg_path.split('/')[-2:]
 
-    version_string = _invest_version(getattr(options.jenkins_push_artifacts, 'python', sys.executable))
+    version_string = _invest_version(getattr(options.jenkins_push_artifacts,
+                                             'python', sys.executable))
 
     def _get_release_files():
         release_files = []

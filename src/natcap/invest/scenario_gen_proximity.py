@@ -25,7 +25,9 @@ LOGGER = logging.getLogger(
 
 
 def execute(args):
-    """Main entry point for proximity based scenario generator model.
+    """Scenario Generator: Proximity-Based.
+
+    Main entry point for proximity based scenario generator model.
 
     Parameters:
         args['workspace_dir'] (string): output directory for intermediate,
