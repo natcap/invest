@@ -11,7 +11,7 @@ from natcap.invest.overlap_analysis import overlap_core
 
 
 def execute(args):
-    '''Overlap Analysis: Management Zones.
+    """Overlap Analysis: Management Zones.
 
     Parameters:
         args: A python dictionary created by the UI and passed to this
@@ -26,7 +26,7 @@ def execute(args):
 
     Returns:
         ``None``
-    '''
+    """
 
     mz_args = {}
 

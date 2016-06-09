@@ -15,7 +15,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args, create_outputs=True):
-    '''Fisheries.
+    """Fisheries.
 
     :param str args['workspace_dir']: location into which all intermediate
         and output files should be placed.
@@ -182,7 +182,7 @@ def execute(args, create_outputs=True):
         N_0_x = [region0-age0, region1-age0] # if sex-specific, rec_func should divide by two before returning
         type(spawners) is float
 
-    '''
+    """
 
     # Parse Inputs
     model_list = io.fetch_args(args, create_outputs=create_outputs)

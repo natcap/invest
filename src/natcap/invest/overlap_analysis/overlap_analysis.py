@@ -19,7 +19,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
-    '''Overlap Analysis.
+    """Overlap Analysis.
 
     This function will take care of preparing files passed into the overlap
     analysis model. It will handle all files/inputs associated with
@@ -60,7 +60,7 @@ def execute(args):
             value from the human use hubs. (optional)
 
     Returns:
-        ``None``'''
+        ``None``"""
 
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')

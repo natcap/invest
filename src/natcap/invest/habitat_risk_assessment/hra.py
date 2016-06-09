@@ -44,7 +44,7 @@ class DQWeightNotFound(Exception):
 
 
 def execute(args):
-    '''Habitat Risk Assessment.
+    """Habitat Risk Assessment.
 
     This function will prepare files passed from the UI to be sent on to the
     hra_core module.
@@ -92,7 +92,7 @@ def execute(args):
         }
 
     Returns:
-        ``None``'''
+        ``None``"""
 
 #    Notes on the internal structure of the model:
 #    ---------------------------------------------
