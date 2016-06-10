@@ -19,7 +19,8 @@ LOGGER = logging.getLogger('natcap.invest.habitat_quality.habitat_quality')
 
 
 def execute(args):
-    """
+    """Habitat Quality.
+
     Open files necessary for the portion of the habitat_quality
     model.
 
