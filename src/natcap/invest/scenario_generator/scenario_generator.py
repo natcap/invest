@@ -531,7 +531,9 @@ def filter_fragments(input_uri, size, output_uri):
 
 
 def execute(args):
-    """Model entry-point.
+    """Scenario Generator: Rule-Based.
+
+    Model entry-point.
 
     Args:
         workspace_dir (str): path to workspace directory

@@ -12,7 +12,8 @@ LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.finfish_aquacultur
 
 
 def execute(args):
-    """
+    """Finfish Aquaculture.
+
     This function will take care of preparing files passed into
     the finfish aquaculture model. It will handle all files/inputs associated
     with biophysical and valuation calculations and manipulations. It will

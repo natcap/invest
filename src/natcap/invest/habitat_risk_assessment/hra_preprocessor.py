@@ -78,47 +78,49 @@ class NA_RatingsError(Exception):
     pass
 
 def execute(args):
-    """
+    """Habitat Risk Assessment Preprocessor.
+
     Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
 
-    Input:
-        args['workspace_dir'] - The directory to dump the output CSV files to.
-        args['habitats_dir'] - A directory of shapefiles that are habitats.
+    Parameters:
+        args['workspace_dir'] (string): The directory to dump the output CSV
+            files to. (required)
+        args['habitats_dir'] (string): A directory of shapefiles that are habitats.
             This is not required, and may not exist if there is a species layer
-            directory.
-        args['species_dir']- Directory which holds all species shapefiles, but
-            may or may not exist if there is a habitats layer directory.
-        args['stressors_dir'] - A directory of ArcGIS shapefiles that are
-            stressors
-        args['exposure_crits']- list containing string names of exposure
+            directory. (optional)
+        args['species_dir'] (string): Directory which holds all species
+            shapefiles, but may or may not exist if there is a habitats
+            layer directory. (optional)
+        args['stressors_dir'] (string): A directory of ArcGIS shapefiles
+            that are stressors. (required)
+        args['exposure_crits'] (list): list containing string names of exposure
             criteria (hab-stress) which should be applied to the exposure
-            score.
-        args['sensitivity-crits']- List containing string names of sensitivity
-            (habitat-stressor overlap specific) criteria which should be
-            applied to the consequence score.
-        args['resilience_crits']- List containing string names of resilience
-            (habitat or species-specific) criteria which should be applied to
-            the consequence score.
-        args['criteria_dir']- Directory which holds the criteria shapefiles.
-            May not exist if the user does not desire criteria shapefiles. This
-            needs to be in a VERY specific format, which shall be described in
-            the user's guide.
+            score. (optional)
+        args['sensitivity-crits'] (list): List containing string names of
+            sensitivity (habitat-stressor overlap specific) criteria which
+            should be applied to the consequence score. (optional)
+        args['resilience_crits'] (list): List containing string names of
+            resilience (habitat or species-specific) criteria which should be
+            applied to the consequence score. (optional)
+        args['criteria_dir'] (string): Directory which holds the criteria
+            shapefiles. May not exist if the user does not desire criteria
+            shapefiles. This needs to be in a VERY specific format, which
+            shall be described in the user's guide. (optional)
 
-    Output:
-        Creation of a series of CSVs within workspace_dir. There will be one
-            CSV for every habitat/species. These files will contain information
-            relevant to each habitat or species, including all criteria. The
-            criteria will be broken up into those which apply to only the
-            habitat, and those which apply to the overlap of that habitat, and
-            each stressor.
+    Returns:
+        ``None``
 
-        JSON file containing vars that need to be passed on to hra non-core
-          when that gets run. Should live inside the preprocessor folder which
-          will be created in 'workspace_dir'. It will contain habitats_dir,
-          species_dir, stressors_dir, and criteria_dir.
+    This function creates a series of CSVs within ``args['workspace_dir']``.
+    There will be one CSV for every habitat/species. These files will contain information
+    relevant to each habitat or species, including all criteria. The criteria
+    will be broken up into those which apply to only the habitat, and those
+    which apply to the overlap of that habitat, and each stressor.
 
-    Returns nothing.
+    JSON file containing vars that need to be passed on to hra non-core
+    when that gets run. Should live inside the preprocessor folder which
+    will be created in ``args['workspace_dir']``. It will contain habitats_dir,
+    species_dir, stressors_dir, and criteria_dir.
     """
     #Create two booleans to indicate which of the layers we should be using in
     #this model run.

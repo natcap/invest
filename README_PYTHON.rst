@@ -22,6 +22,7 @@ but have almost all been ported over to a purely open-source python environment.
 InVEST is licensed under a permissive, modified BSD license.
 
 For more information, see:
+  * `InVEST API documentation <http://invest.readthedocs.io/>`_
   * InVEST on `bitbucket <https://bitbucket.org/natcap/invest>`__
   * The `Natural Capital Project website <http://naturalcapitalproject.org>`__.
 
@@ -44,18 +45,7 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 
 .. code-block::
 
-    Pyro4>=4.41
-    gdal>=1.11.2,<2.0
-    h5py>=2.3.0
-    matplotlib
-    natcap.versioner>=0.4.0
-    numpy>=1.11.0
-    pyamg>=2.2.1
-    pygeoprocessing>=0.3.0a15
-    rtree>=0.8.2
-    scipy>=0.14.0
-    shapely
-    setuptools>=8.0
+{requirements}
 
 Additionally, ``PyQt4`` is required to use the ``invest`` cli, but is not
 required for development against ``natcap.invest``.

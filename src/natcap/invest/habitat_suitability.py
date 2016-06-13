@@ -17,7 +17,8 @@ _RECLASS_NODATA = -1.0
 
 
 def execute(args):
-    """
+    """Habitat Suitability.
+
     Calculate habitat suitability indexes given biophysical parameters.
 
     The objective of a habitat suitability index (HSI) is to help users
@@ -50,15 +51,18 @@ def execute(args):
             tolerable values.  Each biophysical value has a unique key in the
             dictionary that is used to name the mapping of biophysical to
             local HSI value.  Each value is dictionary with keys:
-                'raster_path': path to disk for biophysical raster.
-                'range': a 4-tuple in non-decreasing order describing
-                    the "tolerable" to "optimal" ranges for those biophysical
-                    values.  The endpoints non-inclusively define where the
-                    suitability score is 0.0, the two midpoints inclusively
-                    define the range where the suitability is 1.0, and the
-                    ranges above and below are linearly interpolated between
-                    0.0 and 1.0.
-                Example:
+
+                * 'raster_path': path to disk for biophysical raster.
+                * 'range': a 4-tuple in non-decreasing order describing
+                  the "tolerable" to "optimal" ranges for those biophysical
+                  values.  The endpoints non-inclusively define where the
+                  suitability score is 0.0, the two midpoints inclusively
+                  define the range where the suitability is 1.0, and the
+                  ranges above and below are linearly interpolated between
+                  0.0 and 1.0.
+
+                Example::
+
                     {
                         'depth':
                             {
@@ -87,6 +91,8 @@ def execute(args):
                         'fieldname': 'Suitabilit',
                     }
                 }
+    Returns:
+        None
     """
     _output_base_files = {
         'suitability_path': 'hsi.tif',

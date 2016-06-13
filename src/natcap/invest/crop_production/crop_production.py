@@ -33,8 +33,7 @@ _INTERMEDIATE = {
 
 
 def execute(args):
-    """
-    Entry point into the Crop Production Model.
+    """Crop Production.
 
     :param str args['workspace_dir']: location into which all intermediate
         and output files should be placed.

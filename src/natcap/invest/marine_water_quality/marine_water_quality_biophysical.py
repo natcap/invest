@@ -19,7 +19,8 @@ LOGGER = logging.getLogger('natcap.invest.marine_water_quality.biophysical')
 
 
 def execute(args):
-    """
+    """Marine Water Quality.
+
     Main entry point for the InVEST 3.0 marine water quality
     biophysical model.
 
