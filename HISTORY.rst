@@ -3,6 +3,10 @@
 .. Unreleased Changes
 .. ------------------
 
+3.4.0 ()
+--------
+* Removed the deprecated and incomplete Nearshore Wave and Erosion model.
+
 3.3.1 (2016-04-14)
 ------------------
 * Refactored API documentation for readability, organization by relevant topics, and to allow docs to build on `invest.readthedocs.io <http://invest.readthedocs.io>`_,
