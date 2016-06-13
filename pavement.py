@@ -233,7 +233,8 @@ paver.easy.options(
         skip_bin=False,
         python=_PYTHON,
         envname=_ENVNAME,
-        skip_python=False
+        skip_python=False,
+        fix_namespace=False
     ),
     build_installer=Bunch(
         force_dev=False,
@@ -965,10 +966,6 @@ def after_install(options, home_dir):
         compiler_string = ''
 
     if options.env.with_pygeoprocessing:
-        # Verify that natcap.versioner is present and importable.
-        # pygeoprocessing won't install properly unless this is present.
-        _import_namespace_pkg('versioner')
-
         # Check and update the pygeoprocessing repo if needed.
         call_task('check_repo', options={
             'force-dev': False,
@@ -996,7 +993,7 @@ def after_install(options, home_dir):
         # pygeoprocessing (poster, for example, does not have this issue!).
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
-            "'--no-deps', '-I', '--egg', {compiler_flags} "
+            "'--no-deps', '-I', '--upgrade', {compiler_flags} "
             "'./src/pygeoprocessing'])\n"
         ).format(compiler_flags=compiler_string)
         preinstalled_pkgs.add('pygeoprocessing')
@@ -1012,6 +1009,7 @@ def after_install(options, home_dir):
     # is there.
     pkg_pip_params = {
         'nose': ['-I'],
+        'paver': ['-I'],
         'natcap.versioner': ['-I'],
         # Pygeoprocessing wheels are compiled against specific versions of
         # numpy.  Sometimes the wheel on PyPI is incompatible with the locally
@@ -1039,7 +1037,9 @@ def after_install(options, home_dir):
         return extra_params
 
     # Aything in this list will ALWAYS be installed.
-    pkgs_to_be_installed = [pkg_resources.Requirement.parse('nose')]
+    pkgs_to_be_installed = [
+        pkg_resources.Requirement.parse('nose'),
+    ]
 
     for reqs_file in requirements_files:
         for requirement in pkg_resources.parse_requirements(open(reqs_file).read()):
@@ -1577,14 +1577,6 @@ def build_docs(options):
 
     skip_api = getattr(options, 'skip_api', False)
     if not skip_api:
-        apidoc_args = [
-            "'--module-first'",
-            "'--force'",
-            "'-o doc/api-docs/api'",
-            "'src/natcap'",
-            ]
-        sh('{python} -c "from sphinx.apidoc import main; main([{args}])"'.format(
-            python=options.build_docs.python, args=", ".join(apidoc_args)))
         sh('{python} setup.py build_sphinx'.format(python=options.build_docs.python))
         archive_name = archive_template % 'apidocs'
         call_task('zip', args=[archive_name, 'build/sphinx/html', 'apidocs'])
@@ -1662,11 +1654,24 @@ def _import_namespace_pkg(modname, print_msg=True, preferred='egg'):
         ImportError: If the package cannot be imported.
     """
     _ns_module_name = 'natcap.%s' % modname
+
+    # _import_namespace_pkg will sometimes be called within a virtualenv.  When
+    # this happens, we need to force python to reload natcap.versioner using
+    # the virtualenv-modified sys.path.  Unfortunately, this requires that we
+    # remove the module itself from sys.path, since the built-in reload()
+    # function reloads an already-loaded module from source ... and NOT after
+    # locating it again from sys.path.
+    for _path, _module in sys.modules.items():
+        if _path.startswith('natcap'):
+            LOGGER.debug('Removing %s (%s) from sys.modules',
+                         _path, _module)
+            del sys.modules[_path]
+
     if hasattr(sys, 'real_prefix'):
         # virtualenv appears to respect __import__ better than
         # importlib.import_module, which is helpful for when running this in a
         # virtualenv (via @paver.virtual.virtualenv)
-        module = __import__(_ns_module_name)
+        module = __import__(_ns_module_name, fromlist=['natcap'])
     else:
         module = importlib.import_module(_ns_module_name)
 
@@ -1729,7 +1734,9 @@ def decorate_if(condition, decorator):
     """
     def _check_condition(function):
         if condition:
+            LOGGER.debug('Condition is True, decorating.')
             return decorator(function)
+        LOGGER.debug('Condition is False, not decorating.')
         return function
     return _check_condition
 
@@ -1751,6 +1758,10 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
     Returns:
         A tuple of (subpackages installed as eggs, subpackages installed flat)
     """
+    LOGGER.info('Using environment: %s', use_env)
+    LOGGER.info('Checking namespace package "%s" for pkg format "%s"',
+                 ns_pkg_name, preferred)
+
     @decorate_if(use_env != None, paver.virtual.virtualenv(use_env))
     def _get_packages():
         eggs = []
@@ -1758,6 +1769,7 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
         ns_module = importlib.import_module(ns_pkg_name)
 
         for importer, modname, ispkg in pkgutil.iter_modules(ns_module.__path__):
+            LOGGER.info('Checking natcap namespace package: %s', modname)
             module, pkg_type = _import_namespace_pkg(modname,
                                                     preferred=preferred,
                                                     print_msg=print_msg)
@@ -1767,7 +1779,8 @@ def get_namespace_pkg_types(ns_pkg_name, preferred='egg', print_msg=True,
             else:
                 noneggs.append(modname)
         return (sorted(eggs), sorted(noneggs))
-    return _get_packages()
+    found_packages = _get_packages()
+    return found_packages
 
 
 def reinstall_pkg(pkg_name, reinstall_as_egg=True):
@@ -1794,7 +1807,7 @@ def reinstall_pkg(pkg_name, reinstall_as_egg=True):
         'wheel': ''
     }
 
-    sh(('pip install {flags} {package} > {package}.log').format(
+    sh(('pip install -I {flags} {package} > {package}.log').format(
         package=pkg_name, flags=flags[pkg_type]))
 
     # If the package install fails with nonzero exit code, this line won't be
@@ -1818,6 +1831,10 @@ def check(options):
     This task checks for the presence of required binaries, python packages
     and for known issues with the natcap python namespace.
     """
+    # Silence any log messages less critical than ERROR.
+    previous_level = LOGGER.level
+    LOGGER.setLevel(logging.ERROR)
+
     errors_found = False
     # If we're on Windows, check that python 2.7.11 is installed.  2.7.11
     # provides a version of multiprocessing that was patched to fix an issue
@@ -2181,7 +2198,7 @@ def check(options):
                 print warn
 
     except ImportError:
-        print 'No natcap installations found.'
+        LOGGER.warn('No natcap installations found.')
 
 
     # Check if we need to have versioner installed for setup.py
@@ -2238,6 +2255,9 @@ def check(options):
         print "\033[93mWarnings found; Builds may not work as expected\033[0m"
     else:
         print green("All's well.")
+
+    # Reset warnings to what they were before we ran paver check.
+    LOGGER.setLevel(previous_level)
 
 
 @task
@@ -2375,6 +2395,8 @@ def build_bin(options):
     for retry in [True, False]:
         natcap_eggs, natcap_noneggs = get_namespace_pkg_types(
             'natcap', preferred='dir', use_env=envdir)
+        LOGGER.debug('Eggs: %s', natcap_eggs)
+        LOGGER.debug('Non-eggs: %s', natcap_noneggs)
         # If the package layout looks ok, break out of the loop.
         if len(natcap_eggs) == 0:
             break
@@ -2910,6 +2932,7 @@ def selftest():
     ('skip-bin', '', "Don't build the binaries"),
     ('envname=', 'e', ('The name of the environment to use')),
     ('python=', '', "The python interpreter to use.  If not provided, an env will be built for you."),
+    ('fix-namespace', '', 'Fix namespace issues if needed'),
 ], share_with=['build_docs', 'build_installer', 'build_bin', 'collect_release_files', 'check_repo'])
 @might_call('check')
 @might_call('env')
@@ -2981,6 +3004,7 @@ def build(options):
         call_task('build_bin', options={
             'python': _python(),
             'force_dev': options.build.force_dev,
+            'fix_namespace': options.build.fix_namespace,
         })
     else:
         print 'Skipping binaries per user request'
@@ -3143,7 +3167,7 @@ def jenkins_installer(options):
 
     # Process build options up front so that we can fail earlier.
     # Assume we're in a virtualenv.
-    build_options = {}
+    build_options = {'fix_namespace': True}
     if platform.system() == 'Windows':
         # force building with msvc on jenkins on Windows
         build_options['compiler'] = 'msvc'

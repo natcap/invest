@@ -38,6 +38,7 @@ kwargs = {
         'natcap',
         'natcap.invest',
         'natcap.versioner',
+        'natcap.versioner.version',
         'natcap.invest.version',
         'yaml',
         'distutils',

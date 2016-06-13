@@ -25,6 +25,7 @@ started to release precompiled binary packages of their own, removing the
 need to install these packages through a system package manager.  Others,
 however, remain easiest to install through a package manager.
 
+.. _InstallingOnLinux:
 
 Linux
 *****
@@ -57,7 +58,7 @@ Fedora
 
     $ sudo yum install python-setuptools gdal-python python-rtree python-shapely python-matplotlib PyQt4
    
-
+.. _InstallingOnMac:
 
 Mac OS X
 ********
@@ -71,6 +72,7 @@ The GDAL, PyQt and matplotlib packages include their respective python packages.
 The others will allow their corresponding python packages to be compiled
 against these binaries via ``pip``.
 
+.. _InstallingOnWindows:
 
 Windows
 *******
@@ -79,6 +81,8 @@ While many packages are available for Windows on the Python Package Index, some
 may need to be fetched from a different source. Many are available from
 Christogh Gohlke's unofficial build page: 
 http://www.lfd.uci.edu/~gohlke/pythonlibs/
+
+PyQt4 installers can also be downloaded from the `Riverbank Computing website <https://www.riverbankcomputing.com/software/pyqt/download>`_.
 
 
 Python Dependencies
@@ -91,8 +95,10 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
     :start-line: 9
 
 Additionally, ``PyQt4`` is required to use the ``invest`` cli, but is not
-required for development against ``natcap.invest``.
-
+required for development against ``natcap.invest``.  PyQt4 is not currently
+available from the Python Package Index, but other sources and package managers
+allow for straightforward installation on :ref:`InstallingOnWindows`,
+:ref:`InstallingOnMac`, and :ref:`InstallingOnLinux`.
 
 .. _installing-from-source:
 
