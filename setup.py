@@ -190,7 +190,6 @@ setup(
         'natcap.invest.iui.dbfpy',
         'natcap.invest.marine_water_quality',
         'natcap.invest.ndr',
-        'natcap.invest.nearshore_wave_and_erosion',
         'natcap.invest.overlap_analysis',
         'natcap.invest.pollination',
         'natcap.invest.recreation',

@@ -59,7 +59,6 @@ EXCLUDED_MODULES = [
     'usage_logger',
     'recmodel_server',
     'recmodel_workspace_fetcher',
-    'nearshore_wave_and_erosion', '3p0', 'WaveModel'
 ]
 
 
