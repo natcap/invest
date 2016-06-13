@@ -12,17 +12,6 @@ import pkg_resources
 import natcap.versioner
 
 
-TOOLS_IN_DEVELOPMENT = set([
-    'seasonal_water_yield',
-    'ndr',
-    'globio',
-    'seasonal_water_yield',
-    'scenic_quality',
-    'crop_production',
-    'scenic_quality',
-    'habitat_suitability',
-])
-
 _CLI_CONFIG_FILENAME = 'cli_config'
 
 
@@ -96,11 +85,7 @@ def print_models():
     print "Checking what's available in %s" % iui_dir()
     print 'Available models:'
     for model_name in list_models():
-        if model_name in TOOLS_IN_DEVELOPMENT:
-            unstable = '    UNSTABLE'
-        else:
-            unstable = ''
-        print '    %-30s %s' % (model_name, unstable)
+        print '    %-30s' % model_name
 
 
 def write_console_files(out_dir, extension):
