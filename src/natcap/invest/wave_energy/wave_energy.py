@@ -27,7 +27,8 @@ class IntersectionError(Exception):
     pass
 
 def execute(args):
-    """
+    """Wave Energy.
+
     Executes both the biophysical and valuation parts of the
     wave energy model (WEM). Files will be written on disk to the
     intermediate and output directories. The outputs computed for

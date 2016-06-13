@@ -24,7 +24,7 @@ SIGMA = 9.0
 
 
 def execute(args):
-    """Main entry point for GLOBIO model.
+    """GLOBIO.
 
     The model operates in two modes.  Mode (a) generates a landcover map
     based on a base landcover map and information about crop yields,
@@ -48,12 +48,12 @@ def execute(args):
             differentiated using the additional data in the model.  Contains
             at least the following fields:
 
-            'lucode': Land use and land cover class code of the dataset
-                used. LULC codes match the 'values' column in the LULC
-                raster of mode (b) and must be numeric and unique.
-            'globio_lucode': The LULC code corresponding to the GLOBIO class
-                to which it should be converted, using intermediate codes
-                described in the example below.
+            * 'lucode': Land use and land cover class code of the dataset
+              used. LULC codes match the 'values' column in the LULC
+              raster of mode (b) and must be numeric and unique.
+            * 'globio_lucode': The LULC code corresponding to the GLOBIO class
+              to which it should be converted, using intermediate codes
+              described in the example below.
 
         args['infrastructure_dir'] (string): used in "mode (a) and (b)" a path
             to a folder containing maps of either gdal compatible rasters or
@@ -73,6 +73,7 @@ def execute(args):
             is summarized by AOI
         args['globio_lulc_uri'] (string): used in "mode (b)" path to predefined
             globio raster.
+
     Returns:
         None"""
 

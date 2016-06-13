@@ -40,7 +40,8 @@ class TimePeriodError(Exception):
 
 
 def execute(args):
-    """
+    """Wind Energy.
+
     This module handles the execution of the wind energy model
     given the following dictionary:
 

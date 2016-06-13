@@ -434,7 +434,77 @@ def get_count_feature_set_uri(fs_uri):
     return count
 
 def execute(args):
-    """DOCSTRING"""
+    """Scenic Quality.
+
+    .. Warning::
+        The Scenic Quality model is under active development and is currently
+        unstable.
+
+    Parameters:
+        workspace_dir (string):  The selected folder is used as the workspace
+            where all intermediate and output files will be written. If the
+            selected folder does not exist, it will be created. If
+            datasets already exist in the selected folder, they will be
+            overwritten. (required)
+        aoi_uri (string):  An OGR-supported vector file.  This AOI instructs
+            the model where to clip the input data and the extent of analysis.
+            Users will create a polygon feature layer that defines their area of
+            interest. The AOI must intersect the Digital Elevation Model (DEM).
+            (required)
+        cell_size (float):  Length (in meters) of each side of the (square)
+            cell. (optional)
+        structure_uri (string):  An OGR-supported vector file.  The user
+            must specify a point feature layer that indicates locations of objects
+            that contribute to negative scenic quality, such as aquaculture
+            netpens or wave energy facilities. In order for the viewshed
+            analysis to run correctly, the projection of this input must be
+            consistent with the project of the DEM input. (required)
+        dem_uri (string):  A GDAL-supported raster file. An elevation raster
+            layer is required to conduct viewshed analysis. Elevation data allows the
+            model to determine areas within the AOI's land-seascape where point
+            features contributing to negative scenic quality are visible.
+            (required)
+        refraction (float):  The earth curvature correction option corrects
+            for the curvature of the earth and refraction of visible light in air.
+            Changes in air density curve the light downward causing an observer
+            to see further and the earth to appear less curved. While the
+            magnitude of this effect varies with atmospheric conditions, a
+            standard rule of thumb is that refraction of visible light reduces
+            the apparent curvature of the earth by one-seventh. By default, this
+            model corrects for the curvature of the earth and sets the
+            refractivity coefficient to 0.13. (required)
+        pop_uri (string):  A GDAL-supported raster file.  A population raster
+            layer is required to determine population within the AOI's land-seascape
+            where point features contributing to negative scenic quality are
+            visible and not visible. (optional)
+        overlap_uri (string):  An OGR-supported vector file.  The user has
+            the option of providing a polygon feature layer where they would like
+            to determine the impact of objects on visual quality. This input
+            must be a polygon and projected in meters. The model will use this
+            layer to determine what percent of the total area of each polygon
+            feature can see at least one of the point features impacting scenic
+            quality.optional
+        valuation_function (string): Either 'polynomial' or 'logarithmic'.
+            This field indicates the functional form f(x) the model will use
+            to value the visual impact for each viewpoint. For distances less
+            than 1 km (x<1), the model uses a linear form g(x) where the line
+            passes through f(1) (i.e. g(1) == f(1)) and extends to zero with
+            the same slope as f(1) (i.e. g'(x) == f'(1)). (optional)
+        a_coefficient (float):  First coefficient used either by the polynomial
+            or by the logarithmic valuation function. (required)
+        b_coefficient (float):  Second coefficient used either by the polynomial
+            or by the logarithmic valuation function. (required)
+        c_coefficient (float):  Third coefficient for the polynomial's quadratic
+            term. (required)
+        d_coefficient (float):  Fourth coefficient for the polynomial's
+            cubic exponent. (required)
+        max_valuation_radius (float):  Radius beyond which the valuation
+            is set to zero. The valuation function 'f' cannot be negative at the
+            radius 'r' (f(r)>=0). (required)
+
+    Returns:
+        ``None``
+    """
     LOGGER.info("Start Scenic Quality Model")
 
     #create copy of args
