@@ -283,7 +283,7 @@ def execute(args):
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
-    if 'aoi_uri' in args:
+    if 'aoi_uri' in args and args['aoi_uri'] is not '':
         #copy the aoi to an output shapefile
         original_datasource = ogr.Open(args['aoi_uri'])
         summary_aoi_uri = os.path.join(
