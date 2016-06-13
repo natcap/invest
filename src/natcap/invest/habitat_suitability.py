@@ -1,6 +1,7 @@
 """Habitat suitability model."""
 import os
 import logging
+import itertools
 
 import numpy
 from osgeo import gdal
@@ -12,6 +13,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
+_RECLASS_NODATA = -1.0
 
 
 def execute(args):
@@ -70,6 +72,21 @@ def execute(args):
                                 'range': (5, 7, 12.5, 16),
                             }
                     }
+        args['categorical_geometry'] (dict): a dictionary that describes
+            categorical vector geometry that directly defines the HSI values.
+            The dictionary specifies paths to the vectors and the fieldname
+            that provides the raw HSI values with keys:
+                'vector_path': a path to disk for the vector coverage polygon
+                'fieldname': a string matching a field in the vector polygon
+                    with HSI values.
+            Example:
+                {
+                    'categorical_geometry': {
+                    'substrate': {
+                        'vector_path': r'C:/path/to/Substrate.shp',
+                        'fieldname': 'Suitabilit',
+                    }
+                }
     """
     _output_base_files = {
         'suitability_path': 'hsi.tif',
@@ -100,14 +117,14 @@ def execute(args):
              for entry in args['hsi_ranges'].itervalues()])
 
     LOGGER.info("Aligning base biophysical raster list.")
-    algined_raster_stack = {}
+    aligned_raster_stack = {}
     out_aligned_raster_list = []
     base_raster_list = []
     for key, entry in args['hsi_ranges'].iteritems():
         # create a new name for aligned raster and register with both the
         # temporary base file and regular registry so it can be deleted later
         aligned_path = os.path.join(output_dir, key + file_suffix + '.tif')
-        algined_raster_stack[key] = aligned_path
+        aligned_raster_stack[key] = aligned_path
 
         # sanity check to ensure key is not already defined in the registry
         if key in f_reg:
@@ -116,20 +133,46 @@ def execute(args):
         _tmp_base_files[key] = f_reg[key]
         out_aligned_raster_list.append(aligned_path)
         base_raster_list.append(entry['raster_path'])
+
+    tmp_categorical_files = set()
+    for key, entry in args['categorical_geometry'].iteritems():
+        # create a new name for aligned raster and register with both the
+        # temporary base file and regular registry so it can be deleted later
+        aligned_path = os.path.join(output_dir, key + file_suffix + '.tif')
+        aligned_raster_stack[key] = aligned_path
+        base_path = aligned_path + '_base.tif'
+
+        pygeoprocessing.create_raster_from_vector_extents_uri(
+            entry['vector_path'], output_cell_size, gdal.GDT_Float32,
+            _RECLASS_NODATA, base_path)
+
+        # sanity check to ensure key is not already defined in the registry
+        if key in f_reg:
+            raise ValueError('%s key already defined in f_reg' % key)
+        f_reg[key] = aligned_path
+        tmp_categorical_files.add(base_path)
+        out_aligned_raster_list.append(aligned_path)
+        base_raster_list.append(base_path)
+
     pygeoprocessing.geoprocessing.align_dataset_list(
         base_raster_list, out_aligned_raster_list,
         ['nearest'] * len(base_raster_list),
         output_cell_size, 'intersection', 0, aoi_uri=args['aoi_path'])
 
+    for filename in tmp_categorical_files:
+        try:
+            os.remove(filename)
+        except OSError:
+            LOGGER.warn("Can't remove temporary file %s", filename)
+
     # map biophysical to individual habitat suitability index
     LOGGER.info('Starting biophysical to HSI mapping.')
     base_nodata = None
-    reclass_nodata = -1.0
     suitability_range = None
     suitability_raster_list = []
     for key, entry in args['hsi_ranges'].iteritems():
         LOGGER.info("Mapping biophysical to HSI on %s", key)
-        base_raster_path = algined_raster_stack[key]
+        base_raster_path = aligned_raster_stack[key]
         base_nodata = pygeoprocessing.get_nodata_from_uri(base_raster_path)
         suitability_range = entry['suitability_range']
         suitability_key = key+'_suitability%s' % file_suffix
@@ -169,14 +212,24 @@ def execute(args):
                 lambda x: 1.0 - (
                     (x-suitability_range[2]) /
                     (suitability_range[3]-suitability_range[2])),
-                reclass_nodata,
+                _RECLASS_NODATA,
                 0.0]
             return numpy.piecewise(biophysical_values, condlist, funclist)
 
         pygeoprocessing.vectorize_datasets(
             [base_raster_path], local_map, f_reg[suitability_key],
-            gdal.GDT_Float32, reclass_nodata, output_cell_size,
+            gdal.GDT_Float32, _RECLASS_NODATA, output_cell_size,
             'intersection', vectorize_op=False)
+
+    # calculate categorical raster
+    for key, entry in args['categorical_geometry'].iteritems():
+        LOGGER.info("Rasterizing categorical geometry on %s", key)
+        base_raster_path = aligned_raster_stack[key]
+        base_nodata = pygeoprocessing.get_nodata_from_uri(base_raster_path)
+        pygeoprocessing.rasterize_layer_uri(
+            base_raster_path, entry['vector_path'],
+            option_list=["ATTRIBUTE=%s" % entry['fieldname']])
+        suitability_raster_list.append(base_raster_path)
 
     # calculate geometric mean
     LOGGER.info("Calculate geometric mean of HSIs.")
@@ -184,20 +237,20 @@ def execute(args):
     def geo_mean_op(*suitability_values):
         """Geometric mean of input suitability_values."""
         running_product = suitability_values[0].astype(numpy.float32)
-        running_mask = suitability_values[0] == reclass_nodata
+        running_mask = suitability_values[0] == _RECLASS_NODATA
         for index in range(1, len(suitability_values)):
             running_product *= suitability_values[index]
             running_mask = running_mask | (
-                suitability_values[index] == reclass_nodata)
+                suitability_values[index] == _RECLASS_NODATA)
         result = numpy.empty(running_mask.shape, dtype=numpy.float32)
-        result[:] = reclass_nodata
+        result[:] = _RECLASS_NODATA
         result[~running_mask] = (
             running_product[~running_mask]**(1./len(suitability_values)))
         return result
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         suitability_raster_list, geo_mean_op, f_reg['suitability_path'],
-        gdal.GDT_Float32, reclass_nodata, output_cell_size, "intersection",
+        gdal.GDT_Float32, _RECLASS_NODATA, output_cell_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info(
@@ -207,20 +260,20 @@ def execute(args):
         """Threshold HSI values to user defined value."""
         result = hsi_values[:]
         invalid_mask = (
-            (hsi_values == reclass_nodata) |
+            (hsi_values == _RECLASS_NODATA) |
             (hsi_values < args['habitat_threshold']))
-        result[invalid_mask] = reclass_nodata
+        result[invalid_mask] = _RECLASS_NODATA
         return result
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [f_reg['suitability_path']], threshold_op,
-        f_reg['threshold_suitability_path'], gdal.GDT_Float32, reclass_nodata,
+        f_reg['threshold_suitability_path'], gdal.GDT_Float32, _RECLASS_NODATA,
         output_cell_size, "intersection", vectorize_op=False)
 
     LOGGER.info("Masking threshold by exclusions.")
     pygeoprocessing.new_raster_from_base_uri(
         f_reg['threshold_suitability_path'],
-        f_reg['screened_mask_path'], 'GTiff', reclass_nodata,
+        f_reg['screened_mask_path'], 'GTiff', _RECLASS_NODATA,
         gdal.GDT_Byte, fill_value=0)
     if 'exclusion_path_list' in args:
         for exclusion_mask_path in args['exclusion_path_list']:
@@ -232,13 +285,13 @@ def execute(args):
     def mask_exclusion_op(base_values, mask_values):
         """Mask the base values to nodata where mask == 1."""
         result = base_values[:]
-        result[mask_values == 1] = reclass_nodata
+        result[mask_values == 1] = _RECLASS_NODATA
         return result
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [f_reg['threshold_suitability_path'],
          f_reg['screened_mask_path']], mask_exclusion_op,
-        f_reg['screened_suitability_path'], gdal.GDT_Float32, reclass_nodata,
+        f_reg['screened_suitability_path'], gdal.GDT_Float32, _RECLASS_NODATA,
         output_cell_size, "intersection", vectorize_op=False)
 
     LOGGER.info('Removing temporary files.')
