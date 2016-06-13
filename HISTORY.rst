@@ -1,11 +1,8 @@
 .. :changelog:
 
-.. Unreleased Changes
-.. ------------------
-
-3.4.0 ()
---------
-* Removed the deprecated and incomplete Nearshore Wave and Erosion model.
+Unreleased Changes
+------------------
+* Removed the deprecated and incomplete Nearshore Wave and Erosion model (``natcap.invest.nearshore_wave_and_erosion``).
 
 3.3.1 (2016-04-14)
 ------------------
