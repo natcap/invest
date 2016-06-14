@@ -1,7 +1,7 @@
 {
   "id": "window",
   "label": "InVEST Carbon Model (Biophysical and Valuation)",
-  "targetScript": "natcap.invest.carbon.carbon_combined",
+  "targetScript": "natcap.invest.carbon",
   "modelName": "carbon_combined",
   "localDocURI": "../documentation/carbonstorage.html",
   "height": 800,
@@ -22,7 +22,7 @@
         },
         {
           "id": "results_suffix",
-          "args_id": "suffix",
+          "args_id": "results_suffix",
           "type": "text",
           "dataType": "string",
           "label": "Results Suffix (Optional)",
