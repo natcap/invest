@@ -28,7 +28,7 @@ class HabitatSuitabilityTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_base_regression(self):
-        """Habitat suitability base regression test on sample data.
+        """Habitat suitability base regression on sample data.
 
         Execute Habitat suitability with sample data and checks that the
         output files are generated and that the aggregate shapefile fields are
@@ -52,6 +52,41 @@ class HabitatSuitabilityTests(unittest.TestCase):
             [os.path.join(REGRESSION_DATA, 'hsi.tif'),
              os.path.join(REGRESSION_DATA, 'hsi_threshold.tif'),
              os.path.join(REGRESSION_DATA, 'hsi_threshold_screened.tif')])
+
+    def test_categorical_regression(self):
+        """Habitat suitability regression with categorical sample data.
+
+        Execute Habitat suitability with sample data that includes categorical
+        vector inputs and checks that the output files are generated and that
+        the aggregate shapefile fields are the same as the regression case.
+        """
+        from natcap.invest import habitat_suitability
+
+        # use predefined directory so test can clean up files during teardown
+        args = HabitatSuitabilityTests._generate_base_args(
+            self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['categorical_geometry'] = {
+            'substrate': {
+                'vector_path': os.path.join(
+                    SAMPLE_DATA, 'substrate_3005.shp'),
+                'fieldname': 'Suitabilit',
+            }
+        }
+        args['output_cell_size'] = 500
+        args['results_suffix'] = 'categorical'
+        habitat_suitability.execute(args)
+
+        HabitatSuitabilityTests._assert_regression_results_eq(
+            args['workspace_dir'],
+            os.path.join(REGRESSION_DATA, 'file_list_categorical.txt'),
+            [os.path.join(args['workspace_dir'], 'hsi_categorical.tif'),
+             os.path.join(args['workspace_dir'], 'hsi_threshold_categorical.tif'),
+             os.path.join(args['workspace_dir'],
+                          'hsi_threshold_screened_categorical.tif')],
+            [os.path.join(REGRESSION_DATA, 'hsi_categorical.tif'),
+             os.path.join(REGRESSION_DATA, 'hsi_threshold_categorical.tif'),
+             os.path.join(REGRESSION_DATA, 'hsi_threshold_screened_categorical.tif')])
 
     def test_regression_cell_size(self):
         """Habitat suitability regression test on cell size set to 500m."""
