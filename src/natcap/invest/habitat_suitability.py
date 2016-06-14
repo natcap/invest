@@ -75,6 +75,7 @@ def execute(args):
                                 'range': (5, 7, 12.5, 16),
                             }
                     }
+
         args['categorical_geometry'] (dict): a dictionary that describes
             categorical vector geometry that directly defines the HSI values.
             The dictionary specifies paths to the vectors and the fieldname
@@ -82,7 +83,9 @@ def execute(args):
                 'vector_path': a path to disk for the vector coverage polygon
                 'fieldname': a string matching a field in the vector polygon
                     with HSI values.
-            Example:
+
+            Example::
+
                 {
                     'categorical_geometry': {
                         'substrate': {
@@ -91,6 +94,7 @@ def execute(args):
                         }
                     }
                 }
+
     Returns:
         None
     """
