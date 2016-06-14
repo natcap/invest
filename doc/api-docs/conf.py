@@ -290,7 +290,7 @@ texinfo_documents = [
 # Specify the imports that must be mocked out in order to generate the docs.
 autodoc_mock_imports = [
     'sextante', 'matplotlib', 'matplotlib.pyplot', 'matplotlib.pylab',
-    'pylab', 'pyamg', 'osgeo', 'PyQt4', 'h5py', 'shapely', 'shapely.wkb',
+    'pylab', 'pyamg', 'osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
     'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
     'shapely.geometry', 'osgeo.osr',
     'shapely.wkt', 'shapely.ops',

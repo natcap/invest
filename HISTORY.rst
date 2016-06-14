@@ -3,6 +3,7 @@
 Unreleased Changes
 ------------------
 * Fixed an issue in GLOBIO that would cause model runs to crash if the AOI marked as optional was not present.
+* Removed the deprecated and incomplete Nearshore Wave and Erosion model (``natcap.invest.nearshore_wave_and_erosion``).
 
 3.3.1 (2016-06-13)
 ------------------

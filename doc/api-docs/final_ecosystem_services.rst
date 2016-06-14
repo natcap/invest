@@ -13,7 +13,6 @@ Final Ecosystem Services
     final_ecosystem_services/hydropower.rst
     final_ecosystem_services/monthly_water_yield.rst
     final_ecosystem_services/ndr.rst
-    final_ecosystem_services/nearshore_wave_and_erosion.rst
     final_ecosystem_services/nutrient.rst
     final_ecosystem_services/pollination.rst
     final_ecosystem_services/recreation.rst

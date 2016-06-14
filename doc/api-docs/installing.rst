@@ -48,7 +48,7 @@ Ubuntu & Debian
 
 ::
 
-    $ sudo apt-get install python-setuptools python-gdal python-h5py python-rtree python-shapely python-matplotlib python-qt4
+    $ sudo apt-get install python-setuptools python-gdal python-rtree python-shapely python-matplotlib python-qt4
 
 
 Fedora
@@ -56,7 +56,7 @@ Fedora
 
 ::
 
-    $ sudo yum install python-setuptools gdal-python h5py python-rtree python-shapely python-matplotlib PyQt4
+    $ sudo yum install python-setuptools gdal-python python-rtree python-shapely python-matplotlib PyQt4
    
 .. _InstallingOnMac:
 
@@ -66,7 +66,7 @@ Mac OS X
 The easiest way to install binary packages on Mac OS X is through a package
 manager such as `Homebrew <http://brew.sh>`_::
 
-    $ brew install gdal hdf5 spatialindex pyqt matplotlib
+    $ brew install gdal spatialindex pyqt matplotlib
 
 The GDAL, PyQt and matplotlib packages include their respective python packages.
 The others will allow their corresponding python packages to be compiled
