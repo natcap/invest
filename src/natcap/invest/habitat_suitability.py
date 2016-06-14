@@ -86,9 +86,10 @@ def execute(args):
             Example:
                 {
                     'categorical_geometry': {
-                    'substrate': {
-                        'vector_path': r'C:/path/to/Substrate.shp',
-                        'fieldname': 'Suitabilit',
+                        'substrate': {
+                            'vector_path': r'C:/path/to/Substrate.shp',
+                            'fieldname': 'Suitabilit',
+                        }
                     }
                 }
     Returns:
