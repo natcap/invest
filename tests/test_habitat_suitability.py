@@ -105,8 +105,9 @@ class HabitatSuitabilityTests(unittest.TestCase):
                     'raster_path': os.path.join(
                         SAMPLE_DATA, "tidalspeedcms.tif"),
                     'suitability_range': (1.5, 5, 15, 30),
-                }
-            }
+                },
+            },
+            'categorical_geometry': {},
         }
         return args
 
