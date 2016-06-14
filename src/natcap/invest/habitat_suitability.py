@@ -1,7 +1,6 @@
 """Habitat suitability model."""
 import os
 import logging
-import itertools
 
 import numpy
 from osgeo import gdal
@@ -274,8 +273,8 @@ def execute(args):
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [f_reg['suitability_path']], threshold_op,
-        f_reg['threshold_suitability_path'], gdal.GDT_Float32, _RECLASS_NODATA,
-        output_cell_size, "intersection", vectorize_op=False)
+        f_reg['threshold_suitability_path'], gdal.GDT_Float32,
+        _RECLASS_NODATA, output_cell_size, "intersection", vectorize_op=False)
 
     LOGGER.info("Masking threshold by exclusions.")
     pygeoprocessing.new_raster_from_base_uri(
