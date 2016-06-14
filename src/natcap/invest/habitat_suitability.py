@@ -12,7 +12,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
-_RECLASS_NODATA = -1.0
+_HSI_NODATA = -1.0  # HSI values are floats in [0..1] so -1 as nodata is safe
 
 
 def execute(args):
@@ -150,7 +150,7 @@ def execute(args):
 
         pygeoprocessing.create_raster_from_vector_extents_uri(
             entry['vector_path'], output_cell_size, gdal.GDT_Float32,
-            _RECLASS_NODATA, base_path)
+            _HSI_NODATA, base_path)
 
         # sanity check to ensure key is not already defined in the registry
         if key in f_reg:
@@ -218,13 +218,13 @@ def execute(args):
                 lambda x: 1.0 - (
                     (x-suitability_range[2]) /
                     (suitability_range[3]-suitability_range[2])),
-                _RECLASS_NODATA,
+                _HSI_NODATA,
                 0.0]
             return numpy.piecewise(biophysical_values, condlist, funclist)
 
         pygeoprocessing.vectorize_datasets(
             [base_raster_path], local_map, f_reg[suitability_key],
-            gdal.GDT_Float32, _RECLASS_NODATA, output_cell_size,
+            gdal.GDT_Float32, _HSI_NODATA, output_cell_size,
             'intersection', vectorize_op=False)
 
     # calculate categorical raster
@@ -243,20 +243,20 @@ def execute(args):
     def geo_mean_op(*suitability_values):
         """Geometric mean of input suitability_values."""
         running_product = suitability_values[0].astype(numpy.float32)
-        running_mask = suitability_values[0] == _RECLASS_NODATA
+        running_mask = suitability_values[0] == _HSI_NODATA
         for index in range(1, len(suitability_values)):
             running_product *= suitability_values[index]
             running_mask = running_mask | (
-                suitability_values[index] == _RECLASS_NODATA)
+                suitability_values[index] == _HSI_NODATA)
         result = numpy.empty(running_mask.shape, dtype=numpy.float32)
-        result[:] = _RECLASS_NODATA
+        result[:] = _HSI_NODATA
         result[~running_mask] = (
             running_product[~running_mask]**(1./len(suitability_values)))
         return result
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         suitability_raster_list, geo_mean_op, f_reg['suitability_path'],
-        gdal.GDT_Float32, _RECLASS_NODATA, output_cell_size, "intersection",
+        gdal.GDT_Float32, _HSI_NODATA, output_cell_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info(
@@ -266,20 +266,20 @@ def execute(args):
         """Threshold HSI values to user defined value."""
         result = hsi_values[:]
         invalid_mask = (
-            (hsi_values == _RECLASS_NODATA) |
+            (hsi_values == _HSI_NODATA) |
             (hsi_values < args['habitat_threshold']))
-        result[invalid_mask] = _RECLASS_NODATA
+        result[invalid_mask] = _HSI_NODATA
         return result
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [f_reg['suitability_path']], threshold_op,
         f_reg['threshold_suitability_path'], gdal.GDT_Float32,
-        _RECLASS_NODATA, output_cell_size, "intersection", vectorize_op=False)
+        _HSI_NODATA, output_cell_size, "intersection", vectorize_op=False)
 
     LOGGER.info("Masking threshold by exclusions.")
     pygeoprocessing.new_raster_from_base_uri(
         f_reg['threshold_suitability_path'],
-        f_reg['screened_mask_path'], 'GTiff', _RECLASS_NODATA,
+        f_reg['screened_mask_path'], 'GTiff', _HSI_NODATA,
         gdal.GDT_Byte, fill_value=0)
     if 'exclusion_path_list' in args:
         for exclusion_mask_path in args['exclusion_path_list']:
@@ -291,13 +291,13 @@ def execute(args):
     def mask_exclusion_op(base_values, mask_values):
         """Mask the base values to nodata where mask == 1."""
         result = base_values[:]
-        result[mask_values == 1] = _RECLASS_NODATA
+        result[mask_values == 1] = _HSI_NODATA
         return result
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [f_reg['threshold_suitability_path'],
          f_reg['screened_mask_path']], mask_exclusion_op,
-        f_reg['screened_suitability_path'], gdal.GDT_Float32, _RECLASS_NODATA,
+        f_reg['screened_suitability_path'], gdal.GDT_Float32, _HSI_NODATA,
         output_cell_size, "intersection", vectorize_op=False)
 
     LOGGER.info('Removing temporary files.')
