@@ -1,7 +1,8 @@
 .. :changelog:
 
-.. Unreleased Changes
-.. ------------------
+Unreleased Changes
+------------------
+* Fixed an issue in GLOBIO that would cause model runs to crash if the AOI marked as optional was not present.
 
 3.3.1 (2016-04-14)
 ------------------
@@ -188,7 +189,7 @@ InVEST 3.1.0 (http://www.naturalcapitalproject.org/download.html) is a major sof
 * Updated the pollination model to conform with the latest InVEST geoprocessing standards, resulting in an approximately 33% speedup.
 
 * Improved the UI's ability to remember the last folder visited, and to have all file and folder selection dialogs have access to this information.
-  
+
 * Fixed an issue in Marine Water Quality where the UV points were supposed to be optional, but instead raised an exception when not passed in.
 
 3.0.0 (2014-03-23)
@@ -219,7 +220,7 @@ The 3.0.0 release of InVEST represents a shift away from the ArcGIS to the InVES
 
 * Unstable version of scenario generator available.
 
-* Numerous other minor bug fixes and performance enhacnements. 
+* Numerous other minor bug fixes and performance enhacnements.
 
 
 
@@ -279,7 +280,7 @@ Including:
 
 * Updates to the overlap analysis user's guide.
 
-* Added preprocessing toolkit available under 
+* Added preprocessing toolkit available under
   C:\{InVEST install directory}\utils
 
 * Biodiversity Model now exits gracefully if a threat raster is not
@@ -335,15 +336,15 @@ tweaks, and new functionality of the InVEST standalone models.  Including:
 
  * Production level release of the 3.0 Coastal Vulnerability model.
     - This upgrades the InVEST 2.5.4 version of the beta standalone CV
-      to a full release with full users guide.  This version of the 
+      to a full release with full users guide.  This version of the
       CV model should be used in all cases over its ArcGIS equivalent.
 
  * Production level release of the Habitat Risk Assessment model.
     - This release upgrades the InVEST 2.5.4 beta version of the
-      standalone habitat risk assessment model. It should be used in 
+      standalone habitat risk assessment model. It should be used in
       all cases over its ArcGIS equivalent.
 
- * Uncertainty analysis in Carbon model (beta) 
+ * Uncertainty analysis in Carbon model (beta)
     - Added functionality to assess uncertainty in sequestration and
       emissions given known uncertainty in carbon pool stocks.  Users
       can now specify standard  deviations of carbon pools with
@@ -383,7 +384,7 @@ tweaks, and new functionality of the InVEST standalone models.  Including:
 Known Issues:
 
  * Flow routing in the standalone sediment and nutrient models has a
-   bug that prevents routing in some (not all) landscapes.  This bug is 
+   bug that prevents routing in some (not all) landscapes.  This bug is
    related to resolving d-infinity flow directions across flat areas.
    We are implementing the solution in Garbrecht and Martx (1997).
    In the meanwhile the sediment and nutrient models are still marked
@@ -459,7 +460,7 @@ collapsible containers became entirely non-interactive.
 2.5.0 (2013-03-08)
 ------------------
 This a major release of InVEST that includes new standalone versions (ArcGIS
-is not required) our models as well as additional functionality, stability, 
+is not required) our models as well as additional functionality, stability,
 and increased performance to many of the existing models.  This release is
 timed to support our group's annual training event at Stanford University.
 We expect to release InVEST 2.5.1 a couple of weeks after to address any
@@ -469,7 +470,7 @@ for any issues relating to software:
 
   - *new* Sediment 3.0 Beta:
       - This is a standalone model that executes an order of magnitude faster
-        than the original ArcGIS model, but may have memory issues with 
+        than the original ArcGIS model, but may have memory issues with
 	larger datasets. This fix is scheduled for the 2.5.1 release of InVEST.
       - Uses a d-infinity flow algorithm (ArcGIS version uses D8).
       - Includes a more accurate LS factor.
@@ -478,7 +479,7 @@ for any issues relating to software:
 	GIS raster.
   - *new* Nutrient 3.0 Beta:
       - This is a standalone model that executes an order of magnitude faster
-        than the original ArcGIS model, but may have memory issues with 
+        than the original ArcGIS model, but may have memory issues with
 	larger datasets. This fix is scheduled for the 2.5.1 release of InVEST.
       - Uses a d-infinity flow algorithm (ArcGIS version uses D8).
       - Includes a more accurate LS factor.
@@ -498,7 +499,7 @@ for any issues relating to software:
 	be used as a demo or by NatCap partners that know what they're doing.
 	Users that need to use the habitat risk assessment should use the ArcGIS
 	version of this model.
-      
+
   - Improvements to the InVEST 2.x ArcGIS-based toolset:
       - Bug fixes to the ArcGIS based Coastal Protection toolset.
 
@@ -513,7 +514,7 @@ for any issues relating to software:
     - The InVEST 3.0 standalones generate open source GeoTiffs as
       outputs rather than the proprietary ESRI Grid format.  ArcGIS 9.3.1
       occasionally displays these rasters incorrectly.  We have found
-      that these layers can be visualized in ArcGIS 9.3.1 by following 
+      that these layers can be visualized in ArcGIS 9.3.1 by following
       convoluted steps: Right Click on the layer and select Properties; click on
       the Symbology tab; select Stretch, agree to calculate a histogram (this will
       create an .aux file that Arc can use for visualization), click "Ok", remove
@@ -529,7 +530,7 @@ for any issues relating to software:
    - A user reported an unstable run of InVEST 3.0 water yield.  We are not
      certain what is causing the issue, but we do have a fix that will go out
      in InVEST 2.5.1.
-   
+
    - At the moment the InVEST standalones do not run on Windows XP.  This appears
      to be related to an incompatibility between Windows XP and GDAL, the an open
      source gis library we use to create and read GIS data.  At the moment we are
@@ -544,7 +545,7 @@ many of the InVEST 3.0 standalones:
 
   - Pollination 3.0 Beta:
       - Greatly improved memory efficiency over previous versions of this model.
-      - 3.0 Beta Pollination Biophysical and Valuation have been merged into a 
+      - 3.0 Beta Pollination Biophysical and Valuation have been merged into a
         single tool, run through a unified user interface.
       - Slightly improved runtime through the use of newer core InVEST GIS libraries.
       - Optional ability to weight different species individually.  This feature
@@ -622,8 +623,8 @@ Changes in InVEST 2.4.0
 General:
 
 This is a major release which releases two additional beta versions of the
-InVEST models in the InVEST 3.0 framework.  Additionally, this release 
-introduces start menu shortcuts for all available InVEST 3.0 beta models.  
+InVEST models in the InVEST 3.0 framework.  Additionally, this release
+introduces start menu shortcuts for all available InVEST 3.0 beta models.
 Existing InVEST 2.x models can still be found in the included Arc toolbox.
 
 Existing InVEST models migrated to the 3.0 framework in this release
@@ -647,21 +648,21 @@ Updates to ArcGIS models:
     - Removed the "structures" option
     - Minor bug fixes and usability enhancements
 - Coastal protection (erosion protection)
-    - Incorporated economic valuation option 
+    - Incorporated economic valuation option
     - Minor bug fixes and usability enhancements
 
 Additionally there are a handful of minor fixes and feature
 enhancements:
 
-- InVEST 3.0 Beta standalones (identified by a new InVEST icon) may be run 
-  from the Start Menu (on windows navigate to 
+- InVEST 3.0 Beta standalones (identified by a new InVEST icon) may be run
+  from the Start Menu (on windows navigate to
   Start Menu -> All Programs -> InVEST 2.4.0
 - Bug fixes for the calculation of raster statistics.
 - InVEST 3.0 wave energy no longer requires an AOI for global runs, but
   encounters memory issues on machines with less than 4GB of RAM.  This
   is a known issue that will be fixed in a minor release.
 - Minor fixes to several chapters in the user's guide.
-- Minor bug fix to the 3.0 Carbon model: harvest maps are no longer required 
+- Minor bug fix to the 3.0 Carbon model: harvest maps are no longer required
   inputs.
 - Other minor bug fixes and runtime performance tweaks in the 3.0 framework.
 - Improved installer allows users to remove InVEST from the Windows Add/Remove
@@ -689,7 +690,7 @@ include:
     - Minor bug fixes and usability enhancements.
 - Wave Energy 3.0 beta
     - Runtimes for non-global runs decreased by a factor of 7
-    - Minor bugs in interpolation that exist in the 2.x model is fixed in 
+    - Minor bugs in interpolation that exist in the 2.x model is fixed in
       3.0 beta.
 - Crop Pollination 3.0 beta
     - Runtimes decreased by a factor of over 10,000
@@ -700,7 +701,7 @@ framework:
 - Marine Water Quality 3.0 alpha with a preliminary  user's guide.
 
 InVEST models in the 3.0 framework from previous releases that now
-have a standalone executable include: 
+have a standalone executable include:
 
 - Managed Timber Production Model
 - Carbon Storage and Sequestration
@@ -721,25 +722,25 @@ Changes in InVEST 2.2.2
 
 General:
 
-This is a minor release which fixes the following defects: 
+This is a minor release which fixes the following defects:
 
 -Fixed an issue with sediment retention model where large watersheds
  allowed loading per cell was incorrectly rounded to integer values.
- 
--Fixed bug where changing the threshold didn't affect the retention output 
+
+-Fixed bug where changing the threshold didn't affect the retention output
  because function was incorrectly rounded to integer values.
- 
+
 -Added total water yield in meters cubed to to output table by watershed.
 
--Fixed bug where smaller than default (2000) resolutions threw an error about 
- not being able to find the field in "unitynew".  With non-default resolution, 
- "unitynew" was created without an attribute table, so one was created by 
+-Fixed bug where smaller than default (2000) resolutions threw an error about
+ not being able to find the field in "unitynew".  With non-default resolution,
+ "unitynew" was created without an attribute table, so one was created by
  force.
- 
--Removed mention of beta state and ecoinformatics from header of software 
+
+-Removed mention of beta state and ecoinformatics from header of software
  license.
- 
--Modified overlap analysis toolbox so it reports an error directly in the 
+
+-Modified overlap analysis toolbox so it reports an error directly in the
  toolbox if the workspace name is too long.
 
 2.2.1 (2012-01-26)
@@ -748,7 +749,7 @@ Changes in InVEST 2.2.1
 
 General:
 
-This is a minor release which fixes the following defects: 
+This is a minor release which fixes the following defects:
 
 -A variety of miscellaneous bugs were fixed that were causing crashes of the Coastal Protection model in Arc 9.3.
 -Fixed an issue in the Pollination model that was looking for an InVEST1005 directory.
@@ -772,15 +773,15 @@ See the "Marine Models" and "InVEST 3.0 Beta" sections below for more details.
 
    This tool has been updated to include extension requirements for the new
    Coastal Protection T1 model.  It also reflects changes to the Habitat Risk
-   Assessment and Coastal Protection T0 models, as they no longer require the 
+   Assessment and Coastal Protection T0 models, as they no longer require the
    PythonWin extension.
 
 2. Habitat Risk Assessment (HRA)
 
-   This model has been updated and is now part of three-step toolset.  The 
-   first step is a new Ratings Survey Tool which eliminates the need for 
-   Microsoft Excel when users are providing habitat-stressor ratings.  This 
-   Survey Tool now allows users to up- and down-weight the importance of 
+   This model has been updated and is now part of three-step toolset.  The
+   first step is a new Ratings Survey Tool which eliminates the need for
+   Microsoft Excel when users are providing habitat-stressor ratings.  This
+   Survey Tool now allows users to up- and down-weight the importance of
    various criteria.  For step 2, a copy of the Grid the Seascape tool has been
    placed in the HRA toolset.  In the last step, users will run the HRA model
    which includes the following updates:
@@ -791,79 +792,79 @@ See the "Marine Models" and "InVEST 3.0 Beta" sections below for more details.
 
 3. Coastal Protection
 
-   This module is now split into sub-models, each with two parts.  The first 
+   This module is now split into sub-models, each with two parts.  The first
    sub-model is Coastal Vulnerability (Tier 0) and the new addition is Coastal
    Protection (Tier 1).
 
    Coastal Vulnerability (T0)
    Step 1) Fetch Calculator - there are no updates to this tool.
-   Step 2) Vulnerability Index 
+   Step 2) Vulnerability Index
 
-   - Wave Exposure: In this version of the model, we define wave exposure for 
-     sites facing the open ocean as the maximum of the weighted average of 
-     wave's power coming from the ocean or generated by local winds.  We 
-     weight wave power coming from each of the 16 equiangular sector by the 
-     percent of time that waves occur in that sector, and based on whether or 
+   - Wave Exposure: In this version of the model, we define wave exposure for
+     sites facing the open ocean as the maximum of the weighted average of
+     wave's power coming from the ocean or generated by local winds.  We
+     weight wave power coming from each of the 16 equiangular sector by the
+     percent of time that waves occur in that sector, and based on whether or
      not fetch in that sector exceeds 20km.  For sites that are sheltered, wave
-     exposure is the average of wave power generated by the local storm winds 
-     weighted by the percent occurrence of those winds in each sector.  This 
-     new method takes into account the seasonality of wind and wave patterns 
-     (storm waves generally come from a preferential direction), and helps 
-     identify regions that are not exposed to powerful waves although they are 
+     exposure is the average of wave power generated by the local storm winds
+     weighted by the percent occurrence of those winds in each sector.  This
+     new method takes into account the seasonality of wind and wave patterns
+     (storm waves generally come from a preferential direction), and helps
+     identify regions that are not exposed to powerful waves although they are
      open to the ocean (e.g. the leeside of islands).
 
-   - Natural Habitats: The ranking is now computed using the rank of all 
-     natural habitats present in front of a segment, and we weight the lowest 
-     ranking habitat 50% more than all other habitats.  Also, rankings and 
-     protective distance information are to be provided by CSV file instead of 
-     Excel.  With this new method, shoreline segments that have more habitats 
-     than others will have a lower risk of inundation and/or erosion during 
+   - Natural Habitats: The ranking is now computed using the rank of all
+     natural habitats present in front of a segment, and we weight the lowest
+     ranking habitat 50% more than all other habitats.  Also, rankings and
+     protective distance information are to be provided by CSV file instead of
+     Excel.  With this new method, shoreline segments that have more habitats
+     than others will have a lower risk of inundation and/or erosion during
      storms.
 
-   - Structures: The model has been updated to now incorporate the presence of 
-     structures by decreasing the ranking of shoreline segments that adjoin 
+   - Structures: The model has been updated to now incorporate the presence of
+     structures by decreasing the ranking of shoreline segments that adjoin
      structures.
 
-   Coastal Protection (T1) - This is a new model which plots the amount of 
-   sandy beach erosion or consolidated bed scour that backshore regions 
-   experience in the presence or absence of natural habitats.  It is composed 
-   of two steps: a Profile Generator and Nearshore Waves and Erosion.  It is 
-   recommended to run the Profile Generator before the Nearshore Waves and 
+   Coastal Protection (T1) - This is a new model which plots the amount of
+   sandy beach erosion or consolidated bed scour that backshore regions
+   experience in the presence or absence of natural habitats.  It is composed
+   of two steps: a Profile Generator and Nearshore Waves and Erosion.  It is
+   recommended to run the Profile Generator before the Nearshore Waves and
    Erosion model.
 
    Step 1) Profile Generator:  This tool helps the user generate a 1-dimensional
-   bathymetric and topographic profile perpendicular to the shoreline at the 
-   user-defined location.  This model provides plenty of guidance for building 
-   backshore profiles for beaches, marshes and mangroves.  It will help users 
-   modify bathymetry profiles that they already have, or can generate profiles 
-   for sandy beaches if the user has not bathymetric data.  Also, the model 
-   estimates and maps the location of natural habitats present in front of the 
-   region of interest.  Finally, it provides sample wave and wind data that 
-   can be later used in the Nearshore Waves and Erosion model, based on 
+   bathymetric and topographic profile perpendicular to the shoreline at the
+   user-defined location.  This model provides plenty of guidance for building
+   backshore profiles for beaches, marshes and mangroves.  It will help users
+   modify bathymetry profiles that they already have, or can generate profiles
+   for sandy beaches if the user has not bathymetric data.  Also, the model
+   estimates and maps the location of natural habitats present in front of the
+   region of interest.  Finally, it provides sample wave and wind data that
+   can be later used in the Nearshore Waves and Erosion model, based on
    computed fetch values and default Wave Watch III data.
 
    Step 2) Nearshore Waves and Erosion: This model estimates profiles of beach
    erosion or values of rates of consolidated bed scour at a site as a function
-   of the type of habitats present in the area of interest.  The model takes 
-   into account the protective effects of vegetation, coral and oyster reefs, 
-   and sand dunes.  It also shows the difference of protection provided when 
+   of the type of habitats present in the area of interest.  The model takes
+   into account the protective effects of vegetation, coral and oyster reefs,
+   and sand dunes.  It also shows the difference of protection provided when
    those habitats are present, degraded, or gone.
 
 4. Aesthetic Quality
 
-   This model no longer requires users to provide a projection for Overlap 
-   Analysis.  Instead, it uses the projection from the user-specified Area of 
-   Interest (AOI) polygon.  Additionally, the population estimates for this 
+   This model no longer requires users to provide a projection for Overlap
+   Analysis.  Instead, it uses the projection from the user-specified Area of
+   Interest (AOI) polygon.  Additionally, the population estimates for this
    model have been fixed.
 
 **InVEST 3.0 Beta**
 
 The 2.2.0 release includes a preliminary version of our InVEST 3.0 beta
-platform.  It is included as a toolset named "InVEST 3.0 Beta" in the 
+platform.  It is included as a toolset named "InVEST 3.0 Beta" in the
 InVEST220.tbx.  It is currently only supported with ArcGIS 10.  To launch
-an InVEST 3.0 beta tool, double click on the desired tool in the InVEST 3.0 
+an InVEST 3.0 beta tool, double click on the desired tool in the InVEST 3.0
 toolset then click "Ok" on the Arc toolbox screen that opens. The InVEST 3.0
-tool panel has inputs very similar to the InVEST 2.2.0 versions of the tools 
+tool panel has inputs very similar to the InVEST 2.2.0 versions of the tools
 with the following modifications:
 
 InVEST 3.0 Carbon:
@@ -876,7 +877,7 @@ InVEST 3.0 Carbon:
   * User interface streamlined including dynamic activation of inputs based
     on user preference, direct link to documentation, and recall of inputs
     based on user's previous run.
-    
+
 InVEST 3.0 Timber:
   * User interface streamlined including dynamic activation of inputs based
     on user preference, direct link to documentation, and recall of inputs
@@ -889,10 +890,10 @@ Changes in InVEST 2.1.1
 
 General:
 
-This is a minor release which fixes the following defects: 
+This is a minor release which fixes the following defects:
 
 -A truncation error was fixed on nutrient retention and sedimentation model that involved division by the number of cells in a watershed.  Now correctly calculates floating point division.
--Minor typos were fixed across the user's guide. 
+-Minor typos were fixed across the user's guide.
 
 2.1 Beta (2011-05-11)
 ---------------------
@@ -907,7 +908,7 @@ General:
 1.	InVEST versioning
 We have altered our versioning scheme.  Integer changes will reflect major changes (e.g. the addition of marine models warranted moving from 1.x to 2.0).  An increment in the digit after the primary decimal indicates major new features (e.g the addition of a new model) or major revisions.  For example, this release is numbered InVEST 2.1 because two new models are included).  We will add another decimal to reflect minor feature revisions or bug fixes.  For example, InVEST 2.1.1 will likely be out soon as we are continually working to improve our tool.
 2.	HTML guide
-With this release, we have migrated the entire InVEST users. guide to an HTML format.  The HTML version will output a pdf version for use off-line, printing, etc. 
+With this release, we have migrated the entire InVEST users. guide to an HTML format.  The HTML version will output a pdf version for use off-line, printing, etc.
 
 
 **MARINE MODELS**
@@ -932,7 +933,7 @@ With this release, we have migrated the entire InVEST users. guide to an HTML fo
 
 4. Habitat Risk Assessment (HRA)
 
-This new model allows users to assess the risk posed to coastal and marine habitats by human activities and the potential consequences of exposure for the delivery of ecosystem services and biodiversity.  The HRA model is suited to screening the risk of current and future human activities in order to prioritize management strategies that best mitigate risk. 
+This new model allows users to assess the risk posed to coastal and marine habitats by human activities and the potential consequences of exposure for the delivery of ecosystem services and biodiversity.  The HRA model is suited to screening the risk of current and future human activities in order to prioritize management strategies that best mitigate risk.
 
 5. Overlap Analysis
 
@@ -989,18 +990,18 @@ Changes in InVEST 2.0
 InVEST 1.005 is a minor release with the following modification:
 
 1. Aesthetic Quality
- 
-    This new model allows users to determine the locations from which new nearshore or offshore features can be seen.  It generates viewshed maps that can be used to identify the visual footprint of new offshore development.  
- 
+
+    This new model allows users to determine the locations from which new nearshore or offshore features can be seen.  It generates viewshed maps that can be used to identify the visual footprint of new offshore development.
+
 
 2. Coastal Vulnerability
 
-    This new model produces maps of coastal human populations and a coastal exposure to erosion and inundation index map.  These outputs can be used to understand the relative contributions of different variables to coastal exposure and to highlight the protective services offered by natural habitats. 
+    This new model produces maps of coastal human populations and a coastal exposure to erosion and inundation index map.  These outputs can be used to understand the relative contributions of different variables to coastal exposure and to highlight the protective services offered by natural habitats.
 
 
 3. Aquaculture
 
-    This new model is used to evaluate how human activities (e.g., addition or removal of farms, changes in harvest management practices) and climate change (e.g., change in sea surface temperature) may affect the production and economic value of aquacultured Atlantic salmon.  
+    This new model is used to evaluate how human activities (e.g., addition or removal of farms, changes in harvest management practices) and climate change (e.g., change in sea surface temperature) may affect the production and economic value of aquacultured Atlantic salmon.
 
 
 4. Wave Energy
@@ -1010,10 +1011,10 @@ InVEST 1.005 is a minor release with the following modification:
 
 5. Avoided Reservoir Sedimentation
 
-    - The name of this model has been changed to the Sediment Retention model. 
+    - The name of this model has been changed to the Sediment Retention model.
 
     - We have added a water quality valuation model for sediment retention. The user now has the option to select avoided dredge cost analysis, avoided water treatment cost analysis or both.  The water quality valuation approach is the same as that used in the Water Purification: Nutrient Retention model.
- 
+
     - The threshold information for allowed sediment loads (TMDL, dead volume, etc.) are now input in a stand alone table instead of being included in the valuation table. This adjusts the biophysical service output for any social allowance of pollution. Previously, the adjustment was only done in the valuation model.
 
     - The watersheds and sub-watershed layers are now input as shapefiles instead of rasters.
@@ -1031,7 +1032,7 @@ InVEST 1.005 is a minor release with the following modification:
 
     - Users are strongly advised not to interpret pixel-scale outputs for hydrological understanding or decision-making of any kind. Pixel outputs should only be used for calibration/validation or model checking.
 
-    - The calibration constant for each watershed is now input in a stand-alone table instead of being included in the valuation table. This makes running the water scarcity model simpler. 
+    - The calibration constant for each watershed is now input in a stand-alone table instead of being included in the valuation table. This makes running the water scarcity model simpler.
 
 
 7. Water Purification: Nutrient Retention
