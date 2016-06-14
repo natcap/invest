@@ -4,7 +4,7 @@ Unreleased Changes
 ------------------
 * Fixed an issue in GLOBIO that would cause model runs to crash if the AOI marked as optional was not present.
 
-3.3.1 (2016-04-14)
+3.3.1 (2016-06-13)
 ------------------
 * Refactored API documentation for readability, organization by relevant topics, and to allow docs to build on `invest.readthedocs.io <http://invest.readthedocs.io>`_,
 * Installation of ``natcap.invest`` now requires ``natcap.versioner``.  If this is not available on the system at runtime, setuptools will make it available at runtime.
