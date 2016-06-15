@@ -13,8 +13,9 @@ import pygeoprocessing
 
 from . import utils
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+logging.basicConfig(
+    format='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
+    level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.carbon')
 
@@ -22,6 +23,8 @@ _OUTPUT_BASE_FILES = {
     'tot_c_cur': 'tot_c_cur.tif',
     'tot_c_fut': 'tot_c_fut.tif',
     'tot_c_redd': 'tot_c_redd.tif',
+    'sequest_cur_fut': 'sequest_cur_fut.tif',
+    'sequest_cur_redd': 'sequest_cur_redd.tif'
     }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -104,6 +107,7 @@ def execute(args):
 
     cell_sizes = []
     valid_lulc_keys = []
+    valid_scenarios = []
     for scenario_type in ['cur', 'fut', 'redd']:
         lulc_key = "lulc_%s_path" % (scenario_type)
         if lulc_key in args and len(args[lulc_key]) > 0:
@@ -111,6 +115,7 @@ def execute(args):
                 pygeoprocessing.geoprocessing.get_cell_size_from_uri(
                     args[lulc_key]))
             valid_lulc_keys.append(lulc_key)
+            valid_scenarios.append(scenario_type)
     pixel_size_out = min(cell_sizes)
 
     # align the input datasets
@@ -177,7 +182,7 @@ def execute(args):
 
     for scenario_type, storage_paths in pool_storage_path_lookup.iteritems():
         LOGGER.info(
-            "Calculate total carbon storage for %s", scenario_type)
+            "Calculate total carbon storage for '%s'", scenario_type)
 
         def _sum_op(*storage_arrays):
             valid_mask = reduce(
@@ -195,96 +200,30 @@ def execute(args):
             dataset_to_align_index=0, vectorize_op=False,
             datasets_are_pre_aligned=True)
 
-    return
-
+    # calculate sequestration
     for fut_type in ['fut', 'redd']:
-        fut_type_lulc_uri = 'lulc_%s_uri' % fut_type
-        if 'lulc_cur_uri' in args and fut_type_lulc_uri in args:
-            LOGGER.info('Computing sequestration for %s scenario', fut_type)
+        if fut_type not in valid_scenarios:
+            continue
+        LOGGER.info("Calculate sequestration scenario '%s'", fut_type)
+        storage_paths = [
+            file_registry['tot_c_cur'], file_registry['tot_c_' + fut_type]]
 
-            def sub_op(c_cur, c_fut):
-                fut_nodata = c_fut == nodata_out
-                cur_nodata = c_cur == nodata_out
-                cur_clean = numpy.where(cur_nodata, 0, c_cur)
-                fut_clean = numpy.where(fut_nodata, 0, c_fut)
-                seq = fut_clean - cur_clean
-                return numpy.where(fut_nodata & cur_nodata, nodata_out, seq)
+        def _diff_op(base_array, future_array):
+            """Substract future_array from base_array and ignore nodata."""
+            result = numpy.empty(base_array.shape, dtype=numpy.float32)
+            result[:] = _CARBON_NODATA
+            valid_mask = (
+                (base_array != _CARBON_NODATA) &
+                (future_array != _CARBON_NODATA))
+            result[valid_mask] = (
+                future_array[valid_mask] - base_array[valid_mask])
+            return result
 
-            pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['lulc_cur_uri'])
-            outputs['sequest_%s' % fut_type] = outfile_uri('sequest', fut_type)
-            pygeoprocessing.geoprocessing.vectorize_datasets(
-                [outputs['tot_C_cur'], outputs['tot_C_%s' % fut_type]], sub_op,
-                outputs['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
-                pixel_size_out, "intersection", dataset_to_align_index=0,
-                process_pool=args['_process_pool'], vectorize_op=False)
-
-            if do_uncertainty:
-                LOGGER.info('Computing confident cells for %s scenario.', fut_type)
-                confidence_threshold = args['confidence_threshold']
-
-                # Returns 1 if we're confident storage will increase,
-                #         -1 if we're confident storage will decrease,
-                #         0 if we're not confident either way.
-                def confidence_op(c_cur, c_fut, var_cur, var_fut):
-                    if nodata_out in [c_cur, c_fut, var_cur, var_fut]:
-                        return nodata_out
-
-                    if var_cur == 0 and var_fut == 0:
-                        # There's no variance, so we can just compare the mean estimates.
-                        if c_fut > c_cur:
-                            return 1
-                        if c_fut < c_cur:
-                            return -1
-                        return 0
-
-                    # Given two distributions (one for current storage, one for future storage),
-                    # we use the difference distribution (current storage - future storage),
-                    # and calculate the probability that the difference is less than 0.
-                    # This is equal to the probability that the future storage is greater than
-                    # the current storage.
-                    # We calculate the standard score by beginning with 0, subtracting the mean
-                    # of the difference distribution, and dividing by the standard deviation
-                    # of the difference distribution.
-                    # The mean of the difference distribution is the difference of the means of cur and fut.
-                    # The variance of the difference distribution is the sum of the variances of cur and fut.
-                    standard_score = (c_fut - c_cur) / math.sqrt(var_cur + var_fut)
-
-                    # Calculate the cumulative distribution function for the standard normal distribution.
-                    # This gives us the probability that future carbon storage is greater than
-                    # current carbon storage.
-                    # This formula is copied from http://docs.python.org/3.2/library/math.html
-                    probability = (1.0 + math.erf(standard_score / math.sqrt(2.0))) / 2.0
-
-                    # Multiply by 100 so we have probability in the same units as the confidence_threshold.
-                    confidence = 100 * probability
-                    if confidence >= confidence_threshold:
-                        # We're confident carbon storage will increase.
-                        return 1
-                    if confidence <= 100 - confidence_threshold:
-                        # We're confident carbon storage will decrease.
-                        return -1
-                    # We're not confident about whether storage will increase or decrease.
-                    return 0
-
-                outputs['conf_%s' % fut_type] = outfile_uri('conf', fut_type)
-                pygeoprocessing.geoprocessing.vectorize_datasets(
-                    [outputs[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type,
-                                                       'variance_C_cur', 'variance_C_%s' % fut_type]],
-                    confidence_op, outputs['conf_%s' % fut_type],
-                    gdal.GDT_Float32, nodata_out,
-                    pixel_size_out, "intersection", dataset_to_align_index=0,
-                    process_pool=args['_process_pool'])
-
-    # Do a Monte Carlo simulation for uncertainty analysis.
-    # We only do this if HWP is not enabled, because the simulation
-    # computes carbon just by summing carbon across the
-    # landscape, which is wrong if we're doing HWP analysis.
-    if (do_uncertainty and
-        'hwp_cur_shape_uri' not in args and
-        'hwp_fut_shape_uri' not in args):
-        outputs['uncertainty'] = _compute_uncertainty_data(args, pools)
-
-    return outputs
+        pygeoprocessing.vectorize_datasets(
+            storage_paths, _diff_op, file_registry['sequest_cur_' + fut_type],
+            gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
+            dataset_to_align_index=0, vectorize_op=False,
+            datasets_are_pre_aligned=True)
 
 
 def _compute_carbon_pools(args):
