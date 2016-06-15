@@ -8,54 +8,74 @@ import shutil
 
 from osgeo import gdal
 from osgeo import ogr
-from scipy.stats import norm
 import numpy
-
-from natcap.invest.carbon import carbon_biophysical
-from natcap.invest.carbon import carbon_valuation
-from natcap.invest.carbon import carbon_utils
-from natcap.invest.reporting import html
-
 import pygeoprocessing
+
+from . import utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.carbon')
 
-NUM_MONTE_CARLO_RUNS = 10000
+_OUTPUT_BASE_FILES = {
+    'tot_c_cur': 'tot_c_cur.tif',
+    'tot_c_fut': 'tot_c_fut.tif',
+    'tot_c_redd': 'tot_c_redd.tif',
+    }
 
-class MapCarbonPoolError(Exception):
-    """A custom error for catching lulc codes from a raster that do not
-        match the carbon pools data file"""
-    pass
+_INTERMEDIATE_BASE_FILES = {
+    'c_above_cur': 'c_above_cur.tif',
+    'c_below_cur': 'c_below_cur.tif',
+    'c_soil_cur': 'c_soil_cur.tif',
+    'c_dead_cur': 'c_dead_cur.tif',
+    'c_above_fut': 'c_above_fut.tif',
+    'c_below_fut': 'c_below_fut.tif',
+    'c_soil_fut': 'c_soil_fut.tif',
+    'c_dead_fut': 'c_dead_fut.tif',
+    'c_above_redd': 'c_above_redd.tif',
+    'c_below_redd': 'c_below_redd.tif',
+    'c_soil_redd': 'c_soil_redd.tif',
+    'c_dead_redd': 'c_dead_redd.tif',
+    }
+
+_TMP_BASE_FILES = {
+    }
+
+_CARBON_NODATA = -1.0
+
 
 def execute(args):
     """InVEST Carbon Model.
 
     Calculate the amount of carbon stocks given a landscape, or the difference
-    due to a future change, and/or the additional stocks due to removal of
-    harvested wood products, and/or account for uncertainty in the carbon
-    stock pools.
+    due to a future change, and/or the tradeoffs between that and a REDD
+    scenario, and calculate economic valuation on those scenarios.
+
+    The model can operate on a single scenario, a combined present and future
+    scenario, as well as an additional REDD scenario.
 
     Parameters:
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files during calculation.
         args['results_suffix'] - a string to append to any output file name.
-        args['lulc_cur_uri'] (string): a path to a raster representing the
+        args['lulc_cur_path'] (string): a path to a raster representing the
             current carbon stocks
-        args['carbon_pools_uri'] (string): path to CSV or that indexes carbon
-            storage density to lulc codes. (required if 'do_uncertainty' is false)
-        args['carbon_pools_uncertain_uri'] - as above, but has probability distribution
-            data for each lulc type rather than point estimates.
+        args['lulc_fut_path'] (string): a path to a raster representing future
+            landcover scenario.  Optional, but if present and well defined
+            will trigger a sequestration calculation.
+        args['lulc_redd_path'] (string): a path to a raster representing the
+            alternative REDD scenario which is only possible if the
+            args['lulc_fut_path'] is present and well defined.
+        args['carbon_pools_path'] (string): path to CSV or that indexes carbon
+            storage density to lulc codes. (required if 'do_uncertainty' is
+            false)
+        args['carbon_pools_uncertain_uri'] - as above, but has probability
+            distribution data for each lulc type rather than point estimates.
             (required if 'do_uncertainty' is true)
-        args['do_uncertainty'] - a boolean that indicates whether we should do
-            uncertainty analysis. Defaults to False if not present.
         args['confidence_threshold'] - a number between 0 and 100 that indicates
             the minimum threshold for which we should highlight regions in the output
             raster. (required if 'do_uncertainty' is True)
-        args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
-         if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur
             used in HWP calculation (required if args contains a
             'hwp_cur_shape_uri', or 'hwp_fut_shape_uri' key)
@@ -71,138 +91,85 @@ def execute(args):
 
         returns a dict with the names of all output files."""
 
-    if '_process_pool' not in args:
-        args['_process_pool'] = None
-    else:
-        LOGGER.debug('Found a process pool: %s', args['_process_pool'])
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    intermediate_output_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_outputs')
+    output_dir = args['workspace_dir']
+    pygeoprocessing.create_directories([intermediate_output_dir, output_dir])
 
-    file_suffix = carbon_utils.make_suffix(args)
-    dirs = carbon_utils.setup_dirs(args['workspace_dir'],
-                                   'output', 'intermediate')
+    LOGGER.info('Building file registry')
+    file_registry = utils.build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
+         (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    def outfile_uri(prefix, scenario_type, dirtype='output', filetype='tif'):
-        '''Creates the appropriate output file URI.
+    carbon_pool_table = pygeoprocessing.get_lookup_from_table(
+        args['carbon_pools_path'], 'lucode')
 
-           prefix: 'tot_C', 'sequest', or similar
-           scenario type: 'cur', 'fut', or 'redd'
-           dirtype: 'output' or 'intermediate'
-           '''
-        if scenario_type == 'fut' and args.get('lulc_redd_uri'):
-            # We're doing REDD analysis, so call the future scenario 'base',
-            # since it's the 'baseline' scenario.
-            scenario_type = 'base'
+    LOGGER.debug(carbon_pool_table)
 
-        filename = '%s_%s%s.%s' % (prefix, scenario_type, file_suffix, filetype)
-        return os.path.join(dirs[dirtype], filename)
-
-    pools = _compute_carbon_pools(args)
-
-    do_uncertainty = args['do_uncertainty']
+    cell_sizes = []
+    for landcover_type in ['cur', 'fut', 'redd']:
+        lulc_key = "lulc_%s_path" % (landcover_type)
+        if lulc_key in args and len(args[lulc_key]) > 0:
+            cell_sizes.append(
+                pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+                    args[lulc_key]))
+    pixel_size_out = min(cell_sizes)
 
     # Map total carbon for each scenario.
-    outputs = {}
-    for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri', 'lulc_redd_uri']:
-        if lulc_uri in args:
-            scenario_type = lulc_uri.split('_')[-2] #get the 'cur', 'fut', or 'redd'
+    keys = None
+    nodata = None
+    values = None
+    for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
+        carbon_pool_by_type = dict([
+            (lucode, float(carbon_pool_table[lucode][pool_type]))
+            for lucode in carbon_pool_table])
+        # possible that nodata value is not defined, so test for None first
+        # otherwise if nodata not predefined, remap it into the dictionary
+        for landcover_type in ['cur', 'fut', 'redd']:
+            lulc_key = 'lulc_%s_path' % landcover_type
+            LOGGER.info('Mapping carbon for %s scenario.', lulc_key)
+            if lulc_key not in args or len(args[lulc_key]) == 0:
+                continue
+            nodata = pygeoprocessing.get_nodata_from_uri(args[lulc_key])
+            carbon_pool_by_type_copy = carbon_pool_by_type.copy()
+            carbon_pool_by_type_copy[nodata] = _CARBON_NODATA
 
-            LOGGER.info('Mapping carbon for %s scenario.', scenario_type)
-            nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(args[lulc_uri])
-            nodata_out = -5.0
-            def map_carbon_pool(lulc):
-                if lulc == nodata:
-                    return nodata_out
-                return pools[lulc]['total']
-            dataset_out_uri = outfile_uri('tot_C', scenario_type)
-            outputs['tot_C_%s' % scenario_type] = dataset_out_uri
+            keys = sorted(numpy.array(carbon_pool_by_type_copy.keys()))
+            values = numpy.array([carbon_pool_by_type_copy[x] for x in keys])
 
-            pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args[lulc_uri])
-            # Create a raster that models total carbon storage per pixel.
-            try:
-                pygeoprocessing.geoprocessing.vectorize_datasets(
-                    [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
-                    gdal.GDT_Float32, nodata_out, pixel_size_out,
-                    "intersection", dataset_to_align_index=0,
-                    process_pool=args['_process_pool'])
-            except KeyError:
-                raise MapCarbonPoolError('There was a KeyError when mapping '
-                    'land cover ids to carbon pools. This can happen when '
-                    'there is a land cover id that does not exist in the '
-                    'carbon pool data file.')
+            def _map_lulc_to_total_carbon(lulc_array):
+                """Convert a block of original values to the lookup values."""
+                unique = numpy.unique(lulc_array)
+                has_map = numpy.in1d(unique, keys)
+                if not all(has_map):
+                    raise ValueError(
+                        'There was not a value for at least the following'
+                        ' codes %s for this file %s.\nNodata value is:'
+                        ' %s' % (
+                            str(unique[~has_map]), args[lulc_key],
+                            str(nodata)))
+                index = numpy.digitize(
+                    lulc_array.ravel(), keys, right=True)
+                result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
+                result[:] = _CARBON_NODATA
+                valid_mask = lulc_array != nodata
+                result = values[index].reshape(lulc_array.shape)
+                # multipy density by area to get storage
+                result[valid_mask] *= pixel_size_out**2 / 10**4
+                return result
 
-            if do_uncertainty:
-                def map_carbon_pool_variance(lulc):
-                    if lulc == nodata:
-                        return nodata_out
-                    return pools[lulc]['variance']
-                variance_out_uri = outfile_uri(
-                    'variance_C', scenario_type, dirtype='intermediate')
-                outputs['variance_C_%s' % scenario_type] = variance_out_uri
+            storage_key = '%s_%s' % (pool_type, landcover_type)
+            pygeoprocessing.vectorize_datasets(
+                [args[lulc_key]], _map_lulc_to_total_carbon,
+                file_registry[storage_key], gdal.GDT_Float32, _CARBON_NODATA,
+                pixel_size_out, "intersection", dataset_to_align_index=0,
+                vectorize_op=False,
+                assert_datasets_projected=True,
+                datasets_are_pre_aligned=True)
 
-                # Create a raster that models variance in carbon storage per pixel.
-                pygeoprocessing.geoprocessing.vectorize_datasets(
-                    [args[lulc_uri]], map_carbon_pool_variance, variance_out_uri,
-                    gdal.GDT_Float32, nodata_out, pixel_size_out,
-                    "intersection", dataset_to_align_index=0,
-                    process_pool=args['_process_pool'])
-
-            #Add calculate the hwp storage, if it is passed as an input argument
-            hwp_key = 'hwp_%s_shape_uri' % scenario_type
-            if hwp_key in args:
-                LOGGER.info('Computing HWP storage.')
-                c_hwp_uri = outfile_uri('c_hwp', scenario_type, dirtype='intermediate')
-                bio_hwp_uri = outfile_uri('bio_hwp', scenario_type, dirtype='intermediate')
-                vol_hwp_uri = outfile_uri('vol_hwp', scenario_type, dirtype='intermediate')
-
-                if scenario_type == 'cur':
-                    _calculate_hwp_storage_cur(
-                        args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
-                        vol_hwp_uri, args['lulc_%s_year' % scenario_type])
-                    temp_c_cur_uri = pygeoprocessing.geoprocessing.temporary_filename()
-                    shutil.copyfile(outputs['tot_C_cur'], temp_c_cur_uri)
-
-                    hwp_cur_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(c_hwp_uri)
-                    def add_op(tmp_c_cur, hwp_cur):
-                        """add two rasters and in nodata in the second, return
-                            the first"""
-                        return numpy.where(
-                            hwp_cur == hwp_cur_nodata, tmp_c_cur,
-                            tmp_c_cur + hwp_cur)
-
-                    pygeoprocessing.geoprocessing.vectorize_datasets(
-                        [temp_c_cur_uri, c_hwp_uri], add_op,
-                        outputs['tot_C_cur'], gdal.GDT_Float32, nodata_out,
-                        pixel_size_out, "intersection",
-                        dataset_to_align_index=0, vectorize_op=False)
-
-                elif scenario_type == 'fut':
-                    hwp_shapes = {}
-
-                    if 'hwp_cur_shape_uri' in args:
-                        hwp_shapes['cur'] = args['hwp_cur_shape_uri']
-                    if 'hwp_fut_shape_uri' in args:
-                        hwp_shapes['fut'] = args['hwp_fut_shape_uri']
-
-                    _calculate_hwp_storage_fut(
-                        hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
-                        vol_hwp_uri, args['lulc_cur_year'],
-                        args['lulc_fut_year'], args['_process_pool'])
-
-                    temp_c_fut_uri = pygeoprocessing.geoprocessing.temporary_filename()
-                    shutil.copyfile(outputs['tot_C_fut'], temp_c_fut_uri)
-
-                    hwp_fut_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(c_hwp_uri)
-                    def add_op(tmp_c_fut, hwp_fut):
-                        return numpy.where(
-                            hwp_fut == hwp_fut_nodata, tmp_c_fut,
-                            tmp_c_fut + hwp_fut)
-
-                    pygeoprocessing.geoprocessing.vectorize_datasets(
-                        [temp_c_fut_uri, c_hwp_uri], add_op,
-                        outputs['tot_C_fut'], gdal.GDT_Float32, nodata_out,
-                        pixel_size_out, "intersection",
-                        dataset_to_align_index=0,
-                        vectorize_op=False)
-
+    return
 
     for fut_type in ['fut', 'redd']:
         fut_type_lulc_uri = 'lulc_%s_uri' % fut_type
@@ -768,15 +735,7 @@ def _carbon_pool_in_hwp_from_parcel(carbonPerCut, start_years, timeSpan, harvest
     return carbonSum * carbonPerCut
 
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-LOGGER = logging.getLogger('natcap.invest.carbon.combined')
-
-def execute(args):
-    execute_30(**args)
-
-def execute_30(**args):
+def execute_storage_seq(args):
     """Carbon Storage and Sequestration.
 
     This can include the biophysical model, the valuation model, or both.
@@ -858,10 +817,6 @@ def execute_30(**args):
         outputs (dictionary): contains names of all output files
 
     """
-    if not args['do_biophysical'] and not args['do_valuation']:
-        raise Exception(
-            'Neither biophysical nor valuation model selected. '
-            'Nothing left to do. Exiting.')
 
     if args['do_biophysical']:
         LOGGER.info('Executing biophysical model.')
@@ -886,11 +841,6 @@ def execute_30(**args):
         valuation_outputs = None
 
     _create_HTML_report(args, biophysical_outputs, valuation_outputs)
-
-
-# Copy the execute_30() docstring to execute()
-execute.__doc__ = execute_30.__doc__
-
 
 def _package_valuation_args(args, biophysical_outputs):
     if not biophysical_outputs:
@@ -1347,10 +1297,7 @@ def sum_pixel_values_from_uri(uri):
     return total_sum
 
 
-def execute(args):
-    return execute_30(**args)
-
-def execute_30(**args):
+def execute_valuation(args):
     """This function calculates carbon sequestration valuation.
 
         args - a python dictionary with at the following *required* entries:

@@ -1,8 +1,8 @@
 {
   "id": "window",
-  "label": "InVEST Carbon Model (Biophysical and Valuation)",
+  "label": "InVEST Carbon Model",
   "targetScript": "natcap.invest.carbon",
-  "modelName": "carbon_combined",
+  "modelName": "carbon",
   "localDocURI": "../documentation/carbonstorage.html",
   "height": 650,
   "width": 700,
@@ -35,7 +35,7 @@
         },
         {
           "id": "cur_lulc_raster",
-          "args_id": "lulc_cur_uri",
+          "args_id": "lulc_cur_path",
           "type": "file",
           "label": "Current Land Use/Land Cover (Raster)",
           "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
@@ -46,11 +46,11 @@
           "helpText": "A GDAL-supported raster representing the land-cover of the current scenario."
         },
         {
-          "id": "carbon_pools",
+          "id": "carbon_pools_path",
           "type": "file",
           "label": "Carbon Pools",
           "defaultValue": "../Carbon/Input/carbon_pools_samp.csv",
-          "args_id": "carbon_pools_uri",
+          "args_id": "carbon_pools_path",
           "required": true,
           "validateAs": {
             "type": "CSV",
@@ -89,7 +89,7 @@
           "id": "fut_lulc_raster",
           "type": "file",
           "label": "Future Landcover (Raster)",
-          "args_id": "lulc_fut_uri",
+          "args_id": "lulc_fut_path",
           "required": false,
           "enabledBy": "calc_sequestration",
           "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
@@ -127,7 +127,7 @@
           "id": "redd_lulc_raster",
           "type": "file",
           "label": "REDD Policy (Raster)",
-          "args_id": "lulc_redd_uri",
+          "args_id": "lulc_redd_path",
           "required": false,
           "enabledBy": "redd",
           "defaultValue": "../Carbon/Input/lulc_samp_redd.tif",
