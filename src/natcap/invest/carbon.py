@@ -40,6 +40,9 @@ _INTERMEDIATE_BASE_FILES = {
     }
 
 _TMP_BASE_FILES = {
+    'aligned_lulc_cur_path': 'aligned_lulc_cur.tif',
+    'aligned_lulc_fut_path': 'aligned_lulc_fut.tif',
+    'aligned_lulc_redd_path': 'aligned_lulc_redd.tif',
     }
 
 _CARBON_NODATA = -1.0
@@ -73,24 +76,17 @@ def execute(args):
         args['carbon_pools_uncertain_uri'] - as above, but has probability
             distribution data for each lulc type rather than point estimates.
             (required if 'do_uncertainty' is true)
-        args['confidence_threshold'] - a number between 0 and 100 that indicates
-            the minimum threshold for which we should highlight regions in the output
-            raster. (required if 'do_uncertainty' is True)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur
             used in HWP calculation (required if args contains a
             'hwp_cur_shape_uri', or 'hwp_fut_shape_uri' key)
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
             used in HWP calculation (required if args contains a
             'hwp_fut_shape_uri' key)
-        args['lulc_redd_uri'] - is a uri to a GDAL raster dataset that represents
+        args['lulc_redd_path'] (string): a path to a raster that represents
             land cover data for the REDD policy scenario (optional).
-        args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood
-            calculation (optional, include if calculating current lulc hwp)
-        args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood
-            calculation (optional, include if calculating future lulc hwp)
-
-        returns a dict with the names of all output files."""
-
+    Returns:
+        None.
+    """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
@@ -106,33 +102,41 @@ def execute(args):
     carbon_pool_table = pygeoprocessing.get_lookup_from_table(
         args['carbon_pools_path'], 'lucode')
 
-    LOGGER.debug(carbon_pool_table)
-
     cell_sizes = []
-    for landcover_type in ['cur', 'fut', 'redd']:
-        lulc_key = "lulc_%s_path" % (landcover_type)
+    valid_lulc_keys = []
+    for scenario_type in ['cur', 'fut', 'redd']:
+        lulc_key = "lulc_%s_path" % (scenario_type)
         if lulc_key in args and len(args[lulc_key]) > 0:
             cell_sizes.append(
                 pygeoprocessing.geoprocessing.get_cell_size_from_uri(
                     args[lulc_key]))
+            valid_lulc_keys.append(lulc_key)
     pixel_size_out = min(cell_sizes)
 
-    # Map total carbon for each scenario.
+    # align the input datasets
+    pygeoprocessing.align_dataset_list(
+        [args[_] for _ in valid_lulc_keys],
+        [file_registry['aligned_' + _] for _ in valid_lulc_keys],
+        ['nearest'] * len(valid_lulc_keys),
+        pixel_size_out, 'intersection', 0, assert_datasets_projected=True)
+
     keys = None
     nodata = None
     values = None
+    aligned_lulc_key = None
+    pool_storage_path_lookup = collections.defaultdict(list)
     for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
         carbon_pool_by_type = dict([
             (lucode, float(carbon_pool_table[lucode][pool_type]))
             for lucode in carbon_pool_table])
-        # possible that nodata value is not defined, so test for None first
-        # otherwise if nodata not predefined, remap it into the dictionary
-        for landcover_type in ['cur', 'fut', 'redd']:
-            lulc_key = 'lulc_%s_path' % landcover_type
+        for scenario_type in ['cur', 'fut', 'redd']:
+            lulc_key = 'lulc_%s_path' % scenario_type
             LOGGER.info('Mapping carbon for %s scenario.', lulc_key)
             if lulc_key not in args or len(args[lulc_key]) == 0:
                 continue
-            nodata = pygeoprocessing.get_nodata_from_uri(args[lulc_key])
+            aligned_lulc_key = 'aligned_' + lulc_key
+            nodata = pygeoprocessing.get_nodata_from_uri(
+                file_registry[aligned_lulc_key])
             carbon_pool_by_type_copy = carbon_pool_by_type.copy()
             carbon_pool_by_type_copy[nodata] = _CARBON_NODATA
 
@@ -148,8 +152,8 @@ def execute(args):
                         'There was not a value for at least the following'
                         ' codes %s for this file %s.\nNodata value is:'
                         ' %s' % (
-                            str(unique[~has_map]), args[lulc_key],
-                            str(nodata)))
+                            str(unique[~has_map]),
+                            file_registry[aligned_lulc_key], str(nodata)))
                 index = numpy.digitize(
                     lulc_array.ravel(), keys, right=True)
                 result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
@@ -160,14 +164,36 @@ def execute(args):
                 result[valid_mask] *= pixel_size_out**2 / 10**4
                 return result
 
-            storage_key = '%s_%s' % (pool_type, landcover_type)
+            storage_key = '%s_%s' % (pool_type, scenario_type)
             pygeoprocessing.vectorize_datasets(
-                [args[lulc_key]], _map_lulc_to_total_carbon,
+                [file_registry[aligned_lulc_key]], _map_lulc_to_total_carbon,
                 file_registry[storage_key], gdal.GDT_Float32, _CARBON_NODATA,
                 pixel_size_out, "intersection", dataset_to_align_index=0,
                 vectorize_op=False,
                 assert_datasets_projected=True,
                 datasets_are_pre_aligned=True)
+            pool_storage_path_lookup[scenario_type].append(
+                file_registry[storage_key])
+
+    for scenario_type, storage_paths in pool_storage_path_lookup.iteritems():
+        LOGGER.info(
+            "Calculate total carbon storage for %s", scenario_type)
+
+        def _sum_op(*storage_arrays):
+            valid_mask = reduce(
+                lambda x, y: x & y, [
+                    _ != _CARBON_NODATA for _ in storage_arrays])
+            result = numpy.empty(storage_arrays[0].shape)
+            result[:] = _CARBON_NODATA
+            result[valid_mask] = numpy.sum([
+                _[valid_mask] for _ in storage_arrays], axis=0)
+            return result
+
+        pygeoprocessing.vectorize_datasets(
+            storage_paths, _sum_op, file_registry['tot_c_' + scenario_type],
+            gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
+            dataset_to_align_index=0, vectorize_op=False,
+            datasets_are_pre_aligned=True)
 
     return
 
