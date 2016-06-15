@@ -131,9 +131,9 @@ def execute(args):
             for lucode in carbon_pool_table])
         for scenario_type in ['cur', 'fut', 'redd']:
             lulc_key = 'lulc_%s_path' % scenario_type
-            LOGGER.info('Mapping carbon for %s scenario.', lulc_key)
             if lulc_key not in args or len(args[lulc_key]) == 0:
                 continue
+            LOGGER.info('Mapping carbon for %s scenario.', lulc_key)
             aligned_lulc_key = 'aligned_' + lulc_key
             nodata = pygeoprocessing.get_nodata_from_uri(
                 file_registry[aligned_lulc_key])
