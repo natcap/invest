@@ -23,8 +23,10 @@ _OUTPUT_BASE_FILES = {
     'tot_c_cur': 'tot_c_cur.tif',
     'tot_c_fut': 'tot_c_fut.tif',
     'tot_c_redd': 'tot_c_redd.tif',
-    'sequest_cur_fut': 'sequest_cur_fut.tif',
-    'sequest_cur_redd': 'sequest_cur_redd.tif'
+    'delta_cur_fut': 'delta_cur_fut.tif',
+    'delta_cur_redd': 'delta_cur_redd.tif',
+    'npv_fut': 'npv_fut.tif',
+    'npv_redd': 'npv_redd.tif',
     }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -49,7 +51,7 @@ _TMP_BASE_FILES = {
     }
 
 _CARBON_NODATA = -1.0
-
+_VALUE_NODATA = numpy.finfo(numpy.float32).min
 
 def execute(args):
     """InVEST Carbon Model.
@@ -87,6 +89,20 @@ def execute(args):
             'hwp_fut_shape_uri' key)
         args['lulc_redd_path'] (string): a path to a raster that represents
             land cover data for the REDD policy scenario (optional).
+        args['do_valuation'] (bool): if true then run the valuation model on
+            available outputs.  At a minimum will run on carbon stocks, if
+            sequestration with a future scenario is done and/or a REDD
+            scenario calculate NPV for either and report in final HTML
+            document.
+        args['price_per_metric_ton_of_c'] (float): Is the present value of
+            carbon per metric ton. Used if `args['do_valuation']` is present
+            and True.
+        args['discount_rate'] (float): Discount rate used if NPV calculations
+            are required.  Used if `args['do_valuation']` is  present and
+            True.
+        args['rate_change'] (float): Annual rate of change in price of carbon
+            as a percentage.  Used if `args['do_valuation']` is  present and
+            True.
     Returns:
         None.
     """
@@ -220,10 +236,41 @@ def execute(args):
             return result
 
         pygeoprocessing.vectorize_datasets(
-            storage_paths, _diff_op, file_registry['sequest_cur_' + fut_type],
+            storage_paths, _diff_op, file_registry['delta_cur_' + fut_type],
             gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
             dataset_to_align_index=0, vectorize_op=False,
             datasets_are_pre_aligned=True)
+
+    if 'do_valuation' in args and args['do_valuation']:
+        LOGGER.info('Constructing valuation formula.')
+        n_years = int(args['lulc_fut_year']) - int(args['lulc_cur_year']) - 1
+        ratio = (
+            1.0 / ((1 + float(args['discount_rate']) / 100.0) *
+                   (1 + float(args['rate_change']) / 100.0)))
+        valuation_constant = (
+            float(args['price_per_metric_ton_of_c']) /
+            (float(args['lulc_fut_year']) - float(args['lulc_cur_year'])) *
+            (1.0 - ratio ** (n_years + 1)) / (1.0 - ratio))
+
+        def _npv_value_op(carbon_array):
+            """Calcualte the NPV given carbon storage or loss values."""
+            result = numpy.empty(carbon_array.shape, dtype=numpy.float32)
+            result[:] = _VALUE_NODATA
+            valid_mask = carbon_array != _CARBON_NODATA
+            result[valid_mask] = carbon_array[valid_mask] * valuation_constant
+            return result
+
+        for scenario_type in ['fut', 'redd']:
+            if scenario_type not in valid_scenarios:
+                continue
+            LOGGER.info('Calculating NPV for scenario %s', scenario_type)
+
+            pygeoprocessing.geoprocessing.vectorize_datasets(
+                [file_registry['delta_cur_%s' % scenario_type]],
+                _npv_value_op, file_registry['npv_%s' % scenario_type],
+                gdal.GDT_Float32, _VALUE_NODATA, pixel_size_out,
+                "intersection", dataset_to_align_index=0, vectorize_op=False,
+                datasets_are_pre_aligned=True)
 
 
 def _compute_carbon_pools(args):

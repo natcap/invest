@@ -153,36 +153,22 @@
           "type": "list",
           "elements": [
             {
-              "id": "carbon_price_units",
-              "args_id": "carbon_price_units",
-              "type": "dropdown",
-              "label": "Price in Terms of Metric Tons of",
-              "options": [
-                "Carbon (C)",
-                "Carbon Dioxide (CO2)"
-              ],
-              "defaultValue": 0,
-              "required": true,
-              "helpText": "The units for the price per unit of carbon type."
-            },
-            {
-              "id": "value",
-              "args_id": "V",
+              "id": "price_per_metric_ton_of_c",
+              "args_id": "price_per_metric_ton_of_c",
               "type": "text",
               "width": 70,
-              "label": "Value of Carbon (Price/Metric Ton)",
+              "label": "Price/Metric ton of carbon",
               "required": true,
               "dataType": "float",
               "validText": "[0-9]+(\\.[0-9][0-9])?",
               "defaultValue": "43.00",
               "validateAs": {
                 "type": "number"
-              },
-              "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units."
+              }
             },
             {
               "id": "discount_rate",
-              "args_id": "r",
+              "args_id": "discount_rate",
               "type": "text",
               "width": 70,
               "label": "Market Discount in Price of Carbon (%)",
@@ -193,11 +179,12 @@
               "validateAs": {
                 "type": "number"
               },
-              "helpText": "The discount rate as an integer percent."
+              "enabledBy": "calc_sequestration",
+              "helpText": "The discount rate as a floating point percent."
             },
             {
               "id": "rate_change",
-              "args_id": "c",
+              "args_id": "rate_change",
               "type": "text",
               "width": 70,
               "label": "Annual Rate of Change in Price of Carbon (%)",
@@ -208,7 +195,8 @@
               "validateAs": {
                 "type": "number"
               },
-              "helpText": "The integer percent increase of the price of carbon per year."
+              "enabledBy": "calc_sequestration",
+              "helpText": "The floating point percent increase of the price of carbon per year."
             }
           ]
         }
