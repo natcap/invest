@@ -147,6 +147,7 @@
       "collapsible": true,
       "args_id": "do_valuation",
       "label": "Run Valuation Model",
+      "enabledBy": "calc_sequestration",
       "elements": [
         {
           "id": "valuation_list",
@@ -162,6 +163,7 @@
               "dataType": "float",
               "validText": "[0-9]+(\\.[0-9][0-9])?",
               "defaultValue": "43.00",
+              "enabledBy": "calc_sequestration",
               "validateAs": {
                 "type": "number"
               }
