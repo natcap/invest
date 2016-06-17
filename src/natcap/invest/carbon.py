@@ -142,9 +142,7 @@ def execute(args):
         ['nearest'] * len(valid_lulc_keys),
         pixel_size_out, 'intersection', 0, assert_datasets_projected=True)
 
-    keys = None
-    nodata = None
-    values = None
+    LOGGER.info('Map all carbon pools to carbon storage rasters.')
     aligned_lulc_key = None
     pool_storage_path_lookup = collections.defaultdict(list)
     summary_stats = []  # use to aggregate storage, value, and more
@@ -152,72 +150,28 @@ def execute(args):
         carbon_pool_by_type = dict([
             (lucode, float(carbon_pool_table[lucode][pool_type]))
             for lucode in carbon_pool_table])
-        for scenario_type in ['cur', 'fut', 'redd']:
-            lulc_key = 'lulc_%s_path' % scenario_type
-            if lulc_key not in args or len(args[lulc_key]) == 0:
-                continue
-            LOGGER.info('Mapping carbon for %s scenario.', lulc_key)
-            aligned_lulc_key = 'aligned_' + lulc_key
-            nodata = pygeoprocessing.get_nodata_from_uri(
-                file_registry[aligned_lulc_key])
-            carbon_pool_by_type_copy = carbon_pool_by_type.copy()
-            carbon_pool_by_type_copy[nodata] = _CARBON_NODATA
-
-            keys = sorted(numpy.array(carbon_pool_by_type_copy.keys()))
-            values = numpy.array([carbon_pool_by_type_copy[x] for x in keys])
-
-            def _map_lulc_to_total_carbon(lulc_array):
-                """Convert a block of original values to the lookup values."""
-                unique = numpy.unique(lulc_array)
-                has_map = numpy.in1d(unique, keys)
-                if not all(has_map):
-                    raise ValueError(
-                        'There was not a value for at least the following'
-                        ' codes %s for this file %s.\nNodata value is:'
-                        ' %s' % (
-                            str(unique[~has_map]),
-                            file_registry[aligned_lulc_key], str(nodata)))
-                index = numpy.digitize(
-                    lulc_array.ravel(), keys, right=True)
-                result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-                result[:] = _CARBON_NODATA
-                valid_mask = lulc_array != nodata
-                result = values[index].reshape(lulc_array.shape)
-                # multipy density by area to get storage
-                result[valid_mask] *= pixel_size_out**2 / 10**4
-                return result
-
+        for scenario_type in valid_scenarios:
+            aligned_lulc_key = 'aligned_lulc_%s_path' % scenario_type
             storage_key = '%s_%s' % (pool_type, scenario_type)
-            pygeoprocessing.vectorize_datasets(
-                [file_registry[aligned_lulc_key]], _map_lulc_to_total_carbon,
-                file_registry[storage_key], gdal.GDT_Float32, _CARBON_NODATA,
-                pixel_size_out, "intersection", dataset_to_align_index=0,
-                vectorize_op=False,
-                assert_datasets_projected=True,
-                datasets_are_pre_aligned=True)
+            LOGGER.info(
+                "Mapping carbon from '%s' to '%s' scenario.",
+                aligned_lulc_key, storage_key)
+            _generate_carbon_map(
+                file_registry[aligned_lulc_key], carbon_pool_by_type,
+                file_registry[storage_key])
+            # store the pool storage path so they can be easily added later
             pool_storage_path_lookup[scenario_type].append(
                 file_registry[storage_key])
 
-    for scenario_type, storage_paths in pool_storage_path_lookup.iteritems():
-        LOGGER.info(
-            "Calculate total carbon storage for '%s'", scenario_type)
-
-        def _sum_op(*storage_arrays):
-            valid_mask = reduce(
-                lambda x, y: x & y, [
-                    _ != _CARBON_NODATA for _ in storage_arrays])
-            result = numpy.empty(storage_arrays[0].shape)
-            result[:] = _CARBON_NODATA
-            result[valid_mask] = numpy.sum([
-                _[valid_mask] for _ in storage_arrays], axis=0)
-            return result
-
+    # Sum the individual carbon storage pool paths per scenario
+    for scenario_type, storage_path_list in (
+            pool_storage_path_lookup.iteritems()):
         output_key = 'tot_c_' + scenario_type
-        pygeoprocessing.vectorize_datasets(
-            storage_paths, _sum_op, file_registry[output_key],
-            gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
-            dataset_to_align_index=0, vectorize_op=False,
-            datasets_are_pre_aligned=True)
+        LOGGER.info(
+            "Calculate carbon storage for '%s'", output_key)
+        _sum_rasters(storage_path_list, file_registry[output_key])
+
+        # Tuple below is (sort_priority, description, value, unit, path)
         summary_stats.append((
             0, "Total %s" % scenario_type,
             _accumulate_totals(file_registry[output_key]), 'Mg of C',
@@ -227,27 +181,13 @@ def execute(args):
     for fut_type in ['fut', 'redd']:
         if fut_type not in valid_scenarios:
             continue
-        LOGGER.info("Calculate sequestration scenario '%s'", fut_type)
-        storage_paths = [
-            file_registry['tot_c_cur'], file_registry['tot_c_' + fut_type]]
-
-        def _diff_op(base_array, future_array):
-            """Substract future_array from base_array and ignore nodata."""
-            result = numpy.empty(base_array.shape, dtype=numpy.float32)
-            result[:] = _CARBON_NODATA
-            valid_mask = (
-                (base_array != _CARBON_NODATA) &
-                (future_array != _CARBON_NODATA))
-            result[valid_mask] = (
-                future_array[valid_mask] - base_array[valid_mask])
-            return result
-
         output_key = 'delta_cur_' + fut_type
-        pygeoprocessing.vectorize_datasets(
-            storage_paths, _diff_op, file_registry[output_key],
-            gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
-            dataset_to_align_index=0, vectorize_op=False,
-            datasets_are_pre_aligned=True)
+        LOGGER.info("Calculate sequestration scenario '%s'", output_key)
+        storage_path_list = [
+            file_registry['tot_c_cur'], file_registry['tot_c_' + fut_type]]
+        _diff_rasters(storage_path_list, file_registry[output_key])
+
+        # Tuple below is (sort_priority, description, value, unit, path)
         summary_stats.append((
             1, "Change in C for %s" % fut_type,
             _accumulate_totals(file_registry[output_key]), 'Mg of C',
@@ -255,71 +195,27 @@ def execute(args):
 
     if 'do_valuation' in args and args['do_valuation']:
         LOGGER.info('Constructing valuation formula.')
-        n_years = int(args['lulc_fut_year']) - int(args['lulc_cur_year']) - 1
-        ratio = (
-            1.0 / ((1 + float(args['discount_rate']) / 100.0) *
-                   (1 + float(args['rate_change']) / 100.0)))
-        valuation_constant = (
-            float(args['price_per_metric_ton_of_c']) /
-            (float(args['lulc_fut_year']) - float(args['lulc_cur_year'])) *
-            (1.0 - ratio ** (n_years + 1)) / (1.0 - ratio))
-
-        def _npv_value_op(carbon_array):
-            """Calcualte the NPV given carbon storage or loss values."""
-            result = numpy.empty(carbon_array.shape, dtype=numpy.float32)
-            result[:] = _VALUE_NODATA
-            valid_mask = carbon_array != _CARBON_NODATA
-            result[valid_mask] = carbon_array[valid_mask] * valuation_constant
-            return result
+        valuation_constant = _calculate_valuation_constant(
+            int(args['lulc_cur_year']), int(args['lulc_fut_year']),
+            float(args['discount_rate']), float(args['rate_change']),
+            float(args['price_per_metric_ton_of_c']))
 
         for scenario_type in ['fut', 'redd']:
             if scenario_type not in valid_scenarios:
                 continue
-            LOGGER.info('Calculating NPV for scenario %s', scenario_type)
-
             output_key = 'npv_%s' % scenario_type
-            pygeoprocessing.geoprocessing.vectorize_datasets(
-                [file_registry['delta_cur_%s' % scenario_type]],
-                _npv_value_op, file_registry[output_key],
-                gdal.GDT_Float32, _VALUE_NODATA, pixel_size_out,
-                "intersection", dataset_to_align_index=0, vectorize_op=False,
-                datasets_are_pre_aligned=True)
+            LOGGER.info("Calculating NPV for scenario '%s'", output_key)
+            _calculate_npv(
+                file_registry['delta_cur_%s' % scenario_type],
+                valuation_constant, file_registry[output_key])
+
+            # Tuple below is (sort_priority, description, value, unit, path)
             summary_stats.append((
                 2, "Net present value from cur to %s" % scenario_type,
                 _accumulate_totals(file_registry[output_key]),
                 "currency units", file_registry[output_key]))
 
-    with open(file_registry['html_report'], 'w') as report_doc:
-        header = (
-            '<!DOCTYPE html><html><head><title>Carbon Results</title><style t'
-            'ype="text/css">body { background-color: #EFECCA; color: #002F2F '
-            '} h1 { text-align: center } h1, h2, h3, h4, strong, th { color: '
-            '#046380; } h2 { border-bottom: 1px solid #A7A37E; } table { bord'
-            'er: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E'
-            '6E2AF; } td, th { margin-left: 0px; margin-right: 0px; padding-l'
-            'eft: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: '
-            '2px; text-align:left; } td { border-top: 5px solid #EFECCA; } im'
-            'g { margin: 20px; }</style></head><body><h1>InVEST Carbon Model '
-            'Results</h1><p>This document summarizes the results from running'
-            ' the InVEST carbon model with the following data.</p>')
-        report_doc.write(header)
-        report_doc.write('<p>Run at %s</p>' % (
-            time.strftime("%Y-%m-%d %H:%M")))
-        report_doc.write('<table><tr><th>arg id</th><th>arg value</th></tr>')
-        for key, value in args.iteritems():
-            report_doc.write('<tr><td>%s</td><td>%s</td></tr>' % (key, value))
-        report_doc.write('</table>')
-
-        report_doc.write('<h3>Aggregate Results</h3>')
-        report_doc.write(
-            '<table><tr><th>Description</th><th>Value</th><th>Units</th><th>R'
-            'aw File</th></tr>')
-        for _, result_description, units, value, raw_file_path in sorted(
-                summary_stats):
-            report_doc.write(
-                '<tr><td>%s</td><td>%.2f</td><td>%s</td><td>%s</td></tr>' % (
-                    result_description, units, value, raw_file_path))
-        report_doc.write('</body></html>')
+    _generate_report(summary_stats, args, file_registry['html_report'])
 
     for tmp_filename_key in _TMP_BASE_FILES:
         try:
@@ -337,3 +233,195 @@ def _accumulate_totals(raster_path):
     for _, block in pygeoprocessing.iterblocks(raster_path):
         raster_sum += numpy.sum(block[block != nodata])
     return raster_sum
+
+
+def _generate_carbon_map(
+        lulc_path, carbon_pool_by_type, out_carbon_stock_path):
+    """Generate carbon stock raster by mapping LULC values to carbon pools.
+
+    Parameters:
+        lulc_path (string): landcover raster with integer pixels.
+        out_carbon_stock_path (string): path to output raster that will have
+            pixels with carbon storage values in them with units of Mg*C
+        carbon_pool_by_type (dict): a dictionary that maps landcover values
+            to carbon storage densities per area (Mg C/Ha).
+
+    Returns:
+        None.
+    """
+    nodata = pygeoprocessing.get_nodata_from_uri(lulc_path)
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(lulc_path)
+    carbon_pool_by_type_copy = carbon_pool_by_type.copy()
+    carbon_pool_by_type_copy[nodata] = _CARBON_NODATA
+
+    keys = sorted(numpy.array(carbon_pool_by_type_copy.keys()))
+    values = numpy.array([carbon_pool_by_type_copy[x] for x in keys])
+
+    def _map_lulc_to_total_carbon(lulc_array):
+        """Convert a block of original values to the lookup values."""
+        unique = numpy.unique(lulc_array)
+        has_map = numpy.in1d(unique, keys)
+        if not all(has_map):
+            raise ValueError(
+                'There was not a value for at least the following'
+                ' codes %s for this file %s.\nNodata value is:'
+                ' %s' % (str(unique[~has_map]), lulc_path, str(nodata)))
+        index = numpy.digitize(lulc_array.ravel(), keys, right=True)
+        result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
+        result[:] = _CARBON_NODATA
+        valid_mask = lulc_array != nodata
+        result = values[index].reshape(lulc_array.shape)
+        # multipy density by area to get storage
+        result[valid_mask] *= pixel_size_out**2 / 10**4
+        return result
+
+    pygeoprocessing.vectorize_datasets(
+        [lulc_path], _map_lulc_to_total_carbon, out_carbon_stock_path,
+        gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
+        vectorize_op=False, assert_datasets_projected=True,
+        datasets_are_pre_aligned=True)
+
+
+def _sum_rasters(storage_path_list, output_sum_path):
+    """Sum all the rasters in `storage_path_list` to `output_sum_path`."""
+    def _sum_op(*storage_arrays):
+        """Sum all the arrays or nodata a pixel stack if one exists."""
+        valid_mask = reduce(
+            lambda x, y: x & y, [
+                _ != _CARBON_NODATA for _ in storage_arrays])
+        result = numpy.empty(storage_arrays[0].shape)
+        result[:] = _CARBON_NODATA
+        result[valid_mask] = numpy.sum([
+            _[valid_mask] for _ in storage_arrays], axis=0)
+        return result
+
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(
+        storage_path_list[0])
+    pygeoprocessing.vectorize_datasets(
+        storage_path_list, _sum_op, output_sum_path,
+        gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
+        vectorize_op=False, datasets_are_pre_aligned=True)
+
+
+def _diff_rasters(storage_path_list, output_diff_path):
+    """Subtract rasters in `storage_path_list` to `output_sum_path`."""
+    def _diff_op(base_array, future_array):
+        """Subtract future_array from base_array and ignore nodata."""
+        result = numpy.empty(base_array.shape, dtype=numpy.float32)
+        result[:] = _CARBON_NODATA
+        valid_mask = (
+            (base_array != _CARBON_NODATA) &
+            (future_array != _CARBON_NODATA))
+        result[valid_mask] = (
+            future_array[valid_mask] - base_array[valid_mask])
+        return result
+
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(
+        storage_path_list[0])
+    pygeoprocessing.vectorize_datasets(
+        storage_path_list, _diff_op, output_diff_path,
+        gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
+        vectorize_op=False, datasets_are_pre_aligned=True)
+
+
+def _calculate_valuation_constant(
+        lulc_cur_year, lulc_fut_year, discount_rate, rate_change,
+        price_per_metric_ton_of_c):
+    """Calculate a net present valuation constant to multiply carbon storage.
+
+    Parameters:
+        lulc_cur_year (int): calendar year in present
+        lulc_fut_year (int): calendar year in future
+        discount_rate (float): annual discount rate as a percentage
+        rate_change (float): annual change in price of carbon as a percentage
+        price_per_metric_ton_of_c (float): currency amount of Mg of carbon
+
+    Returns:
+        a floating point number that can be used to multiply a delta carbon
+        storage value by to calculate NPV.
+    """
+    n_years = int(lulc_fut_year) - int(lulc_cur_year) - 1
+    ratio = (
+        1.0 / ((1 + float(discount_rate) / 100.0) *
+               (1 + float(rate_change) / 100.0)))
+    valuation_constant = (
+        float(price_per_metric_ton_of_c) /
+        (float(lulc_fut_year) - float(lulc_cur_year)) *
+        (1.0 - ratio ** (n_years + 1)) / (1.0 - ratio))
+    return valuation_constant
+
+
+def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
+    """Calculate net present value.
+
+    Parameters:
+        delta_carbon_path (string): path to change in carbon storage over
+            time.
+        valulation_constant (float): value to multiply each carbon storage
+            value by to calculate NPV.
+        npv_out_path (string): path to output net present value raster.
+    Returns:
+        None.
+    """
+    def _npv_value_op(carbon_array):
+        """Calculate the NPV given carbon storage or loss values."""
+        result = numpy.empty(carbon_array.shape, dtype=numpy.float32)
+        result[:] = _VALUE_NODATA
+        valid_mask = carbon_array != _CARBON_NODATA
+        result[valid_mask] = carbon_array[valid_mask] * valuation_constant
+        return result
+
+    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(delta_carbon_path)
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [delta_carbon_path], _npv_value_op, npv_out_path, gdal.GDT_Float32,
+        _VALUE_NODATA, pixel_size_out, "intersection",
+        vectorize_op=False, datasets_are_pre_aligned=True)
+
+
+def _generate_report(summary_stats, model_args, html_report_path):
+    """Generate a human readable HTML report of summary stats of model run.
+
+    Paramters:
+        summary_stats (list of tuple): a list of tuples of the form
+            (display_sort_priority, description, value, unit, file_path)
+        model_args (dict): InVEST argument dictionary.
+        html_report_path (string): path to output report file.
+    Returns:
+        None.
+    """
+    with open(html_report_path, 'w') as report_doc:
+        # Boilerplate header that defines style and intro header.
+        header = (
+            '<!DOCTYPE html><html><head><title>Carbon Results</title><style t'
+            'ype="text/css">body { background-color: #EFECCA; color: #002F2F '
+            '} h1 { text-align: center } h1, h2, h3, h4, strong, th { color: '
+            '#046380; } h2 { border-bottom: 1px solid #A7A37E; } table { bord'
+            'er: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E'
+            '6E2AF; } td, th { margin-left: 0px; margin-right: 0px; padding-l'
+            'eft: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: '
+            '2px; text-align:left; } td { border-top: 5px solid #EFECCA; } im'
+            'g { margin: 20px; }</style></head><body><h1>InVEST Carbon Model '
+            'Results</h1><p>This document summarizes the results from running'
+            ' the InVEST carbon model with the following data.</p>')
+
+        report_doc.write(header)
+        report_doc.write('<p>Report generated at %s</p>' % (
+            time.strftime("%Y-%m-%d %H:%M")))
+
+        # Report input arguments
+        report_doc.write('<table><tr><th>arg id</th><th>arg value</th></tr>')
+        for key, value in model_args.iteritems():
+            report_doc.write('<tr><td>%s</td><td>%s</td></tr>' % (key, value))
+        report_doc.write('</table>')
+
+        # Report aggregate results
+        report_doc.write('<h3>Aggregate Results</h3>')
+        report_doc.write(
+            '<table><tr><th>Description</th><th>Value</th><th>Units</th><th>R'
+            'aw File</th></tr>')
+        for _, result_description, units, value, raw_file_path in sorted(
+                summary_stats):
+            report_doc.write(
+                '<tr><td>%s</td><td>%.2f</td><td>%s</td><td>%s</td></tr>' % (
+                    result_description, units, value, raw_file_path))
+        report_doc.write('</body></html>')
