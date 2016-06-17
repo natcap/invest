@@ -399,10 +399,11 @@ def _generate_report(summary_stats, model_args, html_report_path):
             'er: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E'
             '6E2AF; } td, th { margin-left: 0px; margin-right: 0px; padding-l'
             'eft: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: '
-            '2px; text-align:left; } td { border-top: 5px solid #EFECCA; } im'
-            'g { margin: 20px; }</style></head><body><h1>InVEST Carbon Model '
-            'Results</h1><p>This document summarizes the results from running'
-            ' the InVEST carbon model with the following data.</p>')
+            '2px; text-align:left; } td { border-top: 5px solid #EFECCA; } .n'
+            'umber {text-align: right; font-family: monospace;} img { margin:'
+            ' 20px; }</style></head><body><h1>InVEST Carbon Model Results</h1'
+            '><p>This document summarizes the results from running the InVEST'
+            ' carbon model with the following data.</p>')
 
         report_doc.write(header)
         report_doc.write('<p>Report generated at %s</p>' % (
@@ -422,6 +423,7 @@ def _generate_report(summary_stats, model_args, html_report_path):
         for _, result_description, units, value, raw_file_path in sorted(
                 summary_stats):
             report_doc.write(
-                '<tr><td>%s</td><td>%.2f</td><td>%s</td><td>%s</td></tr>' % (
+                '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
+                '<td>%s</td></tr>' % (
                     result_description, units, value, raw_file_path))
         report_doc.write('</body></html>')
