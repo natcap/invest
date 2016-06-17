@@ -48,7 +48,9 @@ _TMP_BASE_FILES = {
     'aligned_lulc_redd_path': 'aligned_lulc_redd.tif',
     }
 
+# -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
+# use min float32 which is unlikely value to see in a NPV raster
 _VALUE_NODATA = numpy.finfo(numpy.float32).min
 
 
