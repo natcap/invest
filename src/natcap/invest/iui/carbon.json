@@ -49,7 +49,7 @@
           "id": "carbon_pools_path",
           "type": "file",
           "label": "Carbon Pools",
-          "defaultValue": "../Carbon/Input/carbon_pools_samp.csv",
+          "defaultValue": "../carbon/carbon_pools_samp.csv",
           "args_id": "carbon_pools_path",
           "required": true,
           "validateAs": {
@@ -130,7 +130,7 @@
           "args_id": "lulc_redd_path",
           "required": false,
           "enabledBy": "redd",
-          "defaultValue": "../Carbon/Input/lulc_samp_redd.tif",
+          "defaultValue": "../carbon/lulc_samp_redd.tif",
           "requiredIf": [
             "redd"
           ],
