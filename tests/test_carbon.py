@@ -33,8 +33,8 @@ class CarbonTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon(self):
-        """Carbon: regression testing the entire carbon model."""
+    def test_carbon_full(self):
+        """Carbon: regression testing all functionality."""
         from natcap.invest import carbon
         args = {
             u'price_per_metric_ton_of_c': 43.0,
@@ -61,6 +61,29 @@ class CarbonTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(REGRESSION_DATA, npv_filename),
                 os.path.join(self.workspace_dir, npv_filename), 1e-6)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_carbon_future_no_val(self):
+        """Carbon: regression testing future scenario with no valuation."""
+        from natcap.invest import carbon
+        args = {
+            u'carbon_pools_path': os.path.join(
+                SAMPLE_DATA, 'carbon/carbon_pools_samp.csv'),
+            u'do_valuation': False,
+            u'lulc_cur_path': os.path.join(
+                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
+            u'lulc_fut_path': os.path.join(
+                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
+            u'workspace_dir': self.workspace_dir,
+        }
+        carbon.execute(args)
+        CarbonTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'file_list_fut_only.txt'),
+            args['workspace_dir'])
+        pygeoprocessing.testing.assert_rasters_equal(
+            os.path.join(REGRESSION_DATA, 'delta_cur_fut.tif'),
+            os.path.join(self.workspace_dir, 'delta_cur_fut.tif'), 1e-6)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
