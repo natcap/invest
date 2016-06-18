@@ -37,21 +37,21 @@ class CarbonTests(unittest.TestCase):
         """Carbon: regression testing all functionality."""
         from natcap.invest import carbon
         args = {
-            u'price_per_metric_ton_of_c': 43.0,
-            u'rate_change': 2.8,
             u'carbon_pools_path': os.path.join(
                 SAMPLE_DATA, 'carbon/carbon_pools_samp.csv'),
-            u'do_valuation': True,
             u'lulc_cur_path': os.path.join(
                 SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
-            u'lulc_cur_year': 2016,
             u'lulc_fut_path': os.path.join(
                 SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
-            u'lulc_fut_year': 2030,
             u'lulc_redd_path': os.path.join(
                 SAMPLE_DATA, 'carbon/lulc_samp_redd.tif'),
-            u'discount_rate': -7.1,
             u'workspace_dir': self.workspace_dir,
+            u'do_valuation': True,
+            u'price_per_metric_ton_of_c': 43.0,
+            u'rate_change': 2.8,
+            u'lulc_cur_year': 2016,
+            u'lulc_fut_year': 2030,
+            u'discount_rate': -7.1,
         }
         carbon.execute(args)
         CarbonTests._test_same_files(
@@ -70,12 +70,17 @@ class CarbonTests(unittest.TestCase):
         args = {
             u'carbon_pools_path': os.path.join(
                 SAMPLE_DATA, 'carbon/carbon_pools_samp.csv'),
-            u'do_valuation': False,
             u'lulc_cur_path': os.path.join(
                 SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
             u'lulc_fut_path': os.path.join(
                 SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
             u'workspace_dir': self.workspace_dir,
+            u'do_valuation': True,
+            u'price_per_metric_ton_of_c': 43.0,
+            u'rate_change': 2.8,
+            u'lulc_cur_year': 2016,
+            u'lulc_fut_year': 2030,
+            u'discount_rate': -7.1,
         }
         carbon.execute(args)
         CarbonTests._test_same_files(
@@ -84,6 +89,24 @@ class CarbonTests(unittest.TestCase):
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'delta_cur_fut.tif'),
             os.path.join(self.workspace_dir, 'delta_cur_fut.tif'), 1e-6)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_carbon_missing_landcover_values(self):
+        """Carbon: testing expected exception on incomplete  table."""
+        from natcap.invest import carbon
+        args = {
+            u'carbon_pools_path': os.path.join(
+                REGRESSION_DATA, 'carbon_pools_missing_coverage.csv'),
+            u'lulc_cur_path': os.path.join(
+                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
+            u'lulc_fut_path': os.path.join(
+                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
+            u'workspace_dir': self.workspace_dir,
+            u'do_valuation': False,
+        }
+        with self.assertRaises(ValueError):
+            carbon.execute(args)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
