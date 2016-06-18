@@ -175,7 +175,7 @@
               "width": 70,
               "label": "Market Discount in Price of Carbon (%)",
               "required": true,
-              "dataType": "int",
+              "dataType": "float",
               "validText": "-?([0-9]+)?\\.[0-9]+",
               "defaultValue": "7",
               "enabledBy": "calc_sequestration",
