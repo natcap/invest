@@ -253,35 +253,16 @@ def _generate_carbon_map(
     """
     nodata = pygeoprocessing.get_nodata_from_uri(lulc_path)
     pixel_size_out = pygeoprocessing.get_cell_size_from_uri(lulc_path)
-    carbon_pool_by_type_copy = carbon_pool_by_type.copy()
-    carbon_pool_by_type_copy[nodata] = _CARBON_NODATA
+    carbon_stock_by_type = dict([
+        (lulcid, stock * pixel_size_out ** 2 / 10**4)
+        for lulcid, stock in carbon_pool_by_type.iteritems()])
 
-    keys = sorted(numpy.array(carbon_pool_by_type_copy.keys()))
-    values = numpy.array([carbon_pool_by_type_copy[x] for x in keys])
+    carbon_stock_by_type[nodata] = _CARBON_NODATA
 
-    def _map_lulc_to_total_carbon(lulc_array):
-        """Convert a block of original values to the lookup values."""
-        unique = numpy.unique(lulc_array)
-        has_map = numpy.in1d(unique, keys)
-        if not all(has_map):
-            raise ValueError(
-                'There was not a value for at least the following'
-                ' codes %s for this file %s.\nNodata value is:'
-                ' %s' % (str(unique[~has_map]), lulc_path, str(nodata)))
-        index = numpy.digitize(lulc_array.ravel(), keys, right=True)
-        result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-        result[:] = _CARBON_NODATA
-        valid_mask = lulc_array != nodata
-        result = values[index].reshape(lulc_array.shape)
-        # multipy density by area to get storage
-        result[valid_mask] *= pixel_size_out**2 / 10**4
-        return result
-
-    pygeoprocessing.vectorize_datasets(
-        [lulc_path], _map_lulc_to_total_carbon, out_carbon_stock_path,
-        gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
-        vectorize_op=False, assert_datasets_projected=True,
-        datasets_are_pre_aligned=True)
+    pygeoprocessing.reclassify_dataset_uri(
+        lulc_path, carbon_stock_by_type, out_carbon_stock_path,
+        gdal.GDT_Float32, _CARBON_NODATA, exception_flag='values_required',
+        assert_dataset_projected=True)
 
 
 def _sum_rasters(storage_path_list, output_sum_path):
