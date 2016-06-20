@@ -1,4 +1,4 @@
-"""InVEST Carbon Model."""
+"""Carbon Storage and Sequestration."""
 import collections
 import logging
 import os
