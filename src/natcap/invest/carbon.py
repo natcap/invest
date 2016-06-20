@@ -67,7 +67,7 @@ def execute(args):
     Parameters:
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files during calculation.
-        args['results_suffix'] - a string to append to any output file name.
+        args['results_suffix'] (string): appended to any output file name.
         args['lulc_cur_path'] (string): a path to a raster representing the
             current carbon stocks
         args['lulc_fut_path'] (string): a path to a raster representing future
@@ -79,17 +79,13 @@ def execute(args):
         args['carbon_pools_path'] (string): path to CSV or that indexes carbon
             storage density to lulc codes. (required if 'do_uncertainty' is
             false)
-        args['carbon_pools_uncertain_uri'] - as above, but has probability
-            distribution data for each lulc type rather than point estimates.
-            (required if 'do_uncertainty' is true)
-        args['lulc_cur_year'] - An integer representing the year of lulc_cur
-            used in HWP calculation (required if args contains a
-            'hwp_cur_shape_uri', or 'hwp_fut_shape_uri' key)
-        args['lulc_fut_year'] - An integer representing the year of  lulc_fut
-            used in HWP calculation (required if args contains a
-            'hwp_fut_shape_uri' key)
-        args['lulc_redd_path'] (string): a path to a raster that represents
-            land cover data for the REDD policy scenario (optional).
+        args['lulc_cur_year'] (int/string): an integer representing the year
+            of `args['lulc_cur_path']` used in valuation required if
+            `args['do_valuation']` is True.
+        args['lulc_fut_year'](int/string): an integer representing the year
+            of `args['lulc_fut_path']` used in valuation if it exists.
+            Required if  `args['do_valuation']` is True and
+            `args['lulc_fut_path']` is present and well defined.
         args['do_valuation'] (bool): if true then run the valuation model on
             available outputs.  At a minimum will run on carbon stocks, if
             sequestration with a future scenario is done and/or a REDD
