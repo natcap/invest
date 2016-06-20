@@ -69,7 +69,7 @@ def execute(args):
             write output and other temporary files during calculation.
         args['results_suffix'] (string): appended to any output file name.
         args['lulc_cur_path'] (string): a path to a raster representing the
-            current carbon stocks
+            current carbon stocks.
         args['lulc_fut_path'] (string): a path to a raster representing future
             landcover scenario.  Optional, but if present and well defined
             will trigger a sequestration calculation.
