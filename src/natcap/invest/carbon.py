@@ -219,7 +219,9 @@ def execute(args):
 
     for tmp_filename_key in _TMP_BASE_FILES:
         try:
-            os.remove(file_registry[tmp_filename_key])
+            tmp_filename = file_registry[tmp_filename_key]
+            if os.path.exists(tmp_filename):
+                os.remove(tmp_filename)
         except OSError as os_error:
             LOGGER.warn(
                 "Can't remove temporary file: %s\nOriginal Exception:\n%s",
