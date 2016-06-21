@@ -807,8 +807,16 @@ def _aggregate_recharge(
         aggregate_layer.ResetReading()
         for poly_index, poly_feat in enumerate(aggregate_layer):
             if op_type == 'mean':
-                value = (aggregate_stats.total[poly_index] /
-                         aggregate_stats.n_pixels[poly_index])
+                n_pixels = aggregate_stats.n_pixels[poly_index]
+                if n_pixels != 0:
+                    value = (aggregate_stats.total[poly_index] /
+                             aggregate_stats.n_pixels[poly_index])
+                else:
+                    LOGGER.warn(
+                        "no coverage for polygon %s", ', '.join(
+                            [str(poly_feat.GetField(_)) for _ in xrange(
+                                poly_feat.GetFieldCount())]))
+                    value = 0.0
             elif op_type == 'sum':
                 value = aggregate_stats.total[poly_index]
             poly_feat.SetField(aggregate_field_id, value)
