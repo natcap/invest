@@ -481,7 +481,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
-    !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 728
+    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
     !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
     !insertmacro downloadData "Timber (optional)" "Timber.zip" 644
     !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 0
