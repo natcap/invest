@@ -9,7 +9,6 @@ Unreleased Changes
 * Removed the deprecated Timber model (``natcap.invest.timber``).
 * Fixed an issue where seasonal water yield would raise a divide by zero error if a watershed polygon didn't cover a valid data region.  Now sets aggregation quantity to zero and reports a warning in the log.
 
-
 3.3.1 (2016-06-13)
 ------------------
 * Refactored API documentation for readability, organization by relevant topics, and to allow docs to build on `invest.readthedocs.io <http://invest.readthedocs.io>`_,
