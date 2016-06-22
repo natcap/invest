@@ -458,6 +458,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 117760
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 784
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 8116
+    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
     !insertmacro downloadData "Marine Water Quality (optional)" "MarineWaterQuality.zip" 13312
     !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3692
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
