@@ -220,7 +220,8 @@ def execute(args):
     result_zip_file_binary, workspace_id = (
         recmodel_server.calc_photo_user_days_in_aoi(
             zip_file_binary, date_range,
-            os.path.basename(file_registry['pud_results_path'])))
+            os.path.basename(file_registry['pud_results_path']),
+            file_suffix=file_suffix))
     LOGGER.info(
         'received result, took %f seconds, workspace_id: %s',
         time.time() - start_time, workspace_id)
