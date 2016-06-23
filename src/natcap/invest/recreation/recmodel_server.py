@@ -150,8 +150,7 @@ class RecModel(object):
 
     @_try_except_wrapper("exception in calc_photo_user_days_in_aoi")
     def calc_photo_user_days_in_aoi(
-            self, zip_file_binary, date_range, out_vector_filename,
-            file_suffix=''):
+            self, zip_file_binary, date_range, out_vector_filename):
         """Calculate annual average and per monthly average photo user days.
 
         Parameters:
@@ -160,8 +159,6 @@ class RecModel(object):
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date formatted as 'YYYY-MM-DD'
             out_vector_filename (string): base filename of output vector
-            file_suffix (string): parameter to append to filenames that are
-                generated in this workspace.
 
         Returns:
             zip_result: a bytestring of a zipped copy of `zip_file_binary`
@@ -179,11 +176,6 @@ class RecModel(object):
             if not os.path.exists(workspace_path):
                 os.makedirs(workspace_path)
                 break
-
-        if file_suffix != '' and not file_suffix.startswith('_'):
-            suffix = '_' + file_suffix
-        else:
-            suffix = ''
 
         # decompress zip
         out_zip_file_filename = os.path.join(
@@ -203,12 +195,12 @@ class RecModel(object):
         base_pud_aoi_path, monthly_table_path = (
             self._calc_aggregated_points_in_aoi(
                 aoi_path, workspace_path, numpy_date_range,
-                out_vector_filename), suffix)
+                out_vector_filename))
 
         # ZIP and stream the result back
         LOGGER.info('zipping result')
         aoi_pud_archive_path = os.path.join(
-            workspace_path, 'aoi_pud_result%s.zip' % suffix)
+            workspace_path, 'aoi_pud_result.zip')
         with zipfile.ZipFile(aoi_pud_archive_path, 'w') as myzip:
             for filename in glob.glob(
                     os.path.splitext(base_pud_aoi_path)[0] + '.*'):
@@ -222,8 +214,7 @@ class RecModel(object):
         return open(aoi_pud_archive_path, 'rb').read(), workspace_id
 
     def _calc_aggregated_points_in_aoi(
-            self, aoi_path, workspace_path, date_range, out_vector_filename,
-            file_suffix=''):
+            self, aoi_path, workspace_path, date_range, out_vector_filename):
         """Aggregate the PUD in the AOI.
 
         Parameters:
@@ -233,7 +224,6 @@ class RecModel(object):
             date_range (datetime 2-tuple): a tuple that contains the inclusive
                 start and end date
             out_vector_filename (string): base filename of output vector
-            file_suffix (string): string to append to newly created filenames
 
         Returns:
             a path to an ESRI shapefile copy of `aoi_path` updated with a
@@ -347,7 +337,7 @@ class RecModel(object):
         local_qt.flush()
 
         local_quad_tree_shapefile_name = os.path.join(
-            local_qt_cache_dir, 'local_qt%s.shp' % file_suffix)
+            local_qt_cache_dir, 'local_qt.shp')
 
         build_quadtree_shape(
             local_quad_tree_shapefile_name, local_qt, aoi_ref)
@@ -393,8 +383,7 @@ class RecModel(object):
         n_processes_alive = n_polytest_processes
         n_poly_tested = 0
 
-        monthly_table_path = os.path.join(
-            workspace_path, 'monthly_table%s.csv' % file_suffix)
+        monthly_table_path = os.path.join(workspace_path, 'monthly_table.csv')
         monthly_table = open(monthly_table_path, 'wb')
         date_range_year = [
             date.tolist().timetuple().tm_year for date in date_range]
