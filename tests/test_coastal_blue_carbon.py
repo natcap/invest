@@ -588,11 +588,7 @@ class TestModel(unittest.TestCase):
         netseq_output_raster = os.path.join(
             self.args['workspace_dir'],
             'outputs_core/total_net_carbon_sequestration_test.tif')
-        npv_output_raster = os.path.join(
-            self.args['workspace_dir'],
-            'outputs_core/net_present_value_test.tif')
         netseq_array = _read_array(netseq_output_raster)
-        npv_array = _read_array(npv_output_raster)
 
         # (Explanation for why netseq is 31.)
         # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2,  Year 2010: 2
@@ -601,8 +597,6 @@ class TestModel(unittest.TestCase):
         #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
         #       Total: 10.5 + 20.5 = 31.
         netseq_test = np.array([[np.nan, 31.], [31., 31.]])
-        npv_test = np.array(
-            [[np.nan, 60.27801514], [60.27801514, 60.27801514]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
@@ -610,8 +604,6 @@ class TestModel(unittest.TestCase):
         # in those inputs would propagate to this raster.
         np.testing.assert_array_almost_equal(
             netseq_array, netseq_test, decimal=4)
-        np.testing.assert_array_almost_equal(
-            npv_array, npv_test, decimal=4)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
