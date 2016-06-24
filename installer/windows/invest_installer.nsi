@@ -285,7 +285,6 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\Forest Carbon Edge Effect (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_forest_carbon_edge_effect.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\GLOBIO (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_globio.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Timber (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_timber.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Finfish Aquaculture (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_finfish_aquaculture.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Marine Water Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_marine_water_quality_biophysical.bat" "" "${INVEST_ICON}"
   CreateDirectory "${OVERLAP}"
@@ -479,11 +478,10 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     SectionEnd
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
+    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
-    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
     !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
-    !insertmacro downloadData "Timber (optional)" "Timber.zip" 644
     !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 0
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd
