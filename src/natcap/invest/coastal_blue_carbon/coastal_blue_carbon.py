@@ -718,13 +718,16 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
             NODATA_FLOAT,
             gdal.GDT_Float32)
     for raster_key in ['N_total_raster', 'NPV_raster']:
-        if file_registry[raster_key] is not None:
+        try:
             geoprocess.new_raster_from_base_uri(
                 template_raster,
                 file_registry[raster_key],
                 'GTiff',
                 NODATA_FLOAT,
                 gdal.GDT_Float32)
+        except KeyError:
+            # KeyError raised when ``raster_key`` is not in the file registry.
+            pass
 
     return file_registry
 

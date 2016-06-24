@@ -94,8 +94,12 @@ def _create_workspace():
     return workspace
 
 
-def _get_args():
+def _get_args(valuation=True):
     """Create and return arguements for CBC main model.
+
+    Parameters:
+        valuation=True (bool): Whether to include parameters related to
+            valuation in the args dict.
 
     Returns:
         args (dict): main model arguements
@@ -142,8 +146,6 @@ def _get_args():
         srs.pixel_size(100),
         datatype=gdal.GDT_Int32,
         filename=os.path.join(workspace, 'raster_2.tif'))
-    lulc_baseline_map_uri = raster_0_uri
-    lulc_transition_maps_list = [raster_1_uri, raster_2_uri]
 
     args = {
         'workspace_dir': workspace,
@@ -156,13 +158,18 @@ def _get_args():
         'analysis_year': 2010,
         'carbon_pool_initial_uri': carbon_pool_initial_uri,
         'carbon_pool_transient_uri': carbon_pool_transient_uri,
-        'do_economic_analysis': True,
-        'do_price_table': False,
-        'price': 2.,
-        'interest_rate': 5.,
-        'price_table_uri': None,
-        'discount_rate': 2.
+        'do_economic_analysis': False,
     }
+
+    if valuation:
+        args.update({
+            'do_economic_analysis': True,
+            'do_price_table': False,
+            'price': 2.,
+            'interest_rate': 5.,
+            'price_table_uri': None,
+            'discount_rate': 2.
+        })
 
     return args
 
@@ -565,6 +572,31 @@ class TestModel(unittest.TestCase):
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5
         netseq_test = np.array([[np.nan, 10.5], [10.5, 10.5]])
+
+        # just a simple regression test.  this demonstrates that a NaN value
+        # will properly propagate across the model. the npv raster was chosen
+        # because the values are determined by multiple inputs, and any changes
+        # in those inputs would propagate to this raster.
+        np.testing.assert_array_almost_equal(
+            netseq_array, netseq_test, decimal=4)
+
+    def test_model_no_valuation(self):
+        """Coastal Blue Carbon: Test main model without valuation."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+        cbc.execute(_get_args(valuation=False))
+        netseq_output_raster = os.path.join(
+            self.args['workspace_dir'],
+            'outputs_core/total_net_carbon_sequestration_test.tif')
+        netseq_array = _read_array(netseq_output_raster)
+
+        # (Explanation for why netseq is 31.)
+        # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2,  Year 2010: 2
+        # Initial Stock from Baseline: 5+5=10
+        # Sequest:
+        #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
+        #       Total: 10.5 + 20.5 = 31.
+        netseq_test = np.array([[np.nan, 31.], [31., 31.]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
