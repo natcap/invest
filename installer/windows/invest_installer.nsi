@@ -458,7 +458,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 117760
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 784
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 8116
-    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
     !insertmacro downloadData "Marine Water Quality (optional)" "MarineWaterQuality.zip" 13312
     !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3692
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
@@ -479,6 +478,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     SectionEnd
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
+    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
     !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
