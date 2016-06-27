@@ -144,6 +144,7 @@ def build_file_registry(base_file_path_list, file_suffix):
 
     Raises:
         ValueError if there are duplicate file keys or duplicate file paths.
+        ValueError if a path is not a string or a list of strings.
     """
     all_paths = set()
     duplicate_keys = set()
