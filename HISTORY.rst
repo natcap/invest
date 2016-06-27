@@ -7,6 +7,7 @@ Unreleased Changes
 * Fixed an issue in GLOBIO that would cause model runs to crash if the AOI marked as optional was not present.
 * Removed the deprecated and incomplete Nearshore Wave and Erosion model (``natcap.invest.nearshore_wave_and_erosion``).
 * Fixed an issue where seasonal water yield would raise a divide by zero error if a watershed polygon didn't cover a valid data region.  Now sets aggregation quantity to zero and reports a warning in the log.
+* Added functionality to recreation model so that the `monthly_table.csv` file now receives a file suffix if one is provided by the user.
 
 3.3.1 (2016-06-13)
 ------------------
