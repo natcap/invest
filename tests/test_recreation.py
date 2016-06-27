@@ -133,30 +133,41 @@ class TestRecServer(unittest.TestCase):
         sample_point_data_path = os.path.join(
             REGRESSION_DATA, 'sample_data.csv')
 
-        # attempt to get an open port; could result in race condition but
-        # will be okay for a test. if this test ever fails because of port
-        # in use, that's probably why
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('', 0))
-        port = sock.getsockname()[1]
-        sock.close()
-        sock = None
+        # Attempt a few connections, we've had this test be flaky on the
+        # entire suite run which we suspect is because of a race condition
+        server_launched = False
+        for _ in range(3):
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.bind(('', 0))
+                port = sock.getsockname()[1]
+                sock.close()
+                sock = None
 
-        server_args = {
-            'hostname': 'localhost',
-            'port': port,
-            'raw_csv_point_data_path': sample_point_data_path,
-            'cache_workspace': self.workspace_dir,
-            'min_year': 2004,
-            'max_year': 2015,
-        }
+                server_args = {
+                    'hostname': 'localhost',
+                    'port': port,
+                    'raw_csv_point_data_path': sample_point_data_path,
+                    'cache_workspace': self.workspace_dir,
+                    'min_year': 2004,
+                    'max_year': 2015,
+                }
 
-        server_process = multiprocessing.Process(
-            target=recmodel_server.execute, args=(server_args,))
-        server_process.start()
+                server_process = multiprocessing.Process(
+                    target=recmodel_server.execute, args=(server_args,))
+                server_process.start()
+                server_launched = True
+                break
+            except:
+                LOGGER.warn("Can't start server process on port %d", port)
+                if server_process.is_alive():
+                    server_process.terminate()
+            if not server_launched:
+                self.fail("Server didn't start")
 
         try:
             path = "PYRO:natcap.invest.recreation@localhost:%s" % port
+            LOGGER.info("Local server path %s", path)
             recreation_server = Pyro4.Proxy(path)
             aoi_path = os.path.join(
                 REGRESSION_DATA, 'test_aoi_for_subset.shp')
@@ -172,7 +183,7 @@ class TestRecServer(unittest.TestCase):
             date_range = (('2005-01-01'), ('2014-12-31'))
             out_vector_filename = 'test_aoi_for_subset_pud.shp'
 
-            zip_result, workspace_id = (
+            _, workspace_id = (
                 recreation_server.calc_photo_user_days_in_aoi(
                     zip_file_binary, date_range, out_vector_filename))
             fetcher_args = {
@@ -181,7 +192,13 @@ class TestRecServer(unittest.TestCase):
                 'port': port,
                 'workspace_id': workspace_id,
             }
-            recmodel_workspace_fetcher.execute(fetcher_args)
+            try:
+                recmodel_workspace_fetcher.execute(fetcher_args)
+            except:
+                LOGGER.error(
+                    "Server process failed (%s) is_alive=%s",
+                    str(server_process), server_process.is_alive())
+                raise
             server_process.terminate()
 
             out_workspace_dir = os.path.join(
