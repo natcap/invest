@@ -105,6 +105,17 @@ class UtilsTests(unittest.TestCase):
             _ = utils.build_file_registry([
                 (base_dict1, ''), (base_dict2, '')], '')
 
+    def test_build_file_registry_invalid_value(self):
+        """Utils: test build_file_registry with invalid path type."""
+        from natcap.invest import utils
+
+        base_dict = {
+            'foo': 'bar',
+            'baz': None
+        }
+        with self.assertRaises(ValueError):
+            _ = utils.build_file_registry([(base_dict, 'somepath')], '')
+
     @staticmethod
     def _norm_dict(path_dict):
         """Take a dictionary of paths and normalize the paths."""
