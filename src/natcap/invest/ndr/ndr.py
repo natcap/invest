@@ -1,5 +1,4 @@
-"""Module for the execution of the biophysical component of the InVEST Nutrient
-Deposition model."""
+"""InVEST Nutrient Delivery Ratio (NDR) module."""
 
 import logging
 import os
@@ -15,8 +14,59 @@ import pygeoprocessing.routing.routing_core
 import ndr_core
 
 LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+logging.basicConfig(
+    format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
+    level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+_OUTPUT_BASE_FILES = {
+    'n_export_path': 'n_export.tif',
+    'p_export_path': 'p_export.tif',
+    'watershed_results_ndr_path': 'watershed_results_ndr.shp',
+    }
+
+_INTERMEDIATE_BASE_FILES = {
+    'ic_factor_path': 'ic_factor.tif',
+    'load_n_path': 'load_n.tif',
+    'load_p_path': 'load_p.tif',
+    'modified_load_n_path': 'modified_load_n.tif',
+    'modified_load_p_path': 'modified_load_p.tif',
+    'modified_sub_load_n_path': 'modified_sub_load_n.tif',
+    'modified_sub_load_p_path': 'modified_sub_load_p.tif',
+    'ndr_n_path': 'ndr_n.tif',
+    'ndr_p_path': 'ndr_p.tif',
+    'runoff_proxy_index_path': 'runoff_proxy_index.tif',
+    's_accumulation_path': 's_accumulation.tif',
+    's_bar_path': 's_bar.tif',
+    's_factor_inverse_path': 's_factor_inverse.tif',
+    'stream_path': 'stream.tif',
+    'sub_crit_len_n_path': 'sub_crit_len_n.tif',
+    'sub_crit_len_p_path': 'sub_crit_len_p.tif',
+    'sub_eff_n_path': 'sub_eff_n.tif',
+    'sub_eff_p_path': 'sub_eff_p.tif',
+    'sub_effective_retention_n_path': 'sub_effective_retention_n.tif',
+    'sub_effective_retention_p_path': 'sub_effective_retention_p.tif',
+    'sub_load_n_path': 'sub_load_n.tif',
+    'sub_load_p_path': 'sub_load_p.tif',
+    'sub_ndr_n_path': 'sub_ndr_n.tif',
+    'sub_ndr_p_path': 'sub_ndr_p.tif',
+    'crit_len_n_path': 'crit_len_n.tif',
+    'crit_len_p_path': 'crit_len_p.tif',
+    'd_dn_path': 'd_dn.tif',
+    'd_up_path': 'd_up.tif',
+    'downstream_distance_path': 'downstream_distance.tif',
+    'eff_n_path': 'eff_n.tif',
+    'eff_p_path': 'eff_p.tif',
+    'effective_retention_n_path': 'effective_retention_n.tif',
+    'effective_retention_p_path': 'effective_retention_p.tif',
+    }
+
+_TMP_BASE_FILES = {
+    'flow_accumulation_path': 'flow_accumulation.tif',
+    'flow_direction_path': 'flow_direction.tif',
+    'processed_cell_path': 'processed_cell.tif',
+    'slope_path': 'slope.tif',
+    'thresholded_slope_path': 'thresholded_slope.tif',
+    }
 
 
 def execute(args):
