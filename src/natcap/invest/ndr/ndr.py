@@ -544,12 +544,15 @@ def execute(args):
     d_dn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(d_dn_uri)
 
     def ic_op(d_up, d_dn):
-        """calc the ic factor"""
-        nodata_mask = (
-            (d_up == d_up_nodata) | (d_dn == d_dn_nodata) | (d_up == 0) |
-            (d_dn == 0))
-        return numpy.where(
-            nodata_mask, ic_nodata, numpy.log10(d_up/d_dn))
+        """Calculate IC0."""
+        valid_mask = (
+            (d_up != d_up_nodata) & (d_dn != d_dn_nodata) & (d_up != 0) &
+            (d_dn != 0))
+        result = numpy.empty(d_up.shape, dtype=numpy.float32)
+        result[:] = ic_nodata
+        result[valid_mask] = numpy.log10(d_up[valid_mask] / d_dn[valid_mask])
+        return result
+
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [d_up_uri, d_dn_uri], ic_op, ic_factor_uri,
         gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
