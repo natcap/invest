@@ -286,12 +286,16 @@ def execute(args):
             map_load (function(lucode_array)): a function that can be passed to
                 vectorize_datasets to create subsurface load raster.
         """
+        # If we don't have subsurface, just return 0.0.
+        if subsurface_proportion_type is None:
+            return lambda lucode_array: numpy.where(
+                lucode_array != nodata_landuse, 0, nodata_load)
+
         keys = sorted(numpy.array(lucode_to_parameters.keys()))
         surface_values = numpy.array(
             [lucode_to_parameters[x][load_type] for x in keys])
         subsurface_values = numpy.array(
             [lucode_to_parameters[x][subsurface_proportion_type]
-             if subsurface_proportion_type is not None else 1.0
              for x in keys])
 
         def map_load(lucode_array):
