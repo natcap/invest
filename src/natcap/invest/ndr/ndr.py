@@ -590,12 +590,17 @@ def execute(args):
         ndr_nodata = -1.0
 
         def calculate_ndr(effective_retention_array, ic_array):
-            '''calcualte NDR'''
-            return numpy.where(
-                (effective_retention_array == effective_retention_nodata)
-                | (ic_array == ic_nodata),
-                ndr_nodata, (1.0 - effective_retention_array) /
-                (1.0 + numpy.exp((ic_0_param - ic_array) / k_param)))
+            """Calculate NDR."""
+            valid_mask = (
+                (effective_retention_array != effective_retention_nodata) &
+                (ic_array != ic_nodata))
+            result = numpy.empty(ic_array.shape, dtype=numpy.float32)
+            result[:] = ndr_nodata
+            result[valid_mask] = (
+                (1.0 - effective_retention_array[valid_mask]) /
+                (1.0 + numpy.exp(
+                    (ic_0_param - ic_array[valid_mask]) / k_param)))
+            return result
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [effective_retention_uri, ic_factor_uri], calculate_ndr, ndr_uri,
