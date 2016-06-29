@@ -167,13 +167,6 @@ def execute(args):
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    try:
-        file_suffix = args['results_suffix']
-        if not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
-
     for folder in [workspace, output_dir, intermediate_dir]:
         if not os.path.exists(folder):
             os.makedirs(folder)
