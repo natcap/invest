@@ -68,8 +68,6 @@ _TMP_BASE_FILES = {
     'thresholded_slope_path': 'thresholded_slope.tif',
     }
 
-#TODO write NODATA values here
-
 
 def execute(args):
     """Nutrient Delivery Ratio.
@@ -108,7 +106,6 @@ def execute(args):
     Returns:
         None
     """
-
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
         """Validate common errors in inputs.
 
@@ -463,9 +460,6 @@ def execute(args):
             crit_len_uri[nutrient], gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
-    field_summaries = {}
-    field_header_order = []
-
     watershed_output_datasource_uri = os.path.join(
         output_dir, 'watershed_results_ndr%s.shp' % file_suffix)
     # If there is already an existing shapefile with the same name and path,
@@ -477,13 +471,6 @@ def execute(args):
     output_datasource = esri_driver.CopyDataSource(
         original_datasource, watershed_output_datasource_uri)
     output_layer = output_datasource.GetLayer()
-
-    _add_fields_to_shapefile(
-        'ws_id', field_summaries, output_layer, field_header_order)
-    field_header_order = []
-
-    export_uri = {}
-    field_summaries = {}
 
     zero_absorption_source_uri = (
         pygeoprocessing.temporary_filename())
@@ -616,6 +603,9 @@ def execute(args):
     sub_effective_retention_nodata = None
     load_nodata = None
     export_nodata = None
+    field_header_order = []
+    field_summaries = {}
+    export_uri = {}
     for nutrient in nutrients_to_process:
         effective_retention_uri = os.path.join(
             intermediate_dir, 'effective_retention_%s%s.tif' %
@@ -710,7 +700,7 @@ def execute(args):
             export_uri[nutrient], gdal.GDT_Float32, export_nodata,
             out_pixel_size, "intersection", vectorize_op=False)
 
-        #Summarize the results in terms of watershed:
+        # summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s", nutrient)
         load_tot = pygeoprocessing.aggregate_raster_values_uri(
             load_uri[nutrient], args['watersheds_path'], 'ws_id').total
@@ -770,12 +760,8 @@ def _add_fields_to_shapefile(
     for feature_id in xrange(output_layer.GetFeatureCount()):
         feature = output_layer.GetFeature(feature_id)
         for field_name in field_header_order:
-            try:
-                ws_id = feature.GetFieldAsInteger(key_field)
-                feature.SetField(
-                    field_name, float(field_summaries[field_name][ws_id]))
-            except KeyError:
-                LOGGER.warning('unknown field %s', field_name)
-                feature.SetField(field_name, 0.0)
+            ws_id = feature.GetFieldAsInteger(key_field)
+            feature.SetField(
+                field_name, float(field_summaries[field_name][ws_id]))
         # Save back to datasource
         output_layer.SetFeature(feature)
