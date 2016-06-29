@@ -1,5 +1,4 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
-
 import logging
 import os
 
@@ -68,6 +67,8 @@ _TMP_BASE_FILES = {
     'thresholded_slope_path': 'thresholded_slope.tif',
     }
 
+#TODO write NODATA values here
+
 
 def execute(args):
     """Nutrient Delivery Ratio.
@@ -108,8 +109,7 @@ def execute(args):
     """
 
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
-        """Validates common errors in inputs that can't be checked easily in
-        the user interface.
+        """Validate common errors in inputs.
 
         Parameters:
             nutrients_to_process (list): list of 'n' and/or 'p'
@@ -124,7 +124,6 @@ def execute(args):
             ValueError whenever a missing field in the parameter table is
             detected along with a message describing every missing field.
         """
-
         # Make sure all the nutrient inputs are good
         if len(nutrients_to_process) == 0:
             raise ValueError("Neither phosphorous nor nitrogen was selected"
@@ -160,7 +159,7 @@ def execute(args):
         if len(missing_headers) > 0:
             raise ValueError('\n'.join(missing_headers))
 
-    #Load all the tables for preprocessing
+    # Load all the tables for preprocessing
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
@@ -176,7 +175,7 @@ def execute(args):
         if not os.path.exists(folder):
             os.makedirs(folder)
 
-    #Build up a list of nutrients to process based on what's checked on
+    # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
     for nutrient_id in ['n', 'p']:
         if args['calc_' + nutrient_id]:
@@ -198,11 +197,11 @@ def execute(args):
 
     dem_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         args['dem_uri'])
-    #Pixel size is in m^2, so square and divide by 10000 to get cell size in Ha
+    # pixel size is m, so square and divide by 10000 to get cell size in Ha
     cell_area_ha = dem_pixel_size ** 2 / 10000.0
     out_pixel_size = dem_pixel_size
 
-    #Align all the input rasters
+    # align all the input rasters
     dem_uri = pygeoprocessing.geoprocessing.temporary_filename()
     lulc_uri = pygeoprocessing.geoprocessing.temporary_filename()
     runoff_proxy_uri = pygeoprocessing.geoprocessing.temporary_filename()
@@ -213,9 +212,6 @@ def execute(args):
         [dem_uri, lulc_uri, runoff_proxy_uri], ['nearest'] * 3,
         out_pixel_size, 'dataset', dataset_to_align_index=0,
         dataset_to_bound_index=0, aoi_uri=args['watersheds_uri'])
-
-    dem_row, dem_col = pygeoprocessing.get_row_col_from_uri(dem_uri)
-    lulc_row, lulc_col = pygeoprocessing.get_row_col_from_uri(lulc_uri)
 
     runoff_proxy_mean = pygeoprocessing.aggregate_raster_values_uri(
         runoff_proxy_uri, args['watersheds_uri']).pixel_mean[9999]
@@ -238,7 +234,7 @@ def execute(args):
         lulc_uri)
     nodata_load = -1.0
 
-    #classify streams from the flow accumulation raster
+    # classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
     pygeoprocessing.routing.stream_threshold(
@@ -248,7 +244,7 @@ def execute(args):
         stream_uri)
 
     def map_load_function(load_type, subsurface_proportion_type=None):
-        """Function generator to map arbitrary nutrient type to surface load
+        """Function generator to map arbitrary nutrient type to surface load.
 
         Parameters:
             load_type (string): either 'n' or 'p', used for indexing headers
@@ -260,7 +256,7 @@ def execute(args):
                 vectorize_datasets.
         """
         def map_load(lucode_array):
-            """converts unit load to total load & handles nodata"""
+            """Convert unit load to total load & handle nodata."""
             result = numpy.empty(lucode_array.shape)
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
@@ -279,7 +275,7 @@ def execute(args):
 
     def map_subsurface_load_function(
             load_type, subsurface_proportion_type=None):
-        """Function generator to map arbitrary nutrient type to subsurface load
+        """Function generator to map arbitrary nutrient to subsurface load.
 
         Parameters:
             load_type (string): either 'n' or 'p', used for indexing headers
@@ -291,7 +287,7 @@ def execute(args):
                 vectorize_datasets to create subsurface load raster.
         """
         def map_load(lucode_array):
-            """converts unit load to total load & handles nodata"""
+            """Convert unit load to total load & handle nodata."""
             result = numpy.empty(lucode_array.shape)
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
@@ -308,19 +304,17 @@ def execute(args):
         return map_load
 
     def map_const_value(const_value, nodata):
-        """Function generator to map arbitrary efficiency type"""
+        """Function generator to map arbitrary efficiency type."""
         def map_const(lucode_array):
-            """maps efficiencies from lulcs, handles nodata, and is aware that
-                streams have no retention"""
+            """Return constant value unless nodata."""
             return numpy.where(
                 lucode_array == nodata_landuse, nodata, const_value)
         return map_const
 
     def map_eff_function(load_type):
-        """Function generator to map arbitrary efficiency type"""
+        """Function generator to map arbitrary efficiency type."""
         def map_eff(lucode_array, stream_array):
-            """maps efficiencies from lulcs, handles nodata, and is aware that
-                streams have no retention"""
+            """Map efficiency from LULC and handle nodata/streams."""
             result = numpy.empty(lucode_array.shape, dtype=numpy.float32)
             result[:] = nodata_load
             for lucode in numpy.unique(lucode_array):
