@@ -10,6 +10,7 @@ import pygeoprocessing.geoprocessing
 import pygeoprocessing.routing
 import pygeoprocessing.routing.routing_core
 
+from .. import utils
 import ndr_core
 
 LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
@@ -163,6 +164,8 @@ def execute(args):
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
+
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     try:
         file_suffix = args['results_suffix']
@@ -339,7 +342,7 @@ def execute(args):
             return result
         return map_eff
 
-    #Build up the load and efficiency rasters from the landcover map
+    # Build up the load and efficiency rasters from the landcover map
     load_uri = {}
     sub_load_uri = {}
     modified_load_uri = {}
@@ -455,7 +458,7 @@ def execute(args):
     zero_absorption_source_uri = (
         pygeoprocessing.geoprocessing.temporary_filename())
     loss_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    #need this for low level route_flux function
+    # need this for low level route_flux function
     pygeoprocessing.geoprocessing.make_constant_raster_from_base_uri(
         aligned_dem_uri, 0.0, zero_absorption_source_uri)
 
@@ -712,26 +715,28 @@ def execute(args):
 
 def _add_fields_to_shapefile(
         key_field, field_summaries, output_layer, field_header_order):
-    """Adds fields and their values indexed by key fields to an OGR
-        layer open for writing.
+    """Add fields and values to an OGR layer open for writing.
 
-        key_field - name of the key field in the output_layer that
+    Parameters:
+        key_field (string): name of the key field in the output_layer that
             uniquely identifies each polygon.
-        field_summaries - a dictionary indexed by the desired field
-            name to place in the polygon that indexes to another
-            dictionary indexed by key_field value to map to that
-            particular polygon.  ex {'field_name_1': {key_val1: value,
+        field_summaries (dict): index for the desired field name to place in
+            the polygon that indexes to another dictionary indexed by
+            key_field value to map to that particular polygon.
+            ex {'field_name_1': {key_val1: value,
             key_val2: value}, 'field_name_2': {key_val1: value, etc.
-        output_layer - an open writable OGR layer
-        field_header_order - a list of field headers in the order we
-            wish them to appear in the output table.
+        output_layer (ogr.Layer): an open writable OGR layer
+        field_header_order (list of string): a list of field headers in the
+            order to appear in the output table.
 
-        returns nothing"""
+    Returns:
+        None.
+    """
     for field_name in field_header_order:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         output_layer.CreateField(field_def)
 
-    #Initialize each feature field to 0.0
+    # Initialize each feature field to 0.0
     for feature_id in xrange(output_layer.GetFeatureCount()):
         feature = output_layer.GetFeature(feature_id)
         for field_name in field_header_order:
@@ -742,12 +747,12 @@ def _add_fields_to_shapefile(
             except KeyError:
                 LOGGER.warning('unknown field %s', field_name)
                 feature.SetField(field_name, 0.0)
-        #Save back to datasource
+        # Save back to datasource
         output_layer.SetFeature(feature)
 
 
 def _prepare(**args):
-    """A function to preprocess the static data that goes into the NDR model
+    """Preprocess static data that goes into the NDR model
         that is unlikely to change when running a batch process.
 
         args['dem_uri'] - dem layer
@@ -768,14 +773,14 @@ def _prepare(**args):
     dem_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         args['dem_uri'])
 
-    #Align all the input rasters
+    # Align all the input rasters
     aligned_dem_uri = pygeoprocessing.geoprocessing.temporary_filename()
     pygeoprocessing.geoprocessing.align_dataset_list(
         [args['dem_uri']], [aligned_dem_uri], ['nearest'], dem_pixel_size,
         'intersection', dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
-    #Calculate flow accumulation
+    # Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
         intermediate_dir, 'flow_accumulation.tif')
@@ -787,7 +792,7 @@ def _prepare(**args):
     pygeoprocessing.routing.flow_accumulation(
         flow_direction_uri, aligned_dem_uri, flow_accumulation_uri)
 
-    #Calculate slope
+    # Calculate slope
     LOGGER.info("Calculating slope")
     original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
     thresholded_slope_uri = os.path.join(
