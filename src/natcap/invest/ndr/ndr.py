@@ -160,11 +160,6 @@ def execute(args):
         if len(missing_headers) > 0:
             raise ValueError('\n'.join(missing_headers))
 
-    if not args['calc_p'] and not args['calc_n']:
-        raise Exception(
-            'Neither "Calculate Nitrogen" nor "Calculate Phosporus" is '
-            'selected.  At least one must be selected.')
-
     #Load all the tables for preprocessing
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
@@ -445,7 +440,7 @@ def execute(args):
         original_datasource, watershed_output_datasource_uri)
     output_layer = output_datasource.GetLayer()
 
-    add_fields_to_shapefile(
+    _add_fields_to_shapefile(
         'ws_id', field_summaries, output_layer, field_header_order)
     field_header_order = []
 
@@ -691,7 +686,7 @@ def execute(args):
             field_header_order)
 
     LOGGER.info('Writing summaries to output shapefile')
-    add_fields_to_shapefile(
+    _add_fields_to_shapefile(
         'ws_id', field_summaries, output_layer, field_header_order)
 
     LOGGER.info('cleaning up temp files')
@@ -710,8 +705,8 @@ def execute(args):
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
 
-def add_fields_to_shapefile(
-        key_field, field_summaries, output_layer, field_header_order=None):
+def _add_fields_to_shapefile(
+        key_field, field_summaries, output_layer, field_header_order):
     """Adds fields and their values indexed by key fields to an OGR
         layer open for writing.
 
@@ -724,13 +719,9 @@ def add_fields_to_shapefile(
             key_val2: value}, 'field_name_2': {key_val1: value, etc.
         output_layer - an open writable OGR layer
         field_header_order - a list of field headers in the order we
-            wish them to appear in the output table, if None then
-            random key order in field summaries is used.
+            wish them to appear in the output table.
 
         returns nothing"""
-    if field_header_order is None:
-        field_header_order = field_summaries.keys()
-
     for field_name in field_header_order:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         output_layer.CreateField(field_def)

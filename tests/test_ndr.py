@@ -48,7 +48,36 @@ class NDRTests(unittest.TestCase):
             'watersheds_uri': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
             'workspace_dir': workspace_dir,
         }
-        return args
+        return args.copy()
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_missing_headers(self):
+        """NDR biphysical headers missing should raise a ValueError."""
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['biophysical_table_uri'] = os.path.join(
+            REGRESSION_DATA, 'biophysical_table_missing_headers.csv')
+        with self.assertRaises(ValueError):
+            ndr.execute(args)
+
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_no_nutrient_selected(self):
+        """NDR no nutrient selected should raise a ValuError."""
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['calc_n'] = False
+        args['calc_p'] = False
+        with self.assertRaises(ValueError):
+            ndr.execute(args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
