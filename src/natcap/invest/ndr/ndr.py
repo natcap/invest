@@ -229,7 +229,7 @@ def execute(args):
     def normalize_runoff_proxy_op(val):
         """Divide val by average runoff."""
         valid_mask = val != runoff_proxy_nodata
-        result = numpy.empty(valid_mask.shape)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = runoff_proxy_nodata
         result[valid_mask] = val[valid_mask] / runoff_proxy_mean
         return result
@@ -478,11 +478,16 @@ def execute(args):
     LOGGER.info("calculating %s", s_bar_uri)
 
     def bar_op(base_accumulation, flow_accumulation):
-        """Calcualtes the bar operation"""
-        return numpy.where(
+        """Calculate bar operation."""
+        valid_mask = (
             (base_accumulation != s_bar_nodata) &
-            (flow_accumulation != flow_accumulation_nodata),
-            base_accumulation / flow_accumulation, s_bar_nodata)
+            (flow_accumulation != flow_accumulation_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = s_bar_nodata
+        result[valid_mask] = (
+            base_accumulation[valid_mask] / flow_accumulation[valid_mask])
+        return result
+
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [s_accumulation_uri, flow_accumulation_uri], bar_op, s_bar_uri,
         gdal.GDT_Float32, s_bar_nodata, out_pixel_size, "intersection",
@@ -518,10 +523,11 @@ def execute(args):
         thresholded_slope_uri)
 
     def s_inverse_op(s_factor):
-        """calcualtes the inverse of the s factor so we can multiply it like
-            a factor"""
-        return numpy.where(
-            s_factor != slope_nodata, 1.0 / s_factor, s_nodata)
+        """Calculate inverse of S factor."""
+        valid_mask = s_factor != slope_nodata
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[valid_mask] = 1.0 / s_factor[valid_mask]
+        return result
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [thresholded_slope_uri], s_inverse_op, s_factor_inverse_uri,
@@ -626,12 +632,15 @@ def execute(args):
             intermediate_dir, 'sub_ndr_%s%s.tif' % (nutrient, file_suffix))
         ndr_nodata = -1.0
 
-        def calculate_sub_ndr(sub_effective_retention_array):
-            '''calcualte NDR'''
-            return numpy.where(
-                (sub_effective_retention_array ==
-                 sub_effective_retention_nodata), ndr_nodata,
-                (1.0 - sub_effective_retention_array))
+        def calculate_sub_ndr(sub_eff_ret_array):
+            """Calculate subsurface NDR."""
+            valid_mask = (
+                sub_eff_ret_array !=
+                sub_effective_retention_nodata)
+            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+            result[:] = ndr_nodata
+            result[valid_mask] = (1.0 - sub_eff_ret_array[valid_mask])
+            return result
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [sub_effective_retention_uri], calculate_sub_ndr, sub_ndr_uri,
@@ -648,11 +657,19 @@ def execute(args):
         def calculate_export(
                 modified_load_array, ndr_array, modified_sub_load_array,
                 sub_ndr_array):
-            '''combine ndr and subsurface ndr'''
-            return numpy.where(
-                (modified_load_array == load_nodata) | (ndr_array == ndr_nodata),
-                export_nodata, modified_load_array * ndr_array +
-                modified_sub_load_array * sub_ndr_array)
+            """Combine NDR and subsurface NDR."""
+            valid_mask = (
+                (modified_load_array != load_nodata) &
+                (ndr_array != ndr_nodata) &
+                (modified_sub_load_array != load_nodata) &
+                (sub_ndr_array != ndr_nodata))
+            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+            result[:] = export_nodata
+            result[valid_mask] = (
+                modified_load_array[valid_mask] * ndr_array[valid_mask] +
+                modified_sub_load_array[valid_mask] *
+                sub_ndr_array[valid_mask])
+            return result
 
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [modified_load_uri[nutrient], ndr_uri,
@@ -785,13 +802,16 @@ def _prepare(**args):
         original_slope_uri)
 
     def threshold_slope(slope):
-        '''Threshold slope between 0.001 and 1.0'''
-        slope_copy = slope / 100
-        nodata_mask = slope == slope_nodata
-        slope_copy[slope_copy < 0.005] = 0.005
-        slope_copy[slope_copy > 1.0] = 1.0
-        slope_copy[nodata_mask] = slope_nodata
-        return slope_copy
+        """Threshold slope between 0.001 and 1.0."""
+        valid_mask = slope != slope_nodata
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = slope_nodata
+        slope_fraction = slope[valid_mask] / 100
+        slope_fraction[slope_fraction < 0.005] = 0.005
+        slope_fraction[slope_fraction > 1.0] = 1.0
+        result[valid_mask] = slope_fraction
+        return result
+
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [original_slope_uri], threshold_slope, thresholded_slope_uri,
         gdal.GDT_Float32, slope_nodata, dem_pixel_size, "intersection",
