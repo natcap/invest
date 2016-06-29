@@ -286,20 +286,24 @@ def execute(args):
             map_load (function(lucode_array)): a function that can be passed to
                 vectorize_datasets to create subsurface load raster.
         """
+        keys = sorted(numpy.array(lucode_to_parameters.keys()))
+        surface_values = numpy.array(
+            [lucode_to_parameters[x][load_type] for x in keys])
+        subsurface_values = numpy.array(
+            [lucode_to_parameters[x][subsurface_proportion_type]
+             if subsurface_proportion_type is not None else 1.0
+             for x in keys])
+
         def map_load(lucode_array):
             """Convert unit load to total load & handle nodata."""
-            result = numpy.empty(lucode_array.shape)
+            valid_mask = lucode_array != nodata_landuse
+            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
             result[:] = nodata_load
-            for lucode in numpy.unique(lucode_array):
-                if lucode != nodata_landuse:
-                    if subsurface_proportion_type is not None:
-                        result[lucode_array == lucode] = (
-                            lucode_to_parameters[lucode][load_type] *
-                            (lucode_to_parameters[lucode]
-                             [subsurface_proportion_type]) *
-                            cell_area_ha)
-                    else:
-                        result[lucode_array == lucode] = 0.0
+            index = numpy.digitize(
+                lucode_array[valid_mask].ravel(), keys, right=True)
+            result[valid_mask] = (
+                surface_values[index] * subsurface_values[index] *
+                cell_area_ha)
             return result
         return map_load
 
@@ -313,18 +317,21 @@ def execute(args):
 
     def map_eff_function(load_type):
         """Function generator to map arbitrary efficiency type."""
+        keys = sorted(numpy.array(lucode_to_parameters.keys()))
+        values = numpy.array(
+            [lucode_to_parameters[x][load_type] for x in keys])
+
         def map_eff(lucode_array, stream_array):
             """Map efficiency from LULC and handle nodata/streams."""
-            result = numpy.empty(lucode_array.shape, dtype=numpy.float32)
+            valid_mask = (
+                (lucode_array != nodata_landuse) &
+                (stream_array != nodata_stream))
+            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
             result[:] = nodata_load
-            for lucode in numpy.unique(lucode_array):
-                if lucode == nodata_landuse:
-                    continue
-                mask = (
-                    (lucode_array == lucode) & (stream_array != nodata_stream))
-                result[mask] = (
-                    lucode_to_parameters[lucode][load_type] *
-                    (1 - stream_array[mask]))
+            index = numpy.digitize(
+                lucode_array[valid_mask].ravel(), keys, right=True)
+            result[valid_mask] = (
+                values[index] * (1 - stream_array[valid_mask]))
             return result
         return map_eff
 
