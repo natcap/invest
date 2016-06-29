@@ -494,13 +494,17 @@ def execute(args):
     d_up_nodata = -1.0
 
     def d_up(s_bar, flow_accumulation):
-        """Calculate the d_up index
-            w_bar * s_bar * sqrt(upstream area) """
-        d_up_array = s_bar * numpy.sqrt(flow_accumulation * cell_area)
-        return numpy.where(
+        """Calculate d_up index."""
+        valid_mask = (
             (s_bar != s_bar_nodata) &
-            (flow_accumulation != flow_accumulation_nodata), d_up_array,
-            d_up_nodata)
+            (flow_accumulation != flow_accumulation_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = d_up_nodata
+        result[valid_mask] = (
+            s_bar[valid_mask] * numpy.sqrt(
+                flow_accumulation[valid_mask] * cell_area))
+        return result
+
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [s_bar_uri, flow_accumulation_uri], d_up, d_up_uri,
         gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
@@ -548,7 +552,7 @@ def execute(args):
         valid_mask = (
             (d_up != d_up_nodata) & (d_dn != d_dn_nodata) & (d_up != 0) &
             (d_dn != 0))
-        result = numpy.empty(d_up.shape, dtype=numpy.float32)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = ic_nodata
         result[valid_mask] = numpy.log10(d_up[valid_mask] / d_dn[valid_mask])
         return result
@@ -594,7 +598,7 @@ def execute(args):
             valid_mask = (
                 (effective_retention_array != effective_retention_nodata) &
                 (ic_array != ic_nodata))
-            result = numpy.empty(ic_array.shape, dtype=numpy.float32)
+            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
             result[:] = ndr_nodata
             result[valid_mask] = (
                 (1.0 - effective_retention_array[valid_mask]) /
