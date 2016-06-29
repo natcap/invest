@@ -76,11 +76,11 @@ def execute(args):
 
     Parameters:
         args['workspace_dir'] (string):  path to current workspace
-        args['dem_uri'] (string): path to digital elevation map raster
-        args['lulc_uri'] (string): a path to landcover map raster
-        args['runoff_proxy_uri'] (string): a path to a runoff proxy raster
-        args['watersheds_uri'] (string): path to the watershed shapefile
-        args['biophysical_table_uri'] (string): path to csv table on disk
+        args['dem_path'] (string): path to digital elevation map raster
+        args['lulc_path'] (string): a path to landcover map raster
+        args['runoff_proxy_path'] (string): a path to a runoff proxy raster
+        args['watersheds_path'] (string): path to the watershed shapefile
+        args['biophysical_table_path'] (string): path to csv table on disk
             containing nutrient retention values.
 
             For each nutrient type [t] in args['calc_[t]'] that is true, must
@@ -138,7 +138,7 @@ def execute(args):
         lu_parameter_row = lucode_to_parameters.values()[0]
         row_header_table_list.append(
             (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
-             args['biophysical_table_uri']))
+             args['biophysical_table_path']))
 
         missing_headers = []
         for row, header_prefixes, table_type in row_header_table_list:
@@ -155,7 +155,7 @@ def execute(args):
                 'proportion_subsurface_n' not in lu_parameter_row):
             missing_headers.append(
                 "Missing header proportion_subsurface_n from " +
-                args['biophysical_table_uri'])
+                args['biophysical_table_path'])
 
         if len(missing_headers) > 0:
             raise ValueError('\n'.join(missing_headers))
@@ -176,19 +176,19 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
     lucode_to_parameters = pygeoprocessing.get_lookup_from_csv(
-        args['biophysical_table_uri'], 'lucode')
+        args['biophysical_table_path'], 'lucode')
 
     _validate_inputs(nutrients_to_process, lucode_to_parameters)
 
     dem_pixel_size = pygeoprocessing.get_cell_size_from_uri(
-        args['dem_uri'])
+        args['dem_path'])
 
     # Align all the input rasters
     aligned_dem_uri = pygeoprocessing.temporary_filename()
     pygeoprocessing.align_dataset_list(
-        [args['dem_uri']], [aligned_dem_uri], ['nearest'], dem_pixel_size,
+        [args['dem_path']], [aligned_dem_uri], ['nearest'], dem_pixel_size,
         'intersection', dataset_to_align_index=0,
-        aoi_uri=args['watersheds_uri'])
+        aoi_uri=args['watersheds_path'])
 
     # Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
@@ -229,7 +229,7 @@ def execute(args):
         dataset_to_align_index=0, vectorize_op=False)
 
     dem_pixel_size = pygeoprocessing.get_cell_size_from_uri(
-        args['dem_uri'])
+        args['dem_path'])
     # pixel size is m, so square and divide by 10000 to get cell size in Ha
     cell_area_ha = dem_pixel_size ** 2 / 10000.0
     out_pixel_size = dem_pixel_size
@@ -241,13 +241,13 @@ def execute(args):
     runoff_proxy_index_uri = os.path.join(
         intermediate_dir, 'runoff_proxy_index%s.tif' % file_suffix)
     pygeoprocessing.align_dataset_list(
-        [args['dem_uri'], args['lulc_uri'], args['runoff_proxy_uri']],
+        [args['dem_path'], args['lulc_path'], args['runoff_proxy_path']],
         [dem_uri, lulc_uri, runoff_proxy_uri], ['nearest'] * 3,
         out_pixel_size, 'dataset', dataset_to_align_index=0,
-        dataset_to_bound_index=0, aoi_uri=args['watersheds_uri'])
+        dataset_to_bound_index=0, aoi_uri=args['watersheds_path'])
 
     runoff_proxy_mean = pygeoprocessing.aggregate_raster_values_uri(
-        runoff_proxy_uri, args['watersheds_uri']).pixel_mean[9999]
+        runoff_proxy_uri, args['watersheds_path']).pixel_mean[9999]
     runoff_proxy_nodata = pygeoprocessing.get_nodata_from_uri(runoff_proxy_uri)
 
     def normalize_runoff_proxy_op(val):
@@ -473,7 +473,7 @@ def execute(args):
     if os.path.isfile(watershed_output_datasource_uri):
         os.remove(watershed_output_datasource_uri)
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    original_datasource = ogr.Open(args['watersheds_uri'])
+    original_datasource = ogr.Open(args['watersheds_path'])
     output_datasource = esri_driver.CopyDataSource(
         original_datasource, watershed_output_datasource_uri)
     output_layer = output_datasource.GetLayer()
@@ -503,7 +503,7 @@ def execute(args):
     pygeoprocessing.routing.route_flux(
         flow_direction_uri, aligned_dem_uri, thresholded_slope_uri,
         zero_absorption_source_uri, loss_uri, s_accumulation_uri, 'flux_only',
-        aoi_uri=args['watersheds_uri'])
+        aoi_uri=args['watersheds_path'])
 
     s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
     s_bar_nodata = pygeoprocessing.get_nodata_from_uri(
@@ -713,9 +713,9 @@ def execute(args):
         #Summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s", nutrient)
         load_tot = pygeoprocessing.aggregate_raster_values_uri(
-            load_uri[nutrient], args['watersheds_uri'], 'ws_id').total
+            load_uri[nutrient], args['watersheds_path'], 'ws_id').total
         export_tot = pygeoprocessing.aggregate_raster_values_uri(
-            export_uri[nutrient], args['watersheds_uri'], 'ws_id').total
+            export_uri[nutrient], args['watersheds_path'], 'ws_id').total
 
         field_summaries['%s_load_tot' % nutrient] = load_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot

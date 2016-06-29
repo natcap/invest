@@ -32,20 +32,20 @@ class NDRTests(unittest.TestCase):
     def generate_base_args(workspace_dir):
         """Generate a base sample args dict for NDR."""
         args = {
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 SAMPLE_DATA, 'biophysical_table.csv'),
             'calc_n': True,
             'calc_p': True,
-            'dem_uri': os.path.join(SAMPLE_DATA, 'dem'),
+            'dem_path': os.path.join(SAMPLE_DATA, 'dem'),
             'k_param': 2.0,
-            'lulc_uri': os.path.join(SAMPLE_DATA, 'landuse_90'),
-            'runoff_proxy_uri': os.path.join(SAMPLE_DATA, 'precip'),
+            'lulc_path': os.path.join(SAMPLE_DATA, 'landuse_90'),
+            'runoff_proxy_path': os.path.join(SAMPLE_DATA, 'precip'),
             'subsurface_critical_length_n': 150,
             'subsurface_critical_length_p': '150',
             'subsurface_eff_n': 0.8,
             'subsurface_eff_p': '0.8',
             'threshold_flow_accumulation': '1000',
-            'watersheds_uri': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
+            'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
             'workspace_dir': workspace_dir,
         }
         return args.copy()
@@ -59,7 +59,7 @@ class NDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
-        args['biophysical_table_uri'] = os.path.join(
+        args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'biophysical_table_missing_headers.csv')
         with self.assertRaises(ValueError):
             ndr.execute(args)
@@ -92,6 +92,14 @@ class NDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
+
+        # copy a junk AOI on top of where the output shapefile should reside
+        # to ensure the model overwrites it
+        os.makedirs(os.path.join(self.workspace_dir, 'output'))
+        shutil.copy(
+            args['watersheds_path'], os.path.join(
+                self.workspace_dir, 'output', 'watershed_results_ndr.shp'))
+
         # make args explicit that this is a base run of SWY
         ndr.execute(args)
 
