@@ -805,11 +805,14 @@ def _calculate_sdr(
 
     def sdr_op(ic_factor, stream):
         """Calculate SDR factor."""
-        nodata_mask = (ic_factor == ic_nodata)
-        sdr = numpy.where(
-            nodata_mask, NODATA_USLE, sdr_max / (
-                1+numpy.exp((ic_0-ic_factor)/k_factor)))
-        return numpy.where(stream == 1, 0.0, sdr)
+        valid_mask = (
+            (ic_factor != ic_nodata) & (stream != 1))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
+        result[valid_mask] = (
+            sdr_max / (1+numpy.exp((ic_0-ic_factor[valid_mask])/k_factor)))
+        result[stream == 1] = 0.0
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [ic_path, stream_path], sdr_op, out_sdr_path,
