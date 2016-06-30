@@ -10,6 +10,7 @@ Unreleased Changes
 * Fixed an issue where seasonal water yield would raise a divide by zero error if a watershed polygon didn't cover a valid data region.  Now sets aggregation quantity to zero and reports a warning in the log.
 * Fixed issues in NDR that would indicate invalid values were being processed during runtimes by skipping the invalid calculations in the first place rather than calculating them and discarding after the fact.
 * Complete code coverage tests for NDR model.
+* Minor (~10% speedup) performance improvements to NDR.
 
 3.3.1 (2016-06-13)
 ------------------
