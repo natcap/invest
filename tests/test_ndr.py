@@ -98,7 +98,7 @@ class NDRTests(unittest.TestCase):
         os.makedirs(os.path.join(self.workspace_dir, 'output'))
         shutil.copy(
             args['watersheds_path'], os.path.join(
-                self.workspace_dir, 'output', 'watershed_results_ndr.shp'))
+                self.workspace_dir, 'watershed_results_ndr.shp'))
 
         # make args explicit that this is a base run of SWY
         ndr.execute(args)
