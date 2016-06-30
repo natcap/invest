@@ -343,21 +343,24 @@ def _calculate_ls_factor(
         Returns:
             ls_factor
         """
-        nodata_mask = (
-            (aspect_angle == aspect_nodata) | (percent_slope == slope_nodata) |
-            (flow_accumulation == flow_accumulation_nodata))
+        valid_mask = (
+            (aspect_angle != aspect_nodata) &
+            (percent_slope != slope_nodata) &
+            (flow_accumulation != flow_accumulation_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
 
         # Determine the length of the flow path on the pixel
-        xij = (numpy.abs(numpy.sin(aspect_angle)) +
-               numpy.abs(numpy.cos(aspect_angle)))
+        xij = (numpy.abs(numpy.sin(aspect_angle[valid_mask])) +
+               numpy.abs(numpy.cos(aspect_angle[valid_mask])))
 
-        contributing_area = (flow_accumulation-1) * cell_area
-        slope_in_radians = numpy.arctan(percent_slope / 100.0)
+        contributing_area = (flow_accumulation[valid_mask]-1) * cell_area
+        slope_in_radians = numpy.arctan(percent_slope[valid_mask] / 100.0)
 
         # From Equation 4 in "Extension and validation of a geographic
         # information system ..."
         slope_factor = numpy.where(
-            percent_slope < 9.0,
+            percent_slope[valid_mask] < 9.0,
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
@@ -372,7 +375,8 @@ def _calculate_ls_factor(
         exponent_table = [0.2, 0.3, 0.4, 0.5]
         m_exp = beta/(1+beta)
         for i in range(4):
-            m_exp[percent_slope <= slope_table[i]] = exponent_table[i]
+            m_exp[percent_slope[valid_mask] <= slope_table[i]] = (
+                exponent_table[i])
 
         l_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
@@ -383,7 +387,8 @@ def _calculate_ls_factor(
         # length calculations ... cap of 333m"
         l_factor[l_factor > 333] = 333
 
-        return numpy.where(nodata_mask, NODATA_USLE, l_factor * slope_factor)
+        result[valid_mask] = l_factor * slope_factor
+        return result
 
     # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.vectorize_datasets(
