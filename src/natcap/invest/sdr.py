@@ -364,19 +364,24 @@ def _calculate_ls_factor(
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
-        # Set m value via lookup table: Table 1 in
-        # InVEST Sediment Model_modifications_10-01-2012_RS.docx
         beta = (
             (numpy.sin(slope_in_radians) / 0.0896) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
-        # slope table in percent
-        slope_table = [1., 3.5, 5., 9.]
-        exponent_table = [0.2, 0.3, 0.4, 0.5]
-        m_exp = beta/(1+beta)
-        for i in range(4):
-            m_exp[percent_slope[valid_mask] <= slope_table[i]] = (
-                exponent_table[i])
+        # Set m value via lookup table: Table 1 in
+        # InVEST Sediment Model_modifications_10-01-2012_RS.docx
+        # note slope_table in percent
+        slope_table = numpy.array([1., 3.5, 5., 9.])
+        m_table = numpy.array([0.2, 0.3, 0.4, 0.5])
+        # mask where slopes are larger than lookup table
+        big_slope_mask = percent_slope[valid_mask] > slope_table[-1]
+        m_indexes = numpy.digitize(
+            percent_slope[valid_mask][~big_slope_mask], slope_table,
+            right=True)
+        m_exp = numpy.empty(big_slope_mask.shape, dtype=numpy.float32)
+        m_exp[big_slope_mask] = (
+            beta[big_slope_mask] / (1 + beta[big_slope_mask]))
+        m_exp[~big_slope_mask] = m_table[m_indexes]
 
         l_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
