@@ -743,9 +743,12 @@ def _calculate_inverse_ws_factor(
 
     def ws_op(w_factor, s_factor):
         """Calculate the inverse ws factor."""
-        return numpy.where(
-            (w_factor != w_nodata) & (s_factor != slope_nodata),
-            1.0 / (w_factor * s_factor), NODATA_USLE)
+        valid_mask = (w_factor != w_nodata) & (s_factor != slope_nodata)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
+        result[valid_mask] = (
+            1.0 / (w_factor[valid_mask] * s_factor[valid_mask]))
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [thresholded_w_factor_path, thresholded_slope_path], ws_op,
@@ -763,8 +766,11 @@ def _calculate_inverse_s_factor(
 
     def s_op(s_factor):
         """Calculate the inverse s factor."""
-        return numpy.where(
-            (s_factor != slope_nodata), 1.0 / s_factor, NODATA_USLE)
+        valid_mask = (s_factor != slope_nodata)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
+        result[valid_mask] = 1.0 / s_factor[valid_mask]
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [thresholded_slope_path], s_op,
@@ -828,9 +834,11 @@ def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
 
     def sed_export_op(usle, sdr):
         """Sediment export."""
-        nodata_mask = (usle == usle_nodata) | (sdr == sdr_nodata)
-        return numpy.where(
-            nodata_mask, NODATA_USLE, usle * sdr)
+        valid_mask = (usle != usle_nodata) & (sdr != sdr_nodata)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
+        result[valid_mask] = usle[valid_mask] * sdr[valid_mask]
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [usle_path, sdr_path], sed_export_op, out_sed_export_path,
@@ -848,12 +856,15 @@ def _calculate_sed_retention_index(
 
     def sediment_index_op(rkls, usle, sdr_factor):
         """Calculate sediment retention index."""
-        nodata_mask = (
-            (rkls == rkls_nodata) | (usle == usle_nodata) |
-            (sdr_factor == sdr_nodata))
-        return numpy.where(
-            nodata_mask,
-            nodata_sed_retention_index, (rkls - usle) * sdr_factor / sdr_max)
+        valid_mask = (
+            (rkls != rkls_nodata) & (usle != usle_nodata) &
+            (sdr_factor != sdr_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = nodata_sed_retention_index
+        result[valid_mask] = (
+            (rkls[valid_mask] - usle[valid_mask]) *
+            sdr_factor[valid_mask] / sdr_max)
+        return result
 
     nodata_sed_retention_index = -1
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(rkls_path)
@@ -896,15 +907,18 @@ def _calculate_sed_retention(
 
     def sediment_retention_bare_soil_op(
             rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
-        """Subract bare soil export from real landcover."""
-        nodata_mask = (
-            (rkls == rkls_nodata) | (usle == usle_nodata) |
-            (stream_factor == stream_nodata) | (sdr_factor == sdr_nodata) |
-            (sdr_factor_bare_soil == sdr_nodata))
-        return numpy.where(
-            nodata_mask, nodata_sediment_retention,
-            (rkls * sdr_factor_bare_soil - usle * sdr_factor) * (
-                1 - stream_factor))
+        """Subtract bare soil export from real landcover."""
+        valid_mask = (
+            (rkls != rkls_nodata) & (usle != usle_nodata) &
+            (stream_factor != stream_nodata) & (sdr_factor != sdr_nodata) &
+            (sdr_factor_bare_soil != sdr_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = nodata_sediment_retention
+        result[valid_mask] = (
+            rkls[valid_mask] * sdr_factor_bare_soil[valid_mask] -
+            usle[valid_mask] * sdr_factor[valid_mask]) * (
+                1 - stream_factor[valid_mask])
+        return result
 
     nodata_sediment_retention = -1
 
