@@ -106,7 +106,7 @@ class NDRTests(unittest.TestCase):
         NDRTests._assert_regression_results_equal(
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
-            os.path.join(args['workspace_dir'], 'output', 'watershed_results_ndr.shp'),
+            os.path.join(args['workspace_dir'], 'watershed_results_ndr.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
     @staticmethod

@@ -53,19 +53,23 @@ _INTERMEDIATE_BASE_FILES = {
     'crit_len_p_path': 'crit_len_p.tif',
     'd_dn_path': 'd_dn.tif',
     'd_up_path': 'd_up.tif',
-    'downstream_distance_path': 'downstream_distance.tif',
     'eff_n_path': 'eff_n.tif',
     'eff_p_path': 'eff_p.tif',
     'effective_retention_n_path': 'effective_retention_n.tif',
     'effective_retention_p_path': 'effective_retention_p.tif',
+    'flow_accumulation_path': 'flow_accumulation.tif',
+    'flow_direction_path': 'flow_direction.tif',
+    'slope_path': 'slope.tif',
+    'thresholded_slope_path': 'thresholded_slope.tif',
+    'processed_cell_path': 'processed_cell.tif',
     }
 
 _TMP_BASE_FILES = {
-    'flow_accumulation_path': 'flow_accumulation.tif',
-    'flow_direction_path': 'flow_direction.tif',
-    'processed_cell_path': 'processed_cell.tif',
-    'slope_path': 'slope.tif',
-    'thresholded_slope_path': 'thresholded_slope.tif',
+    'loss_path': 'loss.tif',
+    'aligned_dem_path': 'aligned_dem.tif',
+    'aligned_lulc_path': 'aligned_lulc.tif',
+    'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
+    'zero_absorption_source_path': 'zero_absorption_source.tif',
     }
 
 
@@ -144,7 +148,8 @@ def execute(args):
                     header = header_prefix + nutrient_id
                     if header not in row:
                         missing_headers.append(
-                            "Missing header %s from %s" % (header, table_type))
+                            "Missing header %s from %s" % (
+                                header, table_type))
 
         # proportion_subsurface_n is a special case in which phosphorous does
         # not have an equivalent.
@@ -158,14 +163,18 @@ def execute(args):
             raise ValueError('\n'.join(missing_headers))
 
     # Load all the tables for preprocessing
-    workspace = args['workspace_dir']
-    output_dir = os.path.join(workspace, 'output')
-    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(args['workspace_dir'])
+    intermediate_output_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_outputs')
+    output_dir = os.path.join(args['workspace_dir'])
+    pygeoprocessing.create_directories(
+        [output_dir, intermediate_output_dir])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    pygeoprocessing.create_directories(
-        [workspace, output_dir, intermediate_dir])
+    f_reg = utils.build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
+         (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
@@ -176,38 +185,29 @@ def execute(args):
         args['biophysical_table_path'], 'lucode')
 
     _validate_inputs(nutrients_to_process, lucode_to_parameters)
-
     dem_pixel_size = pygeoprocessing.get_cell_size_from_uri(
         args['dem_path'])
 
     # Align all the input rasters
-    aligned_dem_uri = pygeoprocessing.temporary_filename()
     pygeoprocessing.align_dataset_list(
-        [args['dem_path']], [aligned_dem_uri], ['nearest'], dem_pixel_size,
-        'intersection', dataset_to_align_index=0,
+        [args['dem_path']], [f_reg['aligned_dem_path']], ['nearest'],
+        dem_pixel_size, 'intersection', dataset_to_align_index=0,
         aoi_uri=args['watersheds_path'])
 
     # Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(
-        intermediate_dir, 'flow_accumulation.tif')
-    flow_direction_uri = os.path.join(
-        intermediate_dir, 'flow_direction.tif')
-
     pygeoprocessing.routing.flow_direction_d_inf(
-        aligned_dem_uri, flow_direction_uri)
+        f_reg['aligned_dem_path'], f_reg['flow_direction_path'])
     pygeoprocessing.routing.flow_accumulation(
-        flow_direction_uri, aligned_dem_uri, flow_accumulation_uri)
+        f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
+        f_reg['flow_accumulation_path'])
 
     # Calculate slope
     LOGGER.info("Calculating slope")
-    original_slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    thresholded_slope_uri = os.path.join(
-        intermediate_dir, 'thresholded_slope.tif')
     pygeoprocessing.calculate_slope(
-        aligned_dem_uri, original_slope_uri)
+        f_reg['aligned_dem_path'], f_reg['slope_path'])
     slope_nodata = pygeoprocessing.get_nodata_from_uri(
-        original_slope_uri)
+        f_reg['slope_path'])
 
     def threshold_slope(slope):
         """Threshold slope between 0.001 and 1.0."""
@@ -221,9 +221,10 @@ def execute(args):
         return result
 
     pygeoprocessing.vectorize_datasets(
-        [original_slope_uri], threshold_slope, thresholded_slope_uri,
-        gdal.GDT_Float32, slope_nodata, dem_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+        [f_reg['slope_path']], threshold_slope,
+        f_reg['thresholded_slope_path'], gdal.GDT_Float32, slope_nodata,
+        dem_pixel_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
 
     dem_pixel_size = pygeoprocessing.get_cell_size_from_uri(
         args['dem_path'])
@@ -232,20 +233,18 @@ def execute(args):
     out_pixel_size = dem_pixel_size
 
     # align all the input rasters
-    dem_uri = pygeoprocessing.temporary_filename()
-    lulc_uri = pygeoprocessing.temporary_filename()
-    runoff_proxy_uri = pygeoprocessing.temporary_filename()
-    runoff_proxy_index_uri = os.path.join(
-        intermediate_dir, 'runoff_proxy_index%s.tif' % file_suffix)
     pygeoprocessing.align_dataset_list(
         [args['dem_path'], args['lulc_path'], args['runoff_proxy_path']],
-        [dem_uri, lulc_uri, runoff_proxy_uri], ['nearest'] * 3,
-        out_pixel_size, 'dataset', dataset_to_align_index=0,
-        dataset_to_bound_index=0, aoi_uri=args['watersheds_path'])
+        [f_reg['aligned_dem_path'], f_reg['aligned_lulc_path'],
+         f_reg['aligned_runoff_proxy_path']], ['nearest'] * 3, out_pixel_size,
+        'dataset', dataset_to_align_index=0, dataset_to_bound_index=0,
+        aoi_uri=args['watersheds_path'])
 
     runoff_proxy_mean = pygeoprocessing.aggregate_raster_values_uri(
-        runoff_proxy_uri, args['watersheds_path']).pixel_mean[9999]
-    runoff_proxy_nodata = pygeoprocessing.get_nodata_from_uri(runoff_proxy_uri)
+        f_reg['aligned_runoff_proxy_path'],
+        args['watersheds_path']).pixel_mean[9999]
+    runoff_proxy_nodata = pygeoprocessing.get_nodata_from_uri(
+        f_reg['aligned_runoff_proxy_path'])
 
     def normalize_runoff_proxy_op(val):
         """Divide val by average runoff."""
@@ -256,22 +255,22 @@ def execute(args):
         return result
 
     pygeoprocessing.vectorize_datasets(
-        [runoff_proxy_uri], normalize_runoff_proxy_op, runoff_proxy_index_uri,
-        gdal.GDT_Float32, runoff_proxy_nodata, out_pixel_size,
-        "intersection", vectorize_op=False)
+        [f_reg['aligned_runoff_proxy_path']], normalize_runoff_proxy_op,
+        f_reg['runoff_proxy_index_path'], gdal.GDT_Float32,
+        runoff_proxy_nodata, out_pixel_size, "intersection",
+        vectorize_op=False)
 
     nodata_landuse = pygeoprocessing.get_nodata_from_uri(
-        lulc_uri)
+        f_reg['aligned_lulc_path'])
     nodata_load = -1.0
 
     # classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
     pygeoprocessing.routing.stream_threshold(
-        flow_accumulation_uri,
-        float(args['threshold_flow_accumulation']), stream_uri)
+        f_reg['flow_accumulation_path'],
+        float(args['threshold_flow_accumulation']), f_reg['stream_path'])
     nodata_stream = pygeoprocessing.get_nodata_from_uri(
-        stream_uri)
+        f_reg['stream_path'])
 
     def map_load_function(load_type, subsurface_proportion_type=None):
         """Function generator to map arbitrary nutrient type to surface load.
@@ -369,21 +368,9 @@ def execute(args):
             return result
         return map_eff
 
-    # Build up the load and efficiency rasters from the landcover map
-    load_uri = {}
-    sub_load_uri = {}
-    modified_load_uri = {}
-    modified_sub_load_uri = {}
-    eff_uri = {}
-    crit_len_uri = {}
-    sub_eff_uri = {}
-    sub_crit_len_uri = {}
     for nutrient in nutrients_to_process:
-        load_uri[nutrient] = os.path.join(
-            intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
-        modified_load_uri[nutrient] = os.path.join(
-            intermediate_dir, 'modified_load_%s%s.tif' % (
-                nutrient, file_suffix))
+        load_path = f_reg['load_%s_path' % nutrient]
+        modified_load_path = f_reg['modified_load_%s_path' % nutrient]
         # Perrine says that 'n' i the only case where we could consider a prop
         # subsurface component.  So there's a special case for that.
         if nutrient == 'n':
@@ -391,9 +378,9 @@ def execute(args):
         else:
             subsurface_proportion_type = None
         pygeoprocessing.vectorize_datasets(
-            [lulc_uri], map_load_function(
+            [f_reg['aligned_lulc_path']], map_load_function(
                 'load_%s' % nutrient, subsurface_proportion_type),
-            load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+            load_path, gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection", vectorize_op=False)
 
         def modified_load(load, runoff_proxy_index):
@@ -408,57 +395,50 @@ def execute(args):
             return result
 
         pygeoprocessing.vectorize_datasets(
-            [load_uri[nutrient], runoff_proxy_index_uri], modified_load,
-            modified_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            [load_path, f_reg['runoff_proxy_index_path']], modified_load,
+            modified_load_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
-        sub_load_uri[nutrient] = os.path.join(
-            intermediate_dir, 'sub_load_%s%s.tif' % (nutrient, file_suffix))
-        modified_sub_load_uri[nutrient] = os.path.join(
-            intermediate_dir, 'modified_sub_load_%s%s.tif' % (
-                nutrient, file_suffix))
+        sub_load_path = f_reg['sub_load_%s_path' % nutrient]
+        modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
         pygeoprocessing.vectorize_datasets(
-            [lulc_uri], map_subsurface_load_function(
+            [f_reg['aligned_lulc_path']], map_subsurface_load_function(
                 'load_%s' % nutrient, subsurface_proportion_type),
-            sub_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            sub_load_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
         pygeoprocessing.vectorize_datasets(
-            [sub_load_uri[nutrient], runoff_proxy_index_uri], modified_load,
-            modified_sub_load_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            [sub_load_path, f_reg['runoff_proxy_index_path']], modified_load,
+            modified_sub_load_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
-        sub_eff_uri[nutrient] = os.path.join(
-            intermediate_dir, 'sub_eff_%s%s.tif' % (nutrient, file_suffix))
+        sub_eff_path = f_reg['sub_eff_%s_path' % nutrient]
         pygeoprocessing.vectorize_datasets(
-            [lulc_uri], map_const_value(
+            [f_reg['aligned_lulc_path']], map_const_value(
                 args['subsurface_eff_%s' % nutrient], nodata_load),
-            sub_eff_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            sub_eff_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size,
             "intersection", vectorize_op=False)
 
-        sub_crit_len_uri[nutrient] = os.path.join(
-            intermediate_dir, 'sub_crit_len_%s%s.tif' % (
-                nutrient, file_suffix))
+        sub_crit_len_path = f_reg['sub_crit_len_%s_path' % nutrient]
         pygeoprocessing.vectorize_datasets(
-            [lulc_uri], map_const_value(
+            [f_reg['aligned_lulc_path']], map_const_value(
                 args['subsurface_critical_length_%s' % nutrient], nodata_load),
-            sub_crit_len_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            sub_crit_len_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
-        eff_uri[nutrient] = os.path.join(
-            intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
+        eff_path = f_reg['eff_%s_path' % nutrient]
         pygeoprocessing.vectorize_datasets(
-            [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
-            eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
-            "intersection", vectorize_op=False)
+            [f_reg['aligned_lulc_path'], f_reg['stream_path']],
+            map_eff_function('eff_%s' % nutrient), eff_path, gdal.GDT_Float32,
+            nodata_load, out_pixel_size, "intersection", vectorize_op=False)
 
-        crit_len_uri[nutrient] = os.path.join(
-            intermediate_dir, 'crit_len_%s%s.tif' % (nutrient, file_suffix))
+        crit_len_path = f_reg['crit_len_%s_path' % nutrient]
         pygeoprocessing.vectorize_datasets(
-            [lulc_uri, stream_uri], map_eff_function('crit_len_%s' % nutrient),
-            crit_len_uri[nutrient], gdal.GDT_Float32, nodata_load,
-            out_pixel_size, "intersection", vectorize_op=False)
+            [f_reg['aligned_lulc_path'], f_reg['stream_path']],
+            map_eff_function('crit_len_%s' % nutrient), crit_len_path,
+            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection",
+            vectorize_op=False)
 
     watershed_output_datasource_uri = os.path.join(
         output_dir, 'watershed_results_ndr%s.shp' % file_suffix)
@@ -472,30 +452,23 @@ def execute(args):
         original_datasource, watershed_output_datasource_uri)
     output_layer = output_datasource.GetLayer()
 
-    zero_absorption_source_uri = (
-        pygeoprocessing.temporary_filename())
-    loss_uri = pygeoprocessing.temporary_filename()
     # need this for low level route_flux function
     pygeoprocessing.make_constant_raster_from_base_uri(
-        aligned_dem_uri, 0.0, zero_absorption_source_uri)
+        f_reg['aligned_dem_path'], 0.0, f_reg['zero_absorption_source_path'])
 
     flow_accumulation_nodata = (
-        pygeoprocessing.get_nodata_from_uri(
-            flow_accumulation_uri))
+        pygeoprocessing.get_nodata_from_uri(f_reg['flow_accumulation_path']))
 
-    s_accumulation_uri = os.path.join(
-        intermediate_dir, 's_accumulation%s.tif' % file_suffix)
-
-    LOGGER.info("calculating %s", s_accumulation_uri)
+    LOGGER.info("calculating %s", f_reg['s_accumulation_path'])
     pygeoprocessing.routing.route_flux(
-        flow_direction_uri, aligned_dem_uri, thresholded_slope_uri,
-        zero_absorption_source_uri, loss_uri, s_accumulation_uri, 'flux_only',
+        f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
+        f_reg['thresholded_slope_path'], f_reg['zero_absorption_source_path'],
+        f_reg['loss_path'], f_reg['s_accumulation_path'], 'flux_only',
         aoi_uri=args['watersheds_path'])
 
-    s_bar_uri = os.path.join(intermediate_dir, 's_bar%s.tif' % file_suffix)
     s_bar_nodata = pygeoprocessing.get_nodata_from_uri(
-        s_accumulation_uri)
-    LOGGER.info("calculating %s", s_bar_uri)
+        f_reg['s_accumulation_path'])
+    LOGGER.info("calculating %s", f_reg['s_bar_path'])
 
     def bar_op(base_accumulation, flow_accumulation):
         """Calculate bar operation."""
@@ -509,12 +482,12 @@ def execute(args):
         return result
 
     pygeoprocessing.vectorize_datasets(
-        [s_accumulation_uri, flow_accumulation_uri], bar_op, s_bar_uri,
-        gdal.GDT_Float32, s_bar_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+        [f_reg['s_accumulation_path'], f_reg['flow_accumulation_path']],
+        bar_op, f_reg['s_bar_path'], gdal.GDT_Float32, s_bar_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
 
     LOGGER.info('calculating d_up')
-    d_up_uri = os.path.join(intermediate_dir, 'd_up%s.tif' % file_suffix)
     cell_area = out_pixel_size ** 2
     d_up_nodata = -1.0
 
@@ -531,16 +504,14 @@ def execute(args):
         return result
 
     pygeoprocessing.vectorize_datasets(
-        [s_bar_uri, flow_accumulation_uri], d_up, d_up_uri,
-        gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+        [f_reg['s_bar_path'], f_reg['flow_accumulation_path']], d_up,
+        f_reg['d_up_path'], gdal.GDT_Float32, d_up_nodata, out_pixel_size,
+        "intersection", dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info('calculate inverse S factor')
-    s_factor_inverse_uri = os.path.join(
-        intermediate_dir, 's_factor_inverse%s.tif' % file_suffix)
     s_nodata = -1.0
     slope_nodata = pygeoprocessing.get_nodata_from_uri(
-        thresholded_slope_uri)
+        f_reg['thresholded_slope_path'])
 
     def s_inverse_op(s_factor):
         """Calculate inverse of S factor."""
@@ -550,28 +521,20 @@ def execute(args):
         return result
 
     pygeoprocessing.vectorize_datasets(
-        [thresholded_slope_uri], s_inverse_op, s_factor_inverse_uri,
-        gdal.GDT_Float32, s_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+        [f_reg['thresholded_slope_path']], s_inverse_op,
+        f_reg['s_factor_inverse_path'], gdal.GDT_Float32, s_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        vectorize_op=False)
 
     LOGGER.info('calculating d_dn')
-    d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
     pygeoprocessing.routing.distance_to_stream(
-        flow_direction_uri, stream_uri, d_dn_uri,
-        factor_uri=s_factor_inverse_uri)
-
-    LOGGER.info('calculating downstream distance')
-    downstream_distance_uri = os.path.join(
-        intermediate_dir, 'downstream_distance%s.tif' % file_suffix)
-    pygeoprocessing.routing.distance_to_stream(
-        flow_direction_uri, stream_uri, downstream_distance_uri)
+        f_reg['flow_direction_path'], f_reg['stream_path'], f_reg['d_dn_path'],
+        factor_uri=f_reg['s_factor_inverse_path'])
 
     LOGGER.info('calculate ic')
-    ic_factor_uri = os.path.join(
-        intermediate_dir, 'ic_factor%s.tif' % file_suffix)
     ic_nodata = -9999.0
-    d_up_nodata = pygeoprocessing.get_nodata_from_uri(d_up_uri)
-    d_dn_nodata = pygeoprocessing.get_nodata_from_uri(d_dn_uri)
+    d_up_nodata = pygeoprocessing.get_nodata_from_uri(f_reg['d_up_path'])
+    d_dn_nodata = pygeoprocessing.get_nodata_from_uri(f_reg['d_dn_path'])
 
     def ic_op(d_up, d_dn):
         """Calculate IC0."""
@@ -584,18 +547,14 @@ def execute(args):
         return result
 
     pygeoprocessing.vectorize_datasets(
-        [d_up_uri, d_dn_uri], ic_op, ic_factor_uri,
-        gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+        [f_reg['d_up_path'], f_reg['d_dn_path']], ic_op,
+        f_reg['ic_factor_path'], gdal.GDT_Float32, ic_nodata, out_pixel_size,
+        "intersection", dataset_to_align_index=0, vectorize_op=False)
 
     ic_min, ic_max, _, _ = (
-        pygeoprocessing.get_statistics_from_uri(ic_factor_uri))
+        pygeoprocessing.get_statistics_from_uri(f_reg['ic_factor_path']))
     ic_0_param = (ic_min + ic_max) / 2.0
     k_param = float(args['k_param'])
-
-    lulc_mask_uri = pygeoprocessing.temporary_filename()
-    current_l_lulc_uri = pygeoprocessing.temporary_filename()
-    l_lulc_temp_uri = pygeoprocessing.temporary_filename()
 
     # define some variables outside the loop for closure
     effective_retention_nodata = None
@@ -605,21 +564,20 @@ def execute(args):
     export_nodata = None
     field_header_order = []
     field_summaries = {}
-    export_uri = {}
     for nutrient in nutrients_to_process:
-        effective_retention_uri = os.path.join(
-            intermediate_dir, 'effective_retention_%s%s.tif' %
-            (nutrient, file_suffix))
+        effective_retention_path = (
+            f_reg['effective_retention_%s_path' % nutrient])
         LOGGER.info('calculate effective retention')
+        eff_path = f_reg['eff_%s_path' % nutrient]
+        crit_len_path = f_reg['crit_len_%s_path' % nutrient]
         ndr_core.ndr_eff_calculation(
-            flow_direction_uri, stream_uri, eff_uri[nutrient],
-            crit_len_uri[nutrient], effective_retention_uri)
+            f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
+            crit_len_path, effective_retention_path)
         effective_retention_nodata = (
             pygeoprocessing.get_nodata_from_uri(
-                effective_retention_uri))
+                effective_retention_path))
         LOGGER.info('calculate NDR')
-        ndr_uri = os.path.join(
-            intermediate_dir, 'ndr_%s%s.tif' % (nutrient, file_suffix))
+        ndr_path = f_reg['ndr_%s_path' % nutrient]
         ndr_nodata = -1.0
 
         def calculate_ndr(effective_retention_array, ic_array):
@@ -636,23 +594,21 @@ def execute(args):
             return result
 
         pygeoprocessing.vectorize_datasets(
-            [effective_retention_uri, ic_factor_uri], calculate_ndr, ndr_uri,
-            gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
-            vectorize_op=False)
+            [effective_retention_path, f_reg['ic_factor_path']],
+            calculate_ndr, ndr_path, gdal.GDT_Float32, ndr_nodata,
+            out_pixel_size, 'intersection', vectorize_op=False)
 
-        sub_effective_retention_uri = os.path.join(
-            intermediate_dir, 'sub_effective_retention_%s%s.tif' %
-            (nutrient, file_suffix))
+        sub_effective_retention_path = (
+            f_reg['sub_effective_retention_%s_path' % nutrient])
         LOGGER.info('calculate subsurface effective retention')
         ndr_core.ndr_eff_calculation(
-            flow_direction_uri, stream_uri, sub_eff_uri[nutrient],
-            sub_crit_len_uri[nutrient], sub_effective_retention_uri)
+            f_reg['flow_direction_path'], f_reg['stream_path'], sub_eff_path,
+            sub_crit_len_path, sub_effective_retention_path)
         sub_effective_retention_nodata = (
             pygeoprocessing.get_nodata_from_uri(
-                sub_effective_retention_uri))
+                sub_effective_retention_path))
         LOGGER.info('calculate sub NDR')
-        sub_ndr_uri = os.path.join(
-            intermediate_dir, 'sub_ndr_%s%s.tif' % (nutrient, file_suffix))
+        sub_ndr_path = f_reg['sub_ndr_%s_path' % nutrient]
         ndr_nodata = -1.0
 
         def calculate_sub_ndr(sub_eff_ret_array):
@@ -666,15 +622,14 @@ def execute(args):
             return result
 
         pygeoprocessing.vectorize_datasets(
-            [sub_effective_retention_uri], calculate_sub_ndr, sub_ndr_uri,
+            [sub_effective_retention_path], calculate_sub_ndr, sub_ndr_path,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
 
-        export_uri[nutrient] = os.path.join(
-            output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
+        export_path = f_reg['%s_export_path' % nutrient]
 
         load_nodata = pygeoprocessing.get_nodata_from_uri(
-            load_uri[nutrient])
+            load_path)
         export_nodata = -1.0
 
         def calculate_export(
@@ -694,18 +649,21 @@ def execute(args):
                 sub_ndr_array[valid_mask])
             return result
 
+        modified_load_path = f_reg['modified_load_%s_path' % nutrient]
+        modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
         pygeoprocessing.vectorize_datasets(
-            [modified_load_uri[nutrient], ndr_uri,
-             modified_sub_load_uri[nutrient], sub_ndr_uri], calculate_export,
-            export_uri[nutrient], gdal.GDT_Float32, export_nodata,
+            [modified_load_path, ndr_path,
+             modified_sub_load_path, sub_ndr_path], calculate_export,
+            export_path, gdal.GDT_Float32, export_nodata,
             out_pixel_size, "intersection", vectorize_op=False)
 
         # summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s", nutrient)
+        load_path = f_reg['load_%s_path' % nutrient]
         load_tot = pygeoprocessing.aggregate_raster_values_uri(
-            load_uri[nutrient], args['watersheds_path'], 'ws_id').total
+            load_path, args['watersheds_path'], 'ws_id').total
         export_tot = pygeoprocessing.aggregate_raster_values_uri(
-            export_uri[nutrient], args['watersheds_path'], 'ws_id').total
+            export_path, args['watersheds_path'], 'ws_id').total
 
         field_summaries['%s_load_tot' % nutrient] = load_tot
         field_summaries['%s_exp_tot' % nutrient] = export_tot
@@ -718,10 +676,13 @@ def execute(args):
         'ws_id', field_summaries, output_layer, field_header_order)
 
     LOGGER.info('cleaning up temp files')
-    for uri in [
-            zero_absorption_source_uri, loss_uri, lulc_mask_uri,
-            current_l_lulc_uri, l_lulc_temp_uri, dem_uri, lulc_uri]:
-        os.remove(uri)
+    for tmp_filename_key in _TMP_BASE_FILES:
+        try:
+            os.remove(f_reg[tmp_filename_key])
+        except OSError as os_error:
+            LOGGER.warn(
+                "Can't remove temporary file: %s\nOriginal Exception:\n%s",
+                f_reg[tmp_filename_key], os_error)
 
     LOGGER.info(r'NDR complete!')
     LOGGER.info(r'  _   _    ____    ____     ')
