@@ -162,8 +162,8 @@ class TestRecServer(unittest.TestCase):
                 LOGGER.warn("Can't start server process on port %d", port)
                 if server_process.is_alive():
                     server_process.terminate()
-            if not server_launched:
-                self.fail("Server didn't start")
+        if not server_launched:
+            self.fail("Server didn't start")
 
         try:
             path = "PYRO:natcap.invest.recreation@localhost:%s" % port
