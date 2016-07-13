@@ -1,0 +1,99 @@
+"""Module for Regression Testing the InVEST Habitat Quality model."""
+import unittest
+import tempfile
+import shutil
+import os
+
+import pygeoprocessing.testing
+from pygeoprocessing.testing import scm
+
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data')
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'habitat_quality')
+
+
+class HabitatQualityTests(unittest.TestCase):
+    """Tests for the Habitat Quality model."""
+
+    def setUp(self):
+        """Overriding setUp function to create temp workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Overriding tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_habitat_quality_regression(self):
+        """Habitat Quality: base regression test."""
+        from natcap.invest.habitat_quality import habitat_quality
+
+        args = {
+            'access_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'access_samp.shp'),
+            'half_saturation_constant': '0.5',
+            'landuse_bas_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'lc_samp_bse_b.tif'),
+            'landuse_cur_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'lc_samp_cur_b.tif'),
+            'landuse_fut_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'lc_samp_fut_b.tif'),
+            'sensitivity_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'sensitivity_samp.csv'),
+            'suffix': 'regression',
+            'threat_raster_folder': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality'),
+            'threats_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'threats_samp.csv'),
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        habitat_quality.execute(args)
+        HabitatQualityTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'file_list_regression.txt'),
+            args['workspace_dir'])
+
+        for output_filename in [
+                'rarity_f_regression.tif', 'deg_sum_out_c_regression.tif',
+                'deg_sum_out_f_regression.tif',
+                'quality_out_c_regression.tif',
+                'quality_out_f_regression.tif', 'rarity_c_regression.tif']:
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(REGRESSION_DATA, output_filename),
+                os.path.join(self.workspace_dir, 'output', output_filename),
+                1e-6)
+
+    @staticmethod
+    def _test_same_files(base_list_path, directory_path):
+        """Assert files in `base_list_path` are in `directory_path`.
+
+        Parameters:
+            base_list_path (string): a path to a file that has one relative
+                file path per line.
+            directory_path (string): a path to a directory whose contents will
+                be checked against the files listed in `base_list_file`
+
+        Returns:
+            None
+
+        Raises:
+            AssertionError when there are files listed in `base_list_file`
+                that don't exist in the directory indicated by `path`
+        """
+        missing_files = []
+        with open(base_list_path, 'r') as file_list:
+            for file_path in file_list:
+                full_path = os.path.join(directory_path, file_path.rstrip())
+                if full_path == '':
+                    continue
+                if not os.path.isfile(full_path):
+                    missing_files.append(full_path)
+        if len(missing_files) > 0:
+            raise AssertionError(
+                "The following files were expected but not found: " +
+                '\n'.join(missing_files))
