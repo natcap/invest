@@ -7,6 +7,8 @@ import time
 import logging
 import math
 import urllib
+import tempfile
+import shutil
 
 import Pyro4
 from osgeo import ogr
@@ -228,8 +230,18 @@ def execute(args):
     # unpack result
     open(file_registry['compressed_pud_path'], 'wb').write(
         result_zip_file_binary)
+    temporary_output_dir = tempfile.mkdtemp()
     zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
-        output_dir)
+        temporary_output_dir)
+    monthly_table_path = os.path.join(
+        temporary_output_dir, 'monthly_table.csv')
+    if os.path.exists(monthly_table_path):
+        os.rename(
+            monthly_table_path,
+            os.path.splitext(monthly_table_path)[0] + file_suffix + '.csv')
+    for filename in os.listdir(temporary_output_dir):
+        shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
+    shutil.rmtree(temporary_output_dir)
 
     if 'compute_regression' in args and args['compute_regression']:
         LOGGER.info('Calculating regression')
