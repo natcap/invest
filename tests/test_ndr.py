@@ -64,7 +64,6 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
-
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_nutrient_selected(self):
