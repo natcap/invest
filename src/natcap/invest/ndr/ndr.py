@@ -371,8 +371,8 @@ def execute(args):
     for nutrient in nutrients_to_process:
         load_path = f_reg['load_%s_path' % nutrient]
         modified_load_path = f_reg['modified_load_%s_path' % nutrient]
-        # Perrine says that 'n' i the only case where we could consider a prop
-        # subsurface component.  So there's a special case for that.
+        # Perrine says that 'n' is the only case where we could consider a
+        # prop subsurface component.  So there's a special case for that.
         if nutrient == 'n':
             subsurface_proportion_type = 'proportion_subsurface_n'
         else:
