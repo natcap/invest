@@ -202,7 +202,7 @@ def execute(args):
             # ranges in order:
             #   1) range[0] to range[1] noninclusive (linear interp 0-1)
             #   2) range[1] to range[2] inclusive (exactly 1.0)
-            #   3) range[2] to range[3] noninclusive (linaer interp 1-0)
+            #   3) range[2] to range[3] noninclusive (linear interp 1-0)
             #   4) nodata -> nodata
             #   5) 0.0 everywhere else
 
@@ -224,7 +224,10 @@ def execute(args):
                     (suitability_range[3]-suitability_range[2])),
                 _HSI_NODATA,
                 0.0]
-            return numpy.piecewise(biophysical_values, condlist, funclist)
+            # The .astype(numpy.float) is necessary for potential int types
+            # that cast vector floating point division to ints
+            return numpy.piecewise(
+                biophysical_values.astype(numpy.float), condlist, funclist)
 
         pygeoprocessing.vectorize_datasets(
             [base_raster_path], local_map, f_reg[suitability_key],
