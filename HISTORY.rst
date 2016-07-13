@@ -6,8 +6,11 @@ Unreleased Changes
 * Major modifications to Terrestrial Carbon model to include removing the harvested wood product pool, uncertainty analysis, and updated efficient raster calculations for performance.
 * Fixed an issue in GLOBIO that would cause model runs to crash if the AOI marked as optional was not present.
 * Removed the deprecated and incomplete Nearshore Wave and Erosion model (``natcap.invest.nearshore_wave_and_erosion``).
+* Removed the deprecated Timber model (``natcap.invest.timber``).
 * Fixed an issue where seasonal water yield would raise a divide by zero error if a watershed polygon didn't cover a valid data region.  Now sets aggregation quantity to zero and reports a warning in the log.
 * Added functionality to recreation model so that the `monthly_table.csv` file now receives a file suffix if one is provided by the user.
+* Fixed an issue in SDR where the m exponent was calculated incorrectly in many situations resulting in an error of about 1% in total export.
+* Fixed an issue in SDR that reported runtime overflow errors during normal processing even though the model completed without other errors.
 
 3.3.1 (2016-06-13)
 ------------------
