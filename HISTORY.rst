@@ -11,6 +11,8 @@ Unreleased Changes
 * Fixed issues in NDR that would indicate invalid values were being processed during runtimes by skipping the invalid calculations in the first place rather than calculating them and discarding after the fact.
 * Complete code coverage tests for NDR model.
 * Minor (~10% speedup) performance improvements to NDR.
+* Fixed an issue in SDR where the m exponent was calculated incorrectly in many situations resulting in an error of about 1% in total export.
+* Fixed an issue in SDR that reported runtime overflow errors during normal processing even though the model completed without other errors.
 
 3.3.1 (2016-06-13)
 ------------------
