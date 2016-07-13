@@ -8,6 +8,8 @@ Unreleased Changes
 * Removed the deprecated and incomplete Nearshore Wave and Erosion model (``natcap.invest.nearshore_wave_and_erosion``).
 * Removed the deprecated Timber model (``natcap.invest.timber``).
 * Fixed an issue where seasonal water yield would raise a divide by zero error if a watershed polygon didn't cover a valid data region.  Now sets aggregation quantity to zero and reports a warning in the log.
+* Fixed an issue in SDR where the m exponent was calculated incorrectly in many situations resulting in an error of about 1% in total export.
+* Fixed an issue in SDR that reported runtime overflow errors during normal processing even though the model completed without other errors.
 
 3.3.1 (2016-06-13)
 ------------------
