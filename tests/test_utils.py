@@ -47,10 +47,6 @@ class SuffixUtilsTests(unittest.TestCase):
 class FileRegistryUtilsTests(unittest.TestCase):
     """Tests for natcap.invest.utils.file_registry."""
 
-    def test_exp_decay_kernel_raster(self):
-        """Utils: test exponential_decay_kernel_raster."""
-        pass
-
     def test_build_file_registry(self):
         """Utils: test build_file_registry on simple case."""
         from natcap.invest import utils
