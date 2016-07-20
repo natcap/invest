@@ -34,8 +34,8 @@
           "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
         },
         {
-          "id": "dem_uri",
-          "args_id": "dem_uri",
+          "id": "dem_path",
+          "args_id": "dem_path",
           "type": "file",
           "label": "DEM (Raster)",
           "defaultValue": "../Base_Data/Freshwater/dem",
@@ -47,7 +47,7 @@
         },
         {
           "id": "land_use",
-          "args_id": "lulc_uri",
+          "args_id": "lulc_path",
           "type": "file",
           "label": "Land Use (Raster)",
           "defaultValue": "../Base_Data/Freshwater/landuse_90",
@@ -59,7 +59,7 @@
         },
         {
           "id": "runoff_proxy",
-          "args_id": "runoff_proxy_uri",
+          "args_id": "runoff_proxy_path",
           "type": "file",
           "label": "Nutrient Runoff Proxy (Raster)",
           "defaultValue": "../Base_Data/Freshwater/precip",
@@ -70,8 +70,8 @@
           "helpText": "Weighting factor to nutrient loads.  Internally this value is normalized by its average values so a variety of data can be used including precipitation or quickflow."
         },
         {
-          "id": "watersheds_uri",
-          "args_id": "watersheds_uri",
+          "id": "watersheds_path",
+          "args_id": "watersheds_path",
           "type": "file",
           "label": "Watersheds (Vector)",
           "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
@@ -96,8 +96,8 @@
           "helpText": "An OGR-supported vector file containing watersheds such that each watershed contributes to a point of interest where water quality will be analyzed.  It must have the integer field 'ws_id' where the values uniquely identify each watershed."
         },
         {
-          "id": "biophysical_table_uri",
-          "args_id": "biophysical_table_uri",
+          "id": "biophysical_table_path",
+          "args_id": "biophysical_table_path",
           "type": "file",
           "label": "Biophysical Table (CSV)",
           "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
