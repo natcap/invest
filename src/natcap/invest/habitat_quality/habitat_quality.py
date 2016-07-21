@@ -255,8 +255,12 @@ def execute(args):
             elif decay_type == 'exponential':
                 utils.exponential_decay_kernel_raster(dr_pixel, kernel_uri)
             else:
-                raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
-            pygeoprocessing.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
+                raise TypeError(
+                    "Unknown type of decay in biophysical table, should be "
+                    "either 'linear' or 'exponential' input was %s" % (
+                        decay_type))
+            pygeoprocessing.convolve_2d_uri(
+                threat_dataset_uri, kernel_uri, filtered_threat_uri)
             os.remove(kernel_uri)
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
@@ -371,13 +375,14 @@ def execute(args):
         pygeoprocessing.vectorize_datasets(
             [deg_sum_uri, habitat_uri], quality_op, quality_uri,
             gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
-            vectorize_op = False)
+            vectorize_op=False)
 
         LOGGER.debug('Finished vectorize on quality_op')
 
-    #Compute Rarity if user supplied baseline raster
-    try:
-        # will throw a KeyError exception if no base raster is provided
+    # Compute Rarity if user supplied baseline raster
+    if '_b' not in landuse_uri_dict:
+        LOGGER.info('Baseline not provided to compute Rarity')
+    else:
         lulc_base_uri = landuse_uri_dict['_b']
 
         # get the area of a base pixel to use for computing rarity where the
@@ -389,80 +394,73 @@ def execute(args):
         lulc_code_count_b = raster_pixel_count(lulc_base_uri)
 
         # compute rarity for current landscape and future (if provided)
+        lulc_nodata = None
         for lulc_cover in ['_c', '_f']:
-            try:
-                lulc_x = landuse_uri_dict[lulc_cover]
-
-                # get the area of a cur/fut pixel
-                lulc_area = pygeoprocessing.get_cell_size_from_uri(lulc_x) ** 2
-                lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_x)
-
-                LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
-                        lulc_nodata)
-
-                def trim_op(base, cover_x):
-                    """Vectorized function used in vectorized_rasters. Trim
-                        cover_x to the mask of base
-
-                        base - the base raster from 'lulc_base' above
-                        cover_x - either the future or current land cover raster
-                            from 'lulc_x' above
-
-                        return - out_nodata if base or cover_x is equal to their
-                            nodata values or the cover_x value
-                        """
-                    return numpy.where(
-                            (base == base_nodata) | (cover_x == lulc_nodata),
-                            base_nodata, cover_x)
-
-                LOGGER.debug('Create new cover for %s', lulc_cover)
-
-                new_cover_uri = os.path.join(
-                    inter_dir, 'new_cover' + lulc_cover + suffix + '.tif')
-
-                # set the current/future land cover to be masked to the base
-                # land cover
-                pygeoprocessing.vectorize_datasets(
-                    [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
-                    gdal.GDT_Int32, base_nodata, lulc_cell_size,
-                    "intersection", vectorize_op=False)
-
-                lulc_code_count_x = raster_pixel_count(new_cover_uri)
-
-                # a dictionary to map LULC types to a number that depicts how
-                # rare they are considered
-                code_index = {}
-
-                # compute the ratio or rarity index for each lulc code where we
-                # return 0.0 if an lulc code is found in the cur/fut land cover
-                # but not the baseline
-                for code in lulc_code_count_x.iterkeys():
-                    if code in lulc_code_count_b:
-                        numerator = float(lulc_code_count_x[code] * lulc_area)
-                        denominator = float(
-                            lulc_code_count_b[code] * base_area)
-                        ratio = 1.0 - (numerator / denominator)
-                        code_index[code] = ratio
-                    else:
-                        code_index[code] = 0.0
-
-                rarity_uri = os.path.join(
-                    out_dir, 'rarity' + lulc_cover + suffix + '.tif')
-
-                LOGGER.debug('Starting vectorize on map_ratio')
-
-                pygeoprocessing.reclassify_dataset_uri(
-                        new_cover_uri, code_index, rarity_uri, gdal.GDT_Float32,
-                        rarity_nodata)
-
-                LOGGER.debug('Finished vectorize on map_ratio')
-
-            except KeyError:
+            if lulc_cover not in landuse_uri_dict:
                 continue
+            lulc_cover_path = landuse_uri_dict[lulc_cover]
 
-    except KeyError:
-        LOGGER.info('Baseline not provided to compute Rarity')
+            # get the area of a cur/fut pixel
+            lulc_area = pygeoprocessing.get_cell_size_from_uri(
+                lulc_cover_path) ** 2
+            lulc_nodata = pygeoprocessing.get_nodata_from_uri(
+                lulc_cover_path)
 
+            def trim_op(base, cover_x):
+                """Trim cover_x to the mask of base.
+
+                Parameters:
+                    base (numpy.ndarray): base raster from 'lulc_base'
+                    cover_x (numpy.ndarray): either future or current land
+                        cover raster from 'lulc_cover_path' above
+
+                Returns:
+                    out_nodata where either array has nodata, otherwise
+                    cover_x.
+                """
+                return numpy.where(
+                    (base == base_nodata) | (cover_x == lulc_nodata),
+                    base_nodata, cover_x)
+
+            LOGGER.debug('Create new cover for %s', lulc_cover)
+
+            new_cover_uri = os.path.join(
+                inter_dir, 'new_cover' + lulc_cover + suffix + '.tif')
+
+            # set the current/future land cover to be masked to the base
+            # land cover
+            pygeoprocessing.vectorize_datasets(
+                [lulc_base_uri, lulc_cover_path], trim_op, new_cover_uri,
+                gdal.GDT_Int32, base_nodata, lulc_cell_size,
+                "intersection", vectorize_op=False)
+
+            lulc_code_count_x = raster_pixel_count(new_cover_uri)
+
+            # a dictionary to map LULC types to a number that depicts how
+            # rare they are considered
+            code_index = {}
+
+            # compute rarity index for each lulc code
+            # define 0.0 if an lulc code is found in the cur/fut landcover
+            # but not the baseline
+            for code in lulc_code_count_x.iterkeys():
+                if code in lulc_code_count_b:
+                    numerator = float(lulc_code_count_x[code] * lulc_area)
+                    denominator = float(
+                        lulc_code_count_b[code] * base_area)
+                    ratio = 1.0 - (numerator / denominator)
+                    code_index[code] = ratio
+                else:
+                    code_index[code] = 0.0
+
+            rarity_uri = os.path.join(
+                out_dir, 'rarity' + lulc_cover + suffix + '.tif')
+
+            pygeoprocessing.reclassify_dataset_uri(
+                new_cover_uri, code_index, rarity_uri, gdal.GDT_Float32,
+                rarity_nodata)
+
+            LOGGER.debug('Finished vectorize on map_ratio')
     LOGGER.debug('Finished habitat_quality biophysical calculations')
 
 
