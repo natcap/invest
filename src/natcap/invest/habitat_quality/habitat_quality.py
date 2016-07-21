@@ -89,10 +89,12 @@ def execute(args):
 
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
-    if not threat_names_match(threat_dict, sensitivity_dict, 'L_'):
-        raise Exception(
-            'The threat names in the threat table do '
-            'not match the columns in the sensitivity table')
+    sens_row = sensitivity_dict.itervalues().next()
+    for threat in threat_dict:
+        if 'L_' + threat not in sens_row:
+            raise Exception(
+                'Threat "%s" does not match any column in the sensitivity '
+                'table. Possible columns: %s', threat, str(sens_row.keys()))
 
     # get the half saturation constant
     half_saturation = float(args['half_saturation_constant'])
@@ -418,17 +420,12 @@ def execute(args):
                 new_cover_uri = os.path.join(
                     inter_dir, 'new_cover' + lulc_cover + suffix + '.tif')
 
-                LOGGER.debug('Starting vectorize on trim_op')
-
                 # set the current/future land cover to be masked to the base
                 # land cover
-
                 pygeoprocessing.vectorize_datasets(
                     [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
-                    gdal.GDT_Int32, base_nodata, lulc_cell_size, "intersection",
-                    vectorize_op = False)
-
-                LOGGER.debug('Finished vectorize on trim_op')
+                    gdal.GDT_Int32, base_nodata, lulc_cell_size,
+                    "intersection", vectorize_op=False)
 
                 lulc_code_count_x = raster_pixel_count(new_cover_uri)
 
@@ -440,13 +437,13 @@ def execute(args):
                 # return 0.0 if an lulc code is found in the cur/fut land cover
                 # but not the baseline
                 for code in lulc_code_count_x.iterkeys():
-                    try:
+                    if code in lulc_code_count_b:
                         numerator = float(lulc_code_count_x[code] * lulc_area)
                         denominator = float(
                             lulc_code_count_b[code] * base_area)
                         ratio = 1.0 - (numerator / denominator)
                         code_index[code] = ratio
-                    except KeyError:
+                    else:
                         code_index[code] = 0.0
 
                 rarity_uri = os.path.join(
@@ -556,32 +553,29 @@ def make_dictionary_from_csv(csv_uri, key_field):
     csv_file.close()
     return out_dict
 
-def threat_names_match(threat_dict, sens_dict, prefix):
-    """Check that the threat names in the threat table match the columns in the
-        sensitivity table that represent the sensitivity of each threat on a
-        lulc.
 
-        threat_dict - a dictionary representing the threat table:
+def threat_names_match(threat_dict, sens_dict, prefix):
+    """Check threat names match the columns in the sensitivity table.
+
+    Parameters:
+        threat_dict (dict): represents the threat table, example:
             {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7'},
              'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
              ... }
-        sens_dict - a dictionary representing the sensitivity table:
+        sens_dict (dict): represents sensitivity table:
             {'1':{'LULC':'1', 'NAME':'Residential', 'HABITAT':'1',
                   'L_crp':'0.4', 'L_urb':'0.45'...},
              '11':{'LULC':'11', 'NAME':'Urban', 'HABITAT':'1',
                    'L_crp':'0.6', 'L_urb':'0.3'...},
              ...}
 
-        prefix - a string that specifies the prefix to the threat names that is
-            found in the sensitivity table
+        prefix (string): prefix to the attach to  threat names to match with
+            sensitivity table
 
-        returns - False if there is a mismatch in threat names or True if
-            everything passes"""
-
-    # get a representation of a row from the sensitivity table where 'sens_row'
-    # will be a dictionary with the column headers as the keys
+    Return:
+        False if there is a mismatch in threat names, True otherwise.
+    """
     sens_row = sens_dict[sens_dict.keys()[0]]
-
     for threat in threat_dict:
         sens_key = prefix + threat
         if sens_key not in sens_row:
