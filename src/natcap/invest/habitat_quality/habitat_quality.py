@@ -1,6 +1,7 @@
 """InVEST Habitat Quality model."""
 
-import os.path
+import collections
+import os
 import logging
 import csv
 
@@ -141,12 +142,11 @@ def execute(args):
                     'correspond to threat rasters in the input folder.'
                     % os.path.join(threat_raster_dir, threat + ext))
 
-    # checking to make sure the land covers have the same projections and are
-    # projected in meters. We pass in 1.0 because that is the unit for meters
-    if not check_projections(landuse_uri_dict, 1.0):
-        raise Exception(
-            'Land cover projections are not the same or are not projected in '
-            'meters')
+    # checking to make sure the land covers have the same projections.
+    # using pygeoprocessing's routine that prints warnings in case projections
+    # are identical but don't test that way
+    pygeoprocessing.assert_datasets_in_same_projection(
+        landuse_uri_dict.values())
 
     LOGGER.debug('Starting habitat_quality biophysical calculations')
 
@@ -469,21 +469,26 @@ def execute(args):
     LOGGER.debug('Finished habitat_quality biophysical calculations')
 
 
-def resolve_ambiguous_raster_path(uri, raise_error=True):
-    """Get the real uri for a raster when we don't know the extension of how
-        the raster may be represented.
+def resolve_ambiguous_raster_path(path, raise_error=True):
+    """Determine real path when we don't know true path extension.
 
-        uri - a python string of the file path that includes the name of the
-              file but not its extension
+    Parameters:
+        path (string): file path that includes the name of the file but not
+            its extension
 
-        raise_error - a Boolean that indicates whether the function should
-            raise an error if a raster file could not be opened.
+        raise_error (boolean): if True then function will raise an
+            ValueError if a valid raster file could not be found.
 
-        return - the resolved uri to the rasster"""
-
+    Return:
+        the full path, plus extension, to the valid raster.
+    """
     # Turning on exceptions so that if an error occurs when trying to open a
     # file path we can catch it and handle it properly
-    gdal.UseExceptions()
+
+    def _error_handler(*_):
+        """A dummy error handler that raises a ValueError."""
+        raise ValueError()
+    gdal.PushErrorHandler(_error_handler)
 
     # a list of possible suffixes for raster datasets. We currently can handle
     # .tif and directory paths
@@ -492,35 +497,32 @@ def resolve_ambiguous_raster_path(uri, raise_error=True):
     # initialize dataset to None in the case that all paths do not exist
     dataset = None
     for suffix in possible_suffixes:
-        full_uri = uri + suffix
-        if not os.path.exists(full_uri):
+        full_path = path + suffix
+        if not os.path.exists(full_path):
             continue
         try:
-            dataset = gdal.Open(full_uri, gdal.GA_ReadOnly)
-        except:
+            dataset = gdal.Open(full_path, gdal.GA_ReadOnly)
+            break
+        except RuntimeError:
             dataset = None
 
-        # return as soon as a valid gdal dataset is found
-        if dataset is not None:
-            break
-
-    # Turning off exceptions because there is a known bug that will hide
-    # certain issues we care about later
-    gdal.DontUseExceptions()
+    gdal.PopErrorHandler()
 
     # If a dataset comes back None, then it could not be found / opened and we
     # should fail gracefully
-    if dataset is None and raise_error:
-        raise Exception('There was an Error locating a threat raster in the '
-        'input folder. One of the threat names in the CSV table does not match'
-        ' to a threat raster in the input folder. Please check that the names '
-        'correspond. The threat raster that could not be found is : %s', uri)
-
     if dataset is None:
-        full_uri = None
+        if raise_error:
+            raise Exception(
+                'There was an Error locating a threat raster in the input '
+                'folder. One of the threat names in the CSV table does not '
+                'match to a threat raster in the input folder. Please check '
+                'that the names correspond. The threat raster that could not '
+                'be found is: %s', path)
+        else:
+            full_path = None
 
     dataset = None
-    return full_uri
+    return full_path
 
 
 def make_dictionary_from_csv(csv_uri, key_field):
@@ -554,43 +556,6 @@ def make_dictionary_from_csv(csv_uri, key_field):
     csv_file.close()
     return out_dict
 
-
-def check_projections(ds_uri_dict, proj_unit):
-    """Check that a group of gdal datasets are projected and that they are
-        projected in a certain unit.
-
-        ds_uri_dict - a dictionary of uris to gdal datasets
-        proj_unit - a float that specifies what units the projection should be
-            in. ex: 1.0 is meters.
-
-        returns - False if one of the datasets is not projected or not in the
-            correct projection type, otherwise returns True if datasets are
-            properly projected
-    """
-    # a list to hold the projection types to compare later
-    projections = []
-
-    for dataset_uri in ds_uri_dict.itervalues():
-        dataset = gdal.Open(dataset_uri)
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(dataset.GetProjection())
-        if not srs.IsProjected():
-            LOGGER.debug('A Raster is Not Projected')
-            return False
-        if srs.GetLinearUnits() != proj_unit:
-            LOGGER.debug('Proj units do not match %s:%s', \
-                         proj_unit, srs.GetLinearUnits())
-            return False
-        projections.append(srs.GetAttrValue("PROJECTION"))
-
-    # check that all the datasets have the same projection type
-    for index in range(len(projections)):
-        if projections[0] != projections[index]:
-            LOGGER.debug('Projections are not the same')
-            return False
-
-    return True
-
 def threat_names_match(threat_dict, sens_dict, prefix):
     """Check that the threat names in the threat table match the columns in the
         sensitivity table that represent the sensitivity of each threat on a
@@ -619,41 +584,33 @@ def threat_names_match(threat_dict, sens_dict, prefix):
 
     for threat in threat_dict:
         sens_key = prefix + threat
-        if not sens_key in sens_row:
+        if sens_key not in sens_row:
             return False
     return True
 
 
-def raster_pixel_count(dataset_uri):
-    """Determine how many of each unique pixel lies in the dataset (dataset)
+def raster_pixel_count(raster_path):
+    """Count unique pixel values in raster.
 
-        dataset_uri - a GDAL raster dataset
+    Parameters:
+        raster_path (string): path to a raster
 
-        returns -  a dictionary whose keys are the unique pixel values and
-                   whose values are the number of occurrences
+    Returns:
+        dict of pixel values to frequency.
     """
-    LOGGER.debug('Entering raster_pixel_count')
-    dataset = gdal.Open(dataset_uri)
-    band = dataset.GetRasterBand(1)
-    nodata = band.GetNoDataValue()
-    counts = {}
-    for row_index in range(band.YSize):
-        cur_array = band.ReadAsArray(0, row_index, band.XSize, 1)
-        for val in numpy.unique(cur_array):
-            if val == nodata:
+    nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
+    counts = collections.defaultdict(int)
+    for _, data_block in pygeoprocessing.iterblocks(raster_path):
+        for value, count in zip(
+                *numpy.unique(data_block, return_counts=True)):
+            if value == nodata:
                 continue
-            if val in counts:
-                counts[val] = \
-                    float(counts[val] + cur_array[cur_array==val].size)
-            else:
-                counts[val] = float(cur_array[cur_array==val].size)
-
-    LOGGER.debug('Leaving raster_pixel_count')
+            counts[value] += count
     return counts
 
 
-def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
-        out_nodata, raise_error):
+def map_raster_to_dict_values(
+        key_raster_uri, out_uri, attr_dict, field, out_nodata, raise_error):
     """Creates a new raster from 'key_raster' where the pixel values from
        'key_raster' are the keys to a dictionary 'attr_dict'. The values
        corresponding to those keys is what is written to the new raster. If a
