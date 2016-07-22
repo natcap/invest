@@ -10,13 +10,13 @@ from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
 
-from .. import utils
+from . import utils
 
 logging.basicConfig(
     format='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
     level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('natcap.invest.habitat_quality.habitat_quality')
+LOGGER = logging.getLogger('natcap.invest.habitat_quality')
 
 
 def execute(args):
@@ -490,6 +490,8 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
         if not os.path.exists(full_path):
             continue
         dataset = gdal.Open(full_path, gdal.GA_ReadOnly)
+        if dataset is not None:
+            break
 
     gdal.PopErrorHandler()
 
