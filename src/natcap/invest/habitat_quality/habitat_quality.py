@@ -138,7 +138,7 @@ def execute(args):
                     density_uri_dict['density' + ext][threat] = (
                         resolve_ambiguous_raster_path(
                             os.path.join(threat_raster_dir, threat + ext)))
-            except KeyError:
+            except ValueError:
                 raise ValueError(
                     'Error: Failed to open raster for the following threat: '
                     '%s . Please make sure the threat names in the CSV table '
@@ -510,7 +510,7 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
     # should fail gracefully
     if dataset is None:
         if raise_error:
-            raise Exception(
+            raise ValueError(
                 'There was an Error locating a threat raster in the input '
                 'folder. One of the threat names in the CSV table does not '
                 'match to a threat raster in the input folder. Please check '

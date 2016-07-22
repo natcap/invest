@@ -70,8 +70,8 @@ class HabitatQualityTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_habitat_quality_missing_threat(self):
-        """Habitat Quality: expected ValueError on missing threat raster."""
+    def test_habitat_quality_missing_sensitivity_threat(self):
+        """Habitat Quality: ValueError w/ missing threat in sensitivity."""
         from natcap.invest.habitat_quality import habitat_quality
 
         args = {
@@ -93,13 +93,34 @@ class HabitatQualityTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_habitat_quality_nodata_small(self):
-        """Habitat Quality: on rasters that have nodata values."""
+    def test_habitat_quality_missing_threat(self):
+        """Habitat Quality: expected ValueError on missing threat raster."""
         from natcap.invest.habitat_quality import habitat_quality
 
         args = {
             'access_uri': os.path.join(
                 SAMPLE_DATA, 'HabitatQuality', 'access_samp.shp'),
+            'half_saturation_constant': '0.5',
+            'landuse_cur_uri': os.path.join(
+                REGRESSION_DATA, 'small_lulc_base.tif'),
+            'sensitivity_uri': os.path.join(
+                REGRESSION_DATA, 'small_sensitivity_samp_missing_threat.csv'),
+            'threat_raster_folder': os.path.join(REGRESSION_DATA),
+            'threats_uri': os.path.join(
+                REGRESSION_DATA, 'small_threats_samp_missing_threat.csv'),
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            habitat_quality.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_habitat_quality_nodata_small(self):
+        """Habitat Quality: on rasters that have nodata values."""
+        from natcap.invest.habitat_quality import habitat_quality
+
+        args = {
             'half_saturation_constant': '0.5',
             'landuse_cur_uri': os.path.join(
                 REGRESSION_DATA, 'small_lulc_base.tif'),
