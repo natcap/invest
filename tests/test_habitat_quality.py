@@ -68,6 +68,37 @@ class HabitatQualityTests(unittest.TestCase):
                 os.path.join(self.workspace_dir, 'output', output_filename),
                 1e-6)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_habitat_quality_nodata_small(self):
+        """Habitat Quality: on rasters that have nodata values."""
+        from natcap.invest.habitat_quality import habitat_quality
+
+        args = {
+            'access_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'access_samp.shp'),
+            'half_saturation_constant': '0.5',
+            'landuse_cur_uri': os.path.join(
+                REGRESSION_DATA, 'small_lulc_base.tif'),
+            'sensitivity_uri': os.path.join(
+                REGRESSION_DATA, 'small_sensitivity_samp.csv'),
+            'threat_raster_folder': os.path.join(REGRESSION_DATA),
+            'threats_uri': os.path.join(
+                REGRESSION_DATA, 'small_threats_samp.csv'),
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        habitat_quality.execute(args)
+        HabitatQualityTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'file_list_small_nodata.txt'),
+            args['workspace_dir'])
+
+        # reasonable to just check quality out in this case
+        pygeoprocessing.testing.assert_rasters_equal(
+            os.path.join(REGRESSION_DATA, 'small_quality_out_c.tif'),
+            os.path.join(self.workspace_dir, 'output', 'quality_out_c.tif'),
+            1e-6)
+
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
