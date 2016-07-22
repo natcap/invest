@@ -552,35 +552,6 @@ def make_dictionary_from_csv(csv_uri, key_field):
     return out_dict
 
 
-def threat_names_match(threat_dict, sens_dict, prefix):
-    """Check threat names match the columns in the sensitivity table.
-
-    Parameters:
-        threat_dict (dict): represents the threat table, example:
-            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7'},
-             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
-             ... }
-        sens_dict (dict): represents sensitivity table:
-            {'1':{'LULC':'1', 'NAME':'Residential', 'HABITAT':'1',
-                  'L_crp':'0.4', 'L_urb':'0.45'...},
-             '11':{'LULC':'11', 'NAME':'Urban', 'HABITAT':'1',
-                   'L_crp':'0.6', 'L_urb':'0.3'...},
-             ...}
-
-        prefix (string): prefix to the attach to  threat names to match with
-            sensitivity table
-
-    Return:
-        False if there is a mismatch in threat names, True otherwise.
-    """
-    sens_row = sens_dict[sens_dict.keys()[0]]
-    for threat in threat_dict:
-        sens_key = prefix + threat
-        if sens_key not in sens_row:
-            return False
-    return True
-
-
 def raster_pixel_count(raster_path):
     """Count unique pixel values in raster.
 
