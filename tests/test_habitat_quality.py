@@ -139,6 +139,28 @@ class HabitatQualityTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_habitat_quality_bad_rasters(self):
+        """Habitat Quality: on threats that aren't real rasters."""
+        from natcap.invest.habitat_quality import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'landuse_cur_uri': os.path.join(
+                REGRESSION_DATA, 'small_lulc_base.tif'),
+            'sensitivity_uri': os.path.join(
+                REGRESSION_DATA, 'small_sensitivity_samp.csv'),
+            'threat_raster_folder': os.path.join(
+                REGRESSION_DATA, 'bad_rasters'),
+            'threats_uri': os.path.join(
+                REGRESSION_DATA, 'small_threats_samp.csv'),
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            habitat_quality.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_nodata_small(self):
         """Habitat Quality: on rasters that have nodata values."""
         from natcap.invest.habitat_quality import habitat_quality

@@ -128,22 +128,15 @@ def execute(args):
         # for each threat given in the CSV file try opening the associated
         # raster which should be found in threat_raster_folder
         for threat in threat_dict:
-            try:
-                if ext == '_b':
-                    density_uri_dict['density' + ext][threat] = (
-                        resolve_ambiguous_raster_path(
-                            os.path.join(threat_raster_dir, threat + ext),
-                            raise_error=False))
-                else:
-                    density_uri_dict['density' + ext][threat] = (
-                        resolve_ambiguous_raster_path(
-                            os.path.join(threat_raster_dir, threat + ext)))
-            except ValueError:
-                raise ValueError(
-                    'Error: Failed to open raster for the following threat: '
-                    '%s . Please make sure the threat names in the CSV table '
-                    'correspond to threat rasters in the input folder.'
-                    % os.path.join(threat_raster_dir, threat + ext))
+            if ext == '_b':
+                density_uri_dict['density' + ext][threat] = (
+                    resolve_ambiguous_raster_path(
+                        os.path.join(threat_raster_dir, threat + ext),
+                        raise_error=False))
+            else:
+                density_uri_dict['density' + ext][threat] = (
+                    resolve_ambiguous_raster_path(
+                        os.path.join(threat_raster_dir, threat + ext)))
 
     # checking to make sure the land covers have the same projections.
     # using pygeoprocessing's routine that prints warnings in case projections
@@ -496,11 +489,7 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
         full_path = path + suffix
         if not os.path.exists(full_path):
             continue
-        try:
-            dataset = gdal.Open(full_path, gdal.GA_ReadOnly)
-            break
-        except RuntimeError:
-            dataset = None
+        dataset = gdal.Open(full_path, gdal.GA_ReadOnly)
 
     gdal.PopErrorHandler()
 
