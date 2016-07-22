@@ -547,7 +547,7 @@ def make_dictionary_from_csv(csv_uri, key_field):
             else:
                 row_upper[key.upper()] = row[key]
 
-	out_dict[row_upper[key_field]] = row_upper
+    out_dict[row_upper[key_field]] = row_upper
     csv_file.close()
     return out_dict
 
