@@ -694,19 +694,20 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
     # Total Net Sequestration
     N_total_raster = 'total_net_carbon_sequestration.tif'
 
-    # Net Sequestration from Base Year to Analysis Year
-    NPV_raster = None
-    if do_economic_analysis:
-        NPV_raster = 'net_present_value.tif'
+    raster_registry_dict = {
+        'T_s_rasters': T_s_rasters,
+        'A_r_rasters': A_r_rasters,
+        'E_r_rasters': E_r_rasters,
+        'N_r_rasters': N_r_rasters,
+        'N_total_raster': N_total_raster,
+    }
 
-    file_registry = invest_utils.build_file_registry([({
-            'T_s_rasters': T_s_rasters,
-            'A_r_rasters': A_r_rasters,
-            'E_r_rasters': E_r_rasters,
-            'N_r_rasters': N_r_rasters,
-            'N_total_raster': N_total_raster,
-            'NPV_raster': NPV_raster
-        }, outputs_dir)], results_suffix)
+    # Net Sequestration from Base Year to Analysis Year
+    if do_economic_analysis:
+        raster_registry_dict['NPV_raster'] = 'net_present_value.tif'
+
+    file_registry = invest_utils.build_file_registry(
+        [(raster_registry_dict, outputs_dir)], results_suffix)
 
     raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
     for raster_filepath in itertools.chain(
