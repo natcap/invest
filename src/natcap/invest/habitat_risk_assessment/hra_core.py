@@ -1787,15 +1787,16 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         b_mask = b_pix != -1
         c_mask = c_pix != -1
 
-        # Want to make sure that the decay is applied to E first, then that
-        # product is what is used as the new E
-        e_vals = (b_pix * e_pix) - 1
+        e_vals = e_pix - 1
         c_vals = c_pix - 1
 
         e_vals = e_vals ** 2
         c_vals = c_vals ** 2
 
-        risk_map = numpy.sqrt(e_vals + c_vals)
+        # Per email from kwyatt and karkema, the h/(buffered-s) overlap layer
+        # should be applied after the sqrt is taken, not multiplied by E before
+        # the sqrt.  See https://bitbucket.org/natcap/invest/issues/3564
+        risk_map = numpy.sqrt(e_vals + c_vals) * b_pix
 
         risk_map = numpy.where(c_mask, risk_map, -1)
         risk_map = numpy.where(c_mask & ~b_mask, 0, risk_map)
