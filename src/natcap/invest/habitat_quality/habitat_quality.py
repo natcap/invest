@@ -83,8 +83,9 @@ def execute(args):
     # get a handle on the folder with the threat rasters
     threat_raster_dir = args['threat_raster_folder']
 
-    threat_dict = make_dictionary_from_csv(args['threats_uri'], 'THREAT')
-    sensitivity_dict = make_dictionary_from_csv(
+    threat_dict = pygeoprocessing.get_lookup_from_csv(
+        args['threats_uri'], 'THREAT')
+    sensitivity_dict = pygeoprocessing.get_lookup_from_csv(
         args['sensitivity_uri'], 'LULC')
 
     # check that the threat names in the threats table match with the threats
@@ -92,7 +93,7 @@ def execute(args):
     sens_row = sensitivity_dict.itervalues().next()
     for threat in threat_dict:
         if 'L_' + threat not in sens_row:
-            raise Exception(
+            raise ValueError(
                 'Threat "%s" does not match any column in the sensitivity '
                 'table. Possible columns: %s', threat, str(sens_row.keys()))
 
@@ -137,8 +138,8 @@ def execute(args):
                     density_uri_dict['density' + ext][threat] = (
                         resolve_ambiguous_raster_path(
                             os.path.join(threat_raster_dir, threat + ext)))
-            except:
-                raise Exception(
+            except KeyError:
+                raise ValueError(
                     'Error: Failed to open raster for the following threat: '
                     '%s . Please make sure the threat names in the CSV table '
                     'correspond to threat rasters in the input folder.'
@@ -192,6 +193,7 @@ def execute(args):
         habitat_uri = os.path.join(
             inter_dir, 'habitat_%s%s.tif' % (lulc_key, suffix))
 
+        LOGGER.debug(sensitivity_dict)
         map_raster_to_dict_values(
             lulc_ds_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
             'none')
@@ -266,9 +268,10 @@ def execute(args):
             sens_uri = os.path.join(
                 inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
 
+            LOGGER.debug(sensitivity_dict)
             map_raster_to_dict_values(
-                    lulc_ds_uri, sens_uri, sensitivity_dict,
-                    'L_' + threat, out_nodata, 'values_required')
+                lulc_ds_uri, sens_uri, sensitivity_dict,
+                'L_' + threat, out_nodata, 'values_required')
 
             # get the normalized weight for each threat
             weight_avg = float(threat_data['WEIGHT']) / weight_sum
@@ -518,38 +521,6 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
 
     dataset = None
     return full_path
-
-
-def make_dictionary_from_csv(csv_uri, key_field):
-    """Make a basic dictionary representing a CSV file, where the
-       keys are a unique field from the CSV file and the values are
-       a dictionary representing each row
-
-       csv_uri - a string for the path to the csv file
-       key_field - a string representing which field is to be used
-                   from the csv file as the key in the dictionary
-
-       returns - a python dictionary
-    """
-    out_dict = {}
-    csv_file = open(csv_uri, 'rU')
-    reader = csv.DictReader(csv_file)
-    for row in reader:
-        # create new dictionary to hold modified key values for case
-        # handling
-        row_upper = {}
-        for key in row.keys():
-            # if the key / column header begins with 'L_' we can not
-            # set that to uppercase, since it will interfere with
-            # matching the threat names to the sensitivity table
-            if key.startswith('L_'):
-                row_upper[key] = row[key]
-            else:
-                row_upper[key.upper()] = row[key]
-
-    out_dict[row_upper[key_field]] = row_upper
-    csv_file.close()
-    return out_dict
 
 
 def raster_pixel_count(raster_path):
