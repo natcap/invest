@@ -8,6 +8,7 @@ Unreleased Changes
 * Removed the deprecated and incomplete Nearshore Wave and Erosion model (``natcap.invest.nearshore_wave_and_erosion``).
 * Removed the deprecated Timber model (``natcap.invest.timber``).
 * Fixed an issue where seasonal water yield would raise a divide by zero error if a watershed polygon didn't cover a valid data region.  Now sets aggregation quantity to zero and reports a warning in the log.
+* ``natcap.invest.utils.build_file_registry`` now raises a ``ValueError`` if a path is not a string or list of strings.
 * Fixed issues in NDR that would indicate invalid values were being processed during runtimes by skipping the invalid calculations in the first place rather than calculating them and discarding after the fact.
 * Complete code coverage tests for NDR model.
 * Minor (~10% speedup) performance improvements to NDR.
