@@ -193,7 +193,6 @@ def execute(args):
         habitat_uri = os.path.join(
             inter_dir, 'habitat_%s%s.tif' % (lulc_key, suffix))
 
-        LOGGER.debug(sensitivity_dict)
         map_raster_to_dict_values(
             lulc_ds_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
             'none')
@@ -257,7 +256,7 @@ def execute(args):
             elif decay_type == 'exponential':
                 utils.exponential_decay_kernel_raster(dr_pixel, kernel_uri)
             else:
-                raise TypeError(
+                raise ValueError(
                     "Unknown type of decay in biophysical table, should be "
                     "either 'linear' or 'exponential' input was %s" % (
                         decay_type))
@@ -268,7 +267,6 @@ def execute(args):
             sens_uri = os.path.join(
                 inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
 
-            LOGGER.debug(sensitivity_dict)
             map_raster_to_dict_values(
                 lulc_ds_uri, sens_uri, sensitivity_dict,
                 'L_' + threat, out_nodata, 'values_required')
