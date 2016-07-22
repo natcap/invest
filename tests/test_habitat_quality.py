@@ -31,7 +31,7 @@ class HabitatQualityTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_regression(self):
         """Habitat Quality: base regression test."""
-        from natcap.invest.habitat_quality import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'access_uri': os.path.join(
@@ -72,7 +72,7 @@ class HabitatQualityTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_missing_sensitivity_threat(self):
         """Habitat Quality: ValueError w/ missing threat in sensitivity."""
-        from natcap.invest.habitat_quality import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'access_uri': os.path.join(
@@ -95,7 +95,7 @@ class HabitatQualityTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_missing_threat(self):
         """Habitat Quality: expected ValueError on missing threat raster."""
-        from natcap.invest.habitat_quality import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'access_uri': os.path.join(
@@ -118,7 +118,7 @@ class HabitatQualityTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_invalid_decay_type(self):
         """Habitat Quality: expected ValueError on invalid decay type."""
-        from natcap.invest.habitat_quality import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'access_uri': os.path.join(
@@ -141,7 +141,7 @@ class HabitatQualityTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_bad_rasters(self):
         """Habitat Quality: on threats that aren't real rasters."""
-        from natcap.invest.habitat_quality import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'half_saturation_constant': '0.5',
@@ -163,7 +163,7 @@ class HabitatQualityTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_nodata_small(self):
         """Habitat Quality: on rasters that have nodata values."""
-        from natcap.invest.habitat_quality import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'half_saturation_constant': '0.5',
@@ -192,7 +192,7 @@ class HabitatQualityTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_nodata_small_fut(self):
         """Habitat Quality: small test with future raster only."""
-        from natcap.invest.habitat_quality import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'half_saturation_constant': '0.5',
