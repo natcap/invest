@@ -182,7 +182,6 @@ setup(
         'natcap.invest.dbfpy',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
-        'natcap.invest.habitat_quality',
         'natcap.invest.habitat_risk_assessment',
         'natcap.invest.hydropower',
         'natcap.invest.iui',
