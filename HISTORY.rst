@@ -3,12 +3,14 @@
 Unreleased Changes
 ------------------
 * Corrected an issue with the uses of buffers in the euclidean risk function of Habitat Risk Assessment.  (issue #3564)
+* Complete code coverage tests for Habitat Quality model.
 * Corrected an issue with the ``Fisheries_Inputs.csv`` sample table used by Overlap Analysis.  (issue #3548)
 * Major modifications to Terrestrial Carbon model to include removing the harvested wood product pool, uncertainty analysis, and updated efficient raster calculations for performance.
 * Fixed an issue in GLOBIO that would cause model runs to crash if the AOI marked as optional was not present.
 * Removed the deprecated and incomplete Nearshore Wave and Erosion model (``natcap.invest.nearshore_wave_and_erosion``).
 * Removed the deprecated Timber model (``natcap.invest.timber``).
 * Fixed an issue where seasonal water yield would raise a divide by zero error if a watershed polygon didn't cover a valid data region.  Now sets aggregation quantity to zero and reports a warning in the log.
+* ``natcap.invest.utils.build_file_registry`` now raises a ``ValueError`` if a path is not a string or list of strings.
 * Fixed issues in NDR that would indicate invalid values were being processed during runtimes by skipping the invalid calculations in the first place rather than calculating them and discarding after the fact.
 * Complete code coverage tests for NDR model.
 * Minor (~10% speedup) performance improvements to NDR.
