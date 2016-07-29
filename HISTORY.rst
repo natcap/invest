@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Corrected an issue with the uses of buffers in the euclidean risk function of Habitat Risk Assessment.  (issue #3564)
 * Corrected an issue with the ``Fisheries_Inputs.csv`` sample table used by Overlap Analysis.  (issue #3548)
 * Major modifications to Terrestrial Carbon model to include removing the harvested wood product pool, uncertainty analysis, and updated efficient raster calculations for performance.
 * Fixed an issue in GLOBIO that would cause model runs to crash if the AOI marked as optional was not present.

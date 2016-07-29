@@ -1793,9 +1793,9 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         e_vals = e_vals ** 2
         c_vals = c_vals ** 2
 
-        # Per email from kwyatt and karkema, the h/(buffered-s) overlap layer
-        # should be applied after the sqrt is taken, not multiplied by E before
-        # the sqrt.  See https://bitbucket.org/natcap/invest/issues/3564
+        # Per email from kwyatt and karkema, the h/(bufferedstressor) overlap
+        # layer should be applied after the sqrt is taken, not multiplied by E
+        # before the sqrt.  See https://bitbucket.org/natcap/invest/issues/3564
         risk_map = numpy.sqrt(e_vals + c_vals) * b_pix
 
         risk_map = numpy.where(c_mask, risk_map, -1)
