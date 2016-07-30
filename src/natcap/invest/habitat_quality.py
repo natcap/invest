@@ -489,9 +489,13 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
         full_path = path + suffix
         if not os.path.exists(full_path):
             continue
-        dataset = gdal.Open(full_path, gdal.GA_ReadOnly)
-        if dataset is not None:
+        try:
+            dataset = gdal.Open(full_path, gdal.GA_ReadOnly)
             break
+        except ValueError:
+            # If GDAL can't open the raster, our GDAL error handler will be
+            # executed and ValueError raised.
+            continue
 
     gdal.PopErrorHandler()
 
