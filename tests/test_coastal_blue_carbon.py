@@ -209,6 +209,10 @@ def _get_preprocessor_args(args_choice):
         band_matrices_zeros, srs.origin, srs.projection, NODATA_INT,
         srs.pixel_size(100), datatype=gdal.GDT_Int32,
         filename=os.path.join(workspace, 'raster_3.tif'))
+    raster_4_uri = pygeotest.create_raster_on_disk(
+        band_matrices_zeros, srs.origin, srs.projection, -1,
+        srs.pixel_size(100), datatype=gdal.GDT_Int32,
+        filename=os.path.join(workspace, 'raster_4.tif'))
     raster_nodata_uri = pygeotest.create_raster_on_disk(
         band_matrices_nodata, srs.origin, srs.projection, NODATA_INT,
         srs.pixel_size(100), datatype=gdal.GDT_Int32,
@@ -235,12 +239,21 @@ def _get_preprocessor_args(args_choice):
         'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_3_uri]
     }
 
+    args4 = {
+        'workspace_dir': workspace,
+        'results_suffix': 'test',
+        'lulc_lookup_uri': lulc_lookup_uri,
+        'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_4_uri]
+    }
+
     if args_choice == 1:
         return args
     elif args_choice == 2:
         return args2
-    else:
+    elif args_choice == 3:
         return args3
+    else:
+        return args4
 
 
 class TestPreprocessor(unittest.TestCase):
@@ -305,6 +318,25 @@ class TestPreprocessor(unittest.TestCase):
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(3)
+        preprocessor.execute(args)
+        trans_csv = os.path.join(
+            args['workspace_dir'],
+            'outputs_preprocessor',
+            'transitions_test.csv')
+        with open(trans_csv, 'r') as f:
+            lines = f.readlines()
+        # just a regression test.  this tests that an output file was
+        # successfully created, and that two particular land class transitions
+        # occur and are set in the right directions.
+        self.assertTrue(lines[2][:].startswith('x,,'))
+
+    def test_preprocessor_user_defined_nodata(self):
+        """Coastal Blue Carbon: Test preprocessor with user-defined nodata.
+
+        First raster contains ones, second nodata, third zeros.
+        """
+        from natcap.invest.coastal_blue_carbon import preprocessor
+        args = _get_preprocessor_args(4)
         preprocessor.execute(args)
         trans_csv = os.path.join(
             args['workspace_dir'],
