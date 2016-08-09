@@ -273,7 +273,7 @@ class TestPreprocessor(unittest.TestCase):
             self.assertTrue(i in transient_dict.keys())
 
     def test_preprocessor_ones(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor.
+        """Coastal Blue Carbon: Test entire run of preprocessor (ones).
 
         All rasters contain ones.
         """
@@ -292,7 +292,7 @@ class TestPreprocessor(unittest.TestCase):
         self.assertTrue(lines[2].startswith('x,,accum'))
 
     def test_preprocessor_zeros(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor.
+        """Coastal Blue Carbon: Test entire run of preprocessor (zeroes).
 
         First two rasters contain ones, last contains zeros.
         """
@@ -312,7 +312,7 @@ class TestPreprocessor(unittest.TestCase):
         self.assertTrue(lines[2][:].startswith('x,disturb,accum'))
 
     def test_preprocessor_nodata(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor.
+        """Coastal Blue Carbon: Test run of preprocessor (various values).
 
         First raster contains ones, second nodata, third zeros.
         """
@@ -413,7 +413,7 @@ class TestPreprocessor(unittest.TestCase):
         self.assertTrue(lines[1][:].startswith('n,NCC,accum'))
 
     def test_mark_transition_type_nodata_check(self):
-        """Coastal Blue Carbon: Test mark_transition_type."""
+        """Coastal Blue Carbon: Test mark_transition_type with nodata check."""
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1)
 
@@ -429,11 +429,12 @@ class TestPreprocessor(unittest.TestCase):
             filename=os.path.join(
                 args['workspace_dir'], 'raster_1.tif'))
         args['lulc_snapshot_list'][0] = raster_zeros
+
         preprocessor.execute(args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
-        """Coastal Blue Carbon: Test main model run against InVEST-Data."""
+        """Coastal Blue Carbon: Test preprocessor  run against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
 
         sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
@@ -509,7 +510,7 @@ class TestIO(unittest.TestCase):
             cbc.get_inputs(self.args)
 
     def test_create_transient_dict(self):
-        """Coastal Blue Carbon: Test function to read transient table."""
+        """Coastal Blue Carbon: Read transient table."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
         biomass_transient_dict, soil_transient_dict = \
@@ -520,7 +521,7 @@ class TestIO(unittest.TestCase):
         self.assertTrue(1 in soil_transient_dict.keys())
 
     def test_get_lulc_trans_to_D_dicts(self):
-        """Coastal Blue Carbon: Test function to read transient table."""
+        """Coastal Blue Carbon: Read transient table (disturbed)."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
         biomass_transient_dict, soil_transient_dict = \
@@ -584,7 +585,7 @@ class TestModel(unittest.TestCase):
             npv_array, npv_test, decimal=4)
 
     def test_model_run_2(self):
-        """Coastal Blue Carbon: Test run function in main model."""
+        """Coastal Blue Carbon: Test CBC without analysis year."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
         self.args['analysis_year'] = None
@@ -639,7 +640,7 @@ class TestModel(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
-        """Coastal Blue Carbon: Test main model run against InVEST-Data."""
+        """Coastal Blue Carbon: Test CBC model against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
