@@ -2877,7 +2877,7 @@ def _write_console_files(binary, mode):
     windows_template = """
 .\{binary} {modelname}
 """
-    posix_template = """
+    posix_template = """#!/bin/sh
 ./{binary} {modelname}
 """
 

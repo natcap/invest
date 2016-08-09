@@ -29,13 +29,17 @@ cp -r "$2" "$invest_bindir"
 # Shell files without the `invest_` prefix will be left alone.
 find "$invest_bindir" -iname "invest_*.sh" | while read sh_file
 do
-    new_name=`echo "$sh_file" | sed 's/\.sh/.command/g'`
-    new_command_file="$tempdir"/`basename "$new_name"`
+    new_name=`echo "$sh_file" | sed 's/\.sh$//g'`
+    new_basename=`basename $new_name`
+    _APPDIR="$tempdir/$new_basename.app/Contents/MacOS"
+    mkdir -p "${_APPDIR}"
+    new_command_file="$_APPDIR/$new_basename"
     mv "$sh_file" "$new_command_file"
-    sed -i '' 's/.\/invest/`dirname $0`\/invest_dist\/invest/g' "$new_command_file"
-done
 
-chmod u+x "$tempdir"/*.command
+    # Three directories up from `dirname $0` is the InVEST installation folder,
+    # which contains invest_dist.
+    sed -i '' 's|./invest|`dirname $0`/../../../invest_dist/invest|g' "$new_command_file"
+done
 
 source=temp
 
