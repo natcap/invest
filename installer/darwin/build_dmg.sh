@@ -31,10 +31,21 @@ find "$invest_bindir" -iname "invest_*.sh" | while read sh_file
 do
     new_name=`echo "$sh_file" | sed 's/\.sh$//g'`
     new_basename=`basename $new_name`
-    _APPDIR="$tempdir/$new_basename.app/Contents/MacOS"
-    mkdir -p "${_APPDIR}"
-    new_command_file="$_APPDIR/$new_basename"
+    _APPDIR="$tempdir/$new_basename.app"
+    _MACOSDIR="$_APPDIR/Contents/MacOS"
+    _RESOURCEDIR="$_APPDIR/Contents/Resources"
+    mkdir -p "${_MACOSDIR}"
+    mkdir -p "${_RESOURCEDIR}"
+    new_command_file="$_MACOSDIR/$new_basename"
     mv "$sh_file" "$new_command_file"
+    cp invest.icns "$_RESOURCEDIR/invest.icns"
+
+    new_plist_file="$_APPDIR/Contents/Info.plist"
+    cp Info.plist "$new_plist_file"
+
+    # replace the version and application name strings in the Info.plist file
+    sed -i '' "s|++NAME++|$new_basename|g" "$new_plist_file"
+    sed -i '' "s|++VERSION++|${1}|g" "$new_plist_file"
 
     # Three directories up from `dirname $0` is the InVEST installation folder,
     # which contains invest_dist.
