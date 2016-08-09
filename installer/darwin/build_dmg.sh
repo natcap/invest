@@ -21,7 +21,7 @@ fi
 
 # prepare a local temp dir for a filesystem
 mkdir -p "$tempdir"
-invest_bindir="$tempdir"/`basename $2`
+invest_bindir="$tempdir"/.`basename $2`  # preceeding . hides the folder from users
 cp -r "$2" "$invest_bindir"
 
 # copy out all the invest shell files and fixup the paths.
@@ -49,7 +49,7 @@ do
 
     # Three directories up from `dirname $0` is the InVEST installation folder,
     # which contains invest_dist.
-    sed -i '' 's|./invest|`dirname $0`/../../../invest_dist/invest|g' "$new_command_file"
+    sed -i '' 's|./invest|`dirname $0`/../../../.invest_dist/invest|g' "$new_command_file"
 done
 
 source=temp
