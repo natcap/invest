@@ -5,6 +5,7 @@ import os
 import logging
 import math
 import itertools
+import time
 
 import numpy as np
 from osgeo import gdal
@@ -118,11 +119,20 @@ def execute(args):
 
     # Setup Logging
     num_blocks = get_num_blocks(d['C_prior_raster'])
+    blocks_processed = 0.
+    last_time = time.time()
 
     block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
     C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
 
     for block_idx, (offset_dict, C_prior) in block_iterator:
+        current_time = time.time()
+        blocks_processed += 1.
+        if current_time - last_time >= 5:
+            LOGGER.info('Processing model, about %.2f%% complete',
+                        (blocks_processed/num_blocks) * 100)
+            last_time = current_time
+
         # Initialization
         timesteps = d['timesteps']
 
