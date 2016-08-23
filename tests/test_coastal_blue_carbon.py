@@ -801,7 +801,7 @@ class CBCRefactorTest(unittest.TestCase):
                 make_raster(band_matrices=[band_matrix], filename=filename)
 
                 args['lulc_transition_maps_list'].append(filename)
-                args['lulc_transition_years_list'].append(filename)
+                args['lulc_transition_years_list'].append(transition_year)
 
         # Make the lulc
         lulc_shape = (10, 10) if not known_matrix_size else known_matrix_size
@@ -826,6 +826,21 @@ class CBCRefactorTest(unittest.TestCase):
 
         args = CBCRefactorTest.create_args(
             workspace=self.workspace_dir, transition_tuples=None,
+            analysis_year=None)
+
+        cbc.execute(args)
+
+    def test_one_transition(self):
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+
+        transition_tuples = [
+            (numpy.ones((10, 10)), 2010),
+        ]
+
+        args = CBCRefactorTest.create_args(
+            workspace=self.workspace_dir,
+            transition_tuples=transition_tuples,
             analysis_year=None)
 
         cbc.execute(args)
