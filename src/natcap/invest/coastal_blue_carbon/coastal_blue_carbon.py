@@ -280,7 +280,7 @@ def execute(args):
         else:
             T_s = map(np.add, T_s, L[:-1])
 
-        N_total = sum(N)
+        N_total = np.sum(N, axis=0)
 
         raster_tuples = [
             ('T_s_rasters', T_s),

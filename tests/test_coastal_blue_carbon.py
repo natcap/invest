@@ -4,15 +4,18 @@ import unittest
 import os
 import shutil
 import csv
+import logging
 
 import numpy as np
 from osgeo import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
 from pygeoprocessing.testing import scm
+import nose.plugins.attrib
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
+LOGGER = logging.getLogger(__name__)
 
 
 lulc_lookup_list = \
@@ -701,6 +704,26 @@ class TestModel(unittest.TestCase):
     def tearDown(self):
         """Remove workspace."""
         shutil.rmtree(self.args['workspace_dir'])
+
+    def test_1_transition_passes(self):
+        """Coastal Blue Carbon: Test model runs with only 1 transition.
+
+        This is a regression test addressing issue #3572
+        (see: https://bitbucket.org/natcap/invest/issues/3572)
+        """
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+
+        self.args['lulc_transition_maps_list'] = \
+            [self.args['lulc_transition_maps_list'][0]]
+        self.args['lulc_transition_years_list'] = \
+            [self.args['lulc_transition_years_list'][0]]
+        self.args['analysis_year'] = None
+        try:
+            cbc.execute(self.args)
+        except AttributeError as error:
+            LOGGER.exception("Here's the traceback encountered:")
+            self.fail('CBC should not crash when only 1 transition provided')
 
 
 if __name__ == '__main__':
