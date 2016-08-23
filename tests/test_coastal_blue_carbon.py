@@ -5,8 +5,11 @@ import os
 import shutil
 import csv
 import logging
+import tempfile
+import functools
 
 import numpy as np
+import numpy
 from osgeo import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
@@ -724,6 +727,108 @@ class TestModel(unittest.TestCase):
         except AttributeError as error:
             LOGGER.exception("Here's the traceback encountered:")
             self.fail('CBC should not crash when only 1 transition provided')
+
+class CBCRefactorTest(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def create_args(workspace, transition_tuples=None, analysis_year=None):
+        """Create a default args dict with the given transition matrices.
+
+        Arguments:
+            workspace (string): The path to the workspace directory on disk.
+                Files will be saved to this location.
+            transition_tuples (list or None): A list of tuples, where the first
+                element of the tuple is a numpy matrix of the transition values,
+                and the second element of the tuple is the year of the transition.
+                Provided years must be in chronological order.
+                If ``None``, the transition parameters will be ignored.
+            analysis_year (int or None): The year of the final analysis.  If
+                provided, it must be greater than the last year within the
+                transition tuples (unless ``transition_tuples`` is None, in which
+                case ``analysis_year`` can be anything greater than 2000, the
+                baseline year).
+
+        Returns:
+            A dict of the model arguments.
+        """
+        from pygeoprocessing.testing import sampledata
+
+        args = {
+            'workspace_dir': workspace,
+            'lulc_lookup_uri': os.path.join(workspace, 'lulc_lookup.csv'),
+            'lulc_transition_matrix_uri': os.path.join(workspace,
+                                                       'transition_matrix.csv'),
+            'carbon_pool_initial_uri': os.path.join(workspace,
+                                                    'carbon_pool_initial.csv'),
+            'carbon_pool_transient_uri': os.path.join(workspace,
+                                                      'carbon_pool_transient.csv'),
+            'lulc_baseline_map_uri': os.path.join(workspace, 'lulc.tif'),
+            'lulc_baseline_year': 2000,
+            'do_economic_analysis': False,
+        }
+        _create_table(args['lulc_lookup_uri'], lulc_lookup_list)
+        _create_table(
+            args['lulc_transition_matrix_uri'],
+            lulc_transition_matrix_list)
+        _create_table(
+            args['carbon_pool_initial_uri'],
+            carbon_pool_initial_list)
+        _create_table(
+            args['carbon_pool_transient_uri'],
+            carbon_pool_transient_list)
+
+        # Only parameters needed are band_matrices and filename
+        make_raster = functools.partial(
+            sampledata.create_raster_on_disk,
+            origin=sampledata.SRS_WILLAMETTE.origin,
+            projection_wkt=sampledata.SRS_WILLAMETTE.projection,
+            nodata=-1, pixel_size=sampledata.SRS_WILLAMETTE.pixel_size(100))
+
+        known_matrix_size = None
+        if transition_tuples:
+            args['lulc_transition_maps_list'] = []
+            args['lulc_transition_years_list'] = []
+
+            for band_matrix, transition_year in transition_tuples:
+                known_matrix_size = band_matrix.shape
+                filename = os.path.join(workspace,
+                                        'transition_%s.tif' % transition_year)
+                make_raster(band_matrices=[band_matrix], filename=filename)
+
+                args['lulc_transition_maps_list'].append(filename)
+                args['lulc_transition_years_list'].append(filename)
+
+        # Make the lulc
+        lulc_shape = (10, 10) if not known_matrix_size else known_matrix_size
+        make_raster(band_matrices=[numpy.ones(lulc_shape)],
+                    filename=args['lulc_baseline_map_uri'])
+
+        if analysis_year:
+            args['analysis_year'] = analysis_year
+
+        # TODO: allow for testing of valuation
+        return args
+
+
+
+    # TODO: allow model to run with no transitions, do current stock only
+    # TODO: transitions need to happen between baseline year and first
+    # transition year
+    # TODO: support absence of transitions from args dict.
+    def test_no_transitions(self):
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+
+        args = CBCRefactorTest.create_args(
+            workspace=self.workspace_dir, transition_tuples=None,
+            analysis_year=None)
+
+        cbc.execute(args)
 
 
 if __name__ == '__main__':

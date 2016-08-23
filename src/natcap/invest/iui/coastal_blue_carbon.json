@@ -103,18 +103,24 @@
          "args_id": "lulc_baseline_map_uri",
          "type": "file",
          "label": "Baseline LULC Raster (GDAL-supported)",
-         "sampleElement": {
-           "id": "sample_id",
-           "type": "file",
-           "label": "Input",
-           "validateAs": {
-             "type": "GDAL"
-           }
-         },
          "defaultValue": "../CoastalBlueCarbon/inputs/GBJC_2004_mean_Resample.tif",
          "helpText": "A GDAL-supported raster representing the baseline landscape/seascape.",
          "required": true
-       }
+       },
+       {
+            "id": "lulc_baseline_year",
+            "args_id": "baseline_year",
+            "type": "text",
+            "label": "Year of baseline LULC raster",
+            "defaultValue": "2000",
+            "required": true,
+            "validateAs": {
+            "type": "number",
+            "allowedValues": {
+                "pattern": "^[0-9]+"
+                }
+            }
+        }
       ]
     },
     {

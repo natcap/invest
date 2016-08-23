@@ -216,8 +216,12 @@ def execute(args):
 
         T[0] = S_biomass[0] + S_soil[0]
 
-        R_biomass[0] = D_biomass[0] * S_biomass[0]
-        R_soil[0] = D_soil[0] * S_soil[0]
+        try:
+            R_biomass[0] = D_biomass[0] * S_biomass[0]
+            R_soil[0] = D_soil[0] * S_soil[0]
+        except IndexError:
+            # When there are no transitions, there's no disturbance.
+            pass
 
         # Transient Analysis
         for i in xrange(0, timesteps):
@@ -571,13 +575,19 @@ def get_inputs(args):
     geoprocess.create_directories([args['workspace_dir'], outputs_dir])
 
     # Rasters
-    d['transition_years'] = [int(i) for i in
-                             args['lulc_transition_years_list']]
-    for i in range(0, len(d['transition_years'])-1):
-        if d['transition_years'][i] >= d['transition_years'][i+1]:
-            raise ValueError(
-                'LULC snapshot years must be provided in chronological order.'
-                ' and in the same order as the LULC snapshot rasters.')
+    try:
+        d['transition_years'] = [int(i) for i in
+                                args['lulc_transition_years_list']]
+    except KeyError:
+        d['transition_years'] = []
+
+    # Comparing the sorted version of this list handles the case where there
+    # might not be any transition_years.
+    if sorted(d['transition_years']) != d['transition_years']:
+        raise ValueError(
+            'LULC snapshot years must be provided in chronological order.'
+            ' and in the same order as the LULC snapshot rasters.')
+
     d['transitions'] = len(d['transition_years'])
 
     d['snapshot_years'] = d['transition_years'][:]
@@ -586,10 +596,18 @@ def get_inputs(args):
             raise ValueError(
                 'Analysis year must be greater than last transition year.')
         d['snapshot_years'].append(int(args['analysis_year']))
-    d['timesteps'] = d['snapshot_years'][-1] - d['snapshot_years'][0]
+
+    try:
+        d['timesteps'] = d['snapshot_years'][-1] - d['snapshot_years'][0]
+    except IndexError:
+        d['timesteps'] = 0
 
     d['C_prior_raster'] = args['lulc_baseline_map_uri']
-    d['C_r_rasters'] = args['lulc_transition_maps_list']
+
+    try:
+        d['C_r_rasters'] = args['lulc_transition_maps_list']
+    except KeyError:
+        d['C_r_rasters'] = []
 
     # Reclass Dictionaries
     lulc_lookup_dict = geoprocess.get_lookup_from_table(
@@ -679,17 +697,17 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
     E_r_rasters = []
     N_r_rasters = []
 
-    for snapshot_idx in xrange(len(snapshot_years)-1):
+    for snapshot_idx in xrange(len(snapshot_years)):
         snapshot_year = snapshot_years[snapshot_idx]
-        next_snapshot_year = snapshot_years[snapshot_idx + 1]
         T_s_rasters.append(_OUTPUT['carbon_stock'] % (snapshot_year))
-        A_r_rasters.append(_OUTPUT['carbon_accumulation'] % (
-            snapshot_year, next_snapshot_year))
-        E_r_rasters.append(_OUTPUT['cabon_emissions'] % (
-            snapshot_year, next_snapshot_year))
-        N_r_rasters.append(_OUTPUT['carbon_net_sequestration'] % (
-            snapshot_year, next_snapshot_year))
-    T_s_rasters.append(_OUTPUT['carbon_stock'] % (snapshot_years[-1]))
+        if snapshot_idx < len(snapshot_years)-1:
+            next_snapshot_year = snapshot_years[snapshot_idx + 1]
+            A_r_rasters.append(_OUTPUT['carbon_accumulation'] % (
+                snapshot_year, next_snapshot_year))
+            E_r_rasters.append(_OUTPUT['cabon_emissions'] % (
+                snapshot_year, next_snapshot_year))
+            N_r_rasters.append(_OUTPUT['carbon_net_sequestration'] % (
+                snapshot_year, next_snapshot_year))
 
     # Total Net Sequestration
     N_total_raster = 'total_net_carbon_sequestration.tif'
