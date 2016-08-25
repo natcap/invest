@@ -7,6 +7,7 @@ import csv
 import logging
 import tempfile
 import functools
+import copy
 
 import numpy as np
 import numpy
@@ -159,9 +160,10 @@ def _get_args(valuation=True):
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
         'lulc_baseline_map_uri': raster_0_uri,
-        'lulc_transition_maps_list': [raster_1_uri, raster_2_uri],
-        'lulc_transition_years_list': [2000, 2005],
-        'analysis_year': 2010,
+        'lulc_baseline_year': 1995,
+        'lulc_transition_maps_list': [raster_1_uri],
+        'lulc_transition_years_list': [2000],
+        'analysis_year': 2005,
         'carbon_pool_initial_uri': carbon_pool_initial_uri,
         'carbon_pool_transient_uri': carbon_pool_transient_uri,
         'do_economic_analysis': False,
@@ -844,6 +846,37 @@ class CBCRefactorTest(unittest.TestCase):
             analysis_year=None)
 
         cbc.execute(args)
+
+    def test_transient_dict_extraction(self):
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+
+        transient_file = _create_table(
+            os.path.join(self.workspace_dir, 'transient.csv'),
+            carbon_pool_transient_list[:3])
+
+        biomass_dict, soil_dict = cbc._create_transient_dict(transient_file)
+
+        expected_biomass_dict = {
+            0: {
+                'lulc-class': 'n',
+                'half-life': 0.0,
+                'med-impact-disturb': 0.0,
+                'yearly-accumulation': 0.0,
+            },
+            1: {
+                'lulc-class': 'x',
+                'half-life': 1,
+                'med-impact-disturb': 0.5,
+                'yearly-accumulation': 1,
+            }
+        }
+
+        expected_soil_dict = copy.deepcopy(expected_biomass_dict)
+        expected_soil_dict[1]['yearly-accumulation'] = 1.1
+
+        self.assertEqual(biomass_dict, expected_biomass_dict)
+        self.assertEqual(soil_dict, expected_soil_dict)
 
 
 if __name__ == '__main__':

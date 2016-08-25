@@ -6,6 +6,7 @@ import logging
 import math
 import itertools
 import time
+import re
 
 import numpy as np
 from osgeo import gdal
@@ -119,6 +120,7 @@ def execute(args):
 
     # Setup Logging
     num_blocks = get_num_blocks(d['C_prior_raster'])
+    LOGGER.debug('Num_blocks: %s', num_blocks)
     blocks_processed = 0.
     last_time = time.time()
 
@@ -251,8 +253,9 @@ def execute(args):
             # Emissions
             for transition_idx in xrange(0, timestep_to_transition_idx(
                     d['snapshot_years'], d['transitions'], i)+1):
-                j = d['transition_years'][transition_idx] - \
-                        d['transition_years'][0]
+
+                j = d['transition_years'][transition_idx] - d['transition_years'][0]
+
                 E_biomass[i] += R_biomass[transition_idx] * \
                     (0.5**(i-j) - 0.5**(i-j+1))
                 E_soil[i] += R_soil[transition_idx] * \
@@ -822,18 +825,18 @@ def _create_transient_dict(carbon_pool_transient_uri):
     """
     transient_dict = geoprocess.get_lookup_from_table(
         carbon_pool_transient_uri, 'code')
-    biomass_transient_dict = {}
-    soil_transient_dict = {}
-    for code, subdict in transient_dict.items():
-        biomass_transient_dict[code] = {}
-        soil_transient_dict[code] = {}
-        for key, val in subdict.items():
-            if key.lower().startswith('biomass'):
-                biomass_transient_dict[code][key.lstrip('biomass')[1:]] = val
-            if key.lower().startswith('soil'):
-                soil_transient_dict[code][key.lstrip('soil')[1:]] = val
-        biomass_transient_dict[code]['lulc-class'] = subdict['lulc-class']
-        soil_transient_dict[code]['lulc-class'] = subdict['lulc-class']
+
+    def _filter_dict_by_header(header_prefix):
+        """Retrieve soil, biomass dicts"""
+        pattern = '^%s-' % header_prefix
+        return dict(
+            (code, dict((re.sub(pattern, '', key.lower()), val)
+                        for (key, val) in subdict.iteritems() if
+                        key.startswith(header_prefix) or key == 'lulc-class'))
+             for (code, subdict) in transient_dict.iteritems())
+
+    biomass_transient_dict = _filter_dict_by_header('biomass')
+    soil_transient_dict = _filter_dict_by_header('soil')
 
     return biomass_transient_dict, soil_transient_dict
 
@@ -857,3 +860,27 @@ def _get_price_table(price_table_uri, start_year, end_year):
     except KeyError as missing_year:
         raise KeyError('Carbon price table does not contain a price value for '
                        '%s' % missing_year)
+
+
+def model_snapshot_timeseries(start_year, end_year, lulc_raster, lulc_lookup, transient_table, accum_path, em_path, net_seq_path):
+    # Assume these rasters exist for now.  These should be created here,
+    # though.
+    accum_raster = gdal.Open(accum_path, gdal.GA_Update)
+    accum_band = accum_raster.GetRasterBand(1)
+
+    em_raster = gdal.Open(em_path, gdal.GA_Update)
+    em_band = em_raster.GetRasterBand(1)
+
+    net_seq_raster = gdal.Open(net_seq_path, gdal.GA_Update)
+    net_seq_band = net_seq_raster.GetRasterBand(1)
+
+    for block_indices, lulc_block in pygeoprocessing.iterblocks(lulc_raster):
+
+        for timestep in xrange(start_year, end_year):
+            pass
+
+
+
+
+
+

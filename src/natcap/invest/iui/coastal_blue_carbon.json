@@ -109,7 +109,7 @@
        },
        {
             "id": "lulc_baseline_year",
-            "args_id": "baseline_year",
+            "args_id": "lulc_baseline_year",
             "type": "text",
             "label": "Year of baseline LULC raster",
             "defaultValue": "2000",
