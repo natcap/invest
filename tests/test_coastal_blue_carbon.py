@@ -674,7 +674,6 @@ class TestModel(unittest.TestCase):
         sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
         args = {
             'workspace_dir': self.args['workspace_dir'],
-            'analysis_year': 2100,
             'carbon_pool_initial_uri': os.path.join(
                 sample_data_path,
                 'outputs_preprocessor/carbon_pool_initial_sample.csv'),
@@ -691,18 +690,20 @@ class TestModel(unittest.TestCase):
             'lulc_baseline_map_uri': os.path.join(
                 sample_data_path,
                 'inputs/GBJC_2004_mean_Resample.tif'),
+            'lulc_baseline_year': 2004,
             'lulc_transition_maps_list': [
-                os.path.join(sample_data_path,
-                             'inputs/GBJC_2050_mean_Resample.tif'),
+                os.path.join(
+                    sample_data_path,
+                    'inputs/GBJC_2050_mean_Resample.tif'),
                 os.path.join(
                     sample_data_path,
                     'inputs/GBJC_2100_mean_Resample.tif')],
+            'lulc_transition_years_list': [2050, 2100],
             'price_table_uri': os.path.join(
                 sample_data_path, 'inputs/price_table.csv'),
             'lulc_transition_matrix_uri': os.path.join(
                 sample_data_path,
                 'outputs_preprocessor/transitions_sample.csv'),
-            'lulc_transition_years_list': [2004, 2050],
             'price': 10.0,
             'results_suffix': '150225'
         }
@@ -720,8 +721,8 @@ class TestModel(unittest.TestCase):
         u = np.unique(npv_array)
         u.sort()
         a = np.array([-3.935801e+04, -2.052500e+04, -1.788486e+04,
-                      -1.787341e+04, 0.0, 1.145100e+01, 3.724291e+03,
-                      3.743750e+03, 3.770121e+03])
+                      -1.787341e+04, 0.0, 1.145100e+01, 3.2086045e+03,
+                      3.5199617e+03, 3.770121e+03], dtype=numpy.float32)
         a.sort()
         np.testing.assert_array_almost_equal(u, a, decimal=2)
 
