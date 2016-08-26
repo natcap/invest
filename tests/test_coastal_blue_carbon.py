@@ -101,7 +101,7 @@ def _create_workspace():
     return workspace
 
 
-def _get_args(valuation=True):
+def _get_args(num_transitions=2, valuation=True):
     """Create and return arguements for CBC main model.
 
     Parameters:
@@ -154,6 +154,9 @@ def _get_args(valuation=True):
         datatype=gdal.GDT_Int32,
         filename=os.path.join(workspace, 'raster_2.tif'))
 
+    possible_transitions = [raster_1_uri, raster_2_uri]
+    possible_transition_years = [2000, 2005]
+
     args = {
         'workspace_dir': workspace,
         'results_suffix': 'test',
@@ -161,9 +164,9 @@ def _get_args(valuation=True):
         'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
         'lulc_baseline_map_uri': raster_0_uri,
         'lulc_baseline_year': 1995,
-        'lulc_transition_maps_list': [raster_1_uri],
-        'lulc_transition_years_list': [2000],
-        'analysis_year': 2005,
+        'lulc_transition_maps_list': possible_transitions[:num_transitions+1],
+        'lulc_transition_years_list': possible_transition_years[:num_transitions+1],
+        'analysis_year': 2010,
         'carbon_pool_initial_uri': carbon_pool_initial_uri,
         'carbon_pool_transient_uri': carbon_pool_transient_uri,
         'do_economic_analysis': False,
@@ -596,7 +599,12 @@ class TestModel(unittest.TestCase):
         """Coastal Blue Carbon: Test CBC without analysis year."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
+
         self.args['analysis_year'] = None
+        self.args['lulc_baseline_year'] = 2000
+        self.args['lulc_transition_maps_list'] = [self.args['lulc_transition_maps_list'][0]]
+        self.args['lulc_transition_years_list'] = [2005]
+
         cbc.execute(self.args)
         netseq_output_raster = os.path.join(
             self.args['workspace_dir'],
