@@ -65,6 +65,7 @@ def execute(args):
             transition occurs away from a lulc-class.
         lulc_baseline_map_uri (str): a GDAL-supported raster representing the
             baseline landscape/seascape.
+        lulc_baseline_year (int): The year of the baseline snapshot.
         lulc_transition_maps_list (list): a list of GDAL-supported rasters
             representing the landscape/seascape at particular points in time.
             Provided in chronological order.
@@ -104,6 +105,7 @@ def execute(args):
             'carbon_pool_initial_uri': 'path/to/carbon_pool_initial_uri',
             'carbon_pool_transient_uri': 'path/to/carbon_pool_transient_uri',
             'lulc_baseline_map_uri': 'path/to/baseline_map.tif',
+            'lulc_baseline_year': <int>,
             'lulc_transition_maps_list': [raster1_uri, raster2_uri, ...],
             'lulc_transition_years_list': [2000, 2005, ...],
             'analysis_year': 2100,
@@ -175,7 +177,7 @@ def execute(args):
 
         # Set Accumulation and Disturbance Values
         C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
-        C_list = [C_prior] + C_r
+        C_list = [C_prior] + C_r + [C_r[-1]]  # final transition out to analysis year
         for i in xrange(0, d['transitions']):
             D_biomass[i] = reclass_transition(
                 C_list[i],
@@ -601,9 +603,9 @@ def get_inputs(args):
             'LULC snapshot years must be provided in chronological order.'
             ' and in the same order as the LULC snapshot rasters.')
 
-    d['transitions'] = len(d['transition_years'])
+    d['transitions'] = len(d['transition_years']) + 1  # +1 for lulc baseline
 
-    d['snapshot_years'] = d['transition_years'][:]
+    d['snapshot_years'] = [int(args['lulc_baseline_year'])] + d['transition_years'][:]
     if 'analysis_year' in args and args['analysis_year'] not in ['', None]:
         if int(args['analysis_year']) <= d['snapshot_years'][-1]:
             raise ValueError(
