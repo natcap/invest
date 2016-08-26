@@ -112,7 +112,7 @@
             "args_id": "lulc_baseline_year",
             "type": "text",
             "label": "Year of baseline LULC raster",
-            "defaultValue": "2000",
+            "defaultValue": "2004",
             "required": true,
             "validateAs": {
             "type": "number",
@@ -160,8 +160,8 @@
         }
       },
       "defaultValue": [
-        "2004",
-        "2050"
+        "2050",
+        "2100"
       ],
       "linkText": "Add Another",
       "helpText": "Transition years must be entered in chronological order."
