@@ -638,7 +638,13 @@ class TestModel(unittest.TestCase):
         """Coastal Blue Carbon: Test main model without valuation."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
-        cbc.execute(_get_args(valuation=False))
+
+        self.args = _get_args(valuation=False)
+        self.args['lulc_baseline_year']= 2000
+        self.args['lulc_transition_years_list'] = [2005, 2010]
+        self.args['analysis_year'] = None
+
+        cbc.execute(self.args)
         netseq_output_raster = os.path.join(
             self.args['workspace_dir'],
             'outputs_core/total_net_carbon_sequestration_test.tif')
