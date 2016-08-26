@@ -132,7 +132,7 @@ def execute(args):
     for block_idx, (offset_dict, C_prior) in block_iterator:
         current_time = time.time()
         blocks_processed += 1.
-        if current_time - last_time >= 5:
+        if current_time - last_time >= 5 or blocks_processed in [0, num_blocks-1]:
             LOGGER.info('Processing model, about %.2f%% complete',
                         (blocks_processed/num_blocks) * 100)
             last_time = current_time
@@ -233,12 +233,8 @@ def execute(args):
 
         T[0] = S_biomass[0] + S_soil[0]
 
-        try:
-            R_biomass[0] = D_biomass[0] * S_biomass[0]
-            R_soil[0] = D_soil[0] * S_soil[0]
-        except IndexError:
-            # When there are no transitions, there's no disturbance.
-            pass
+        R_biomass[0] = D_biomass[0] * S_biomass[0]
+        R_soil[0] = D_soil[0] * S_soil[0]
 
         # Transient Analysis
         for i in xrange(0, timesteps):
@@ -622,10 +618,7 @@ def get_inputs(args):
                 'Analysis year must be greater than last transition year.')
         d['snapshot_years'].append(int(args['analysis_year']))
 
-    try:
-        d['timesteps'] = d['snapshot_years'][-1] - d['snapshot_years'][0]
-    except IndexError:
-        d['timesteps'] = 0
+    d['timesteps'] = d['snapshot_years'][-1] - d['snapshot_years'][0]
 
     d['C_prior_raster'] = args['lulc_baseline_map_uri']
 
@@ -872,27 +865,3 @@ def _get_price_table(price_table_uri, start_year, end_year):
     except KeyError as missing_year:
         raise KeyError('Carbon price table does not contain a price value for '
                        '%s' % missing_year)
-
-
-def model_snapshot_timeseries(start_year, end_year, lulc_raster, lulc_lookup, transient_table, accum_path, em_path, net_seq_path):
-    # Assume these rasters exist for now.  These should be created here,
-    # though.
-    accum_raster = gdal.Open(accum_path, gdal.GA_Update)
-    accum_band = accum_raster.GetRasterBand(1)
-
-    em_raster = gdal.Open(em_path, gdal.GA_Update)
-    em_band = em_raster.GetRasterBand(1)
-
-    net_seq_raster = gdal.Open(net_seq_path, gdal.GA_Update)
-    net_seq_band = net_seq_raster.GetRasterBand(1)
-
-    for block_indices, lulc_block in pygeoprocessing.iterblocks(lulc_raster):
-
-        for timestep in xrange(start_year, end_year):
-            pass
-
-
-
-
-
-
