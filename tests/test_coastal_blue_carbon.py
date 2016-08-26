@@ -483,14 +483,15 @@ class TestIO(unittest.TestCase):
         """Coastal Blue Carbon: Test get_inputs function in IO module."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
+
         d = cbc.get_inputs(self.args)
         # check several items in the data dictionary to check that the inputs
         # are properly fetched.
-        self.assertTrue(d['lulc_to_Hb'][0] == 0.0)
-        self.assertTrue(d['lulc_to_Hb'][1] == 1.0)
-        self.assertTrue(len(d['price_t']) == 11)
-        self.assertTrue(len(d['snapshot_years']) == 3)
-        self.assertTrue(len(d['transition_years']) == 2)
+        self.assertEqual(d['lulc_to_Hb'][0], 0.0)
+        self.assertEqual(d['lulc_to_Hb'][1], 1.0)
+        self.assertEqual(len(d['price_t']), 16)
+        self.assertEqual(len(d['snapshot_years']), 4)
+        self.assertEqual(len(d['transition_years']), 2)
 
     def test_get_price_table_exception(self):
         """Coastal Blue Carbon: Test price table exception."""
@@ -836,13 +837,8 @@ class CBCRefactorTest(unittest.TestCase):
         # TODO: allow for testing of valuation
         return args
 
-
-
-    # TODO: allow model to run with no transitions, do current stock only
-    # TODO: transitions need to happen between baseline year and first
-    # transition year
-    # TODO: support absence of transitions from args dict.
     def test_no_transitions(self):
+        """Coastal Blue Carbon: Verify model can run without transitions."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
@@ -853,6 +849,7 @@ class CBCRefactorTest(unittest.TestCase):
         cbc.execute(args)
 
     def test_one_transition(self):
+        """Coastal Blue Carbon: Verify model can run with 1 transition."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
@@ -868,6 +865,7 @@ class CBCRefactorTest(unittest.TestCase):
         cbc.execute(args)
 
     def test_transient_dict_extraction(self):
+        """Coastal Blue Carbon: Verify extraction of transient dictionary."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
