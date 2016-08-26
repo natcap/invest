@@ -177,7 +177,10 @@ def execute(args):
 
         # Set Accumulation and Disturbance Values
         C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
-        C_list = [C_prior] + C_r + [C_r[-1]]  # final transition out to analysis year
+        if C_r:
+            C_list = [C_prior] + C_r + [C_r[-1]]  # final transition out to analysis year
+        else:
+            C_list = [C_prior]*2  # allow for a final analysis
         for i in xrange(0, d['transitions']):
             D_biomass[i] = reclass_transition(
                 C_list[i],

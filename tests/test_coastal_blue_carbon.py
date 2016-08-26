@@ -848,6 +848,17 @@ class CBCRefactorTest(unittest.TestCase):
 
         cbc.execute(args)
 
+    def test_no_transitions_with_analysis_year(self):
+        """Coastal Blue Carbon: Model can run w/o trans., w/analysis yr."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+
+        args = CBCRefactorTest.create_args(
+            workspace=self.workspace_dir, transition_tuples=None,
+            analysis_year=2010)
+
+        cbc.execute(args)
+
     def test_one_transition(self):
         """Coastal Blue Carbon: Verify model can run with 1 transition."""
         from natcap.invest.coastal_blue_carbon \
