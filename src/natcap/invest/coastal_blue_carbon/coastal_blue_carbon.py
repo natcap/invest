@@ -256,7 +256,14 @@ def execute(args):
             for transition_idx in xrange(0, timestep_to_transition_idx(
                     d['snapshot_years'], d['transitions'], i)+1):
 
-                j = d['transition_years'][transition_idx] - d['transition_years'][0]
+                try:
+                    j = d['transition_years'][transition_idx] - d['transition_years'][0]
+                except IndexError:
+                    # When we're at the analysis year, we're out of transition
+                    # years to calculate for.  Transition years represent years
+                    # for which we have LULC rasters, and the analysis year
+                    # doesn't have a transition LULC associated with it.
+                    break
 
                 E_biomass[i] += R_biomass[transition_idx] * \
                     (0.5**(i-j) - 0.5**(i-j+1))
