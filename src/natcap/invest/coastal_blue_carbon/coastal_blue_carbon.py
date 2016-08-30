@@ -442,7 +442,11 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
     d[np.nan] = np.nan
     k = sorted(d.keys())
     v = np.array([d[key] for key in k])
-    index = np.digitize(a_ravel, k, right=True)
+    try:
+        index = np.digitize(a_ravel, k, right=True)
+    except ValueError:
+        LOGGER.exception('Bins used: %s', k)
+        raise
     reclass_array = v[index].reshape(array.shape)
 
     if nodata_mask and np.issubdtype(reclass_array.dtype, float):
