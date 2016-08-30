@@ -746,8 +746,12 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
         [(raster_registry_dict, outputs_dir)], results_suffix)
 
     raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
-    for raster_filepath in itertools.chain(
-            *[file_registry[key] for key in raster_lists]):
+    num_temporal_rasters = sum([len(file_registry[key]) for key in raster_lists])
+    LOGGER.info('Creating %s temporal rasters', num_temporal_rasters)
+    for index, raster_filepath in enumerate(itertools.chain(
+            *[file_registry[key] for key in raster_lists])):
+        LOGGER.debug('Setting up temporal raster %s of %s at %s', index+1,
+                     num_temporal_rasters, os.path.basename(raster_filepath))
         geoprocess.new_raster_from_base_uri(
             template_raster,
             raster_filepath,
@@ -756,9 +760,12 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
             gdal.GDT_Float32)
     for raster_key in ['N_total_raster', 'NPV_raster']:
         try:
+            filepath = file_registry[raster_key]
+            LOGGER.info('Setting up valuation raster %s',
+                        os.path.basename(filepath))
             geoprocess.new_raster_from_base_uri(
                 template_raster,
-                file_registry[raster_key],
+                filepath,
                 'GTiff',
                 NODATA_FLOAT,
                 gdal.GDT_Float32)
