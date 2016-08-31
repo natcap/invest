@@ -439,7 +439,6 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
 
     a_ravel = reclass_array.ravel()
     d[ndata] = ndata
-    d[np.nan] = np.nan
     k = sorted(d.keys())
     v = np.array([d[key] for key in k])
     try:
