@@ -244,8 +244,8 @@ def _aggregate_carbon_map(
             will be created by this function as the aggregating output.
 
     Returns:
-        None"""
-
+        None
+    """
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_serviceshed_datasource = ogr.Open(aoi_uri)
     if (os.path.normpath(aoi_uri) ==
@@ -287,7 +287,10 @@ def _aggregate_carbon_map(
         serviceshed_defn.GetFieldIndex(poly_id_field))
 
     carbon_sum_field = ogr.FieldDefn('c_sum', ogr.OFTReal)
+    carbon_sum_field.SetWidth(24)
     carbon_mean_field = ogr.FieldDefn('c_ha_mean', ogr.OFTReal)
+    carbon_mean_field.SetWidth(24)
+
     serviceshed_layer.CreateField(carbon_sum_field)
     serviceshed_layer.CreateField(carbon_mean_field)
 
