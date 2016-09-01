@@ -122,7 +122,6 @@ def execute(args):
 
     # Setup Logging
     num_blocks = get_num_blocks(d['C_prior_raster'])
-    LOGGER.debug('Num_blocks: %s', num_blocks)
     blocks_processed = 0.
     last_time = time.time()
 
