@@ -9,13 +9,11 @@ import tempfile
 import functools
 import copy
 
-import numpy as np
 import numpy
 from osgeo import gdal
 from pygeoprocessing import geoprocessing as geoprocess
 import pygeoprocessing.testing as pygeotest
 from pygeoprocessing.testing import scm
-import nose.plugins.attrib
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
@@ -111,9 +109,9 @@ def _get_args(num_transitions=2, valuation=True):
     Returns:
         args (dict): main model arguements
     """
-    band_matrices = [np.ones((2, 2))]
-    band_matrices_two = [np.ones((2, 2)) * 2]
-    band_matrices_with_nodata = [np.ones((2, 2))]
+    band_matrices = [numpy.ones((2, 2))]
+    band_matrices_two = [numpy.ones((2, 2)) * 2]
+    band_matrices_with_nodata = [numpy.ones((2, 2))]
     band_matrices_with_nodata[0][0][0] = NODATA_INT
     srs = pygeotest.sampledata.SRS_WILLAMETTE
 
@@ -194,9 +192,9 @@ def _get_preprocessor_args(args_choice):
     Returns:
         args (dict): preprocessor arguments
     """
-    band_matrices_zeros = [np.zeros((2, 2))]
-    band_matrices_ones = [np.ones((2, 2))]
-    band_matrices_nodata = [np.ones((2, 2)) * NODATA_INT]
+    band_matrices_zeros = [numpy.zeros((2, 2))]
+    band_matrices_ones = [numpy.ones((2, 2))]
+    band_matrices_nodata = [numpy.ones((2, 2)) * NODATA_INT]
     srs = pygeotest.sampledata.SRS_WILLAMETTE
 
     workspace = _create_workspace()
@@ -374,7 +372,7 @@ class TestPreprocessor(unittest.TestCase):
         args = _get_preprocessor_args(1)
         OTHER_NODATA = -1
         srs = pygeotest.sampledata.SRS_WILLAMETTE
-        band_matrices_with_nodata = [np.ones((2, 2)) * OTHER_NODATA]
+        band_matrices_with_nodata = [numpy.ones((2, 2)) * OTHER_NODATA]
         raster_wrong_nodata = pygeotest.create_raster_on_disk(
             band_matrices_with_nodata,
             srs.origin,
@@ -401,7 +399,7 @@ class TestPreprocessor(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1)
 
-        band_matrices_zero = [np.zeros((2, 2))]
+        band_matrices_zero = [numpy.zeros((2, 2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
         raster_zeros = pygeotest.create_raster_on_disk(
             band_matrices_zero,
@@ -428,7 +426,7 @@ class TestPreprocessor(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1)
 
-        band_matrices_zero = [np.zeros((2, 2))]
+        band_matrices_zero = [numpy.zeros((2, 2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
         raster_zeros = pygeotest.create_raster_on_disk(
             band_matrices_zero,
@@ -588,17 +586,17 @@ class TestModel(unittest.TestCase):
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
         #       Total: 10.5 + 20.5 = 31.
-        netseq_test = np.array([[np.nan, 31.], [31., 31.]])
-        npv_test = np.array(
-            [[np.nan, 60.27801514], [60.27801514, 60.27801514]])
+        netseq_test = numpy.array([[numpy.nan, 31.], [31., 31.]])
+        npv_test = numpy.array(
+            [[numpy.nan, 60.27801514], [60.27801514, 60.27801514]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
-        np.testing.assert_array_almost_equal(
+        numpy.testing.assert_array_almost_equal(
             netseq_array, netseq_test, decimal=4)
-        np.testing.assert_array_almost_equal(
+        numpy.testing.assert_array_almost_equal(
             npv_array, npv_test, decimal=4)
 
     def test_model_run_2(self):
@@ -626,13 +624,13 @@ class TestModel(unittest.TestCase):
         # Initial Stock from Baseline: 5+5=10
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5
-        netseq_test = np.array([[np.nan, 10.5], [10.5, 10.5]])
+        netseq_test = numpy.array([[numpy.nan, 10.5], [10.5, 10.5]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
-        np.testing.assert_array_almost_equal(
+        numpy.testing.assert_array_almost_equal(
             netseq_array, netseq_test, decimal=4)
 
     def test_model_no_valuation(self):
@@ -657,13 +655,13 @@ class TestModel(unittest.TestCase):
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
         #       Total: 10.5 + 20.5 = 31.
-        netseq_test = np.array([[np.nan, 31.], [31., 31.]])
+        netseq_test = numpy.array([[numpy.nan, 31.], [31., 31.]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
-        np.testing.assert_array_almost_equal(
+        numpy.testing.assert_array_almost_equal(
             netseq_array, netseq_test, decimal=4)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -719,13 +717,13 @@ class TestModel(unittest.TestCase):
         # in the net present value raster.  the npv raster was chosen because
         # the values are determined by multiple inputs, and any changes in
         # those inputs would propagate to this raster.
-        u = np.unique(npv_array)
+        u = numpy.unique(npv_array)
         u.sort()
-        a = np.array([-3.935801e+04, -2.052500e+04, -1.788486e+04,
+        a = numpy.array([-3.935801e+04, -2.052500e+04, -1.788486e+04,
                       -1.787341e+04, 0.0, 1.145100e+01, 3.2086045e+03,
                       3.5199617e+03, 3.770121e+03], dtype=numpy.float32)
         a.sort()
-        np.testing.assert_array_almost_equal(u, a, decimal=2)
+        numpy.testing.assert_array_almost_equal(u, a, decimal=2)
 
     def tearDown(self):
         """Remove workspace."""
