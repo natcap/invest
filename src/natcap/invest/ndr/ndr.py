@@ -298,7 +298,8 @@ def execute(args):
                             cell_area_ha)
                     else:
                         result[lucode_array == lucode] = (
-                            lucode_to_parameters[lucode][load_type])
+                            lucode_to_parameters[lucode][load_type] *
+                            cell_area_ha)
             return result
         return map_load
 
