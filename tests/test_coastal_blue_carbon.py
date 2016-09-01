@@ -832,7 +832,6 @@ class CBCRefactorTest(unittest.TestCase):
         if analysis_year:
             args['analysis_year'] = analysis_year
 
-        # TODO: allow for testing of valuation
         return args
 
     def test_no_transitions(self):
