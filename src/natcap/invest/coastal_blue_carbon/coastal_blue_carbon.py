@@ -600,7 +600,7 @@ def get_inputs(args):
     # Rasters
     try:
         d['transition_years'] = [int(i) for i in
-                                args['lulc_transition_years_list']]
+                                 args['lulc_transition_years_list']]
     except KeyError:
         d['transition_years'] = []
 
@@ -608,8 +608,8 @@ def get_inputs(args):
     # might not be any transition_years.
     if sorted(d['transition_years']) != d['transition_years']:
         raise ValueError(
-            'LULC snapshot years must be provided in chronological order.'
-            ' and in the same order as the LULC snapshot rasters.')
+            'LULC snapshot years must be provided in chronological order '
+            'and in the same order as the LULC snapshot rasters.')
 
     d['transitions'] = len(d['transition_years']) + 1  # +1 for lulc baseline
 
