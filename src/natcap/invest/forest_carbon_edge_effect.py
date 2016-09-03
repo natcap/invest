@@ -247,12 +247,6 @@ def _aggregate_carbon_map(
     """
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_serviceshed_datasource = ogr.Open(aoi_uri)
-    if (os.path.normpath(aoi_uri) ==
-            os.path.normpath(aoi_datasource_filename)):
-        raise ValueError(
-            "The input and output serviceshed filenames are the same, "
-            "please choose a different workspace or move the serviceshed "
-            "out of the current workspace %s" % aoi_datasource_filename)
 
     if os.path.exists(aoi_datasource_filename):
         os.remove(aoi_datasource_filename)
