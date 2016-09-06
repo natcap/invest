@@ -751,8 +751,8 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
     LOGGER.info('Creating %s temporal rasters', num_temporal_rasters)
     for index, raster_filepath in enumerate(itertools.chain(
             *[file_registry[key] for key in raster_lists])):
-        LOGGER.debug('Setting up temporal raster %s of %s at %s', index+1,
-                     num_temporal_rasters, os.path.basename(raster_filepath))
+        LOGGER.info('Setting up temporal raster %s of %s at %s', index+1,
+                    num_temporal_rasters, os.path.basename(raster_filepath))
         geoprocess.new_raster_from_base_uri(
             template_raster,
             raster_filepath,
