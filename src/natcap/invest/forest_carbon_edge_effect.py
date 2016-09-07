@@ -212,7 +212,7 @@ def execute(args):
         'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
 
     # generate report (optional) by aoi if they exist
-    if 'aoi_uri' in args:
+    if 'aoi_uri' in args and args['aoi_uri'] != '':
         LOGGER.info('aggregating carbon map by aoi')
         _aggregate_carbon_map(
             args['aoi_uri'], output_file_registry['carbon_map'],
@@ -406,7 +406,7 @@ def _map_distance_from_tropical_forest_edge(
 def _build_spatial_index(
         base_raster_uri, local_model_dir,
         tropical_forest_edge_carbon_model_shapefile_uri):
-    """Builds a kd-tree index of the locally projected globally georeferenced
+    """Build a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
     Parameters:
@@ -462,9 +462,6 @@ def _build_spatial_index(
     theta_model_parameters = numpy.array(
         theta_model_parameters, dtype=numpy.float32)
 
-    # if kd-tree is empty, raise exception
-    if len(kd_points) == 0:
-        raise ValueError("The input raster is outside any carbon edge model")
     LOGGER.info('building kd_tree')
     kd_tree = scipy.spatial.cKDTree(kd_points)
     LOGGER.info('done building kd_tree')
