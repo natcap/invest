@@ -66,6 +66,34 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 args['workspace_dir'], 'aggregated_carbon_stocks.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_carbon_small_dup_output(self):
+        """Forest Carbon Edge: small test for existing output overlap."""
+        from natcap.invest import forest_carbon_edge_effect
+
+        args = {
+            'aoi_uri': os.path.join(REGRESSION_DATA, 'small_aoi.shp'),
+            'biomass_to_carbon_conversion_factor': '0.47',
+            'biophysical_table_uri': os.path.join(
+                SAMPLE_DATA, 'forest_edge_carbon_lu_table.csv'),
+            'compute_forest_edge_effects': True,
+            'lulc_uri': os.path.join(REGRESSION_DATA, 'small_lulc.tif'),
+            'n_nearest_model_points': '10',
+            'pools_to_calculate': 'above_ground',
+            'results_suffix': 'small',
+            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+                SAMPLE_DATA, 'core_data',
+                'forest_carbon_edge_regression_model_parameters.shp'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        # explictily testing that invoking twice doesn't cause the model to
+        # crash because of exising outputs
+        forest_carbon_edge_effect.execute(args)
+        forest_carbon_edge_effect.execute(args)
+        self.assertTrue(True)  # explict pass of the model
+
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
