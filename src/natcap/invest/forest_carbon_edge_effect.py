@@ -16,10 +16,6 @@ from osgeo import ogr
 import pygeoprocessing
 import scipy.spatial
 
-logging.basicConfig(
-    format='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
-    level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
 
 # grid cells are 100km.  becky says 500km is a good upper bound to search
