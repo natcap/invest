@@ -563,17 +563,10 @@ def _calculate_tropical_forest_edge_carbon_map(
         coord_points = zip(
             row_coords[valid_edge_distance_mask].ravel(),
             col_coords[valid_edge_distance_mask].ravel())
-        try:
-            distances, indexes = kd_tree.query(
-                coord_points, k=n_nearest_model_points,
-                distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
-        except TypeError:
-            LOGGER.warn(
-                "n_jobs parameter not supported, reverting to single "
-                "threaded query")
-            distances, indexes = kd_tree.query(
-                coord_points, k=n_nearest_model_points,
-                distance_upper_bound=DISTANCE_UPPER_BOUND)
+        # note, the 'n_jobs' parameter was introduced in SciPy 0.16.0
+        distances, indexes = kd_tree.query(
+            coord_points, k=n_nearest_model_points,
+            distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
 
         # the 3 is for the 3 thetas in the carbon model
         thetas = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
