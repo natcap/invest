@@ -71,11 +71,13 @@ def execute(args):
                 Note the "n/a" in ``c_above`` are optional since that field
                 is ignored when ``is_tropical_forest==1``.
         args['lulc_uri'] (string): path to a integer landcover code raster
-        args['pools_to_calculate'] (string): one of "all" or "above_ground".
-            If "all" model expects 'c_above', 'c_below', 'c_dead', 'c_soil'
-            in header of biophysical_table and will make a translated carbon
-            map for each based off the landcover map.  If "above_ground", this
-            is only done with 'c_above'.
+        args['pools_to_calculate'] (string): if "all" then all carbon pools
+            will be calculted.  If any other value only above ground carbon
+            pools will be calculated and expect only a 'c_above' header in
+            the biophysical table. If "all" model expects 'c_above',
+            'c_below', 'c_dead', 'c_soil' in header of biophysical_table and
+            will make a translated carbon map for each based off the landcover
+            map.
         args['compute_forest_edge_effects'] (boolean): if True, requires
             biophysical table to have 'is_tropical_forest' forest field, and
             any landcover codes that have a 1 in this column calculate carbon
@@ -131,10 +133,6 @@ def execute(args):
             intermediate_dir, 'c_soil_carbon_stocks%s.tif' % file_suffix)
         output_file_registry['c_dead_map'] = os.path.join(
             intermediate_dir, 'c_dead_carbon_stocks%s.tif' % file_suffix)
-    elif args['pools_to_calculate'] != 'above_ground':
-        raise ValueError(
-            "Unknown value for args['pools_to_calculate']=%s" %
-            args['pools_to_calculate'])
 
     if args['compute_forest_edge_effects']:
         output_file_registry['edge_distance'] = os.path.join(
