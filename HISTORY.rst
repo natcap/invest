@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for carbon forest edge model.
+* Upgraded SciPy dependancy to 0.16.1.
 * Patched bug in NDR that would cause a phosphorus density to be reported per pixel rather than total amount of phosporous in a pixel.
 * Corrected an issue with the uses of buffers in the euclidean risk function of Habitat Risk Assessment.  (issue #3564)
 * Complete code coverage tests for Habitat Quality model.
