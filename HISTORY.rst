@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Patched bug in NDR that would cause a phosphorus density to be reported per pixel rather than total amount of phosporous in a pixel.
 * Corrected an issue with the uses of buffers in the euclidean risk function of Habitat Risk Assessment.  (issue #3564)
 * Complete code coverage tests for Habitat Quality model.
 * Corrected an issue with the ``Fisheries_Inputs.csv`` sample table used by Overlap Analysis.  (issue #3548)

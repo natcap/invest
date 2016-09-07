@@ -5,8 +5,10 @@ import os
 import logging
 import math
 import itertools
+import time
+import re
 
-import numpy as np
+import numpy
 from osgeo import gdal
 import pygeoprocessing.geoprocessing as geoprocess
 
@@ -63,6 +65,7 @@ def execute(args):
             transition occurs away from a lulc-class.
         lulc_baseline_map_uri (str): a GDAL-supported raster representing the
             baseline landscape/seascape.
+        lulc_baseline_year (int): The year of the baseline snapshot.
         lulc_transition_maps_list (list): a list of GDAL-supported rasters
             representing the landscape/seascape at particular points in time.
             Provided in chronological order.
@@ -102,6 +105,7 @@ def execute(args):
             'carbon_pool_initial_uri': 'path/to/carbon_pool_initial_uri',
             'carbon_pool_transient_uri': 'path/to/carbon_pool_transient_uri',
             'lulc_baseline_map_uri': 'path/to/baseline_map.tif',
+            'lulc_baseline_year': <int>,
             'lulc_transition_maps_list': [raster1_uri, raster2_uri, ...],
             'lulc_transition_years_list': [2000, 2005, ...],
             'analysis_year': 2100,
@@ -118,11 +122,20 @@ def execute(args):
 
     # Setup Logging
     num_blocks = get_num_blocks(d['C_prior_raster'])
+    blocks_processed = 0.
+    last_time = time.time()
 
     block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
     C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
 
     for block_idx, (offset_dict, C_prior) in block_iterator:
+        current_time = time.time()
+        blocks_processed += 1.
+        if current_time - last_time >= 5 or blocks_processed in [0, num_blocks-1]:
+            LOGGER.info('Processing model, about %.2f%% complete',
+                        (blocks_processed/num_blocks) * 100)
+            last_time = current_time
+
         # Initialization
         timesteps = d['timesteps']
 
@@ -130,88 +143,90 @@ def execute(args):
 
         # timesteps+1 to include initial conditions
         stock_shape = (timesteps+1, x_size, y_size)
-        S_biomass = np.zeros(stock_shape, dtype=np.float32)  # Stock
-        S_soil = np.zeros(stock_shape, dtype=np.float32)
-        S_litter = np.zeros(stock_shape, dtype=np.float32)
-        T = np.zeros(stock_shape, dtype=np.float32)  # Total Carbon Stock
+        S_biomass = numpy.zeros(stock_shape, dtype=numpy.float32)  # Stock
+        S_soil = numpy.zeros(stock_shape, dtype=numpy.float32)
+        T = numpy.zeros(stock_shape, dtype=numpy.float32)  # Total Carbon Stock
 
         timestep_shape = (timesteps, x_size, y_size)
-        A_biomass = np.zeros(timestep_shape, dtype=np.float32)  # Accumulation
-        A_soil = np.zeros(timestep_shape, dtype=np.float32)
-        E_biomass = np.zeros(timestep_shape, dtype=np.float32)  # Emissions
-        E_soil = np.zeros(timestep_shape, dtype=np.float32)
+        A_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Accumulation
+        A_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
+        E_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Emissions
+        E_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
         # Net Sequestration
-        N_biomass = np.zeros(timestep_shape, dtype=np.float32)
-        N_soil = np.zeros(timestep_shape, dtype=np.float32)
-        V = np.zeros(timestep_shape, dtype=np.float32)  # Valuation
+        N_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)
+        N_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
+        V = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Valuation
 
         snapshot_shape = (d['transitions']+1, x_size, y_size)
-        L = np.zeros(snapshot_shape, dtype=np.float32)  # Litter
+        L = numpy.zeros(snapshot_shape, dtype=numpy.float32)  # Litter
 
         transition_shape = (d['transitions'], x_size, y_size)
         # Yearly Accumulation
-        Y_biomass = np.zeros(transition_shape, dtype=np.float32)
-        Y_soil = np.zeros(transition_shape, dtype=np.float32)
+        Y_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
+        Y_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
         # Disturbance Percentage
-        D_biomass = np.zeros(transition_shape, dtype=np.float32)
-        D_soil = np.zeros(transition_shape, dtype=np.float32)
-        H_biomass = np.zeros(transition_shape, dtype=np.float32)  # Half-life
-        H_soil = np.zeros(transition_shape, dtype=np.float32)
+        D_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
+        D_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
+        H_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)  # Half-life
+        H_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
         # Total Disturbed Carbon
-        R_biomass = np.zeros(transition_shape, dtype=np.float32)
-        R_soil = np.zeros(transition_shape, dtype=np.float32)
+        R_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
+        R_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
 
         # Set Accumulation and Disturbance Values
         C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
-        C_list = [C_prior] + C_r
+        if C_r:
+            C_list = [C_prior] + C_r + [C_r[-1]]  # final transition out to analysis year
+        else:
+            C_list = [C_prior]*2  # allow for a final analysis
         for i in xrange(0, d['transitions']):
             D_biomass[i] = reclass_transition(
                 C_list[i],
                 C_list[i+1],
                 d['lulc_trans_to_Db'],
-                out_dtype=np.float32,
+                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
             D_soil[i] = reclass_transition(
                 C_list[i],
                 C_list[i+1],
                 d['lulc_trans_to_Ds'],
-                out_dtype=np.float32,
+                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
             H_biomass[i] = reclass(
                 C_list[i],
                 d['lulc_to_Hb'],
-                out_dtype=np.float32,
+                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
             H_soil[i] = reclass(
                 C_list[i], d['lulc_to_Hs'],
-                out_dtype=np.float32,
+                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
             Y_biomass[i] = reclass(
                 C_list[i+1], d['lulc_to_Yb'],
-                out_dtype=np.float32,
+                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
             Y_soil[i] = reclass(
                 C_list[i+1],
                 d['lulc_to_Ys'],
-                out_dtype=np.float32,
+                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
 
         S_biomass[0] = reclass(
             C_prior,
             d['lulc_to_Sb'],
-            out_dtype=np.float32,
+            out_dtype=numpy.float32,
             nodata_mask=C_nodata)
         S_soil[0] = reclass(
             C_prior,
             d['lulc_to_Ss'],
-            out_dtype=np.float32,
+            out_dtype=numpy.float32,
             nodata_mask=C_nodata)
 
         for i in xrange(0, len(C_list)):
             L[i] = reclass(
                 C_list[i],
                 d['lulc_to_L'],
-                out_dtype=np.float32,
+                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
 
         T[0] = S_biomass[0] + S_soil[0]
@@ -237,8 +252,16 @@ def execute(args):
             # Emissions
             for transition_idx in xrange(0, timestep_to_transition_idx(
                     d['snapshot_years'], d['transitions'], i)+1):
-                j = d['transition_years'][transition_idx] - \
-                        d['transition_years'][0]
+
+                try:
+                    j = d['transition_years'][transition_idx] - d['transition_years'][0]
+                except IndexError:
+                    # When we're at the analysis year, we're out of transition
+                    # years to calculate for.  Transition years represent years
+                    # for which we have LULC rasters, and the analysis year
+                    # doesn't have a transition LULC associated with it.
+                    break
+
                 E_biomass[i] += R_biomass[transition_idx] * \
                     (0.5**(i-j) - 0.5**(i-j+1))
                 E_soil[i] += R_soil[transition_idx] * \
@@ -276,11 +299,11 @@ def execute(args):
 
         # Add litter to total carbon stock
         if len(T_s) == len(L):
-            T_s = map(np.add, T_s, L)
+            T_s = map(numpy.add, T_s, L)
         else:
-            T_s = map(np.add, T_s, L[:-1])
+            T_s = map(numpy.add, T_s, L[:-1])
 
-        N_total = sum(N)
+        N_total = numpy.sum(N, axis=0)
 
         raster_tuples = [
             ('T_s_rasters', T_s),
@@ -303,7 +326,7 @@ def execute(args):
             offset_dict['yoff'])
 
         if d['do_economic_analysis']:
-            NPV = np.sum(V, axis=0)
+            NPV = numpy.sum(V, axis=0)
             write_to_raster(
                 d['File_Registry']['NPV_raster'],
                 NPV,
@@ -393,36 +416,39 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
     NaN values in its place to mark cells that could not be reclassed.​
 
     Args:
-        array (np.array): input data
+        array (numpy.array): input data
         d (dict): reclassification map
-        out_dtype (np.dtype): a numpy datatype for the reclass_array
-        nodata_mask (number): for floats, a nodata value that is set to np.nan
+        out_dtype (numpy.dtype): a numpy datatype for the reclass_array
+        nodata_mask (number): for floats, a nodata value that is set to numpy.nan
             if provided to make reclass_array nodata values consistent
 
     Returns:
-        reclass_array (np.array): reclassified array
+        reclass_array (numpy.array): reclassified array
     """
     if out_dtype:
         array = array.astype(out_dtype)
-    u = np.unique(array)
-    has_map = np.in1d(u, d.keys())
-    ndata = np.finfo(out_dtype).min
+    u = numpy.unique(array)
+    has_map = numpy.in1d(u, d.keys())
+    ndata = numpy.finfo(out_dtype).min
 
     reclass_array = array.copy()
     for i in u[~has_map]:
-        reclass_array = np.where(reclass_array == i, ndata, reclass_array)
+        reclass_array = numpy.where(reclass_array == i, ndata, reclass_array)
 
     a_ravel = reclass_array.ravel()
     d[ndata] = ndata
-    d[np.nan] = np.nan
     k = sorted(d.keys())
-    v = np.array([d[key] for key in k])
-    index = np.digitize(a_ravel, k, right=True)
+    v = numpy.array([d[key] for key in k])
+    try:
+        index = numpy.digitize(a_ravel, k, right=True)
+    except ValueError:
+        LOGGER.exception('Bins used: %s', k)
+        raise
     reclass_array = v[index].reshape(array.shape)
 
-    if nodata_mask and np.issubdtype(reclass_array.dtype, float):
-        reclass_array[array == nodata_mask] = np.nan
-        reclass_array[array == ndata] = np.nan
+    if nodata_mask and numpy.issubdtype(reclass_array.dtype, float):
+        reclass_array[array == nodata_mask] = numpy.nan
+        reclass_array[array == ndata] = numpy.nan
 
     return reclass_array
 
@@ -432,19 +458,19 @@ def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None,
     """Reclass arrays based on element-wise combinations between two arrays.
 
     Args:
-        a_prev (np.array): previous lulc array
-        a_next (np.array): next lulc array
+        a_prev (numpy.array): previous lulc array
+        a_next (numpy.array): next lulc array
         trans_dict (dict): reclassification map
-        out_dtype (np.dtype): a numpy datatype for the reclass_array
-        nodata_mask (number): for floats, a nodata value that is set to np.nan
+        out_dtype (numpy.dtype): a numpy datatype for the reclass_array
+        nodata_mask (number): for floats, a nodata value that is set to numpy.nan
             if provided to make reclass_array nodata values consistent
 
     Returns:
-        reclass_array (np.array): reclassified array
+        reclass_array (numpy.array): reclassified array
     """
     a = a_prev.flatten()
     b = a_next.flatten()
-    c = np.ma.masked_array(np.zeros(a.shape))
+    c = numpy.ma.masked_array(numpy.zeros(a.shape))
     if out_dtype:
         c = c.astype(out_dtype)
 
@@ -453,10 +479,10 @@ def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None,
         if transition_tuple in trans_dict:
             c[index] = trans_dict[transition_tuple]
         else:
-            c[index] = np.ma.masked
+            c[index] = numpy.ma.masked
 
-    if nodata_mask and np.issubdtype(c.dtype, float):
-        c[a == nodata_mask] = np.nan
+    if nodata_mask and numpy.issubdtype(c.dtype, float):
+        c[a == nodata_mask] = numpy.nan
 
     return c.reshape(a_prev.shape)
 
@@ -466,14 +492,14 @@ def write_to_raster(output_raster, array, xoff, yoff):
 
     Args:
         output_raster (str): filepath to output raster
-        array (np.array): block to save to raster
+        array (numpy.array): block to save to raster
         xoff (int): offset index for x-dimension
         yoff (int): offset index for y-dimension
     """
     ds = gdal.Open(output_raster, gdal.GA_Update)
     band = ds.GetRasterBand(1)
-    if np.issubdtype(array.dtype, float):
-        array[array == np.nan] = NODATA_FLOAT
+    if numpy.issubdtype(array.dtype, float):
+        array[array == numpy.nan] = NODATA_FLOAT
     band.WriteArray(array, xoff, yoff)
     ds = None
 
@@ -486,7 +512,7 @@ def read_from_raster(input_raster, offset_block):
         offset_block (dict): dictionary of offset information
 
     Returns:
-        array (np.array): a blocked array of the input raster
+        array (numpy.array): a blocked array of the input raster
     """
     ds = gdal.Open(input_raster)
     band = ds.GetRasterBand(1)
@@ -571,25 +597,36 @@ def get_inputs(args):
     geoprocess.create_directories([args['workspace_dir'], outputs_dir])
 
     # Rasters
-    d['transition_years'] = [int(i) for i in
-                             args['lulc_transition_years_list']]
-    for i in range(0, len(d['transition_years'])-1):
-        if d['transition_years'][i] >= d['transition_years'][i+1]:
-            raise ValueError(
-                'LULC snapshot years must be provided in chronological order.'
-                ' and in the same order as the LULC snapshot rasters.')
-    d['transitions'] = len(d['transition_years'])
+    try:
+        d['transition_years'] = [int(i) for i in
+                                 args['lulc_transition_years_list']]
+    except KeyError:
+        d['transition_years'] = []
 
-    d['snapshot_years'] = d['transition_years'][:]
+    # Comparing the sorted version of this list handles the case where there
+    # might not be any transition_years.
+    if sorted(d['transition_years']) != d['transition_years']:
+        raise ValueError(
+            'LULC snapshot years must be provided in chronological order '
+            'and in the same order as the LULC snapshot rasters.')
+
+    d['transitions'] = len(d['transition_years']) + 1  # +1 for lulc baseline
+
+    d['snapshot_years'] = [int(args['lulc_baseline_year'])] + d['transition_years'][:]
     if 'analysis_year' in args and args['analysis_year'] not in ['', None]:
         if int(args['analysis_year']) <= d['snapshot_years'][-1]:
             raise ValueError(
                 'Analysis year must be greater than last transition year.')
         d['snapshot_years'].append(int(args['analysis_year']))
+
     d['timesteps'] = d['snapshot_years'][-1] - d['snapshot_years'][0]
 
     d['C_prior_raster'] = args['lulc_baseline_map_uri']
-    d['C_r_rasters'] = args['lulc_transition_maps_list']
+
+    try:
+        d['C_r_rasters'] = args['lulc_transition_maps_list']
+    except KeyError:
+        d['C_r_rasters'] = []
 
     # Reclass Dictionaries
     lulc_lookup_dict = geoprocess.get_lookup_from_table(
@@ -641,10 +678,10 @@ def get_inputs(args):
         else:
             interest_rate = float(args['interest_rate']) * 0.01
             price = args['price']
-            d['price_t'] = (1 + interest_rate) ** np.arange(
+            d['price_t'] = (1 + interest_rate) ** numpy.arange(
                 0, d['timesteps']+1) * price
 
-        d['price_t'] /= (1 + discount_rate) ** np.arange(0, d['timesteps']+1)
+        d['price_t'] /= (1 + discount_rate) ** numpy.arange(0, d['timesteps']+1)
 
     # Create Output Rasters
     d['File_Registry'] = _build_file_registry(
@@ -679,17 +716,17 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
     E_r_rasters = []
     N_r_rasters = []
 
-    for snapshot_idx in xrange(len(snapshot_years)-1):
+    for snapshot_idx in xrange(len(snapshot_years)):
         snapshot_year = snapshot_years[snapshot_idx]
-        next_snapshot_year = snapshot_years[snapshot_idx + 1]
         T_s_rasters.append(_OUTPUT['carbon_stock'] % (snapshot_year))
-        A_r_rasters.append(_OUTPUT['carbon_accumulation'] % (
-            snapshot_year, next_snapshot_year))
-        E_r_rasters.append(_OUTPUT['cabon_emissions'] % (
-            snapshot_year, next_snapshot_year))
-        N_r_rasters.append(_OUTPUT['carbon_net_sequestration'] % (
-            snapshot_year, next_snapshot_year))
-    T_s_rasters.append(_OUTPUT['carbon_stock'] % (snapshot_years[-1]))
+        if snapshot_idx < len(snapshot_years)-1:
+            next_snapshot_year = snapshot_years[snapshot_idx + 1]
+            A_r_rasters.append(_OUTPUT['carbon_accumulation'] % (
+                snapshot_year, next_snapshot_year))
+            E_r_rasters.append(_OUTPUT['cabon_emissions'] % (
+                snapshot_year, next_snapshot_year))
+            N_r_rasters.append(_OUTPUT['carbon_net_sequestration'] % (
+                snapshot_year, next_snapshot_year))
 
     # Total Net Sequestration
     N_total_raster = 'total_net_carbon_sequestration.tif'
@@ -710,8 +747,12 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
         [(raster_registry_dict, outputs_dir)], results_suffix)
 
     raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
-    for raster_filepath in itertools.chain(
-            *[file_registry[key] for key in raster_lists]):
+    num_temporal_rasters = sum([len(file_registry[key]) for key in raster_lists])
+    LOGGER.info('Creating %s temporal rasters', num_temporal_rasters)
+    for index, raster_filepath in enumerate(itertools.chain(
+            *[file_registry[key] for key in raster_lists])):
+        LOGGER.info('Setting up temporal raster %s of %s at %s', index+1,
+                    num_temporal_rasters, os.path.basename(raster_filepath))
         geoprocess.new_raster_from_base_uri(
             template_raster,
             raster_filepath,
@@ -720,9 +761,12 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
             gdal.GDT_Float32)
     for raster_key in ['N_total_raster', 'NPV_raster']:
         try:
+            filepath = file_registry[raster_key]
+            LOGGER.info('Setting up valuation raster %s',
+                        os.path.basename(filepath))
             geoprocess.new_raster_from_base_uri(
                 template_raster,
-                file_registry[raster_key],
+                filepath,
                 'GTiff',
                 NODATA_FLOAT,
                 gdal.GDT_Float32)
@@ -794,18 +838,18 @@ def _create_transient_dict(carbon_pool_transient_uri):
     """
     transient_dict = geoprocess.get_lookup_from_table(
         carbon_pool_transient_uri, 'code')
-    biomass_transient_dict = {}
-    soil_transient_dict = {}
-    for code, subdict in transient_dict.items():
-        biomass_transient_dict[code] = {}
-        soil_transient_dict[code] = {}
-        for key, val in subdict.items():
-            if key.lower().startswith('biomass'):
-                biomass_transient_dict[code][key.lstrip('biomass')[1:]] = val
-            if key.lower().startswith('soil'):
-                soil_transient_dict[code][key.lstrip('soil')[1:]] = val
-        biomass_transient_dict[code]['lulc-class'] = subdict['lulc-class']
-        soil_transient_dict[code]['lulc-class'] = subdict['lulc-class']
+
+    def _filter_dict_by_header(header_prefix):
+        """Retrieve soil, biomass dicts"""
+        pattern = '^%s-' % header_prefix
+        return dict(
+            (code, dict((re.sub(pattern, '', key.lower()), val)
+                        for (key, val) in subdict.iteritems() if
+                        key.startswith(header_prefix) or key == 'lulc-class'))
+            for (code, subdict) in transient_dict.iteritems())
+
+    biomass_transient_dict = _filter_dict_by_header('biomass')
+    soil_transient_dict = _filter_dict_by_header('soil')
 
     return biomass_transient_dict, soil_transient_dict
 
@@ -819,13 +863,13 @@ def _get_price_table(price_table_uri, start_year, end_year):
         end_year (int): end year of analysis
 
     Returns:
-        price_t (np.array): price for each year.
+        price_t (numpy.array): price for each year.
     """
     price_dict = geoprocess.get_lookup_from_table(price_table_uri, 'year')
 
     try:
-        return np.array([price_dict[year]['price']
-                        for year in xrange(start_year, end_year+1)])
+        return numpy.array([price_dict[year]['price']
+                            for year in xrange(start_year, end_year+1)])
     except KeyError as missing_year:
         raise KeyError('Carbon price table does not contain a price value for '
                        '%s' % missing_year)
