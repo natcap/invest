@@ -341,7 +341,7 @@ def _calculate_lulc_carbon_map(
                     biophysical_table[lucode][carbon_pool_type]) * cell_area_ha
             except ValueError:
                 raise ValueError(
-                    "Could not interpret carbon pool type as a number. "
+                    "Could not interpret carbon pool value as a number. "
                     "lucode: %s, pool_type: %s, value: %s" %
                     (lucode, carbon_pool_type,
                      biophysical_table[lucode][carbon_pool_type]))
