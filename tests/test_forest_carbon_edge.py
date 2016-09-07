@@ -94,6 +94,40 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         forest_carbon_edge_effect.execute(args)
         self.assertTrue(True)  # explict pass of the model
 
+    def test_carbon_small_no_forest_edge(self):
+        """Forest Carbon Edge: small test for no forest edge effects."""
+        from natcap.invest import forest_carbon_edge_effect
+
+        args = {
+            'aoi_uri': os.path.join(REGRESSION_DATA, 'small_aoi.shp'),
+            'biomass_to_carbon_conversion_factor': '0.47',
+            'biophysical_table_uri': os.path.join(
+                REGRESSION_DATA, 'no_forest_edge_carbon_lu_table.csv'),
+            'compute_forest_edge_effects': False,
+            'lulc_uri': os.path.join(REGRESSION_DATA, 'small_lulc.tif'),
+            'n_nearest_model_points': '10',
+            'pools_to_calculate': 'above_ground',
+            'results_suffix': 'small_no_edge_effect',
+            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+                SAMPLE_DATA, 'core_data',
+                'forest_carbon_edge_regression_model_parameters.shp'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        forest_carbon_edge_effect.execute(args)
+
+        ForestCarbonEdgeTests._test_same_files(
+            os.path.join(
+                REGRESSION_DATA, 'file_list_small_no_edge_effect.txt'),
+            args['workspace_dir'])
+        ForestCarbonEdgeTests._assert_regression_results_eq(
+            args['workspace_dir'],
+            os.path.join(
+                args['workspace_dir'],
+                'aggregated_carbon_stocks_small_no_edge_effect.shp'),
+            os.path.join(
+                REGRESSION_DATA, 'agg_results_small_no_edge_effect.csv'))
+
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
