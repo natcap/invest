@@ -57,6 +57,34 @@ class GLOBIOTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_globio_shape_infra(self):
+        """GLOBIO: regression testing with shapefile infrastructure."""
+        from natcap.invest import globio
+
+        args = {
+            'aoi_uri': '',
+            'globio_lulc_uri': os.path.join(
+                REGRESSION_DATA, 'globio_lulc.tif'),
+            'infrastructure_dir':  os.path.join(
+                REGRESSION_DATA, 'small_infrastructure'),
+            'intensification_fraction': '0.46',
+            'msa_parameters_uri': os.path.join(
+                SAMPLE_DATA, 'msa_parameters.csv'),
+            'predefined_globio': True,
+            'workspace_dir': self.workspace_dir,
+        }
+        globio.execute(args)
+        GLOBIOTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'expected_file_list_lulc.txt'),
+            args['workspace_dir'])
+
+        pygeoprocessing.testing.assert_rasters_equal(
+            os.path.join(self.workspace_dir, 'msa.tif'),
+            os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'),
+            1e-6)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_full(self):
         """GLOBIO: regression testing all functionality."""
         from natcap.invest import globio
