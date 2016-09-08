@@ -24,6 +24,10 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger(
     'natcap.invest.coastal_blue_carbon.coastal_blue_carbon')
 
+_INTERMEDIATE = {
+    'aligned_lulc_template': 'aligned_lulc_%s.tif',
+}
+
 _OUTPUT = {
     'carbon_stock': 'carbon_stock_at_%s.tif',
     'carbon_accumulation': 'carbon_accumulation_between_%s_and_%s.tif',
@@ -594,7 +598,9 @@ def get_inputs(args):
     args['results_suffix'] = invest_utils.make_suffix_string(
         args, 'results_suffix')
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
-    geoprocess.create_directories([args['workspace_dir'], outputs_dir])
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    geoprocess.create_directories([args['workspace_dir'], outputs_dir,
+                                   intermediate_dir])
 
     # Rasters
     try:
@@ -686,20 +692,25 @@ def get_inputs(args):
     # Create Output Rasters
     d['File_Registry'] = _build_file_registry(
         d['C_prior_raster'],
+        d['C_r_rasters'],
         d['snapshot_years'],
         args['results_suffix'],
         d['do_economic_analysis'],
-        outputs_dir)
+        outputs_dir, intermediate_dir)
 
     return d
 
 
-def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
-                         do_economic_analysis, outputs_dir):
+def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
+                         results_suffix, do_economic_analysis, outputs_dir,
+                         intermediate_dir):
     """Build an output file registry.
 
     Args:
         C_prior_raster (str): template raster
+        transition_rasters (list): A list of GDAL-supported rasters
+            representing representing the landcover at transition years.  May
+            be an empty list.
         snapshot_years (list): years of provided snapshots to help with
             filenames
         results_suffix (str): the results file suffix
@@ -744,7 +755,25 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
         raster_registry_dict['NPV_raster'] = 'net_present_value.tif'
 
     file_registry = invest_utils.build_file_registry(
-        [(raster_registry_dict, outputs_dir)], results_suffix)
+        [(raster_registry_dict, outputs_dir),
+         (_INTERMEDIATE, intermediate_dir)], results_suffix)
+
+    LOGGER.info('Aligning and clipping incoming datasets')
+    incoming_rasters = [C_prior_raster] + transition_rasters
+    # If an analysis year is defined, it's appended to the snapshot_years list,
+    # but won't have a corresponding raster.
+    aligned_lulc_files = [file_registry['aligned_lulc_template'] % year
+                          for year in snapshot_years[:len(incoming_rasters)]]
+    min_pixel_size = min(geoprocess.get_cell_size_from_uri(filepath)
+                         for filepath in incoming_rasters)
+    geoprocess.align_dataset_list(
+        dataset_uri_list=[C_prior_raster]+transition_rasters,
+        dataset_out_uri_list=aligned_lulc_files,
+        resample_method_list=['nearest']*len(aligned_lulc_files),
+        out_pixel_size=min_pixel_size,
+        mode='intersection',
+        dataset_to_align_index=0  # Align to baseline LULC
+    )
 
     raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
     num_temporal_rasters = sum([len(file_registry[key]) for key in raster_lists])
