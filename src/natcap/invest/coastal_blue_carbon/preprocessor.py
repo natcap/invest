@@ -22,6 +22,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
 
 _OUTPUT = {
+    'aligned_lulc_template': 'aligned_lulc_%s.tif',
     'transitions': 'transitions.csv',
     'carbon_pool_initial_template': 'carbon_pool_initial_template.csv',
     'carbon_pool_transient_template': 'carbon_pool_transient_template.csv'
@@ -57,16 +58,29 @@ def execute(args):
     # Inputs
     vars_dict = _get_inputs(args)
 
-    # Run Preprocessor
-    vars_dict['transition_matrix_dict'] = _preprocess_data(
-        vars_dict['lulc_lookup_dict'], vars_dict['lulc_snapshot_list'])
-
-    # Outputs
     base_file_path_list = [(_OUTPUT, vars_dict['output_dir'])]
     reg = invest_utils.build_file_registry(
         base_file_path_list,
         vars_dict['results_suffix'])
 
+    aligned_lulcs = [reg['aligned_lulc_template'] % index
+                     for index in xrange(len(args['lulc_snapshot_list']))]
+    min_pixel_size = min(geoprocess.get_cell_size_from_uri(path) for path in
+                         vars_dict['lulc_snapshot_list'])
+    geoprocess.align_dataset_list(
+        dataset_uri_list=vars_dict['lulc_snapshot_list'],
+        dataset_out_uri_list=aligned_lulcs,
+        resample_method_list=['nearest']*len(aligned_lulcs),
+        out_pixel_size=min_pixel_size,
+        mode='intersection',
+        dataset_to_align_index=0
+    )
+
+    # Run Preprocessor
+    vars_dict['transition_matrix_dict'] = _preprocess_data(
+        vars_dict['lulc_lookup_dict'], vars_dict['lulc_snapshot_list'])
+
+    # Outputs
     _create_transition_table(
         reg['transitions'],
         vars_dict['lulc_to_code_dict'].keys(),
