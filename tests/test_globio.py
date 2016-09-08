@@ -83,6 +83,28 @@ class GLOBIOTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_globio_empty_infra(self):
+        """GLOBIO: testing that empty infra directory raises exception."""
+        from natcap.invest import globio
+
+        args = {
+            'aoi_uri': '',
+            'globio_lulc_uri': os.path.join(
+                REGRESSION_DATA, 'globio_lulc_small.tif'),
+            'infrastructure_dir':  os.path.join(
+                REGRESSION_DATA, 'empty_dir'),
+            'intensification_fraction': '0.46',
+            'msa_parameters_uri': os.path.join(
+                SAMPLE_DATA, 'msa_parameters.csv'),
+            'predefined_globio': True,
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            globio.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_shape_infra(self):
         """GLOBIO: regression testing with shapefile infrastructure."""
         from natcap.invest import globio
