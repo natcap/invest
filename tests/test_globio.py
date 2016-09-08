@@ -57,6 +57,32 @@ class GLOBIOTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_globio_duplicate_output(self):
+        """GLOBIO: testing that overwriting output does not crash."""
+        from natcap.invest import globio
+
+        args = {
+            'aoi_uri': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
+            'globio_lulc_uri': os.path.join(
+                REGRESSION_DATA, 'globio_lulc_small.tif'),
+            'infrastructure_dir':  os.path.join(
+                SAMPLE_DATA, 'infrastructure_dir'),
+            'intensification_fraction': '0.46',
+            'msa_parameters_uri': os.path.join(
+                SAMPLE_DATA, 'msa_parameters.csv'),
+            'predefined_globio': True,
+            'workspace_dir': self.workspace_dir,
+        }
+
+        # invoke twice to ensure no error is raised
+        globio.execute(args)
+        globio.execute(args)
+
+        # inferring an explicit 'pass'
+        self.assertTrue(True)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_shape_infra(self):
         """GLOBIO: regression testing with shapefile infrastructure."""
         from natcap.invest import globio
