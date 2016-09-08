@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for GLOBIO model.
 * Full test coverage for carbon forest edge model.
 * Upgraded SciPy dependancy to 0.16.1.
 * Patched bug in NDR that would cause a phosphorus density to be reported per pixel rather than total amount of phosporous in a pixel.
