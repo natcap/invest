@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for the marine water quality model.
 * Full test coverage for GLOBIO model.
 * Full test coverage for carbon forest edge model.
 * Upgraded SciPy dependancy to 0.16.1.
