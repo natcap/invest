@@ -3,7 +3,7 @@
     "data/invest-test-data": "89",
     "doc/users-guide": "5ff5d57cdea3",
     "src/invest-natcap.default": "f18244edcff0f68871b9f839a904bc98b5a50b82",
-    "src/pygeoprocessing": "REQUIREMENTS_TXT:pygeoprocessing",
+    "src/pygeoprocessing": "4b6582efd2a9",
     "src/pyinstaller": {
         "Darwin": "v3.1.1",
         "Windows": "v2.1",

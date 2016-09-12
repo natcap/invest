@@ -63,7 +63,8 @@ class MarineWaterQualityTests(unittest.TestCase):
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(self.workspace_dir, 'output', 'concentration.tif'),
             os.path.join(
-                REGRESSION_DATA, 'concentration_regression.tif'), 1e-3)
+                REGRESSION_DATA, 'concentration_regression.tif'), rel_tol=1e-6,
+            abs_tol=1e-9)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
