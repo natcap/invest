@@ -42,7 +42,7 @@ class MarineWaterQualityTests(unittest.TestCase):
                 SAMPLE_DATA, 'AOI_clay_soundwideWQ.shp'),
             'kps': 0.001,
             'land_poly_uri': os.path.join(
-                SAMPLE_DATA, '3005_VI_landPolygon.shp'),
+                REGRESSION_DATA, 'simple_island.shp'),
             'layer_depth': 1.0,
             'pixel_size': 100.0,
             'source_point_data_uri': os.path.join(
@@ -63,7 +63,7 @@ class MarineWaterQualityTests(unittest.TestCase):
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(self.workspace_dir, 'output', 'concentration.tif'),
             os.path.join(
-                REGRESSION_DATA, 'concentration_regression.tif'), rel_tol=1e-6,
+                REGRESSION_DATA, 'concentration_island.tif'), rel_tol=1e-5,
             abs_tol=1e-9)
 
     @staticmethod
