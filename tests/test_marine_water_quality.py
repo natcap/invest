@@ -66,6 +66,34 @@ class MarineWaterQualityTests(unittest.TestCase):
                 REGRESSION_DATA, 'concentration_island.tif'), rel_tol=1e-5,
             abs_tol=1e-9)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_mwq_bad_cell_size(self):
+        """MWQ: ensuring cells that are too large cause numerical failure."""
+        from natcap.invest.marine_water_quality import marine_water_quality_biophysical
+
+        args = {
+            'adv_uv_points_uri': os.path.join(
+                SAMPLE_DATA, 'ADVuv_WGS1984_BCAlbers.shp'),
+            'aoi_poly_uri': os.path.join(
+                SAMPLE_DATA, 'AOI_clay_soundwideWQ.shp'),
+            'kps': 0.001,
+            'land_poly_uri': os.path.join(
+                REGRESSION_DATA, 'simple_island.shp'),
+            'layer_depth': 1.0,
+            'pixel_size': 100000.0,
+            'source_point_data_uri': os.path.join(
+                SAMPLE_DATA, 'WQM_PAR.csv'),
+            'source_points_uri': os.path.join(
+                SAMPLE_DATA, 'floathomes_centroids.shp'),
+            'tide_e_points_uri': os.path.join(
+                SAMPLE_DATA, 'TideE_WGS1984_BCAlbers.shp'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError):
+            marine_water_quality_biophysical.execute(args)
+
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
