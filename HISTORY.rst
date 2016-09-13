@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for pollination model.
+* Removed "farms aggregation" functionality from the InVEST pollination model.
 * Full test coverage for GLOBIO model.
 * Full test coverage for carbon forest edge model.
 * Upgraded SciPy dependancy to 0.16.1.
