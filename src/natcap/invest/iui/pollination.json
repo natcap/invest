@@ -234,7 +234,7 @@
               }
             ]
           },
-          "helpText": "A CSV table containing information specific to the various pollinators to be modeled.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If aggregating by crops, the table should contain fields matching 'crp_*', where the value is either 1 or 0.  For each crop column in this table, the 'Aggregate by Farms' shapefile (below) must also have a field with a matching name."
+          "helpText": "A CSV table containing information specific to the various pollinators to be modeled.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If aggregating by crops, the table should contain fields matching 'crp_*', where the value is either 1 or 0."
         },
         {
           "id": "ag_classes",
@@ -252,45 +252,6 @@
           },
           "dataType": "string",
           "helpText": "A space-separated list of agricultural land-cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If agricultural classes are not provided here, the entire land-cover raster will be considered as agricultural."
-        },
-        {
-          "id": "aggregate_by_farms",
-          "args_id": "farms_shapefile",
-          "type": "hideableFileEntry",
-          "defaultValue": "../Pollination/Input/farms.shp",
-          "label": "Aggregate Results by Farm Sites (Vector) (Optional)",
-          "returns": {
-            "ifEmpty": "pass"
-          },
-          "validateAs": {
-            "type": "OGR",
-            "fieldsExist": [
-              "ID"
-            ],
-            "layers": [
-              {
-                "name": {
-                  "inheritFrom": "file"
-                },
-                "type": "points"
-              }
-            ],
-            "restrictions": [
-              {
-                "field": {
-                  "pattern": "crp_.*",
-                  "flag": "ignoreCase"
-                },
-                "validateAs": {
-                  "type": "number",
-                  "allowedValues": {
-                    "pattern": "^(1\\.?0*)|(0\\.?0*)$"
-                  }
-                }
-              }
-            ]
-          },
-          "helpText": "Optional. An OGR-supported vector file. If provided, it must contain points representing data collection points on the landscape.  This table must contain crop fields matching those in the Guilds table, with a value of 1 indicating that this crop is present at this farm site and a 0 indicating that the crop is not present.  Values are then aggregated per farm site based on which species visit which crops using the corresponding fields in the Guilds table."
         }
       ]
     }

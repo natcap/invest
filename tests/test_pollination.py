@@ -37,8 +37,6 @@ class PollinationTests(unittest.TestCase):
             'ag_classes': (
                 '67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92'),
             'do_valuation': True,
-            'farms_shapefile': os.path.join(
-                SAMPLE_DATA, 'Pollination', 'Input', 'farms.shp'),
             'guilds_uri': os.path.join(
                 SAMPLE_DATA, 'Pollination', 'Input', 'Guild.csv'),
             'half_saturation': 0.125,
