@@ -63,7 +63,7 @@ class MarineWaterQualityTests(unittest.TestCase):
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(self.workspace_dir, 'output', 'concentration.tif'),
             os.path.join(
-                REGRESSION_DATA, 'concentration_island.tif'), rel_tol=1e-5,
+                REGRESSION_DATA, 'concentration_island.tif'), rel_tol=1e-4,
             abs_tol=1e-9)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
