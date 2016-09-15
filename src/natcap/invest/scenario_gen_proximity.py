@@ -1,9 +1,7 @@
-"""Scenario Generation: Proximity Based"""
+"""Scenario Generation: Proximity Based."""
 
 import os
-import math
 import logging
-import numpy
 import tempfile
 import struct
 import heapq
@@ -12,16 +10,13 @@ import atexit
 import collections
 import csv
 
+import numpy
 from osgeo import osr
 from osgeo import gdal
 import pygeoprocessing
 import scipy
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-LOGGER = logging.getLogger(
-    'natcap.invest.scenario_generator_proximity_based')
+LOGGER = logging.getLogger('natcap.invest.scenario_generator_proximity_based')
 
 
 def execute(args):
@@ -61,7 +56,6 @@ def execute(args):
     Returns:
         None.
     """
-
     if (not args['convert_farthest_from_edge'] and
             not args['convert_nearest_to_edge']):
         raise ValueError("Neither scenario was selected.")
