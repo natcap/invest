@@ -192,7 +192,6 @@
               },
               {
                 "field": "SPECIES_WEIGHT",
-                "required": false,
                 "validateAs": {
                   "type": "number"
                 }
