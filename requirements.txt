@@ -12,7 +12,7 @@ matplotlib
 natcap.versioner>=0.4.2
 numpy>=1.11.0
 pyamg>=2.2.1
-pygeoprocessing>=0.3.0a17
+pygeoprocessing>=0.3.0a20
 rtree>=0.8.2
 scipy>=0.16.1
 shapely
