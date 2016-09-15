@@ -181,7 +181,8 @@
             "type": "CSV",
             "fieldsExist": [
               "SPECIES",
-              "ALPHA"
+              "ALPHA",
+              "SPECIES_WEIGHT"
             ],
             "restrictions": [
               {
