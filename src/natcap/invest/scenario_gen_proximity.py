@@ -16,6 +16,8 @@ from osgeo import gdal
 import pygeoprocessing
 import scipy
 
+from . import utils
+
 LOGGER = logging.getLogger('natcap.invest.scenario_generator_proximity_based')
 
 
@@ -61,14 +63,9 @@ def execute(args):
         raise ValueError("Neither scenario was selected.")
 
     # append a _ to the suffix if it's not empty and doesn't already have one
-    try:
-        file_suffix = args['results_suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    #create working directories
+    # create working directories
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
@@ -86,7 +83,7 @@ def execute(args):
         int(x) for x in args['focal_landcover_codes'].split()])
 
     if 'aoi_uri' in args and args['aoi_uri'] != '':
-        #clip base lulc to a new raster
+        # clip base lulc to a new raster
         base_lulc_uri = pygeoprocessing.temporary_filename()
         pygeoprocessing.clip_dataset_uri(
             args['base_lulc_uri'], args['aoi_uri'], base_lulc_uri,
@@ -118,9 +115,11 @@ def execute(args):
 def _convert_landscape(
         base_lulc_uri, replacement_lucode, area_to_convert,
         focal_landcover_codes, convertible_type_list, score_weight, n_steps,
-        smooth_distance_from_edge_uri, output_landscape_raster_uri, stats_uri):
-    """Expands the replacement lucodes in relation to the focal landcover
-    codes.  If the sign on `score_weight` is positive, expansion occurs marches
+        smooth_distance_from_edge_uri, output_landscape_raster_uri,
+        stats_uri):
+    """Expand replacement lucodes in relation to the focal lucodes.
+
+    If the sign on `score_weight` is positive, expansion occurs marches
     away from the focal types, while if `score_weight` is negative conversion
     marches toward the focal types.
 
@@ -152,8 +151,8 @@ def _convert_landscape(
             type, and area of pixels converted in `output_landscape_raster_uri`
 
     Returns:
-        None."""
-
+        None.
+    """
     tmp_file_registry = {
         'non_base_mask': pygeoprocessing.temporary_filename(),
         'base_mask': pygeoprocessing.temporary_filename(),
@@ -203,9 +202,9 @@ def _convert_landscape(
         for invert_mask, mask_id, distance_id in [
                 (False, 'non_base_mask', 'distance_from_non_base_mask_edge'),
                 (True, 'base_mask', 'distance_from_base_mask_edge')]:
-            #mask non-base codes from map
+
             def _mask_base_op(lulc_array):
-                """create a mask of valid non-base pixels only"""
+                """Create a mask of valid non-base pixels only."""
                 base_mask = numpy.in1d(
                     lulc_array.flatten(), focal_landcover_codes).reshape(
                         lulc_array.shape)
@@ -228,7 +227,7 @@ def _convert_landscape(
             tmp_file_registry['distance_from_base_mask_edge'])
 
         def _combine_masks(base_distance_array, non_base_distance_array):
-            """create a mask of valid non-base pixels only"""
+            """create a mask of valid non-base pixels only."""
             result = non_base_distance_array
             valid_base_mask = base_distance_array > 0.0
             result[valid_base_mask] = base_distance_array[valid_base_mask]
@@ -248,8 +247,7 @@ def _convert_landscape(
 
         # turn inside and outside masks into a single mask
         def _mask_to_convertible_codes(distance_from_base_edge, lulc):
-            """masks out the distance transform to a set of given landcover
-            codes"""
+            """Mask out the distance transform to a set of lucodes."""
             convertible_mask = numpy.in1d(
                 lulc.flatten(), convertible_type_list).reshape(lulc.shape)
             return numpy.where(
@@ -262,7 +260,6 @@ def _convert_landscape(
             convertible_type_nodata, pixel_size_out, "intersection",
             vectorize_op=False, datasets_are_pre_aligned=True)
 
-        #Convert a wad of pixels
         LOGGER.info(
             'convert %d pixels to lucode %d', pixels_to_convert,
             replacement_lucode)
@@ -277,8 +274,7 @@ def _convert_landscape(
 
 
 def _log_stats(stats_cache, pixel_area, stats_uri):
-    """Writes pixel change statistics from a simulation to disk in tabular
-    format.
+    """Write pixel change statistics to a file in tabular format.
 
     Parameters:
         stats_cache (dict): a dictionary mapping pixel lucodes to number of
@@ -291,7 +287,6 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
     Returns:
         None
     """
-
     with open(stats_uri, 'wb') as csv_output_file:
         stats_writer = csv.writer(
             csv_output_file, delimiter=',', quotechar=',',
@@ -304,8 +299,7 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
 
 
 def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
-    """Sorts the non-nodata pixels in the dataset on disk and returns
-    an iterable in sorted order.
+    """Return an iterable of non-nodata pixels in sorted order.
 
     Parameters:
         dataset_uri (string): a path to a floating point GDAL dataset
@@ -318,14 +312,24 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
 
     Returns:
         an iterable that produces (value * score_weight, flat_index) in
-        decreasing sorted order by value * score_weight"""
-
+        decreasing sorted order by value * score_weight
+    """
     def _read_score_index_from_disk(
             score_file_name, index_file_name, buffer_size=4*10000):
         """Generator to yield a float/int value from the given filenames.
-        reads a buffer of `buffer_size` big before to avoid keeping the
-        file open between generations."""
 
+        Reads a buffer of `buffer_size` big before to avoid keeping the
+        file open between generations.
+
+        score_file_name (string): a path to a file that has 32 bit floats
+            packed consecutively
+        index_file_name (string): a path to a file that has 32 bit ints
+            packed consecutively
+        buffser_size (int): size of readahead buffer
+
+        Yields:
+            next (score, index) tuple in the given score and index files.
+        """
         score_buffer = ''
         index_buffer = ''
         file_offset = 0
@@ -358,7 +362,7 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
                    struct.unpack('i', packed_index)[0])
 
     def _sort_cache_to_iterator(index_cache, score_cache):
-        """Flushes the current cache to a heap and returns it
+        """Flushe the current cache to a heap and return it.
 
         Parameters:
             index_cache (1d numpy.array): contains flat indexes to the
@@ -366,29 +370,28 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
             score_cache (1d numpy.array): contains score pixels
 
         Returns:
-            Iterable to visit scores/indexes in increasing score order."""
-
+            Iterable to visit scores/indexes in increasing score order.
+        """
         # sort the whole bunch to disk
         sort_index = score_cache.argsort()
         score_cache = score_cache[sort_index]
         index_cache = index_cache[sort_index]
 
-        #Dump all the scores and indexes to disk
+        # Dump all the scores and indexes to disk
         score_file = tempfile.NamedTemporaryFile(delete=False)
         score_file.write(struct.pack('%sf' % score_cache.size, *score_cache))
         index_file = tempfile.NamedTemporaryFile(delete=False)
         index_file.write(struct.pack('%si' % index_cache.size, *index_cache))
 
-        #Get the filename and register a command to delete it after the
-        #interpreter exits
+        # Get filename and register a command to delete it after the
+        # interpreter exits
         score_file_name = score_file.name
         score_file.close()
         index_file_name = index_file.name
         index_file.close()
 
         def _remove_file(path):
-            """Function to remove a file and handle exceptions to
-                register in atexit."""
+            """Remove a file and handle exceptions to register in atexit."""
             try:
                 os.remove(path)
             except OSError:
@@ -451,8 +454,7 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
 def _convert_by_score(
         score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
         stats_cache, score_weight, cache_size=2**24):
-    """Takes an input score layer and changes the pixels in `out_raster_uri`
-    and converts up to `max_pixels_to_convert` them to `convert_value` type.
+    """Convert up to max pixels in ranked order of score.
 
     Parameters:
         score_uri (string): path to a raster whose non-nodata values score the
@@ -479,11 +481,11 @@ def _convert_by_score(
     Returns:
         None.
     """
-
     def _flush_cache_to_band(
             data_array, row_array, col_array, valid_index, dirty_blocks,
             out_band, stats_counter):
-        """Internal function to flush the block cache to the output band.
+        """Flush block cache to the output band.
+
         Provided as an internal function because the exact operation needs
         to be invoked inside the processing loop and again at the end to
         finalize the scan.
@@ -508,7 +510,6 @@ def _convert_by_score(
         Returns:
             None
         """
-
         # construct sparse matrix so it can be indexed later
         sparse_matrix = scipy.sparse.csc_matrix(
             (data_array[:valid_index],
@@ -599,7 +600,7 @@ def _convert_by_score(
 
 
 def _make_gaussian_kernel_uri(sigma, kernel_uri):
-    """Creates a 2D gaussian kernel.
+    """Create a 2D Gaussian kernel.
 
     Parameters:
         sigma (float): the sigma as in the classic Gaussian function
@@ -609,7 +610,6 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
     Returns:
         None.
     """
-
     # going 3.0 times out from the sigma gives you over 99% of area under
     # the guassian curve
     max_distance = sigma * 3.0
