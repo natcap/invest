@@ -7,9 +7,9 @@ import logging
 import os
 import csv
 import copy
-import itertools
 
 import numpy as np
+import pygeoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst_io')
 
@@ -87,7 +87,9 @@ def fetch_args(args):
     args['sexsp'] = sexsp_dict[args['sexsp'].lower()]
 
     # Fetch Data
-    args = _create_dirs(args)
+    args['output_dir'] = os.path.join(args['workspace_dir'], 'output')
+    pygeoprocessing.create_directories([args['workspace_dir'],
+                                        args['output_dir']])
     pop_dict = read_population_csv(args)
     habitat_chg_dict = read_habitat_chg_csv(args)
     habitat_dep_dict = read_habitat_dep_csv(args)
@@ -116,58 +118,6 @@ def fetch_args(args):
     vars_dict = dict(args.items() + pop_dict.items() + habitat_dict.items())
 
     return vars_dict
-
-
-def _create_dirs(args):
-    '''
-    Creates the workspace and output directories if they don't already exist
-    and adds the output directory ('output_dir') to the dictionary of
-    arguments.
-
-    Args:
-        args (dictionary): arguments from the user (same as Fisheries
-            Preprocessor entry point)
-
-    Returns:
-        args (dictionary): Same as input, but with additional 'output_dir' uri.
-
-    Example Args::
-
-        args = {
-            'workspace_dir': 'path/to/workspace_dir',
-
-            # other arguments are ignored ...
-        }
-
-    Example Returns::
-
-        ret = {
-            'workspace_dir': 'path/to/workspace_dir/',
-            'output_dir': 'path/to/output_dir/',
-
-            # original args ...
-        }
-
-    '''
-    # Check that workspace directory exists, if not, try to create directory
-    if not os.path.isdir(args['workspace_dir']):
-        try:
-            os.makedirs(args['workspace_dir'])
-        except:
-            LOGGER.error("Cannot create Workspace Directory")
-            raise OSError
-
-    # Create output directory
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    if not os.path.isdir(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except:
-            LOGGER.error("Cannot create Output Directory")
-            raise OSError
-    args['output_dir'] = output_dir
-
-    return args
 
 
 def read_population_csv(args):
