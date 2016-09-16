@@ -47,6 +47,7 @@ class FisheriesTest(unittest.TestCase):
         }
         fisheries.execute(args)
 
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_specific(self):
         from natcap.invest.fisheries import fisheries
