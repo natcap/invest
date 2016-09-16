@@ -94,10 +94,11 @@ def fetch_args(args, create_outputs=True):
     except:
         args['results_suffix'] = ''
 
-    if args['sexsp'].lower() == 'yes':
-        args['sexsp'] = 2
-    else:
-        args['sexsp'] = 1
+    sexsp_dict = {
+        'yes': 2,
+        'no': 1,
+    }
+    args['sexsp'] = sexsp_dict[args['sexsp'].lower()]
 
     params_dict = _verify_single_params(args, create_outputs=create_outputs)
 
@@ -219,48 +220,40 @@ def read_population_csv(args, uri):
                         'Survnaturalfrac', 'Vulnfishing']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
     if len(Matching_Params) != len(Necessary_Params):
-        LOGGER.error("Population Parameters File does not contain all \
-necessary parameters. %s" % uri)
-        raise MissingParameter("Population Parameters File does not contain \
-all necessary parameters")
+        raise MissingParameter("Population Parameters File does not contain "
+                               "all necessary parameters")
 
     if (args['recruitment_type'] != 'Fixed') and (
             'Maturity' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Maturity' \
-vector when running the given recruitment function. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Maturity' vector when running the given recruitment function")
+        raise MissingParameter("Population Parameters File must contain a "
+                               "'Maturity' vector when running the given "
+                               "recruitment function. %s" % uri)
 
     if (args['population_type'] == 'Stage-Based') and (
             'Duration' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Duration' \
-vector when running Stage-Based models. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Duration' vector when running Stage-Based models")
+        raise MissingParameter("Population Parameters File must contain a "
+                               "'Duration' vector when running Stage-Based "
+                               "models. %s" % uri)
 
     if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and (
             args['spawn_units'] == 'Weight') and (
             'Weight' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Weight' \
-vector when Spawners are calulated by weight using the \
-Beverton-Holt or Ricker recruitment functions. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Weight' vector when Spawners are calulated by weight using the \
-Beverton-Holt or Ricker recruitment functions")
+        raise MissingParameter("Population Parameters File must contain a "
+                               "'Weight' vector when Spawners are calulated "
+                               "by weight using the Beverton-Holt or Ricker "
+                               "recruitment functions. %s" % uri)
 
     if (args['harvest_units'] == 'Weight') and (
             'Weight' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Weight' \
-vector when 'Harvest by Weight' is selected. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Weight' vector when 'Harvest by Weight' is selected")
+        raise MissingParameter("Population Parameters File must contain a "
+                               "'Weight' vector when 'Harvest by Weight' is "
+                               "selected. %s" % uri)
 
     if (args['recruitment_type'] == 'Fecundity' and (
             'Fecundity' not in pop_dict.keys())):
-        LOGGER.error("Population Parameters File must contain a 'Fecundity' \
-vector when using the Fecundity recruitment function. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Fecundity' vector when using the Fecundity recruitment function")
+        raise MissingParameter("Population Parameters File must contain a "
+                               "'Fecundity' vector when using the Fecundity "
+                               "recruitment function. %s" % uri)
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -271,13 +264,12 @@ vector when using the Fecundity recruitment function. %s" % uri)
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
     if not (pop_dict['Larvaldispersal'].shape == pop_dict[
             'Exploitationfraction'].shape):
-        LOGGER.error("Region vector shapes do not match. %s" % uri)
-        raise ValueError
+        raise ValueError("Region vector shapes do not match. %s" % uri)
 
     # Check that information is correct
     if not np.allclose(pop_dict['Larvaldispersal'].sum(), 1):
-        LOGGER.warning("The Larvaldisperal vector does not sum exactly to one\
-. %s" % uri)
+        LOGGER.warning(("The Larvaldisperal vector does not sum exactly to "
+                        "one.. %s"), uri)
 
     # Check that certain attributes have fraction elements
     Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing',
@@ -287,8 +279,8 @@ vector when using the Fecundity recruitment function. %s" % uri)
     for attr in Frac_Vectors:
         a = pop_dict[attr]
         if np.any(a > 1) or np.any(a < 0):
-            LOGGER.warning("The %s vector has elements that are not decimal \
-fractions. %s" % (attr, uri))
+            LOGGER.warning(("The %s vector has elements that are not decimal "
+                            "fractions. %s"), (attr, uri))
 
     # Make duration vector of type integer
     if args['population_type'] == 'Stage-Based':
@@ -377,8 +369,7 @@ def _parse_population_csv(uri, sexsp):
 
     else:
         # Throw exception about sex-specific conflict or formatting issue
-        LOGGER.error("Could not parse table given Sex-Specific inputs")
-        raise Exception
+        raise Exception("Could not parse table given Sex-Specific inputs")
 
     for col in range(0, len(class_attributes_table[0])):
         pop_dict.update(_vectorize_attribute(
@@ -434,15 +425,14 @@ def read_migration_tables(args, class_list, region_list):
 
     # Check migration regions are equal across matrices
     if not all(map(lambda x: x.shape == matrix_list[0].shape, matrix_list)):
-        LOGGER.error("Shape of migration matrices are not equal across \
-lifecycle classes")
-        raise ValueError
+        raise ValueError("Shape of migration matrices are not equal across "
+                         "lifecycle classes")
 
     # Check that all migration vectors approximately sum to one
     if not all([np.allclose(vector.sum(
             ), 1) for matrix in matrix_list for vector in matrix]):
-        LOGGER.warning("Elements in at least one migration matrices source \
-vector do not sum to one")
+        LOGGER.warning("Elements in at least one migration matrices source "
+                       "vector do not sum to one")
 
     migration_dict['Migration'] = matrix_list
     return migration_dict
