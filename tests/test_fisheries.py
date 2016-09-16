@@ -7,6 +7,7 @@ from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'Fisheries')
+HST_INPUTS = os.path.join(SAMPLE_DATA, 'input', 'Habitat_Scenario_Tool')
 
 
 class FisheriesTest(unittest.TestCase):
@@ -53,22 +54,36 @@ class FisheriesHSTTest(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
-    def test_regression(self):
+    def test_regression_sex_neutral(self):
         from natcap.invest.fisheries import fisheries_hst
         args = {
             u'gamma': 0.5,
             u'hab_cont': False,
-            u'habitat_chg_csv_uri': os.path.join(SAMPLE_DATA, 'input',
-                                                 'Habitat_Scenario_Tool',
+            u'habitat_chg_csv_uri': os.path.join(HST_INPUTS,
                                                  'habitat_chg_params.csv'),
-            u'habitat_dep_csv_uri': os.path.join(SAMPLE_DATA, 'input',
-                                                 'Habitat_Scenario_Tool',
+            u'habitat_dep_csv_uri': os.path.join(HST_INPUTS,
                                                  'habitat_dep_params.csv'),
             u'pop_cont': False,
-            u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
-                                                'Habitat_Scenario_Tool',
-                                                'pop_params.csv'),
+            u'population_csv_uri': os.path.join(HST_INPUTS, 'pop_params.csv'),
             u'sexsp': 'No',
+            u'workspace_dir': self.workspace_dir,
+        }
+        fisheries_hst.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_regression_sex_specific(self):
+        raise unittest.SkipTest('No sample data')
+        from natcap.invest.fisheries import fisheries_hst
+        args = {
+            u'gamma': 0.5,
+            u'hab_cont': False,
+            u'habitat_chg_csv_uri': os.path.join(HST_INPUTS,
+                                                 'habitat_chg_params.csv'),
+            u'habitat_dep_csv_uri': os.path.join(HST_INPUTS,
+                                                 'habitat_dep_params.csv'),
+            u'pop_cont': False,
+            u'population_csv_uri': os.path.join(HST_INPUTS, 'pop_params.csv'),
+            u'sexsp': 'Yes',
             u'workspace_dir': self.workspace_dir,
         }
         fisheries_hst.execute(args)
