@@ -45,6 +45,89 @@ class FisheriesTest(unittest.TestCase):
         }
         fisheries.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_regression_sex_specific(self):
+        from natcap.invest.fisheries import fisheries
+        args = {
+            u'alpha': 6050000.0,
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_galveston',
+                                     'Galveston_Subregion.shp'),
+            u'beta': 4.14e-08,
+            u'do_batch': False,
+            u'harvest_units': 'Individuals',
+            u'migr_cont': False,
+            u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+                                                'input_dungeness_crab',
+                                                'population_params.csv'),
+            u'population_type': 'Age-Based',
+            u'recruitment_type': 'Ricker',
+            u'sexsp': 'Yes',
+            u'spawn_units': 'Individuals',
+            u'total_init_recruits': 200000.0,
+            u'total_recur_recruits': 5.0,
+            u'total_timesteps': 100,
+            u'val_cont': False,
+            u'workspace_dir': self.workspace_dir,
+        }
+        fisheries.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_regression_migrations(self):
+        from natcap.invest.fisheries import fisheries
+        args = {
+            u'alpha': 6050000.0,
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_galveston',
+                                     'Galveston_Subregion.shp'),
+            u'beta': 4.14e-08,
+            u'do_batch': False,
+            u'harvest_units': 'Individuals',
+            u'migr_cont': True,
+            u'migration_dir': os.path.join(SAMPLE_DATA, 'input',
+                                           'input_lobster', 'Migrations'),
+            u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+                                                'input_lobster',
+                                                'population_params.csv'),
+            u'population_type': 'Age-Based',
+            u'recruitment_type': 'Ricker',
+            u'sexsp': 'No',
+            u'spawn_units': 'Individuals',
+            u'total_init_recruits': 200000.0,
+            u'total_recur_recruits': 5.0,
+            u'total_timesteps': 100,
+            u'val_cont': False,
+            u'workspace_dir': self.workspace_dir,
+        }
+        fisheries.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_regression_batch(self):
+        from natcap.invest.fisheries import fisheries
+        args = {
+            u'alpha': 6050000.0,
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_galveston',
+                                     'Galveston_Subregion.shp'),
+            u'beta': 4.14e-08,
+            u'do_batch': True,
+            u'harvest_units': 'Individuals',
+            u'migr_cont': False,
+            u'population_csv_dir': os.path.join(SAMPLE_DATA, 'input',
+                                                'input_blue_crab'),
+            u'population_type': 'Age-Based',
+            u'recruitment_type': 'Ricker',
+            u'results_suffix': u'',
+            u'sexsp': 'No',
+            u'spawn_units': 'Individuals',
+            u'total_init_recruits': 200000.0,
+            u'total_recur_recruits': 5.0,
+            u'total_timesteps': 100,
+            u'val_cont': False,
+            u'workspace_dir': self.workspace_dir,
+        }
+        fisheries.execute(args)
+
 
 class FisheriesHSTTest(unittest.TestCase):
     def setUp(self):

@@ -15,13 +15,12 @@ from natcap.invest import reporting
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
 
 
-class MissingParameter(StandardError):
+class MissingParameter(ValueError):
     '''
     An exception class that may be raised when a necessary parameter is not
     provided by the user.
     '''
-    def __init__(self, msg):
-        self.msg = msg
+    pass
 
 
 # Fetch and Verify Arguments
@@ -538,39 +537,19 @@ def _verify_single_params(args, create_outputs=True):
     params_dict = args
 
     if create_outputs:
-        # Check that workspace directory exists, if not, try to create directory
-        if not os.path.isdir(args['workspace_dir']):
-            try:
-                os.makedirs(args['workspace_dir'])
-            except:
-                LOGGER.error("Cannot create Workspace Directory")
-                raise OSError
-
         # Create output directory
         output_dir = os.path.join(args['workspace_dir'], 'output')
-        if not os.path.isdir(output_dir):
-            try:
-                os.makedirs(output_dir)
-            except:
-                LOGGER.error("Cannot create Output Directory")
-                raise OSError
-        params_dict['output_dir'] = output_dir
-
-        # Create intermediate directory
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-        if not os.path.isdir(intermediate_dir):
-            try:
-                os.makedirs(intermediate_dir)
-            except:
-                LOGGER.error("Cannot create Intermediate Directory")
-                raise OSError
+        params_dict['output_dir'] = output_dir
         params_dict['intermediate_dir'] = intermediate_dir
+        pygeoprocessing.create_directories([args['workspace_dir'],
+                                            output_dir,
+                                            intermediate_dir])
 
     # Check that timesteps is positive integer
     total_timesteps = args['total_timesteps']
     if type(total_timesteps) != int or total_timesteps < 1:
-        LOGGER.error("Total Time Steps value must be positive integer")
-        raise ValueError
+        raise ValueError("Total Time Steps value must be positive integer")
     params_dict['total_timesteps'] = total_timesteps + 1
 
     # Check total_init_recruits for non-negative float
@@ -579,46 +558,39 @@ def _verify_single_params(args, create_outputs=True):
         try:
             total_timesteps = float(total_init_recruits)
         except:
-            LOGGER.error("Total Initial Recruits value must be non-negative float")
-            raise ValueError
+            raise ValueError("Total Initial Recruits value must be "
+                             "non-negative float")
     if total_init_recruits < 0:
-        LOGGER.error("Total Initial Recruits value must be non-negative float")
-        raise ValueError
+        raise ValueError("Total Initial Recruits value must be non-negative "
+                         "float")
 
     # Check that corresponding recruitment parameters exist
     recruitment_type = args['recruitment_type']
     if recruitment_type in ['Beverton-Holt', 'Ricker']:
         if args['alpha'] is None or args['beta'] is None:
-            LOGGER.error("Not all required recruitment parameters provided")
-            raise ValueError
+            raise ValueError("Not all required recruitment parameters provided")
         if args['alpha'] <= 0 or args['beta'] <= 0:
-            LOGGER.error("Alpha and Beta parameters must be positive")
-            raise ValueError
+            raise ValueError("Alpha and Beta parameters must be positive")
     if recruitment_type is 'Fixed':
         if args['total_recur_recruits'] is None:
-            LOGGER.error("Not all required recruitment parameters provided")
-            raise ValueError
+            raise ValueError("Not all required recruitment parameters provided")
         if args['total_recur_recruits'] < 0:
-            LOGGER.error(
-                "Total Recruits per Time Step must be non-negative float")
-            raise ValueError
+            raise ValueError("Total Recruits per Time Step must be "
+                             "non-negative float")
 
     # If Harvest:
     if args['val_cont']:
         frac_post_process = args['frac_post_process']
         unit_price = args['unit_price']
         if frac_post_process is None or unit_price is None:
-            LOGGER.error("Not all required harvest parameters are provided")
-            raise ValueError
+            raise ValueError("Not all required harvest parameters are provided")
         # Check frac_post_process float between [0,1]
         if frac_post_process < 0 or frac_post_process > 1:
-            LOGGER.error("The fraction of harvest kept after processing must \
-                be a float between 0 and 1 (inclusive)")
-            raise ValueError
+            raise ValueError("The fraction of harvest kept after processing "
+                             "must be a float between 0 and 1 (inclusive)")
         # Check unit_price non-negative float
         if unit_price < 0:
-            LOGGER.error("Unit price of harvest must be non-negative float")
-            raise ValueError
+            raise ValueError("Unit price of harvest must be non-negative float")
 
     return params_dict
 
