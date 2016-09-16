@@ -549,20 +549,6 @@ def _verify_single_params(args, create_outputs=True):
     # Check that timesteps is positive integer
     params_dict['total_timesteps'] = int(args['total_timesteps']) + 1
 
-    # Check that corresponding recruitment parameters exist
-    recruitment_type = args['recruitment_type']
-    if recruitment_type in ['Beverton-Holt', 'Ricker']:
-        if args['alpha'] is None or args['beta'] is None:
-            raise ValueError("Not all required recruitment parameters provided")
-        if args['alpha'] <= 0 or args['beta'] <= 0:
-            raise ValueError("Alpha and Beta parameters must be positive")
-    if recruitment_type is 'Fixed':
-        if args['total_recur_recruits'] is None:
-            raise ValueError("Not all required recruitment parameters provided")
-        if args['total_recur_recruits'] < 0:
-            raise ValueError("Total Recruits per Time Step must be "
-                             "non-negative float")
-
     return params_dict
 
 
