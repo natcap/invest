@@ -186,7 +186,8 @@
               "required": true,
               "defaultValue": "200000",
               "validateAs": {
-                "type": "number"
+                "type": "number",
+                "greaterThan": 0
               },
               "helpText": "The initial number of recruits in the population model at time equal to zero.<br><br>If the model contains multiple regions of interest or is distinguished by sex, this value will be evenly divided and distributed into each sub-population."
             },

@@ -552,18 +552,6 @@ def _verify_single_params(args, create_outputs=True):
         raise ValueError("Total Time Steps value must be positive integer")
     params_dict['total_timesteps'] = total_timesteps + 1
 
-    # Check total_init_recruits for non-negative float
-    total_init_recruits = args['total_init_recruits']
-    if type(total_init_recruits) != float:
-        try:
-            total_timesteps = float(total_init_recruits)
-        except:
-            raise ValueError("Total Initial Recruits value must be "
-                             "non-negative float")
-    if total_init_recruits < 0:
-        raise ValueError("Total Initial Recruits value must be non-negative "
-                         "float")
-
     # Check that corresponding recruitment parameters exist
     recruitment_type = args['recruitment_type']
     if recruitment_type in ['Beverton-Holt', 'Ricker']:
