@@ -43,3 +43,32 @@ class FisheriesTest(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
         fisheries.execute(args)
+
+
+class FisheriesHSTTest(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_regression(self):
+        from natcap.invest.fisheries import fisheries_hst
+        args = {
+            u'gamma': 0.5,
+            u'hab_cont': False,
+            u'habitat_chg_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+                                                 'Habitat_Scenario_Tool',
+                                                 'habitat_chg_params.csv'),
+            u'habitat_dep_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+                                                 'Habitat_Scenario_Tool',
+                                                 'habitat_dep_params.csv'),
+            u'pop_cont': False,
+            u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+                                                'Habitat_Scenario_Tool',
+                                                'pop_params.csv'),
+            u'sexsp': 'No',
+            u'workspace_dir': self.workspace_dir,
+        }
+        fisheries_hst.execute(args)
