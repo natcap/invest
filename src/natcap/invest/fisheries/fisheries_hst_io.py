@@ -177,22 +177,20 @@ def read_population_csv(args):
     try:
         pop_dict['Surv_nat_xsa']
     except:
-        LOGGER.error("Population Parameters File does not contain a Survival\
-            Matrix")
-        raise MissingParameter
+        raise MissingParameter("Population Parameters File does not contain a "
+                               "Survival Matrix")
 
     Necessary_Params = ['Classes', 'Regions', 'Surv_nat_xsa']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
 
     if len(Matching_Params) != len(Necessary_Params):
-        LOGGER.warning("Population Parameters File does not contain all \
-            necessary parameters. %s" % uri)
+        raise ValueError("Population Parameters File does not contain all "
+                         "necessary parameters. %s" % uri)
 
     # Checks that all Survival Matrix elements exist between [0, 1]
     A = pop_dict['Surv_nat_xsa']
     if any(A[A > 1.0]) or any(A[A < 0.0]):
-        LOGGER.error("Surivial Matrix contains values outside [0, 1]")
-        raise ValueError
+        raise ValueError("Surivial Matrix contains values outside [0, 1]")
 
     return pop_dict
 
@@ -281,8 +279,7 @@ def _parse_population_csv(uri, sexsp):
 
     else:
         # Throw exception about sex-specific conflict or formatting issue
-        LOGGER.error("Could not parse table given Sex-Specific inputs")
-        raise Exception
+        raise ValueError("Could not parse table given Sex-Specific inputs")
 
     Class_vector_names = class_attributes_table[0]
     for i in range(0, len(Class_vector_names)):
@@ -544,26 +541,6 @@ def _parse_habitat_chg_csv(args):
     habitat_chg_dict['Hab_chg_hx'] = np.array(Hab_chg_hx, dtype=float)
 
     return habitat_chg_dict
-
-
-# Helper function
-def _listdir(path):
-    '''
-    A replacement for the standar os.listdir which, instead of returning
-    only the filename, will include the entire path. This will use os as a
-    base, then just lambda transform the whole list.
-
-    Args:
-        path (string): the location container from which we want to
-            gather all files
-
-    Returns:
-        uris (list): A list of full URIs contained within 'path'
-    '''
-    file_names = os.listdir(path)
-    uris = map(lambda x: os.path.join(path, x), file_names)
-
-    return uris
 
 
 # Helper functions for navigating CSV files
