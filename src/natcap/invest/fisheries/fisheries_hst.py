@@ -9,10 +9,7 @@ import pprint
 
 import numpy as np
 
-try:
-    from natcap.invest.fisheries import fisheries_hst_io as io
-except:
-    import fisheries_hst_io as io
+from . import fisheries_hst_io as io
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -68,7 +65,7 @@ def execute(args):
     Note:
 
         + Modified Population Parameters CSV File saved to 'workspace_dir/output/'
-    '''
+    """
 
     # Parse, Verify Inputs
     vars_dict = io.fetch_args(args)
@@ -81,7 +78,7 @@ def execute(args):
 
 
 def convert_survival_matrix(vars_dict):
-    '''
+    """
     Creates a new survival matrix based on the information provided by
     the user related to habitat area changes and class-level dependencies
     on those habitats.
