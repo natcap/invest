@@ -18,7 +18,7 @@ class FisheriesTest(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
-    def test_regression(self):
+    def test_regression_with_valuation(self):
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 6050000.0,
@@ -40,7 +40,9 @@ class FisheriesTest(unittest.TestCase):
             u'total_init_recruits': 200000.0,
             u'total_recur_recruits': 5.0,
             u'total_timesteps': 100,
-            u'val_cont': False,
+            u'val_cont': True,
+            u'frac_post_process': 0.351487513,
+            u'unit_price': 1.0,
             u'workspace_dir': self.workspace_dir,
         }
         fisheries.execute(args)
