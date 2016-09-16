@@ -4,14 +4,11 @@ model
 '''
 
 import logging
-import pprint as pp
 
 import fisheries_io as io
 import fisheries_model as model
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.fisheries')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 def execute(args, create_outputs=True):

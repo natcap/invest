@@ -14,8 +14,6 @@ from . import fisheries_hst_io as io
 pp = pprint.PrettyPrinter(indent=4)
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 def execute(args):

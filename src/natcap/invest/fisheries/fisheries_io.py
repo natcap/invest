@@ -13,8 +13,6 @@ import pygeoprocessing.geoprocessing
 from natcap.invest import reporting
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 class MissingParameter(StandardError):

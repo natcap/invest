@@ -6,14 +6,11 @@ inputs and outputs
 import logging
 import os
 import csv
-import pprint as pp
 import copy
 
 import numpy as np
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst_io')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 class MissingParameter(StandardError):
