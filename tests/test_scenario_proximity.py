@@ -66,6 +66,39 @@ class ScenarioProximityTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'nearest_to_edge_regression.csv'),
             rel_tol=1e-6)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_scenario_gen_small_far(self):
+        """Scenario Gen Proximity: regression testing all functionality."""
+        from natcap.invest import scenario_gen_proximity
+
+        args = {
+            'aoi_uri': os.path.join(
+                SAMPLE_DATA, 'scenario_proximity_aoi.shp'),
+            'area_to_convert': '20000.0',
+            'base_lulc_uri': os.path.join(
+                REGRESSION_DATA, 'clipped_lulc.tif'),
+            'convert_farthest_from_edge': True,
+            'convert_nearest_to_edge': False,
+            'convertible_landcover_codes': '1 2 3 4 5',
+            'focal_landcover_codes': '1 2 3 4 5',
+            'n_fragmentation_steps': '1',
+            'replacment_lucode': '12',
+            'workspace_dir': self.workspace_dir,
+        }
+
+        scenario_gen_proximity.execute(args)
+        ScenarioProximityTests._test_same_files(
+            os.path.join(
+                REGRESSION_DATA, 'expected_file_list_small_farthest.txt'),
+            args['workspace_dir'])
+
+        pygeoprocessing.testing.assertions.assert_csv_equal(
+            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
+            os.path.join(
+                REGRESSION_DATA, 'small_farthest_from_edge_regression.csv'),
+            rel_tol=1e-6)
+
     def test_scenario_gen_no_scenario(self):
         """Scenario Gen Proximity: no scenario should raise an exception."""
         from natcap.invest import scenario_gen_proximity
