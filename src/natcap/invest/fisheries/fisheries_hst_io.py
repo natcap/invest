@@ -7,6 +7,7 @@ import logging
 import os
 import csv
 import copy
+import itertools
 
 import numpy as np
 
@@ -79,10 +80,11 @@ def fetch_args(args):
         }
 
     '''
-    if args['sexsp'].lower() == 'yes':
-        args['sexsp'] = 2
-    else:
-        args['sexsp'] = 1
+    sexsp_dict = {
+        'no': 1,
+        'yes': 2,
+    }
+    args['sexsp'] = sexsp_dict[args['sexsp'].lower()]
 
     # Fetch Data
     args = _create_dirs(args)
@@ -98,31 +100,17 @@ def fetch_args(args):
     habitat_dict = dict(habitat_chg_dict.items() + habitat_dep_dict.items())
 
     # Check that classes and regions match
-    P_Classes = pop_dict['Classes']
-    H_Classes = habitat_dict['Hab_classes']
-    try:
-        is_equal_list = map(
-            lambda x, y: x.lower() == y.lower(), P_Classes, H_Classes)
-    except:
-        is_equal_list = [False]
-        print "P_Classes", P_Classes
-        print "H_Classes", H_Classes
-    if not all(is_equal_list):
-        LOGGER.error("Mismatch between class names in Population and Habitat CSV files")
-        raise ValueError
+    P_Classes = [x.lower() for x in pop_dict['Classes']]
+    H_Classes = [x.lower() for x in habitat_dict['Hab_classes']]
+    if not P_Classes == H_Classes:
+        raise ValueError("Mismatch between class names in Population and "
+                         "Habitat CSV files")
 
-    P_Regions = pop_dict['Regions']
-    H_Regions = habitat_dict['Hab_regions']
-    try:
-        is_equal_list = map(
-            lambda x, y: x.lower() == y.lower(), P_Regions, H_Regions)
-    except:
-        is_equal_list = False
-        print "P_Regions", P_Regions
-        print "H_Regions", H_Regions
-    if not all(is_equal_list):
-        LOGGER.error("Mismatch between region names in Population and Habitat CSV files")
-        raise ValueError
+    P_Regions = [x.lower() for x in pop_dict['Regions']]
+    H_Regions = [x.lower() for x in habitat_dict['Hab_regions']]
+    if not P_Regions == H_Regions:
+        raise ValueError("Mismatch between region names in Population and "
+                         "Habitat CSV files")
 
     # Combine Data
     vars_dict = dict(args.items() + pop_dict.items() + habitat_dict.items())
