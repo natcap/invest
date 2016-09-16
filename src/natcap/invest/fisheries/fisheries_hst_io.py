@@ -92,7 +92,8 @@ def fetch_args(args):
 
     # Check that habitat names match between habitat parameter files
     if not habitat_dep_dict['Habitats'] == habitat_chg_dict['Habitats']:
-        LOGGER.error("Mismatch between Habitat names in Habitat Paramater CSV files")
+        raise ValueError("Mismatch between Habitat names in Habitat Paramater "
+                         "CSV files.")
     del habitat_dep_dict['Habitats']
     habitat_dict = dict(habitat_chg_dict.items() + habitat_dep_dict.items())
 
