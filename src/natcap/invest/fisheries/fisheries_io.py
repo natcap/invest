@@ -547,10 +547,7 @@ def _verify_single_params(args, create_outputs=True):
                                             intermediate_dir])
 
     # Check that timesteps is positive integer
-    total_timesteps = args['total_timesteps']
-    if type(total_timesteps) != int or total_timesteps < 1:
-        raise ValueError("Total Time Steps value must be positive integer")
-    params_dict['total_timesteps'] = total_timesteps + 1
+    params_dict['total_timesteps'] = int(args['total_timesteps']) + 1
 
     # Check that corresponding recruitment parameters exist
     recruitment_type = args['recruitment_type']
@@ -565,20 +562,6 @@ def _verify_single_params(args, create_outputs=True):
         if args['total_recur_recruits'] < 0:
             raise ValueError("Total Recruits per Time Step must be "
                              "non-negative float")
-
-    # If Harvest:
-    if args['val_cont']:
-        frac_post_process = args['frac_post_process']
-        unit_price = args['unit_price']
-        if frac_post_process is None or unit_price is None:
-            raise ValueError("Not all required harvest parameters are provided")
-        # Check frac_post_process float between [0,1]
-        if frac_post_process < 0 or frac_post_process > 1:
-            raise ValueError("The fraction of harvest kept after processing "
-                             "must be a float between 0 and 1 (inclusive)")
-        # Check unit_price non-negative float
-        if unit_price < 0:
-            raise ValueError("Unit price of harvest must be non-negative float")
 
     return params_dict
 
