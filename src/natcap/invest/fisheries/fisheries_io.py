@@ -1040,15 +1040,10 @@ def _create_results_aoi(vars_dict):
 
     # Add Information to Shapefile
     for feature in layer:
-        try:
-            region_name = str(feature.items()['Name'])
-            feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
-            if vars_dict['val_cont']:
-                feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
-            layer.SetFeature(feature)
-        except:
-            LOGGER.warning("A feature in the given AOI shapefile either does \
-                not have a 'Name' attribute (case-sensitive) or does not match \
-                any of the given sub-regions. Skipping feature.")
+        region_name = str(feature.items()['Name'])
+        feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
+        if vars_dict['val_cont']:
+            feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
+        layer.SetFeature(feature)
 
     layer.ResetReading()
