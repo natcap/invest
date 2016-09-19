@@ -194,8 +194,8 @@ def set_recru_func(vars_dict):
             return rec_func
 
         except Exception, e:
-            LOGGER.error("User-defined recruitment function could not be validated.")
-            raise ValueError
+            raise ValueError("User-defined recruitment function could not be "
+                             "validated.")
 
     elif vars_dict['recruitment_type'] == "Beverton-Holt":
         return rec_func_BH
@@ -206,8 +206,7 @@ def set_recru_func(vars_dict):
     elif vars_dict['recruitment_type'] == "Fixed":
         return rec_func_Fixed
     else:
-        LOGGER.error("Could not determine correct recruitment function")
-        raise ValueError
+        raise ValueError("Could not determine correct recruitment function")
 
 
 def set_init_cond_func(vars_dict):
@@ -266,9 +265,8 @@ def set_init_cond_func(vars_dict):
     elif vars_dict['population_type'] == 'Stage-Based':
         return stage_based_init_cond
     else:
-        LOGGER.error(
-            "Could not determine which initial_condition function to use")
-        raise ValueError
+        raise ValueError("Could not determine which initial_condition "
+                         "function to use")
 
 
 def set_cycle_func(vars_dict, rec_func):
@@ -370,9 +368,8 @@ def set_cycle_func(vars_dict, rec_func):
     elif vars_dict['population_type'] == 'Stage-Based':
         return stage_based_cycle_func
     else:
-        LOGGER.error(
-            "Could not determine which initial_condition function to use")
-        raise ValueError
+        raise ValueError("Could not determine which initial_condition "
+                         "function to use")
 
 
 def set_harvest_func(vars_dict):
