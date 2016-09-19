@@ -17,10 +17,34 @@ class FisheriesSampleDataTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
 
+    @staticmethod
+    def get_harvest_info(workspace):
+        """Extract final harvest info from the results CSV.
+
+        Parameters:
+            workspace (string): The path to the output workspace.  The file
+                *workspace*/output/results_table.csv must exist.
+
+        Returns:
+            A dict with 4 attributes mapping to the 4 columns of the very last
+            timestep in the fisheries calculation.  The 4 attributes are:
+            'timestep', 'is_equilibrated', 'spawners', and 'harvest'.
+        """
+        filename = os.path.join(workspace, 'output', 'results_table.csv')
+        with open(filename) as results_csv:
+            last_line = results_csv.readlines()[-1].strip().split(',')
+            timestep, is_equilibrated, spawners, harvest = last_line
+            return {
+                'timestep': int(timestep),
+                'is_equilibrated': is_equilibrated,
+                'spawners': float(spawners),
+                'harvest': float(harvest),
+            }
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_shrimp(self):
-        raise unittest.SkipTest
         from natcap.invest.fisheries import fisheries
+        # raise unittest.SkipTest('stage-based cycles not correctly implemented')
         args = {
             u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
             u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
@@ -77,6 +101,11 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         fisheries.execute(args)
 
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        self.assertEqual(final_timestep_data['spawners'], 2846715.12)
+        self.assertEqual(final_timestep_data['harvest'], 963108.36)
+
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_blue_crab(self):
         from natcap.invest.fisheries import fisheries
@@ -104,6 +133,10 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         fisheries.execute(args)
 
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        self.assertEqual(final_timestep_data['spawners'], 42649419.32)
+        self.assertEqual(final_timestep_data['harvest'], 24789383.34)
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_dungeness_crab(self):
         from natcap.invest.fisheries import fisheries
@@ -130,6 +163,10 @@ class FisheriesSampleDataTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
         fisheries.execute(args)
+
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        self.assertEqual(final_timestep_data['spawners'], 4053119.08)
+        self.assertEqual(final_timestep_data['harvest'], 527192.41)
 
 class FisheriesTest(unittest.TestCase):
     def setUp(self):
