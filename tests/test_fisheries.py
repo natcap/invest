@@ -48,21 +48,20 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_lobster(self):
-        raise unittest.SkipTest('Missing Maturity Vector')
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 5.77e6,
             u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
                                      'shapefile_belize',
-                                     'Lob_Belize_subregion.shp'),
+                                     'Lob_Belize_Subregions.shp'),
             u'beta': 2.885e6,
             u'do_batch': False,
             u'harvest_units': 'Weight',
             u'migr_cont': True,
-            u'migration_dir': os.path.join(SAMPLE_DATA, 'input_lobster',
-                                           'Migrations', 'migration_2.csv'),
+            u'migration_dir': os.path.join(SAMPLE_DATA, 'input',
+                                           'input_lobster', 'Migrations'),
             u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
-                                                'input_shrimp',
+                                                'input_lobster',
                                                 'population_params.csv'),
             u'population_type': 'Age-Based',
             u'recruitment_type': 'Beverton-Holt',

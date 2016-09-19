@@ -463,10 +463,10 @@ def _parse_migration_tables(args, class_list):
     mig_dict = {}
 
     if args['migr_cont']:
-        uri = args['migration_dir']
+        uri = os.path.abspath(args['migration_dir'])
         if not os.path.isdir(uri):
-            LOGGER.error("Migration directory does not exist")
-            raise OSError
+            raise ValueError(("Migration directory does not exist or is not a "
+                              "folder: %s"), uri)
         try:
             for mig_csv in _listdir(uri):
                 basename = os.path.splitext(os.path.basename(mig_csv))[0]
@@ -1013,6 +1013,7 @@ def _create_results_aoi(vars_dict):
         filename = basename + '_results_aoi.shp'
 
     output_aoi_uri = os.path.join(vars_dict['output_dir'], filename)
+    LOGGER.info('Copying AOI %s to %s', aoi_uri, output_aoi_uri)
 
     # Copy AOI file to outputs directory
     pygeoprocessing.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
