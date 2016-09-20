@@ -3,11 +3,14 @@ import tempfile
 import shutil
 import os
 
+import numpy
 from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'Fisheries')
 HST_INPUTS = os.path.join(SAMPLE_DATA, 'input', 'Habitat_Scenario_Tool')
+TEST_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'fisheries')
 
 
 class FisheriesSampleDataTests(unittest.TestCase):
@@ -167,6 +170,103 @@ class FisheriesSampleDataTests(unittest.TestCase):
         final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
         self.assertEqual(final_timestep_data['spawners'], 4053119.08)
         self.assertEqual(final_timestep_data['harvest'], 527192.41)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_sampledata_fecundity(self):
+        # Based on the lobster inputs, but need coverage for fecundity.
+        from natcap.invest.fisheries import fisheries
+        args = {
+            u'alpha': 5.77e6,
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_belize',
+                                     'Lob_Belize_Subregions.shp'),
+            u'beta': 2.885e6,
+            u'do_batch': False,
+            u'harvest_units': 'Weight',
+            u'migr_cont': False,
+            u'population_csv_uri': os.path.join(TEST_DATA,
+                                                'sample_fecundity_params.csv'),
+            u'population_type': 'Age-Based',
+            u'recruitment_type': 'Fecundity',
+            u'sexsp': 'No',
+            u'spawn_units': 'Weight',
+            u'total_init_recruits': 1e5,
+            u'total_recur_recruits': 2.16e11,
+            u'total_timesteps': 100,
+            u'val_cont': False,
+            u'workspace_dir': self.workspace_dir,
+        }
+        fisheries.execute(args)
+
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        self.assertEqual(final_timestep_data['spawners'], 594922.52)
+        self.assertEqual(final_timestep_data['harvest'], 205666.3)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_sampledata_custom_function(self):
+        from natcap.invest.fisheries import fisheries
+
+        args = {
+            u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_galveston',
+                                     'Galveston_Subregion.shp'),
+            u'beta': 4.14e-08,  # TODO: supposedly ignored w/Fixed, keyerror
+            u'do_batch': False,
+            u'harvest_units': 'Individuals',  # TODO: supposedly ignored w/Fixed, keyerror
+            u'migr_cont': False,
+            u'population_csv_uri': os.path.join(TEST_DATA,
+                                                'sample_fecundity_params.csv'),
+            u'population_type': 'Age-Based',
+            u'recruitment_type': 'Other',
+            u'sexsp': 'No',
+            u'spawn_units': 'Individuals',
+            u'total_init_recruits': 1e5,
+            u'total_recur_recruits': 2.16e11,
+            u'total_timesteps': 300,
+            u'val_cont': False,
+            u'workspace_dir': self.workspace_dir,
+            # Demonstration of a near-trivial function; does not model
+            # anything.
+            u'recruitment_func': lambda x: (numpy.ones((9,)),
+                                            numpy.float64(100)),
+        }
+        fisheries.execute(args)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        self.assertEqual(final_timestep_data['spawners'], 100.0)
+        self.assertEqual(final_timestep_data['harvest'], 1.83)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_sampledata_invalid_recruitment(self):
+        from natcap.invest.fisheries import fisheries
+
+        args = {
+            u'alpha': 6050000.0,
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_galveston',
+                                     'Galveston_Subregion.shp'),
+            u'beta': 4.14e-08,
+            u'do_batch': False,
+            u'harvest_units': 'Individuals',
+            u'migr_cont': False,
+            u'population_csv_uri': os.path.join(TEST_DATA,
+                                                'sample_fecundity_params.csv'),
+            u'population_type': 'Age-Based',
+            u'recruitment_type': 'foo',
+            u'sexsp': 'No',
+            u'spawn_units': 'Individuals',
+            u'total_init_recruits': 1e5,
+            u'total_recur_recruits': 2.16e11,
+            u'total_timesteps': 300,
+            u'val_cont': False,
+            u'workspace_dir': self.workspace_dir,
+            # Demonstration of a near-trivial function; does not model
+            # anything.
+            u'recruitment_func': lambda x: (numpy.ones((9,)),
+                                            numpy.float64(100)),
+        }
+        with self.assertRaises(ValueError):
+            fisheries.execute(args)
 
 
 class FisheriesHSTTest(unittest.TestCase):

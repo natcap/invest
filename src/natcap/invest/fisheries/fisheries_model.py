@@ -183,19 +183,25 @@ def set_recru_func(vars_dict):
     if vars_dict['recruitment_type'] == "Other":
         try:
             rec_func = vars_dict['recruitment_func']
-            assert(hasattr(rec_func, '__call__'))
+            assert hasattr(rec_func, '__call__'), ('Recruitment object is '
+                                                   'missing __call__')
 
             # Test function
             N_prev = np.ones([len(vars_dict['Classes']), sexsp, len(
                 vars_dict['Regions'])]).swapaxes(0, 2)
             N_0, spawn = rec_func(N_prev)
-            assert(type(spawn) is np.float64)
-            assert(N_0.shape == (len(vars_dict['Regions']),))
+            assert type(spawn) is np.float64, ('The second return value of the '
+                                               'recruitment callable must be '
+                                               'of type numpy.float64')
+            assert N_0.shape == (len(vars_dict['Regions']),), (
+                'The first return value of the recruitement callable must '
+                'have the shape (%s,), not %s' % (len(vars_dict['Regions']),
+                                                  N_0.shape))
             return rec_func
 
-        except Exception, e:
-            raise ValueError("User-defined recruitment function could not be "
-                             "validated.")
+        except Exception as error:
+            raise ValueError(("User-defined recruitment function could not be "
+                              "validated: %s") % error)
 
     elif vars_dict['recruitment_type'] == "Beverton-Holt":
         return rec_func_BH
