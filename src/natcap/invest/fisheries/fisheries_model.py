@@ -89,10 +89,7 @@ def _calc_survtotalfrac(vars_dict):
     I = np.array(I)
 
     S_tot = S_nat * (1 - I)
-
-    if np.isnan(S_tot).any():
-        LOGGER.warning("Survival Matrix Contains NaN Values")
-
+    assert not np.isnan(S_tot).any(), "Survival Matrix Contains NaN Values"
     return S_tot
 
 
@@ -120,10 +117,8 @@ def _calc_p_g_survtotalfrac(vars_dict):
     I_2 = S_tot ** (D_sa - 1)
     P = S_tot * ((1 - I_2) / (1 - I))
 
-    if (np.isnan(G).any() or np.isnan(P).any()):
-        LOGGER.warning(
-            "Stage-based Survival Matrices Contain NaN Values")
-
+    assert not (np.isnan(G).any() or np.isnan(P).any()), (
+        "Stage-based Survival Matrices Contain NaN Values")
     return G, P
 
 
