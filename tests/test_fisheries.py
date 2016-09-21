@@ -1,3 +1,4 @@
+"""Tests for the Fisheries model."""
 import unittest
 import tempfile
 import shutil
@@ -14,10 +15,14 @@ TEST_DATA = os.path.join(
 
 
 class FisheriesSampleDataTests(unittest.TestCase):
+    """Tests for Fisheries that rely on InVEST sample data."""
+
     def setUp(self):
+        """Set up the test environment by creating the workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Clean up the test environment by removing the workspace."""
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
@@ -52,6 +57,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_shrimp(self):
+        """Fisheries: Verify run on Shrimp sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
@@ -83,6 +89,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_lobster(self):
+        """Fisheries: Verify run on Lobster sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 5.77e6,
@@ -119,6 +126,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_blue_crab(self):
+        """Fisheries: Verify run on Blue Crab sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 6.05e6,
@@ -150,6 +158,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_dungeness_crab(self):
+        """Fisheries: Verify run on Dungeness Crab sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 2e6,
@@ -181,6 +190,17 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @staticmethod
     def fecundity_args(workspace):
+        """
+        Create a base set of args for the fecundity recruitment model.
+
+        The AOI is located in Belize.
+
+        Parameters:
+            workspace (string): The path to the workspace on disk.
+
+        Returns:
+            A dict with args for the model.
+        """
         args = {
             u'alpha': 5.77e6,
             u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
@@ -206,6 +226,15 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @staticmethod
     def galveston_args(workspace):
+        """
+        Create a base set of fecundity args for Galveston Bay.
+
+        Parameters:
+            workspace (string): The path to the workspace on disk.
+
+        Returns:
+            A dict with args for the model.
+        """
         args = FisheriesSampleDataTests.fecundity_args(workspace)
         args.update({
             u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
@@ -222,6 +251,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_fecundity(self):
+        """Fisheries: Verify run with fecundity recruitment."""
         # Based on the lobster inputs, but need coverage for fecundity.
         from natcap.invest.fisheries import fisheries
         args = FisheriesSampleDataTests.fecundity_args(self.workspace_dir)
@@ -233,6 +263,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_custom_function(self):
+        """Fisheries: Verify results with custom function."""
         from natcap.invest.fisheries import fisheries
         args = FisheriesSampleDataTests.galveston_args(self.workspace_dir)
 
@@ -251,6 +282,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_custom_function(self):
+        """Fisheries: Verify exception with invalid custom function."""
         from natcap.invest.fisheries import fisheries
         args = FisheriesSampleDataTests.galveston_args(self.workspace_dir)
 
@@ -265,6 +297,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_recruitment(self):
+        """Fisheries: Verify exception with invalid recruitment type."""
         from natcap.invest.fisheries import fisheries
         args = FisheriesSampleDataTests.galveston_args(self.workspace_dir)
 
@@ -277,6 +310,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_population_type(self):
+        """Fisheries: Verify exception with invalid population type."""
         from natcap.invest.fisheries import fisheries
         args = FisheriesSampleDataTests.galveston_args(self.workspace_dir)
 
@@ -289,14 +323,19 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
 
 class FisheriesHSTTest(unittest.TestCase):
+    """Tests for the Fisheries Habitat Suitability Tool."""
+
     def setUp(self):
+        """Set up the test environment by creating the workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Clean up the test environment by removing the workspace."""
         shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_neutral(self):
+        """Fisheries-HST: Verify outputs of sex-neutral run."""
         from natcap.invest.fisheries import fisheries_hst
         args = {
             u'gamma': 0.5,
@@ -314,6 +353,7 @@ class FisheriesHSTTest(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_specific(self):
+        """Fisheries-HST: Verify outputs of sex-specific run."""
         raise unittest.SkipTest('Currently fails')
         from natcap.invest.fisheries import fisheries_hst
         args = {
