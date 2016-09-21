@@ -366,11 +366,8 @@ def set_cycle_func(vars_dict, rec_func):
 
     if vars_dict['population_type'] == 'Age-Based':
         return age_based_cycle_func
-    elif vars_dict['population_type'] == 'Stage-Based':
+    else:  # population_type == 'Stage-Based'
         return stage_based_cycle_func
-    else:
-        raise ValueError("Could not determine which initial_condition "
-                         "function to use")
 
 
 def set_harvest_func(vars_dict):

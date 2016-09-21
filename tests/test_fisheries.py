@@ -299,6 +299,34 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fisheries.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_sampledata_invalid_population_type(self):
+        from natcap.invest.fisheries import fisheries
+
+        args = {
+            u'alpha': 6050000.0,
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_galveston',
+                                     'Galveston_Subregion.shp'),
+            u'beta': 4.14e-08,
+            u'do_batch': False,
+            u'harvest_units': 'Individuals',
+            u'migr_cont': False,
+            u'population_csv_uri': os.path.join(TEST_DATA,
+                                                'sample_fecundity_params.csv'),
+            u'population_type': 'INVALID TYPE',
+            u'recruitment_type': 'Ricker',
+            u'sexsp': 'No',
+            u'spawn_units': 'Individuals',
+            u'total_init_recruits': 1e5,
+            u'total_recur_recruits': 2.16e11,
+            u'total_timesteps': 300,
+            u'val_cont': False,
+            u'workspace_dir': self.workspace_dir,
+        }
+        with self.assertRaises(ValueError):
+            fisheries.execute(args)
+
 
 class FisheriesHSTTest(unittest.TestCase):
     def setUp(self):
