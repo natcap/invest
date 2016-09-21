@@ -141,7 +141,7 @@ def convert_survival_matrix(vars_dict):
     H_xa = H_xha.sum(axis=1)
 
     # Divide by number of habitats and cancel non-class-transition elements
-    H_xa_weighted = (H_xa * t_a) / n_a
+    H_xa_weighted = np.where(n_a == 0, 0, H_xa * t_a)
 
     # Add unchanged elements back in to matrix
     nan_elements = np.isnan(H_xa_weighted)
