@@ -37,17 +37,22 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with open(filename) as results_csv:
             last_line = results_csv.readlines()[-1].strip().split(',')
             timestep, is_equilibrated, spawners, harvest = last_line
+            try:
+                spawners = float(spawners)
+            except:
+                # Sometimes, spawners == "(fixed recruitment)"
+                pass
+
             return {
                 'timestep': int(timestep),
                 'is_equilibrated': is_equilibrated,
-                'spawners': float(spawners),
+                'spawners': spawners,
                 'harvest': float(harvest),
             }
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_shrimp(self):
         from natcap.invest.fisheries import fisheries
-        # raise unittest.SkipTest('stage-based cycles not correctly implemented')
         args = {
             u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
             u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
@@ -55,7 +60,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
                                      'Galveston_Subregion.shp'),
             u'beta': 4.14e-08,  # TODO: supposedly ignored w/Fixed, keyerror
             u'do_batch': False,
-            u'harvest_units': 'Individuals',  # TODO: supposedly ignored w/Fixed, keyerror
+            u'harvest_units': 'Weight',
             u'migr_cont': False,
             u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
                                                 'input_shrimp',
@@ -63,7 +68,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
             u'population_type': 'Stage-Based',
             u'recruitment_type': 'Fixed',
             u'sexsp': 'No',
-            u'spawn_units': 'Individuals',
+            u'spawn_units': 'Individuals',  # TODO: supposedly ignored w/Fixed
             u'total_init_recruits': 1e5,
             u'total_recur_recruits': 2.16e11,
             u'total_timesteps': 300,
@@ -72,6 +77,9 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
         }
         fisheries.execute(args)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
+        self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_lobster(self):

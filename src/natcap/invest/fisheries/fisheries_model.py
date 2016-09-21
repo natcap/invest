@@ -351,7 +351,11 @@ def set_cycle_func(vars_dict, rec_func):
 
         N_prev_xsa = N_prev.swapaxes(0, 2)
         N_next_0_xsa, spawners = rec_func(N_prev_xsa)
-        N_next[0] = N_next_0_xsa.swapaxes(0, 2)
+        try:
+            N_next[0] = N_next_0_xsa.swapaxes(0, 2)
+        except ValueError:
+            # See the note in age_based_cycle_func
+            N_next[0] = N_next_0_xsa
 
         N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0])) * S[0]
 
