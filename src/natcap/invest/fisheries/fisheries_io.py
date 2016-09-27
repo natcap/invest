@@ -220,41 +220,35 @@ def read_population_csv(args, uri):
     Necessary_Params = ['Classes', 'Exploitationfraction', 'Regions',
                         'Survnaturalfrac', 'Vulnfishing']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
-    if len(Matching_Params) != len(Necessary_Params):
-        raise MissingParameter("Population Parameters File does not contain "
-                               "all necessary parameters")
+    assert len(Matching_Params) == len(Necessary_Params), (
+        "Population Parameters File does not contain all necessary parameters")
 
-    if (args['recruitment_type'] != 'Fixed') and (
-            'Maturity' not in pop_dict.keys()):
-        raise MissingParameter("Population Parameters File must contain a "
-                               "'Maturity' vector when running the given "
-                               "recruitment function. %s" % uri)
+    if (args['recruitment_type'] != 'Fixed'):
+        assert 'Maturity' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Maturity' vector when "
+            "running the given recruitment function. %s" % uri)
 
-    if (args['population_type'] == 'Stage-Based') and (
-            'Duration' not in pop_dict.keys()):
-        raise MissingParameter("Population Parameters File must contain a "
-                               "'Duration' vector when running Stage-Based "
-                               "models. %s" % uri)
+    if (args['population_type'] == 'Stage-Based'):
+        assert 'Duration' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Duration' vector when "
+            "running Stage-Based models. %s" % uri)
 
     if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and (
-            args['spawn_units'] == 'Weight') and (
-            'Weight' not in pop_dict.keys()):
-        raise MissingParameter("Population Parameters File must contain a "
-                               "'Weight' vector when Spawners are calulated "
-                               "by weight using the Beverton-Holt or Ricker "
-                               "recruitment functions. %s" % uri)
+            args['spawn_units'] == 'Weight'):
+        assert 'Weight' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Weight' vector when "
+            "Spawners are calulated by weight using the Beverton-Holt or "
+            "Ricker recruitment functions. %s" % uri)
 
-    if (args['harvest_units'] == 'Weight') and (
-            'Weight' not in pop_dict.keys()):
-        raise MissingParameter("Population Parameters File must contain a "
-                               "'Weight' vector when 'Harvest by Weight' is "
-                               "selected. %s" % uri)
+    if (args['harvest_units'] == 'Weight'):
+        assert 'Weight' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Weight' vector when "
+            "'Harvest by Weight' is selected. %s" % uri)
 
-    if (args['recruitment_type'] == 'Fecundity' and (
-            'Fecundity' not in pop_dict.keys())):
-        raise MissingParameter("Population Parameters File must contain a "
-                               "'Fecundity' vector when using the Fecundity "
-                               "recruitment function. %s" % uri)
+    if (args['recruitment_type'] == 'Fecundity'):
+        assert 'Fecundity' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Fecundity' vector "
+            "when using the Fecundity recruitment function. %s" % uri)
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -263,14 +257,14 @@ def read_population_csv(args, uri):
                                        num_regions))
 
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
-    if not (pop_dict['Larvaldispersal'].shape == pop_dict[
-            'Exploitationfraction'].shape):
-        raise ValueError("Region vector shapes do not match. %s" % uri)
+    assert (pop_dict['Larvaldispersal'].shape ==
+            pop_dict['Exploitationfraction'].shape), (
+                "Region vector shapes do not match. %s" % uri)
 
     # Check that information is correct
-    if not np.allclose(pop_dict['Larvaldispersal'].sum(), 1):
-        LOGGER.warning(("The Larvaldisperal vector does not sum exactly to "
-                        "one.. %s"), uri)
+    assert pygeoprocessing.testing.isclose(
+        pop_dict['Larvaldispersal'].sum(), 1), (
+            "The Larvaldisperal vector does not sum exactly to one.. %s" % uri)
 
     # Check that certain attributes have fraction elements
     Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing',
@@ -279,9 +273,9 @@ def read_population_csv(args, uri):
         Frac_Vectors.append('Maturity')
     for attr in Frac_Vectors:
         a = pop_dict[attr]
-        if np.any(a > 1) or np.any(a < 0):
-            LOGGER.warning(("The %s vector has elements that are not decimal "
-                            "fractions. %s"), (attr, uri))
+        assert (a.min() >= 0.0 and a.max() <= 1.0), (
+            "The %s vector has elements that are not decimal "
+            "fractions. %s") % (attr, uri)
 
     # Make duration vector of type integer
     if args['population_type'] == 'Stage-Based':
@@ -356,21 +350,17 @@ def _parse_population_csv(uri, sexsp):
     region_attributes_table = _get_table(
         csv_data, start_rows[1], start_cols[0])
 
+    assert sexsp in (1, 2), 'Sex-specificity must be one of (1, 2)'
     if sexsp == 1:
         # Sex Neutral
         pop_dict['Survnaturalfrac'] = np.array(
             [surv_table], dtype=np.float_).swapaxes(1, 2).swapaxes(0, 1)
-
     elif sexsp == 2:
         # Sex Specific
         female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
         pop_dict['Survnaturalfrac'] = np.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
-
-    else:
-        # Throw exception about sex-specific conflict or formatting issue
-        raise Exception("Could not parse table given Sex-Specific inputs")
 
     for col in range(0, len(class_attributes_table[0])):
         pop_dict.update(_vectorize_attribute(
@@ -425,13 +415,12 @@ def read_migration_tables(args, class_list, region_list):
             matrix_list[i] = np.matrix(np.identity(len(region_list)))
 
     # Check migration regions are equal across matrices
-    if not all(map(lambda x: x.shape == matrix_list[0].shape, matrix_list)):
-        raise ValueError("Shape of migration matrices are not equal across "
-                         "lifecycle classes")
+    assert all(map(lambda x: x.shape == matrix_list[0].shape, matrix_list)), (
+        "Shape of migration matrices are not equal across lifecycle classes")
 
     # Check that all migration vectors approximately sum to one
-    if not all([np.allclose(vector.sum(
-            ), 1) for matrix in matrix_list for vector in matrix]):
+    if not all([np.allclose(vector.sum(), 1)
+                for matrix in matrix_list for vector in matrix]):
         LOGGER.warning("Elements in at least one migration matrices source "
                        "vector do not sum to one")
 
@@ -466,41 +455,28 @@ def _parse_migration_tables(args, class_list):
 
     if args['migr_cont']:
         uri = os.path.abspath(args['migration_dir'])
-        if not os.path.isdir(uri):
-            raise ValueError(("Migration directory does not exist or is not a "
-                              "folder: %s"), uri)
-        try:
-            for mig_csv in _listdir(uri):
-                basename = os.path.splitext(os.path.basename(mig_csv))[0]
-                class_name = basename.split('_').pop().lower()
-                if class_name.lower() in class_list:
-                    with open(mig_csv, 'rU') as param_file:
-                        csv_reader = csv.reader(param_file)
-                        lines = []
-                        for row in csv_reader:
-                            lines.append(row)
+        for mig_csv in _listdir(uri):
+            basename = os.path.splitext(os.path.basename(mig_csv))[0]
+            class_name = basename.split('_').pop().lower()
+            if class_name.lower() in class_list:
+                LOGGER.info('Parsing csv %s for class %s', mig_csv,
+                            class_name)
+                with open(mig_csv, 'rU') as param_file:
+                    csv_reader = csv.reader(param_file)
+                    lines = []
+                    for row in csv_reader:
+                        lines.append(row)
 
-                        matrix = []
-                        for row in range(1, len(lines)):
-                            if lines[row][0] == '':
-                                break
-                            array = []
-                            for entry in range(1, len(lines[row])):
-                                array.append(float(lines[row][entry]))
-                            matrix.append(array)
+                    matrix = []
+                    for row in range(1, len(lines)):
+                        array = []
+                        for entry in range(1, len(lines[row])):
+                            array.append(float(lines[row][entry]))
+                        matrix.append(array)
 
-                        Migration = np.matrix(matrix)
+                    Migration = np.matrix(matrix)
 
-                    mig_dict[class_name] = Migration
-                else:
-                    # Warn user if possible mig matrix isn't being added
-                    LOGGER.warning("The suffix '%s' in the Migration Directory \
-did not match any class name in the Population Parameters \
-File. This could result in no migration for a class \
-with expected migration.", class_name.capitalize())
-
-        except:
-            LOGGER.warning("Issue parsing at least one migration table")
+                mig_dict[class_name] = Migration
 
     return mig_dict
 

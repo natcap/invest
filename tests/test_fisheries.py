@@ -80,11 +80,13 @@ class FisheriesSampleDataTests(unittest.TestCase):
             u'total_recur_recruits': 2.16e11,
             u'total_timesteps': 300,
             u'val_cont': False,
+            u'results_suffix': 'foo',
             u'workspace_dir': self.workspace_dir,
 
         }
         fisheries.execute(args)
-        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
+            self.workspace_dir, 'results_table_foo.csv')
         self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
