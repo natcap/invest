@@ -469,7 +469,8 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
     N_tasx[0] = init_cond_func()
 
     # Run Cycles
-    for i in range(0, len(N_tasx)-1):
+    num_cycles = len(N_tasx)
+    for i in xrange(0, num_cycles):
         # Run Harvest and Check Equilibrium for Current Population
         # Consider Wrapping this into a function
         if harvest_func:
@@ -481,19 +482,16 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
             equilibrate_timestep = i
             LOGGER.info('Model Equilibrated at Timestep %i',
                         equilibrate_timestep)
-        # Find Numbers for Next Population
-        N_next, Spawners_t[i+1] = cycle_func(N_tasx[i])
-        N_tasx[i+1] = N_next
+        if i < num_cycles-1:
+            # Find Numbers for Next Population
+            N_next, Spawners_t[i+1] = cycle_func(N_tasx[i])
+            N_tasx[i+1] = N_next
 
     # Run Harvest and Check Equilibrium for Final Population
     if harvest_func:
         H_x, V_x = harvest_func(N_tasx[-1])
         H_tx[-1] = H_x
         V_tx[-1] = V_x
-    if (not equilibrate_timestep and len(N_tasx) >= subset_size and
-            _is_equilibrated(H_tx, len(N_tasx)-1, subset_size=subset_size)):
-        equilibrate_timestep = len(N_tasx)
-        LOGGER.info('Model Equilibrated at Timestep %i', equilibrate_timestep)
 
     # Store Results in Variables Dictionary
     vars_dict['N_tasx'] = N_tasx
