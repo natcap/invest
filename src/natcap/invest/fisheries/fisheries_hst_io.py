@@ -88,24 +88,23 @@ def fetch_args(args):
     habitat_dep_dict = read_habitat_dep_csv(args)
 
     # Check that habitat names match between habitat parameter files
-    if not habitat_dep_dict['Habitats'] == habitat_chg_dict['Habitats']:
-        raise ValueError("Mismatch between Habitat names in Habitat Paramater "
-                         "CSV files.")
+    assert habitat_dep_dict['Habitats'] == habitat_chg_dict['Habitats'], (
+        "Mismatch between Habitat names in Habitat Paramater CSV files.")
+
     del habitat_dep_dict['Habitats']
     habitat_dict = dict(habitat_chg_dict.items() + habitat_dep_dict.items())
 
     # Check that classes and regions match
     P_Classes = [x.lower() for x in pop_dict['Classes']]
     H_Classes = [x.lower() for x in habitat_dict['Hab_classes']]
-    if not P_Classes == H_Classes:
-        raise ValueError("Mismatch between class names in Population and "
-                         "Habitat CSV files")
+    assert P_Classes == H_Classes, (
+        "Mismatch between class names in Population and Habitat CSV files "
+        "(%s vs %s)") % (P_Classes, H_Classes)
 
     P_Regions = [x.lower() for x in pop_dict['Regions']]
     H_Regions = [x.lower() for x in habitat_dict['Hab_regions']]
-    if not P_Regions == H_Regions:
-        raise ValueError("Mismatch between region names in Population and "
-                         "Habitat CSV files")
+    assert P_Regions == H_Regions, (
+        "Mismatch between region names in Population and Habitat CSV files")
 
     # Combine Data
     vars_dict = dict(args.items() + pop_dict.items() + habitat_dict.items())
@@ -167,23 +166,20 @@ def read_population_csv(args):
     pop_dict = _parse_population_csv(uri, args['sexsp'])
 
     # Check that required information exists
-    try:
-        pop_dict['Surv_nat_xsa']
-    except:
-        raise MissingParameter("Population Parameters File does not contain a "
-                               "Survival Matrix")
+    assert 'Surv_nat_xsa' in pop_dict, (
+        "Population Parameters File does not contain a Survival Matrix")
 
     Necessary_Params = ['Classes', 'Regions', 'Surv_nat_xsa']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
 
-    if len(Matching_Params) != len(Necessary_Params):
-        raise ValueError("Population Parameters File does not contain all "
-                         "necessary parameters. %s" % uri)
+    assert len(Matching_Params) == len(Necessary_Params), (
+        "Population Parameters File does not contain all necessary "
+        "parameters. %s") % uri
 
     # Checks that all Survival Matrix elements exist between [0, 1]
     A = pop_dict['Surv_nat_xsa']
-    if any(A[A > 1.0]) or any(A[A < 0.0]):
-        raise ValueError("Surivial Matrix contains values outside [0, 1]")
+    assert all((A.min() >= 0.0, A.max() <= 1.0)), (
+        "Surivial Matrix contains values outside [0, 1]")
 
     return pop_dict
 
@@ -228,6 +224,7 @@ def _parse_population_csv(uri, sexsp):
             }
         }
     '''
+    assert sexsp in (1, 2), 'Sexsp value %s unknown' % sexsp
     csv_data = []
     pop_dict = {}
 
@@ -269,10 +266,6 @@ def _parse_population_csv(uri, sexsp):
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
         pop_dict['Surv_nat_xsa'] = np.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
-
-    else:
-        # Throw exception about sex-specific conflict or formatting issue
-        raise ValueError("Could not parse table given Sex-Specific inputs")
 
     Class_vector_names = class_attributes_table[0]
     for i in range(0, len(Class_vector_names)):
