@@ -88,6 +88,8 @@ def fetch_args(args, create_outputs=True):
         This function receives an unmodified 'args' dictionary from the user
 
     '''
+    args['do_batch'] = bool(args['do_batch'])
+
     try:
         args['results_suffix']
     except:

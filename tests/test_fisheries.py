@@ -5,6 +5,7 @@ import shutil
 import os
 
 import numpy
+import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
@@ -26,7 +27,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
-    def get_harvest_info(workspace):
+    def get_harvest_info(workspace, filename='results_table.csv'):
         """Extract final harvest info from the results CSV.
 
         Parameters:
@@ -38,7 +39,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
             timestep in the fisheries calculation.  The 4 attributes are:
             'timestep', 'is_equilibrated', 'spawners', and 'harvest'.
         """
-        filename = os.path.join(workspace, 'output', 'results_table.csv')
+        filename = os.path.join(workspace, 'output', filename)
         with open(filename) as results_csv:
             last_line = results_csv.readlines()[-1].strip().split(',')
             timestep, is_equilibrated, spawners, harvest = last_line
@@ -153,6 +154,38 @@ class FisheriesSampleDataTests(unittest.TestCase):
         fisheries.execute(args)
 
         final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        self.assertEqual(final_timestep_data['spawners'], 42649419.32)
+        self.assertEqual(final_timestep_data['harvest'], 24789383.34)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_sampledata_blue_crab_batch(self):
+        """Fisheries: Verify run on (batched) Blue Crab sample data."""
+        from natcap.invest.fisheries import fisheries
+        args = {
+            u'alpha': 6.05e6,
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_galveston',
+                                     'Galveston_Subregion.shp'),
+            u'beta': 4.14e-08,
+            u'do_batch': True,
+            u'harvest_units': 'Individuals',
+            u'migr_cont': False,
+            u'population_csv_dir': os.path.join(SAMPLE_DATA, 'input',
+                                                'input_blue_crab'),
+            u'population_type': 'Age-Based',
+            u'recruitment_type': 'Ricker',
+            u'sexsp': 'No',
+            u'spawn_units': 'Individuals',
+            u'total_init_recruits': 2e5,
+            u'total_recur_recruits': 5.0,
+            u'total_timesteps': 100,
+            u'val_cont': False,
+            u'workspace_dir': self.workspace_dir,
+        }
+        fisheries.execute(args)
+
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
+            self.workspace_dir, filename='results_table_population_params.csv')
         self.assertEqual(final_timestep_data['spawners'], 42649419.32)
         self.assertEqual(final_timestep_data['harvest'], 24789383.34)
 
@@ -351,10 +384,13 @@ class FisheriesHSTTest(unittest.TestCase):
         }
         fisheries_hst.execute(args)
 
+        pygeoprocessing.testing.assert_csv_equal(
+            os.path.join(TEST_DATA, 'pop_params_modified.csv'),
+            os.path.join(self.workspace_dir, 'output', 'pop_params_modified.csv'))
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_specific(self):
         """Fisheries-HST: Verify outputs of sex-specific run."""
-        raise unittest.SkipTest('Currently fails')
         from natcap.invest.fisheries import fisheries_hst
         args = {
             u'gamma': 0.5,
@@ -364,8 +400,14 @@ class FisheriesHSTTest(unittest.TestCase):
             u'habitat_dep_csv_uri': os.path.join(HST_INPUTS,
                                                  'habitat_dep_params.csv'),
             u'pop_cont': False,
-            u'population_csv_uri': os.path.join(HST_INPUTS, 'pop_params.csv'),
+            u'population_csv_uri': os.path.join(TEST_DATA,
+                                                'hst_pop_params_sexsp.csv'),
             u'sexsp': 'Yes',
             u'workspace_dir': self.workspace_dir,
         }
         fisheries_hst.execute(args)
+
+        pygeoprocessing.testing.assert_csv_equal(
+            os.path.join(TEST_DATA, 'hst_pop_params_sexsp_modified.csv'),
+            os.path.join(self.workspace_dir, 'output',
+                         'hst_pop_params_sexsp_modified.csv'))
