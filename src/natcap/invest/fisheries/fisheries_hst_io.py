@@ -11,8 +11,6 @@ import copy
 import numpy as np
 import pygeoprocessing
 
-from .fisheries_io import MissingParameter
-
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst_io')
 
 
@@ -332,10 +330,9 @@ def read_habitat_dep_csv(args):
 
     # Verify provided information
     A = habitat_dep_dict['Hab_dep_ha']
-    if any(A[A < 0.0]) or any(A[A > 1.0]):
-        raise ValueError("At least one element of the Habitat Dependency by Class \
-            vectors is out of bounds. Values must be between [0, 1] inclusive.\
-            ")
+    assert (A.min() >= 0.0 and A.max() <= 1.0), (
+        "At least one element of the Habitat Dependency by Class vectors is "
+        "out of bounds. Values must be between [0, 1] inclusive.")
 
     # Derive additional information
     # TRANSITION BITMAP NEEDS CLEARER DEFINITION
@@ -458,9 +455,9 @@ def read_habitat_chg_csv(args):
 
     # Verify provided information
     A = habitat_chg_dict['Hab_chg_hx']
-    if any(A[A < -1.0]):
-        raise ValueError("At least one element of the Habitat Area Change vectors \
-            is out of bounds. Values must be between [-1.0, +inf).")
+    assert A.min() >= -1.0, (
+        "At least one element of the Habitat Area Change vectors is out of "
+        "bounds. Values must be between [-1.0, +inf).")
 
     return habitat_chg_dict
 
