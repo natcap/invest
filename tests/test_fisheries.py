@@ -388,7 +388,7 @@ class FisheriesHSTTest(unittest.TestCase):
 
         pygeoprocessing.testing.assert_csv_equal(
             os.path.join(TEST_DATA, 'pop_params_modified.csv'),
-            os.path.join(self.workspace_dir, 'output', 'pop_params_modified.csv'))
+            os.path.join(args['workspace_dir'], 'output', 'pop_params_modified.csv'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_specific(self):
@@ -411,5 +411,5 @@ class FisheriesHSTTest(unittest.TestCase):
 
         pygeoprocessing.testing.assert_csv_equal(
             os.path.join(TEST_DATA, 'hst_pop_params_sexsp_modified.csv'),
-            os.path.join(self.workspace_dir, 'output',
+            os.path.join(args['workspace_dir'], 'output',
                          'hst_pop_params_sexsp_modified.csv'))
