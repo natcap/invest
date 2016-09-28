@@ -587,8 +587,8 @@ def _calculate_monthly_quick_flow(
         """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (stream_array != 1) & (n_events != n_events_nodata) &
-            (n_events > 0))
+            (s_i != 0.0) & (stream_array != 1) &
+            (n_events != n_events_nodata) & (n_events > 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
