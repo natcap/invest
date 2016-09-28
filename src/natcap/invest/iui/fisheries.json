@@ -186,7 +186,8 @@
               "required": true,
               "defaultValue": "200000",
               "validateAs": {
-                "type": "number"
+                "type": "number",
+                "greaterThan": 0
               },
               "helpText": "The initial number of recruits in the population model at time equal to zero.<br><br>If the model contains multiple regions of interest or is distinguished by sex, this value will be evenly divided and distributed into each sub-population."
             },
@@ -231,7 +232,8 @@
               "defaultValue": "6050000",
               "required": false,
               "validateAs": {
-                "type": "number"
+                "type": "number",
+                "greaterThan": 0.0
               },
               "helpText": "Specifies the shape of the stock-recruit curve. Used only for the Beverton-Holt and Ricker recruitment functions.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
             },
@@ -244,7 +246,8 @@
               "defaultValue": "0.0000000414",
               "required": false,
               "validateAs": {
-                "type": "number"
+                "type": "number",
+                "greaterThan": 0.0
               },
               "helpText": "Specifies the shape of the stock-recruit curve.<br><br>Used only for the Beverton-Holt and Ricker recruitment functions."
             },
@@ -313,7 +316,9 @@
               "required": true,
               "dataType": "float",
               "validateAs": {
-                "type": "number"
+                "type": "number",
+                "gteq": 0.0,
+                "lteq": 1.0
               },
               "helpText": "Decimal fraction indicating the percentage of harvested catch remaining after post-harvest processing is complete."
             },
@@ -326,7 +331,8 @@
               "required": true,
               "dataType": "float",
               "validateAs": {
-                "type": "number"
+                "type": "number",
+                "gteq": 0
               },
               "helpText": "Specifies the price per harvest unit.<br><br>If ‘Harvest by Individuals or Weight’ was set to ‘Individuals’, this should be the price per individual.  If set to ‘Weight’, this should be the price per unit weight."
             }

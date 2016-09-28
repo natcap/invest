@@ -9,16 +9,11 @@ import pprint
 
 import numpy as np
 
-try:
-    from natcap.invest.fisheries import fisheries_hst_io as io
-except:
-    import fisheries_hst_io as io
+from . import fisheries_hst_io as io
 
 pp = pprint.PrettyPrinter(indent=4)
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 def execute(args):
@@ -68,7 +63,7 @@ def execute(args):
     Note:
 
         + Modified Population Parameters CSV File saved to 'workspace_dir/output/'
-    '''
+    """
 
     # Parse, Verify Inputs
     vars_dict = io.fetch_args(args)
@@ -81,7 +76,7 @@ def execute(args):
 
 
 def convert_survival_matrix(vars_dict):
-    '''
+    """
     Creates a new survival matrix based on the information provided by
     the user related to habitat area changes and class-level dependencies
     on those habitats.
@@ -146,7 +141,7 @@ def convert_survival_matrix(vars_dict):
     H_xa = H_xha.sum(axis=1)
 
     # Divide by number of habitats and cancel non-class-transition elements
-    H_xa_weighted = (H_xa * t_a) / n_a
+    H_xa_weighted = np.where(n_a == 0, 0, (H_xa * t_a) / n_a)
 
     # Add unchanged elements back in to matrix
     nan_elements = np.isnan(H_xa_weighted)
