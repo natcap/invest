@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for the fisheries model.
 * Patching a critical issue with forest carbon edge that would give incorrect results for edge distance effects.
 * Patching a minor issue with forest carbon edge that would cause the model to crash if only one  interpolation point were selected.
 * Full test coverage for pollination model.
