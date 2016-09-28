@@ -415,12 +415,12 @@ def read_migration_tables(args, class_list, region_list):
             matrix_list[i] = np.matrix(np.identity(len(region_list)))
 
     # Check migration regions are equal across matrices
-    assert all(map(lambda x: x.shape == matrix_list[0].shape, matrix_list)), (
+    assert all((x.shape == matrix_list[0].shape for x in matrix_list)), (
         "Shape of migration matrices are not equal across lifecycle classes")
 
     # Check that all migration vectors approximately sum to one
-    if not all([np.allclose(vector.sum(), 1)
-                for matrix in matrix_list for vector in matrix]):
+    if not all((np.allclose(vector.sum(), 1)
+                for matrix in matrix_list for vector in matrix)):
         LOGGER.warning("Elements in at least one migration matrices source "
                        "vector do not sum to one")
 
