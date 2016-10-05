@@ -69,7 +69,7 @@ class ScenarioProximityTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_scenario_gen_small_far(self):
-        """Scenario Gen Proximity: regression testing all functionality."""
+        """Scenario Gen Proximity: testing small far functionality."""
         from natcap.invest import scenario_gen_proximity
 
         args = {

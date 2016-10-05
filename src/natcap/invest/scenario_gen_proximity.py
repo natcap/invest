@@ -206,7 +206,7 @@ def _convert_landscape(
     # convert everything furthest from edge for each of n_steps
     pixel_area_ha = (
         pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
-    max_pixels_to_convert = int(area_to_convert / pixel_area_ha)
+    max_pixels_to_convert = int(math.ceil(area_to_convert / pixel_area_ha))
     convertible_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
     pixels_to_convert = max_pixels_to_convert / n_steps
@@ -219,6 +219,9 @@ def _convert_landscape(
     for step_index in xrange(n_steps):
         LOGGER.info('step %d of %d', step_index+1, n_steps)
         pixels_left_to_convert -= pixels_to_convert
+
+        # Often the last segement of the steps will overstep the  number of
+        # pixels to convert, this check converts the exact amount
         if pixels_left_to_convert < 0:
             pixels_to_convert += pixels_left_to_convert
 
