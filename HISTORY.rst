@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for the fisheries model.
+* Patched an issue that would cause the Seasonal Water Edge model to crash when the curve number was 100.
+* Patching a critical issue with forest carbon edge that would give incorrect results for edge distance effects.
+* Patching a minor issue with forest carbon edge that would cause the model to crash if only one  interpolation point were selected.
 * Full test coverage for pollination model.
 * Removed "farms aggregation" functionality from the InVEST pollination model.
 * Full test coverage for the marine water quality model.

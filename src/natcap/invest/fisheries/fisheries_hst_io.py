@@ -6,23 +6,12 @@ inputs and outputs
 import logging
 import os
 import csv
-import pprint as pp
 import copy
 
 import numpy as np
+import pygeoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst_io')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-
-class MissingParameter(StandardError):
-    '''
-    An exception class that may be raised when a necessary parameter is not
-    provided by the user.
-    '''
-    def __init__(self, msg):
-        self.msg = msg
 
 
 # Fetch and Verify Arguments
@@ -82,106 +71,43 @@ def fetch_args(args):
         }
 
     '''
-    if args['sexsp'].lower() == 'yes':
-        args['sexsp'] = 2
-    else:
-        args['sexsp'] = 1
+    sexsp_dict = {
+        'no': 1,
+        'yes': 2,
+    }
+    args['sexsp'] = sexsp_dict[args['sexsp'].lower()]
 
     # Fetch Data
-    args = _create_dirs(args)
+    args['output_dir'] = os.path.join(args['workspace_dir'], 'output')
+    pygeoprocessing.create_directories([args['workspace_dir'],
+                                        args['output_dir']])
     pop_dict = read_population_csv(args)
     habitat_chg_dict = read_habitat_chg_csv(args)
     habitat_dep_dict = read_habitat_dep_csv(args)
 
     # Check that habitat names match between habitat parameter files
-    if not habitat_dep_dict['Habitats'] == habitat_chg_dict['Habitats']:
-        LOGGER.error("Mismatch between Habitat names in Habitat Paramater CSV files")
+    assert habitat_dep_dict['Habitats'] == habitat_chg_dict['Habitats'], (
+        "Mismatch between Habitat names in Habitat Paramater CSV files.")
+
     del habitat_dep_dict['Habitats']
     habitat_dict = dict(habitat_chg_dict.items() + habitat_dep_dict.items())
 
     # Check that classes and regions match
-    P_Classes = pop_dict['Classes']
-    H_Classes = habitat_dict['Hab_classes']
-    try:
-        is_equal_list = map(
-            lambda x, y: x.lower() == y.lower(), P_Classes, H_Classes)
-    except:
-        is_equal_list = [False]
-        print "P_Classes", P_Classes
-        print "H_Classes", H_Classes
-    if not all(is_equal_list):
-        LOGGER.error("Mismatch between class names in Population and Habitat CSV files")
-        raise ValueError
+    P_Classes = [x.lower() for x in pop_dict['Classes']]
+    H_Classes = [x.lower() for x in habitat_dict['Hab_classes']]
+    assert P_Classes == H_Classes, (
+        "Mismatch between class names in Population and Habitat CSV files "
+        "(%s vs %s)") % (P_Classes, H_Classes)
 
-    P_Regions = pop_dict['Regions']
-    H_Regions = habitat_dict['Hab_regions']
-    try:
-        is_equal_list = map(
-            lambda x, y: x.lower() == y.lower(), P_Regions, H_Regions)
-    except:
-        is_equal_list = False
-        print "P_Regions", P_Regions
-        print "H_Regions", H_Regions
-    if not all(is_equal_list):
-        LOGGER.error("Mismatch between region names in Population and Habitat CSV files")
-        raise ValueError
+    P_Regions = [x.lower() for x in pop_dict['Regions']]
+    H_Regions = [x.lower() for x in habitat_dict['Hab_regions']]
+    assert P_Regions == H_Regions, (
+        "Mismatch between region names in Population and Habitat CSV files")
 
     # Combine Data
     vars_dict = dict(args.items() + pop_dict.items() + habitat_dict.items())
 
     return vars_dict
-
-
-def _create_dirs(args):
-    '''
-    Creates the workspace and output directories if they don't already exist
-    and adds the output directory ('output_dir') to the dictionary of
-    arguments.
-
-    Args:
-        args (dictionary): arguments from the user (same as Fisheries
-            Preprocessor entry point)
-
-    Returns:
-        args (dictionary): Same as input, but with additional 'output_dir' uri.
-
-    Example Args::
-
-        args = {
-            'workspace_dir': 'path/to/workspace_dir',
-
-            # other arguments are ignored ...
-        }
-
-    Example Returns::
-
-        ret = {
-            'workspace_dir': 'path/to/workspace_dir/',
-            'output_dir': 'path/to/output_dir/',
-
-            # original args ...
-        }
-
-    '''
-    # Check that workspace directory exists, if not, try to create directory
-    if not os.path.isdir(args['workspace_dir']):
-        try:
-            os.makedirs(args['workspace_dir'])
-        except:
-            LOGGER.error("Cannot create Workspace Directory")
-            raise OSError
-
-    # Create output directory
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    if not os.path.isdir(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except:
-            LOGGER.error("Cannot create Output Directory")
-            raise OSError
-    args['output_dir'] = output_dir
-
-    return args
 
 
 def read_population_csv(args):
@@ -238,25 +164,20 @@ def read_population_csv(args):
     pop_dict = _parse_population_csv(uri, args['sexsp'])
 
     # Check that required information exists
-    try:
-        pop_dict['Surv_nat_xsa']
-    except:
-        LOGGER.error("Population Parameters File does not contain a Survival\
-            Matrix")
-        raise MissingParameter
+    assert 'Surv_nat_xsa' in pop_dict, (
+        "Population Parameters File does not contain a Survival Matrix")
 
     Necessary_Params = ['Classes', 'Regions', 'Surv_nat_xsa']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
 
-    if len(Matching_Params) != len(Necessary_Params):
-        LOGGER.warning("Population Parameters File does not contain all \
-            necessary parameters. %s" % uri)
+    assert len(Matching_Params) == len(Necessary_Params), (
+        "Population Parameters File does not contain all necessary "
+        "parameters. %s") % uri
 
     # Checks that all Survival Matrix elements exist between [0, 1]
     A = pop_dict['Surv_nat_xsa']
-    if any(A[A > 1.0]) or any(A[A < 0.0]):
-        LOGGER.error("Surivial Matrix contains values outside [0, 1]")
-        raise ValueError
+    assert all((A.min() >= 0.0, A.max() <= 1.0)), (
+        "Surivial Matrix contains values outside [0, 1]")
 
     return pop_dict
 
@@ -301,6 +222,7 @@ def _parse_population_csv(uri, sexsp):
             }
         }
     '''
+    assert sexsp in (1, 2), 'Sexsp value %s unknown' % sexsp
     csv_data = []
     pop_dict = {}
 
@@ -342,11 +264,6 @@ def _parse_population_csv(uri, sexsp):
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
         pop_dict['Surv_nat_xsa'] = np.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
-
-    else:
-        # Throw exception about sex-specific conflict or formatting issue
-        LOGGER.error("Could not parse table given Sex-Specific inputs")
-        raise Exception
 
     Class_vector_names = class_attributes_table[0]
     for i in range(0, len(Class_vector_names)):
@@ -413,11 +330,9 @@ def read_habitat_dep_csv(args):
 
     # Verify provided information
     A = habitat_dep_dict['Hab_dep_ha']
-    if any(A[A < 0.0]) or any(A[A > 1.0]):
-        LOGGER.error("At least one element of the Habitat Dependency by Class \
-            vectors is out of bounds. Values must be between [0, 1] inclusive.\
-            ")
-        raise ValueError
+    assert (A.min() >= 0.0 and A.max() <= 1.0), (
+        "At least one element of the Habitat Dependency by Class vectors is "
+        "out of bounds. Values must be between [0, 1] inclusive.")
 
     # Derive additional information
     # TRANSITION BITMAP NEEDS CLEARER DEFINITION
@@ -540,10 +455,9 @@ def read_habitat_chg_csv(args):
 
     # Verify provided information
     A = habitat_chg_dict['Hab_chg_hx']
-    if any(A[A < -1.0]):
-        LOGGER.error("At least one element of the Habitat Area Change vectors \
-            is out of bounds. Values must be between [-1.0, +inf).")
-        raise ValueError
+    assert A.min() >= -1.0, (
+        "At least one element of the Habitat Area Change vectors is out of "
+        "bounds. Values must be between [-1.0, +inf).")
 
     return habitat_chg_dict
 
@@ -608,26 +522,6 @@ def _parse_habitat_chg_csv(args):
     habitat_chg_dict['Hab_chg_hx'] = np.array(Hab_chg_hx, dtype=float)
 
     return habitat_chg_dict
-
-
-# Helper function
-def _listdir(path):
-    '''
-    A replacement for the standar os.listdir which, instead of returning
-    only the filename, will include the entire path. This will use os as a
-    base, then just lambda transform the whole list.
-
-    Args:
-        path (string): the location container from which we want to
-            gather all files
-
-    Returns:
-        uris (list): A list of full URIs contained within 'path'
-    '''
-    file_names = os.listdir(path)
-    uris = map(lambda x: os.path.join(path, x), file_names)
-
-    return uris
 
 
 # Helper functions for navigating CSV files

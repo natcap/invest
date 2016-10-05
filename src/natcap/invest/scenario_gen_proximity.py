@@ -412,7 +412,8 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
 
     index_cache = numpy.empty((0,), dtype=numpy.float32)
     score_cache = numpy.empty((0,), dtype=numpy.int32)
-    for scores_data, scores_block in pygeoprocessing.iterblocks(dataset_uri):
+    for scores_data, scores_block in pygeoprocessing.iterblocks(
+            dataset_uri, largest_block=2**12):
         # flatten and scale the results
         scores_block = scores_block.flatten() * score_weight
 

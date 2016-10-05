@@ -79,7 +79,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 SAMPLE_DATA, 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
             'lulc_uri': os.path.join(REGRESSION_DATA, 'small_lulc.tif'),
-            'n_nearest_model_points': '10',
+            'n_nearest_model_points': '1',
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small',
             'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
@@ -107,7 +107,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 REGRESSION_DATA, 'no_forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': False,
             'lulc_uri': os.path.join(REGRESSION_DATA, 'small_lulc.tif'),
-            'n_nearest_model_points': '10',
+            'n_nearest_model_points': '1',
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small_no_edge_effect',
             'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
@@ -137,14 +137,13 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(REGRESSION_DATA, 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
                 REGRESSION_DATA,
                 'no_forest_edge_carbon_lu_table_bad_pool_value.csv'),
             'compute_forest_edge_effects': False,
             'lulc_uri': os.path.join(REGRESSION_DATA, 'small_lulc.tif'),
-            'n_nearest_model_points': '10',
+            'n_nearest_model_points': '1',
             'pools_to_calculate': 'all',
             'results_suffix': 'small_no_edge_effect',
             'tropical_forest_edge_carbon_model_shape_uri': os.path.join(

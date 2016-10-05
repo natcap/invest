@@ -464,7 +464,7 @@ def _build_spatial_index(
 
     LOGGER.info('building kd_tree')
     kd_tree = scipy.spatial.cKDTree(kd_points)
-    LOGGER.info('done building kd_tree')
+    LOGGER.info('done building kd_tree with %d points', len(kd_points))
     return kd_tree, theta_model_parameters, method_model_parameter
 
 
@@ -518,11 +518,13 @@ def _calculate_tropical_forest_edge_carbon_map(
 
     cell_area_ha = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         edge_distance_uri) ** 2 / 10000.0
+    cell_size_km = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        edge_distance_uri) / 1000.0
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
     for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
-            edge_distance_uri):
+            edge_distance_uri, largest_block=2**12):
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info(
@@ -565,6 +567,10 @@ def _calculate_tropical_forest_edge_carbon_map(
             coord_points, k=n_nearest_model_points,
             distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
 
+        if n_nearest_model_points == 1:
+            distances = distances.reshape(distances.shape[0], 1)
+            indexes = indexes.reshape(indexes.shape[0], 1)
+
         # the 3 is for the 3 thetas in the carbon model
         thetas = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
         valid_index_mask = (indexes != kd_tree.n)
@@ -575,27 +581,27 @@ def _calculate_tropical_forest_edge_carbon_map(
         biomass_model = numpy.zeros(
             (indexes.shape[0], indexes.shape[1], 3))
         # reshape to an N,nearest_points so we can multiply by thetas
-        valid_edge_distances = numpy.repeat(
-            edge_distance_block[valid_edge_distance_mask],
+        valid_edge_distances_km = numpy.repeat(
+            edge_distance_block[valid_edge_distance_mask] * cell_size_km,
             n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
         # asymptotic model
         # biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
         biomass_model[:, :, 0] = (
             thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
-                -thetas[:, :, 2] * valid_edge_distances)
+                -thetas[:, :, 2] * valid_edge_distances_km)
             ) * cell_area_ha
 
         # logarithmic model
         # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
         biomass_model[:, :, 1] = (
             thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
-                valid_edge_distances)) * cell_area_ha
+                valid_edge_distances_km)) * cell_area_ha
 
         # linear regression
         # biomass_3 = t1 + t2 * edge_dist_km
         biomass_model[:, :, 2] = (
-            (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances) *
+            (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances_km) *
             cell_area_ha)
 
         # Collapse the biomass down to the valid models
