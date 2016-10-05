@@ -1,5 +1,6 @@
 """Scenario Generation: Proximity Based."""
 
+import math
 import shutil
 import os
 import logging
@@ -7,7 +8,6 @@ import tempfile
 import struct
 import heapq
 import time
-import atexit
 import collections
 import csv
 
@@ -30,6 +30,15 @@ _INTERMEDIATE_BASE_FILES = {
 _TMP_BASE_FILES = {
     'base_lulc_path': 'base_lulc.tif'
     }
+
+# This sets the largest number of elements that will be packed at once and
+# addresses a memory leak issue that happens when many arguments are passed
+# to the function via the * operator
+_LARGEST_STRUCT_PACK = 1024
+
+# Max number of elements to read/cache at once.  Used throughout the code to
+# load arrays to and from disk
+_BLOCK_SIZE = 2**20
 
 
 def execute(args):
@@ -54,9 +63,10 @@ def execute(args):
             found in `args['base_lulc_path']`.
         args['n_fragmentation_steps'] (string): an int as a string indicating
             the number of steps to take for the fragmentation conversion
-        args['aoi_path'] (string): (optional) path to a shapefile that indicates
-            an area of interest.  If present, the expansion scenario operates
-            only under that AOI and the output raster is clipped to that shape.
+        args['aoi_path'] (string): (optional) path to a shapefile that
+            indicates area of interest.  If present, the expansion scenario
+            operates only under that AOI and the output raster is clipped to
+            that shape.
         args['convert_farthest_from_edge'] (boolean): if True will run the
             conversion simulation starting from the furthest pixel from the
             edge and work inwards.  Workspace will contain output files named
@@ -313,70 +323,71 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
                 lucode, stats_cache[lucode] * pixel_area, stats_cache[lucode]])
 
 
-def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
+def _sort_to_disk(dataset_uri, score_weight=1.0):
     """Return an iterable of non-nodata pixels in sorted order.
 
     Parameters:
         dataset_uri (string): a path to a floating point GDAL dataset
         score_weight (float): a number to multiply all values by, which can be
             used to reverse the order of the iteration if negative.
-        cache_element_size (int): approximate number of single elements to hold
-            in memory before flushing to disk.  Due to the internal blocksize
-            of the input raster, it is possible this cache could go over
-            this value by that size before the cache is flushed.
 
     Returns:
         an iterable that produces (value * score_weight, flat_index) in
         decreasing sorted order by value * score_weight
     """
     def _read_score_index_from_disk(
-            score_file_name, index_file_name, buffer_size=4*10000):
+            score_file_path, index_file_path):
         """Generator to yield a float/int value from the given filenames.
 
         Reads a buffer of `buffer_size` big before to avoid keeping the
         file open between generations.
 
-        score_file_name (string): a path to a file that has 32 bit floats
+        score_file_path (string): a path to a file that has 32 bit floats
             packed consecutively
-        index_file_name (string): a path to a file that has 32 bit ints
+        index_file_path (string): a path to a file that has 32 bit ints
             packed consecutively
-        buffser_size (int): size of readahead buffer
 
         Yields:
             next (score, index) tuple in the given score and index files.
         """
-        score_buffer = ''
-        index_buffer = ''
-        file_offset = 0
-        buffer_offset = 0  # initialize to 0 to trigger the first load
+        try:
+            score_buffer = ''
+            index_buffer = ''
+            file_offset = 0
+            buffer_offset = 0  # initialize to 0 to trigger the first load
 
-        # in case user passes a buffer size that is not a perfect multiple of 4
-        buffer_size = buffer_size - buffer_size % 4
+            # ensure buffer size that is not a perfect multiple of 4
+            read_buffer_size = int(math.sqrt(_BLOCK_SIZE))
+            read_buffer_size = read_buffer_size - read_buffer_size % 4
 
-        while True:
-            assert buffer_offset <= len(score_buffer)
-            if buffer_offset == len(score_buffer):
-                score_file = open(score_file_name, 'rb')
-                index_file = open(index_file_name, 'rb')
-                score_file.seek(file_offset)
-                index_file.seek(file_offset)
+            while True:
+                if buffer_offset == len(score_buffer):
+                    score_file = open(score_file_path, 'rb')
+                    index_file = open(index_file_path, 'rb')
+                    score_file.seek(file_offset)
+                    index_file.seek(file_offset)
 
-                score_buffer = score_file.read(buffer_size)
-                index_buffer = index_file.read(buffer_size)
-                score_file.close()
-                index_file.close()
+                    score_buffer = score_file.read(read_buffer_size)
+                    index_buffer = index_file.read(read_buffer_size)
+                    score_file.close()
+                    index_file.close()
 
-                file_offset += buffer_size
-                buffer_offset = 0
-            packed_score = score_buffer[buffer_offset:buffer_offset+4]
-            packed_index = index_buffer[buffer_offset:buffer_offset+4]
-            buffer_offset += 4
-            if not packed_score:
-                break
-            yield (struct.unpack('f', packed_score)[0],
-                   struct.unpack('i', packed_index)[0])
+                    file_offset += read_buffer_size
+                    buffer_offset = 0
+                packed_score = score_buffer[buffer_offset:buffer_offset+4]
+                packed_index = index_buffer[buffer_offset:buffer_offset+4]
+                buffer_offset += 4
+                if not packed_score:
+                    break
+                yield (struct.unpack('f', packed_score)[0],
+                       struct.unpack('i', packed_index)[0])
+        finally:
+            # deletes the files when generator goes out of scope or ends
+            os.remove(score_file_path)
+            os.remove(index_file_path)
 
-    def _sort_cache_to_iterator(index_cache, score_cache):
+    def _sort_cache_to_iterator(
+            index_cache, score_cache):
         """Flushe the current cache to a heap and return it.
 
         Parameters:
@@ -388,34 +399,26 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
             Iterable to visit scores/indexes in increasing score order.
         """
         # sort the whole bunch to disk
+        score_file = tempfile.NamedTemporaryFile(delete=False)
+        index_file = tempfile.NamedTemporaryFile(delete=False)
+
         sort_index = score_cache.argsort()
         score_cache = score_cache[sort_index]
         index_cache = index_cache[sort_index]
+        for index in xrange(0, score_cache.size, _LARGEST_STRUCT_PACK):
+            score_block = score_cache[index:index+_LARGEST_STRUCT_PACK]
+            index_block = index_cache[index:index+_LARGEST_STRUCT_PACK]
+            score_file.write(
+                struct.pack('%sf' % score_block.size, *score_block))
+            index_file.write(
+                struct.pack('%si' % index_block.size, *index_block))
 
-        # Dump all the scores and indexes to disk
-        score_file = tempfile.NamedTemporaryFile(delete=False)
-        score_file.write(struct.pack('%sf' % score_cache.size, *score_cache))
-        index_file = tempfile.NamedTemporaryFile(delete=False)
-        index_file.write(struct.pack('%si' % index_cache.size, *index_cache))
-
-        # Get filename and register a command to delete it after the
-        # interpreter exits
-        score_file_name = score_file.name
+        score_file_path = score_file.name
+        index_file_path = index_file.name
         score_file.close()
-        index_file_name = index_file.name
         index_file.close()
 
-        def _remove_file(path):
-            """Remove a file and handle exceptions to register in atexit."""
-            try:
-                os.remove(path)
-            except OSError:
-                # This happens if the file didn't exist, okay because
-                # maybe we deleted it in a method
-                pass
-        atexit.register(_remove_file, score_file_name)
-        atexit.register(_remove_file, index_file_name)
-        return _read_score_index_from_disk(score_file_name, index_file_name)
+        return _read_score_index_from_disk(score_file_path, index_file_path)
 
     nodata = pygeoprocessing.get_nodata_from_uri(dataset_uri)
     nodata *= score_weight  # scale the nodata so they can be filtered out
@@ -425,10 +428,8 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
 
     _, n_cols = pygeoprocessing.get_row_col_from_uri(dataset_uri)
 
-    index_cache = numpy.empty((0,), dtype=numpy.float32)
-    score_cache = numpy.empty((0,), dtype=numpy.int32)
     for scores_data, scores_block in pygeoprocessing.iterblocks(
-            dataset_uri, largest_block=2**12):
+            dataset_uri, largest_block=_BLOCK_SIZE):
         # flatten and scale the results
         scores_block = scores_block.flatten() * score_weight
 
@@ -449,27 +450,20 @@ def _sort_to_disk(dataset_uri, score_weight=1.0, cache_element_size=2**25):
         right_index = numpy.searchsorted(
             sorted_scores, nodata, side='right')
 
-        # remove nodata values and sort in decreasing order
+        # remove nodata values
         score_cache = numpy.concatenate(
-            (score_cache, sorted_scores[0:left_index],
-             sorted_scores[right_index::]))
+            (sorted_scores[0:left_index], sorted_scores[right_index::]))
         index_cache = numpy.concatenate(
-            (index_cache, sorted_indexes[0:left_index],
-             sorted_indexes[right_index::]))
+            (sorted_indexes[0:left_index], sorted_indexes[right_index::]))
 
-        # check if we need to flush the cache
-        if index_cache.size >= cache_element_size:
-            iters.append(_sort_cache_to_iterator(index_cache, score_cache))
-            index_cache = numpy.empty((0,), dtype=numpy.float32)
-            score_cache = numpy.empty((0,), dtype=numpy.int32)
+        iters.append(_sort_cache_to_iterator(index_cache, score_cache))
 
-    iters.append(_sort_cache_to_iterator(index_cache, score_cache))
     return heapq.merge(*iters)
 
 
 def _convert_by_score(
         score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
-        stats_cache, score_weight, cache_size=2**24):
+        stats_cache, score_weight):
     """Convert up to max pixels in ranked order of score.
 
     Parameters:
@@ -489,8 +483,6 @@ def _convert_by_score(
             variable.
         reverse_sort (boolean): If true, pixels are visited in descreasing
             order of `score_uri`, otherwise increasing.
-        cache_size (int): number of elements to keep in cache before flushing
-            to `out_raster_uri`
         stats_cache (collections.defaultdict(int)): contains the number of
             pixels converted indexed by original pixel id.
 
@@ -571,10 +563,9 @@ def _convert_by_score(
     n_cols = out_band.XSize
     pixels_converted = 0
 
-    # initialize the cache to cache_size large
-    row_array = numpy.empty((cache_size,), dtype=numpy.uint32)
-    col_array = numpy.empty((cache_size,), dtype=numpy.uint32)
-    data_array = numpy.empty((cache_size,), dtype=numpy.bool)
+    row_array = numpy.empty((_BLOCK_SIZE,), dtype=numpy.uint32)
+    col_array = numpy.empty((_BLOCK_SIZE,), dtype=numpy.uint32)
+    data_array = numpy.empty((_BLOCK_SIZE,), dtype=numpy.bool)
     next_index = 0
     dirty_blocks = set()
 
@@ -601,7 +592,7 @@ def _convert_by_score(
                 max_pixels_to_convert)
             last_time = time.time()
 
-        if next_index == cache_size:
+        if next_index == _BLOCK_SIZE:
             # next_index points beyond the end of the cache, flush and reset
             _flush_cache_to_band(
                 data_array, row_array, col_array, next_index, dirty_blocks,
