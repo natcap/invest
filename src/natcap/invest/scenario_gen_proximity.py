@@ -1,5 +1,6 @@
 """Scenario Generation: Proximity Based."""
 
+import shutil
 import os
 import logging
 import tempfile
@@ -20,6 +21,16 @@ from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.scenario_generator_proximity_based')
 
+_OUTPUT_BASE_FILES = {
+    }
+
+_INTERMEDIATE_BASE_FILES = {
+    }
+
+_TMP_BASE_FILES = {
+    'base_lulc_path': 'base_lulc.tif'
+    }
+
 
 def execute(args):
     """Scenario Generator: Proximity-Based.
@@ -31,7 +42,7 @@ def execute(args):
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
             output files
-        args['base_lulc_uri'] (string): path to the base landcover map
+        args['base_lulc_path'] (string): path to the base landcover map
         args['replacment_lucode'] (string or int): code to replace when
             converting pixels
         args['area_to_convert'] (string or float): max area (Ha) to convert
@@ -40,10 +51,10 @@ def execute(args):
             refering to "towards" or "away" from the base landcover codes
         args['convertible_landcover_codes'] (string): a space separated string
             of landcover codes that can be converted in the generation phase
-            found in `args['base_lulc_uri']`.
+            found in `args['base_lulc_path']`.
         args['n_fragmentation_steps'] (string): an int as a string indicating
             the number of steps to take for the fragmentation conversion
-        args['aoi_uri'] (string): (optional) path to a shapefile that indicates
+        args['aoi_path'] (string): (optional) path to a shapefile that indicates
             an area of interest.  If present, the expansion scenario operates
             only under that AOI and the output raster is clipped to that shape.
         args['convert_farthest_from_edge'] (boolean): if True will run the
@@ -67,11 +78,17 @@ def execute(args):
 
     # create working directories
     output_dir = os.path.join(args['workspace_dir'])
-    intermediate_dir = os.path.join(
+    intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
+
     pygeoprocessing.geoprocessing.create_directories(
-        [output_dir, intermediate_dir, tmp_dir])
+        [output_dir, intermediate_output_dir, tmp_dir])
+
+    f_reg = utils.build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
+         (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     area_to_convert = float(args['area_to_convert'])
     replacement_lucode = int(args['replacment_lucode'])
@@ -82,14 +99,12 @@ def execute(args):
     focal_landcover_codes = numpy.array([
         int(x) for x in args['focal_landcover_codes'].split()])
 
-    if 'aoi_uri' in args and args['aoi_uri'] != '':
+    shutil.copy(args['base_lulc_path'], f_reg['base_lulc_path'])
+    if 'aoi_path' in args and args['aoi_path'] != '':
         # clip base lulc to a new raster
-        base_lulc_uri = pygeoprocessing.temporary_filename()
         pygeoprocessing.clip_dataset_uri(
-            args['base_lulc_uri'], args['aoi_uri'], base_lulc_uri,
+            args['base_lulc_path'], args['aoi_path'], f_reg['base_lulc_path'],
             assert_projections=True, all_touched=False)
-    else:
-        base_lulc_uri = args['base_lulc_uri']
 
     scenarios = [
         (args['convert_farthest_from_edge'], 'farthest_from_edge', -1.0),
@@ -104,9 +119,9 @@ def execute(args):
         stats_uri = os.path.join(
             output_dir, basename+file_suffix+'.csv')
         distance_from_edge_uri = os.path.join(
-            intermediate_dir, basename+'_distance'+file_suffix+'.tif')
+            intermediate_output_dir, basename+'_distance'+file_suffix+'.tif')
         _convert_landscape(
-            base_lulc_uri, replacement_lucode, area_to_convert,
+            f_reg['base_lulc_path'], replacement_lucode, area_to_convert,
             focal_landcover_codes, convertible_type_list, score_weight,
             int(args['n_fragmentation_steps']), distance_from_edge_uri,
             output_landscape_raster_uri, stats_uri)

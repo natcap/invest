@@ -34,8 +34,8 @@
           "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
         },
         {
-          "id": "base_lulc_uri",
-          "args_id": "base_lulc_uri",
+          "id": "base_lulc_path",
+          "args_id": "base_lulc_path",
           "type": "file",
           "label": "Base Land Use/Cover (Raster)",
           "defaultValue": "",
@@ -46,8 +46,8 @@
           "defaultValue": "../scenario_proximity/scenario_proximity_lulc.tif"
         },
         {
-          "id": "aoi_uri",
-          "args_id": "aoi_uri",
+          "id": "aoi_path",
+          "args_id": "aoi_path",
           "type": "file",
           "label": "Area of interest (Vector) (optional)",
           "defaultValue": "../scenario_proximity/scenario_proximity_aoi.shp",

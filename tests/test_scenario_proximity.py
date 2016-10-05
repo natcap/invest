@@ -35,10 +35,10 @@ class ScenarioProximityTests(unittest.TestCase):
         from natcap.invest import scenario_gen_proximity
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_path': os.path.join(
                 SAMPLE_DATA, 'scenario_proximity_aoi.shp'),
             'area_to_convert': '20000.0',
-            'base_lulc_uri': os.path.join(
+            'base_lulc_path': os.path.join(
                 SAMPLE_DATA, 'scenario_proximity_lulc.tif'),
             'convert_farthest_from_edge': True,
             'convert_nearest_to_edge': True,
@@ -73,10 +73,10 @@ class ScenarioProximityTests(unittest.TestCase):
         from natcap.invest import scenario_gen_proximity
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_path': os.path.join(
                 SAMPLE_DATA, 'scenario_proximity_aoi.shp'),
             'area_to_convert': '20000.0',
-            'base_lulc_uri': os.path.join(
+            'base_lulc_path': os.path.join(
                 REGRESSION_DATA, 'clipped_lulc.tif'),
             'convert_farthest_from_edge': True,
             'convert_nearest_to_edge': False,
@@ -104,10 +104,10 @@ class ScenarioProximityTests(unittest.TestCase):
         from natcap.invest import scenario_gen_proximity
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_path': os.path.join(
                 SAMPLE_DATA, 'scenario_proximity_aoi.shp'),
             'area_to_convert': '20000.0',
-            'base_lulc_uri': os.path.join(
+            'base_lulc_path': os.path.join(
                 SAMPLE_DATA, 'scenario_proximity_lulc.tif'),
             'convert_farthest_from_edge': False,
             'convert_nearest_to_edge': False,
