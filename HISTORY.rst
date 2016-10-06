@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for scenario generator proximity model.
 * Full test coverage for the fisheries model.
 * Patched an issue that would cause the Seasonal Water Edge model to crash when the curve number was 100.
 * Patching a critical issue with forest carbon edge that would give incorrect results for edge distance effects.
