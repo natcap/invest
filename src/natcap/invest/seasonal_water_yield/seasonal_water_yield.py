@@ -673,11 +673,11 @@ def _calculate_curve_number_raster(
                 lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
                 lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
 
-        # Making the array an int64 to make sure it's big enough to handle
-        # both signed and unsigned int32 values
+        # Making the landcover array a float32 in case the user provides a
+        # float landcover map like Kate did.
         lulc_to_soil[soil_id]['lulc_values'] = (
             numpy.array(lulc_to_soil[soil_id]['lulc_values'],
-                        dtype=numpy.int64))
+                        dtype=numpy.float32))
         lulc_to_soil[soil_id]['cn_values'] = (
             numpy.array(lulc_to_soil[soil_id]['cn_values'],
                         dtype=numpy.float32))
