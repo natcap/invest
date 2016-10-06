@@ -2,7 +2,6 @@
 import os
 import logging
 
-
 import pygeoprocessing.geoprocessing
 import pygeoprocessing.routing
 import pygeoprocessing.routing.routing_core
@@ -58,8 +57,7 @@ def execute(args):
     """
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
+    pygeoprocessing.create_directories([output_directory])
     file_suffix = ''
     dem_uri = args['dem_uri']
 
@@ -74,7 +72,7 @@ def execute(args):
     pygeoprocessing.routing.fill_pits(dem_tiled_uri, dem_pit_filled_uri)
     dem_uri = dem_pit_filled_uri
 
-    #Calculate slope
+    # Calculate slope
     if args['calculate_slope']:
         LOGGER.info("Calculating slope")
         prefix, suffix = os.path.splitext(args['slope_filename'])
@@ -82,7 +80,7 @@ def execute(args):
             output_directory, prefix + file_suffix + suffix)
         pygeoprocessing.geoprocessing.calculate_slope(dem_uri, slope_uri)
 
-    #Calculate flow accumulation
+    # Calculate flow accumulation
     LOGGER.info("calculating flow direction")
     prefix, suffix = os.path.splitext(args['flow_direction_filename'])
     flow_direction_uri = os.path.join(
@@ -96,7 +94,7 @@ def execute(args):
     pygeoprocessing.routing.flow_accumulation(
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
-    #classify streams from the flow accumulation raster
+    # classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
 
     if args['multiple_stream_thresholds']:
