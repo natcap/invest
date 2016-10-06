@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Patching an issue in seasonal water yield that causes an int overflow error if the user provides a floating point landcover map and the nodata value is outside of the range of an int64.
 * Full test coverage for the fisheries model.
 * Patched an issue that would cause the Seasonal Water Edge model to crash when the curve number was 100.
 * Patching a critical issue with forest carbon edge that would give incorrect results for edge distance effects.
