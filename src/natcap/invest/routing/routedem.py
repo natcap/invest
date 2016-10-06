@@ -1,6 +1,4 @@
-"""RouteDEM entry point for exposing the natcap.invest's routing package
-    to a UI."""
-
+"""RouteDEM for exposing the natcap.invest's routing package to UI."""
 import os
 import logging
 
@@ -9,11 +7,8 @@ import pygeoprocessing.geoprocessing
 import pygeoprocessing.routing
 import pygeoprocessing.routing.routing_core
 
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('natcap.invest.routing.routedem')
+
 
 def execute(args):
     """RouteDEM: D-Infinity Routing.
@@ -61,7 +56,6 @@ def execute(args):
     Returns:
         ``None``
     """
-
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)
     if not os.path.exists(output_directory):
