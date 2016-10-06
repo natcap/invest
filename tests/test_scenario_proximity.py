@@ -123,62 +123,6 @@ class ScenarioProximityTests(unittest.TestCase):
             scenario_gen_proximity.execute(args)
 
     @staticmethod
-    def _assert_regression_results_equal(
-            workspace_dir, file_list_path, result_vector_path,
-            agg_results_path):
-        """Test workspace state against expected aggregate results.
-
-        Parameters:
-            workspace_dir (string): path to the completed model workspace
-            file_list_path (string): path to a file that has a list of all
-                the expected files relative to the workspace base
-            result_vector_path (string): path to the summary shapefile
-                produced by the SWY model.
-            agg_results_path (string): path to a csv file that has the
-                expected aggregated_results.shp table in the form of
-                fid,vri_sum,qb_val per line
-
-        Returns:
-            None
-
-        Raises:
-            AssertionError if any files are missing or results are out of
-            range by `tolerance_places`
-        """
-        # test that the workspace has the same files as we expect
-        ScenarioProximityTests._test_same_files(
-            file_list_path, workspace_dir)
-
-        # we expect a file called 'aggregated_results.shp'
-
-        # The tolerance of 3 digits after the decimal was determined by
-        # experimentation on the application with the given range of numbers.
-        # This is an apparently reasonable approach as described by ChrisF:
-        # http://stackoverflow.com/a/3281371/42897
-        # and even more reading about picking numerical tolerance (it's hard):
-        # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-        tolerance_places = 3
-
-        with open(agg_results_path, 'rb') as agg_result_file:
-            for line in agg_result_file:
-                fid, sed_retent, sed_export, usle_tot = [
-                    float(x) for x in line.split(',')]
-                feature = result_layer.GetFeature(int(fid))
-                for field, value in [
-                        ('sed_retent', sed_retent),
-                        ('sed_export', sed_export),
-                        ('usle_tot', usle_tot)]:
-                    numpy.testing.assert_almost_equal(
-                        feature.GetField(field), value,
-                        decimal=tolerance_places)
-                ogr.Feature.__swig_destroy__(feature)
-                feature = None
-
-        result_layer = None
-        ogr.DataSource.__swig_destroy__(result_vector)
-        result_vector = None
-
-    @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
