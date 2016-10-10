@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for RouteDEM.
 * Full test coverage for scenario generator proximity model.
 * Patching an issue in seasonal water yield that causes an int overflow error if the user provides a floating point landcover map and the nodata value is outside of the range of an int64.
 * Full test coverage for the fisheries model.
