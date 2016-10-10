@@ -94,8 +94,9 @@ def execute(args):
     for threat in threat_dict:
         if 'L_' + threat not in sens_row:
             raise ValueError(
-                'Threat "%s" does not match any column in the sensitivity '
-                'table. Possible columns: %s', threat, str(sens_row.keys()))
+                'Threat "L_%s" does not match any column in the sensitivity '
+                'table. Possible columns: %s' % (
+                    threat, str(sens_row.keys())))
 
     # get the half saturation constant
     half_saturation = float(args['half_saturation_constant'])
@@ -508,7 +509,7 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
                 'folder. One of the threat names in the CSV table does not '
                 'match to a threat raster in the input folder. Please check '
                 'that the names correspond. The threat raster that could not '
-                'be found is: %s', path)
+                'be found is: %s' % path)
         else:
             full_path = None
 
