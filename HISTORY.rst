@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Full test coverage for DelineateIT.
 * Full test coverage for RouteDEM.
 * Fixed an issue in Habitat Quality where an error in the sample table or malformed threat raster names would display a confusing message to the user.
 * Full test coverage for scenario generator proximity model.
