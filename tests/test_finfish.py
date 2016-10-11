@@ -68,7 +68,6 @@ class FinfishTests(unittest.TestCase):
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'),
             1e-6)
 
-
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_finfish_simple_run(self):
@@ -93,6 +92,40 @@ class FinfishTests(unittest.TestCase):
 
         FinfishTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list_simple.txt'),
+            args['workspace_dir'])
+        pygeoprocessing.testing.assert_vectors_equal(
+            os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
+            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'),
+            1e-6)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_finfish_mc_no_valuation(self):
+        """Finfish: run model with MC analysis and no valuation."""
+        import natcap.invest.finfish_aquaculture.finfish_aquaculture
+
+        args = {
+            'do_valuation': False,
+            'farm_ID': 'FarmID',
+            'farm_op_tbl': os.path.join(SAMPLE_DATA, 'Farm_Operations.csv'),
+            'ff_farm_loc': os.path.join(SAMPLE_DATA, 'Finfish_Netpens.shp'),
+            'g_param_a': 0.038,
+            'g_param_a_sd': 0.005,
+            'g_param_b': 0.6667,
+            'g_param_b_sd': 0.05,
+            'g_param_tau': 0.08,
+            'num_monte_carlo_runs': 101,
+            'outplant_buffer': 3,
+            'use_uncertainty': True,
+            'water_temp_tbl': os.path.join(SAMPLE_DATA, 'Temp_Daily.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
+
+        FinfishTests._test_same_files(
+            os.path.join(
+                REGRESSION_DATA, 'expected_file_list_no_valuation.txt'),
             args['workspace_dir'])
         pygeoprocessing.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
