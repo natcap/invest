@@ -68,9 +68,40 @@ class FinfishTests(unittest.TestCase):
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'),
             1e-6)
 
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_finfish_full_run(self):
+    def test_finfish_simple_run(self):
+        """Finfish: run model with no valuation or stats sampling."""
+        import natcap.invest.finfish_aquaculture.finfish_aquaculture
+
+        args = {
+            'do_valuation': False,
+            'farm_ID': 'FarmID',
+            'farm_op_tbl': os.path.join(SAMPLE_DATA, 'Farm_Operations.csv'),
+            'ff_farm_loc': os.path.join(SAMPLE_DATA, 'Finfish_Netpens.shp'),
+            'g_param_a': 0.038,
+            'g_param_b': 0.6667,
+            'g_param_tau': 0.08,
+            'outplant_buffer': 3,
+            'use_uncertainty': False,
+            'water_temp_tbl': os.path.join(SAMPLE_DATA, 'Temp_Daily.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
+
+        FinfishTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'expected_file_list_simple.txt'),
+            args['workspace_dir'])
+        pygeoprocessing.testing.assert_vectors_equal(
+            os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
+            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'),
+            1e-6)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_finfish_duplicate_run(self):
         """Finfish: duplicate test to ensure model can overwrite output."""
         import natcap.invest.finfish_aquaculture.finfish_aquaculture
 

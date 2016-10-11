@@ -96,7 +96,7 @@ def execute(args):
         float(args['duration']))
 
     out_path = os.path.join(output_dir, 'Finfish_Harvest.shp')
-    if os.path.exists(out_path):
+    if os.path.isfile(out_path):
         # Remove so we can re-create.
         os.remove(out_path)
 
