@@ -31,6 +31,32 @@ class OverlapAnalysisTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_overlap_analysis_mz(self):
+        """Overlap Analysis: management zones."""
+        import natcap.invest.overlap_analysis.overlap_analysis_mz
+
+        args = {
+            'overlap_data_dir_loc': os.path.join(
+                SAMPLE_DATA, 'FisheriesLayers_RI'),
+            'workspace_dir': self.workspace_dir,
+            'zone_layer_loc': os.path.join(
+                SAMPLE_DATA, 'ManagementZones_WCVI.shp'),
+        }
+        # invoke twice to cover the case where output already exists
+        natcap.invest.overlap_analysis.overlap_analysis_mz.execute(args)
+        natcap.invest.overlap_analysis.overlap_analysis_mz.execute(args)
+
+        OverlapAnalysisTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'expected_file_list_mz.txt'),
+            args['workspace_dir'])
+        pygeoprocessing.testing.assert_vectors_equal(
+            os.path.join(REGRESSION_DATA, 'mz_frequency.shp'),
+            os.path.join(self.workspace_dir, 'output', 'mz_frequency.shp'),
+            1e-6)
+
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_overlap_analysis_full(self):
         """Overlap Analysis: regression test with all options enabled."""
         import natcap.invest.overlap_analysis.overlap_analysis
