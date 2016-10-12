@@ -36,19 +36,19 @@ class OverlapAnalysisTests(unittest.TestCase):
         import natcap.invest.overlap_analysis.overlap_analysis
 
         args = {
-            u'decay_amt': u'0.0001',
-            u'do_hubs': True,
-            u'do_inter': True,
-            u'do_intra': True,
-            u'grid_size': u'1000',
-            u'hubs_uri': os.path.join(SAMPLE_DATA, 'PopulatedPlaces_WCVI.shx'),
-            u'intra_name': u'RI',
-            u'overlap_data_dir_uri': os.path.join(
+            'decay_amt': '0.0001',
+            'do_hubs': True,
+            'do_inter': True,
+            'do_intra': True,
+            'grid_size': '1000',
+            'hubs_uri': os.path.join(SAMPLE_DATA, 'PopulatedPlaces_WCVI.shx'),
+            'intra_name': 'RI',
+            'overlap_data_dir_uri': os.path.join(
                 SAMPLE_DATA, 'FisheriesLayers_RI'),
-            u'overlap_layer_tbl': os.path.join(
+            'overlap_layer_tbl': os.path.join(
                 SAMPLE_DATA, 'Fisheries_Inputs.csv'),
-            u'workspace_dir': self.workspace_dir,
-            u'zone_layer_uri': os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp'),
+            'workspace_dir': self.workspace_dir,
+            'zone_layer_uri': os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp'),
         }
         natcap.invest.overlap_analysis.overlap_analysis.execute(args)
         OverlapAnalysisTests._test_same_files(
@@ -56,6 +56,33 @@ class OverlapAnalysisTests(unittest.TestCase):
             args['workspace_dir'])
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'hu_impscore.tif'),
+            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'),
+            1e-6)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_overlap_analysis_simple(self):
+        """Overlap Analysis: regression test with msot options disabled."""
+        import natcap.invest.overlap_analysis.overlap_analysis
+
+        args = {
+            'do_hubs': False,
+            'do_inter': True,
+            'do_intra': False,
+            'grid_size': '1000',
+            'overlap_data_dir_uri': os.path.join(
+                SAMPLE_DATA, 'FisheriesLayers_RI'),
+            'overlap_layer_tbl': os.path.join(
+                SAMPLE_DATA, 'Fisheries_Inputs.csv'),
+            'workspace_dir': self.workspace_dir,
+            'zone_layer_uri': os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp'),
+        }
+        natcap.invest.overlap_analysis.overlap_analysis.execute(args)
+        OverlapAnalysisTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'expected_file_list_simple.txt'),
+            args['workspace_dir'])
+        pygeoprocessing.testing.assert_rasters_equal(
+            os.path.join(REGRESSION_DATA, 'hu_impscore_simple.tif'),
             os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'),
             1e-6)
 
