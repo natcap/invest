@@ -266,8 +266,7 @@ def _aggregate_carbon_map(
     serviceshed_stats = pygeoprocessing.aggregate_raster_values_uri(
         carbon_map_uri, aoi_datasource_filename,
         shapefile_field=poly_id_field, ignore_nodata=True,
-        threshold_amount_lookup=None, ignore_value_list=[],
-        process_pool=None, all_touched=False)
+        all_touched=False)
 
     # don't need a random poly id anymore
     serviceshed_layer.DeleteField(

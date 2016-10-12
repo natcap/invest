@@ -798,8 +798,7 @@ def _aggregate_recharge(
         aggregate_stats = pygeoprocessing.aggregate_raster_values_uri(
             raster_path, aggregate_vector_path,
             shapefile_field=poly_id_field, ignore_nodata=True,
-            threshold_amount_lookup=None, ignore_value_list=[],
-            process_pool=None, all_touched=False)
+            all_touched=False)
 
         aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
         aggregate_layer.CreateField(aggregate_field)
