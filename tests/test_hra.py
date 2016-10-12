@@ -146,6 +146,42 @@ class HRATests(unittest.TestCase):
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
             1e-6)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_hra_preprocessor(self):
+        """HRA: preprocessor coverage."""
+        import natcap.invest.habitat_risk_assessment.hra_preprocessor
+        args = {
+            'criteria_dir': os.path.join(
+                SAMPLE_DATA, 'Input', 'Spatially_Explicit_Criteria'),
+            'exposure_crits': [
+                'Intensity Rating',
+                'Management Effectiveness',
+                'Temporal Overlap Rating',
+            ],
+            'habitats_dir': os.path.join(
+                SAMPLE_DATA, 'Input', 'HabitatLayers'),
+            'resilience_crits': [
+                'Connectivity Rate',
+                'Natural Mortality Rate',
+                'Recovery Time',
+                'Recruitment Rate',
+            ],
+            'sensitivity_crits': [
+                'Change in Area Rating',
+                'Change in Structure Rating',
+                'Frequency of Disturbance',
+            ],
+            'stressors_dir': os.path.join(
+                SAMPLE_DATA, 'Input', 'StressorLayers'),
+            'workspace_dir': self.workspace_dir,
+        }
+        natcap.invest.habitat_risk_assessment.hra_preprocessor.execute(args)
+        HRATests._test_same_files(
+            os.path.join(
+                REGRESSION_DATA, 'expected_file_list_hra_preprocessor.txt'),
+            args['workspace_dir'])
+
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
