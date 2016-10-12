@@ -117,6 +117,35 @@ class HRATests(unittest.TestCase):
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
             1e-6)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_hra_euc_exp(self):
+        """HRA: euclidean and exponential."""
+        import natcap.invest.habitat_risk_assessment.hra
+
+        args = {
+            'aoi_tables': os.path.join(
+                SAMPLE_DATA, 'Input', 'subregions.shp'),
+            'csv_uri': os.path.join(
+                SAMPLE_DATA, 'habitat_stressor_ratings_sample'),
+            'decay_eq': 'Exponential',
+            'grid_size': 200,
+            'max_rating': 3,
+            'max_stress': 4,
+            'risk_eq': 'Euclidean',
+            'workspace_dir': self.workspace_dir,
+        }
+        natcap.invest.habitat_risk_assessment.hra.execute(args)
+
+        HRATests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
+            args['workspace_dir'])
+        pygeoprocessing.testing.assert_rasters_equal(
+            os.path.join(REGRESSION_DATA, 'ecosys_risk_euc_exp.tif'),
+            os.path.join(
+                self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
+            1e-6)
+
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
