@@ -9,11 +9,11 @@ from pygeoprocessing.testing import scm
 
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'OverlapAnalysis',
-    'Input')
+    os.path.dirname(__file__), '..', 'data', 'invest-data',
+    'HabitatRiskAssess')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'OverlapAnalysis')
+    'habitat_risk_assessment')
 
 
 class HRATests(unittest.TestCase):
@@ -31,20 +31,62 @@ class HRATests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_hra_euc_none(self):
+        """HRA: euclidean and no decay."""
+        import natcap.invest.habitat_risk_assessment.hra
+
+        args = {
+            'aoi_tables': os.path.join(
+                SAMPLE_DATA, 'Input', 'subregions.shp'),
+            'csv_uri': os.path.join(
+                SAMPLE_DATA, 'habitat_stressor_ratings_sample'),
+            'decay_eq': 'None',
+            'grid_size': 200,
+            'max_rating': 3,
+            'max_stress': 4,
+            'risk_eq': 'Euclidean',
+            'workspace_dir': self.workspace_dir,
+        }
+        natcap.invest.habitat_risk_assessment.hra.execute(args)
+
+        HRATests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'expected_file_list_euc_none.txt'),
+            args['workspace_dir'])
+        pygeoprocessing.testing.assert_rasters_equal(
+            os.path.join(REGRESSION_DATA, 'ecosys_risk_euc_none.tif'),
+            os.path.join(
+                self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
+            1e-6)
+
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hra_mult_none(self):
-        """HRA: multipliciative and no decay."""
+        """HRA: multiplicative and no decay."""
+        import natcap.invest.habitat_risk_assessment.hra
+
+        args = {
+            'aoi_tables': os.path.join(
+                SAMPLE_DATA, 'Input', 'subregions.shp'),
+            'csv_uri': os.path.join(
+                SAMPLE_DATA, 'habitat_stressor_ratings_sample'),
+            'decay_eq': 'None',
+            'grid_size': 200,
+            'max_rating': 3,
+            'max_stress': 4,
+            'risk_eq': 'Multiplicative',
+            'workspace_dir': self.workspace_dir,
+        }
+        natcap.invest.habitat_risk_assessment.hra.execute(args)
+
         HRATests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list_mult_none.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
-            os.path.join(REGRESSION_DATA, 'mz_frequency.shp'),
-            os.path.join(self.workspace_dir, 'output', 'mz_frequency.shp'),
-            1e-6)
         pygeoprocessing.testing.assert_rasters_equal(
-            os.path.join(REGRESSION_DATA, 'hu_impscore.tif'),
-            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'),
+            os.path.join(REGRESSION_DATA, 'ecosys_risk_mult_none.tif'),
+            os.path.join(
+                self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
             1e-6)
-
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
