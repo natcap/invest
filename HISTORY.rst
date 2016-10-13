@@ -3,6 +3,7 @@
 Unreleased Changes
 ------------------
 * Partial test coverage for HRA model.
+* Full test coverage for Overlap Analysis model.
 * Full test coverage for Finfish Aquaculture.
 * Full test coverage for DelineateIT.
 * Full test coverage for RouteDEM.
