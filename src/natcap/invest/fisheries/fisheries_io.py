@@ -10,6 +10,7 @@ from osgeo import ogr
 import numpy as np
 
 import pygeoprocessing.geoprocessing
+import pygeoprocessing.testing
 from natcap.invest import reporting
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
