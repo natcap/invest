@@ -2,7 +2,7 @@
 
 .. Unreleased Changes
 
-3.3.2 (2016-10-14)
+3.3.2 (2016-10-17)
 ------------------
 * Partial test coverage for HRA model.
 * Full test coverage for Overlap Analysis model.
