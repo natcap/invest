@@ -179,6 +179,7 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
         transition_set (set): a set of all types of transitions
     """
     iter_r1 = geoprocess.iterblocks(raster_t1_uri)
+    transition_nodata = geoprocess.get_nodata_from_uri(raster_t1_uri)
     transition_set = set()
 
     for d, a1 in iter_r1:
@@ -187,10 +188,13 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
         transition_set = transition_set.union(set(transition_list))
 
     # Remove transitions to or from cells with NODATA values
+    # There may be times when the user's nodata may not match NODATA_INT
+    expected_nodata_values = set([NODATA_INT, transition_nodata])
     s = copy.copy(transition_set)
     for i in s:
-        if NODATA_INT in i:
-            transition_set.remove(i)
+        for nodata_value in expected_nodata_values:
+            if nodata_value in i:
+                transition_set.remove(i)
 
     return transition_set
 

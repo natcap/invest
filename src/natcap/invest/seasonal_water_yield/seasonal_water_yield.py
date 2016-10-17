@@ -587,8 +587,8 @@ def _calculate_monthly_quick_flow(
         """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (stream_array != 1) & (n_events != n_events_nodata) &
-            (n_events > 0))
+            (s_i != 0.0) & (stream_array != 1) &
+            (n_events != n_events_nodata) & (n_events > 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
@@ -673,11 +673,11 @@ def _calculate_curve_number_raster(
                 lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
                 lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
 
-        # Making the array an int64 to make sure it's big enough to handle
-        # both signed and unsigned int32 values
+        # Making the landcover array a float32 in case the user provides a
+        # float landcover map like Kate did.
         lulc_to_soil[soil_id]['lulc_values'] = (
             numpy.array(lulc_to_soil[soil_id]['lulc_values'],
-                        dtype=numpy.int64))
+                        dtype=numpy.float32))
         lulc_to_soil[soil_id]['cn_values'] = (
             numpy.array(lulc_to_soil[soil_id]['cn_values'],
                         dtype=numpy.float32))
@@ -798,8 +798,7 @@ def _aggregate_recharge(
         aggregate_stats = pygeoprocessing.aggregate_raster_values_uri(
             raster_path, aggregate_vector_path,
             shapefile_field=poly_id_field, ignore_nodata=True,
-            threshold_amount_lookup=None, ignore_value_list=[],
-            process_pool=None, all_touched=False)
+            all_touched=False)
 
         aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
         aggregate_layer.CreateField(aggregate_field)
@@ -807,8 +806,16 @@ def _aggregate_recharge(
         aggregate_layer.ResetReading()
         for poly_index, poly_feat in enumerate(aggregate_layer):
             if op_type == 'mean':
-                value = (aggregate_stats.total[poly_index] /
-                         aggregate_stats.n_pixels[poly_index])
+                n_pixels = aggregate_stats.n_pixels[poly_index]
+                if n_pixels != 0:
+                    value = (aggregate_stats.total[poly_index] /
+                             aggregate_stats.n_pixels[poly_index])
+                else:
+                    LOGGER.warn(
+                        "no coverage for polygon %s", ', '.join(
+                            [str(poly_feat.GetField(_)) for _ in xrange(
+                                poly_feat.GetFieldCount())]))
+                    value = 0.0
             elif op_type == 'sum':
                 value = aggregate_stats.total[poly_index]
             poly_feat.SetField(aggregate_field_id, value)

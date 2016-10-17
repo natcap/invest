@@ -34,6 +34,7 @@ kwargs = {
     'hookspath': [os.path.join(current_dir, 'hooks')],
     'excludes': None,
     'pathex': path_extension,
+    'runtime_hooks': [os.path.join(current_dir, 'hooks', 'rthook.py')],
     'hiddenimports': [
         'natcap',
         'natcap.invest',
@@ -43,7 +44,6 @@ kwargs = {
         'yaml',
         'distutils',
         'distutils.dist',
-        'h5py.h5ac',
         'rtree',  # mac builds aren't picking up rtree by default.
     ],
 }

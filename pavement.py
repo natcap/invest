@@ -1039,6 +1039,7 @@ def after_install(options, home_dir):
     # Aything in this list will ALWAYS be installed.
     pkgs_to_be_installed = [
         pkg_resources.Requirement.parse('nose'),
+        pkg_resources.Requirement.parse('mock'),
     ]
 
     for reqs_file in requirements_files:
@@ -1907,7 +1908,6 @@ def check(options):
         ('numpy', lib_needed,  None, None),
         ('scipy', lib_needed,  None, None),
         ('paramiko', suggested, None, None),
-        ('h5py', lib_needed,  None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
         ('poster', lib_needed,  None, None),
@@ -2593,6 +2593,8 @@ def build_bin(options):
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
     if platform.system() == 'Windows':
+        # If we're on Windows, write out a batfile to testall.bat that will run
+        # each model UI in sequence and record model success or failure.
         binary = os.path.join(invest_dist, 'invest.exe')
         _write_console_files(binary, 'bat')
 
@@ -2603,8 +2605,7 @@ def build_bin(options):
         for filename in os.listdir(os.path.join(os.path.dirname(__file__),
                                                 'src', 'natcap', 'invest',
                                                 'iui')):
-            if not filename.endswith('.json') or\
-                    filename.startswith('nearshore'):
+            if not filename.endswith('.json'):
                 continue
 
             json_basename = os.path.splitext(filename)[0]
@@ -2876,7 +2877,7 @@ def _write_console_files(binary, mode):
     windows_template = """
 .\{binary} {modelname}
 """
-    posix_template = """
+    posix_template = """#!/bin/sh
 ./{binary} {modelname}
 """
 

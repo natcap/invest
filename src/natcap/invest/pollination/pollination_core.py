@@ -255,7 +255,8 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # apply an exponential convolution filter and save the floral resources raster to the
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
-    pygeoprocessing.geoprocessing.convolve_2d_uri(floral_raster_temp_uri, kernel_uri, uris['floral'])
+    pygeoprocessing.geoprocessing.convolve_2d_uri(
+        floral_raster_temp_uri, kernel_uri, uris['floral'])
     os.remove(kernel_uri)
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
@@ -263,12 +264,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # Once the pollination supply has been calculated, we add it to the
     # total abundance matrix.
     LOGGER.debug('Calculating abundance index')
-    try:
-        species_weight = float(guild['species_weight'])
-    except KeyError:
-        # If the species_weight field has not been provided, assume that all
-        # species weights should be equal (1.0).
-        species_weight = 1.0
+    species_weight = float(guild['species_weight'])
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [uris['nesting'], uris['floral']],
@@ -344,12 +340,11 @@ def reclass_ag_raster(landuse_uri, out_uri, ag_classes, nodata):
 
     LOGGER.info(
         'Starting to create an ag raster at %s. Nodata=%s', out_uri, nodata)
+    reclass_rules = {}
+    default_value = 1.0
     if len(ag_classes) > 0:
         reclass_rules = dict((r, 1) for r in ag_classes)
         default_value = 0.0
-    else:
-        reclass_rules = {}
-        default_value = 1.0
 
     lulc_values = pygeoprocessing.geoprocessing.unique_raster_values_uri(
         landuse_uri)

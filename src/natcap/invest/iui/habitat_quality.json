@@ -1,7 +1,7 @@
 {
   "id": "window",
   "label": "Habitat Quality",
-  "targetScript": "natcap.invest.habitat_quality.habitat_quality",
+  "targetScript": "natcap.invest.habitat_quality",
   "modelName": "habitat_quality",
   "localDocURI": "../documentation/habitat_quality.html",
   "height": 500,

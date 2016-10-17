@@ -1,5 +1,4 @@
-"""The natcap.invest.testing package defines core testing routines and
-functionality."""
+"""natcap.invest.reporting package."""
 
 import os
 import logging

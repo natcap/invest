@@ -97,7 +97,6 @@ InVEST relies on the following python packages:
   * pyAMG
   * cython
   * setuptools
-  * h5py
   * dbfpy
   * poster
   * pygeoprocessing
@@ -368,7 +367,6 @@ Specific package dependencies include:
  * ``sudo apt-get install python-matplotlib``
  * ``sudo apt-get install libgeos-dev python-dev``
  * ``sudo apt-get install python-qt4`` Install PyQt4
- * ``sudo apt-get install libhdf5-dev && sudo pip install h5py`` Install HDF5.
  * ``sudo pip install --upgrade sphinxcontrib-napoleon`` We use the Napoleon theme for the API documentation.
  * ``sudo apt-get install python-setuptools``  Fixes some path issues with setuptools (see https://bitbucket.org/pypa/setuptools/issue/368/module-object-has-no-attribute-packaging)
 

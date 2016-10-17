@@ -343,36 +343,45 @@ def _calculate_ls_factor(
         Returns:
             ls_factor
         """
-        nodata_mask = (
-            (aspect_angle == aspect_nodata) | (percent_slope == slope_nodata) |
-            (flow_accumulation == flow_accumulation_nodata))
+        valid_mask = (
+            (aspect_angle != aspect_nodata) &
+            (percent_slope != slope_nodata) &
+            (flow_accumulation != flow_accumulation_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
 
         # Determine the length of the flow path on the pixel
-        xij = (numpy.abs(numpy.sin(aspect_angle)) +
-               numpy.abs(numpy.cos(aspect_angle)))
+        xij = (numpy.abs(numpy.sin(aspect_angle[valid_mask])) +
+               numpy.abs(numpy.cos(aspect_angle[valid_mask])))
 
-        contributing_area = (flow_accumulation-1) * cell_area
-        slope_in_radians = numpy.arctan(percent_slope / 100.0)
+        contributing_area = (flow_accumulation[valid_mask]-1) * cell_area
+        slope_in_radians = numpy.arctan(percent_slope[valid_mask] / 100.0)
 
         # From Equation 4 in "Extension and validation of a geographic
         # information system ..."
         slope_factor = numpy.where(
-            percent_slope < 9.0,
+            percent_slope[valid_mask] < 9.0,
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
-        # Set m value via lookup table: Table 1 in
-        # InVEST Sediment Model_modifications_10-01-2012_RS.docx
         beta = (
             (numpy.sin(slope_in_radians) / 0.0896) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
-        # slope table in percent
-        slope_table = [1., 3.5, 5., 9.]
-        exponent_table = [0.2, 0.3, 0.4, 0.5]
-        m_exp = beta/(1+beta)
-        for i in range(4):
-            m_exp[percent_slope <= slope_table[i]] = exponent_table[i]
+        # Set m value via lookup table: Table 1 in
+        # InVEST Sediment Model_modifications_10-01-2012_RS.docx
+        # note slope_table in percent
+        slope_table = numpy.array([1., 3.5, 5., 9.])
+        m_table = numpy.array([0.2, 0.3, 0.4, 0.5])
+        # mask where slopes are larger than lookup table
+        big_slope_mask = percent_slope[valid_mask] > slope_table[-1]
+        m_indexes = numpy.digitize(
+            percent_slope[valid_mask][~big_slope_mask], slope_table,
+            right=True)
+        m_exp = numpy.empty(big_slope_mask.shape, dtype=numpy.float32)
+        m_exp[big_slope_mask] = (
+            beta[big_slope_mask] / (1 + beta[big_slope_mask]))
+        m_exp[~big_slope_mask] = m_table[m_indexes]
 
         l_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
@@ -383,7 +392,8 @@ def _calculate_ls_factor(
         # length calculations ... cap of 333m"
         l_factor[l_factor > 333] = 333
 
-        return numpy.where(nodata_mask, NODATA_USLE, l_factor * slope_factor)
+        result[valid_mask] = l_factor * slope_factor
+        return result
 
     # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.vectorize_datasets(
@@ -733,9 +743,12 @@ def _calculate_inverse_ws_factor(
 
     def ws_op(w_factor, s_factor):
         """Calculate the inverse ws factor."""
-        return numpy.where(
-            (w_factor != w_nodata) & (s_factor != slope_nodata),
-            1.0 / (w_factor * s_factor), NODATA_USLE)
+        valid_mask = (w_factor != w_nodata) & (s_factor != slope_nodata)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
+        result[valid_mask] = (
+            1.0 / (w_factor[valid_mask] * s_factor[valid_mask]))
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [thresholded_w_factor_path, thresholded_slope_path], ws_op,
@@ -753,8 +766,11 @@ def _calculate_inverse_s_factor(
 
     def s_op(s_factor):
         """Calculate the inverse s factor."""
-        return numpy.where(
-            (s_factor != slope_nodata), 1.0 / s_factor, NODATA_USLE)
+        valid_mask = (s_factor != slope_nodata)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
+        result[valid_mask] = 1.0 / s_factor[valid_mask]
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [thresholded_slope_path], s_op,
@@ -795,11 +811,14 @@ def _calculate_sdr(
 
     def sdr_op(ic_factor, stream):
         """Calculate SDR factor."""
-        nodata_mask = (ic_factor == ic_nodata)
-        sdr = numpy.where(
-            nodata_mask, NODATA_USLE, sdr_max / (
-                1+numpy.exp((ic_0-ic_factor)/k_factor)))
-        return numpy.where(stream == 1, 0.0, sdr)
+        valid_mask = (
+            (ic_factor != ic_nodata) & (stream != 1))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
+        result[valid_mask] = (
+            sdr_max / (1+numpy.exp((ic_0-ic_factor[valid_mask])/k_factor)))
+        result[stream == 1] = 0.0
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [ic_path, stream_path], sdr_op, out_sdr_path,
@@ -815,9 +834,11 @@ def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
 
     def sed_export_op(usle, sdr):
         """Sediment export."""
-        nodata_mask = (usle == usle_nodata) | (sdr == sdr_nodata)
-        return numpy.where(
-            nodata_mask, NODATA_USLE, usle * sdr)
+        valid_mask = (usle != usle_nodata) & (sdr != sdr_nodata)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = NODATA_USLE
+        result[valid_mask] = usle[valid_mask] * sdr[valid_mask]
+        return result
 
     pygeoprocessing.vectorize_datasets(
         [usle_path, sdr_path], sed_export_op, out_sed_export_path,
@@ -835,12 +856,15 @@ def _calculate_sed_retention_index(
 
     def sediment_index_op(rkls, usle, sdr_factor):
         """Calculate sediment retention index."""
-        nodata_mask = (
-            (rkls == rkls_nodata) | (usle == usle_nodata) |
-            (sdr_factor == sdr_nodata))
-        return numpy.where(
-            nodata_mask,
-            nodata_sed_retention_index, (rkls - usle) * sdr_factor / sdr_max)
+        valid_mask = (
+            (rkls != rkls_nodata) & (usle != usle_nodata) &
+            (sdr_factor != sdr_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = nodata_sed_retention_index
+        result[valid_mask] = (
+            (rkls[valid_mask] - usle[valid_mask]) *
+            sdr_factor[valid_mask] / sdr_max)
+        return result
 
     nodata_sed_retention_index = -1
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(rkls_path)
@@ -883,15 +907,18 @@ def _calculate_sed_retention(
 
     def sediment_retention_bare_soil_op(
             rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
-        """Subract bare soil export from real landcover."""
-        nodata_mask = (
-            (rkls == rkls_nodata) | (usle == usle_nodata) |
-            (stream_factor == stream_nodata) | (sdr_factor == sdr_nodata) |
-            (sdr_factor_bare_soil == sdr_nodata))
-        return numpy.where(
-            nodata_mask, nodata_sediment_retention,
-            (rkls * sdr_factor_bare_soil - usle * sdr_factor) * (
-                1 - stream_factor))
+        """Subtract bare soil export from real landcover."""
+        valid_mask = (
+            (rkls != rkls_nodata) & (usle != usle_nodata) &
+            (stream_factor != stream_nodata) & (sdr_factor != sdr_nodata) &
+            (sdr_factor_bare_soil != sdr_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = nodata_sediment_retention
+        result[valid_mask] = (
+            rkls[valid_mask] * sdr_factor_bare_soil[valid_mask] -
+            usle[valid_mask] * sdr_factor[valid_mask]) * (
+                1 - stream_factor[valid_mask])
+        return result
 
     nodata_sediment_retention = -1
 

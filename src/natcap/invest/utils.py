@@ -144,6 +144,7 @@ def build_file_registry(base_file_path_list, file_suffix):
 
     Raises:
         ValueError if there are duplicate file keys or duplicate file paths.
+        ValueError if a path is not a string or a list of strings.
     """
     all_paths = set()
     duplicate_keys = set()
@@ -177,6 +178,10 @@ def build_file_registry(base_file_path_list, file_suffix):
                     for filename in file_payload:
                         full_path = _build_path(filename, path)
                         f_reg[file_key].append(full_path)
+                else:
+                    raise ValueError(
+                        "Unknown type in base_file_dict[%s]=%s" % (
+                            file_key, path))
 
     if len(duplicate_paths) > 0 or len(duplicate_keys):
         raise ValueError(

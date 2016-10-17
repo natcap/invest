@@ -1,16 +1,14 @@
-"""DelineateIt entry point for exposing pygeoprocessing's watershed delineation
-    routine to a UI."""
+"""DelineateIt wrapper for pygeoprocessing's watershed delineation routine."""
 
 import os
 import logging
 
 import pygeoprocessing.routing
 
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.routing.delineateit')
+
 
 def execute(args):
     """Delineateit: Watershed Delineation.
@@ -52,19 +50,12 @@ def execute(args):
         snap_distance (int):  Pixel Distance to Snap Outlet Points (required)
 
     Returns:
-        None"""
-
+        None
+    """
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-
-    try:
-        file_suffix = args['results_suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
+    pygeoprocessing.create_directories([output_directory])
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     dem_uri = args['dem_uri']
     outlet_shapefile_uri = args['outlet_shapefile_uri']

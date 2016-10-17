@@ -65,12 +65,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
     source_points = {}
     for source_id, source_data in source_point_data.iteritems():
         source_index = calc_index(*source_data['point'])
-        if source_index not in source_points:
-            source_points[source_index] = source_data
-        else:
-            #There is another point at the same grid point, add the sources
-            source_points[source_index]['WPS'] += source_data['WPS']
-
+        source_points[source_index] = source_data
 
     #Build up an array of valid indexes.  These are locations where there is
     #water and well defined E and ADV points.

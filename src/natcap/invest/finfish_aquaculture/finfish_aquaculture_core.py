@@ -108,6 +108,7 @@ def execute(args):
     #This adds the number of cycles completed by each farm to their shapefile
     #feature
     cycle_field = ogr.FieldDefn('Tot_Cycles', ogr.OFTReal)
+    cycle_field.SetWidth(24)
     layer.CreateField(cycle_field)
 
     for feature in layer:
@@ -115,7 +116,6 @@ def execute(args):
         feature_ID = feature.items()[accessor]
         num_cycles = len(cycle_history[feature_ID])
         feature.SetField('Tot_Cycles', num_cycles)
-
         layer.SetFeature(feature)
 
     #Now want to add the total processed weight of each farm as a second
@@ -131,6 +131,7 @@ def execute(args):
 
     #Now, add the total processed weight as a shapefile feature
     hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
+    hrv_field.SetWidth(24)
     layer.CreateField(hrv_field)
 
     for feature in layer:

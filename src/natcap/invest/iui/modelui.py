@@ -129,11 +129,11 @@ def main(uri, use_gui=True):
             raise Exception('Can\'t find the file %s.'%uri)
 
     window = base_widgets.MainWindow(ModelUI, uri)
-    window.ui.resetParametersToDefaults()
     window.show()
     if use_gui:
         result = app.exec_()
     else:
+        window.ui.resetParametersToDefaults()
         from PyQt4.QtTest import QTest
         # check to see if the model's target default workspace exists.  If it
         # does, set a new workspace.

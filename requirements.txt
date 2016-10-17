@@ -8,13 +8,12 @@
 
 Pyro4>=4.41
 gdal>=1.11.2,<2.0
-h5py>=2.3.0
 matplotlib
 natcap.versioner>=0.4.2
 numpy>=1.11.0
 pyamg>=2.2.1
-pygeoprocessing>=0.3.0a17
+pygeoprocessing>=0.3.0a22
 rtree>=0.8.2
-scipy>=0.14.0
+scipy>=0.16.1
 shapely
 setuptools>=8.0
