@@ -1858,6 +1858,21 @@ def check(options):
             print 'Python %s OK' % python_version
         print ''  # add newline between this section and the next one.
 
+    # PYTHONHOME, if defined, forces the python interpreter to use the given
+    # location for its site-packages folder.  This confounds virtualenv, and
+    # undermines all of the functionality that we depend on in pavement that
+    # requires virtualenvs to work as expected.
+    print bold('Checking environment')
+    try:
+        pythonhome = os.environ['PYTHONHOME']
+        print red('CRITICAL:') + ('PYTHONHOME is set to %s. This undermines '
+                                  'the functionality of virtualenv and should '
+                                  'be unset.') % pythonhome
+        errors_found = True
+    except KeyError:
+        print 'PYTHONHOME unset: ' + green('OK')
+    print ''
+
     # verify required programs exist
     programs = [
         ('hg', 'everything'),
