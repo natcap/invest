@@ -1,6 +1,10 @@
 .. :changelog:
 
 .. Unreleased Changes
+Unreleased Changes
+------------------
+* Fixing an issue in SDR where the optional drainage layer would not be used in most of the SDR biophysical calculations.
+
 
 3.3.2 (2016-10-17)
 ------------------
