@@ -4,7 +4,7 @@
 Unreleased Changes
 ------------------
 * Fixing an issue in SDR where the optional drainage layer would not be used in most of the SDR biophysical calculations.
-
+* Refactoring so water yield pixels with Kc and et0 equal to be 0 now yields a 0.0 value of water yield on that pixel rather than nodata.
 
 3.3.2 (2016-10-17)
 ------------------
