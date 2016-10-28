@@ -822,7 +822,7 @@ def execute(args):
 
         tmp_dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
         pygeoprocessing.geoprocessing.distance_transform_edt(
-            land_poly_rasterized_uri, tmp_dist_uri, process_pool=None)
+            land_poly_rasterized_uri, tmp_dist_uri)
 
         def add_avg_dist_op(tmp_dist):
             """vectorize_datasets operation to convert distances
@@ -1798,7 +1798,7 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
 
         dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
         pygeoprocessing.geoprocessing.distance_transform_edt(
-            land_pts_rasterized_uri, dist_uri, process_pool=None)
+            land_pts_rasterized_uri, dist_uri)
         # Add each features distance transform result to list
         uri_list.append(dist_uri)
 
@@ -1884,7 +1884,7 @@ def calculate_distances_grid(land_shape_uri, harvested_masked_uri, tmp_dist_fina
     tmp_dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
     # Run distance transform
     pygeoprocessing.geoprocessing.distance_transform_edt(
-        land_pts_rasterized_uri, tmp_dist_uri, process_pool=None)
+        land_pts_rasterized_uri, tmp_dist_uri)
 
     def dist_meters_op(tmp_dist):
         """vectorize_dataset operation that multiplies by the pixel size
