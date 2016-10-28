@@ -904,8 +904,7 @@ def execute(args):
                         [landcover_uri],
                         lambda x: 0 if x != landcover_nodata else -1,
                         ds_uri,
-                        geoprocess.get_datatype_from_uri(
-                            ds_uri),
+                        gdal.GDT_Int16,
                         ds_nodata,
                         geoprocess.get_cell_size_from_uri(
                             ds_uri),
@@ -928,7 +927,7 @@ def execute(args):
                         [distance_uri],
                         threshold,
                         fdistance_uri,
-                        geoprocess.get_datatype_from_uri(distance_uri),
+                        gdal.GDT_Float32,
                         transition_nodata,
                         cell_size,
                         "union",
@@ -1169,7 +1168,7 @@ def execute(args):
                     [distance_uri],
                     threshold,
                     fdistance_uri,
-                    geoprocess.get_datatype_from_uri(distance_uri),
+                    gdal.GDT_Float32,
                     transition_nodata,
                     cell_size,
                     "union")
