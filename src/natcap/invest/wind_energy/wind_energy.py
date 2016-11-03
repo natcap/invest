@@ -38,6 +38,7 @@ class TimePeriodError(Exception):
         the number of years given in the price table"""
     pass
 
+@profile
 def execute(args):
     """Wind Energy.
 
@@ -1703,6 +1704,7 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
     LOGGER.debug('Leaving clip_datasource')
     output_datasource = None
 
+@profile
 def calculate_distances_land_grid(
         land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
     """Creates a distance transform raster based on the shortest distances
@@ -1727,7 +1729,7 @@ def calculate_distances_land_grid(
     # features 'L2G' field
     l2g_dist = []
     # A list to hold the individual distance transform URI's in order
-    uri_list = []
+    land_point_distance_raster_path_list = []
 
     # Get nodata value from biophsyical output raster
     out_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
@@ -1802,52 +1804,46 @@ def calculate_distances_land_grid(
         pygeoprocessing.geoprocessing.distance_transform_edt(
             land_pts_rasterized_uri, dist_uri)
         # Add each features distance transform result to list
-        uri_list.append(dist_uri)
+        land_point_distance_raster_path_list.append(dist_uri)
 
-    def land_ocean_dist(*rasters):
+    def _min_land_ocean_dist(*grid_distances):
         """vectorize_dataset operation to aggregate each features distance
             transform output and create one distance output that has the
             shortest distances combined with each features land to grid
             distance
 
-            *rasters - a numpy array of numpy nd arrays
+            *grid_distances - a numpy array of numpy nd arrays
 
             returns - a nd numpy array of the shortest distances
         """
         # Get the shape of the incoming numpy arrays
-        shape = rasters[0].shape
-        # Create a numpy array of 1's with proper shape
-        land_grid = np.ones(shape)
-        # Initialize numpy array with land to grid distances from the first
-        # array
-        land_grid = land_grid * l2g_dist[0]
-        # Initialize final minimum distances array to first rasters
-        distances = rasters[0]
+        # Initialize with land to grid distances from the first array
+        min_land_grid_dist = np.empty(
+            grid_distances[0].shape, dtype=np.float32)
+        min_land_grid_dist[:] = l2g_dist[0]
+        min_distances = grid_distances[0]
         # Get the length of rasters lists to use in iteration and
         # indexing
-        size = len(rasters)
-
-        for index in range(1, size):
-            raster = rasters[index]
+        size = len(grid_distances)
+        for index in xrange(1, size):
             # Get the land to grid distances corresponding to current
             # indexed raster
-            new_dist = np.ones(shape)
-            new_dist = new_dist * l2g_dist[index]
             # Create a mask to indicate minimum distances
-            mask = raster < distances
+            min_mask = grid_distances[index] < min_distances
             # Replace distance values with minimum
-            distances = np.where(mask, raster, distances)
-            # Replace land to grid distances based on mask
-            land_grid = np.where(mask, new_dist, land_grid)
+            min_distances[min_mask] = grid_distances[index][min_mask]
+            # Replace land to grid distances based on min_mask
+            min_land_grid_dist[min_mask] = l2g_dist[index]
 
-        # Convert to meters from number of pixels
-        distances = distances * pixel_size
         # Return and add land to grid distances to final distances
-        return distances + land_grid
+        # and convert distances to meters by multiplying by pixel size
+        return min_distances * pixel_size + min_land_grid_dist
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        uri_list, land_ocean_dist, tmp_dist_final_uri, gdal.GDT_Float32,
-        out_nodata, pixel_size, 'intersection', vectorize_op=False)
+        land_point_distance_raster_path_list, _min_land_ocean_dist,
+        tmp_dist_final_uri, gdal.GDT_Float32, out_nodata, pixel_size,
+        'intersection', vectorize_op=False)
+
 
 def calculate_distances_grid(
         land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
