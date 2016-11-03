@@ -38,7 +38,7 @@ class TimePeriodError(Exception):
         the number of years given in the price table"""
     pass
 
-
+@profile
 def execute(args):
     """Wind Energy.
 
