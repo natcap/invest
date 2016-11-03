@@ -62,13 +62,9 @@ def execute(args):
 
     LOGGER.info('resolving filling pits')
 
-    dem_tiled_uri = os.path.join(
-        output_directory, 'dem_tiled.tif')
-    pygeoprocessing.geoprocessing.tile_dataset_uri(
-        dem_uri, dem_tiled_uri, 256)
     dem_pit_filled_uri = os.path.join(
         output_directory, args['pit_filled_filename'])
-    pygeoprocessing.routing.fill_pits(dem_tiled_uri, dem_pit_filled_uri)
+    pygeoprocessing.routing.fill_pits(dem_uri, dem_pit_filled_uri)
     dem_uri = dem_pit_filled_uri
 
     # Calculate slope
