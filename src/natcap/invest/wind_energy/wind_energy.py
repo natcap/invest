@@ -1582,48 +1582,48 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
 
     LOGGER.debug('Leaving clip_and_reproject_dataset')
 
-def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
-    """Clip and project a DataSource to an area of interest
+@profile
+def clip_and_reproject_shapefile(
+        base_vector_path, aoi_vector_path, output_vector_path):
+    """Clip a vector against an AOI and output result in AOI coordinates.
 
-        shapefile_uri - a URI to a ogr Datasource
+    Parameters:
+        base_vector_path (string): a path to a base vector
+        aoi_vector_path (string): path to an AOI vector
+        output_vector_path (string): desired output path to write the
+            clipped base against AOI in AOI's coordinate system.
 
-        aoi_uri - a URI to a ogr DataSource of geometry type polygon
-
-        projected_uri - a URI string for the output shapefile to be written to
-            disk
-
-        returns - nothing"""
-
-    LOGGER.debug('Entering clip_and_reproject_shapefile')
+    Returns:
+        None.
+    """
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_uri)
+    aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_vector_path)
     aoi_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the shapefile
-    shapefile_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(shapefile_uri)
-    shapefile_wkt = shapefile_sr.ExportToWkt()
+    base_vector = pygeoprocessing.geoprocessing.get_spatial_ref_uri(
+        base_vector_path)
+    base_vector_coordinate_system = base_vector.ExportToWkt()
 
     # Temporary URI for an intermediate step
-    aoi_reprojected_uri = pygeoprocessing.geoprocessing.temporary_folder()
+    aoi_reprojected_path = pygeoprocessing.geoprocessing.temporary_folder()
 
     # Reproject the AOI to the spatial reference of the shapefile so that the
     # AOI can be used to clip the shapefile properly
     pygeoprocessing.geoprocessing.reproject_datasource_uri(
-            aoi_uri, shapefile_wkt, aoi_reprojected_uri)
+        aoi_vector_path, base_vector_coordinate_system, aoi_reprojected_path)
 
     # Temporary URI for an intermediate step
-    clipped_uri = pygeoprocessing.geoprocessing.temporary_folder()
+    clipped_path = pygeoprocessing.geoprocessing.temporary_folder()
 
     # Clip the shapefile to the AOI
-    LOGGER.debug('Clipping datasource')
-    clip_datasource(aoi_reprojected_uri, shapefile_uri, clipped_uri)
+    clip_datasource(aoi_reprojected_path, base_vector_path, clipped_path)
 
     # Reproject the clipped shapefile to that of the AOI
-    LOGGER.debug('Reprojecting datasource')
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(clipped_uri, aoi_wkt, projected_uri)
+    pygeoprocessing.geoprocessing.reproject_datasource_uri(
+        clipped_path, aoi_wkt, output_vector_path)
 
-    LOGGER.debug('Leaving clip_and_reproject_maps')
-
+@profile
 def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
     """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
         geometry type polygon. The aoi should be a shapefile with a layer
