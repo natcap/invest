@@ -1,4 +1,4 @@
-"""InVEST Wind Energy model """
+"""InVEST Wind Energy model."""
 import logging
 import os
 import csv
@@ -30,15 +30,17 @@ speedups.enable()
 
 class FieldError(Exception):
     """A custom error message for fields that are missing"""
+
     pass
 
 
 class TimePeriodError(Exception):
     """A custom error message for when the number of years does not match
         the number of years given in the price table"""
+
     pass
 
-@profile
+
 def execute(args):
     """Wind Energy.
 
@@ -148,7 +150,8 @@ def execute(args):
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    pygeoprocessing.geoprocessing.create_directories([workspace, inter_dir, out_dir])
+    pygeoprocessing.geoprocessing.create_directories(
+        [workspace, inter_dir, out_dir])
 
     bathymetry_uri = args['bathymetry_uri']
     number_of_turbines = int(args['number_of_turbines'])
@@ -156,7 +159,7 @@ def execute(args):
     # Set the output nodata value to use throughout the model
     out_nodata = -64329.0
 
-    # Append a _ to the suffix if it's not empty and doens't already have one
+    # Append a _ to the suffix if it's not empty and doesn't already have one
     try:
         suffix = args['suffix']
         if suffix != "" and not suffix.startswith('_'):
@@ -243,8 +246,8 @@ def execute(args):
         clip_and_reproject_raster(bathymetry_uri, aoi_uri, bathymetry_proj_uri)
 
         # Set the bathymetry and points URI to use in the rest of the model. In
-        # this case these URIs refer to the projected files. This may not be the
-        # case if an AOI is not provided
+        # this case these URIs refer to the projected files. This may not be
+        # the case if an AOI is not provided
         final_bathymetry_uri = bathymetry_proj_uri
         final_wind_points_uri = wind_points_proj_uri
 
@@ -278,7 +281,7 @@ def execute(args):
                     inter_dir, 'aoi_raster%s.tif' % suffix)
 
             LOGGER.debug('Create Raster From AOI')
-            # Make a raster from the AOI using the bathymetry rasters pixel size
+            # Make a raster from AOI using the bathymetry rasters pixel size
             pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
                 aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
                 aoi_raster_uri)
@@ -307,7 +310,8 @@ def execute(args):
 
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
-            pygeoprocessing.geoprocessing.distance_transform_edt(aoi_raster_uri, dist_trans_uri)
+            pygeoprocessing.geoprocessing.distance_transform_edt(
+                aoi_raster_uri, dist_trans_uri)
             mask_by_distance(
                     dist_trans_uri, min_distance, max_distance,
                     out_nodata, dist_meters_uri, dist_mask_uri)
@@ -364,14 +368,15 @@ def execute(args):
 
     # Get the cell size here to use from the DEM. The cell size could either
     # come in a project unprojected format
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(final_bathymetry_uri)
+    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        final_bathymetry_uri)
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
     pygeoprocessing.geoprocessing.vectorize_datasets(
             [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection',
-            assert_datasets_projected=projected, vectorize_op = False)
+            assert_datasets_projected=projected, vectorize_op=False)
 
     # The String name for the shape field. So far this is a default from the
     # text file given by CK. I guess we could search for the 'K' if needed.
@@ -420,8 +425,8 @@ def execute(args):
     num_days = 365
 
     # The rated power is expressed in units of MW but the harvested energy
-    # equation calls for it in terms of Wh. Thus we multiply by a million to get
-    # to Wh.
+    # equation calls for it in terms of Wh. Thus we multiply by a million to
+    # get to Wh.
     rated_power = float(bio_parameters_dict['turbine_rated_pwr']) * 1000000
 
     # Get the rest of the inputs needed to compute harvested wind energy
@@ -1704,7 +1709,7 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
     LOGGER.debug('Leaving clip_datasource')
     output_datasource = None
 
-@profile
+
 def calculate_distances_land_grid(
         land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
     """Creates a distance transform raster based on the shortest distances
