@@ -1,4 +1,4 @@
-"""InVEST Wind Energy model """
+"""InVEST Wind Energy model."""
 import logging
 import os
 import csv
@@ -30,12 +30,14 @@ speedups.enable()
 
 class FieldError(Exception):
     """A custom error message for fields that are missing"""
+
     pass
 
 
 class TimePeriodError(Exception):
     """A custom error message for when the number of years does not match
         the number of years given in the price table"""
+
     pass
 
 
@@ -148,7 +150,8 @@ def execute(args):
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    pygeoprocessing.geoprocessing.create_directories([workspace, inter_dir, out_dir])
+    pygeoprocessing.geoprocessing.create_directories(
+        [workspace, inter_dir, out_dir])
 
     bathymetry_uri = args['bathymetry_uri']
     number_of_turbines = int(args['number_of_turbines'])
@@ -156,7 +159,7 @@ def execute(args):
     # Set the output nodata value to use throughout the model
     out_nodata = -64329.0
 
-    # Append a _ to the suffix if it's not empty and doens't already have one
+    # Append a _ to the suffix if it's not empty and doesn't already have one
     try:
         suffix = args['suffix']
         if suffix != "" and not suffix.startswith('_'):
@@ -243,8 +246,8 @@ def execute(args):
         clip_and_reproject_raster(bathymetry_uri, aoi_uri, bathymetry_proj_uri)
 
         # Set the bathymetry and points URI to use in the rest of the model. In
-        # this case these URIs refer to the projected files. This may not be the
-        # case if an AOI is not provided
+        # this case these URIs refer to the projected files. This may not be
+        # the case if an AOI is not provided
         final_bathymetry_uri = bathymetry_proj_uri
         final_wind_points_uri = wind_points_proj_uri
 
@@ -278,7 +281,7 @@ def execute(args):
                     inter_dir, 'aoi_raster%s.tif' % suffix)
 
             LOGGER.debug('Create Raster From AOI')
-            # Make a raster from the AOI using the bathymetry rasters pixel size
+            # Make a raster from AOI using the bathymetry rasters pixel size
             pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
                 aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
                 aoi_raster_uri)
@@ -307,7 +310,8 @@ def execute(args):
 
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
-            pygeoprocessing.geoprocessing.distance_transform_edt(aoi_raster_uri, dist_trans_uri)
+            pygeoprocessing.geoprocessing.distance_transform_edt(
+                aoi_raster_uri, dist_trans_uri)
             mask_by_distance(
                     dist_trans_uri, min_distance, max_distance,
                     out_nodata, dist_meters_uri, dist_mask_uri)
@@ -364,14 +368,15 @@ def execute(args):
 
     # Get the cell size here to use from the DEM. The cell size could either
     # come in a project unprojected format
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(final_bathymetry_uri)
+    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        final_bathymetry_uri)
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
     pygeoprocessing.geoprocessing.vectorize_datasets(
             [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection',
-            assert_datasets_projected=projected, vectorize_op = False)
+            assert_datasets_projected=projected, vectorize_op=False)
 
     # The String name for the shape field. So far this is a default from the
     # text file given by CK. I guess we could search for the 'K' if needed.
@@ -420,8 +425,8 @@ def execute(args):
     num_days = 365
 
     # The rated power is expressed in units of MW but the harvested energy
-    # equation calls for it in terms of Wh. Thus we multiply by a million to get
-    # to Wh.
+    # equation calls for it in terms of Wh. Thus we multiply by a million to
+    # get to Wh.
     rated_power = float(bio_parameters_dict['turbine_rated_pwr']) * 1000000
 
     # Get the rest of the inputs needed to compute harvested wind energy
@@ -1582,47 +1587,45 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
 
     LOGGER.debug('Leaving clip_and_reproject_dataset')
 
-def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
-    """Clip and project a DataSource to an area of interest
+def clip_and_reproject_shapefile(
+        base_vector_path, aoi_vector_path, output_vector_path):
+    """Clip a vector against an AOI and output result in AOI coordinates.
 
-        shapefile_uri - a URI to a ogr Datasource
+    Parameters:
+        base_vector_path (string): a path to a base vector
+        aoi_vector_path (string): path to an AOI vector
+        output_vector_path (string): desired output path to write the
+            clipped base against AOI in AOI's coordinate system.
 
-        aoi_uri - a URI to a ogr DataSource of geometry type polygon
-
-        projected_uri - a URI string for the output shapefile to be written to
-            disk
-
-        returns - nothing"""
-
-    LOGGER.debug('Entering clip_and_reproject_shapefile')
+    Returns:
+        None.
+    """
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_uri)
+    aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_vector_path)
     aoi_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the shapefile
-    shapefile_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(shapefile_uri)
-    shapefile_wkt = shapefile_sr.ExportToWkt()
+    base_vector = pygeoprocessing.geoprocessing.get_spatial_ref_uri(
+        base_vector_path)
+    base_vector_coordinate_system = base_vector.ExportToWkt()
 
     # Temporary URI for an intermediate step
-    aoi_reprojected_uri = pygeoprocessing.geoprocessing.temporary_folder()
+    aoi_reprojected_path = pygeoprocessing.geoprocessing.temporary_folder()
 
     # Reproject the AOI to the spatial reference of the shapefile so that the
     # AOI can be used to clip the shapefile properly
     pygeoprocessing.geoprocessing.reproject_datasource_uri(
-            aoi_uri, shapefile_wkt, aoi_reprojected_uri)
+        aoi_vector_path, base_vector_coordinate_system, aoi_reprojected_path)
 
     # Temporary URI for an intermediate step
-    clipped_uri = pygeoprocessing.geoprocessing.temporary_folder()
+    clipped_path = pygeoprocessing.geoprocessing.temporary_folder()
 
     # Clip the shapefile to the AOI
-    LOGGER.debug('Clipping datasource')
-    clip_datasource(aoi_reprojected_uri, shapefile_uri, clipped_uri)
+    clip_datasource(aoi_reprojected_path, base_vector_path, clipped_path)
 
     # Reproject the clipped shapefile to that of the AOI
-    LOGGER.debug('Reprojecting datasource')
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(clipped_uri, aoi_wkt, projected_uri)
-
-    LOGGER.debug('Leaving clip_and_reproject_maps')
+    pygeoprocessing.geoprocessing.reproject_datasource_uri(
+        clipped_path, aoi_wkt, output_vector_path)
 
 def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
     """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
@@ -1687,26 +1690,28 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
         # new geometry if there is an intersection. If there is not an
         # intersection it will return an empty geometry or it will return None
         # and print an error to standard out
-        intersect_geom = aoi_geom.Intersection(orig_geom)
-
-        if not intersect_geom == None and not intersect_geom.IsEmpty():
-            # Copy original_datasource's feature and set as new shapes feature
-            output_feature = ogr.Feature(
+        if aoi_geom.Intersects(orig_geom):
+            intersect_geom = aoi_geom.Intersection(orig_geom)
+            if not intersect_geom == None and not intersect_geom.IsEmpty():
+                # Copy original_datasource's feature and set as new shapes feature
+                output_feature = ogr.Feature(
                     feature_def=output_layer.GetLayerDefn())
 
-            # Since the original feature is of interest add it's fields and
-            # Values to the new feature from the intersecting geometries
-            # The False in SetFrom() signifies that the fields must match
-            # exactly
-            output_feature.SetFrom(orig_feat, False)
-            output_feature.SetGeometry(intersect_geom)
-            output_layer.CreateFeature(output_feature)
-            output_feature = None
+                # Since the original feature is of interest add it's fields and
+                # Values to the new feature from the intersecting geometries
+                # The False in SetFrom() signifies that the fields must match
+                # exactly
+                output_feature.SetFrom(orig_feat, False)
+                output_feature.SetGeometry(intersect_geom)
+                output_layer.CreateFeature(output_feature)
+                output_feature = None
 
     LOGGER.debug('Leaving clip_datasource')
     output_datasource = None
 
-def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
+
+def calculate_distances_land_grid(
+        land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
     """Creates a distance transform raster based on the shortest distances
         of each point feature in 'land_shape_uri' and each features
         'L2G' field.
@@ -1729,12 +1734,14 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
     # features 'L2G' field
     l2g_dist = []
     # A list to hold the individual distance transform URI's in order
-    uri_list = []
+    land_point_distance_raster_path_list = []
 
     # Get nodata value from biophsyical output raster
-    out_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(harvested_masked_uri)
+    out_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        harvested_masked_uri)
     # Get pixel size
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
+    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        harvested_masked_uri)
 
     for feat in land_pts_layer:
         # Get the point features land to grid value and add it to the list
@@ -1744,8 +1751,10 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
         # Create a new shapefile with only one feature to burn onto a raster
         # in order to get the distance transform based on that one feature
         output_driver = ogr.GetDriverByName('ESRI Shapefile')
-        tmp_uri = pygeoprocessing.geoprocessing.temporary_folder()
-        output_datasource = output_driver.CreateDataSource(tmp_uri)
+        single_feature_vector_path = (
+            pygeoprocessing.geoprocessing.temporary_folder())
+        output_datasource = output_driver.CreateDataSource(
+            single_feature_vector_path)
 
         # Get the original_layer definition which holds needed attribute values
         original_layer_dfn = land_pts_layer.GetLayerDefn()
@@ -1753,8 +1762,8 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
         # Create the new layer for output_datasource using same name and
         # geometry type from original_datasource as well as spatial reference
         output_layer = output_datasource.CreateLayer(
-                original_layer_dfn.GetName(), land_pts_layer.GetSpatialRef(),
-                original_layer_dfn.GetGeomType())
+            original_layer_dfn.GetName(), land_pts_layer.GetSpatialRef(),
+            original_layer_dfn.GetGeomType())
 
         # Get the number of fields in original_layer
         original_field_count = original_layer_dfn.GetFieldCount()
@@ -1764,16 +1773,15 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
         for fld_index in range(original_field_count):
             original_field = original_layer_dfn.GetFieldDefn(fld_index)
             output_field = ogr.FieldDefn(
-                    original_field.GetName(), original_field.GetType())
+                original_field.GetName(), original_field.GetType())
             # NOT setting the WIDTH or PRECISION because that seems to be
             # unneeded and causes interesting OGR conflicts
             output_layer.CreateField(output_field)
 
         # Copy original_datasource's feature and set as new shapes feature
-        output_feature = ogr.Feature(
-                feature_def=output_layer.GetLayerDefn())
+        output_feature = ogr.Feature(feature_def=output_layer.GetLayerDefn())
 
-        # Since the original feature is of interest add it's fields and
+        # Since the original feature is of interest add its fields and
         # Values to the new feature from the intersecting geometries
         # The False in SetFrom() signifies that the fields must match
         # exactly
@@ -1784,7 +1792,8 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
         output_layer = None
         output_datasource = None
 
-        land_pts_rasterized_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
+        land_pts_rasterized_uri = (
+            pygeoprocessing.geoprocessing.temporary_filename('.tif'))
         # Create a new raster based on a biophysical output and fill with 0's
         # to set up for distance transform
         pygeoprocessing.geoprocessing.new_raster_from_base_uri(
@@ -1793,61 +1802,56 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
         # Burn single feature onto the raster with value of 1 to set up for
         # distance transform
         pygeoprocessing.geoprocessing.rasterize_layer_uri(
-            land_pts_rasterized_uri, tmp_uri, burn_values=[1.0],
-            option_list=["ALL_TOUCHED=TRUE"])
+            land_pts_rasterized_uri, single_feature_vector_path,
+            burn_values=[1.0], option_list=["ALL_TOUCHED=TRUE"])
 
         dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
         pygeoprocessing.geoprocessing.distance_transform_edt(
             land_pts_rasterized_uri, dist_uri)
         # Add each features distance transform result to list
-        uri_list.append(dist_uri)
+        land_point_distance_raster_path_list.append(dist_uri)
 
-    def land_ocean_dist(*rasters):
+    def _min_land_ocean_dist(*grid_distances):
         """vectorize_dataset operation to aggregate each features distance
             transform output and create one distance output that has the
             shortest distances combined with each features land to grid
             distance
 
-            *rasters - a numpy array of numpy nd arrays
+            *grid_distances - a numpy array of numpy nd arrays
 
             returns - a nd numpy array of the shortest distances
         """
         # Get the shape of the incoming numpy arrays
-        shape = rasters[0].shape
-        # Create a numpy array of 1's with proper shape
-        land_grid = np.ones(shape)
-        # Initialize numpy array with land to grid distances from the first
-        # array
-        land_grid = land_grid * l2g_dist[0]
-        # Initialize final minimum distances array to first rasters
-        distances = rasters[0]
+        # Initialize with land to grid distances from the first array
+        min_land_grid_dist = np.empty(
+            grid_distances[0].shape, dtype=np.float32)
+        min_land_grid_dist[:] = l2g_dist[0]
+        min_distances = grid_distances[0]
         # Get the length of rasters lists to use in iteration and
         # indexing
-        size = len(rasters)
-
-        for index in range(1, size):
-            raster = rasters[index]
+        size = len(grid_distances)
+        for index in xrange(1, size):
             # Get the land to grid distances corresponding to current
             # indexed raster
-            new_dist = np.ones(shape)
-            new_dist = new_dist * l2g_dist[index]
             # Create a mask to indicate minimum distances
-            mask = raster < distances
+            min_mask = grid_distances[index] < min_distances
             # Replace distance values with minimum
-            distances = np.where(mask, raster, distances)
-            # Replace land to grid distances based on mask
-            land_grid = np.where(mask, new_dist, land_grid)
+            min_distances[min_mask] = grid_distances[index][min_mask]
+            # Replace land to grid distances based on min_mask
+            min_land_grid_dist[min_mask] = l2g_dist[index]
 
-        # Convert to meters from number of pixels
-        distances = distances * pixel_size
         # Return and add land to grid distances to final distances
-        return distances + land_grid
+        # and convert distances to meters by multiplying by pixel size
+        return min_distances * pixel_size + min_land_grid_dist
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
-                uri_list, land_ocean_dist, tmp_dist_final_uri, gdal.GDT_Float32,
-                out_nodata, pixel_size, 'intersection', vectorize_op=False)
+        land_point_distance_raster_path_list, _min_land_ocean_dist,
+        tmp_dist_final_uri, gdal.GDT_Float32, out_nodata, pixel_size,
+        'intersection', vectorize_op=False)
 
-def calculate_distances_grid(land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
+
+def calculate_distances_grid(
+        land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
     """Creates a distance transform raster from an OGR shapefile. The function
         first burns the features from 'land_shape_uri' onto a raster using
         'harvested_masked_uri' as the base for that raster. It then does a
