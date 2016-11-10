@@ -22,6 +22,10 @@ import shapely.prepared
 import pygeoprocessing
 import numpy
 import numpy.linalg
+import shapely.speedups
+
+if shapely.speedups.available:
+    shapely.speedups.enable()
 
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
@@ -66,7 +70,7 @@ _TMP_BASE_FILES = {
     'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
     }
 
-
+@profile
 def execute(args):
     """Recreation.
 
@@ -598,7 +602,7 @@ def _raster_sum_mean(
         }
     return fid_raster_values
 
-
+@profile
 def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
     """Calculate polygon area overlap.
 
@@ -621,9 +625,10 @@ def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
     """
     start_time = time.time()
     polygons = _ogr_to_geometry_list(polygon_vector_path)
-    prepared_polygons = [
-        shapely.prepared.prep(polygon) for polygon in polygons
-        if polygon.is_valid]
+    prepped_polygons = [shapely.prepared.prep(polygon) for polygon in polygons]
+    polygon_spatial_index = rtree.index.Index()
+    for polygon_index, polygon in enumerate(polygons):
+        polygon_spatial_index.insert(polygon_index, polygon.bounds)
     polygon_coverage_lookup = {}  # map FID to point count
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
@@ -634,10 +639,16 @@ def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
                 (100.0*index)/len(response_polygons_lookup))
             start_time = time.time()
 
+        potential_intersecting_poly_ids = polygon_spatial_index.intersection(
+            geometry.bounds)
+        intersecting_polygons = [
+            polygons[polygon_index]
+            for polygon_index in potential_intersecting_poly_ids
+            if prepped_polygons[polygon_index].intersects(geometry)]
         polygon_area_coverage = sum([
-            (polygon.intersection(geometry)).area for polygon, prep_poly in
-            zip(polygons, prepared_polygons) if
-            prep_poly.intersects(geometry)])
+            (geometry.intersection(polygon)).area
+            for polygon in intersecting_polygons])
+
         if mode == 'area':
             polygon_coverage_lookup[feature_id] = polygon_area_coverage
         elif mode == 'percent':
