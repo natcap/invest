@@ -445,7 +445,7 @@ class TestRecServer(unittest.TestCase):
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 7000.0,
+            'cell_size': 40000.0,
             'compute_regression': True,
             'start_year': '2005',
             'end_year': '2014',
@@ -466,7 +466,7 @@ class TestRecServer(unittest.TestCase):
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
-            os.path.join(REGRESSION_DATA, 'scenario_results.csv'))
+            os.path.join(REGRESSION_DATA, 'scenario_results_40000.csv'))
 
     def tearDown(self):
         """Delete workspace."""
@@ -629,7 +629,7 @@ class RecreationRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @_timeout(200.0)
     def test_base_regression(self):
-        """Recreation base regression test on sample data.
+        """Recreation base regression test on fast sample data.
 
         Executes Recreation model with default data and default arguments.
         """
@@ -637,7 +637,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 7000.0,
+            'cell_size': 40000.0,
             'compute_regression': True,
             'start_year': '2005',
             'end_year': '2014',
@@ -656,7 +656,7 @@ class RecreationRegressionTests(unittest.TestCase):
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
-            os.path.join(REGRESSION_DATA, 'scenario_results.csv'))
+            os.path.join(REGRESSION_DATA, 'scenario_results_40000.csv'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -1054,11 +1054,9 @@ class RecreationRegressionTests(unittest.TestCase):
                         numpy.testing.assert_almost_equal(
                             feature.GetField(field), value,
                             decimal=tolerance_places)
-                    ogr.Feature.__swig_destroy__(feature)
                     feature = None
         finally:
             result_layer = None
-            ogr.DataSource.__swig_destroy__(result_vector)
             result_vector = None
 
 
