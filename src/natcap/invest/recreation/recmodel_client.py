@@ -70,7 +70,6 @@ _TMP_BASE_FILES = {
     'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
     }
 
-@profile
 def execute(args):
     """Recreation.
 
@@ -602,7 +601,7 @@ def _raster_sum_mean(
         }
     return fid_raster_values
 
-@profile
+
 def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
     """Calculate polygon area overlap.
 
