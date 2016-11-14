@@ -29,19 +29,6 @@ LOGGER = logging.getLogger('natcap.invest.wind_energy.wind_energy')
 speedups.enable()
 
 
-class FieldError(Exception):
-    """A custom error message for fields that are missing"""
-
-    pass
-
-
-class TimePeriodError(Exception):
-    """A custom error message for when the number of years does not match
-        the number of years given in the price table"""
-
-    pass
-
-
 def execute(args):
     """Wind Energy.
 
@@ -194,7 +181,7 @@ def execute(args):
     # collected by comparing the number of dictionary keys to the number of
     # elements in our known list
     if len(bio_parameters_dict.keys()) != len(biophysical_params):
-        raise FieldError('An Error occured from reading in a field value from '
+        raise ValueError('An Error occured from reading in a field value from '
         'either the turbine CSV file or the global parameters JSON file. '
         'Please make sure all the necessary fields are present and spelled '
         'correctly.')
@@ -704,7 +691,7 @@ def execute(args):
 
     val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
     if len(val_parameters_dict.keys()) != val_param_len:
-        raise FieldError('An Error occured from reading in a field value from '
+        raise ValueError('An Error occured from reading in a field value from '
                 'either the turbine CSV file or the global parameters JSON '
                 'file. Please make sure all the necessary fields are present '
                 'and spelled correctly.')
@@ -902,7 +889,7 @@ def execute(args):
         year_keys.sort()
 
         if len(year_keys) != time + 1:
-            raise TimePeriodError("The 'time' argument in the global parameter"
+            raise ValueError("The 'time' argument in the global parameter"
                 "file must equal the number years provided in the table.")
 
         # Save the price values into a list where the indices of the list
