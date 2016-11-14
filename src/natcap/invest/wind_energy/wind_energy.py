@@ -1,4 +1,5 @@
 """InVEST Wind Energy model."""
+import tempfile
 import logging
 import os
 import csv
@@ -40,7 +41,7 @@ class TimePeriodError(Exception):
 
     pass
 
-
+@profile
 def execute(args):
     """Wind Energy.
 
@@ -1710,6 +1711,7 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
     output_datasource = None
 
 
+@profile
 def calculate_distances_land_grid(
         land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
     """Creates a distance transform raster based on the shortest distances
@@ -1743,21 +1745,19 @@ def calculate_distances_land_grid(
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         harvested_masked_uri)
 
+    # Create a new shapefile with only one feature to burn onto a raster
+    # in order to get the distance transform based on that one feature
     for feat in land_pts_layer:
         # Get the point features land to grid value and add it to the list
         field_index = feat.GetFieldIndex("L2G")
         l2g_dist.append(float(feat.GetField(field_index)))
-
-        # Create a new shapefile with only one feature to burn onto a raster
-        # in order to get the distance transform based on that one feature
-        output_driver = ogr.GetDriverByName('ESRI Shapefile')
-        single_feature_vector_path = (
-            pygeoprocessing.geoprocessing.temporary_folder())
-        output_datasource = output_driver.CreateDataSource(
-            single_feature_vector_path)
+        single_feature_vector_path = tempfile.mkdtemp()
 
         # Get the original_layer definition which holds needed attribute values
         original_layer_dfn = land_pts_layer.GetLayerDefn()
+        output_driver = ogr.GetDriverByName('ESRI Shapefile')
+        output_datasource = output_driver.CreateDataSource(
+            single_feature_vector_path)
 
         # Create the new layer for output_datasource using same name and
         # geometry type from original_datasource as well as spatial reference
@@ -1787,9 +1787,7 @@ def calculate_distances_land_grid(
         # exactly
         output_feature.SetFrom(feat, False)
         output_layer.CreateFeature(output_feature)
-
-        output_feature = None
-        output_layer = None
+        output_datasource.SyncToDisk()
         output_datasource = None
 
         land_pts_rasterized_uri = (
@@ -1805,12 +1803,17 @@ def calculate_distances_land_grid(
             land_pts_rasterized_uri, single_feature_vector_path,
             burn_values=[1.0], option_list=["ALL_TOUCHED=TRUE"])
 
+        shutil.rmtree(single_feature_vector_path)
+
         dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
         pygeoprocessing.geoprocessing.distance_transform_edt(
             land_pts_rasterized_uri, dist_uri)
         # Add each features distance transform result to list
         land_point_distance_raster_path_list.append(dist_uri)
 
+    l2g_dist_array = np.array(l2g_dist)
+
+    @profile
     def _min_land_ocean_dist(*grid_distances):
         """vectorize_dataset operation to aggregate each features distance
             transform output and create one distance output that has the
@@ -1823,8 +1826,13 @@ def calculate_distances_land_grid(
         """
         # Get the shape of the incoming numpy arrays
         # Initialize with land to grid distances from the first array
-        min_land_grid_dist = np.empty(
+        min_distances = np.min(grid_distances, axis=0)
+        min_land_grid_dist = l2g_dist_array[np.argmin(grid_distances, axis=0)]
+        return min_distances * pixel_size + min_land_grid_dist
+
+        """min_land_grid_dist = np.empty(
             grid_distances[0].shape, dtype=np.float32)
+
         min_land_grid_dist[:] = l2g_dist[0]
         min_distances = grid_distances[0]
         # Get the length of rasters lists to use in iteration and
@@ -1842,12 +1850,12 @@ def calculate_distances_land_grid(
 
         # Return and add land to grid distances to final distances
         # and convert distances to meters by multiplying by pixel size
-        return min_distances * pixel_size + min_land_grid_dist
+        return min_distances * pixel_size + min_land_grid_dist"""
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         land_point_distance_raster_path_list, _min_land_ocean_dist,
         tmp_dist_final_uri, gdal.GDT_Float32, out_nodata, pixel_size,
-        'intersection', vectorize_op=False)
+        'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
 
 
 def calculate_distances_grid(
