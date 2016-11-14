@@ -41,7 +41,6 @@ class TimePeriodError(Exception):
 
     pass
 
-@profile
 def execute(args):
     """Wind Energy.
 
@@ -1711,7 +1710,6 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
     output_datasource = None
 
 
-@profile
 def calculate_distances_land_grid(
         land_shape_uri, harvested_masked_uri, tmp_dist_final_uri):
     """Creates a distance transform raster based on the shortest distances
@@ -1813,7 +1811,6 @@ def calculate_distances_land_grid(
 
     l2g_dist_array = np.array(l2g_dist)
 
-    @profile
     def _min_land_ocean_dist(*grid_distances):
         """vectorize_dataset operation to aggregate each features distance
             transform output and create one distance output that has the
