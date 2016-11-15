@@ -22,6 +22,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
+@profile
 def execute(args):
     '''
     This provides the main calculation functionaility of the HRA model. This
@@ -743,6 +744,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     return avgs_dict, name_map.values()
 
 
+@profile
 def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_value_list=[]):
     '''Will take a stack of rasters and an AOI, and return a dictionary
     containing the number of overlap pixels, and the value of those pixels for
@@ -795,14 +797,6 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
     n_cols = aoi_band.XSize
     n_rows = aoi_band.YSize
 
-    # Set up numpy arrays that currently hold only zeros, but will be used for
-    # each row read.
-    aoi_row = numpy.zeros((1, n_cols), numpy.float64, 'C')
-
-    rows_dict = {}
-    for layer_name in rast_labels:
-        rows_dict[layer_name] = numpy.zeros((1, n_cols), numpy.float64, 'C')
-
     # Now iterate through every cell of the aOI, and concat everything that's
     # undr it and store that.
 
@@ -810,39 +804,32 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
     # info[aoi_pix][layer_name] = [0,0.]
     layer_overlap_info = collections.defaultdict(
         lambda: collections.defaultdict(lambda: list([0, 0.])))
-    for row_index in range(n_rows):
-        aoi_band.ReadAsArray(
-            yoff=row_index,
-            win_xsize=n_cols,
-            win_ysize=1,
-            buf_obj=aoi_row)
 
+    for offset_dict, aoi_block in pygeoprocessing.iterblocks(
+            temp_rast_uris[0]):
+        layer_block_list = {}
         for idx, layer_name in enumerate(rast_labels):
-            rast_bands[idx+1].ReadAsArray(
-                yoff=row_index,
-                win_xsize=n_cols,
-                win_ysize=1,
-                buf_obj=rows_dict[layer_name])
+            layer_block_list[layer_name] = (
+                rast_bands[idx+1].ReadAsArray(**offset_dict))
 
-        for aoi_pix_value in numpy.unique(aoi_row):
+        for aoi_pix_value in numpy.unique(aoi_block):
             if aoi_pix_value == nodata:
                 continue
-
-            aoi_mask = (aoi_row == aoi_pix_value)
-
+            aoi_mask = (aoi_block == aoi_pix_value)
             for layer_name in rast_labels:
-                valid_rows_dict_mask = (
-                    rows_dict[layer_name] != nodata) & aoi_mask
+                valid_mask = (
+                    layer_block_list[layer_name] != nodata) & aoi_mask
                 for ignore_value in ignore_value_list:
-                    valid_rows_dict_mask = valid_rows_dict_mask & (
-                        rows_dict[layer_name] != ignore_value)
+                    valid_mask = valid_mask & (
+                        layer_block_list[layer_name] != ignore_value)
 
                 layer_sum = numpy.sum(
-                    rows_dict[layer_name][valid_rows_dict_mask])
-                layer_count = numpy.count_nonzero(valid_rows_dict_mask)
+                    layer_block_list[layer_name][valid_mask])
+                layer_count = numpy.count_nonzero(valid_mask)
 
                 layer_overlap_info[aoi_pix_value][layer_name][0] += layer_count
                 layer_overlap_info[aoi_pix_value][layer_name][1] += layer_sum
+
     return layer_overlap_info
 
 
