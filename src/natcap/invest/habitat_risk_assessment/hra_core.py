@@ -22,7 +22,7 @@ logging.basicConfig(format='%(asctime)s %(name)_RISK_NODATA5s %(levelname)-8s \
    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 # Global safe nodata value for rasters that have values [0..1]
-_RISK_NODATA = _RISK_NODATA
+_RISK_NODATA = -1
 
 @profile
 def execute(args):
@@ -746,8 +746,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     return avgs_dict, name_map.values()
 
 
-@profile
-def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_value_list=[]):
+def aggregate_multi_rasters_uri(
+    aoi_rast_uri, rast_uris, rast_labels, ignore_value_list):
     '''Will take a stack of rasters and an AOI, and return a dictionary
     containing the number of overlap pixels, and the value of those pixels for
     each overlap of raster and AOI.
@@ -793,12 +793,6 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
 
     rast_ds_list = [gdal.Open(uri) for uri in temp_rast_uris]
     rast_bands = [ds.GetRasterBand(1) for ds in rast_ds_list]
-
-    # Get the AOI to use for line by line, then cell by cell iterration.
-    aoi_band = rast_bands[0]
-
-    n_cols = aoi_band.XSize
-    n_rows = aoi_band.YSize
 
     # Now iterate through every cell of the aOI, and concat everything that's
     # undr it and store that.
@@ -1940,6 +1934,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         "union",
         resample_method_list=None,
         dataset_to_align_index=0,
+        datasets_are_pre_aligned=True,
         aoi_uri=None,
         vectorize_op=False)
 
@@ -1991,6 +1986,8 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         value = numpy.zeros(pixels[0].shape)
         denom_val = numpy.zeros(pixels[0].shape)
 
+        # calculate h_sum / len(h_sum) + h_s_sum / len(h_s_sum)
+
         for i in range(len(h_pixels)):
             valid_mask = h_pixels[i] != _RISK_NODATA
             value = numpy.where(valid_mask, h_pixels[i] + value, value)
@@ -2027,46 +2024,6 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
 
         return result
 
-        '''h_base_pix = pixels[0]
-        h_s_base_pix = pixels[1]
-        h_pixels = pixels[2:h_count+2]
-        h_s_pixels = pixels[2+h_count::]
-
-        all_nodata = True
-        for p in pixels:
-            if p != nodata:
-                all_nodata = False
-        if all_nodata:
-            return nodata
-
-        h_value = 0.
-        h_denom_value = 0.
-
-        #If we have habitat without overlap, want to return 0.
-        if h_s_base_pix == nodata and h_base_pix != nodata:
-            return 0.
-
-        for i in range(len(h_pixels)):
-
-            if p != nodata:
-                h_value += h_pixels[i]
-                h_denom_value += h_denom_dict[h_names[i]]
-
-        #The h will need to get put into the h_s, so might as well have the
-        #h_s loop start with the average returned from h.
-        #This will essentiall treat all resilience criteria (h) as a single
-        #entry alongside the h_s criteria.
-        h_s_value = h_value / h_count
-        h_s_denom_value = h_denom_value / h_count
-
-        for i in range(len(h_s_pixels)):
-
-            if p != nodata:
-                h_s_value += h_s_pixels[i]
-                h_s_denom_value += h_s_denom_dict[h_s_names[i]]
-
-        return h_s_value / h_s_denom_value'''
-
     pygeoprocessing.vectorize_datasets(
         tot_crit_list,
         add_c_pix,
@@ -2077,6 +2034,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         "union",
         resample_method_list=None,
         dataset_to_align_index=0,
+        datasets_are_pre_aligned=True,
         aoi_uri=None,
         vectorize_op=False)
 
