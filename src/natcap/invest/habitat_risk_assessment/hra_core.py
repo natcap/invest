@@ -18,9 +18,11 @@ from osgeo import gdal, ogr, osr
 import pygeoprocessing.geoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra_core')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+logging.basicConfig(format='%(asctime)s %(name)_RISK_NODATA5s %(levelname)-8s \
    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+# Global safe nodata value for rasters that have values [0..1]
+_RISK_NODATA = _RISK_NODATA
 
 def execute(args):
     '''
@@ -51,7 +53,7 @@ def execute(args):
                                 'Weight': 1.0, 'DQ': 1.0
                             }
                         },
-                    'DS':  "A-1 Dataset URI"
+                    'DS':  "A_RISK_NODATA Dataset URI"
                     }
             }
         args['habitats']- Similar to the h-s dictionary, a multi-level
@@ -536,7 +538,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             (Habitat, Stressor) to the URI for the risk raster created when the
             various sub components (H/S/H_S) are combined.
 
-            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            {('HabA', 'Stress1'): "A_RISK_NODATA Risk Raster URI",
             ('HabA', 'Stress2'): "A-2 Risk Raster URI",
             ...
             }
@@ -611,7 +613,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         arb_raster_uri,
         aoi_rast_uri,
         'GTiff',
-        -1,
+        _RISK_NODATA,
         gdal.GDT_Float32)
 
     # This rasterize should burn a unique burn ID int to each. Need to have a
@@ -919,17 +921,20 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         curr_denoms = denoms['Recovery'][h]
 
         def add_recov_pix(*pixels):
-            '''We will have burned numerator values for the recovery potential
-            equation. Want to add all of the numerators (r/dq), then divide by
-            the denoms added together (1/dq).'''
+            '''Add only non-nodata pixels in the stack.
 
+
+            We will have burned numerator values for the recovery potential
+            equation. Want to add all of the numerators (r/dq), then divide by
+            the denoms added together (1/dq).
+            '''
             value = numpy.zeros(pixels[0].shape)
             denom_val = numpy.zeros(pixels[0].shape)
             all_nodata = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
             all_nodata[:] = True
 
             for i in range(len(pixels)):
-                valid_mask = pixels[i] != -1
+                valid_mask = pixels[i] != _RISK_NODATA
                 value = numpy.where(valid_mask, pixels[i] + value, value)
                 denom_val = numpy.where(
                     valid_mask,
@@ -947,15 +952,15 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             numpy.seterr(**olderr)
 
             # mask out nodata stacks
-            return numpy.where(all_nodata, -1, result)
+            return numpy.where(all_nodata, _RISK_NODATA, result)
 
             '''
             all_nodata = True
             for p in pixels:
-                if p not in [-1., -1]:
+                if p not in [_RISK_NODATA, _RISK_NODATA]:
                     all_nodata = False
             if all_nodata:
-                return -1.
+                return _RISK_NODATA
 
             value = 0.
             denom_val = 0.
@@ -964,7 +969,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
                 p = pixels[i]
 
-                if p not in [-1., -1]:
+                if p not in [_RISK_NODATA, _RISK_NODATA]:
                     value += p
                     denom_val += curr_denoms[curr_crit_names[i]]
 
@@ -987,7 +992,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             add_recov_pix,
             out_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             pixel_size,
             "union",
             resample_method_list=None,
@@ -1037,20 +1042,20 @@ def make_ecosys_risk_raster(dir, h_dict):
         all_nodata[:] = True
 
         for i in range(len(pixels)):
-            valid_mask = pixels[i] != -1
+            valid_mask = pixels[i] != _RISK_NODATA
 
             value = numpy.where(valid_mask, pixels[i] + value, value)
 
             all_nodata = ~valid_mask & all_nodata
 
-        return numpy.where(all_nodata, -1, value)
+        return numpy.where(all_nodata, _RISK_NODATA, value)
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         h_list,
         add_e_pixels,
         out_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         pixel_size,
         "union",
         resample_method_list=None,
@@ -1102,8 +1107,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         h_s_dict- A dictionary that maps a habitat name to the risk rasters
             for each of the applicable stressors.
 
-            {'HabA': ["A-1 Risk Raster URI", "A-2 Risk Raster URI", ...],
-             'HabB': ["B-1 Risk Raster URI", "B-2 Risk Raster URI", ...], ...
+            {'HabA': ["A_RISK_NODATA Risk Raster URI", "A-2 Risk Raster URI", ...],
+             'HabB': ["B_RISK_NODATA Risk Raster URI", "B-2 Risk Raster URI", ...], ...
             }
         max_risk- Double representing the highest potential value for a single
             h-s raster. The amount of risk for a given Habitat raster would be
@@ -1142,7 +1147,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         # H_Raster is first in the stack.
         high_h_mask = numpy.where(
-            pixels[0] != -1,
+            pixels[0] != _RISK_NODATA,
             pixels[0] / float(user_max_risk) >= .666,
             False)
 
@@ -1151,7 +1156,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         for i in range(1, len(pixels)):
             high_hs = high_hs | (pixels[i] / float(max_risk) >= .666)
 
-        return numpy.where(high_hs | high_h_mask, 3, -1)
+        return numpy.where(high_hs | high_h_mask, 3, _RISK_NODATA)
 
         '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
@@ -1170,12 +1175,12 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered high risk. Can return nodata.
-        return -1.'''
+        return _RISK_NODATA'''
 
     def med_risk_raster(*pixels):
 
         med_h_mask = numpy.where(
-            pixels[0] != -1,
+            pixels[0] != _RISK_NODATA,
             (pixels[0] / float(user_max_risk) < .666) &
             (pixels[0] / float(user_max_risk) >= .333),
             False)
@@ -1187,7 +1192,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
                 ((pixels[i] / float(max_risk) < .666) &
                     (pixels[i] / float(max_risk) >= .333))
 
-        return numpy.where(med_hs | med_h_mask, 2, -1)
+        return numpy.where(med_hs | med_h_mask, 2, _RISK_NODATA)
         '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
         h_percent = float(h_pixel)/ user_max_risk
@@ -1205,11 +1210,11 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered med risk. Can return nodata.
-        return -1.'''
+        return _RISK_NODATA'''
 
     def low_risk_raster(*pixels):
         low_h_mask = numpy.where(
-            pixels[0] != -1,
+            pixels[0] != _RISK_NODATA,
             (pixels[0] / float(user_max_risk) < .333) &
             (pixels[0] / float(user_max_risk) >= 0),
             False)
@@ -1221,7 +1226,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
                       ((pixels[i] / float(user_max_risk) < .333) &
                        (pixels[i] / float(user_max_risk) >= 0)))
 
-        return numpy.where(low_hs | low_h_mask, 1, -1)
+        return numpy.where(low_hs | low_h_mask, 1, _RISK_NODATA)
 
         '''#We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
@@ -1240,28 +1245,28 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered low risk. Can return nodata.
-        return -1.'''
+        return _RISK_NODATA'''
 
     def combo_risk_raster(*pixels):
         # We actually know that there will be a l_pix, m_pix, and h_pix
         # But it's easier to just loop through all of them.
 
         combo_risk = numpy.zeros(pixels[0].shape)
-        combo_risk[:] = -1
+        combo_risk[:] = _RISK_NODATA
 
         for layer in pixels:
-            combo_risk = numpy.where(layer != -1, layer, combo_risk)
+            combo_risk = numpy.where(layer != _RISK_NODATA, layer, combo_risk)
 
         return combo_risk
 
-        '''if h_pix != -1.:
+        '''if h_pix != _RISK_NODATA:
             return 3
-        elif m_pix != -1.:
+        elif m_pix != _RISK_NODATA:
             return 2
-        elif l_pix != -1.:
+        elif l_pix != _RISK_NODATA:
             return 1
         else:
-            return -1.'''
+            return _RISK_NODATA'''
 
     for h in h_dict:
         # Want to know the number of stressors for the current habitat
@@ -1282,7 +1287,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
             high_risk_raster,
             h_out_uri_r,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             grid_size,
             "union",
             resample_method_list=None,
@@ -1298,7 +1303,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
             med_risk_raster,
             m_out_uri_r,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             grid_size,
             "union",
             resample_method_list=None,
@@ -1314,7 +1319,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
             low_risk_raster,
             l_out_uri_r,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             grid_size,
             "union",
             resample_method_list=None,
@@ -1332,7 +1337,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
             combo_risk_raster,
             single_raster_uri_r,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             grid_size,
             "union",
             resample_method_list=None,
@@ -1431,7 +1436,7 @@ def make_hab_risk_raster(dir, risk_dict):
             and the value is the raster dataset URI corresponding to that
             combination.
 
-            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            {('HabA', 'Stress1'): "A_RISK_NODATA Risk Raster URI",
             ('HabA', 'Stress2'): "A-2 Risk Raster URI",
             ...
             }
@@ -1449,8 +1454,8 @@ def make_hab_risk_raster(dir, risk_dict):
         h_s_rasters- A dictionary that maps a habitat name to the risk rasters
             for each of the applicable stressors.
 
-            {'HabA': ["A-1 Risk Raster URI", "A-2 Risk Raster URI", ...],
-             'HabB': ["B-1 Risk Raster URI", "B-2 Risk Raster URI", ...], ...
+            {'HabA': ["A_RISK_NODATA Risk Raster URI", "A-2 Risk Raster URI", ...],
+             'HabB': ["B_RISK_NODATA Risk Raster URI", "B-2 Risk Raster URI", ...], ...
             }
     '''
 
@@ -1466,7 +1471,7 @@ def make_hab_risk_raster(dir, risk_dict):
         all_nodata[:] = True
 
         for i in range(len(pixels)):
-            valid_mask = pixels[i] != -1
+            valid_mask = pixels[i] != _RISK_NODATA
 
             value = numpy.where(
                 valid_mask,
@@ -1475,7 +1480,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
             all_nodata = ~valid_mask & all_nodata
 
-        return numpy.where(all_nodata, -1, value)
+        return numpy.where(all_nodata, _RISK_NODATA, value)
         '''all_nodata = True
         for p in pixels:
             if p != nodata:
@@ -1529,7 +1534,7 @@ def make_hab_risk_raster(dir, risk_dict):
             add_risk_pixels,
             out_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             pixel_size,
             "union",
             resample_method_list=None,
@@ -1618,7 +1623,7 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
             (Habitat, Stressor) to the URI for the risk raster created when the
             various sub components (H/S/H_S) are combined.
 
-            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            {('HabA', 'Stress1'): "A_RISK_NODATA Risk Raster URI",
             ('HabA', 'Stress2'): "A-2 Risk Raster URI",
             ...
             }
@@ -1722,11 +1727,11 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
     def combine_risk_mult(b_pix, e_pix, c_pix):
 
         risk_map = numpy.zeros(b_pix.shape)
-        risk_map[:] = -1
+        risk_map[:] = _RISK_NODATA
 
-        risk_map = numpy.where((b_pix == -1) & (c_pix != -1), 0, risk_map)
+        risk_map = numpy.where((b_pix == _RISK_NODATA) & (c_pix != _RISK_NODATA), 0, risk_map)
         risk_map = numpy.where(
-            (b_pix != -1) & (c_pix != -1),
+            (b_pix != _RISK_NODATA) & (c_pix != _RISK_NODATA),
             e_pix * c_pix, risk_map)
 
         return risk_map
@@ -1749,7 +1754,7 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         combine_risk_mult,
         risk_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         grid_size,
         "union",
         resample_method_list=None,
@@ -1773,7 +1778,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         risk_uri- The file path to which we should be burning our new raster.
 
     Returns a raster representing the euclidean calculated E raster, C raster,
-    and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
+    and the base raster. The equation will be sqrt((C_RISK_NODATA)^2 + (E_RISK_NODATA)^2)
     '''
     # Already have base open for nodata values, just using pixel_size
     # version of the function.
@@ -1784,8 +1789,8 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     # be safe.
     def combine_risk_euc(b_pix, e_pix, c_pix):
 
-        b_mask = b_pix != -1
-        c_mask = c_pix != -1
+        b_mask = b_pix != _RISK_NODATA
+        c_mask = c_pix != _RISK_NODATA
 
         e_vals = e_pix - 1
         c_vals = c_pix - 1
@@ -1798,7 +1803,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         # before the sqrt.  See https://bitbucket.org/natcap/invest/issues/3564
         risk_map = numpy.sqrt(e_vals + c_vals) * b_pix
 
-        risk_map = numpy.where(c_mask, risk_map, -1)
+        risk_map = numpy.where(c_mask, risk_map, _RISK_NODATA)
         risk_map = numpy.where(c_mask & ~b_mask, 0, risk_map)
 
         return risk_map
@@ -1841,7 +1846,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         combine_risk_euc,
         risk_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         grid_size,
         "union",
         resample_method_list=None,
@@ -1883,7 +1888,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         denom_val = numpy.zeros(pixels[0].shape)
 
         for i in range(len(h_s_pixels)):
-            valid_mask = h_s_pixels[i] != -1
+            valid_mask = h_s_pixels[i] != _RISK_NODATA
             value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
             denom_val = numpy.where(
                 valid_mask,
@@ -1897,7 +1902,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         # return numpy error state to old value
         numpy.seterr(**olderr)
 
-        result[pixels[0] == -1] = -1
+        result[pixels[0] == _RISK_NODATA] = _RISK_NODATA
 
         return result
 
@@ -1942,7 +1947,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         add_e_pix,
         out_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         grid_size,
         "union",
         resample_method_list=None,
@@ -1999,7 +2004,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         denom_val = numpy.zeros(pixels[0].shape)
 
         for i in range(len(h_pixels)):
-            valid_mask = h_pixels[i] != -1
+            valid_mask = h_pixels[i] != _RISK_NODATA
             value = numpy.where(valid_mask, h_pixels[i] + value, value)
             denom_val = numpy.where(
                 valid_mask,
@@ -2014,7 +2019,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         denom_val = denom_val / h_count
 
         for i in range(len(h_s_pixels)):
-            valid_mask = h_s_pixels[i] != -1
+            valid_mask = h_s_pixels[i] != _RISK_NODATA
             value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
             denom_val = numpy.where(
                 valid_mask,
@@ -2030,7 +2035,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
 
         # Where there's just habitat but nothing else, we want 0, but evrything
         # outside that habitat should be nodata.
-        result[pixels[0] == -1] = -1
+        result[pixels[0] == _RISK_NODATA] = _RISK_NODATA
 
         return result
 
@@ -2079,7 +2084,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         add_c_pix,
         out_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         grid_size,
         "union",
         resample_method_list=None,
@@ -2130,7 +2135,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                                 'DS': "CritName Raster URI",
                                     'Weight': 1.0, 'DQ': 1.0}
                         },
-                    'DS':  "A-1 Raster URI"
+                    'DS':  "A_RISK_NODATA Raster URI"
                     }
             }
         hab- Similar to the h-s dictionary, a multi-level
@@ -2259,7 +2264,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # crit_rate_numerator as the burn value.
 
         def burn_numerator_single_hs(pixel):
-            return numpy.where(pixel == -1, -1, crit_rate_numerator)
+            return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, crit_rate_numerator)
 
             '''if pixel == base_nodata:
                 return base_nodata
@@ -2271,7 +2276,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             burn_numerator_single_hs,
             single_crit_C_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             base_pixel_size,
             "union",
             resample_method_list=None,
@@ -2303,7 +2308,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             def burn_numerator_hs(pixel):
 
-                return numpy.where(pixel == -1, -1, pixel / (dq * w))
+                return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, pixel / (dq * w))
                 '''if pixel == crit_nodata:
                     return crit_nodata
 
@@ -2316,7 +2321,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 burn_numerator_hs,
                 crit_C_uri,
                 gdal.GDT_Float32,
-                -1.,
+                _RISK_NODATA,
                 base_pixel_size,
                 "union",
                 resample_method_list=None,
@@ -2381,7 +2386,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             burn_numerator_risk_single,
             single_crit_C_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             base_pixel_size,
             "union",
             resample_method_list=None,
@@ -2397,7 +2402,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             'H[' + h + ']' + '_Indiv_Recov_Raster.tif')
 
         def burn_numerator_rec_single(pixel):
-            return numpy.where(pixel == -1, -1, rec_crit_rate_numerator)
+            return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, rec_crit_rate_numerator)
 
             '''if pixel == base_nodata:
                 return base_nodata
@@ -2410,7 +2415,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             burn_numerator_rec_single,
             single_crit_rec_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             base_pixel_size,
             "union",
             resample_method_list=None,
@@ -2438,10 +2443,10 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 'H[' + h + ']' + '_' + crit_name + '_' + 'C_Raster.tif')
 
             def burn_numerator_risk(pixel):
-                return numpy.where(pixel == -1, -1, pixel / (w*dq))
+                return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, pixel / (w*dq))
 
                 '''if pixel == crit_nodata:
-                    return -1.
+                    return _RISK_NODATA
 
                 else:
                     burn_rating = float(pixel) / (w*dq)
@@ -2452,7 +2457,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 burn_numerator_risk,
                 crit_C_uri,
                 gdal.GDT_Float32,
-                -1.,
+                _RISK_NODATA,
                 base_pixel_size,
                 "union",
                 resample_method_list=None,
@@ -2468,7 +2473,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 'H[' + h + ']_' + crit_name + '_' + 'Recov_Raster.tif')
 
             def burn_numerator_rec(pixel):
-                return numpy.where(pixel == -1, -1, pixel / (w*dq))
+                return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, pixel / (w*dq))
                 '''if pixel == crit_nodata:
                     return 0.
 
@@ -2481,7 +2486,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 burn_numerator_rec,
                 crit_recov_uri,
                 gdal.GDT_Float32,
-                -1.,
+                _RISK_NODATA,
                 base_pixel_size,
                 "union",
                 resample_method_list=None,
@@ -2541,7 +2546,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # crit_rate_numerator as the burn value.
 
         def burn_numerator_single_hs(pixel):
-            return numpy.where(pixel == -1, -1, crit_rate_numerator)
+            return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, crit_rate_numerator)
             '''if pixel == base_nodata:
                 return base_nodata
             else:
@@ -2552,7 +2557,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             burn_numerator_single_hs,
             single_crit_E_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             base_pixel_size,
             "union",
             resample_method_list=None,
@@ -2583,7 +2588,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 'E_Raster.tif')
 
             def burn_numerator_hs(pixel):
-                return numpy.where(pixel == -1, -1, pixel / (w*dq))
+                return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, pixel / (w*dq))
                 '''if pixel == crit_nodata:
                     return crit_nodata
 
@@ -2596,7 +2601,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 burn_numerator_hs,
                 crit_E_uri,
                 gdal.GDT_Float32,
-                -1.,
+                _RISK_NODATA,
                 base_pixel_size,
                 "union",
                 resample_method_list=None,
