@@ -538,7 +538,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             (Habitat, Stressor) to the URI for the risk raster created when the
             various sub components (H/S/H_S) are combined.
 
-            {('HabA', 'Stress1'): "A_RISK_NODATA Risk Raster URI",
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
             ('HabA', 'Stress2'): "A-2 Risk Raster URI",
             ...
             }
@@ -1107,8 +1107,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         h_s_dict- A dictionary that maps a habitat name to the risk rasters
             for each of the applicable stressors.
 
-            {'HabA': ["A_RISK_NODATA Risk Raster URI", "A-2 Risk Raster URI", ...],
-             'HabB': ["B_RISK_NODATA Risk Raster URI", "B-2 Risk Raster URI", ...], ...
+            {'HabA': ["A-1 Risk Raster URI", "A-2 Risk Raster URI", ...],
+             'HabB': ["B-1 Risk Raster URI", "B-2 Risk Raster URI", ...], ...
             }
         max_risk- Double representing the highest potential value for a single
             h-s raster. The amount of risk for a given Habitat raster would be
@@ -1436,7 +1436,7 @@ def make_hab_risk_raster(dir, risk_dict):
             and the value is the raster dataset URI corresponding to that
             combination.
 
-            {('HabA', 'Stress1'): "A_RISK_NODATA Risk Raster URI",
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
             ('HabA', 'Stress2'): "A-2 Risk Raster URI",
             ...
             }
@@ -1454,8 +1454,8 @@ def make_hab_risk_raster(dir, risk_dict):
         h_s_rasters- A dictionary that maps a habitat name to the risk rasters
             for each of the applicable stressors.
 
-            {'HabA': ["A_RISK_NODATA Risk Raster URI", "A-2 Risk Raster URI", ...],
-             'HabB': ["B_RISK_NODATA Risk Raster URI", "B-2 Risk Raster URI", ...], ...
+            {'HabA': ["A-1 Risk Raster URI", "A-2 Risk Raster URI", ...],
+             'HabB': ["B-1 Risk Raster URI", "B-2 Risk Raster URI", ...], ...
             }
     '''
 
@@ -1623,7 +1623,7 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
             (Habitat, Stressor) to the URI for the risk raster created when the
             various sub components (H/S/H_S) are combined.
 
-            {('HabA', 'Stress1'): "A_RISK_NODATA Risk Raster URI",
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
             ('HabA', 'Stress2'): "A-2 Risk Raster URI",
             ...
             }
@@ -1778,7 +1778,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         risk_uri- The file path to which we should be burning our new raster.
 
     Returns a raster representing the euclidean calculated E raster, C raster,
-    and the base raster. The equation will be sqrt((C_RISK_NODATA)^2 + (E_RISK_NODATA)^2)
+    and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
     '''
     # Already have base open for nodata values, just using pixel_size
     # version of the function.
