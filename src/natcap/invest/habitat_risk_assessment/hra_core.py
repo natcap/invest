@@ -1,19 +1,17 @@
-'''This is the core module for HRA functionality. This will perform all HRA
-calcs, and return the appropriate outputs.
-'''
+'''InVEST HRA model.'''
 
 import logging
 import os
 import collections
 import math
 import datetime
-import matplotlib
-matplotlib.use('AGG')  # Use the Anti-Grain Geometry backend (for PNG files)
-from matplotlib import pyplot as plt
 import re
 import random
 import numpy
 
+import matplotlib
+matplotlib.use('AGG')  # Use the Anti-Grain Geometry backend (for PNG files)
+from matplotlib import pyplot as plt
 from osgeo import gdal, ogr, osr
 import pygeoprocessing.geoprocessing
 
@@ -24,7 +22,7 @@ logging.basicConfig(format='%(asctime)s %(name)_RISK_NODATA5s %(levelname)-8s \
 # Global safe nodata value for rasters that have values [0..1]
 _RISK_NODATA = -1
 
-@profile
+
 def execute(args):
     '''
     This provides the main calculation functionaility of the HRA model. This
