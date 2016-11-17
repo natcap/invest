@@ -177,6 +177,9 @@
               "required": true,
               "dataType": "float",
               "validText": "-?([0-9]+)?\\.[0-9]+",
+              "validateAs": {
+                "type": "float"
+              },
               "defaultValue": "7",
               "enabledBy": "calc_sequestration",
               "helpText": "The discount rate as a floating point percent."
@@ -192,7 +195,7 @@
               "validText": "-?([0-9]+)?\\.[0-9]+",
               "defaultValue": "0",
               "validateAs": {
-                "type": "number"
+                "type": "float"
               },
               "enabledBy": "calc_sequestration",
               "helpText": "The floating point percent increase of the price of carbon per year."

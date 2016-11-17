@@ -10,6 +10,7 @@ import urllib
 import tempfile
 import shutil
 
+import rtree
 import Pyro4
 from osgeo import ogr
 from osgeo import gdal
@@ -21,6 +22,10 @@ import shapely.prepared
 import pygeoprocessing
 import numpy
 import numpy.linalg
+import shapely.speedups
+
+if shapely.speedups.available:
+    shapely.speedups.enable()
 
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
@@ -64,7 +69,6 @@ _TMP_BASE_FILES = {
     'tmp_fid_raster_path': 'vector_fid_raster.tif',
     'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
     }
-
 
 def execute(args):
     """Recreation.
@@ -620,9 +624,10 @@ def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
     """
     start_time = time.time()
     polygons = _ogr_to_geometry_list(polygon_vector_path)
-    prepared_polygons = [
-        shapely.prepared.prep(polygon) for polygon in polygons
-        if polygon.is_valid]
+    prepped_polygons = [shapely.prepared.prep(polygon) for polygon in polygons]
+    polygon_spatial_index = rtree.index.Index()
+    for polygon_index, polygon in enumerate(polygons):
+        polygon_spatial_index.insert(polygon_index, polygon.bounds)
     polygon_coverage_lookup = {}  # map FID to point count
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
@@ -633,10 +638,16 @@ def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
                 (100.0*index)/len(response_polygons_lookup))
             start_time = time.time()
 
+        potential_intersecting_poly_ids = polygon_spatial_index.intersection(
+            geometry.bounds)
+        intersecting_polygons = [
+            polygons[polygon_index]
+            for polygon_index in potential_intersecting_poly_ids
+            if prepped_polygons[polygon_index].intersects(geometry)]
         polygon_area_coverage = sum([
-            (polygon.intersection(geometry)).area for polygon, prep_poly in
-            zip(polygons, prepared_polygons) if
-            prep_poly.intersects(geometry)])
+            (geometry.intersection(polygon)).area
+            for polygon in intersecting_polygons])
+
         if mode == 'area':
             polygon_coverage_lookup[feature_id] = polygon_area_coverage
         elif mode == 'percent':
@@ -666,16 +677,24 @@ def _line_intersect_length(response_polygons_lookup, line_vector_path):
     lines = _ogr_to_geometry_list(line_vector_path)
     line_length_lookup = {}  # map FID to intersecting line length
 
-    index = None
-    for index, (feature_id, geometry) in enumerate(
+    line_spatial_index = rtree.index.Index()
+    for line_index, line in enumerate(lines):
+        line_spatial_index.insert(line_index, line.bounds)
+
+    feature_count = None
+    for feature_count, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 "%s line intersect length: %.2f%% complete",
                 os.path.basename(line_vector_path),
-                (100.0 * index)/len(response_polygons_lookup)))
+                (100.0 * feature_count)/len(response_polygons_lookup)))
+        potential_intersecting_lines = line_spatial_index.intersection(
+            geometry.bounds)
         line_length = sum([
-            (line.intersection(geometry)).length for line in lines])
+            (lines[line_index].intersection(geometry)).length
+            for line_index in potential_intersecting_lines if
+            geometry.intersects(lines[line_index])])
         line_length_lookup[feature_id] = line_length
     LOGGER.info(
         "%s line intersect length: 100.00%% complete",

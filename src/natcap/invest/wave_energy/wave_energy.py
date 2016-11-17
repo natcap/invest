@@ -1032,7 +1032,7 @@ def create_percentile_rasters(
         perc_dict[percentile_groups[index]] = percentile_ranges[index]
 
     col_name = "Val_Range"
-    pygeoprocessing.geoprocessing.create_rat_uri(output_path, perc_dict, col_name)
+    _create_rat(output_path, perc_dict, col_name)
 
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
@@ -1586,3 +1586,36 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
     dataset = None
 
     return (pixel_diff_x, pixel_diff_y)
+
+
+def _create_rat(dataset_path, attr_dict, column_name):
+    """Create a raster attribute table.
+
+    URI wrapper for create_rat.
+
+    Args:
+        dataset_path (string): a GDAL raster dataset to create the RAT for (...)
+        attr_dict (dict): a dictionary with keys that point to a primitive type
+           {integer_id_1: value_1, ... integer_id_n: value_n}
+        column_name (string): a string for the column name that maps the values
+    """
+    dataset = gdal.Open(dataset_path, gdal.GA_Update)
+    band = dataset.GetRasterBand(1)
+    rat = gdal.RasterAttributeTable()
+    rat.SetRowCount(len(attr_dict))
+
+    # create columns
+    rat.CreateColumn('Value', gdal.GFT_Integer, gdal.GFU_MinMax)
+    rat.CreateColumn(column_name, gdal.GFT_String, gdal.GFU_Name)
+
+    row_count = 0
+    for key in sorted(attr_dict.keys()):
+        rat.SetValueAsInt(row_count, 0, int(key))
+        rat.SetValueAsString(row_count, 1, attr_dict[key])
+        row_count += 1
+
+    band.SetDefaultRAT(rat)
+
+    # Make sure the dataset is closed and cleaned up
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
