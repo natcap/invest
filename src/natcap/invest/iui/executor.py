@@ -23,6 +23,7 @@ import errno
 import tempfile
 from types import StringType
 import importlib
+import contextlib
 
 from osgeo import gdal
 from osgeo import ogr
@@ -43,6 +44,28 @@ INVEST_USAGE_LOGGER_URL = ('http://data.naturalcapitalproject.org/'
 CURRENT_OS = platform.system()
 if CURRENT_OS != 'Windows':
     from shutil import WindowsError
+
+
+@contextlib.contextmanager
+def _manage_tempdir(new_tempdir):
+    """Context manager for resetting the previous tempfile.tempdir.
+
+    When the context manager is exited, ``tempfile.tempdir`` is reset to its
+    previous value.
+
+    Parameters:
+        new_tempdir (string): The folder that should be the new temporary
+            directory.
+
+    Returns:
+        ``None``
+    """
+    LOGGER.info('Setting tempfile.tempdir to %s', new_tempdir)
+    previous_tempdir = tempfile.tempdir
+    tempfile.tempdir = new_tempdir
+    yield
+    LOGGER.info('Resetting tempfile.tempdir to %s', previous_tempdir)
+    tempfile.tempdir = previous_tempdir
 
 
 class InsufficientDiskSpace(Exception):
@@ -531,20 +554,6 @@ class Executor(threading.Thread):
                 #some other reason, raise that exception
                 if exception.errno != errno.EEXIST:
                     raise
-            for tmp_variable in ['TMP', 'TEMP', 'TMPDIR']:
-                if tmp_variable in os.environ:
-                    LOGGER.info(
-                        'Updating os.environ["%s"]=%s to %s', tmp_variable,
-                        os.environ[tmp_variable], args['workspace_dir'])
-                else:
-                    LOGGER.info(
-                        'Setting os.environ["%s"]=%s', tmp_variable,
-                        args['workspace_dir'])
-
-                os.environ[tmp_variable] = temporary_path
-
-            LOGGER.info('Setting tempfile.tempdir to %s', temporary_path)
-            tempfile.tempdir = temporary_path
 
             model_start_time = time.time()
             LOGGER.info('Starting %s', module)
@@ -557,7 +566,8 @@ class Executor(threading.Thread):
                 }
                 args['_iui_meta']['logfile'] = logfile_data
 
-            model.execute(args)
+            with _manage_tempdir(temporary_path):
+                model.execute(args)
 
             log_exit_thread = threading.Thread(
                 target=_log_exit_status, args=(session_id, ':)'))
