@@ -1,25 +1,26 @@
-'''This is the core module for HRA functionality. This will perform all HRA
-calcs, and return the appropriate outputs.
-'''
+'''InVEST HRA model.'''
 
 import logging
 import os
 import collections
 import math
 import datetime
-import matplotlib
-matplotlib.use('AGG')  # Use the Anti-Grain Geometry backend (for PNG files)
-from matplotlib import pyplot as plt
 import re
 import random
 import numpy
 
+import matplotlib
+matplotlib.use('AGG')  # Use the Anti-Grain Geometry backend (for PNG files)
+from matplotlib import pyplot as plt
 from osgeo import gdal, ogr, osr
 import pygeoprocessing.geoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+# Global safe nodata value for rasters that have values [0..1]
+_RISK_NODATA = -1
 
 
 def execute(args):
@@ -600,24 +601,24 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_r_sum = {}
 
     # Set a temp filename for the AOI raster.
-    aoi_rast_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    aoi_rast_uri = pygeoprocessing.temporary_filename()
 
     # Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
     LOGGER.debug("arb_uri: %s" % arb_raster_uri)
 
     # Use the first overlap raster as the base for the AOI
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+    pygeoprocessing.new_raster_from_base_uri(
         arb_raster_uri,
         aoi_rast_uri,
         'GTiff',
-        -1,
+        _RISK_NODATA,
         gdal.GDT_Float32)
 
     # This rasterize should burn a unique burn ID int to each. Need to have a
     # dictionary which associates each burn ID with the AOI 'name' attribute
     # that's required.
-    pygeoprocessing.geoprocessing.rasterize_layer_uri(
+    pygeoprocessing.rasterize_layer_uri(
         aoi_rast_uri,
         cp_aoi_uri,
         option_list=["ATTRIBUTE=BURN_ID", "ALL_TOUCHED=TRUE"])
@@ -743,7 +744,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     return avgs_dict, name_map.values()
 
 
-def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_value_list=[]):
+def aggregate_multi_rasters_uri(
+    aoi_rast_uri, rast_uris, rast_labels, ignore_value_list):
     '''Will take a stack of rasters and an AOI, and return a dictionary
     containing the number of overlap pixels, and the value of those pixels for
     each overlap of raster and AOI.
@@ -767,17 +769,18 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
             }
     '''
 
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(aoi_rast_uri)
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(aoi_rast_uri)
+    cell_size = pygeoprocessing.get_cell_size_from_uri(
+        aoi_rast_uri)
+    nodata = pygeoprocessing.get_nodata_from_uri(aoi_rast_uri)
 
     rast_uris = [aoi_rast_uri] + rast_uris
 
     # Want to create a set of temporary filenames, just need to be sure to
     # clean them up at the end.
     temp_rast_uris = [
-        pygeoprocessing.geoprocessing.temporary_filename() for _ in range(len(rast_uris))]
+        pygeoprocessing.temporary_filename() for _ in range(len(rast_uris))]
 
-    pygeoprocessing.geoprocessing.align_dataset_list(
+    pygeoprocessing.align_dataset_list(
         rast_uris,
         temp_rast_uris,
         ['nearest'] * len(rast_uris),
@@ -789,20 +792,6 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
     rast_ds_list = [gdal.Open(uri) for uri in temp_rast_uris]
     rast_bands = [ds.GetRasterBand(1) for ds in rast_ds_list]
 
-    # Get the AOI to use for line by line, then cell by cell iterration.
-    aoi_band = rast_bands[0]
-
-    n_cols = aoi_band.XSize
-    n_rows = aoi_band.YSize
-
-    # Set up numpy arrays that currently hold only zeros, but will be used for
-    # each row read.
-    aoi_row = numpy.zeros((1, n_cols), numpy.float64, 'C')
-
-    rows_dict = {}
-    for layer_name in rast_labels:
-        rows_dict[layer_name] = numpy.zeros((1, n_cols), numpy.float64, 'C')
-
     # Now iterate through every cell of the aOI, and concat everything that's
     # undr it and store that.
 
@@ -810,39 +799,32 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
     # info[aoi_pix][layer_name] = [0,0.]
     layer_overlap_info = collections.defaultdict(
         lambda: collections.defaultdict(lambda: list([0, 0.])))
-    for row_index in range(n_rows):
-        aoi_band.ReadAsArray(
-            yoff=row_index,
-            win_xsize=n_cols,
-            win_ysize=1,
-            buf_obj=aoi_row)
 
+    for offset_dict, aoi_block in pygeoprocessing.iterblocks(
+            temp_rast_uris[0]):
+        layer_block_list = {}
         for idx, layer_name in enumerate(rast_labels):
-            rast_bands[idx+1].ReadAsArray(
-                yoff=row_index,
-                win_xsize=n_cols,
-                win_ysize=1,
-                buf_obj=rows_dict[layer_name])
+            layer_block_list[layer_name] = (
+                rast_bands[idx+1].ReadAsArray(**offset_dict))
 
-        for aoi_pix_value in numpy.unique(aoi_row):
+        for aoi_pix_value in numpy.unique(aoi_block):
             if aoi_pix_value == nodata:
                 continue
-
-            aoi_mask = (aoi_row == aoi_pix_value)
-
+            aoi_mask = (aoi_block == aoi_pix_value)
             for layer_name in rast_labels:
-                valid_rows_dict_mask = (
-                    rows_dict[layer_name] != nodata) & aoi_mask
+                valid_mask = (
+                    layer_block_list[layer_name] != nodata) & aoi_mask
                 for ignore_value in ignore_value_list:
-                    valid_rows_dict_mask = valid_rows_dict_mask & (
-                        rows_dict[layer_name] != ignore_value)
+                    valid_mask = valid_mask & (
+                        layer_block_list[layer_name] != ignore_value)
 
                 layer_sum = numpy.sum(
-                    rows_dict[layer_name][valid_rows_dict_mask])
-                layer_count = numpy.count_nonzero(valid_rows_dict_mask)
+                    layer_block_list[layer_name][valid_mask])
+                layer_count = numpy.count_nonzero(valid_mask)
 
                 layer_overlap_info[aoi_pix_value][layer_name][0] += layer_count
                 layer_overlap_info[aoi_pix_value][layer_name][1] += layer_sum
+
     return layer_overlap_info
 
 
@@ -919,17 +901,20 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         curr_denoms = denoms['Recovery'][h]
 
         def add_recov_pix(*pixels):
-            '''We will have burned numerator values for the recovery potential
-            equation. Want to add all of the numerators (r/dq), then divide by
-            the denoms added together (1/dq).'''
+            '''Add only non-nodata pixels in the stack.
 
+
+            We will have burned numerator values for the recovery potential
+            equation. Want to add all of the numerators (r/dq), then divide by
+            the denoms added together (1/dq).
+            '''
             value = numpy.zeros(pixels[0].shape)
             denom_val = numpy.zeros(pixels[0].shape)
             all_nodata = numpy.zeros(pixels[0].shape, dtype=numpy.bool)
             all_nodata[:] = True
 
             for i in range(len(pixels)):
-                valid_mask = pixels[i] != -1
+                valid_mask = pixels[i] != _RISK_NODATA
                 value = numpy.where(valid_mask, pixels[i] + value, value)
                 denom_val = numpy.where(
                     valid_mask,
@@ -947,47 +932,21 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             numpy.seterr(**olderr)
 
             # mask out nodata stacks
-            return numpy.where(all_nodata, -1, result)
-
-            '''
-            all_nodata = True
-            for p in pixels:
-                if p not in [-1., -1]:
-                    all_nodata = False
-            if all_nodata:
-                return -1.
-
-            value = 0.
-            denom_val = 0.
-
-            for i in range(0, len(pixels)):
-
-                p = pixels[i]
-
-                if p not in [-1., -1]:
-                    value += p
-                    denom_val += curr_denoms[curr_crit_names[i]]
-
-            if value in [0, 0.]:
-                return 0
-            else:
-
-                value = value / denom_val
-                return value'''
+            return numpy.where(all_nodata, _RISK_NODATA, result)
 
         # Need to get the arbitrary first element in order to have a pixel size
         # to use in vectorize_datasets. One hopes that we have at least 1 thing
         # in here.
-        pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(curr_list[0])
+        pixel_size = pygeoprocessing.get_cell_size_from_uri(curr_list[0])
 
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             curr_list,
             add_recov_pix,
             out_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             pixel_size,
             "union",
             resample_method_list=None,
@@ -1020,9 +979,9 @@ def make_ecosys_risk_raster(dir, h_dict):
     '''
     # Need a straight list of the values from h_dict
     h_list = h_dict.values()
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(h_list[0])
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(h_list[0])
 
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(h_list[0])
+    nodata = pygeoprocessing.get_nodata_from_uri(h_list[0])
 
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
@@ -1037,20 +996,20 @@ def make_ecosys_risk_raster(dir, h_dict):
         all_nodata[:] = True
 
         for i in range(len(pixels)):
-            valid_mask = pixels[i] != -1
+            valid_mask = pixels[i] != _RISK_NODATA
 
             value = numpy.where(valid_mask, pixels[i] + value, value)
 
             all_nodata = ~valid_mask & all_nodata
 
-        return numpy.where(all_nodata, -1, value)
+        return numpy.where(all_nodata, _RISK_NODATA, value)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         h_list,
         add_e_pixels,
         out_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         pixel_size,
         "union",
         resample_method_list=None,
@@ -1142,7 +1101,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         # H_Raster is first in the stack.
         high_h_mask = numpy.where(
-            pixels[0] != -1,
+            pixels[0] != _RISK_NODATA,
             pixels[0] / float(user_max_risk) >= .666,
             False)
 
@@ -1151,31 +1110,13 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         for i in range(1, len(pixels)):
             high_hs = high_hs | (pixels[i] / float(max_risk) >= .666)
 
-        return numpy.where(high_hs | high_h_mask, 3, -1)
+        return numpy.where(high_hs | high_h_mask, 3, _RISK_NODATA)
 
-        '''#We know that the overarching habitat pixel is the first in the list
-        h_pixel = pixels[0]
-        h_percent = float(h_pixel)/ user_max_risk
-
-        #high risk is classified as the top third of risk
-        if h_percent >= .666:
-            return 1
-        #If we aren't getting high risk from just the habitat pixel,
-        #want to secondarily check each of the h_s pixels.
-        for p in pixels[1::]:
-
-            p_percent = float(p) / max_risk
-            if p_percent >= .666:
-                return 1
-
-        #If we get here, neither the habitat raster nor the h_s_raster are
-        #considered high risk. Can return nodata.
-        return -1.'''
 
     def med_risk_raster(*pixels):
 
         med_h_mask = numpy.where(
-            pixels[0] != -1,
+            pixels[0] != _RISK_NODATA,
             (pixels[0] / float(user_max_risk) < .666) &
             (pixels[0] / float(user_max_risk) >= .333),
             False)
@@ -1187,29 +1128,11 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
                 ((pixels[i] / float(max_risk) < .666) &
                     (pixels[i] / float(max_risk) >= .333))
 
-        return numpy.where(med_hs | med_h_mask, 2, -1)
-        '''#We know that the overarching habitat pixel is the first in the list
-        h_pixel = pixels[0]
-        h_percent = float(h_pixel)/ user_max_risk
-
-        #medium risk is classified as the middle third of risk
-        if .333 <= h_percent < .666:
-            return 1
-        #If we aren't getting medium risk from just the habitat pixel,
-        #want to secondarily check each of the h_s pixels.
-        for p in pixels[1::]:
-
-            p_percent = float(p) / max_risk
-            if .333 <= p_percent < .666:
-                return 1
-
-        #If we get here, neither the habitat raster nor the h_s_raster are
-        #considered med risk. Can return nodata.
-        return -1.'''
+        return numpy.where(med_hs | med_h_mask, 2, _RISK_NODATA)
 
     def low_risk_raster(*pixels):
         low_h_mask = numpy.where(
-            pixels[0] != -1,
+            pixels[0] != _RISK_NODATA,
             (pixels[0] / float(user_max_risk) < .333) &
             (pixels[0] / float(user_max_risk) >= 0),
             False)
@@ -1221,47 +1144,19 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
                       ((pixels[i] / float(user_max_risk) < .333) &
                        (pixels[i] / float(user_max_risk) >= 0)))
 
-        return numpy.where(low_hs | low_h_mask, 1, -1)
-
-        '''#We know that the overarching habitat pixel is the first in the list
-        h_pixel = pixels[0]
-        h_percent = float(h_pixel)/ user_max_risk
-
-        #low risk is classified as the lowest third of risk
-        if 0. <= h_percent < .333:
-            return 1
-        #If we aren't getting low risk from just the habitat pixel,
-        #want to secondarily check each of the h_s pixels.
-        for p in pixels[1::]:
-
-            p_percent = float(p) / max_risk
-            if 0. <= p_percent < .333:
-                return 1
-
-        #If we get here, neither the habitat raster nor the h_s_raster are
-        #considered low risk. Can return nodata.
-        return -1.'''
+        return numpy.where(low_hs | low_h_mask, 1, _RISK_NODATA)
 
     def combo_risk_raster(*pixels):
         # We actually know that there will be a l_pix, m_pix, and h_pix
         # But it's easier to just loop through all of them.
 
         combo_risk = numpy.zeros(pixels[0].shape)
-        combo_risk[:] = -1
+        combo_risk[:] = _RISK_NODATA
 
         for layer in pixels:
-            combo_risk = numpy.where(layer != -1, layer, combo_risk)
+            combo_risk = numpy.where(layer != _RISK_NODATA, layer, combo_risk)
 
         return combo_risk
-
-        '''if h_pix != -1.:
-            return 3
-        elif m_pix != -1.:
-            return 2
-        elif l_pix != -1.:
-            return 1
-        else:
-            return -1.'''
 
     for h in h_dict:
         # Want to know the number of stressors for the current habitat
@@ -1273,16 +1168,16 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         old_ds_uri = h_dict[h]
         risk_raster_list = [old_ds_uri] + h_s_dict[h]
 
-        grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(old_ds_uri)
+        grid_size = pygeoprocessing.get_cell_size_from_uri(old_ds_uri)
 
         h_out_uri_r = os.path.join(dir, '[' + h + ']_HIGH_RISK.tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             risk_raster_list,
             high_risk_raster,
             h_out_uri_r,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             grid_size,
             "union",
             resample_method_list=None,
@@ -1293,12 +1188,12 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         # Medium area would be here.
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             risk_raster_list,
             med_risk_raster,
             m_out_uri_r,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             grid_size,
             "union",
             resample_method_list=None,
@@ -1309,12 +1204,12 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         # Now, want to do the low area.
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             risk_raster_list,
             low_risk_raster,
             l_out_uri_r,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             grid_size,
             "union",
             resample_method_list=None,
@@ -1327,12 +1222,12 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         single_raster_uri_r = os.path.join(dir, '[' + h + ']_ALL_RISK.tif')
         single_raster_uri = os.path.join(dir, '[' + h + ']_RISK.shp')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [l_out_uri_r, m_out_uri_r, h_out_uri_r],
             combo_risk_raster,
             single_raster_uri_r,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             grid_size,
             "union",
             resample_method_list=None,
@@ -1455,7 +1350,7 @@ def make_hab_risk_raster(dir, risk_dict):
     '''
 
     #Use arbitrary element to get the nodata for habs
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(risk_dict.values()[0])
+    nodata = pygeoprocessing.get_nodata_from_uri(risk_dict.values()[0])
 
     def add_risk_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the
@@ -1466,7 +1361,7 @@ def make_hab_risk_raster(dir, risk_dict):
         all_nodata[:] = True
 
         for i in range(len(pixels)):
-            valid_mask = pixels[i] != -1
+            valid_mask = pixels[i] != _RISK_NODATA
 
             value = numpy.where(
                 valid_mask,
@@ -1475,23 +1370,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
             all_nodata = ~valid_mask & all_nodata
 
-        return numpy.where(all_nodata, -1, value)
-        '''all_nodata = True
-        for p in pixels:
-            if p != nodata:
-                all_nodata = False
-        if all_nodata:
-            return nodata
-
-        pixel_sum = 0.0
-
-        for p in pixels:
-
-            if p != nodata:
-
-                pixel_sum += p
-
-        return pixel_sum'''
+        return numpy.where(all_nodata, _RISK_NODATA, value)
 
     #This will give us two lists where we have only the unique habs and
     #stress for the system. List(set(list)) cast allows us to only get the
@@ -1501,7 +1380,7 @@ def make_hab_risk_raster(dir, risk_dict):
     stressors = list(set(stressors))
 
     #Want to get an arbitrary element in order to have a pixel size.
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size = pygeoprocessing.get_cell_size_from_uri(
         risk_dict[(habitats[0], stressors[0])])
 
     #List to store the completed h rasters in. Will be passed on to the
@@ -1524,12 +1403,12 @@ def make_hab_risk_raster(dir, risk_dict):
         #Once we have the complete list, we can pass it to vectorize.
         out_uri = os.path.join(dir, 'cum_risk_[' + h + '].tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             ds_list,
             add_risk_pixels,
             out_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             pixel_size,
             "union",
             resample_method_list=None,
@@ -1715,41 +1594,28 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
     Returns the URI for a raster representing the multiplied E raster,
         C raster, and the base raster.
     '''
-    grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_uri)
+    grid_size = pygeoprocessing.get_cell_size_from_uri(base_uri)
 
     # Rules should be similar to euclidean risk in that nothing happens
     # without there being c_pixels there.
     def combine_risk_mult(b_pix, e_pix, c_pix):
 
         risk_map = numpy.zeros(b_pix.shape)
-        risk_map[:] = -1
+        risk_map[:] = _RISK_NODATA
 
-        risk_map = numpy.where((b_pix == -1) & (c_pix != -1), 0, risk_map)
+        risk_map = numpy.where((b_pix == _RISK_NODATA) & (c_pix != _RISK_NODATA), 0, risk_map)
         risk_map = numpy.where(
-            (b_pix != -1) & (c_pix != -1),
+            (b_pix != _RISK_NODATA) & (c_pix != _RISK_NODATA),
             e_pix * c_pix, risk_map)
 
         return risk_map
 
-        '''if c_pix == c_nodata:
-            return base_nodata
-
-        #Here, we know that c_pix is not nodata, but want to return 0 if
-        #there is habitat without overlap.
-        elif b_pix == base_nodata:
-            return 0
-
-        #Here, we know that c_pix isn't nodata, and that overlap exists, so
-        #can just straight multiply.
-        else:
-            return e_pix * c_pix'''
-
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         [base_uri, e_uri, c_uri],
         combine_risk_mult,
         risk_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         grid_size,
         "union",
         resample_method_list=None,
@@ -1777,15 +1643,15 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     '''
     # Already have base open for nodata values, just using pixel_size
     # version of the function.
-    grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_uri)
+    grid_size = pygeoprocessing.get_cell_size_from_uri(base_uri)
 
     # we need to know very explicitly which rasters are being passed in which
     # order. However, since it's all within the make_risk_euc function, should
     # be safe.
     def combine_risk_euc(b_pix, e_pix, c_pix):
 
-        b_mask = b_pix != -1
-        c_mask = c_pix != -1
+        b_mask = b_pix != _RISK_NODATA
+        c_mask = c_pix != _RISK_NODATA
 
         e_vals = e_pix - 1
         c_vals = c_pix - 1
@@ -1798,50 +1664,17 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         # before the sqrt.  See https://bitbucket.org/natcap/invest/issues/3564
         risk_map = numpy.sqrt(e_vals + c_vals) * b_pix
 
-        risk_map = numpy.where(c_mask, risk_map, -1)
+        risk_map = numpy.where(c_mask, risk_map, _RISK_NODATA)
         risk_map = numpy.where(c_mask & ~b_mask, 0, risk_map)
 
         return risk_map
 
-        '''#If there is no C data (no habitat/overlap), we will always
-        #be returning nodata.
-        if c_pix == c_nodata:
-            return base_nodata
-
-        #Already know here that c_pix (hab/hab-overlap) exists.
-        #If habitat exists without stressor, want to return 0 as the overall
-        #risk, so that it will show up as "no risk" but still show up.
-        elif b_pix == base_nodata:
-            #If there's no spatial overlap, want the outcome of risk to just be
-            #be 0.
-            return 0
-
-        #At this point, we know that there is data in c_pix, and we know that
-        #there is overlap. So now can do the euc. equation.
-        else:
-
-            #Want to make sure that the decay is applied to E first, then that
-            #product is what is used as the new E
-            e_val = b_pix * e_pix
-
-            c_val = c_pix - 1
-            e_val -= 1
-
-            #Now square both.
-            c_val = c_val ** 2
-            e_val = e_val ** 2
-
-            #Combine, and take the sqrt
-            value = math.sqrt(e_val + c_val)
-
-            return value'''
-
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         [base_uri, e_uri, c_uri],
         combine_risk_euc,
         risk_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         grid_size,
         "union",
         resample_method_list=None,
@@ -1865,7 +1698,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
 
     Returns nothing.
     '''
-    grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(h_s_base_uri)
+    grid_size = pygeoprocessing.get_cell_size_from_uri(h_s_base_uri)
 
     # Using regex to pull out the criteria name after the last ]_. Will do this
     # for all full URI's.
@@ -1883,7 +1716,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         denom_val = numpy.zeros(pixels[0].shape)
 
         for i in range(len(h_s_pixels)):
-            valid_mask = h_s_pixels[i] != -1
+            valid_mask = h_s_pixels[i] != _RISK_NODATA
             value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
             denom_val = numpy.where(
                 valid_mask,
@@ -1897,56 +1730,23 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         # return numpy error state to old value
         numpy.seterr(**olderr)
 
-        result[pixels[0] == -1] = -1
+        result[pixels[0] == _RISK_NODATA] = _RISK_NODATA
 
         return result
 
-        '''h_base_pix = pixels[0]
-        h_s_base_pix = pixels[1]
-        h_s_pixels = pixels[2::]
-
-        all_nodata = True
-        for p in pixels:
-            if p != nodata:
-                all_nodata = False
-        if all_nodata:
-            return nodata
-
-        #Know here that at least some pixels exist. h_s_pixels and h_s_base_pix
-        #should cover the same area since they're all burned to h_s overlap.
-        #Need to check if the one that exists is only the h pixel. If not
-        #catching here, can assume that there are h_s values, and continue with
-        #equation.
-        if h_s_base_pix == nodata and h_base_pix != nodata:
-            return 0
-
-        #If we're here, want to go ahead and calculate out the values, since
-        #we know there is overlap.
-        value = 0.
-        denom_val = 0.
-
-        for i in range(len(h_s_pixels)):
-
-            p = h_s_pixels[i]
-
-            if p != nodata:
-                value += p
-                denom_val += denom_dict[crit_name_list[i]]
-
-        return value / denom_val'''
-
     uri_list = [h_base_uri, h_s_base_uri] + h_s_list
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         uri_list,
         add_e_pix,
         out_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         grid_size,
         "union",
         resample_method_list=None,
         dataset_to_align_index=0,
+        datasets_are_pre_aligned=True,
         aoi_uri=None,
         vectorize_op=False)
 
@@ -1985,8 +1785,8 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
             '.*\]_([^_]*)',
             os.path.splitext(os.path.basename(uri))[0]).group(1), h_list)
 
-    grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(tot_crit_list[0])
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(h_s_list[0])
+    grid_size = pygeoprocessing.get_cell_size_from_uri(tot_crit_list[0])
+    nodata = pygeoprocessing.get_nodata_from_uri(h_s_list[0])
 
     # The first two spots are habitat raster and h_s raster
     h_count = len(h_list)
@@ -1998,8 +1798,10 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         value = numpy.zeros(pixels[0].shape)
         denom_val = numpy.zeros(pixels[0].shape)
 
+        # calculate h_sum / len(h_sum) + h_s_sum / len(h_s_sum)
+
         for i in range(len(h_pixels)):
-            valid_mask = h_pixels[i] != -1
+            valid_mask = h_pixels[i] != _RISK_NODATA
             value = numpy.where(valid_mask, h_pixels[i] + value, value)
             denom_val = numpy.where(
                 valid_mask,
@@ -2014,7 +1816,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         denom_val = denom_val / h_count
 
         for i in range(len(h_s_pixels)):
-            valid_mask = h_s_pixels[i] != -1
+            valid_mask = h_s_pixels[i] != _RISK_NODATA
             value = numpy.where(valid_mask, h_s_pixels[i] + value, value)
             denom_val = numpy.where(
                 valid_mask,
@@ -2030,60 +1832,21 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
 
         # Where there's just habitat but nothing else, we want 0, but evrything
         # outside that habitat should be nodata.
-        result[pixels[0] == -1] = -1
+        result[pixels[0] == _RISK_NODATA] = _RISK_NODATA
 
         return result
 
-        '''h_base_pix = pixels[0]
-        h_s_base_pix = pixels[1]
-        h_pixels = pixels[2:h_count+2]
-        h_s_pixels = pixels[2+h_count::]
-
-        all_nodata = True
-        for p in pixels:
-            if p != nodata:
-                all_nodata = False
-        if all_nodata:
-            return nodata
-
-        h_value = 0.
-        h_denom_value = 0.
-
-        #If we have habitat without overlap, want to return 0.
-        if h_s_base_pix == nodata and h_base_pix != nodata:
-            return 0.
-
-        for i in range(len(h_pixels)):
-
-            if p != nodata:
-                h_value += h_pixels[i]
-                h_denom_value += h_denom_dict[h_names[i]]
-
-        #The h will need to get put into the h_s, so might as well have the
-        #h_s loop start with the average returned from h.
-        #This will essentiall treat all resilience criteria (h) as a single
-        #entry alongside the h_s criteria.
-        h_s_value = h_value / h_count
-        h_s_denom_value = h_denom_value / h_count
-
-        for i in range(len(h_s_pixels)):
-
-            if p != nodata:
-                h_s_value += h_s_pixels[i]
-                h_s_denom_value += h_s_denom_dict[h_s_names[i]]
-
-        return h_s_value / h_s_denom_value'''
-
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing.vectorize_datasets(
         tot_crit_list,
         add_c_pix,
         out_uri,
         gdal.GDT_Float32,
-        -1.,
+        _RISK_NODATA,
         grid_size,
         "union",
         resample_method_list=None,
         dataset_to_align_index=0,
+        datasets_are_pre_aligned=True,
         aoi_uri=None,
         vectorize_op=False)
 
@@ -2215,8 +1978,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # The base dataset for all h_s overlap criteria. Will need to load bases
         # for each of the h/s crits too.
         base_ds_uri = h_s_c[pair]['DS']
-        base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_ds_uri)
-        base_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_ds_uri)
+        base_nodata = pygeoprocessing.get_nodata_from_uri(base_ds_uri)
+        base_pixel_size = pygeoprocessing.get_cell_size_from_uri(base_ds_uri)
 
         # First, want to make a raster of added individual numerator criteria.
         # We will pre-sum all r / (dq*w), and then vectorize that with the
@@ -2259,19 +2022,14 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # crit_rate_numerator as the burn value.
 
         def burn_numerator_single_hs(pixel):
-            return numpy.where(pixel == -1, -1, crit_rate_numerator)
+            return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, crit_rate_numerator)
 
-            '''if pixel == base_nodata:
-                return base_nodata
-            else:
-                return crit_rate_numerator'''
-
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [base_ds_uri],
             burn_numerator_single_hs,
             single_crit_C_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             base_pixel_size,
             "union",
             resample_method_list=None,
@@ -2290,7 +2048,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         for crit_name, crit_dict in h_s_c[pair]['Crit_Rasters'].iteritems():
 
             crit_ds_uri = crit_dict['DS']
-            crit_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(crit_ds_uri)
+            crit_nodata = pygeoprocessing.get_nodata_from_uri(crit_ds_uri)
 
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
@@ -2303,20 +2061,14 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             def burn_numerator_hs(pixel):
 
-                return numpy.where(pixel == -1, -1, pixel / (dq * w))
-                '''if pixel == crit_nodata:
-                    return crit_nodata
+                return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, pixel / (dq * w))
 
-                else:
-                    burn_rating = float(pixel) / (dq * w)
-                    return burn_rating'''
-
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing.vectorize_datasets(
                 [crit_ds_uri],
                 burn_numerator_hs,
                 crit_C_uri,
                 gdal.GDT_Float32,
-                -1.,
+                _RISK_NODATA,
                 base_pixel_size,
                 "union",
                 resample_method_list=None,
@@ -2338,8 +2090,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # The base dataset for all h_s overlap criteria. Will need to load bases
         # for each of the h/s crits too.
         base_ds_uri = hab[h]['DS']
-        base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_ds_uri)
-        base_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_ds_uri)
+        base_nodata = pygeoprocessing.get_nodata_from_uri(base_ds_uri)
+        base_pixel_size = pygeoprocessing.get_cell_size_from_uri(base_ds_uri)
 
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
@@ -2370,18 +2122,13 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 pixel == base_nodata,
                 base_nodata,
                 risk_crit_rate_numerator)
-            '''if pixel == base_nodata:
-                return base_nodata
 
-            else:
-                return risk_crit_rate_numerator
-            '''
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [base_ds_uri],
             burn_numerator_risk_single,
             single_crit_C_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             base_pixel_size,
             "union",
             resample_method_list=None,
@@ -2397,7 +2144,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             'H[' + h + ']' + '_Indiv_Recov_Raster.tif')
 
         def burn_numerator_rec_single(pixel):
-            return numpy.where(pixel == -1, -1, rec_crit_rate_numerator)
+            return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, rec_crit_rate_numerator)
 
             '''if pixel == base_nodata:
                 return base_nodata
@@ -2405,12 +2152,12 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             else:
                 return rec_crit_rate_numerator'''
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [base_ds_uri],
             burn_numerator_rec_single,
             single_crit_rec_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             base_pixel_size,
             "union",
             resample_method_list=None,
@@ -2427,7 +2174,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             w = crit_dict['Weight']
 
             crit_ds_uri = crit_dict['DS']
-            crit_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(crit_ds_uri)
+            crit_nodata = pygeoprocessing.get_nodata_from_uri(crit_ds_uri)
 
             denoms['Risk']['h'][h][crit_name] = 1 / float(dq * w)
             denoms['Recovery'][h][crit_name] = 1 / float(dq)
@@ -2438,21 +2185,14 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 'H[' + h + ']' + '_' + crit_name + '_' + 'C_Raster.tif')
 
             def burn_numerator_risk(pixel):
-                return numpy.where(pixel == -1, -1, pixel / (w*dq))
+                return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, pixel / (w*dq))
 
-                '''if pixel == crit_nodata:
-                    return -1.
-
-                else:
-                    burn_rating = float(pixel) / (w*dq)
-                    return burn_rating'''
-
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing.vectorize_datasets(
                 [crit_ds_uri],
                 burn_numerator_risk,
                 crit_C_uri,
                 gdal.GDT_Float32,
-                -1.,
+                _RISK_NODATA,
                 base_pixel_size,
                 "union",
                 resample_method_list=None,
@@ -2468,20 +2208,14 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 'H[' + h + ']_' + crit_name + '_' + 'Recov_Raster.tif')
 
             def burn_numerator_rec(pixel):
-                return numpy.where(pixel == -1, -1, pixel / (w*dq))
-                '''if pixel == crit_nodata:
-                    return 0.
+                return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, pixel / (w*dq))
 
-                else:
-                    burn_rating = float(pixel) / dq
-                    return burn_rating'''
-
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing.vectorize_datasets(
                 [crit_ds_uri],
                 burn_numerator_rec,
                 crit_recov_uri,
                 gdal.GDT_Float32,
-                -1.,
+                _RISK_NODATA,
                 base_pixel_size,
                 "union",
                 resample_method_list=None,
@@ -2501,8 +2235,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # The base dataset for all h_s overlap criteria. Will need to load bases
         # for each of the h/s crits too.
         base_ds_uri = h_s_e[pair]['DS']
-        base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_ds_uri)
-        base_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_ds_uri)
+        base_nodata = pygeoprocessing.get_nodata_from_uri(base_ds_uri)
+        base_pixel_size = pygeoprocessing.get_cell_size_from_uri(base_ds_uri)
 
         # First, want to make a raster of added individual numerator criteria.
         # We will pre-sum all r / (dq*w), and then vectorize that with the
@@ -2541,18 +2275,18 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # crit_rate_numerator as the burn value.
 
         def burn_numerator_single_hs(pixel):
-            return numpy.where(pixel == -1, -1, crit_rate_numerator)
+            return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, crit_rate_numerator)
             '''if pixel == base_nodata:
                 return base_nodata
             else:
                 return crit_rate_numerator'''
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing.vectorize_datasets(
             [base_ds_uri],
             burn_numerator_single_hs,
             single_crit_E_uri,
             gdal.GDT_Float32,
-            -1.,
+            _RISK_NODATA,
             base_pixel_size,
             "union",
             resample_method_list=None,
@@ -2571,7 +2305,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         for crit_name, crit_dict in h_s_e[pair]['Crit_Rasters'].iteritems():
 
             crit_ds_uri = crit_dict['DS']
-            crit_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(crit_ds_uri)
+            crit_nodata = pygeoprocessing.get_nodata_from_uri(crit_ds_uri)
 
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
@@ -2583,20 +2317,14 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 'E_Raster.tif')
 
             def burn_numerator_hs(pixel):
-                return numpy.where(pixel == -1, -1, pixel / (w*dq))
-                '''if pixel == crit_nodata:
-                    return crit_nodata
+                return numpy.where(pixel == _RISK_NODATA, _RISK_NODATA, pixel / (w*dq))
 
-                else:
-                    burn_rating = float(pixel) / (dq * w)
-                    return burn_rating'''
-
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing.vectorize_datasets(
                 [crit_ds_uri],
                 burn_numerator_hs,
                 crit_E_uri,
                 gdal.GDT_Float32,
-                -1.,
+                _RISK_NODATA,
                 base_pixel_size,
                 "union",
                 resample_method_list=None,
@@ -2606,5 +2334,4 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             crit_lists['Risk']['h_s_e'][pair].append(crit_E_uri)
 
-    # This might help.
     return (crit_lists, denoms)
