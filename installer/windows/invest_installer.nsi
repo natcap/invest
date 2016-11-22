@@ -102,7 +102,7 @@ SetCompressor zlib
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW AddAdvancedOptions
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ValidateAdvZipFile
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "license.rtf"
+!insertmacro MUI_PAGE_LICENSE "..\..\LICENSE.txt"
 
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipComponents
 !insertmacro MUI_PAGE_COMPONENTS
