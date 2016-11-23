@@ -1,4 +1,4 @@
-!#/bin/bash
+#!/bin/bash
 # REQUIREMENTS:
 # -------------
 # * invest.arcgis repo has been cloned ($ paver fetch src)
