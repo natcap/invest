@@ -79,6 +79,24 @@ SetCompressor zlib
 
 ; MUI has some graphical files that I want to define, which must be defined
 ; here before the macros are declared.
+;
+; NOTES ABOUT GRAPHICS:
+; ---------------------
+; NSIS is surprisingly picky about the sorts of graphics that can be displayed.
+; Here's what I know about these images after a fair amount of
+; trial and error:
+;  * Image format must be Windows Bitmap (.bmp).
+;       * I've used 24-bit ad 32-bit encodings without issue.
+;       * 24-bit encodings should be sufficient, and yield ~30% filesize reduction.
+;  * Vertical images must have dimensions 164Wx314H.
+;       * Within this, the InVEST logo currently has dimensions 130Wx109H.
+;  * Horizontal (top) banner must have dimensions 150Wx57H.
+;       * Within this, the InVEST logo currently has dimensions 48Wx40H.
+;
+; GIMP notes: I've had good results with just opening the existing BMPs from
+; the repo, inserting a new layer with the InVEST logo, scaling the layer,
+; repositioning the logo to perfectly cover the old logo, flattening the
+; layers and then exporting as a 24-bit windows bitmap.
 !define MUI_WELCOMEFINISHPAGE_BITMAP "InVEST-vertical.bmp"
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "InVEST-vertical.bmp"
 !define MUI_HEADERIMAGE
