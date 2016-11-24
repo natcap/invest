@@ -616,6 +616,7 @@ class Executor(threading.Thread):
                 target=_log_exit_status, args=(
                     session_id, traceback.format_exc()))
             log_exit_thread.start()
+            self.log_file.close()
             return
 
         # clean up the temporary folder, but only if we've completed the model
@@ -656,6 +657,7 @@ class Executor(threading.Thread):
         log_exit_thread.join(5.0)
         LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
+        self.log_file.close()
 
 
 def _calculate_args_bounding_box(args_dict):
