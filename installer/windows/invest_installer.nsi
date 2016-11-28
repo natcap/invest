@@ -88,6 +88,8 @@ SetCompressor zlib
 ;  * Image format must be Windows Bitmap (.bmp).
 ;       * I've used 24-bit ad 32-bit encodings without issue.
 ;       * 24-bit encodings should be sufficient, and yield ~30% filesize reduction.
+;       * If using GIMP, be sure to check the compatibility option marked
+;         "Do not write color space information".
 ;  * Vertical images must have dimensions 164Wx314H.
 ;       * Within this, the InVEST logo currently has dimensions 130Wx109H.
 ;  * Horizontal (top) banner must have dimensions 150Wx57H.
