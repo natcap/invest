@@ -46,6 +46,17 @@ if CURRENT_OS != 'Windows':
     from shutil import WindowsError
 
 
+# GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
+# A dict clarifies the mapping between levels.
+GDAL_ERROR_LEVELS = {
+    gdal.CE_None: logging.NOTSET,
+    gdal.CE_Debug: logging.DEBUG,
+    gdal.CE_Warning: logging.WARNING,
+    gdal.CE_Failure: logging.ERROR,
+    gdal.CE_Fatal: logging.CRITICAL,
+}
+
+
 @contextlib.contextmanager
 def _manage_tempdir(new_tempdir):
     """Context manager for resetting the previous tempfile.tempdir.
@@ -66,6 +77,45 @@ def _manage_tempdir(new_tempdir):
     yield
     LOGGER.info('Resetting tempfile.tempdir to %s', previous_tempdir)
     tempfile.tempdir = previous_tempdir
+
+
+@contextlib.contextmanager
+def capture_gdal_logging():
+    """Context manager for logging GDAL errors with python logging.
+
+    GDAL error messages are logged via python's logging system, at a severity
+    that corresponds to a log level in ``logging``.  Error messages are logged
+    with the ``osgeo.gdal`` logger.
+
+    Parameters:
+        ``None``
+
+    Returns:
+        ``None``"""
+    gdal_logger = logging.getLogger('osgeo.gdal')
+
+    def _log_gdal_errors(err_level, err_no, err_msg):
+        """Log error messages to gdal.
+
+        All error messages are logged with reasonable ``logging`` levels based
+        on the GDAL error level.
+
+        Parameters:
+            err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
+            err_no (int): The GDAL error number.  For a full listing of error
+                codes, see: http://www.gdal.org/cpl__error_8h.html
+            err_msg (string): The error string.
+
+        Returns:
+            ``None``"""
+        gdal_logger.log(
+            level=GDAL_ERROR_LEVELS[err_level],
+            msg='[errno {err}] {msg}'.format(
+                err=err_no, msg=err_msg.replace('\n', ' ')))
+
+    gdal.PushErrorHandler(_log_gdal_errors)
+    yield
+    gdal.PopErrorHandler()
 
 
 class InsufficientDiskSpace(Exception):
@@ -566,7 +616,7 @@ class Executor(threading.Thread):
                 }
                 args['_iui_meta']['logfile'] = logfile_data
 
-            with _manage_tempdir(temporary_path):
+            with _manage_tempdir(temporary_path), capture_gdal_logging():
                 model.execute(args)
 
             log_exit_thread = threading.Thread(
