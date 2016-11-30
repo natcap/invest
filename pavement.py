@@ -3200,6 +3200,13 @@ def jenkins_installer(options):
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
+
+            # Only prepare data zips and docs if we're on a windows machine.
+            if (platform.system() != 'Windows' and
+                    opt_name in ('nodata', 'nodocs')):
+                LOGGER.debug('Not on Windows; skipping %s', user_option[3:])
+                user_option = 'true'
+
             if user_option.lower() in ['true', '1']:
                 user_option = True
             elif user_option.lower() in ['', "''", '""', 'false', '0']:
