@@ -1885,6 +1885,9 @@ def check(options):
     if platform.system() == 'Linux':
         programs.append(('fpm', 'installers'))
 
+    if platform.system() == 'Darwin':
+        programs.append(('dmgbuild', 'installers'))
+
     print bold("Checking binaries")
     for program, build_steps in programs:
         # Inspired by this SO post: http://stackoverflow.com/a/855764/299084
