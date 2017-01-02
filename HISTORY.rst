@@ -9,6 +9,7 @@ Unreleased Changes
 * Refactoring so water yield pixels with Kc and et0 equal to be 0 now yields a 0.0 value of water yield on that pixel rather than nodata.
 * Light optimization refactor of wind energy model that improves runtimes in some cases by a factor of 2-3.
 * Performance optimizations to HRA that improve runtimes by approximately 30%.
+* Fixed a broken UI link to Seasonal Water Yield's user's guide.
 
 3.3.2 (2016-10-17)
 ------------------
