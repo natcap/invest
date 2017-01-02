@@ -3,7 +3,7 @@
   "label": "Seasonal Water Yield",
   "targetScript": "natcap.invest.seasonal_water_yield.seasonal_water_yield",
   "modelName": "seasonal_water_yield",
-  "localDocURI": "../documentation/seasonalwateryield.html",
+  "localDocURI": "../documentation/seasonal_water_yield.html",
   "height": 740,
   "width": 900,
   "elements": [
