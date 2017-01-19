@@ -37,9 +37,9 @@ class DelineateItTests(unittest.TestCase):
 
         args = {
             'dem_uri': os.path.join(SAMPLE_DATA, 'dem'),
-            'flow_threshold': '1000',
+            'flow_threshold': '500',
             'outlet_shapefile_uri': os.path.join(SAMPLE_DATA, 'outlets.shp'),
-            'snap_distance': '10',
+            'snap_distance': '20',
             'workspace_dir': self.workspace_dir,
         }
         natcap.invest.routing.delineateit.execute(args)
