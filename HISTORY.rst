@@ -10,6 +10,7 @@ Unreleased Changes
 * Light optimization refactor of wind energy model that improves runtimes in some cases by a factor of 2-3.
 * Performance optimizations to HRA that improve runtimes by approximately 30%.
 * Fixed a broken UI link to Seasonal Water Yield's user's guide.
+* Fixed an issue with DelineateIT that caused ArcGIS users to see both the watershed and inverse watershed polygons when viewing the output of the tool.
 
 3.3.2 (2016-10-17)
 ------------------
