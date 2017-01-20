@@ -184,6 +184,7 @@ setup(
         'natcap.invest.fisheries',
         'natcap.invest.habitat_risk_assessment',
         'natcap.invest.hydropower',
+        'natcap.invest.ui',
         'natcap.invest.iui',
         'natcap.invest.iui.dbfpy',
         'natcap.invest.marine_water_quality',
