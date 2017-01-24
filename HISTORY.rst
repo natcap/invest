@@ -11,6 +11,7 @@ Unreleased Changes
 * Performance optimizations to HRA that improve runtimes by approximately 30%.
 * Fixed a broken UI link to Seasonal Water Yield's user's guide.
 * Fixed an issue with DelineateIT that caused ArcGIS users to see both the watershed and inverse watershed polygons when viewing the output of the tool.
+* Upgrading dependency to PyGeoprocessing 0.3.2.
 
 3.3.2 (2016-10-17)
 ------------------
