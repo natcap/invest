@@ -228,6 +228,9 @@ setup(
             'invest = natcap.invest.iui.cli:main'
         ],
     },
+    extras_require={
+        'ui': ['natcap.ui'],
+    },
     cmdclass=CMDCLASS,
     package_data={
         'natcap.invest.iui': [
