@@ -3,6 +3,7 @@ import logging
 import threading
 import os
 import contextlib
+from datetime import datetime
 
 from PyQt4 import QtGui
 import natcap.invest
@@ -76,7 +77,8 @@ class Model(object):
         self.add_input(self.workspace)
         self.add_input(self.suffix)
 
-        self._thread = None
+        self.message_pane = natcap.ui.inputs.RealtimeMessagesDialog()
+
         self.form.submitted.connect(self.execute)
 
     def _make_links(self, qlabel):
@@ -97,17 +99,29 @@ class Model(object):
     def add_input(self, input):
         self.form.add_input(input)
 
-    def execute(self):
+    def execute(self, logfile=None, tempdir=None):
         args = self.assemble_args()
 
-        self._thread = natcap.ui.execution.Executor(
-            target=self.target, args=(args,))
-        self._thread.finished.connect(self._execution_finished)
+        if not os.path.exists(args['workspace_dir']):
+            os.makedirs(args['workspace_dir'])
 
+        if not logfile:
+            logfile = os.path.join(
+                args['workspace_dir'],
+                'InVEST-{modelname}-log-{timestamp}.txt'.format(
+                    modelname='-'.join(self.label.split(' ')),
+                    timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
 
-    def _execution_finished(self):
-        pass
+        if not tempdir:
+            tempdir = os.path.join(args['workspace_dir'], 'tmp')
+            os.makedirs(tempdir)
 
+        self.form.run(target=self.target,
+                      kwargs={'args': args},
+                      logfile=logfile,
+                      tempdir=tempdir,
+                      window_title='Running %s' % self.label,
+                      out_folder=args['workspace_dir'])
 
     def assemble_args(self):
         raise NotImplementedError
