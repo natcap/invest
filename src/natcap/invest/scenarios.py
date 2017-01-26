@@ -81,56 +81,47 @@ def collect_parameters(parameters, archive_uri):
     data_dir = os.path.join(temp_workspace, 'data')
     os.makedirs(data_dir)
 
-    def get_multi_part_gdal(filepath):
-        """Collect all GDAL files into a new folder inside of the temp_workspace
-        (a closure from the collect_parameters funciton).
-
-        This function uses gdal's internal knowledge of the files it contains to
-        determine which files are to be included.
-
-            filepath - a URI to a file that is in a GDAL raster.
-
-        Returns the name of the new folder within the temp_workspace that
-        contains all the files in this raster."""
-        # this works with AIG/Arc/Info Binary Grid format, for which GDAL only
-        # supports reading.
-        dataset = gdal.Open(filepath)
-        driver = dataset.GetDriver()
-        new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
-        LOGGER.info('Saving new raster to %s', new_path)
-        driver.CreateCopy(new_path, new_path)
-        return new_path
-
-    def get_multi_part_ogr(filepath):
-        vector = ogr.Open(filepath)
-        driver = vector.GetDriver()
-        new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
-        LOGGER.info('Saving new vector to %s', new_path)
-        new_vector = driver.CopyDataSource(vector, new_path)
-        new_vector.SyncToDisk()
-        new_vector = None
-        return new_path
-
     def get_multi_part(filepath):
         # If the user provides a mutli-part file, wrap it into a folder and grab
         # that instead of the individual file.
 
         with utils.capture_gdal_logging():
-            raster_obj = gdal.Open(filepath)
-            if raster_obj is not None:
-                # file is a raster
-                raster_obj = None
-                LOGGER.debug('%s is a raster', filepath)
-                return get_multi_part_gdal(filepath)
+            raster = gdal.Open(filepath)
+            if raster is not None:
+                driver = raster.GetDriver()
+                new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
+                LOGGER.info('Saving new raster to %s', new_path)
+                # driver.CreateCopy returns None if there's an error
+                # Common case: driver does not have Create() method implemented
+                # ESRI Arc/Binary Grids are a great example of this.
+                if not driver.CreateCopy(new_path, raster):
+                    LOGGER.info('Manually copying raster files to %s',
+                                new_path)
+                    for filename in raster.GetFileList():
+                        if os.path.isdir(filename) and (
+                                os.path.abspath(filename) ==
+                                os.path.abspath(filepath)):
+                            continue
+                        new_filename = os.path.join(
+                            new_path,
+                            os.path.basename(filename))
+                        shutil.copyfile(filename, new_filename)
+                driver = None
+                raster = None
+                return new_path
 
-            vector_obj = ogr.Open(filepath)
-            if vector_obj is not None:
+            vector = ogr.Open(filepath)
+            if vector is not None:
                 # OGR also reads CSVs; verify this IS actually a vector
-                driver = vector_obj.GetDriver()
+                driver = vector.GetDriver()
                 if driver.name != 'CSV':
-                    # file is a vector
-                    vector_obj = None
-                    return get_multi_part_ogr(filepath)
+                    new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
+                    LOGGER.info('Saving new vector to %s', new_path)
+                    new_vector = driver.CopyDataSource(vector, new_path)
+                    new_vector.SyncToDisk()
+                    driver = None
+                    vector = None
+                    return new_path
         return None
 
     # For tracking existing files so we don't copy things twice
