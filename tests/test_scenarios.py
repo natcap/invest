@@ -86,3 +86,27 @@ class ScenariosTest(unittest.TestCase):
         )
 
         self.assertEqual(len(archived_params), 1)  # sanity check
+
+    @scm.skip_if_data_missing(FW_DATA)
+    def test_collect_ogr_table(self):
+        from natcap.invest import scenarios
+        params = {
+            'table': os.path.join(DATA_DIR, 'Carbon', 'carbon_pools_samp.csv'),
+        }
+
+        # Collect the raster's files into a single archive
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        scenarios.collect_parameters(params, archive_path)
+
+        # extract the archive
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+        scenarios.extract_archive(out_directory, archive_path)
+
+        archived_params = json.load(
+            open(os.path.join(out_directory, 'parameters.json')))
+        pygeoprocessing.testing.assert_csv_equal(
+            params['table'], os.path.join(out_directory,
+                                          archived_params['table'])
+        )
+
+        self.assertEqual(len(archived_params), 1)  # sanity check

@@ -114,14 +114,17 @@ def collect_parameters(parameters, archive_uri):
             if vector is not None:
                 # OGR also reads CSVs; verify this IS actually a vector
                 driver = vector.GetDriver()
-                if driver.name != 'CSV':
-                    new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
-                    LOGGER.info('Saving new vector to %s', new_path)
+                new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
+                LOGGER.info('Saving new vector to %s', new_path)
+                new_vector = driver.CopyDataSource(vector, new_path)
+                if not new_vector:
+                    new_path = os.path.join(new_path,
+                                            os.path.basename(filepath))
                     new_vector = driver.CopyDataSource(vector, new_path)
-                    new_vector.SyncToDisk()
-                    driver = None
-                    vector = None
-                    return new_path
+                new_vector.SyncToDisk()
+                driver = None
+                vector = None
+                return new_path
         return None
 
     # For tracking existing files so we don't copy things twice
