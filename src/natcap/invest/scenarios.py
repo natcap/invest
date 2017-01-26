@@ -161,8 +161,8 @@ def collect_parameters(parameters, archive_uri):
                 new_foldername = tempfile.mkdtemp(
                     prefix='data_', dir=temp_workspace)
                 for filename in os.listdir(parameter):
-                    os.copyfile(os.path.join(parameter, filename),
-                                os.path.join(new_foldername, filename))
+                    shutil.copyfile(os.path.join(parameter, filename),
+                                    os.path.join(new_foldername, filename))
                 return_path = new_foldername
 
             else:
