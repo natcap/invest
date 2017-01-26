@@ -12,6 +12,7 @@ import tempfile
 import string
 import random
 import glob
+import codecs
 
 from osgeo import gdal
 from osgeo import ogr
@@ -28,6 +29,45 @@ class NotAVector(Exception):
 DATA_ARCHIVES = os.path.join('data', 'regression_archives')
 INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
 LOGGER = logging.getLogger(__name__)
+
+
+def log_to_file(logfile):
+    handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
+    formatter = logging.Formatter(
+        "%(asctime)s %(name)-18s %(levelname)-8s %(message)s",
+        "%m/%d/%Y %H:%M:%S ")
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.NOTSET)  # capture everything
+    root_logger.addHandler(handler)
+    handler.setFormatter(formatter)
+    yield
+    handler.close()
+    root_logger.removeHandler(handler)
+
+
+def build_scenario(args, out_scenario_path, archive_data):
+    # TODO: Add a checksum for each input
+
+    tmp_scenario_dir = tempfile.mkdtemp(prefix='scenario_')
+    parameters_path = os.path.join(tmp_scenario_dir, 'parameters')
+    log_path = os.path.join(tmp_scenario_dir, 'log')
+    data_dir = os.path.join(tmp_scenario_dir, 'data')
+    with log_to_file(log_path):
+        os.makedirs(data_dir)
+
+        # convert parameters to local filepaths.
+
+        # Write the parameters to a file.
+        with codecs.open(parameters_path, 'w', encoding='UTF-8') as params:
+            params.write(json.dump(args,
+                                   encoding='UTF-8',
+                                   indent=4,
+                                   sort_keys=True))
+
+
+
+
+
 
 
 def make_random_dir(workspace, seed_string, prefix, make_dir=True):
