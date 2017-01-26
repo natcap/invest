@@ -188,30 +188,28 @@ def collect_parameters(parameters, archive_uri):
     #   Duplicate URIs should also have the same replacement URI.
     #
     # If a workspace or suffix is provided, ignore that key.
-    LOGGER.debug('Keys: %s', parameters.keys())
-    ignored_keys = []
-    for key, restore_key in [
-            ('workspace_dir', False),
-            ('suffix', True),
-            ('results_suffix', True)]:
-        try:
-            if restore_key:
-                ignored_keys.append((key, parameters[key]))
-                LOGGER.debug('tracking key %s', key)
-            del parameters[key]
-        except KeyError:
-            LOGGER.warn(('Parameters missing the workspace key \'%s\'.'
-                         ' Be sure to check your archived data'), key)
+    LOGGER.debug('Keys: %s', sorted(parameters.keys()))
 
-    types = {
-        str: get_if_file,
-        unicode: get_if_file,
-    }
-    new_args = format_dictionary(parameters, types)
+    def _recurse(args_param):
+        if isinstance(args_param, dict):
+            new_dict = {}
+            for args_key, args_value in args_param.iteritems():
+                if args_key not in ('workspace_dir',):
+                    new_dict[args_key] = _recurse(args_value)
+            return new_dict
+        elif isinstance(args_param, list):
+            return [_recurse(list_item) for list_item in args_param]
+        else:
+            if (isinstance(args_param, basestring) and
+                    os.path.exists(args_param)):
+                # It's a string and exists on disk, it's a file!
+                return get_if_file(args_param)
+            else:
+                # It's not a file or a structure to recurse through, so
+                # just return the item verbatim.
+                return args_param
 
-    for (key, value) in ignored_keys:
-        LOGGER.debug('Restoring %s: %s', key, value)
-        new_args[key] = value
+    new_args = _recurse(parameters)
 
     LOGGER.debug('new arguments: %s', new_args)
     # write parameters to a new json file in the temp workspace

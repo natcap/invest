@@ -110,3 +110,12 @@ class ScenariosTest(unittest.TestCase):
         )
 
         self.assertEqual(len(archived_params), 1)  # sanity check
+
+    def test_single_file(self):
+        self.fail('needs to be implemented!')
+
+    def test_data_dir(self):
+        self.fail('needs to be implemented!')
+
+    def test_list_of_inputs(self):
+        self.fail('needs to be implemented!')
