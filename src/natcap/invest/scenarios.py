@@ -214,9 +214,11 @@ def collect_parameters(parameters, archive_uri):
     LOGGER.debug('new arguments: %s', new_args)
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace, 'parameters.json')
-    parameter_file = open(param_file_uri, mode='w+')
-    parameter_file.writelines(json.dumps(new_args))
-    parameter_file.close()
+    with codecs.open(param_file_uri, 'w', encoding='UTF-8') as params:
+        params.write(json.dumps(new_args,
+                                encoding='UTF-8',
+                                indent=4,
+                                sort_keys=True))
 
     # archive the workspace.
     if archive_uri[-7:] == '.tar.gz':
