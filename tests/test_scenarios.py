@@ -199,3 +199,33 @@ class ScenariosTest(unittest.TestCase):
         if src_digest != dest_digest:
             self.fail('Digest mismatch: src:%s != dest:%s' % (
                 src_digest, dest_digest))
+
+    def test_duplicate_filepaths(self):
+        from natcap.invest import scenarios
+        params = {
+            'foo': os.path.join(self.workspace, 'foo.txt'),
+            'bar': os.path.join(self.workspace, 'foo.txt'),
+        }
+        with open(params['foo'], 'w') as textfile:
+            textfile.write('hello world!')
+
+        # Collect the file into an archive
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        scenarios.collect_parameters(params, archive_path)
+
+        # extract the archive
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+        scenarios.extract_archive(out_directory, archive_path)
+
+        archived_params = json.load(
+            open(os.path.join(out_directory, 'parameters.json')))
+
+        # Assert that the archived 'foo' and 'bar' params point to the same
+        # file.
+        self.assertEqual(archived_params['foo'], archived_params['bar'])
+        self.assertEqual(
+            len(os.listdir(os.path.join(out_directory))),
+            3)
+
+
+
