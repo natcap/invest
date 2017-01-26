@@ -232,7 +232,7 @@ def extract_archive(workspace_dir, archive_uri):
     archive.close()
 
 
-def extract_parameters_archive(archive_uri, input_folder=None):
+def extract_parameters_archive(archive_uri, input_folder):
     """Extract the target archive to the target workspace folder.
 
         workspace_dir - a uri to a folder on disk.  Must be an empty folder.
@@ -243,12 +243,6 @@ def extract_parameters_archive(archive_uri, input_folder=None):
             register.
 
         Returns a dictionary of the model's parameters for this run."""
-
-    # create a new temporary folder just for the input parameters, if the user
-    # has not provided one already.
-    if input_folder == None:
-        input_folder = tempfile.mkdtemp()
-
     # extract the archive to the workspace
     extract_archive(input_folder, archive_uri)
 
