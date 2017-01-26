@@ -35,13 +35,12 @@ LOGGER = logging.getLogger(__name__)
 def log_to_file(logfile):
     handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
     formatter = logging.Formatter(
-        "%(asctime)s %(name)-18s %(levelname)-8s %(message)s",
-        "%m/%d/%Y %H:%M:%S ")
+        "%(args_key)-25s %(name)-25s %(levelname)-8s %(message)s")
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.NOTSET)  # capture everything
     root_logger.addHandler(handler)
     handler.setFormatter(formatter)
-    yield
+    yield handler
     handler.close()
     root_logger.removeHandler(handler)
 
@@ -145,6 +144,15 @@ def _get_filepath(parameter, data_dir):
                      parameter)
 
 
+class _ArgsKeyFilter(logging.Filter):
+    def __init__(self, args_key):
+        self.args_key = args_key
+
+    def filter(self, record):
+        record.args_key = self.args_key
+        return True
+
+
 def collect_parameters(parameters, archive_uri):
     """Collect an InVEST model's arguments into a dictionary and archive all
         the input data.
@@ -156,6 +164,7 @@ def collect_parameters(parameters, archive_uri):
 
     parameters = parameters.copy()
     temp_workspace = tempfile.mkdtemp(prefix='scenario_')
+    logfile = os.path.join(temp_workspace, 'log')
     data_dir = os.path.join(temp_workspace, 'data')
     os.makedirs(data_dir)
 
@@ -170,15 +179,19 @@ def collect_parameters(parameters, archive_uri):
     # If a workspace or suffix is provided, ignore that key.
     LOGGER.debug('Keys: %s', sorted(parameters.keys()))
 
-    def _recurse(args_param):
+    def _recurse(args_param, handler):
         if isinstance(args_param, dict):
             new_dict = {}
             for args_key, args_value in args_param.iteritems():
+                # log the key via a filter installed to the handler.
+                args_key_filter = _ArgsKeyFilter(args_key)
+                handler.addFilter(args_key_filter)
                 if args_key not in ('workspace_dir',):
-                    new_dict[args_key] = _recurse(args_value)
+                    new_dict[args_key] = _recurse(args_value, handler)
+                handler.removeFilter(args_key_filter)
             return new_dict
         elif isinstance(args_param, list):
-            return [_recurse(list_item) for list_item in args_param]
+            return [_recurse(list_item, handler) for list_item in args_param]
         elif isinstance(args_param, basestring):
             # It's a string and exists on disk, it's a file!
             possible_path = os.path.abspath(args_param)
@@ -200,7 +213,8 @@ def collect_parameters(parameters, archive_uri):
         LOGGER.info('Using verbatim value: %s', args_param)
         return args_param
 
-    new_args = _recurse(parameters)
+    with log_to_file(logfile) as handler:
+        new_args = _recurse(parameters, handler)
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
 
     LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
