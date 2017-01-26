@@ -31,7 +31,7 @@ class ScenariosTest(unittest.TestCase):
         scenarios.collect_parameters(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         scenarios.extract_archive(out_directory, archive_path)
-        self.assertEqual(len(os.listdir(out_directory)), 2)
+        self.assertEqual(len(os.listdir(out_directory)), 3)
 
         self.assertEqual(
             json.load(open(os.path.join(out_directory, 'parameters.json'))),
@@ -225,7 +225,7 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(archived_params['foo'], archived_params['bar'])
 
         # Assert we have the expected number of files in the archive
-        self.assertEqual(len(os.listdir(os.path.join(out_directory))), 2)
+        self.assertEqual(len(os.listdir(os.path.join(out_directory))), 3)
 
         # Assert we have the expected number of files in the data dir.
         self.assertEqual(
@@ -268,7 +268,6 @@ class ScenariosTest(unittest.TestCase):
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         archive_params = scenarios.extract_parameters_archive(archive_path,
                                                               out_directory)
-
         pygeoprocessing.testing.assert_rasters_equal(
             archive_params['raster'], params['raster'])
         pygeoprocessing.testing.assert_vectors_equal(
