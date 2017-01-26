@@ -67,6 +67,85 @@ def build_scenario(args, out_scenario_path, archive_data):
                                    sort_keys=True))
 
 
+def _get_spatial_files(filepath, data_dir):
+    # If the user provides a mutli-part file, wrap it into a folder and grab
+    # that instead of the individual file.
+
+    with utils.capture_gdal_logging():
+        raster = gdal.Open(filepath)
+        if raster is not None:
+            driver = raster.GetDriver()
+            new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
+            LOGGER.info('Saving new raster to %s', new_path)
+            # driver.CreateCopy returns None if there's an error
+            # Common case: driver does not have Create() method implemented
+            # ESRI Arc/Binary Grids are a great example of this.
+            if not driver.CreateCopy(new_path, raster):
+                LOGGER.info('Manually copying raster files to %s',
+                            new_path)
+                for filename in raster.GetFileList():
+                    if os.path.isdir(filename) and (
+                            os.path.abspath(filename) ==
+                            os.path.abspath(filepath)):
+                        continue
+                    new_filename = os.path.join(
+                        new_path,
+                        os.path.basename(filename))
+                    shutil.copyfile(filename, new_filename)
+            driver = None
+            raster = None
+            return new_path
+
+        vector = ogr.Open(filepath)
+        if vector is not None:
+            # OGR also reads CSVs; verify this IS actually a vector
+            driver = vector.GetDriver()
+            new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
+            LOGGER.info('Saving new vector to %s', new_path)
+            new_vector = driver.CopyDataSource(vector, new_path)
+            if not new_vector:
+                new_path = os.path.join(new_path,
+                                        os.path.basename(filepath))
+                new_vector = driver.CopyDataSource(vector, new_path)
+            new_vector.SyncToDisk()
+            driver = None
+            vector = None
+            return new_path
+    return None
+
+
+def _get_filepath(parameter, data_dir):
+    # initialize the return_path
+    multi_part_folder = _get_spatial_files(parameter, data_dir)
+    if multi_part_folder is not None:
+        LOGGER.debug('%s is a multi-part file', parameter)
+        return multi_part_folder
+
+    elif os.path.isfile(parameter):
+        LOGGER.debug('%s is a single file', parameter)
+        new_filename = os.path.join(data_dir,
+                                    os.path.basename(parameter))
+        shutil.copyfile(parameter, new_filename)
+        return new_filename
+
+    elif os.path.isdir(parameter):
+        LOGGER.debug('%s is a directory', parameter)
+        # parameter is a folder, so we want to copy the folder and all
+        # its contents to the data dir.
+        new_foldername = tempfile.mkdtemp(
+            prefix='data_', dir=data_dir)
+        for filename in os.listdir(parameter):
+            shutil.copyfile(os.path.join(parameter, filename),
+                            os.path.join(new_foldername, filename))
+        return new_foldername
+
+    else:
+        # Parameter does not exist on disk.  Print an error to the
+        # logger and move on.
+        LOGGER.error('File %s does not exist on disk.  Skipping.',
+                     parameter)
+
+
 def collect_parameters(parameters, archive_uri):
     """Collect an InVEST model's arguments into a dictionary and archive all
         the input data.
@@ -81,106 +160,8 @@ def collect_parameters(parameters, archive_uri):
     data_dir = os.path.join(temp_workspace, 'data')
     os.makedirs(data_dir)
 
-    def get_multi_part(filepath):
-        # If the user provides a mutli-part file, wrap it into a folder and grab
-        # that instead of the individual file.
-
-        with utils.capture_gdal_logging():
-            raster = gdal.Open(filepath)
-            if raster is not None:
-                driver = raster.GetDriver()
-                new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
-                LOGGER.info('Saving new raster to %s', new_path)
-                # driver.CreateCopy returns None if there's an error
-                # Common case: driver does not have Create() method implemented
-                # ESRI Arc/Binary Grids are a great example of this.
-                if not driver.CreateCopy(new_path, raster):
-                    LOGGER.info('Manually copying raster files to %s',
-                                new_path)
-                    for filename in raster.GetFileList():
-                        if os.path.isdir(filename) and (
-                                os.path.abspath(filename) ==
-                                os.path.abspath(filepath)):
-                            continue
-                        new_filename = os.path.join(
-                            new_path,
-                            os.path.basename(filename))
-                        shutil.copyfile(filename, new_filename)
-                driver = None
-                raster = None
-                return new_path
-
-            vector = ogr.Open(filepath)
-            if vector is not None:
-                # OGR also reads CSVs; verify this IS actually a vector
-                driver = vector.GetDriver()
-                new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
-                LOGGER.info('Saving new vector to %s', new_path)
-                new_vector = driver.CopyDataSource(vector, new_path)
-                if not new_vector:
-                    new_path = os.path.join(new_path,
-                                            os.path.basename(filepath))
-                    new_vector = driver.CopyDataSource(vector, new_path)
-                new_vector.SyncToDisk()
-                driver = None
-                vector = None
-                return new_path
-        return None
-
     # For tracking existing files so we don't copy things twice
     files_found = {}
-
-    def get_if_file(parameter):
-        try:
-            uri = files_found[os.path.abspath(parameter)]
-            LOGGER.debug('Found %s from a previous parameter', uri)
-            return uri
-        except KeyError:
-            # we haven't found this file before, so we still need to process it.
-            pass
-
-        # initialize the return_path
-        return_path = None
-        try:
-            multi_part_folder = get_multi_part(parameter)
-            if multi_part_folder is not None:
-                LOGGER.debug('%s is a multi-part file', parameter)
-                return_path = multi_part_folder
-
-            elif os.path.isfile(parameter):
-                LOGGER.debug('%s is a single file', parameter)
-                new_filename = os.path.join(data_dir,
-                                            os.path.basename(parameter))
-                shutil.copyfile(parameter, new_filename)
-                return_path = new_filename
-
-            elif os.path.isdir(parameter):
-                LOGGER.debug('%s is a directory', parameter)
-                # parameter is a folder, so we want to copy the folder and all
-                # its contents to the data dir.
-                new_foldername = tempfile.mkdtemp(
-                    prefix='data_', dir=data_dir)
-                for filename in os.listdir(parameter):
-                    shutil.copyfile(os.path.join(parameter, filename),
-                                    os.path.join(new_foldername, filename))
-                return_path = new_foldername
-
-            else:
-                # Parameter does not exist on disk.  Print an error to the
-                # logger and move on.
-                LOGGER.error('File %s does not exist on disk.  Skipping.',
-                             parameter)
-        except TypeError as e:
-            # When the value is not a string.
-            LOGGER.warn('%s', e)
-
-        if return_path is not None:
-            files_found[os.path.abspath(parameter)] = return_path
-            LOGGER.debug('Return path: %s', return_path)
-            return return_path
-
-        LOGGER.debug('Returning original parameter %s', parameter)
-        return parameter
 
     # Recurse through the parameters to locate any URIs
     #   If a URI is found, copy that file to a new location in the temp
@@ -203,7 +184,18 @@ def collect_parameters(parameters, archive_uri):
             if (isinstance(args_param, basestring) and
                     os.path.exists(args_param)):
                 # It's a string and exists on disk, it's a file!
-                return get_if_file(args_param)
+                args_param = os.path.abspath(args_param)
+                try:
+                    filepath = files_found[args_param]
+                    LOGGER.debug('Parameter known from a previous entry: %s',
+                                 args_param)
+                    return filepath
+                except KeyError:
+                    found_filepath = _get_filepath(args_param, data_dir)
+                    files_found[args_param] = found_filepath
+                    LOGGER.debug('Processed path %s to %s', args_param,
+                                 found_filepath)
+                    return found_filepath
             else:
                 # It's not a file or a structure to recurse through, so
                 # just return the item verbatim.
