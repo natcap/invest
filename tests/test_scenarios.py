@@ -230,3 +230,61 @@ class ScenariosTest(unittest.TestCase):
         # Assert we have the expected number of files in the data dir.
         self.assertEqual(
             len(os.listdir(os.path.join(out_directory, 'data'))), 1)
+
+    def test_archive_extraction(self):
+        from natcap.invest import scenarios
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'foo': os.path.join(self.workspace, 'foo.txt'),
+            'bar': os.path.join(self.workspace, 'foo.txt'),
+            'file_list': [
+                os.path.join(self.workspace, 'file1.txt'),
+                os.path.join(self.workspace, 'file2.txt'),
+            ],
+            'data_dir': os.path.join(self.workspace, 'data_dir'),
+            'raster': os.path.join(FW_DATA, 'dem'),
+            'vector': os.path.join(FW_DATA, 'watersheds.shp'),
+            'table': os.path.join(DATA_DIR, 'carbon', 'carbon_pools_samp.csv'),
+        }
+        # synthesize sample data
+        os.makedirs(params['data_dir'])
+        for filename in ('foo.txt', 'bar.txt', 'baz.txt'):
+            data_filepath = os.path.join(params['data_dir'], filename)
+            with open(data_filepath, 'w') as textfile:
+                textfile.write(filename)
+
+        with open(params['foo'], 'w') as textfile:
+            textfile.write('hello world!')
+
+        for filename in params['file_list']:
+            with open(filename, 'w') as textfile:
+                textfile.write(filename)
+
+        # collect parameters:
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        scenarios.collect_parameters(params, archive_path)
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+        archive_params = scenarios.extract_parameters_archive(archive_path,
+                                                              out_directory)
+
+        pygeoprocessing.testing.assert_rasters_equal(
+            archive_params['raster'], params['raster'])
+        pygeoprocessing.testing.assert_vectors_equal(
+            archive_params['vector'], params['vector'], field_tolerance=1e-6)
+        pygeoprocessing.testing.assert_csv_equal(
+            archive_params['table'], params['table'])
+        for key in ('a', 'b', 'c'):
+            self.assertEqual(archive_params[key],
+                             params[key],
+                             'Params differ for key %s' % key)
+
+        for key in ('foo', 'bar'):
+            pygeoprocessing.testing.assert_text_equal(
+                archive_params[key], params[key])
+
+        self.assertEqual(
+            pygeoprocessing.testing.digest_file_list(
+                archive_params['file_list']),
+            pygeoprocessing.testing.digest_file_list(params['file_list']))

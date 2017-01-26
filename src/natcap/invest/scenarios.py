@@ -9,9 +9,8 @@ import tarfile
 import shutil
 import logging
 import tempfile
-import string
-import random
 import codecs
+import pprint
 
 from osgeo import gdal
 from osgeo import ogr
@@ -180,30 +179,31 @@ def collect_parameters(parameters, archive_uri):
             return new_dict
         elif isinstance(args_param, list):
             return [_recurse(list_item) for list_item in args_param]
-        else:
-            if (isinstance(args_param, basestring) and
-                    os.path.exists(args_param)):
-                # It's a string and exists on disk, it's a file!
-                args_param = os.path.abspath(args_param)
+        elif isinstance(args_param, basestring):
+            # It's a string and exists on disk, it's a file!
+            possible_path = os.path.abspath(args_param)
+            if os.path.exists(possible_path):
                 try:
-                    filepath = files_found[args_param]
-                    LOGGER.debug('Parameter known from a previous entry: %s',
-                                 args_param)
+                    filepath = files_found[possible_path]
+                    LOGGER.debug(('Parameter known from a previous '
+                                  'entry: %s, using %s'),
+                                 possible_path, filepath)
                     return filepath
                 except KeyError:
-                    found_filepath = _get_filepath(args_param, data_dir)
-                    files_found[args_param] = found_filepath
+                    found_filepath = _get_filepath(possible_path, data_dir)
+                    files_found[possible_path] = found_filepath
                     LOGGER.debug('Processed path %s to %s', args_param,
                                  found_filepath)
                     return found_filepath
-            else:
-                # It's not a file or a structure to recurse through, so
-                # just return the item verbatim.
-                return args_param
+        # It's not a file or a structure to recurse through, so
+        # just return the item verbatim.
+        LOGGER.info('Using verbatim value: %s', args_param)
+        return args_param
 
     new_args = _recurse(parameters)
+    LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
 
-    LOGGER.debug('new arguments: %s', new_args)
+    LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace, 'parameters.json')
     with codecs.open(param_file_uri, 'w', encoding='UTF-8') as params:
@@ -216,7 +216,7 @@ def collect_parameters(parameters, archive_uri):
     if archive_uri[-7:] == '.tar.gz':
         archive_uri = archive_uri[:-7]
     shutil.make_archive(archive_uri, 'gztar', root_dir=temp_workspace,
-                        logger=LOGGER)
+                        logger=LOGGER, verbose=True)
 
 
 def extract_archive(workspace_dir, archive_uri):
@@ -232,49 +232,7 @@ def extract_archive(workspace_dir, archive_uri):
     archive.close()
 
 
-def format_dictionary(input_dict, types_lookup={}):
-    """Recurse through the input dictionary and return a formatted dictionary.
-
-        As each element is encountered, the correct function to use is looked up
-        in the types_lookup input.  If a type is not found, we assume that the
-        element should be returned verbatim.
-
-        input_dict - a dictionary to process
-        types_lookup - a dictionary mapping types to functions.  These functions
-            must take a single parameter of the type that is the key.  These
-            functions must return a formatted version of the input parameter.
-
-        Returns a formatted dictionary."""
-
-    def format_dict(parameter):
-        new_dict = {}
-        for key, value in parameter.iteritems():
-            try:
-                new_dict[key] = types[value.__class__](value)
-            except KeyError:
-                new_dict[key] = value
-        return new_dict
-
-    def format_list(parameter):
-        new_list = []
-        for item in parameter:
-            try:
-                new_list.append(types[item.__class__](item))
-            except KeyError:
-                new_list.append(item)
-        return new_list
-
-    types = {
-        dict: format_dict,
-        list: format_list,
-    }
-
-    types.update(types_lookup)
-
-    return format_dict(input_dict)
-
-
-def extract_parameters_archive(workspace_dir, archive_uri, input_folder=None):
+def extract_parameters_archive(archive_uri, input_folder=None):
     """Extract the target archive to the target workspace folder.
 
         workspace_dir - a uri to a folder on disk.  Must be an empty folder.
@@ -297,28 +255,20 @@ def extract_parameters_archive(workspace_dir, archive_uri, input_folder=None):
     # get the arguments dictionary
     arguments_dict = json.load(open(os.path.join(input_folder, 'parameters.json')))
 
-    def _get_if_uri(parameter):
-        """If the parameter is a file, returns the filepath relative to the
-        extracted workspace.  If the parameter is not a file, returns the
-        original parameter."""
-        try:
-            temp_file_path = os.path.join(input_folder, parameter)
-            if os.path.exists(temp_file_path) and not len(parameter) == 0:
-                return temp_file_path
-        except TypeError:
-            # When the parameter is not a string
-            pass
-        except AttributeError:
-            # when the parameter is not a string
-            pass
+    def _recurse(args_param):
+        if isinstance(args_param, dict):
+            _args = {}
+            for key, value in args_param.iteritems():
+                _args[key] = _recurse(value)
+            return _args
+        elif isinstance(args_param, list):
+            return [_recurse(param) for param in args_param]
+        elif isinstance(args_param, basestring):
+            data_path = os.path.join(input_folder, args_param)
+            if os.path.exists(data_path):
+                return data_path
+        return args_param
 
-        return parameter
-
-    types = {
-        str: _get_if_uri,
-        unicode: _get_if_uri,
-    }
-    formatted_args = format_dictionary(arguments_dict, types)
-    formatted_args[u'workspace_dir'] = workspace_dir
-
-    return formatted_args
+    new_args = _recurse(arguments_dict)
+    LOGGER.debug(new_args)
+    return new_args
