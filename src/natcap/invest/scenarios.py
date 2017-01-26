@@ -149,17 +149,17 @@ def collect_parameters(parameters, archive_uri):
 
             elif os.path.isfile(parameter):
                 LOGGER.debug('%s is a single file', parameter)
-                new_filename = os.path.basename(parameter)
-                shutil.copyfile(parameter, os.path.join(temp_workspace,
-                                new_filename))
+                new_filename = os.path.join(data_dir,
+                                            os.path.basename(parameter))
+                shutil.copyfile(parameter, new_filename)
                 return_path = new_filename
 
             elif os.path.isdir(parameter):
                 LOGGER.debug('%s is a directory', parameter)
                 # parameter is a folder, so we want to copy the folder and all
-                # its contents to temp_workspace.
+                # its contents to the data dir.
                 new_foldername = tempfile.mkdtemp(
-                    prefix='data_', dir=temp_workspace)
+                    prefix='data_', dir=data_dir)
                 for filename in os.listdir(parameter):
                     shutil.copyfile(os.path.join(parameter, filename),
                                     os.path.join(new_foldername, filename))
@@ -174,9 +174,9 @@ def collect_parameters(parameters, archive_uri):
             # When the value is not a string.
             LOGGER.warn('%s', e)
 
-        LOGGER.debug('Return path: %s', return_path)
         if return_path is not None:
             files_found[os.path.abspath(parameter)] = return_path
+            LOGGER.debug('Return path: %s', return_path)
             return return_path
 
         LOGGER.debug('Returning original parameter %s', parameter)

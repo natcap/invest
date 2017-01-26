@@ -129,7 +129,7 @@ class ScenariosTest(unittest.TestCase):
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
         pygeoprocessing.testing.assert_text_equal(
-            params['some_file'], os.path.join(out_directory,
+            params['some_file'], os.path.join(out_directory, 'data',
                                               archived_params['some_file'])
         )
 
@@ -192,7 +192,7 @@ class ScenariosTest(unittest.TestCase):
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
         dest_digest = pygeoprocessing.testing.digest_file_list(
-            [os.path.join(out_directory, filename)
+            [os.path.join(out_directory, 'data', filename)
              for filename in archived_params['file_list']])
 
         self.assertEqual(len(archived_params), 1)  # sanity check
@@ -223,9 +223,10 @@ class ScenariosTest(unittest.TestCase):
         # Assert that the archived 'foo' and 'bar' params point to the same
         # file.
         self.assertEqual(archived_params['foo'], archived_params['bar'])
+
+        # Assert we have the expected number of files in the archive
+        self.assertEqual(len(os.listdir(os.path.join(out_directory))), 2)
+
+        # Assert we have the expected number of files in the data dir.
         self.assertEqual(
-            len(os.listdir(os.path.join(out_directory))),
-            3)
-
-
-
+            len(os.listdir(os.path.join(out_directory, 'data'))), 1)
