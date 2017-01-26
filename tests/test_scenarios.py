@@ -32,7 +32,7 @@ class ScenariosTest(unittest.TestCase):
         scenarios.collect_parameters(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         scenarios.extract_archive(out_directory, archive_path)
-        self.assertEqual(len(os.listdir(out_directory)), 1)
+        self.assertEqual(len(os.listdir(out_directory)), 2)
 
         self.assertEqual(
             json.load(open(os.path.join(out_directory, 'parameters.json'))),
