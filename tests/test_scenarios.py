@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import json
 import glob
+import functools
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -45,10 +46,6 @@ class ScenariosTest(unittest.TestCase):
             'raster': os.path.join(FW_DATA, 'dem'),
         }
 
-        # get the checksum of the dem
-        dem_checksum = pygeoprocessing.testing.digest_file_list(
-            glob.glob(os.path.join(params['raster'], '*')))
-
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         scenarios.collect_parameters(params, archive_path)
@@ -59,19 +56,11 @@ class ScenariosTest(unittest.TestCase):
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
-        archived_raster_path = os.path.join(out_directory,
-                                            archived_params['raster'])
 
-        # there's an extra dem.aux file that appears in the file list from
-        # using the GDAL internal method for getting the component filenames
-        # with an ESRI binary grid.
-        raster_file_list = [filename for filename in
-                            glob.glob(os.path.join(archived_raster_path, '*'))
-                            if not filename.endswith('dem.aux')]
-        self.assertEqual(
-            dem_checksum,
-            pygeoprocessing.testing.digest_file_list(raster_file_list))
         self.assertEqual(len(archived_params), 1)
+        pygeoprocessing.testing.assert_rasters_equal(
+            params['raster'], os.path.join(out_directory,
+                                           archived_params['raster']))
 
     @scm.skip_if_data_missing(FW_DATA)
     def test_collect_multipart_ogr_vector(self):
@@ -80,10 +69,6 @@ class ScenariosTest(unittest.TestCase):
             'vector': os.path.join(FW_DATA, 'watersheds.shp'),
         }
 
-        # get the checksum of the dem
-        checksum = pygeoprocessing.testing.digest_file_list(
-            glob.glob(os.path.join(FW_DATA, 'watersheds.*')))
-
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         scenarios.collect_parameters(params, archive_path)
@@ -94,12 +79,10 @@ class ScenariosTest(unittest.TestCase):
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
-        archived_vector_path = os.path.join(out_directory,
-                                            archived_params['vector'])
+        pygeoprocessing.testing.assert_vectors_equal(
+            params['vector'], os.path.join(out_directory,
+                                           archived_params['vector']),
+            field_tolerance=1e-6,
+        )
 
-        vector_file_list = [filename for filename in
-                            glob.glob(os.path.join(archived_vector_path, '*'))]
-        self.assertEqual(
-            checksum,
-            pygeoprocessing.testing.digest_file_list(vector_file_list))
-        self.assertEqual(len(archived_params), 1)
+        self.assertEqual(len(archived_params), 1)  # sanity check
