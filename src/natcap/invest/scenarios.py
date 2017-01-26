@@ -7,12 +7,10 @@ import os
 import json
 import tarfile
 import shutil
-import inspect
 import logging
 import tempfile
 import string
 import random
-import glob
 import codecs
 
 from osgeo import gdal
@@ -67,38 +65,6 @@ def build_scenario(args, out_scenario_path, archive_data):
                                    encoding='UTF-8',
                                    indent=4,
                                    sort_keys=True))
-
-
-
-
-
-
-
-def make_random_dir(workspace, seed_string, prefix, make_dir=True):
-    LOGGER.debug('Random dir seed: %s', seed_string)
-    random.seed(seed_string)
-    new_dirname = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                          for x in range(6))
-    new_dirname = prefix + new_dirname
-    LOGGER.debug('New dirname: %s', new_dirname)
-    raster_dir = os.path.join(workspace, new_dirname)
-
-    if make_dir:
-        os.mkdir(raster_dir)
-
-    return raster_dir
-
-
-def make_raster_dir(workspace, seed_string, make_dir=True):
-    raster_dir = make_random_dir(workspace, seed_string, 'raster_', make_dir)
-    LOGGER.debug('new raster dir: %s', raster_dir)
-    return raster_dir
-
-
-def make_vector_dir(workspace, seed_string, make_dir=True):
-    vector_dir = make_random_dir(workspace, seed_string, 'vector_', make_dir)
-    LOGGER.debug('new vector dir: %s', vector_dir)
-    return vector_dir
 
 
 def collect_parameters(parameters, archive_uri):
@@ -198,10 +164,11 @@ def collect_parameters(parameters, archive_uri):
                 LOGGER.debug('%s is a directory', parameter)
                 # parameter is a folder, so we want to copy the folder and all
                 # its contents to temp_workspace.
-                folder_name = os.path.basename(parameter)
-                new_foldername = make_random_dir(temp_workspace, folder_name,
-                                                 'data_', False)
-                shutil.copytree(parameter, new_foldername)
+                new_foldername = tempfile.mkdtemp(
+                    prefix='data_', dir=temp_workspace)
+                for filename in os.listdir(parameter):
+                    os.copyfile(os.path.join(parameter, filename),
+                                os.path.join(new_foldername, filename))
                 return_path = new_foldername
 
             else:
