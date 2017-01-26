@@ -2,6 +2,7 @@
 A module for InVEST test-related data storage.
 """
 
+import contextlib
 import os
 import json
 import tarfile
@@ -17,6 +18,8 @@ import codecs
 from osgeo import gdal
 from osgeo import ogr
 
+from . import utils
+
 
 class UnsupportedFormat(Exception):
     pass
@@ -31,6 +34,7 @@ INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
 LOGGER = logging.getLogger(__name__)
 
 
+@contextlib.contextmanager
 def log_to_file(logfile):
     handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
     formatter = logging.Formatter(
@@ -145,28 +149,22 @@ def collect_parameters(parameters, archive_uri):
         # If the user provides a mutli-part file, wrap it into a folder and grab
         # that instead of the individual file.
 
-        raster_obj = gdal.Open(filepath)
-        if raster_obj is not None:
-            # file is a raster
-            raster_obj = None
-            LOGGER.debug('%s is a raster', filepath)
-            return get_multi_part_gdal(filepath)
+        with utils.capture_gdal_logging():
+            raster_obj = gdal.Open(filepath)
+            if raster_obj is not None:
+                # file is a raster
+                raster_obj = None
+                LOGGER.debug('%s is a raster', filepath)
+                return get_multi_part_gdal(filepath)
 
-        vector_obj = ogr.Open(filepath)
-        if vector_obj is not None:
-            # Need to check the driver name to be sure that this isn't a CSV.
-            driver = vector_obj.GetDriver()
-            if driver.name != 'CSV':
-                # file is a shapefile
-                vector_obj = None
-                try:
+            vector_obj = ogr.Open(filepath)
+            if vector_obj is not None:
+                # OGR also reads CSVs; verify this IS actually a vector
+                driver = vector_obj.GetDriver()
+                if driver.name != 'CSV':
+                    # file is a vector
+                    vector_obj = None
                     return get_multi_part_ogr(filepath)
-                except NotAVector:
-                    # For some reason, the file actually turned out to not be a
-                    # vector, so we just want to return from this function.
-                    LOGGER.debug('Thought %s was a shapefile, but I was wrong.',
-                                 filepath)
-                    pass
         return None
 
     # For tracking existing files so we don't copy things twice
