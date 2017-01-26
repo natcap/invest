@@ -132,50 +132,14 @@ def collect_parameters(parameters, archive_uri):
         return new_path
 
     def get_multi_part_ogr(filepath):
-        shapefile = ogr.Open(filepath)
-        driver = shapefile.GetDriver()
-
-        if os.path.isdir(filepath):
-            parent_folder = os.path.basename(filepath)
-        else:
-            folder_name = os.path.basename(os.path.dirname(filepath))
-            file_name = os.path.basename(filepath)
-            parent_folder = os.path.join(folder_name, file_name)
-
-        LOGGER.debug('Temp folder seed: %s', parent_folder)
-
-        new_vector_dir = make_vector_dir(temp_workspace, parent_folder)
-        if driver.name == 'ESRI Shapefile':
-            LOGGER.debug('%s is an ESRI Shapefile', filepath)
-            # get the layer name
-            layer = shapefile.GetLayer()
-
-            # get the layer files
-            parent_folder_path = os.path.dirname(filepath)
-            glob_pattern = os.path.join(parent_folder_path, '%s.*' %
-                                        layer.GetName())
-            layer_files = sorted(glob.glob(glob_pattern))
-            LOGGER.debug('Layer files: %s', layer_files)
-
-            layer_extensions = map(lambda x: os.path.splitext(x)[1],
-                                   layer_files)
-            LOGGER.debug('Layer extensions: %s', layer_extensions)
-
-            # It's not a shapefile if there's no file with a .shp extension.
-            if '.shp' not in layer_extensions:
-                shutil.rmtree(new_vector_dir)
-                raise NotAVector()
-
-            # copy the layer files to the new folder.
-            for file_name in layer_files:
-                file_basename = os.path.basename(file_name)
-                new_filename = os.path.join(new_vector_dir, file_basename)
-                shutil.copyfile(file_name, new_filename)
-        else:
-            raise UnsupportedFormat('%s is not a supported OGR Format',
-                                    driver.name)
-
-        return os.path.basename(new_vector_dir)
+        vector = ogr.Open(filepath)
+        driver = vector.GetDriver()
+        new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
+        LOGGER.info('Saving new vector to %s', new_path)
+        new_vector = driver.CopyDataSource(vector, new_path)
+        new_vector.SyncToDisk()
+        new_vector = None
+        return new_path
 
     def get_multi_part(filepath):
         # If the user provides a mutli-part file, wrap it into a folder and grab
