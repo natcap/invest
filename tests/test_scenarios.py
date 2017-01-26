@@ -3,8 +3,6 @@ import unittest
 import tempfile
 import shutil
 import json
-import glob
-import functools
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -91,7 +89,7 @@ class ScenariosTest(unittest.TestCase):
     def test_collect_ogr_table(self):
         from natcap.invest import scenarios
         params = {
-            'table': os.path.join(DATA_DIR, 'Carbon', 'carbon_pools_samp.csv'),
+            'table': os.path.join(DATA_DIR, 'carbon', 'carbon_pools_samp.csv'),
         }
 
         # Collect the raster's files into a single archive
