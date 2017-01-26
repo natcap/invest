@@ -72,3 +72,34 @@ class ScenariosTest(unittest.TestCase):
             dem_checksum,
             pygeoprocessing.testing.digest_file_list(raster_file_list))
         self.assertEqual(len(archived_params), 1)
+
+    @scm.skip_if_data_missing(FW_DATA)
+    def test_collect_multipart_ogr_vector(self):
+        from natcap.invest import scenarios
+        params = {
+            'vector': os.path.join(FW_DATA, 'watersheds.shp'),
+        }
+
+        # get the checksum of the dem
+        checksum = pygeoprocessing.testing.digest_file_list(
+            glob.glob(os.path.join(FW_DATA, 'watersheds.*')))
+
+        # Collect the raster's files into a single archive
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        scenarios.collect_parameters(params, archive_path)
+
+        # extract the archive
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+        scenarios.extract_archive(out_directory, archive_path)
+
+        archived_params = json.load(
+            open(os.path.join(out_directory, 'parameters.json')))
+        archived_vector_path = os.path.join(out_directory,
+                                            archived_params['vector'])
+
+        vector_file_list = [filename for filename in
+                            glob.glob(os.path.join(archived_vector_path, '*'))]
+        self.assertEqual(
+            checksum,
+            pygeoprocessing.testing.digest_file_list(vector_file_list))
+        self.assertEqual(len(archived_params), 1)
