@@ -29,7 +29,7 @@ class ScenariosTest(unittest.TestCase):
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
 
         with tarfile.open(archive_path) as tar:
@@ -50,7 +50,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -75,7 +75,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -101,7 +101,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -128,7 +128,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -159,7 +159,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -193,7 +193,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -222,7 +222,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -276,7 +276,7 @@ class ScenariosTest(unittest.TestCase):
 
         # collect parameters:
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.collect_parameters(params, archive_path)
+        scenarios.build_scenario(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         archive_params = scenarios.extract_parameters_archive(archive_path,
                                                               out_directory)

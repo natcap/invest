@@ -37,25 +37,6 @@ def log_to_file(logfile):
     root_logger.removeHandler(handler)
 
 
-def build_scenario(args, out_scenario_path, archive_data):
-    # TODO: Add a checksum for each input
-
-    tmp_scenario_dir = tempfile.mkdtemp(prefix='scenario_')
-    parameters_path = os.path.join(tmp_scenario_dir, 'parameters')
-    log_path = os.path.join(tmp_scenario_dir, 'log')
-    data_dir = os.path.join(tmp_scenario_dir, 'data')
-    with log_to_file(log_path):
-        os.makedirs(data_dir)
-
-        # convert parameters to local filepaths.
-
-        # Write the parameters to a file.
-        with codecs.open(parameters_path, 'w', encoding='UTF-8') as params:
-            params.write(json.dump(args,
-                                   encoding='UTF-8',
-                                   indent=4,
-                                   sort_keys=True))
-
 
 def _collect_spatial_files(filepath, data_dir):
     # If the user provides a mutli-part file, wrap it into a folder and grab
@@ -145,16 +126,16 @@ class _ArgsKeyFilter(logging.Filter):
         return True
 
 
-def collect_parameters(parameters, archive_uri):
+def build_scenario(args, scenario_path, link_data=False):
     """Collect an InVEST model's arguments into a dictionary and archive all
         the input data.
 
-        parameters - a dictionary of arguments
-        archive_uri - a URI to the target archive.
+        args - a dictionary of arguments
+        scenario_path - a URI to the target archive.
 
         Returns nothing."""
 
-    parameters = parameters.copy()
+    args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='scenario_')
     logfile = os.path.join(temp_workspace, 'log')
     data_dir = os.path.join(temp_workspace, 'data')
@@ -163,13 +144,13 @@ def collect_parameters(parameters, archive_uri):
     # For tracking existing files so we don't copy things twice
     files_found = {}
 
-    # Recurse through the parameters to locate any URIs
+    # Recurse through the args parameters to locate any URIs
     #   If a URI is found, copy that file to a new location in the temp
     #   workspace and update the URI reference.
     #   Duplicate URIs should also have the same replacement URI.
     #
     # If a workspace or suffix is provided, ignore that key.
-    LOGGER.debug('Keys: %s', sorted(parameters.keys()))
+    LOGGER.debug('Keys: %s', sorted(args.keys()))
 
     def _recurse(args_param, handler):
         if isinstance(args_param, dict):
@@ -206,7 +187,7 @@ def collect_parameters(parameters, archive_uri):
         return args_param
 
     with log_to_file(logfile) as handler:
-        new_args = _recurse(parameters, handler)
+        new_args = _recurse(args, handler)
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
 
     LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
@@ -219,9 +200,9 @@ def collect_parameters(parameters, archive_uri):
                                 sort_keys=True))
 
     # archive the workspace.
-    if archive_uri[-7:] == '.tar.gz':
-        archive_uri = archive_uri[:-7]
-    shutil.make_archive(archive_uri, 'gztar', root_dir=temp_workspace,
+    if scenario_path[-7:] == '.tar.gz':
+        scenario_path = scenario_path[:-7]
+    shutil.make_archive(scenario_path, 'gztar', root_dir=temp_workspace,
                         logger=LOGGER, verbose=True)
 
 
