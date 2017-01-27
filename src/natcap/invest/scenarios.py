@@ -118,15 +118,13 @@ def _collect_filepath(parameter, data_dir):
         new_foldername = tempfile.mkdtemp(
             prefix='data_', dir=data_dir)
         for filename in os.listdir(parameter):
-            shutil.copyfile(os.path.join(parameter, filename),
-                            os.path.join(new_foldername, filename))
+            src_path = os.path.join(parameter, filename)
+            dest_path = os.path.join(new_foldername, filename)
+            if os.path.isdir(src_path):
+                shutil.copytree(src_path, dest_path)
+            else:
+                shutil.copyfile(src_path, dest_path)
         return new_foldername
-
-    else:
-        # Parameter does not exist on disk.  Print an error to the
-        # logger and move on.
-        LOGGER.error('File %s does not exist on disk.  Skipping.',
-                     parameter)
 
 
 class _ArgsKeyFilter(logging.Filter):

@@ -154,6 +154,13 @@ class ScenariosTest(unittest.TestCase):
             data_filepath = os.path.join(params['data_dir'], filename)
             with open(data_filepath, 'w') as textfile:
                 textfile.write(filename)
+
+        # make a folder within the data folder.
+        nested_folder = os.path.join(params['data_dir'], 'nested')
+        os.makedirs(nested_folder)
+        with open(os.path.join(nested_folder, 'nested.txt'), 'w') as textfile:
+            textfile.write('hello, world!')
+
         src_datadir_digest = pygeoprocessing.testing.digest_folder(
             params['data_dir'])
 
