@@ -299,3 +299,17 @@ class ScenariosTest(unittest.TestCase):
             pygeoprocessing.testing.digest_file_list(
                 archive_params['file_list']),
             pygeoprocessing.testing.digest_file_list(params['file_list']))
+
+    def test_sandbox_manager(self):
+        from natcap.invest import scenarios
+
+        with scenarios.sandbox_tempdir(suffix='foo',
+                                       prefix='bar',
+                                       dir=self.workspace) as new_dir:
+            self.assertTrue(new_dir.startswith(self.workspace))
+            basename = os.path.basename(new_dir)
+            self.assertTrue(basename.startswith('bar'))
+            self.assertTrue(basename.endswith('foo'))
+
+            # trigger the exception handling for coverage.
+            shutil.rmtree(new_dir)
