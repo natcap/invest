@@ -265,6 +265,7 @@ def build_scenario(args, scenario_path, link_data=False):
         return args_param
 
     with log_to_file(logfile) as handler:
+        LOGGER.info('Data are symlinked: %s', link_data)
         new_args = _recurse(args, handler)
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
 
