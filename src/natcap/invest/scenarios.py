@@ -37,6 +37,18 @@ def log_to_file(logfile):
     root_logger.removeHandler(handler)
 
 
+@contextlib.contextmanager
+def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
+    sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
+    try:
+        yield sandbox
+    finally:
+        try:
+            shutil.rmtree(sandbox)
+        except OSError:
+            LOGGER.exception('Could not remove sandbox %s', sandbox)
+
+
 
 def _collect_spatial_files(filepath, data_dir):
     # If the user provides a mutli-part file, wrap it into a folder and grab
@@ -200,10 +212,12 @@ def build_scenario(args, scenario_path, link_data=False):
                                 sort_keys=True))
 
     # archive the workspace.
-    if scenario_path[-7:] == '.tar.gz':
-        scenario_path = scenario_path[:-7]
-    shutil.make_archive(scenario_path, 'gztar', root_dir=temp_workspace,
-                        logger=LOGGER, verbose=True)
+    with sandbox_tempdir() as temp_dir:
+        temp_archive = os.path.join(temp_dir, 'invest_archive')
+        archive_name = shutil.make_archive(
+            temp_archive, 'gztar', root_dir=temp_workspace,
+            logger=LOGGER, verbose=True)
+        shutil.move(archive_name, scenario_path)
 
 
 def extract_parameters_archive(archive_uri, input_folder):
