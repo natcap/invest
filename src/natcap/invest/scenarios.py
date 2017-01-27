@@ -18,14 +18,6 @@ from osgeo import ogr
 from . import utils
 
 
-class UnsupportedFormat(Exception):
-    pass
-
-
-class NotAVector(Exception):
-    pass
-
-
 DATA_ARCHIVES = os.path.join('data', 'regression_archives')
 INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
 LOGGER = logging.getLogger(__name__)
@@ -65,7 +57,7 @@ def build_scenario(args, out_scenario_path, archive_data):
                                    sort_keys=True))
 
 
-def _get_spatial_files(filepath, data_dir):
+def _collect_spatial_files(filepath, data_dir):
     # If the user provides a mutli-part file, wrap it into a folder and grab
     # that instead of the individual file.
 
@@ -112,9 +104,9 @@ def _get_spatial_files(filepath, data_dir):
     return None
 
 
-def _get_filepath(parameter, data_dir):
+def _collect_filepath(parameter, data_dir):
     # initialize the return_path
-    multi_part_folder = _get_spatial_files(parameter, data_dir)
+    multi_part_folder = _collect_spatial_files(parameter, data_dir)
     if multi_part_folder is not None:
         LOGGER.debug('%s is a multi-part file', parameter)
         return multi_part_folder
@@ -203,7 +195,7 @@ def collect_parameters(parameters, archive_uri):
                                  possible_path, filepath)
                     return filepath
                 except KeyError:
-                    found_filepath = _get_filepath(possible_path, data_dir)
+                    found_filepath = _collect_filepath(possible_path, data_dir)
                     files_found[possible_path] = found_filepath
                     LOGGER.debug('Processed path %s to %s', args_param,
                                  found_filepath)
