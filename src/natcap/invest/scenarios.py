@@ -22,6 +22,13 @@ DATA_ARCHIVES = os.path.join('data', 'regression_archives')
 INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
 LOGGER = logging.getLogger(__name__)
 
+OGRVRTTEMPLATE = """
+<OGRVRTDataSource>
+    <OGRVRTLayer name="{src_layer}">
+        <SrcDataSource>{src_vector}</SrcDataSource>
+    </OGRVRTLayer>
+</OGRVRTDataSource>"""
+
 
 @contextlib.contextmanager
 def log_to_file(logfile):
@@ -49,21 +56,55 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
             LOGGER.exception('Could not remove sandbox %s', sandbox)
 
 
-
-def _collect_spatial_files(filepath, data_dir):
+def _collect_spatial_files(filepath, data_dir, link_data):
     # If the user provides a mutli-part file, wrap it into a folder and grab
     # that instead of the individual file.
 
     with utils.capture_gdal_logging():
         raster = gdal.Open(filepath)
         if raster is not None:
-            driver = raster.GetDriver()
             new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
-            LOGGER.info('Saving new raster to %s', new_path)
+            if link_data:
+                driver = gdal.GetDriverByName('VRT')
+                new_path = os.path.join(new_path, 'linked_raster.vrt')
+                wkt = raster.GetProjection()
+
+                new_ds = gdal.AutoCreateWarpedVRT(
+                    raster, wkt, wkt, gdal.GRA_NearestNeighbour, 0.0)
+                new_ds.GetDriver().CreateCopy(new_path, new_ds, 1)
+                new_ds = None
+
+                # GDAL simple VRT rasters don't allow the output VRT to use a
+                # blocksize other than 128x128.  Warped VRTs, however, DO allow
+                # this.  See this email thread for a litte more info:
+                # http://lists.osgeo.org/pipermail/gdal-dev/2009-January/019660.html
+                # A workaround is to open up the VRT XML file and write the
+                # correct blocksizes.  Hacky, but appears to work.
+                band = raster.GetRasterBand(1)
+                blocksize = band.GetBlockSize()
+                band = None
+                _orig_lines = open(new_path).readlines()
+                _new_lines = []
+                for line in _orig_lines:
+                    if 'BlockXSize' in line:
+                        line = '  <BlockXSize>%s</BlockXSize>\n' % blocksize[0]
+                    elif 'BlockYSize' in line:
+                        line = '  <BlockYSize>%s</BlockYSize>\n' % blocksize[1]
+                    _new_lines.append(line)
+
+                with open(new_path, 'w') as vrtfile:
+                    vrtfile.writelines(_new_lines)
+
+                print open(new_path).read()
+                return new_path
+            else:
+                driver = raster.GetDriver()
+            LOGGER.info('[%s] Saving new raster to %s',
+                        driver.LongName, new_path)
             # driver.CreateCopy returns None if there's an error
             # Common case: driver does not have Create() method implemented
             # ESRI Arc/Binary Grids are a great example of this.
-            if not driver.CreateCopy(new_path, raster):
+            if not driver.CreateCopy(new_path, raster, strict=1):
                 LOGGER.info('Manually copying raster files to %s',
                             new_path)
                 for filename in raster.GetFileList():
@@ -75,6 +116,7 @@ def _collect_spatial_files(filepath, data_dir):
                         new_path,
                         os.path.basename(filename))
                     shutil.copyfile(filename, new_filename)
+
             driver = None
             raster = None
             return new_path
@@ -83,8 +125,26 @@ def _collect_spatial_files(filepath, data_dir):
         if vector is not None:
             # OGR also reads CSVs; verify this IS actually a vector
             driver = vector.GetDriver()
+            if driver.GetName() == 'CSV':
+                driver = None
+                vector = None
+                return None
+
             new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
-            LOGGER.info('Saving new vector to %s', new_path)
+            LOGGER.info('[%s] Saving new vector to %s',
+                        driver.GetName(), new_path)
+            if link_data:
+                vrt_vector_path = os.path.join(new_path, 'linked_vector.vrt')
+                with codecs.open(vrt_vector_path,
+                                 'w', encoding='utf-8') as vrt:
+                    vrt.write(OGRVRTTEMPLATE.format(
+                        src_vector=filepath,
+                        src_layer=vector.GetLayer().GetName()
+                    ))
+                driver = None
+                vector = None
+                return vrt_vector_path
+
             new_vector = driver.CopyDataSource(vector, new_path)
             if not new_vector:
                 new_path = os.path.join(new_path,
@@ -97,9 +157,9 @@ def _collect_spatial_files(filepath, data_dir):
     return None
 
 
-def _collect_filepath(parameter, data_dir):
+def _collect_filepath(parameter, data_dir, link_data=False):
     # initialize the return_path
-    multi_part_folder = _collect_spatial_files(parameter, data_dir)
+    multi_part_folder = _collect_spatial_files(parameter, data_dir, link_data)
     if multi_part_folder is not None:
         LOGGER.debug('%s is a multi-part file', parameter)
         return multi_part_folder
@@ -108,7 +168,10 @@ def _collect_filepath(parameter, data_dir):
         LOGGER.debug('%s is a single file', parameter)
         new_filename = os.path.join(data_dir,
                                     os.path.basename(parameter))
-        shutil.copyfile(parameter, new_filename)
+        if link_data:
+            os.symlink(parameter, new_filename)
+        else:
+            shutil.copyfile(parameter, new_filename)
         return new_filename
 
     elif os.path.isdir(parameter):
@@ -120,10 +183,13 @@ def _collect_filepath(parameter, data_dir):
         for filename in os.listdir(parameter):
             src_path = os.path.join(parameter, filename)
             dest_path = os.path.join(new_foldername, filename)
-            if os.path.isdir(src_path):
-                shutil.copytree(src_path, dest_path)
+            if link_data:
+                os.symlink(src_path, dest_path)
             else:
-                shutil.copyfile(src_path, dest_path)
+                if os.path.isdir(src_path):
+                    shutil.copytree(src_path, dest_path)
+                else:
+                    shutil.copyfile(src_path, dest_path)
         return new_foldername
 
 
@@ -186,7 +252,9 @@ def build_scenario(args, scenario_path, link_data=False):
                                  possible_path, filepath)
                     return filepath
                 except KeyError:
-                    found_filepath = _collect_filepath(possible_path, data_dir)
+                    found_filepath = _collect_filepath(possible_path,
+                                                       data_dir,
+                                                       link_data)
                     files_found[possible_path] = found_filepath
                     LOGGER.debug('Processed path %s to %s', args_param,
                                  found_filepath)
