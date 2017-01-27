@@ -3,6 +3,7 @@ import unittest
 import tempfile
 import shutil
 import json
+import tarfile
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -30,7 +31,10 @@ class ScenariosTest(unittest.TestCase):
 
         scenarios.collect_parameters(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        scenarios.extract_archive(out_directory, archive_path)
+
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
+
         self.assertEqual(len(os.listdir(out_directory)), 3)
 
         self.assertEqual(
@@ -50,7 +54,9 @@ class ScenariosTest(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        scenarios.extract_archive(out_directory, archive_path)
+
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
@@ -73,7 +79,8 @@ class ScenariosTest(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        scenarios.extract_archive(out_directory, archive_path)
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
@@ -98,7 +105,8 @@ class ScenariosTest(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        scenarios.extract_archive(out_directory, archive_path)
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
@@ -124,7 +132,8 @@ class ScenariosTest(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        scenarios.extract_archive(out_directory, archive_path)
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
@@ -154,7 +163,8 @@ class ScenariosTest(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        scenarios.extract_archive(out_directory, archive_path)
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
@@ -187,7 +197,8 @@ class ScenariosTest(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        scenarios.extract_archive(out_directory, archive_path)
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
@@ -215,7 +226,8 @@ class ScenariosTest(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        scenarios.extract_archive(out_directory, archive_path)
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))

@@ -225,19 +225,6 @@ def collect_parameters(parameters, archive_uri):
                         logger=LOGGER, verbose=True)
 
 
-def extract_archive(workspace_dir, archive_uri):
-    """Extract a .tar.gzipped file to the given workspace.
-
-        workspace_dir - the folder to which the archive should be extracted
-        archive_uri - the uri to the target archive
-
-        Returns nothing."""
-
-    archive = tarfile.open(archive_uri)
-    archive.extractall(workspace_dir)
-    archive.close()
-
-
 def extract_parameters_archive(archive_uri, input_folder):
     """Extract the target archive to the target workspace folder.
 
@@ -250,7 +237,8 @@ def extract_parameters_archive(archive_uri, input_folder):
 
         Returns a dictionary of the model's parameters for this run."""
     # extract the archive to the workspace
-    extract_archive(input_folder, archive_uri)
+    with tarfile.open(archive_uri) as tar:
+        tar.extractall(input_folder)
 
     # get the arguments dictionary
     arguments_dict = json.load(open(
