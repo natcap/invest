@@ -34,10 +34,10 @@ def capture_gdal_logging():
 
     Returns:
         ``None``"""
-    gdal_logger = logging.getLogger('osgeo.gdal')
+    osgeo_logger = logging.getLogger('osgeo')
 
     def _log_gdal_errors(err_level, err_no, err_msg):
-        """Log error messages to gdal.
+        """Log error messages to osgeo.
 
         All error messages are logged with reasonable ``logging`` levels based
         on the GDAL error level.
@@ -50,7 +50,7 @@ def capture_gdal_logging():
 
         Returns:
             ``None``"""
-        gdal_logger.log(
+        osgeo_logger.log(
             level=GDAL_ERROR_LEVELS[err_level],
             msg='[errno {err}] {msg}'.format(
                 err=err_no, msg=err_msg.replace('\n', ' ')))
