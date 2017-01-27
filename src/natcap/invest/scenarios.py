@@ -261,7 +261,8 @@ def extract_parameters_archive(archive_uri, input_folder):
     extract_archive(input_folder, archive_uri)
 
     # get the arguments dictionary
-    arguments_dict = json.load(open(os.path.join(input_folder, 'parameters.json')))
+    arguments_dict = json.load(open(
+        os.path.join(input_folder, 'parameters.json')))
 
     def _recurse(args_param):
         if isinstance(args_param, dict):
@@ -278,5 +279,5 @@ def extract_parameters_archive(archive_uri, input_folder):
         return args_param
 
     new_args = _recurse(arguments_dict)
-    LOGGER.debug(new_args)
+    LOGGER.debug(pprint.pformat(new_args))
     return new_args
