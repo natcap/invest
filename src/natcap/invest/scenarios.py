@@ -40,6 +40,19 @@ OGRVRTTEMPLATE = """<OGRVRTDataSource>
 
 @contextlib.contextmanager
 def log_to_file(logfile):
+    """Log all messages within this context to a file.
+
+    Parameters:
+        logfile (string): The path to where the logfile will be written.
+            If there is already a file at this location, it will be
+            overwritten.
+
+    Yields:
+        ``handler``: An instance of ``logging.FileHandler`` that
+            represents the file that is being written to.
+
+    Returns:
+        ``None``"""
     handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
     formatter = logging.Formatter(
         "%(args_key)-25s %(name)-25s %(levelname)-8s %(message)s")
@@ -54,6 +67,26 @@ def log_to_file(logfile):
 
 @contextlib.contextmanager
 def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
+    """Create a temporary directory for this context and clean it up on exit.
+
+    Parameters are identical to those for :py:func:`tempfile.mkdtemp`.
+
+    When the context manager exits, the created temporary directory is
+    recursively removed.
+
+    Parameters:
+        suffix='' (string): a suffix for the name of the directory.
+        prefix='tmp' (string): the prefix to use for the directory name.
+        dir=None (string or None): If a string, a directory that should be
+            the parent directory of the new temporary directory.  If None,
+            tempfile will determine the appropriate tempdir to use as the
+            parent folder.
+
+    Yields:
+        ``sandbox`` (string): The path to the new folder on disk.
+
+    Returns:
+        ``None``"""
     sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
     try:
         yield sandbox
