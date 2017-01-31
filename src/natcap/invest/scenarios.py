@@ -141,7 +141,8 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
 
 def _collect_filepath(parameter, data_dir, link_data, archive_path):
     # initialize the return_path
-    multi_part_folder = _collect_spatial_files(parameter, data_dir, link_data, archive_path)
+    multi_part_folder = _collect_spatial_files(parameter, data_dir, link_data,
+                                               archive_path)
     if multi_part_folder is not None:
         LOGGER.debug('%s is a multi-part file', parameter)
         return multi_part_folder
@@ -156,7 +157,8 @@ def _collect_filepath(parameter, data_dir, link_data, archive_path):
                                         'extracted_archive',
                                         'data'))
             os.symlink(relative_parameter, new_filename)
-            LOGGER.debug('Symlinking %s against %s as %s', parameter, archive_path, relative_parameter)
+            LOGGER.debug('Symlinking %s against %s as %s', parameter,
+                         archive_path, relative_parameter)
         else:
             shutil.copyfile(parameter, new_filename)
         return new_filename
@@ -182,6 +184,7 @@ def _collect_filepath(parameter, data_dir, link_data, archive_path):
 
 class _ArgsKeyFilter(logging.Filter):
     def __init__(self, args_key):
+        logging.Filter.__init__(self)
         self.args_key = args_key
 
     def filter(self, record):
@@ -311,7 +314,8 @@ def extract_parameters_archive(archive_uri, input_folder):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
             data_path = os.path.join(input_folder, args_param)
-            LOGGER.info('Recursing with args param: %s --> %s', args_param, data_path)
+            LOGGER.info('Recursing with args param: %s --> %s', args_param,
+                        data_path)
             if os.path.exists(data_path):
                 return os.path.normpath(data_path)
             else:
