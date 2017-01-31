@@ -218,15 +218,21 @@ def build_scenario(args, scenario_path, link_data=False):
     # If a workspace or suffix is provided, ignore that key.
     LOGGER.debug('Keys: %s', sorted(args.keys()))
 
-    def _recurse(args_param, handler):
+    def _recurse(args_param, handler, nested_key=None):
         if isinstance(args_param, dict):
             new_dict = {}
             for args_key, args_value in args_param.iteritems():
                 # log the key via a filter installed to the handler.
-                args_key_filter = _ArgsKeyFilter(args_key)
+                if nested_key:
+                    args_key_label = "%s['%s']" % (nested_key, args_key)
+                else:
+                    args_key_label = "args['%s']" % args_key
+
+                args_key_filter = _ArgsKeyFilter(args_key_label)
                 handler.addFilter(args_key_filter)
                 if args_key not in ('workspace_dir',):
-                    new_dict[args_key] = _recurse(args_value, handler)
+                    new_dict[args_key] = _recurse(args_value, handler,
+                                                  nested_key=args_key_label)
                 handler.removeFilter(args_key_filter)
             return new_dict
         elif isinstance(args_param, list):

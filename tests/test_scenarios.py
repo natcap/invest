@@ -364,6 +364,23 @@ class ScenariosTest(unittest.TestCase):
                 archive_params['file_list']),
             pygeoprocessing.testing.digest_file_list(params['file_list']))
 
+    def test_nested_args_keys(self):
+        from natcap.invest import scenarios
+
+        params = {
+            'a': {
+                'b': 1
+            }
+        }
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        scenarios.build_scenario(params, archive_path, link_data=True)
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+        archive_params = scenarios.extract_parameters_archive(archive_path,
+                                                              out_directory)
+        self.assertEqual(archive_params, params)
+        shutil.copytree(out_directory, 'extracted_archive')
+
 
     def test_sandbox_manager(self):
         from natcap.invest import scenarios
