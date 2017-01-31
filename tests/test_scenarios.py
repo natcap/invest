@@ -138,7 +138,7 @@ class ScenariosTest(unittest.TestCase):
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
         pygeoprocessing.testing.assert_text_equal(
-            params['some_file'], os.path.join(out_directory, 'data',
+            params['some_file'], os.path.join(out_directory,
                                               archived_params['some_file'])
         )
 
@@ -210,7 +210,7 @@ class ScenariosTest(unittest.TestCase):
         archived_params = json.load(
             open(os.path.join(out_directory, 'parameters.json')))
         dest_digest = pygeoprocessing.testing.digest_file_list(
-            [os.path.join(out_directory, 'data', filename)
+            [os.path.join(out_directory, filename)
              for filename in archived_params['file_list']])
 
         self.assertEqual(len(archived_params), 1)  # sanity check
