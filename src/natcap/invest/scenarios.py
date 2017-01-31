@@ -64,39 +64,16 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
         if raster is not None:
             new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
             if link_data:
-                driver = gdal.GetDriverByName('VRT')
-                new_path = os.path.join(new_path, 'linked_raster.vrt')
-                wkt = raster.GetProjection()
+                raster_files = raster.GetFileList()
+                for raster_file in sorted(raster_files):
+                    new_filename = os.path.join(
+                        new_path, os.path.basename(raster_file))
+                    LOGGER.info('Symlinking %s --> %s',
+                                raster_file, new_filename)
+                    os.symlink(raster_file, new_filename)
+                return raster_files[0]  # pick a file to return as the filename
 
-                new_ds = gdal.AutoCreateWarpedVRT(
-                    raster, wkt, wkt, gdal.GRA_NearestNeighbour, 0.0)
-                new_ds.GetDriver().CreateCopy(new_path, new_ds, 1)
-                new_ds = None
-
-                # GDAL simple VRT rasters don't allow the output VRT to use a
-                # blocksize other than 128x128.  Warped VRTs, however, DO allow
-                # this.  See this email thread for a litte more info:
-                # http://lists.osgeo.org/pipermail/gdal-dev/2009-January/019660.html
-                # A workaround is to open up the VRT XML file and write the
-                # correct blocksizes.  Hacky, but appears to work.
-                band = raster.GetRasterBand(1)
-                blocksize = band.GetBlockSize()
-                band = None
-                _orig_lines = open(new_path).readlines()
-                _new_lines = []
-                for line in _orig_lines:
-                    if 'BlockXSize' in line:
-                        line = '  <BlockXSize>%s</BlockXSize>\n' % blocksize[0]
-                    elif 'BlockYSize' in line:
-                        line = '  <BlockYSize>%s</BlockYSize>\n' % blocksize[1]
-                    _new_lines.append(line)
-
-                with open(new_path, 'w') as vrtfile:
-                    vrtfile.writelines(_new_lines)
-
-                return new_path
-            else:
-                driver = raster.GetDriver()
+            driver = raster.GetDriver()
             LOGGER.info('[%s] Saving new raster to %s',
                         driver.LongName, new_path)
             # driver.CreateCopy returns None if there's an error
