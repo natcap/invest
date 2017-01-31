@@ -55,7 +55,7 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
             LOGGER.exception('Could not remove sandbox %s', sandbox)
 
 
-def _collect_spatial_files(filepath, data_dir, link_data):
+def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
     # If the user provides a mutli-part file, wrap it into a folder and grab
     # that instead of the individual file.
 
@@ -136,7 +136,8 @@ def _collect_spatial_files(filepath, data_dir, link_data):
                 with codecs.open(vrt_vector_path,
                                  'w', encoding='utf-8') as vrt:
                     vrt.write(OGRVRTTEMPLATE.format(
-                        src_vector=filepath,
+                        src_vector=os.path.relpath(
+                            filepath, os.path.dirname(archive_path)),
                         src_layer=vector.GetLayer().GetName()
                     ))
                 driver = None
@@ -155,9 +156,9 @@ def _collect_spatial_files(filepath, data_dir, link_data):
     return None
 
 
-def _collect_filepath(parameter, data_dir, link_data=False):
+def _collect_filepath(parameter, data_dir, link_data, archive_path):
     # initialize the return_path
-    multi_part_folder = _collect_spatial_files(parameter, data_dir, link_data)
+    multi_part_folder = _collect_spatial_files(parameter, data_dir, link_data, archive_path)
     if multi_part_folder is not None:
         LOGGER.debug('%s is a multi-part file', parameter)
         return multi_part_folder
@@ -252,7 +253,8 @@ def build_scenario(args, scenario_path, link_data=False):
                 except KeyError:
                     found_filepath = _collect_filepath(possible_path,
                                                        data_dir,
-                                                       link_data)
+                                                       link_data,
+                                                       scenario_path)
                     files_found[possible_path] = found_filepath
                     LOGGER.debug('Processed path %s to %s', args_param,
                                  found_filepath)
@@ -264,7 +266,7 @@ def build_scenario(args, scenario_path, link_data=False):
 
     with log_to_file(logfile) as handler:
         LOGGER.info('Data are symlinked: %s', link_data,
-                    extra={'args_key':''})
+                    extra={'args_key': ''})
         new_args = _recurse(args, handler)
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
 
