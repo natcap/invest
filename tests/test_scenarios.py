@@ -379,8 +379,6 @@ class ScenariosTest(unittest.TestCase):
         archive_params = scenarios.extract_parameters_archive(archive_path,
                                                               out_directory)
         self.assertEqual(archive_params, params)
-        shutil.copytree(out_directory, 'extracted_archive')
-
 
     def test_sandbox_manager(self):
         from natcap.invest import scenarios

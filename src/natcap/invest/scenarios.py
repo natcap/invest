@@ -252,11 +252,8 @@ def build_scenario(args, scenario_path, link_data=False):
                                                        data_dir,
                                                        link_data,
                                                        scenario_path)
-                    if os.path.isabs(found_filepath):
-                        relative_filepath = os.path.relpath(
-                            found_filepath, temp_workspace)
-                    else:
-                        relative_filepath = found_filepath
+                    relative_filepath = os.path.relpath(
+                        found_filepath, temp_workspace)
                     files_found[possible_path] = relative_filepath
                     LOGGER.debug('Processed path %s to %s',
                                  args_param, relative_filepath)
