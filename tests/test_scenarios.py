@@ -285,8 +285,8 @@ class ScenariosTest(unittest.TestCase):
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         scenarios.build_scenario(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        archive_params = scenarios.extract_parameters_archive(archive_path,
-                                                              out_directory)
+        archive_params = scenarios.extract_scenario(archive_path,
+                                                    out_directory)
         pygeoprocessing.testing.assert_rasters_equal(
             archive_params['raster'], params['raster'])
         pygeoprocessing.testing.assert_vectors_equal(
@@ -342,8 +342,8 @@ class ScenariosTest(unittest.TestCase):
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         scenarios.build_scenario(params, archive_path, link_data=True)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        archive_params = scenarios.extract_parameters_archive(archive_path,
-                                                              out_directory)
+        archive_params = scenarios.extract_scenario(archive_path,
+                                                    out_directory)
         pygeoprocessing.testing.assert_rasters_equal(
             archive_params['raster'], params['raster'])
         pygeoprocessing.testing.assert_vectors_equal(
@@ -376,8 +376,8 @@ class ScenariosTest(unittest.TestCase):
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         scenarios.build_scenario(params, archive_path, link_data=True)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        archive_params = scenarios.extract_parameters_archive(archive_path,
-                                                              out_directory)
+        archive_params = scenarios.extract_scenario(archive_path,
+                                                    out_directory)
         self.assertEqual(archive_params, params)
 
     def test_sandbox_manager(self):

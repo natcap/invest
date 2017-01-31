@@ -329,25 +329,27 @@ def build_scenario(args, scenario_path, link_data=False):
         shutil.move(archive_name, scenario_path)
 
 
-def extract_parameters_archive(archive_uri, input_folder):
-    """Extract the target archive to the target workspace folder.
+def extract_scenario(scenario_path, dest_dir_path):
+    """Extract a demonstration scenario to a given folder.
 
-        workspace_dir - a uri to a folder on disk.  Must be an empty folder.
-        archive_uri - a uri to an archive to be unzipped on disk.  Archive must
-            be in .tar.gz format.
-        input_folder=None - either a URI to a folder on disk or None.  If None,
-            temporary folder will be created and then erased using the atexit
-            register.
+    Parameters:
+        scenario_path (string): The path to a demonstration scenario archive
+            on disk.
+        dest_dir_path (string): The path to a directory.  The contents of the
+            demonstration scenario archive will be extracted into this
+            directory. If the directory does not exist, it will be created.
 
-        Returns a dictionary of the model's parameters for this run."""
-    LOGGER.info('Extracting archive %s to %s', archive_uri, input_folder)
+    Returns:
+        ``args`` (dict): A dictionary of arguments from the extracted
+            archive"""
+    LOGGER.info('Extracting archive %s to %s', scenario_path, dest_dir_path)
     # extract the archive to the workspace
-    with tarfile.open(archive_uri) as tar:
-        tar.extractall(input_folder)
+    with tarfile.open(scenario_path) as tar:
+        tar.extractall(dest_dir_path)
 
     # get the arguments dictionary
     arguments_dict = json.load(open(
-        os.path.join(input_folder, 'parameters.json')))
+        os.path.join(dest_dir_path, 'parameters.json')))
 
     def _recurse(args_param):
         if isinstance(args_param, dict):
@@ -358,7 +360,7 @@ def extract_parameters_archive(archive_uri, input_folder):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
-            data_path = os.path.join(input_folder, args_param)
+            data_path = os.path.join(dest_dir_path, args_param)
             LOGGER.info('Recursing with args param: %s --> %s', args_param,
                         data_path)
             if os.path.exists(data_path):
