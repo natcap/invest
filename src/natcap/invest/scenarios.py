@@ -73,14 +73,8 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
                     os.symlink(raster_file, new_filename)
 
                 # pick a file to return as the filename
-                raster_path = os.path.normpath(os.path.join(
-                    os.path.dirname(archive_path),
-                    'extracted_archive',
-                    'data',
-                    os.path.basename(new_path),
-                    os.path.basename(raster_files[0])))
-                LOGGER.info('Raster path: %s', raster_path)
-                return raster_path
+                return os.path.join(new_path,
+                                    os.path.basename(raster_files[0]))
 
             driver = raster.GetDriver()
             LOGGER.info('[%s] Saving new raster to %s',
