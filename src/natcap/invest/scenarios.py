@@ -1,5 +1,11 @@
-"""
-A module for InVEST test-related data storage.
+"""Functions for creating and extracting InVEST demonstration scenarios.
+
+A demonstration scenario for InVEST is a compressed archive that includes the
+arguments for a model, all of the data files referenced by the arguments, and
+a logfile with some extra information about how the archive was created.  The
+resulting archive can then be extracted on a different computer and should
+have all of the information it needs to run an InVEST model in its entirity.
+
 """
 
 import contextlib
@@ -18,10 +24,13 @@ from osgeo import ogr
 from . import utils
 
 
-DATA_ARCHIVES = os.path.join('data', 'regression_archives')
-INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
 LOGGER = logging.getLogger(__name__)
 
+#: This is the template string for writing a primitive OGR VRT vector with a
+#: based on a preexisting vector.  To use, be sure to use the ``format``
+#: method to set the ``src_layer`` and ``src_vector`` strings.  ``src_vector``
+#: is assumed to be relative to the VRT file's location, wherever that's
+#: written.
 OGRVRTTEMPLATE = """<OGRVRTDataSource>
     <OGRVRTLayer name="{src_layer}">
         <SrcDataSource relativeToVRT="1">{src_vector}</SrcDataSource>
