@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 OGRVRTTEMPLATE = """<OGRVRTDataSource>
     <OGRVRTLayer name="{src_layer}">
-        <SrcDataSource>{src_vector}</SrcDataSource>
+        <SrcDataSource relativeToVRT="1">{src_vector}</SrcDataSource>
     </OGRVRTLayer>
 </OGRVRTDataSource>"""
 
@@ -71,7 +71,16 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
                     LOGGER.info('Symlinking %s --> %s',
                                 raster_file, new_filename)
                     os.symlink(raster_file, new_filename)
-                return raster_files[0]  # pick a file to return as the filename
+
+                # pick a file to return as the filename
+                raster_path = os.path.normpath(os.path.join(
+                    os.path.dirname(archive_path),
+                    'extracted_archive',
+                    'data',
+                    os.path.basename(new_path),
+                    os.path.basename(raster_files[0])))
+                LOGGER.info('Raster path: %s', raster_path)
+                return raster_path
 
             driver = raster.GetDriver()
             LOGGER.info('[%s] Saving new raster to %s',
@@ -114,7 +123,10 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
                                  'w', encoding='utf-8') as vrt:
                     vrt.write(OGRVRTTEMPLATE.format(
                         src_vector=os.path.relpath(
-                            filepath, os.path.dirname(archive_path)),
+                            filepath,
+                            os.path.join(os.path.dirname(archive_path),
+                                         'extracted_path',  # placeholder
+                                         'data', os.path.basename(new_path))),
                         src_layer=vector.GetLayer().GetName()
                     ))
                 driver = None
@@ -145,7 +157,12 @@ def _collect_filepath(parameter, data_dir, link_data, archive_path):
         new_filename = os.path.join(data_dir,
                                     os.path.basename(parameter))
         if link_data:
-            os.symlink(parameter, new_filename)
+            relative_parameter = os.path.relpath(
+                parameter, os.path.join(os.path.dirname(archive_path),
+                                        'extracted_archive',
+                                        'data'))
+            os.symlink(relative_parameter, new_filename)
+            LOGGER.debug('Symlinking %s against %s as %s', parameter, archive_path, relative_parameter)
         else:
             shutil.copyfile(parameter, new_filename)
         return new_filename
@@ -232,10 +249,15 @@ def build_scenario(args, scenario_path, link_data=False):
                                                        data_dir,
                                                        link_data,
                                                        scenario_path)
-                    files_found[possible_path] = found_filepath
-                    LOGGER.debug('Processed path %s to %s', args_param,
-                                 found_filepath)
-                    return found_filepath
+                    if os.path.isabs(found_filepath):
+                        relative_filepath = os.path.relpath(
+                            found_filepath, temp_workspace)
+                    else:
+                        relative_filepath = found_filepath
+                    files_found[possible_path] = relative_filepath
+                    LOGGER.debug('Processed path %s to %s',
+                                 args_param, relative_filepath)
+                    return relative_filepath
         # It's not a file or a structure to recurse through, so
         # just return the item verbatim.
         LOGGER.info('Using verbatim value: %s', args_param)
@@ -276,6 +298,7 @@ def extract_parameters_archive(archive_uri, input_folder):
             register.
 
         Returns a dictionary of the model's parameters for this run."""
+    LOGGER.info('Extracting archive %s to %s', archive_uri, input_folder)
     # extract the archive to the workspace
     with tarfile.open(archive_uri) as tar:
         tar.extractall(input_folder)
@@ -294,8 +317,12 @@ def extract_parameters_archive(archive_uri, input_folder):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
             data_path = os.path.join(input_folder, args_param)
+            LOGGER.info('Recursing with args param: %s --> %s', args_param, data_path)
             if os.path.exists(data_path):
-                return data_path
+                return os.path.normpath(data_path)
+            else:
+                LOGGER.info('Path not found: %s, (Normalized: %s)',
+                            data_path, os.path.normpath(data_path))
         return args_param
 
     new_args = _recurse(arguments_dict)
