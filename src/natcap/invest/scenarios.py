@@ -22,8 +22,7 @@ DATA_ARCHIVES = os.path.join('data', 'regression_archives')
 INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
 LOGGER = logging.getLogger(__name__)
 
-OGRVRTTEMPLATE = """
-<OGRVRTDataSource>
+OGRVRTTEMPLATE = """<OGRVRTDataSource>
     <OGRVRTLayer name="{src_layer}">
         <SrcDataSource>{src_vector}</SrcDataSource>
     </OGRVRTLayer>
@@ -95,7 +94,6 @@ def _collect_spatial_files(filepath, data_dir, link_data):
                 with open(new_path, 'w') as vrtfile:
                     vrtfile.writelines(_new_lines)
 
-                print open(new_path).read()
                 return new_path
             else:
                 driver = raster.GetDriver()
@@ -265,7 +263,8 @@ def build_scenario(args, scenario_path, link_data=False):
         return args_param
 
     with log_to_file(logfile) as handler:
-        LOGGER.info('Data are symlinked: %s', link_data)
+        LOGGER.info('Data are symlinked: %s', link_data,
+                    extra={'args_key':''})
         new_args = _recurse(args, handler)
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
 
@@ -321,5 +320,5 @@ def extract_parameters_archive(archive_uri, input_folder):
         return args_param
 
     new_args = _recurse(arguments_dict)
-    LOGGER.debug(pprint.pformat(new_args))
+    LOGGER.debug('Expanded parameters as \n%s', pprint.pformat(new_args))
     return new_args
