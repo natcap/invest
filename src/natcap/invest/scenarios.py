@@ -29,7 +29,7 @@ from . import __version__
 LOGGER = logging.getLogger(__name__)
 
 ParameterSet = collections.namedtuple('ParameterSet',
-                                      'args invest_version callable')
+                                      'args invest_version name')
 
 
 @contextlib.contextmanager
@@ -359,7 +359,19 @@ def extract_scenario(scenario_path, dest_dir_path):
     return new_args
 
 
-def write_parameter_set(filepath, args, callable_name):
+def write_parameter_set(filepath, args, name):
+    """Record a parameter set to a file on disk.
+
+    Parameters:
+        filepath (string): The path to the file on disk where the parameters
+            should be recorded.
+        args (dict): The args dictionary to record to the parameter set.
+        name (string): An identifier string for the callable or InVEST
+            model that would accept the arguments given.
+
+    Returns:
+        ``None``
+    """
     def _recurse(args_param):
         if isinstance(args_param, dict):
             return dict((key, _recurse(value))
@@ -371,7 +383,7 @@ def write_parameter_set(filepath, args, callable_name):
                 return os.path.normpath(args_param)
         return args_param
     parameter_data = {
-        'callable': callable_name,
+        'name': name,
         'invest_version': __version__,
         'args': _recurse(args)
     }
@@ -380,7 +392,21 @@ def write_parameter_set(filepath, args, callable_name):
 
 
 def read_parameter_set(filepath):
+    """Extract and return attributes from a parameter set.
+
+    Parameters:
+        filepath (string): The file containing a parameter set.
+
+    Returns:
+        A ``ParameterSet`` namedtuple with these attributes::
+
+            args (dict): The arguments dict for the callable
+            invest_version (string): The version of InVEST used to record the
+                parameter set.
+            name (string): The name of the callable or model that these
+                arguments are intended for.
+    """
     read_params = json.load(codecs.open(filepath, 'r', encoding='UTF-8'))
     return ParameterSet(read_params['args'],
                         read_params['invest_version'],
-                        read_params['callable'])
+                        read_params['name'])
