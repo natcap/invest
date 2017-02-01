@@ -235,14 +235,20 @@ class _ArgsKeyFilter(logging.Filter):
 
 
 def build_scenario(args, scenario_path, link_data=False):
-    """Collect an InVEST model's arguments into a dictionary and archive all
-        the input data.
+    """Build an InVEST demonstration scenario from an arguments dict.
 
-        args - a dictionary of arguments
-        scenario_path - a URI to the target archive.
+    Parameters:
+        args (dict): The arguments dictionary to include in the demonstration
+            scenario.
+        scenario_path (string): The path to where the scenario archive should
+            be written.
+        link_data=False (bool): If ``False``, any data referred to in ``args``
+            will be symlinked, except for OGR vectors, which will be
+            represented by a VRT.  If ``True``, all files will be copied into
+            the archive.
 
-        Returns nothing."""
-
+    Returns:
+        ``None``"""
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='scenario_')
     logfile = os.path.join(temp_workspace, 'log')
