@@ -26,17 +26,6 @@ from . import utils
 
 LOGGER = logging.getLogger(__name__)
 
-#: This is the template string for writing a primitive OGR VRT vector with a
-#: based on a preexisting vector.  To use, be sure to use the ``format``
-#: method to set the ``src_layer`` and ``src_vector`` strings.  ``src_vector``
-#: is assumed to be relative to the VRT file's location, wherever that's
-#: written.
-OGRVRTTEMPLATE = """<OGRVRTDataSource>
-    <OGRVRTLayer name="{src_layer}">
-        <SrcDataSource relativeToVRT="1">{src_vector}</SrcDataSource>
-    </OGRVRTLayer>
-</OGRVRTDataSource>"""
-
 
 @contextlib.contextmanager
 def log_to_file(logfile):
@@ -97,7 +86,7 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
             LOGGER.exception('Could not remove sandbox %s', sandbox)
 
 
-def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
+def _collect_spatial_files(filepath, data_dir):
     """Collect spatial files into the data directory of an archive.
 
     This function detects whether a filepath is a raster or vector
@@ -117,10 +106,6 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
     Parameters:
         filepath (string): The filepath to analyze.
         data_dir (string): The path to the data directory.
-        link_data (bool): Whether to link to the data with relative paths
-            rather than include the data files themselves.
-        archive_path (string): The path to where the final archive will
-            be placed.
 
     Returns:
         ``None`` If the file is not a spatial file, or the ``path`` to the new
@@ -133,19 +118,6 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
         raster = gdal.Open(filepath)
         if raster is not None:
             new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
-            if link_data:
-                raster_files = raster.GetFileList()
-                for raster_file in sorted(raster_files):
-                    new_filename = os.path.join(
-                        new_path, os.path.basename(raster_file))
-                    LOGGER.info('Symlinking %s --> %s',
-                                raster_file, new_filename)
-                    os.symlink(raster_file, new_filename)
-
-                # pick a file to return as the filename
-                return os.path.join(new_path,
-                                    os.path.basename(raster_files[0]))
-
             driver = raster.GetDriver()
             LOGGER.info('[%s] Saving new raster to %s',
                         driver.LongName, new_path)
@@ -181,22 +153,6 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
             new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
             LOGGER.info('[%s] Saving new vector to %s',
                         driver.GetName(), new_path)
-            if link_data:
-                vrt_vector_path = os.path.join(new_path, 'linked_vector.vrt')
-                with codecs.open(vrt_vector_path,
-                                 'w', encoding='utf-8') as vrt:
-                    vrt.write(OGRVRTTEMPLATE.format(
-                        src_vector=os.path.relpath(
-                            filepath,
-                            os.path.join(os.path.dirname(archive_path),
-                                         'extracted_path',  # placeholder
-                                         'data', os.path.basename(new_path))),
-                        src_layer=vector.GetLayer().GetName()
-                    ))
-                driver = None
-                vector = None
-                return vrt_vector_path
-
             new_vector = driver.CopyDataSource(vector, new_path)
             if not new_vector:
                 new_path = os.path.join(new_path,
@@ -209,23 +165,19 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
     return None
 
 
-def _collect_filepath(path, data_dir, link_data, archive_path):
+def _collect_filepath(path, data_dir):
     """Collect files on disk into the data directory of an archive.
 
     Parameters:
         path (string): The path to examine.  Must exist on disk.
         data_dir (string): The path to the data directory, where any data
             files will be stored.
-        link_data (bool): If ``True``, data files will be symlinked to their
-            location relative to ``archive_path``.  If ``False``, data files
-            will be copied into the data folder as they are.
 
     Returns:
         The path to the new filename within ``data_dir``.
     """
     # initialize the return_path
-    multi_part_folder = _collect_spatial_files(path, data_dir, link_data,
-                                               archive_path)
+    multi_part_folder = _collect_spatial_files(path, data_dir)
     if multi_part_folder is not None:
         LOGGER.debug('%s is a multi-part file', path)
         return multi_part_folder
@@ -234,16 +186,7 @@ def _collect_filepath(path, data_dir, link_data, archive_path):
         LOGGER.debug('%s is a single file', path)
         new_filename = os.path.join(data_dir,
                                     os.path.basename(path))
-        if link_data:
-            relative_path = os.path.relpath(
-                path, os.path.join(os.path.dirname(archive_path),
-                                   'extracted_archive',
-                                   'data'))
-            os.symlink(relative_path, new_filename)
-            LOGGER.debug('Symlinking %s against %s as %s', path,
-                         archive_path, relative_path)
-        else:
-            shutil.copyfile(path, new_filename)
+        shutil.copyfile(path, new_filename)
         return new_filename
 
     elif os.path.isdir(path):
@@ -255,13 +198,10 @@ def _collect_filepath(path, data_dir, link_data, archive_path):
         for filename in os.listdir(path):
             src_path = os.path.join(path, filename)
             dest_path = os.path.join(new_foldername, filename)
-            if link_data:
-                os.symlink(src_path, dest_path)
+            if os.path.isdir(src_path):
+                shutil.copytree(src_path, dest_path)
             else:
-                if os.path.isdir(src_path):
-                    shutil.copytree(src_path, dest_path)
-                else:
-                    shutil.copyfile(src_path, dest_path)
+                shutil.copyfile(src_path, dest_path)
         return new_foldername
 
 
@@ -275,7 +215,7 @@ class _ArgsKeyFilter(logging.Filter):
         return True
 
 
-def build_scenario(args, scenario_path, link_data=False):
+def build_scenario(args, scenario_path):
     """Build an InVEST demonstration scenario from an arguments dict.
 
     Parameters:
@@ -283,10 +223,6 @@ def build_scenario(args, scenario_path, link_data=False):
             scenario.
         scenario_path (string): The path to where the scenario archive should
             be written.
-        link_data=False (bool): If ``False``, any data referred to in ``args``
-            will be symlinked, except for OGR vectors, which will be
-            represented by a VRT.  If ``True``, all files will be copied into
-            the archive.
 
     Returns:
         ``None``"""
@@ -338,9 +274,7 @@ def build_scenario(args, scenario_path, link_data=False):
                     return filepath
                 except KeyError:
                     found_filepath = _collect_filepath(possible_path,
-                                                       data_dir,
-                                                       link_data,
-                                                       scenario_path)
+                                                       data_dir)
                     relative_filepath = os.path.relpath(
                         found_filepath, temp_workspace)
                     files_found[possible_path] = relative_filepath
@@ -353,8 +287,6 @@ def build_scenario(args, scenario_path, link_data=False):
         return args_param
 
     with log_to_file(logfile) as handler:
-        LOGGER.info('Data are symlinked: %s', link_data,
-                    extra={'args_key': ''})
         new_args = _recurse(args, handler)
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
 
