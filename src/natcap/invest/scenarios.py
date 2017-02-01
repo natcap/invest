@@ -17,14 +17,19 @@ import logging
 import tempfile
 import codecs
 import pprint
+import collections
 
 from osgeo import gdal
 from osgeo import ogr
 
 from . import utils
+from . import __version__
 
 
 LOGGER = logging.getLogger(__name__)
+
+ParameterSet = collections.namedtuple('ParameterSet',
+                                      'args invest_version callable')
 
 
 @contextlib.contextmanager
@@ -352,3 +357,30 @@ def extract_scenario(scenario_path, dest_dir_path):
     new_args = _recurse(arguments_dict)
     LOGGER.debug('Expanded parameters as \n%s', pprint.pformat(new_args))
     return new_args
+
+
+def write_parameter_set(filepath, args, callable_name):
+    def _recurse(args_param):
+        if isinstance(args_param, dict):
+            return dict((key, _recurse(value))
+                        for (key, value) in args_param.iteritems())
+        elif isinstance(args_param, list):
+            return [_recurse(param) for param in args_param]
+        elif isinstance(args_param, basestring):
+            if os.path.exists(args_param):
+                return os.path.normpath(args_param)
+        return args_param
+    parameter_data = {
+        'callable': callable_name,
+        'invest_version': __version__,
+        'args': _recurse(args)
+    }
+    json.dump(parameter_data, codecs.open(filepath, 'w', encoding='UTF-8'),
+              encoding='UTF-8', indent=4, sort_keys=True)
+
+
+def read_parameter_set(filepath):
+    read_params = json.load(codecs.open(filepath, 'r', encoding='UTF-8'))
+    return ParameterSet(read_params['args'],
+                        read_params['invest_version'],
+                        read_params['callable'])

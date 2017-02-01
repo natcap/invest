@@ -336,3 +336,44 @@ class ScenariosTest(unittest.TestCase):
 
             # trigger the exception handling for coverage.
             shutil.rmtree(new_dir)
+
+    def test_scenario_parameter_set(self):
+        from natcap.invest import scenarios, __version__
+
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'nested': {
+                'level1': 123,
+            },
+            'foo': os.path.join(self.workspace, 'foo.txt'),
+            'bar': os.path.join(self.workspace, 'foo.txt'),
+            'file_list': [
+                os.path.join(self.workspace, 'file1.txt'),
+                os.path.join(self.workspace, 'file2.txt'),
+            ],
+            'data_dir': os.path.join(self.workspace, 'data_dir'),
+            'raster': os.path.join(FW_DATA, 'dem'),
+            'vector': os.path.join(FW_DATA, 'watersheds.shp'),
+            'table': os.path.join(DATA_DIR, 'carbon', 'carbon_pools_samp.csv'),
+        }
+        modelname = 'natcap.invest.foo'
+        paramset_filename = os.path.join(self.workspace, 'paramset.json')
+
+        # Write the parameter set
+        scenarios.write_parameter_set(paramset_filename, params, modelname)
+
+        # Read back the parameter set
+        args, invest_version, callable_name = scenarios.read_parameter_set(
+            paramset_filename)
+
+        # parameter set calculations normalizes all paths.
+        # These are relative paths and must be patched.
+        normalized_params = params.copy()
+        for key in ('raster', 'vector', 'table'):
+            normalized_params[key] = os.path.normpath(normalized_params[key])
+
+        self.assertEqual(args, normalized_params)
+        self.assertEqual(invest_version, __version__)
+        self.assertEqual(callable_name, modelname)
