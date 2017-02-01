@@ -98,6 +98,34 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
 
 
 def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
+    """Collect spatial files into the data directory of an archive.
+
+    This function detects whether a filepath is a raster or vector
+    recignizeable by GDAL/OGR and does what is needed to copy the dataset
+    into the scenario's archive folder.
+
+    Rasters copied into the archive will be stored in a new folder with the
+    ``raster_`` prefix.  Vectors will be stored in a new folder with the
+    ``vector_`` prefix.
+
+    .. Note :: CSV files are not handled by this function.
+
+        While the CSV format can be read as a vector format by OGR, we
+        explicitly exclude CSV files from this function.  This is to maintain
+        readibility of the final textfile.
+
+    Parameters:
+        filepath (string): The filepath to analyze.
+        data_dir (string): The path to the data directory.
+        link_data (bool): Whether to link to the data with relative paths
+            rather than include the data files themselves.
+        archive_path (string): The path to where the final archive will
+            be placed.
+
+    Returns:
+        ``None`` If the file is not a spatial file, or the ``path`` to the new
+        resting place of the spatial files."""
+
     # If the user provides a mutli-part file, wrap it into a folder and grab
     # that instead of the individual file.
 
