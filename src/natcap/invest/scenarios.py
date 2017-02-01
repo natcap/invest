@@ -209,38 +209,51 @@ def _collect_spatial_files(filepath, data_dir, link_data, archive_path):
     return None
 
 
-def _collect_filepath(parameter, data_dir, link_data, archive_path):
+def _collect_filepath(path, data_dir, link_data, archive_path):
+    """Collect files on disk into the data directory of an archive.
+
+    Parameters:
+        path (string): The path to examine.  Must exist on disk.
+        data_dir (string): The path to the data directory, where any data
+            files will be stored.
+        link_data (bool): If ``True``, data files will be symlinked to their
+            location relative to ``archive_path``.  If ``False``, data files
+            will be copied into the data folder as they are.
+
+    Returns:
+        The path to the new filename within ``data_dir``.
+    """
     # initialize the return_path
-    multi_part_folder = _collect_spatial_files(parameter, data_dir, link_data,
+    multi_part_folder = _collect_spatial_files(path, data_dir, link_data,
                                                archive_path)
     if multi_part_folder is not None:
-        LOGGER.debug('%s is a multi-part file', parameter)
+        LOGGER.debug('%s is a multi-part file', path)
         return multi_part_folder
 
-    elif os.path.isfile(parameter):
-        LOGGER.debug('%s is a single file', parameter)
+    elif os.path.isfile(path):
+        LOGGER.debug('%s is a single file', path)
         new_filename = os.path.join(data_dir,
-                                    os.path.basename(parameter))
+                                    os.path.basename(path))
         if link_data:
-            relative_parameter = os.path.relpath(
-                parameter, os.path.join(os.path.dirname(archive_path),
-                                        'extracted_archive',
-                                        'data'))
-            os.symlink(relative_parameter, new_filename)
-            LOGGER.debug('Symlinking %s against %s as %s', parameter,
-                         archive_path, relative_parameter)
+            relative_path = os.path.relpath(
+                path, os.path.join(os.path.dirname(archive_path),
+                                   'extracted_archive',
+                                   'data'))
+            os.symlink(relative_path, new_filename)
+            LOGGER.debug('Symlinking %s against %s as %s', path,
+                         archive_path, relative_path)
         else:
-            shutil.copyfile(parameter, new_filename)
+            shutil.copyfile(path, new_filename)
         return new_filename
 
-    elif os.path.isdir(parameter):
-        LOGGER.debug('%s is a directory', parameter)
-        # parameter is a folder, so we want to copy the folder and all
+    elif os.path.isdir(path):
+        LOGGER.debug('%s is a directory', path)
+        # path is a folder, so we want to copy the folder and all
         # its contents to the data dir.
         new_foldername = tempfile.mkdtemp(
             prefix='data_', dir=data_dir)
-        for filename in os.listdir(parameter):
-            src_path = os.path.join(parameter, filename)
+        for filename in os.listdir(path):
+            src_path = os.path.join(path, filename)
             dest_path = os.path.join(new_foldername, filename)
             if link_data:
                 os.symlink(src_path, dest_path)
