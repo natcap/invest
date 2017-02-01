@@ -184,18 +184,15 @@ def _collect_filepath(path, data_dir):
     # initialize the return_path
     multi_part_folder = _collect_spatial_files(path, data_dir)
     if multi_part_folder is not None:
-        LOGGER.debug('%s is a multi-part file', path)
         return multi_part_folder
 
     elif os.path.isfile(path):
-        LOGGER.debug('%s is a single file', path)
         new_filename = os.path.join(data_dir,
                                     os.path.basename(path))
         shutil.copyfile(path, new_filename)
         return new_filename
 
     elif os.path.isdir(path):
-        LOGGER.debug('%s is a directory', path)
         # path is a folder, so we want to copy the folder and all
         # its contents to the data dir.
         new_foldername = tempfile.mkdtemp(
@@ -220,7 +217,7 @@ class _ArgsKeyFilter(logging.Filter):
         return True
 
 
-def build_scenario(args, scenario_path):
+def build_scenario_archive(args, scenario_path):
     """Build an InVEST demonstration scenario from an arguments dict.
 
     Parameters:
@@ -239,13 +236,6 @@ def build_scenario(args, scenario_path):
 
     # For tracking existing files so we don't copy things twice
     files_found = {}
-
-    # Recurse through the args parameters to locate any URIs
-    #   If a URI is found, copy that file to a new location in the temp
-    #   workspace and update the URI reference.
-    #   Duplicate URIs should also have the same replacement URI.
-    #
-    # If a workspace or suffix is provided, ignore that key.
     LOGGER.debug('Keys: %s', sorted(args.keys()))
 
     def _recurse(args_param, handler, nested_key=None):
@@ -279,12 +269,12 @@ def build_scenario(args, scenario_path):
                     return filepath
                 except KeyError:
                     found_filepath = _collect_filepath(possible_path,
-                                                       data_dir)
+                                                        data_dir)
                     relative_filepath = os.path.relpath(
                         found_filepath, temp_workspace)
                     files_found[possible_path] = relative_filepath
                     LOGGER.debug('Processed path %s to %s',
-                                 args_param, relative_filepath)
+                                    args_param, relative_filepath)
                     return relative_filepath
         # It's not a file or a structure to recurse through, so
         # just return the item verbatim.
@@ -313,7 +303,7 @@ def build_scenario(args, scenario_path):
         shutil.move(archive_name, scenario_path)
 
 
-def extract_scenario(scenario_path, dest_dir_path):
+def extract_scenario_archive(scenario_path, dest_dir_path):
     """Extract a demonstration scenario to a given folder.
 
     Parameters:
@@ -345,13 +335,8 @@ def extract_scenario(scenario_path, dest_dir_path):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
             data_path = os.path.join(dest_dir_path, args_param)
-            LOGGER.info('Recursing with args param: %s --> %s', args_param,
-                        data_path)
             if os.path.exists(data_path):
                 return os.path.normpath(data_path)
-            else:
-                LOGGER.info('Path not found: %s, (Normalized: %s)',
-                            data_path, os.path.normpath(data_path))
         return args_param
 
     new_args = _recurse(arguments_dict)

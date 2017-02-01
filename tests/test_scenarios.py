@@ -29,7 +29,7 @@ class ScenariosTest(unittest.TestCase):
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
 
         with tarfile.open(archive_path) as tar:
@@ -50,7 +50,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -75,7 +75,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -101,7 +101,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -128,7 +128,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -166,7 +166,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -200,7 +200,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -229,7 +229,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -283,10 +283,10 @@ class ScenariosTest(unittest.TestCase):
 
         # collect parameters:
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        archive_params = scenarios.extract_scenario(archive_path,
-                                                    out_directory)
+        archive_params = scenarios.extract_scenario_archive(
+            archive_path, out_directory)
         pygeoprocessing.testing.assert_rasters_equal(
             archive_params['raster'], params['raster'])
         pygeoprocessing.testing.assert_vectors_equal(
@@ -317,10 +317,10 @@ class ScenariosTest(unittest.TestCase):
         }
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario(params, archive_path)
+        scenarios.build_scenario_archive(params, archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        archive_params = scenarios.extract_scenario(archive_path,
-                                                    out_directory)
+        archive_params = scenarios.extract_scenario_archive(
+            archive_path, out_directory)
         self.assertEqual(archive_params, params)
 
     def test_sandbox_manager(self):
