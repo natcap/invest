@@ -6,6 +6,7 @@ import contextlib
 from datetime import datetime
 
 from qtpy import QtWidgets
+from qtpy import QtCore
 import natcap.invest
 from natcap.ui import inputs
 
@@ -61,8 +62,11 @@ class Model(object):
         self.window.setLayout(QtWidgets.QVBoxLayout())
         if self.label:
             self.window.setWindowTitle(self.label)
+
         self.links = QtWidgets.QLabel()
+        self._make_links(self.links)
         self.window.layout().addWidget(self.links)
+
         self.form = inputs.Form()
         self.window.layout().addWidget(self.form)
         self.run_dialog = inputs.FileSystemRunDialog()
@@ -81,7 +85,9 @@ class Model(object):
         self.form.submitted.connect(self.execute)
 
     def _make_links(self, qlabel):
-        links = ['Version ' + natcap.invest.__version__]
+        qlabel.setAlignment(QtCore.Qt.AlignRight)
+        qlabel.setOpenExternalLinks(True)
+        links = ['InVEST version ' + natcap.invest.__version__]
 
         try:
             doc_uri = 'file://' + os.path.abspath(self.localdoc)
