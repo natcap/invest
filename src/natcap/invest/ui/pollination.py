@@ -17,8 +17,3 @@ class Pollination(Model):
             self.workspace_dir.args_key: self.workspace_dir.value(),
             self.suffix.args_key: self.suffix.value()
         }
-
-
-if __name__ == '__main__':
-    model = Pollination()
-    model.exec_()
