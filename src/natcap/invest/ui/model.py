@@ -5,9 +5,9 @@ import os
 import contextlib
 from datetime import datetime
 
-from PyQt4 import QtGui
+from qtpy import QtWidgets
 import natcap.invest
-import natcap.ui
+from natcap.ui import inputs
 
 LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
 DATE_FMT = "%m/%d/%Y %H:%M:%S "
@@ -56,28 +56,26 @@ class Model(object):
     localdoc = None
 
     def __init__(self):
-        self.window = QtGui.QWidget()
-        self.window.setLayout(QtGui.QVBoxLayout())
+        self.window = QtWidgets.QWidget()
+        self.window.setLayout(QtWidgets.QVBoxLayout())
         if self.label:
-            self.window.setLabel(self.label)
-        self.links = QtGui.QLabel()
+            self.window.setWindowTitle(self.label)
+        self.links = QtWidgets.QLabel()
         self.window.layout().addWidget(self.links)
-        self.form = natcap.ui.Form(target=self.target)
+        self.form = inputs.Form()
         self.window.layout().addWidget(self.form)
-        self.run_dialog = natcap.ui.RealtimeMessagesDialog()
+        self.run_dialog = inputs.FileSystemRunDialog()
 
         # start with workspace and suffix inputs
-        self.workspace = natcap.ui.Folder(args_key='workspace_dir',
-                                          label='workspace',
-                                          required=True)
-        self.suffix = natcap.ui.Text(args_key='suffix',
-                                     label='Results suffix',
-                                     required=False)
+        self.workspace = inputs.Folder(args_key='workspace_dir',
+                                       label='workspace',
+                                       required=True)
+        self.suffix = inputs.Text(args_key='suffix',
+                                  label='Results suffix',
+                                  required=False)
         self.suffix.textfield.setMaximumWidth(150)
         self.add_input(self.workspace)
         self.add_input(self.suffix)
-
-        self.message_pane = natcap.ui.inputs.RealtimeMessagesDialog()
 
         self.form.submitted.connect(self.execute)
 
@@ -125,3 +123,7 @@ class Model(object):
 
     def assemble_args(self):
         raise NotImplementedError
+
+    def run(self):
+        self.window.show()
+        inputs.QT_APP.exec_()

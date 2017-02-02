@@ -4,6 +4,7 @@ Single entry point for all InVEST applications.
 
 import argparse
 import os
+import importlib
 
 import pkg_resources
 import natcap.versioner
@@ -32,9 +33,9 @@ _CLI_CONFIG_FILENAME = 'cli_config'
 
 
 def list_models():
-   from .ui import MODELS
+    from .ui import _MODEL_UIS
 
-   return sorted(MODELS.keys())
+    return sorted(meta.id for meta in _MODEL_UIS)
 
 
 def print_models():
@@ -143,8 +144,19 @@ def main():
             print '    %s' % ' '.join(matching_models)
             return 2
 
-        import natcap.invest.iui.modelui
-        natcap.invest.iui.modelui.main(modelname + '.json', args.test)
+        try:
+            import natcap.ui
+        except ImportError:
+            print ('Error: natcap.ui not installed:\n'
+                   '    pip install natcap.invest[ui]')
+            return 3
+
+        ui_module = importlib.import_module(
+            name='.ui.%s' % modelname,
+            package='natcap.invest')
+
+        model_form = getattr(ui_module, 'Pollination')()
+        model_form.run()
 
 if __name__ == '__main__':
     main()

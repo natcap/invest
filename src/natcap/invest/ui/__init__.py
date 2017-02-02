@@ -1,9 +1,9 @@
 
-from ..utils import mock_import
+import collections
 
-with mock_import('natcap.invest.ui.model'):
-    from .pollination import Pollination
+_MODELMETA = collections.namedtuple('ModelMeta', 'id ui_module classname')
 
-    MODELS = {
-        'pollination': Pollination,
-    }
+#    modelname, ui modulename, classname
+_MODEL_UIS = (
+    _MODELMETA(id='pollination', ui_module='pollination', classname='Pollination'),
+)
