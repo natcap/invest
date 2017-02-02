@@ -1,4 +1,5 @@
 """InVEST specific code utils."""
+import sys
 import math
 import os
 import contextlib
@@ -8,6 +9,7 @@ import numpy
 from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
+import mock
 
 
 # GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
@@ -20,6 +22,33 @@ GDAL_ERROR_LEVELS = {
     gdal.CE_Fatal: logging.CRITICAL,
 }
 
+
+@contextlib.contextmanager
+def mock_import(name):
+    """Replace an imported module with ``mock.MagicMock``.
+
+    This is a context manager.  At the end of the context, the previous module
+    reference (or lack thereof) will be restored.
+
+    Parameters:
+        name (string): The name of the module to mock.
+
+    Returns:
+        ``None``
+    """
+    try:
+        _old_ref = sys.modules[name]
+    except KeyError:
+        _old_ref = None
+
+    sys.modules[name] = mock.MagicMock()
+
+    yield
+
+    if _old_ref is None:
+        del sys.modules[name]
+    else:
+        sys.modules[name] = _old_ref
 
 @contextlib.contextmanager
 def capture_gdal_logging():
