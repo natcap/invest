@@ -5,9 +5,12 @@ Single entry point for all InVEST applications.
 import argparse
 import os
 import importlib
+import logging
 
 import pkg_resources
 import natcap.versioner
+
+logging.basicConfig(level=logging.NOTSET)
 
 
 # Goal: allow InVEST models to be run at the command-line, without a UI.

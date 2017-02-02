@@ -53,6 +53,7 @@ def log_to_file(logfile):
 class Model(object):
     label = None
     target = None
+    validator = None
     localdoc = None
 
     def __init__(self):
@@ -95,6 +96,9 @@ class Model(object):
         qlabel.setText(' | '.join(links))
 
     def add_input(self, input):
+        # Add the model's validator if it hasn't already been set.
+        if hasattr(input, 'validator') and input.validator is None:
+            input.validator = self.validator
         self.form.add_input(input)
 
     def execute(self, logfile=None, tempdir=None):
@@ -126,4 +130,5 @@ class Model(object):
 
     def run(self):
         self.window.show()
+        self.window.raise_()  # raise window to top of stack.
         inputs.QT_APP.exec_()

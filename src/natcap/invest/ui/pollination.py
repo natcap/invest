@@ -1,12 +1,16 @@
 from __future__ import absolute_import
+import logging
 
 from .model import Model
 from ..pollination import pollination
 
+LOGGER = logging.getLogger(__name__)
+_validate = lambda args, limit_to: []
 
 class Pollination(Model):
     label = pollination.LABEL
     target = pollination.execute
+    validator = _validate
     localdoc = 'croppollination.html'
 
     def __init__(self):
