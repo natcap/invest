@@ -15,6 +15,7 @@ from natcap.invest.pollination import pollination_core as pollination_core
 from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.pollination.pollination')
+LABEL = 'Pollinator Abundance: Crop Pollination'
 
 
 class MissingFields(ValueError): pass
