@@ -8,13 +8,31 @@ import os
 import importlib
 import logging
 import sys
-
-import pkg_resources
-import natcap.versioner
-
-from .ui import _MODEL_UIS
+import collections
 
 LOGGER = logging.getLogger(__name__)
+_UIMETA = collections.namedtuple('UIMeta', 'pyname gui')
+
+
+_MODEL_UIS = {
+    'pollination': _UIMETA(
+        pyname='natcap.invest.pollination.pollination',
+        gui='pollination.Pollination'),
+    'habitat_suitability': _UIMETA(
+        pyname='natcap.invest.habitat_suitability',
+        gui=None),
+}
+
+
+def _import_ui_class(gui_class):
+    mod_name, classname = gui_class.split('.')
+    module = importlib.import_module(
+        name='.ui.%s' % mod_name,
+        package='natcap.invest')
+    return getattr(module, classname)
+
+# metadata for models: full modelname, first released, full citation,
+# local documentation name.
 
 
 # Goal: allow InVEST models to be run at the command-line, without a UI.
@@ -36,11 +54,9 @@ LOGGER = logging.getLogger(__name__)
 #       3.  Allow model to run with a scenario file.
 #       PS: Optionally, don't validate inputs, but do validate by default.
 
-_CLI_CONFIG_FILENAME = 'cli_config'
-
 
 def list_models():
-    return sorted(meta.id for meta in _MODEL_UIS)
+    return sorted(_MODEL_UIS.keys())
 
 
 def print_models():
@@ -112,7 +128,7 @@ def main():
                                  action='store_const', const=logging.DEBUG,
                                  help='Enable debug logging. Alias for -vvvvv')
     parser.add_argument('--test', action='store_false',
-                         help='Run in headless mode with default args.')
+                        help='Run in headless mode with default args.')
     verbosity_group.add_argument('--verbose', '-v', dest='verbosity', default=0,
                                  action='count', help=('Increase verbosity'))
     list_group.add_argument('model', nargs='?', help=(
@@ -188,16 +204,8 @@ def main():
                    '    pip install natcap.invest[ui]')
             return 3
 
-        ui_module = importlib.import_module(
-            name='.ui.%s' % modelname,
-            package='natcap.invest')
-
-        for meta in _MODEL_UIS:
-            if meta.id == modelname:
-                classname = meta.classname
-                break
-
-        model_form = getattr(ui_module, classname)()
+        model_classname = _import_ui_class(_MODEL_UIS[modelname].gui)
+        model_form = model_classname()
         model_form.run()
 
 if __name__ == '__main__':
