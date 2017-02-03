@@ -11,6 +11,8 @@ import sys
 import collections
 import pprint
 
+from . import utils
+
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'pyname gui')
 
@@ -228,17 +230,19 @@ def main():
 
             paramset = scenarios.read_parameter_set(args.scenario)
 
-            warnings = []
-            try:
-                warnings = getattr(target_mod, 'validate')(paramset.args)
-            except AttributeError:
-                LOGGER.warn('%s does not have a defined validation function.',
-                            model_module.LABEL)
-            finally:
-                if warnings:
-                    LOGGER.warn('Warnings found: \n%s',
-                                pprint.pformat(warnings))
-            getattr(model_module, 'execute')(paramset.args)
+            with utils.capture_gdal_logging():
+                warnings = []
+                try:
+                    warnings = getattr(target_mod, 'validate')(paramset.args)
+                except AttributeError:
+                    LOGGER.warn(
+                        '%s does not have a defined validation function.',
+                        model_module.LABEL)
+                finally:
+                    if warnings:
+                        LOGGER.warn('Warnings found: \n%s',
+                                    pprint.pformat(warnings))
+                getattr(model_module, 'execute')(paramset.args)
         else:
             model_classname = _import_ui_class(_MODEL_UIS[modelname].gui)
             model_form = model_classname()
