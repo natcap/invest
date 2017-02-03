@@ -391,7 +391,22 @@ def read_parameter_set(filepath):
             name (string): The name of the callable or model that these
                 arguments are intended for.
     """
+    paramset_parent_dir = os.path.dirname(os.path.abspath(filepath))
     read_params = json.load(codecs.open(filepath, 'r', encoding='UTF-8'))
-    return ParameterSet(read_params['args'],
+
+    def _recurse(args_param):
+        if isinstance(args_param, dict):
+            return dict((key, _recurse(value)) for (key, value) in
+                        args_param.iteritems())
+        elif isinstance(args_param, list):
+            return [_recurse(param) for param in args_param]
+        elif isinstance(args_param, basestring):
+            if not os.path.isabs(args_param):
+                full_param_path = os.path.join(paramset_parent_dir, args_param)
+                if os.path.exists(full_param_path):
+                    return full_param_path
+        return args_param
+
+    return ParameterSet(_recurse(read_params['args']),
                         read_params['invest_version'],
                         read_params['name'])
