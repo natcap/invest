@@ -1,6 +1,7 @@
 """
 Single entry point for all InVEST applications.
 """
+from __future__ import absolute_import
 
 import argparse
 import os
@@ -10,6 +11,8 @@ import sys
 
 import pkg_resources
 import natcap.versioner
+
+from .ui import _MODEL_UIS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,8 +40,6 @@ _CLI_CONFIG_FILENAME = 'cli_config'
 
 
 def list_models():
-    from .ui import _MODEL_UIS
-
     return sorted(meta.id for meta in _MODEL_UIS)
 
 
@@ -191,10 +192,13 @@ def main():
             name='.ui.%s' % modelname,
             package='natcap.invest')
 
-        model_form = getattr(ui_module, 'Pollination')()
+        for meta in _MODEL_UIS:
+            if meta.id == modelname:
+                classname = meta.classname
+                break
+
+        model_form = getattr(ui_module, classname)()
         model_form.run()
 
 if __name__ == '__main__':
     main()
-
-
