@@ -9,6 +9,7 @@ import importlib
 import logging
 import sys
 import collections
+import pprint
 
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'pyname gui')
@@ -138,6 +139,8 @@ def main():
                                  help='Enable debug logging. Alias for -vvvvv')
     parser.add_argument('--test', action='store_false',
                         help='Run in headless mode with default args.')
+    parser.add_argument('--scenario', '-s', default=None, nargs='?',
+                        help='Run the specified model with this scenario')
     verbosity_group.add_argument('--verbose', '-v', dest='verbosity', default=0,
                                  action='count', help=('Increase verbosity'))
     list_group.add_argument('model', nargs='?', help=(
@@ -168,6 +171,9 @@ def main():
     # Also FYI: using logging.DEBUG means that the logger will defer to
     # the setting of the parent logger.
     logging.getLogger('natcap').setLevel(logging.DEBUG)
+
+    # Now that we've set up logging based on args, we can start logging.
+    LOGGER.debug(args)
 
     if args.list is True:
         print_models()
@@ -213,9 +219,30 @@ def main():
                    '    pip install natcap.invest[ui]')
             return 3
 
-        model_classname = _import_ui_class(_MODEL_UIS[modelname].gui)
-        model_form = model_classname()
-        model_form.run()
+        if args.scenario:
+            from natcap.invest import scenarios
+            target_mod = _MODEL_UIS[modelname].pyname
+            model_module = importlib.import_module(name=target_mod)
+            LOGGER.info('imported target %s from %s',
+                        model_module.__name__, model_module)
+
+            paramset = scenarios.read_parameter_set(args.scenario)
+
+            warnings = []
+            try:
+                warnings = getattr(target_mod, 'validate')(paramset.args)
+            except AttributeError:
+                LOGGER.warn('%s does not have a defined validation function.',
+                            model_module.LABEL)
+            finally:
+                if warnings:
+                    LOGGER.warn('Warnings found: \n%s',
+                                pprint.pformat(warnings))
+            getattr(model_module, 'execute')(paramset.args)
+        else:
+            model_classname = _import_ui_class(_MODEL_UIS[modelname].gui)
+            model_form = model_classname()
+            model_form.run()
 
 if __name__ == '__main__':
     main()
