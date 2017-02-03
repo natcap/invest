@@ -17,8 +17,6 @@ from .. import utils as invest_utils
 
 
 LOGGER = logging.getLogger('natcap.invest.crop_production.crop_production')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 _OUTPUT = {
     'nutrient_contents_table': 'nutritional_analysis.csv',

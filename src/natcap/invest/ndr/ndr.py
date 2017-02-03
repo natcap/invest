@@ -14,9 +14,6 @@ from .. import utils
 import ndr_core
 
 LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
-logging.basicConfig(
-    format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
-    level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',

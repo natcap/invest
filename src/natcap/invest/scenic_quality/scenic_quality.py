@@ -15,9 +15,6 @@ from pygeoprocessing import geoprocessing
 from natcap.invest.scenic_quality import scenic_quality_core
 #from natcap.invest.overlap_analysis import overlap_analysis
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 
 def old_reproject_dataset_uri(original_dataset_uri, *args, **kwargs):

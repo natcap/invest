@@ -6,8 +6,6 @@ import logging
 
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.finfish_aquaculture')
 
 

@@ -10,10 +10,6 @@ import pygeoprocessing
 
 from . import utils
 
-logging.basicConfig(
-    format='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
-    level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('natcap.invest.carbon')
 
 _OUTPUT_BASE_FILES = {

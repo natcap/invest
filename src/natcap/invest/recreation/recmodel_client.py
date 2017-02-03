@@ -31,9 +31,6 @@ if shapely.speedups.available:
 # installed and we import the global version of it rather than the local
 from .. import utils
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
 RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long

@@ -13,9 +13,6 @@ from osgeo import gdal, ogr
 import pygeoprocessing.geoprocessing as geoprocess
 from .. import utils as invest_utils
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger(
     'natcap.invest.scenario_generator.scenario_generator')
 

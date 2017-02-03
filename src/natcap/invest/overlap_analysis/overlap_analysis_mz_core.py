@@ -9,8 +9,6 @@ import logging
 from osgeo import ogr
 
 LOGGER = logging.getLogger('natcap.invest.overlap_analysis.mz_core')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 def execute(args):

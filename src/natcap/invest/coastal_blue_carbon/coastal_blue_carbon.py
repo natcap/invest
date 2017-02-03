@@ -19,8 +19,6 @@ from .. import utils as invest_utils
 #          be positive
 NODATA_FLOAT = -16777216
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger(
     'natcap.invest.coastal_blue_carbon.coastal_blue_carbon')
 

@@ -6,11 +6,12 @@ import argparse
 import os
 import importlib
 import logging
+import sys
 
 import pkg_resources
 import natcap.versioner
 
-logging.basicConfig(level=logging.NOTSET)
+LOGGER = logging.getLogger(__name__)
 
 
 # Goal: allow InVEST models to be run at the command-line, without a UI.
@@ -83,7 +84,7 @@ def main():
     """
 
     parser = argparse.ArgumentParser(description=(
-        'Integrated Valuation of Ecosystem Services and Tradeoffs.'
+        'Integrated Valuation of Ecosystem Services and Tradeoffs.  '
         'InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is '
         'a family of tools for quantifying the values of natural capital in '
         'clear, credible, and practical ways. In promising a return (of '
@@ -97,18 +98,50 @@ def main():
         'open-source python environment.'),
         prog='invest'
     )
+    list_group = parser.add_mutually_exclusive_group()
+    verbosity_group = parser.add_mutually_exclusive_group()
     import natcap.invest
+
     parser.add_argument('--version', action='version',
                         version=natcap.invest.__version__)
-    parser.add_argument('--list', action='store_true',
-                        help='List available models')
+    list_group.add_argument('--list', action='store_true',
+                            help='List available models')
+    verbosity_group.add_argument('--debug', dest='log_level',
+                                 default=logging.CRITICAL,
+                                 action='store_const', const=logging.DEBUG,
+                                 help='Enable debug logging. Alias for -vvvvv')
     parser.add_argument('--test', action='store_false',
                          help='Run in headless mode with default args.')
-    parser.add_argument('model', nargs='?', help=(
+    verbosity_group.add_argument('--verbose', '-v', dest='verbosity', default=0,
+                                 action='count', help=('Increase verbosity'))
+    list_group.add_argument('model', nargs='?', help=(
         'The model/tool to run. Use --list to show available models/tools. '
         'Identifiable model prefixes may also be used.'))
 
     args = parser.parse_args()
+
+    root_logger = logging.getLogger()
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(
+        fmt='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
+        datefmt='%m/%d/%Y %H:%M:%S ')
+    handler.setFormatter(formatter)
+
+    # Set the log level based on what the user provides in the available
+    # arguments.  Verbosity: the more v's the lower the logging threshold.
+    # If --debug is used, the logging threshold is 10.
+    # If the user goes lower than logging.DEBUG, default to logging.DEBUG.
+    log_level = min(args.log_level, logging.CRITICAL - (args.verbosity*10))
+    handler.setLevel(max(log_level, logging.DEBUG))  # don't go lower than DEBUG
+    root_logger.addHandler(handler)
+    LOGGER.info('Setting handler log level to %s', log_level)
+
+    # FYI: Root logger by default has a level of logging.WARNING.
+    # To capture ALL logging produced in this system at runtime, use this:
+    # logging.getLogger().setLevel(logging.DEBUG)
+    # Also FYI: using logging.DEBUG means that the logger will defer to
+    # the setting of the parent logger.
+    logging.getLogger('natcap').setLevel(logging.DEBUG)
 
     if args.list is True:
         print_models()

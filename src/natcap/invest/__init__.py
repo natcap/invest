@@ -29,9 +29,6 @@ if (pkg_resources.parse_version(pygeoprocessing.__version__) <
 
 __version__ = natcap.versioner.get_version('natcap.invest')
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 
 def local_dir(source_file):
     """Return the path to where `source_file` would be on disk.

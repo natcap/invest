@@ -39,9 +39,6 @@ LOGGER_TIME_DELAY = 5.0
 
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('natcap.invest.recreation.recmodel_server')
 
 

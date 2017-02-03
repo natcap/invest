@@ -16,8 +16,6 @@ from osgeo import gdal, ogr, osr
 import pygeoprocessing.geoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra_core')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-   %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 # Global safe nodata value for rasters that have values [0..1]
 _RISK_NODATA = -1

@@ -16,8 +16,6 @@ import scipy
 
 import pygeoprocessing.geoprocessing
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
 class IntersectionError(Exception):

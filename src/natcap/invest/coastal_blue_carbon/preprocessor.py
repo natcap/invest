@@ -16,8 +16,6 @@ from .. import utils as invest_utils
 
 NODATA_INT = -9999  # typical integer nodata value used in rasters
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
 

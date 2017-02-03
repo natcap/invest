@@ -15,8 +15,6 @@ from natcap.invest.habitat_risk_assessment import hra_preprocessor
 import pygeoprocessing.geoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 class ImproperCriteriaAttributeName(Exception):
