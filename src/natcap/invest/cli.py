@@ -68,12 +68,11 @@ def print_models():
     max_model_name_length = max(len(name) for name in model_names)
     template_string = '    {modelname}   {usage}'
     for model_name in list_models():
-        usage_string = '(CLI-only)'
+        usage_string = '(No GUI available)'
         if _MODEL_UIS[model_name].gui is not None:
             usage_string = ''
 
-        print(
-            template_string.format(
+        print(template_string.format(
                 modelname=model_name.ljust(max_model_name_length),
                 usage=usage_string))
 
