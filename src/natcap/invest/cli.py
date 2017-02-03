@@ -64,8 +64,18 @@ def print_models():
     Pretty-print available models.
     """
     print 'Available models:'
+    model_names = list_models()
+    max_model_name_length = max(len(name) for name in model_names)
+    template_string = '    {modelname}   {usage}'
     for model_name in list_models():
-        print '    %-30s' % model_name
+        usage_string = '(CLI-only)'
+        if _MODEL_UIS[model_name].gui is not None:
+            usage_string = ''
+
+        print(
+            template_string.format(
+                modelname=model_name.ljust(max_model_name_length),
+                usage=usage_string))
 
 
 def write_console_files(out_dir, extension):
