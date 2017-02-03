@@ -62,7 +62,7 @@ def list_models():
     return sorted(_MODEL_UIS.keys())
 
 
-def print_models():
+def format_models():
     """
     Pretty-print available models.
     """
@@ -70,14 +70,67 @@ def print_models():
     model_names = list_models()
     max_model_name_length = max(len(name) for name in model_names)
     template_string = '    {modelname}   {usage}'
+    strings = []
     for model_name in list_models():
         usage_string = '(No GUI available)'
         if _MODEL_UIS[model_name].gui is not None:
             usage_string = ''
 
-        print(template_string.format(
+        strings.append(template_string.format(
                 modelname=model_name.ljust(max_model_name_length),
                 usage=usage_string))
+    return strings
+
+
+class ListModelsAction(argparse.Action):
+    def __init__(self,
+                 option_strings,
+                 dest,
+                 default=False,
+                 required=False,
+                 help=None, *args, **kwargs):
+        super(ListModelsAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            const=True,
+            nargs=0,
+            default=default,
+            required=required,
+            help=help, *args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string):
+        setattr(namespace, self.dest, self.const)
+        parser.exit(message='\n'.join(format_models()))
+
+
+class SelectModelAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string):
+        if values in ['', None]:
+            parser.print_help()
+            print format_models()
+            parser.exit()
+        else:
+            known_models = list_models()
+            matching_models = [model for model in known_models if
+                               model.startswith(values)]
+
+            exact_matches = [model for model in known_models if
+                             model == values]
+
+            if len(matching_models) == 1:
+                modelname = matching_models[0]
+            elif len(exact_matches) == 1:
+                modelname = exact_matches[0]
+            elif len(matching_models) == 0:
+                parser.exit("Error: '%s' not a known model" % values)
+            else:
+                parser.exit((
+                    "Model string '{model}' is ambiguous:\n"
+                    "    {matching_models}").format(
+                        model=values,
+                        matching_models=' '.join(matching_models)))
+        setattr(namespace, self.dest, modelname)
+
 
 
 def write_console_files(out_dir, extension):
@@ -133,7 +186,7 @@ def main():
 
     parser.add_argument('--version', action='version',
                         version=natcap.invest.__version__)
-    list_group.add_argument('--list', action='store_true',
+    list_group.add_argument('--list', action=ListModelsAction,
                             help='List available models')
     verbosity_group.add_argument('--debug', dest='log_level',
                                  default=logging.CRITICAL,
@@ -145,9 +198,10 @@ def main():
                         help='Run the specified model with this scenario')
     verbosity_group.add_argument('--verbose', '-v', dest='verbosity', default=0,
                                  action='count', help=('Increase verbosity'))
-    list_group.add_argument('model', nargs='?', help=(
-        'The model/tool to run. Use --list to show available models/tools. '
-        'Identifiable model prefixes may also be used.'))
+    list_group.add_argument('model', action=SelectModelAction, nargs='?',
+                            help=('The model/tool to run. Use --list to show '
+                                  'available models/tools. Identifiable model '
+                                  'prefixes may also be used.'))
 
     args = parser.parse_args()
 
@@ -177,76 +231,39 @@ def main():
     # Now that we've set up logging based on args, we can start logging.
     LOGGER.debug(args)
 
-    if args.list is True:
-        print_models()
-        return 0
+    try:
+        import natcap.ui
+    except ImportError:
+        print ('Error: natcap.ui not installed:\n'
+                '    pip install natcap.invest[ui]')
+        return 3
 
-    # args.model is '' or None when the user provided no input.
-    if args.model in ['', None]:
-        parser.print_help()
-        print ''
-        print_models()
+    if args.scenario:
+        from natcap.invest import scenarios
+        target_mod = _MODEL_UIS[args.model].pyname
+        model_module = importlib.import_module(name=target_mod)
+        LOGGER.info('imported target %s from %s',
+                    model_module.__name__, model_module)
 
-        if not args.model:
-            return 1
+        paramset = scenarios.read_parameter_set(args.scenario)
 
-        if args.model not in list_models():
-            print "Error: '%s' not a known model" % args.model
-            return 1
-
+        with utils.capture_gdal_logging():
+            warnings = []
+            try:
+                warnings = getattr(target_mod, 'validate')(paramset.args)
+            except AttributeError:
+                LOGGER.warn(
+                    '%s does not have a defined validation function.',
+                    model_module.LABEL)
+            finally:
+                if warnings:
+                    LOGGER.warn('Warnings found: \n%s',
+                                pprint.pformat(warnings))
+            getattr(model_module, 'execute')(paramset.args)
     else:
-        known_models = list_models()
-        matching_models = [model for model in known_models if
-                           model.startswith(args.model)]
-
-        exact_matches = [model for model in known_models if
-                         model == args.model]
-
-        if len(matching_models) == 1:
-            modelname = matching_models[0]
-        elif len(exact_matches) == 1:
-            modelname = exact_matches[0]
-        elif len(matching_models) == 0:
-            print "Error: '%s' not a known model" % args.model
-            return 1
-        else:
-            print "Model string '%s' is ambiguous:" % args.model
-            print '    %s' % ' '.join(matching_models)
-            return 2
-
-        try:
-            import natcap.ui
-        except ImportError:
-            print ('Error: natcap.ui not installed:\n'
-                   '    pip install natcap.invest[ui]')
-            return 3
-
-        if args.scenario:
-            from natcap.invest import scenarios
-            target_mod = _MODEL_UIS[modelname].pyname
-            model_module = importlib.import_module(name=target_mod)
-            LOGGER.info('imported target %s from %s',
-                        model_module.__name__, model_module)
-
-            paramset = scenarios.read_parameter_set(args.scenario)
-
-            with utils.capture_gdal_logging():
-                warnings = []
-                try:
-                    warnings = getattr(target_mod, 'validate')(paramset.args)
-                except AttributeError:
-                    LOGGER.warn(
-                        '%s does not have a defined validation function.',
-                        model_module.LABEL)
-                finally:
-                    if warnings:
-                        LOGGER.warn('Warnings found: \n%s',
-                                    pprint.pformat(warnings))
-                getattr(model_module, 'execute')(paramset.args)
-        else:
-            model_classname = _import_ui_class(_MODEL_UIS[modelname].gui)
-            model_form = model_classname()
-            model_form.run()
+        model_classname = _import_ui_class(_MODEL_UIS[args.model].gui)
+        model_form = model_classname()
+        model_form.run()
 
 if __name__ == '__main__':
     main()
