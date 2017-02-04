@@ -71,6 +71,9 @@ class Model(object):
         self.window.layout().addWidget(self.form)
         self.run_dialog = inputs.FileSystemRunDialog()
 
+        # set up a system tray icon.
+        self.systray_icon = QtWidgets.QSystemTrayIcon()
+
         # start with workspace and suffix inputs
         self.workspace = inputs.Folder(args_key='workspace_dir',
                                        label='workspace',
@@ -82,7 +85,12 @@ class Model(object):
         self.add_input(self.workspace)
         self.add_input(self.suffix)
 
-        self.form.submitted.connect(self.execute)
+        self.form.submitted.connect(self.execute_model)
+        self.form.run_finished.connect(self._show_alert)
+
+    def _show_alert(self):
+        self.systray_icon.showMessage(
+            'InVEST', 'Model run finished')
 
     def _make_links(self, qlabel):
         qlabel.setAlignment(QtCore.Qt.AlignRight)
@@ -107,7 +115,7 @@ class Model(object):
             input.validator = self.validator
         self.form.add_input(input)
 
-    def execute(self, logfile=None, tempdir=None):
+    def execute_model(self, logfile=None, tempdir=None):
         args = self.assemble_args()
 
         if not os.path.exists(args['workspace_dir']):
@@ -122,11 +130,12 @@ class Model(object):
 
         if not tempdir:
             tempdir = os.path.join(args['workspace_dir'], 'tmp')
-            os.makedirs(tempdir)
+            if not os.path.exists(tempdir):
+                os.makedirs(tempdir)
 
         self.form.run(target=self.target,
-                      kwargs={'args': args},
                       logfile=logfile,
+                      kwargs={'args': args},
                       tempdir=tempdir,
                       window_title='Running %s' % self.label,
                       out_folder=args['workspace_dir'])
