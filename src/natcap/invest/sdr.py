@@ -62,7 +62,6 @@ _TMP_BASE_FILES = {
     'aligned_lulc_path': 'aligned_lulc.tif',
     'aligned_erosivity_path': 'aligned_erosivity.tif',
     'aligned_erodibility_path': 'aligned_erodibility.tif',
-    'aligned_watersheds_path': 'aligned_watersheds_path.tif',
     'aligned_drainage_path': 'aligned_drainage.tif',
     'zero_absorption_source_path': 'zero_absorption_source.tif',
     'loss_path': 'loss.tif',
@@ -365,7 +364,7 @@ def _calculate_ls_factor(
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
         beta = (
-            (numpy.sin(slope_in_radians) / 0.0896) /
+            (numpy.sin(slope_in_radians) / 0.0986) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
         # Set m value via lookup table: Table 1 in
