@@ -7,9 +7,10 @@ from ..pollination import pollination
 LOGGER = logging.getLogger(__name__)
 _validate = lambda args, limit_to: []
 
+
 class Pollination(Model):
     label = pollination.LABEL
-    target = pollination.execute
+    target = staticmethod(pollination.execute)
     validator = _validate
     localdoc = 'croppollination.html'
 
@@ -18,6 +19,6 @@ class Pollination(Model):
 
     def assemble_args(self):
         return {
-            self.workspace_dir.args_key: self.workspace_dir.value(),
+            self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value()
         }
