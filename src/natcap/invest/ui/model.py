@@ -76,7 +76,7 @@ class Model(object):
 
         # start with workspace and suffix inputs
         self.workspace = inputs.Folder(args_key='workspace_dir',
-                                       label='workspace',
+                                       label='Workspace',
                                        required=True)
         self.suffix = inputs.Text(args_key='suffix',
                                   label='Results suffix',
