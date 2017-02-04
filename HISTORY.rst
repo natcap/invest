@@ -12,6 +12,7 @@ Unreleased Changes
 * Fixed a broken UI link to Seasonal Water Yield's user's guide.
 * Fixed an issue with DelineateIT that caused ArcGIS users to see both the watershed and inverse watershed polygons when viewing the output of the tool.
 * Upgrading dependency to PyGeoprocessing 0.3.2.
+* Fixed an issue with SDR that caused the LS factor to be an order of magnitue too high in areas where the slope was greater than 9%.  In our sample case this caused sediment export estimates to be about 6% too high, but in cases where analyses are run over steep slopes the error would have been greater.
 
 3.3.2 (2016-10-17)
 ------------------
