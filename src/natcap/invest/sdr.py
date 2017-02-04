@@ -297,12 +297,8 @@ def execute(args):
         f_reg['watershed_results_sdr_path'])
 
     for tmp_filename_key in _TMP_BASE_FILES:
-        try:
+        if os.path.exists(f_reg[tmp_filename_key]):
             os.remove(f_reg[tmp_filename_key])
-        except OSError as os_error:
-            LOGGER.warn(
-                "Can't remove temporary file: %s\nOriginal Exception:\n%s",
-                f_reg[tmp_filename_key], os_error)
 
 
 def _calculate_ls_factor(
