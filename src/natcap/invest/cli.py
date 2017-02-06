@@ -10,6 +10,7 @@ import logging
 import sys
 import collections
 import pprint
+import datetime
 
 from . import utils
 
@@ -258,7 +259,19 @@ def main():
                 if warnings:
                     LOGGER.warn('Warnings found: \n%s',
                                 pprint.pformat(warnings))
-            getattr(model_module, 'execute')(paramset.args)
+
+            tempdir = os.path.join(paramset.args['workspace_dir'], 'tmp')
+            if not os.path.exists(tempdir):
+                os.makedirs(tempdir)
+
+            logfile = os.path.join(
+                args['workspace_dir'],
+                'InVEST-{modelname}-log-{timestamp}.txt'.format(
+                    modelname='-'.join(model_module.LABEL.split(' ')),
+                    timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
+
+            with utils.log_to_file(logfile):
+                getattr(model_module, 'execute')(paramset.args)
     else:
         model_classname = _import_ui_class(_MODEL_UIS[args.model].gui)
         model_form = model_classname()
