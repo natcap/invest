@@ -10,7 +10,7 @@ import logging
 import sys
 import collections
 import pprint
-import datetime
+from datetime import datetime
 
 from . import utils
 
@@ -265,7 +265,7 @@ def main():
                 os.makedirs(tempdir)
 
             logfile = os.path.join(
-                args['workspace_dir'],
+                paramset.args['workspace_dir'],
                 'InVEST-{modelname}-log-{timestamp}.txt'.format(
                     modelname='-'.join(model_module.LABEL.split(' ')),
                     timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
