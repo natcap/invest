@@ -10,7 +10,6 @@ import logging
 import sys
 import collections
 import pprint
-from datetime import datetime
 
 from . import utils
 
@@ -235,7 +234,7 @@ def main():
         import natcap.ui
     except ImportError:
         print ('Error: natcap.ui not installed:\n'
-                '    pip install natcap.invest[ui]')
+               '    pip install natcap.invest[ui]')
         return 3
 
     if args.scenario:
@@ -247,7 +246,8 @@ def main():
 
         paramset = scenarios.read_parameter_set(args.scenario)
 
-        with utils.capture_gdal_logging():
+        with utils.prepare_workspace(paramset.args['workspace_dir'],
+                                     name=model_module.LABEL):
             warnings = []
             try:
                 warnings = getattr(target_mod, 'validate')(paramset.args)
@@ -260,9 +260,7 @@ def main():
                     LOGGER.warn('Warnings found: \n%s',
                                 pprint.pformat(warnings))
 
-            with utils.prepare_workspace(paramset.args['workspace_dir'],
-                                         name=model_module.LABEL):
-                getattr(model_module, 'execute')(paramset.args)
+            getattr(model_module, 'execute')(paramset.args)
     else:
         model_classname = _import_ui_class(_MODEL_UIS[args.model].gui)
         model_form = model_classname()

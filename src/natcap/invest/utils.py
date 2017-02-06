@@ -1,5 +1,4 @@
 """InVEST specific code utils."""
-import sys
 import math
 import os
 import contextlib
@@ -13,7 +12,6 @@ import numpy
 from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
-import mock
 
 
 LOGGER = logging.getLogger(__name__)
