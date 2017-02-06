@@ -13,6 +13,8 @@ import pprint
 
 from . import utils
 
+import six
+
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'pyname gui')
 
@@ -24,6 +26,20 @@ _MODEL_UIS = {
         pyname='natcap.invest.habitat_suitability',
         gui=None),
 }
+
+
+def _format_args(args_dict):
+    sorted_args = sorted(six.iteritems(args_dict), key=lambda x: x[0])
+
+    max_key_width = 0
+    if len(sorted_args) > 0:
+        max_key_width = max(len(x[0]) for x in sorted_args)
+
+    format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
+
+    args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
+    args_string = u"Arguments:\n%s\n" % args_string
+    return args_string
 
 
 def _import_ui_class(gui_class):
@@ -129,7 +145,6 @@ class SelectModelAction(argparse.Action):
                         model=values,
                         matching_models=' '.join(matching_models)))
         setattr(namespace, self.dest, modelname)
-
 
 
 def write_console_files(out_dir, extension):
@@ -248,6 +263,7 @@ def main():
 
         with utils.prepare_workspace(paramset.args['workspace_dir'],
                                      name=model_module.LABEL):
+            LOGGER.info(_format_args(paramset.args))
             warnings = []
             try:
                 warnings = getattr(target_mod, 'validate')(paramset.args)

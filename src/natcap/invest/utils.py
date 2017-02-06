@@ -7,6 +7,7 @@ import threading
 import tempfile
 import shutil
 from datetime import datetime
+import time
 
 import numpy
 from osgeo import gdal
@@ -68,6 +69,24 @@ def capture_gdal_logging():
     gdal.PopErrorHandler()
 
 
+def _format_time(seconds):
+    """Render the integer number of seconds as a string.  Returns a string.
+    """
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    hours = int(hours)
+    minutes = int(minutes)
+
+    if hours > 0:
+        return "%sh %sm %ss" % (hours, minutes, seconds)
+
+    if minutes > 0:
+        return "%sm %ss" % (minutes, seconds)
+    return "%ss" % seconds
+
+
+# TODO: come up with a better name for this contextmanager.
 @contextlib.contextmanager
 def prepare_workspace(workspace, name):
     if not os.path.exists(workspace):
@@ -82,7 +101,10 @@ def prepare_workspace(workspace, name):
     with capture_gdal_logging(), log_to_file(logfile):
         with sandbox_tempdir(dir=workspace,
                              set_tempdir=True):
+            start_time = time.time()
             yield
+            LOGGER.info('Elapsed time: %s',
+                        _format_time(round(time.time() - start_time, 2)))
 
 
 class ThreadFilter(logging.Filter):
