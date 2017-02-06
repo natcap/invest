@@ -1,7 +1,8 @@
 .. :changelog:
 
 .. Unreleased Changes
-Unreleased Changes
+
+3.3.3 (2017-02-06)
 ------------------
 * Fixed an issue in the UI where the carbon model wouldn't accept negative numbers in the price increase of carbon.
 * RouteDEM no longer produces a "tiled_dem.tif" file since that functionality is being deprecated in PyGeoprocessing.
