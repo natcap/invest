@@ -80,26 +80,11 @@ class Model(object):
             input.validator = self.validator
         self.form.add_input(input)
 
-    def execute_model(self, logfile=None, tempdir=None):
+    def execute_model(self):
         args = self.assemble_args()
 
-        if not os.path.exists(args['workspace_dir']):
-            os.makedirs(args['workspace_dir'])
-
-        if not logfile:
-            logfile = os.path.join(
-                args['workspace_dir'],
-                'InVEST-{modelname}-log-{timestamp}.txt'.format(
-                    modelname='-'.join(self.label.split(' ')),
-                    timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
-
-        if not tempdir:
-            tempdir = os.path.join(args['workspace_dir'], 'tmp')
-            if not os.path.exists(tempdir):
-                os.makedirs(tempdir)
-
         def _logged_target():
-            with utils.log_to_file(logfile), utils.sandbox_tempdir(tempdir):
+            with utils.prepare_workspace(args['workspace_dir']):
                 return self.target(args=args)
 
         self.form.run(target=_logged_target,

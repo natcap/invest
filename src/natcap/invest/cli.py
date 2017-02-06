@@ -260,19 +260,9 @@ def main():
                     LOGGER.warn('Warnings found: \n%s',
                                 pprint.pformat(warnings))
 
-            if not os.path.exists(paramset.args['workspace_dir']):
-                os.makedirs(paramset.args['workspace_dir'])
-
-            logfile = os.path.join(
-                paramset.args['workspace_dir'],
-                'InVEST-{modelname}-log-{timestamp}.txt'.format(
-                    modelname='-'.join(model_module.LABEL.split(' ')),
-                    timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
-
-            with utils.log_to_file(logfile):
-                with utils.sandbox_tempdir(dir=paramset.args['workspace_dir'],
-                                           set_tempdir=True):
-                    getattr(model_module, 'execute')(paramset.args)
+            with utils.prepare_workspace(paramset.args['workspace_dir'],
+                                         name=model_module.LABEL):
+                getattr(model_module, 'execute')(paramset.args)
     else:
         model_classname = _import_ui_class(_MODEL_UIS[args.model].gui)
         model_form = model_classname()

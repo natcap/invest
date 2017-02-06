@@ -7,6 +7,7 @@ import logging
 import threading
 import tempfile
 import shutil
+from datetime import datetime
 
 import numpy
 from osgeo import gdal
@@ -67,6 +68,23 @@ def capture_gdal_logging():
     gdal.PushErrorHandler(_log_gdal_errors)
     yield
     gdal.PopErrorHandler()
+
+
+@contextlib.contextmanager
+def prepare_workspace(workspace, name):
+    if not os.path.exists(workspace):
+        os.makedirs(workspace)
+
+    logfile = os.path.join(
+        workspace,
+        'InVEST-{modelname}-log-{timestamp}.txt'.format(
+            modelname='-'.join(name.replace(':', '').split(' ')),
+            timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
+
+    with capture_gdal_logging(), log_to_file(logfile):
+        with sandbox_tempdir(dir=workspace,
+                             set_tempdir=True):
+            yield
 
 
 class ThreadFilter(logging.Filter):
