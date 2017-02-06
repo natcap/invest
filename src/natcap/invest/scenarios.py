@@ -320,6 +320,9 @@ def write_parameter_set(filepath, args, name):
 def read_parameter_set(filepath):
     """Extract and return attributes from a parameter set.
 
+    Any string values found will have environment variables expanded.  See
+    :py:ref:os.path.expandvars and :py:ref:os.path.expanduser for details.
+
     Parameters:
         filepath (string): The file containing a parameter set.
 
@@ -342,10 +345,15 @@ def read_parameter_set(filepath):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
-            if not os.path.isabs(args_param):
-                full_param_path = os.path.join(paramset_parent_dir, args_param)
-                if os.path.exists(full_param_path):
-                    return full_param_path
+            expanded_param = os.path.expandvars(
+                os.path.expanduser(args_param))
+            if os.path.isabs(expanded_param):
+                return expanded_param
+            else:
+                paramset_rel_path = os.path.abspath(
+                    os.path.join(paramset_parent_dir, args_param))
+                if os.path.exists(paramset_rel_path):
+                    return paramset_rel_path
         return args_param
 
     return ParameterSet(_recurse(read_params['args']),
