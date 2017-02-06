@@ -192,3 +192,28 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
             os.path.join(
                 ExponentialDecayUtilsTests._REGRESSION_PATH,
                 'kernel_100.tif'), kernel_filepath, 1e-6)
+
+
+class SandboxTempdirTests(unittest.TestCase):
+    def setUp(self):
+        """Setup workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_sandbox_manager(self):
+        from natcap.invest import utils
+
+        with utils.sandbox_tempdir(suffix='foo',
+                                   prefix='bar',
+                                   dir=self.workspace_dir) as new_dir:
+            self.assertTrue(new_dir.startswith(self.workspace_dir))
+            basename = os.path.basename(new_dir)
+            self.assertTrue(basename.startswith('bar'))
+            self.assertTrue(basename.endswith('foo'))
+
+            # trigger the exception handling for coverage.
+            shutil.rmtree(new_dir)
+

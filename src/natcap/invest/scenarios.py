@@ -8,7 +8,6 @@ have all of the information it needs to run an InVEST model in its entirity.
 
 """
 
-import contextlib
 import os
 import json
 import tarfile
@@ -30,65 +29,6 @@ LOGGER = logging.getLogger(__name__)
 
 ParameterSet = collections.namedtuple('ParameterSet',
                                       'args invest_version name')
-
-
-@contextlib.contextmanager
-def log_to_file(logfile):
-    """Log all messages within this context to a file.
-
-    Parameters:
-        logfile (string): The path to where the logfile will be written.
-            If there is already a file at this location, it will be
-            overwritten.
-
-    Yields:
-        ``handler``: An instance of ``logging.FileHandler`` that
-            represents the file that is being written to.
-
-    Returns:
-        ``None``"""
-    handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
-    formatter = logging.Formatter(
-        "%(args_key)-25s %(name)-25s %(levelname)-8s %(message)s")
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.NOTSET)  # capture everything
-    root_logger.addHandler(handler)
-    handler.setFormatter(formatter)
-    yield handler
-    handler.close()
-    root_logger.removeHandler(handler)
-
-
-@contextlib.contextmanager
-def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
-    """Create a temporary directory for this context and clean it up on exit.
-
-    Parameters are identical to those for :py:func:`tempfile.mkdtemp`.
-
-    When the context manager exits, the created temporary directory is
-    recursively removed.
-
-    Parameters:
-        suffix='' (string): a suffix for the name of the directory.
-        prefix='tmp' (string): the prefix to use for the directory name.
-        dir=None (string or None): If a string, a directory that should be
-            the parent directory of the new temporary directory.  If None,
-            tempfile will determine the appropriate tempdir to use as the
-            parent folder.
-
-    Yields:
-        ``sandbox`` (string): The path to the new folder on disk.
-
-    Returns:
-        ``None``"""
-    sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
-    try:
-        yield sandbox
-    finally:
-        try:
-            shutil.rmtree(sandbox)
-        except OSError:
-            LOGGER.exception('Could not remove sandbox %s', sandbox)
 
 
 def _collect_spatial_files(filepath, data_dir):
@@ -269,22 +209,23 @@ def build_scenario_archive(args, scenario_path):
                     return filepath
                 except KeyError:
                     found_filepath = _collect_filepath(possible_path,
-                                                        data_dir)
+                                                       data_dir)
                     relative_filepath = os.path.relpath(
                         found_filepath, temp_workspace)
                     files_found[possible_path] = relative_filepath
                     LOGGER.debug('Processed path %s to %s',
-                                    args_param, relative_filepath)
+                                 args_param, relative_filepath)
                     return relative_filepath
         # It's not a file or a structure to recurse through, so
         # just return the item verbatim.
         LOGGER.info('Using verbatim value: %s', args_param)
         return args_param
 
-    with log_to_file(logfile) as handler:
+    log_format = "%(args_key)-25s %(name)-25s %(levelname)-8s %(message)s"
+    with utils.log_to_file(logfile, log_fmt=log_format) as handler:
         new_args = _recurse(args, handler)
-    LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
 
+    LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
     LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace, 'parameters.json')
@@ -295,7 +236,7 @@ def build_scenario_archive(args, scenario_path):
                                 sort_keys=True))
 
     # archive the workspace.
-    with sandbox_tempdir() as temp_dir:
+    with utils.sandbox_tempdir() as temp_dir:
         temp_archive = os.path.join(temp_dir, 'invest_archive')
         archive_name = shutil.make_archive(
             temp_archive, 'gztar', root_dir=temp_workspace,

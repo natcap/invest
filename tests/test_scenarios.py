@@ -323,20 +323,6 @@ class ScenariosTest(unittest.TestCase):
             archive_path, out_directory)
         self.assertEqual(archive_params, params)
 
-    def test_sandbox_manager(self):
-        from natcap.invest import scenarios
-
-        with scenarios.sandbox_tempdir(suffix='foo',
-                                       prefix='bar',
-                                       dir=self.workspace) as new_dir:
-            self.assertTrue(new_dir.startswith(self.workspace))
-            basename = os.path.basename(new_dir)
-            self.assertTrue(basename.startswith('bar'))
-            self.assertTrue(basename.endswith('foo'))
-
-            # trigger the exception handling for coverage.
-            shutil.rmtree(new_dir)
-
     def test_scenario_parameter_set(self):
         from natcap.invest import scenarios, __version__
 

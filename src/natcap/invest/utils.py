@@ -4,6 +4,9 @@ import math
 import os
 import contextlib
 import logging
+import threading
+import tempfile
+import shutil
 
 import numpy
 from osgeo import gdal
@@ -11,6 +14,10 @@ from osgeo import osr
 import pygeoprocessing
 import mock
 
+
+LOGGER = logging.getLogger(__name__)
+LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
+DATE_FMT = "%m/%d/%Y %H:%M:%S "
 
 # GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
 # A dict clarifies the mapping between levels.
@@ -50,6 +57,7 @@ def mock_import(name):
     else:
         sys.modules[name] = _old_ref
 
+
 @contextlib.contextmanager
 def capture_gdal_logging():
     """Context manager for logging GDAL errors with python logging.
@@ -87,6 +95,110 @@ def capture_gdal_logging():
     gdal.PushErrorHandler(_log_gdal_errors)
     yield
     gdal.PopErrorHandler()
+
+
+class ThreadFilter(logging.Filter):
+    """When used, this filters out log messages that were recorded from other
+    threads.  This is especially useful if we have logging coming from several
+    concurrent threads.
+    Arguments passed to the constructor:
+        thread_name - the name of the thread to identify.  If the record was
+            reported from this thread name, it will be passed on.
+    """
+    def __init__(self, thread_name):
+        logging.Filter.__init__(self)
+        self.thread_name = thread_name
+
+    def filter(self, record):
+        if record.threadName == self.thread_name:
+            return True
+        return False
+
+
+@contextlib.contextmanager
+def log_to_file(logfile, threadname=None, log_fmt=LOG_FMT, date_fmt=DATE_FMT):
+    """Log all messages within this context to a file.
+
+    Parameters:
+        logfile (string): The path to where the logfile will be written.
+            If there is already a file at this location, it will be
+            overwritten.
+        threadname=None (string): If None, logging from all threads will be
+            included in the log.  If a string, only logging from the thread
+            with the same name will be included in the logfile.
+        log_fmt=LOG_FMT (string): The logging format string to use.  If not
+            provided, ``utils.LOG_FMT`` will be used.
+        date_fmt=DATE_FMT (string): The logging date format string to use.
+            If not provided, ``utils.DATE_FMT`` will be used.
+
+
+    Yields:
+        ``handler``: An instance of ``logging.FileHandler`` that
+            represents the file that is being written to.
+
+    Returns:
+        ``None``"""
+    if os.path.exists(logfile):
+        LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+
+    if not threadname:
+        threadname = threading.current_thread().name
+
+    handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
+    formatter = logging.Formatter(log_fmt, date_fmt)
+    thread_filter = ThreadFilter(threadname)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.NOTSET)  # capture everything
+    root_logger.addHandler(handler)
+    handler.addFilter(thread_filter)
+    handler.setFormatter(formatter)
+    yield handler
+    handler.close()
+    root_logger.removeHandler(handler)
+
+
+@contextlib.contextmanager
+def sandbox_tempdir(suffix='', prefix='tmp', dir=None, set_tempdir=False):
+    """Create a temporary directory for this context and clean it up on exit.
+
+    Parameters are identical to those for :py:func:`tempfile.mkdtemp`.
+
+    When the context manager exits, the created temporary directory is
+    recursively removed.
+
+    Parameters:
+        suffix='' (string): a suffix for the name of the directory.
+        prefix='tmp' (string): the prefix to use for the directory name.
+        dir=None (string or None): If a string, a directory that should be
+            the parent directory of the new temporary directory.  If None,
+            tempfile will determine the appropriate tempdir to use as the
+            parent folder.
+        set_tempdir=False (bool): If True, ``tempfile.tempdir`` will be set
+            to the newly created folder, forcing all tempfiles to be written
+            to this directory.
+
+    Yields:
+        ``sandbox`` (string): The path to the new folder on disk.
+
+    Returns:
+        ``None``"""
+    sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
+
+    if set_tempdir:
+        LOGGER.info('Setting tempfile.tempdir to %s', sandbox)
+        previous_tempdir = tempfile.tempdir
+        tempfile.tempdir = sandbox
+    try:
+        yield sandbox
+    finally:
+        try:
+            shutil.rmtree(sandbox)
+        except OSError:
+            LOGGER.exception('Could not remove sandbox %s', sandbox)
+
+    if set_tempdir:
+        LOGGER.info('Resetting tempfile.tempdir to %s', previous_tempdir)
+        tempfile.tempdir = previous_tempdir
 
 
 def make_suffix_string(args, suffix_key):

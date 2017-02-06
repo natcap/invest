@@ -1,8 +1,7 @@
+from __future__ import absolute_import
 
 import logging
-import threading
 import os
-import contextlib
 from datetime import datetime
 
 from qtpy import QtWidgets
@@ -10,45 +9,11 @@ from qtpy import QtCore
 import natcap.invest
 from natcap.ui import inputs
 
+from .. import utils
+
 LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
 DATE_FMT = "%m/%d/%Y %H:%M:%S "
 LOGGER = logging.getLogger(__name__)
-
-
-class ThreadFilter(logging.Filter):
-    """When used, this filters out log messages that were recorded from other
-    threads.  This is especially useful if we have logging coming from several
-    concurrent threads.
-    Arguments passed to the constructor:
-        thread_name - the name of the thread to identify.  If the record was
-            reported from this thread name, it will be passed on.
-    """
-    def __init__(self, thread_name):
-        logging.Filter.__init__(self)
-        self.thread_name = thread_name
-
-    def filter(self, record):
-        if record.threadName == self.thread_name:
-            return True
-        return False
-
-
-@contextlib.contextmanager
-def log_to_file(logfile):
-    if os.path.exists(logfile):
-        LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
-
-    handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
-    formatter = logging.Formatter(LOG_FMT, DATE_FMT)
-    thread_filter = ThreadFilter(threading.current_thread().name)
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.NOTSET)  # capture everything
-    root_logger.addHandler(handler)
-    handler.addFilter(thread_filter)
-    handler.setFormatter(formatter)
-    yield handler
-    handler.close()
-    root_logger.removeHandler(handler)
 
 
 class Model(object):
@@ -133,10 +98,11 @@ class Model(object):
             if not os.path.exists(tempdir):
                 os.makedirs(tempdir)
 
-        self.form.run(target=self.target,
-                      logfile=logfile,
-                      kwargs={'args': args},
-                      tempdir=tempdir,
+        def _logged_target():
+            with utils.log_to_file(logfile), utils.sandbox_tempdir(tempdir):
+                return self.target(args=args)
+
+        self.form.run(target=_logged_target,
                       window_title='Running %s' % self.label,
                       out_folder=args['workspace_dir'])
 

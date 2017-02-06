@@ -16,7 +16,6 @@ from . import utils
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'pyname gui')
 
-
 _MODEL_UIS = {
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
