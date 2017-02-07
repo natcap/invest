@@ -286,8 +286,7 @@ def execute(args):
             (Kc != Kc_nodata) & (eto != eto_nodata) &
             (precip != precip_nodata) & (root != root_nodata) &
             (soil != root_rest_layer_nodata) & (pawc != pawc_nodata) &
-            (veg != veg_nodata) & (precip != 0.0) & (Kc != 0.0) &
-            (eto != 0.0))
+            (veg != veg_nodata) & (precip != 0.0))
 
         # Compute Budyko Dryness index
         # Use the original AET equation if the land cover type is vegetation

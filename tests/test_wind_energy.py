@@ -1099,7 +1099,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['turbine_parameters_uri'] = fname
 
-        self.assertRaises(wind_energy.FieldError, wind_energy.execute, args)
+        self.assertRaises(ValueError, wind_energy.execute, args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -1151,7 +1151,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['turbine_parameters_uri'] = fname
 
-        self.assertRaises(wind_energy.FieldError, wind_energy.execute, args)
+        self.assertRaises(ValueError, wind_energy.execute, args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -1210,7 +1210,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['global_wind_parameters_uri'] = fname
 
-        self.assertRaises(wind_energy.TimePeriodError, wind_energy.execute, args)
+        self.assertRaises(ValueError, wind_energy.execute, args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)

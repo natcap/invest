@@ -62,7 +62,6 @@ _TMP_BASE_FILES = {
     'aligned_lulc_path': 'aligned_lulc.tif',
     'aligned_erosivity_path': 'aligned_erosivity.tif',
     'aligned_erodibility_path': 'aligned_erodibility.tif',
-    'aligned_watersheds_path': 'aligned_watersheds_path.tif',
     'aligned_drainage_path': 'aligned_drainage.tif',
     'zero_absorption_source_path': 'zero_absorption_source.tif',
     'loss_path': 'loss.tif',
@@ -208,7 +207,7 @@ def execute(args):
     LOGGER.info('calculating RKLS')
     _calculate_rkls(*[f_reg[key] for key in [
         'ls_path', 'aligned_erosivity_path', 'aligned_erodibility_path',
-        'stream_path', 'rkls_path']])
+        'drainage_raster_path', 'rkls_path']])
 
     LOGGER.info('calculating USLE')
     _calculate_usle(*[f_reg[key] for key in [
@@ -239,7 +238,7 @@ def execute(args):
 
     LOGGER.info('calculating d_dn')
     pygeoprocessing.routing.routing_core.distance_to_stream(
-        f_reg['flow_direction_path'], f_reg['stream_path'],
+        f_reg['flow_direction_path'], f_reg['drainage_raster_path'],
         f_reg['d_dn_path'], factor_uri=f_reg['ws_inverse_path'])
 
     LOGGER.info('calculate ic')
@@ -249,8 +248,8 @@ def execute(args):
     LOGGER.info('calculate sdr')
     _calculate_sdr(
         float(args['k_param']), float(args['ic_0_param']),
-        float(args['sdr_max']), f_reg['ic_path'], f_reg['stream_path'],
-        f_reg['sdr_path'])
+        float(args['sdr_max']), f_reg['ic_path'],
+        f_reg['drainage_raster_path'], f_reg['sdr_path'])
 
     LOGGER.info('calculate sed export')
     _calculate_sed_export(
@@ -268,7 +267,7 @@ def execute(args):
 
     LOGGER.info('calculating d_dn bare soil')
     pygeoprocessing.routing.routing_core.distance_to_stream(
-        f_reg['flow_direction_path'], f_reg['stream_path'],
+        f_reg['flow_direction_path'], f_reg['drainage_raster_path'],
         f_reg['d_dn_bare_soil_path'], factor_uri=f_reg['s_inverse_path'])
 
     LOGGER.info('calculating d_up bare soil')
@@ -284,10 +283,10 @@ def execute(args):
     _calculate_sdr(
         float(args['k_param']), float(args['ic_0_param']),
         float(args['sdr_max']), f_reg['ic_bare_soil_path'],
-        f_reg['stream_path'], f_reg['sdr_bare_soil_path'])
+        f_reg['drainage_raster_path'], f_reg['sdr_bare_soil_path'])
 
     _calculate_sed_retention(
-        f_reg['rkls_path'], f_reg['usle_path'], f_reg['stream_path'],
+        f_reg['rkls_path'], f_reg['usle_path'], f_reg['drainage_raster_path'],
         f_reg['sdr_path'], f_reg['sdr_bare_soil_path'],
         f_reg['sed_retention_path'])
 
@@ -298,12 +297,8 @@ def execute(args):
         f_reg['watershed_results_sdr_path'])
 
     for tmp_filename_key in _TMP_BASE_FILES:
-        try:
+        if os.path.exists(f_reg[tmp_filename_key]):
             os.remove(f_reg[tmp_filename_key])
-        except OSError as os_error:
-            LOGGER.warn(
-                "Can't remove temporary file: %s\nOriginal Exception:\n%s",
-                f_reg[tmp_filename_key], os_error)
 
 
 def _calculate_ls_factor(
@@ -365,7 +360,7 @@ def _calculate_ls_factor(
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
         beta = (
-            (numpy.sin(slope_in_radians) / 0.0896) /
+            (numpy.sin(slope_in_radians) / 0.0986) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
         # Set m value via lookup table: Table 1 in

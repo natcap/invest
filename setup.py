@@ -206,7 +206,7 @@ setup(
     include_package_data=True,
     install_requires=BUILD_REQUIREMENTS,
     setup_requires=requirements('natcap.versioner'),
-    license=open('LICENSE.txt').read(),
+    license='BSD',
     zip_safe=False,
     keywords='gis invest',
     classifiers=[
@@ -218,6 +218,7 @@ setup(
         'Operating System :: Microsoft',
         'Operating System :: POSIX',
         'Programming Language :: Python :: 2 :: Only',
+        'License :: OSI Approved :: BSD License',
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,

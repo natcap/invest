@@ -23,6 +23,7 @@ import errno
 import tempfile
 from types import StringType
 import importlib
+import contextlib
 
 from osgeo import gdal
 from osgeo import ogr
@@ -43,6 +44,78 @@ INVEST_USAGE_LOGGER_URL = ('http://data.naturalcapitalproject.org/'
 CURRENT_OS = platform.system()
 if CURRENT_OS != 'Windows':
     from shutil import WindowsError
+
+
+# GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
+# A dict clarifies the mapping between levels.
+GDAL_ERROR_LEVELS = {
+    gdal.CE_None: logging.NOTSET,
+    gdal.CE_Debug: logging.DEBUG,
+    gdal.CE_Warning: logging.WARNING,
+    gdal.CE_Failure: logging.ERROR,
+    gdal.CE_Fatal: logging.CRITICAL,
+}
+
+
+@contextlib.contextmanager
+def _manage_tempdir(new_tempdir):
+    """Context manager for resetting the previous tempfile.tempdir.
+
+    When the context manager is exited, ``tempfile.tempdir`` is reset to its
+    previous value.
+
+    Parameters:
+        new_tempdir (string): The folder that should be the new temporary
+            directory.
+
+    Returns:
+        ``None``
+    """
+    LOGGER.info('Setting tempfile.tempdir to %s', new_tempdir)
+    previous_tempdir = tempfile.tempdir
+    tempfile.tempdir = new_tempdir
+    yield
+    LOGGER.info('Resetting tempfile.tempdir to %s', previous_tempdir)
+    tempfile.tempdir = previous_tempdir
+
+
+@contextlib.contextmanager
+def capture_gdal_logging():
+    """Context manager for logging GDAL errors with python logging.
+
+    GDAL error messages are logged via python's logging system, at a severity
+    that corresponds to a log level in ``logging``.  Error messages are logged
+    with the ``osgeo.gdal`` logger.
+
+    Parameters:
+        ``None``
+
+    Returns:
+        ``None``"""
+    gdal_logger = logging.getLogger('osgeo.gdal')
+
+    def _log_gdal_errors(err_level, err_no, err_msg):
+        """Log error messages to gdal.
+
+        All error messages are logged with reasonable ``logging`` levels based
+        on the GDAL error level.
+
+        Parameters:
+            err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
+            err_no (int): The GDAL error number.  For a full listing of error
+                codes, see: http://www.gdal.org/cpl__error_8h.html
+            err_msg (string): The error string.
+
+        Returns:
+            ``None``"""
+        gdal_logger.log(
+            level=GDAL_ERROR_LEVELS[err_level],
+            msg='[errno {err}] {msg}'.format(
+                err=err_no, msg=err_msg.replace('\n', ' ')))
+
+    gdal.PushErrorHandler(_log_gdal_errors)
+    yield
+    gdal.PopErrorHandler()
 
 
 class InsufficientDiskSpace(Exception):
@@ -531,20 +604,6 @@ class Executor(threading.Thread):
                 #some other reason, raise that exception
                 if exception.errno != errno.EEXIST:
                     raise
-            for tmp_variable in ['TMP', 'TEMP', 'TMPDIR']:
-                if tmp_variable in os.environ:
-                    LOGGER.info(
-                        'Updating os.environ["%s"]=%s to %s', tmp_variable,
-                        os.environ[tmp_variable], args['workspace_dir'])
-                else:
-                    LOGGER.info(
-                        'Setting os.environ["%s"]=%s', tmp_variable,
-                        args['workspace_dir'])
-
-                os.environ[tmp_variable] = temporary_path
-
-            LOGGER.info('Setting tempfile.tempdir to %s', temporary_path)
-            tempfile.tempdir = temporary_path
 
             model_start_time = time.time()
             LOGGER.info('Starting %s', module)
@@ -557,7 +616,8 @@ class Executor(threading.Thread):
                 }
                 args['_iui_meta']['logfile'] = logfile_data
 
-            model.execute(args)
+            with _manage_tempdir(temporary_path), capture_gdal_logging():
+                model.execute(args)
 
             log_exit_thread = threading.Thread(
                 target=_log_exit_status, args=(session_id, ':)'))
@@ -606,6 +666,7 @@ class Executor(threading.Thread):
                 target=_log_exit_status, args=(
                     session_id, traceback.format_exc()))
             log_exit_thread.start()
+            self.log_file.close()
             return
 
         # clean up the temporary folder, but only if we've completed the model
@@ -646,6 +707,7 @@ class Executor(threading.Thread):
         log_exit_thread.join(5.0)
         LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
+        self.log_file.close()
 
 
 def _calculate_args_bounding_box(args_dict):

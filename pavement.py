@@ -1858,6 +1858,21 @@ def check(options):
             print 'Python %s OK' % python_version
         print ''  # add newline between this section and the next one.
 
+    # PYTHONHOME, if defined, forces the python interpreter to use the given
+    # location for its site-packages folder.  This confounds virtualenv, and
+    # undermines all of the functionality that we depend on in pavement that
+    # requires virtualenvs to work as expected.
+    print bold('Checking environment')
+    try:
+        pythonhome = os.environ['PYTHONHOME']
+        print red('CRITICAL:') + ('PYTHONHOME is set to %s. This undermines '
+                                  'the functionality of virtualenv and should '
+                                  'be unset.') % pythonhome
+        errors_found = True
+    except KeyError:
+        print 'PYTHONHOME unset: ' + green('OK')
+    print ''
+
     # verify required programs exist
     programs = [
         ('hg', 'everything'),
@@ -1869,6 +1884,9 @@ def check(options):
     ]
     if platform.system() == 'Linux':
         programs.append(('fpm', 'installers'))
+
+    if platform.system() == 'Darwin':
+        programs.append(('dmgbuild', 'installers'))
 
     print bold("Checking binaries")
     for program, build_steps in programs:
@@ -2770,7 +2788,7 @@ def _build_nsis(version, bindir, arch):
     else:
         short_version = version
 
-    hg_path = sh('hg paths', capture=True).rstrip()
+    hg_path = sh('hg showconfig paths.default', capture=True).rstrip()
     forkuser, forkreponame = hg_path.split('/')[-2:]
     if forkuser == 'natcap':
         data_location = 'invest-data/%s' % short_version
@@ -3182,6 +3200,13 @@ def jenkins_installer(options):
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
+
+            # Only prepare data zips and docs if we're on a windows machine.
+            if (platform.system() != 'Windows' and
+                    opt_name in ('nodata', 'nodocs')):
+                LOGGER.debug('Not on Windows; skipping %s', user_option[3:])
+                user_option = 'true'
+
             if user_option.lower() in ['true', '1']:
                 user_option = True
             elif user_option.lower() in ['', "''", '""', 'false', '0']:
@@ -3281,7 +3306,7 @@ def forked_by(options):
     Print the name of the user who forked this repo.
     """
 
-    hg_path = sh('hg paths', capture=True).rstrip()
+    hg_path = sh('hg showconfig paths.default', capture=True).rstrip()
 
     username, reponame = hg_path.split('/')[-2:]
     print 'username=%s' % username
@@ -3547,7 +3572,7 @@ def jenkins_push_artifacts(options):
     try:
         hg_path = getattr(options.jenkins_push_artifacts, 'upstream')
     except AttributeError:
-        hg_path = sh('hg paths', capture=True).rstrip()
+        hg_path = sh('hg showconfig paths.default', capture=True).rstrip()
 
     username, reponame = hg_path.split('/')[-2:]
 

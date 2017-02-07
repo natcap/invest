@@ -48,7 +48,7 @@ Ubuntu & Debian
 
 ::
 
-    $ sudo apt-get install python-setuptools python-gdal python-rtree python-shapely python-matplotlib python-qt4
+    $ sudo apt-get install python-dev python-setuptools python-gdal python-rtree python-shapely python-matplotlib python-qt4
 
 
 Fedora
@@ -56,7 +56,7 @@ Fedora
 
 ::
 
-    $ sudo yum install python-setuptools gdal-python python-rtree python-shapely python-matplotlib PyQt4
+    $ sudo yum install python-devel python-setuptools gdal-python python-rtree python-shapely python-matplotlib PyQt4
    
 .. _InstallingOnMac:
 
