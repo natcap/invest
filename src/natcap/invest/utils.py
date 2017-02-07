@@ -195,7 +195,7 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None, set_tempdir=False):
     sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
 
     if set_tempdir:
-        LOGGER.info('Setting tempfile.tempdir to %s', sandbox)
+        LOGGER.debug('Setting tempfile.tempdir to %s', sandbox)
         previous_tempdir = tempfile.tempdir
         tempfile.tempdir = sandbox
     try:
@@ -207,7 +207,7 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None, set_tempdir=False):
             LOGGER.exception('Could not remove sandbox %s', sandbox)
 
     if set_tempdir:
-        LOGGER.info('Resetting tempfile.tempdir to %s', previous_tempdir)
+        LOGGER.debug('Resetting tempfile.tempdir to %s', previous_tempdir)
         tempfile.tempdir = previous_tempdir
 
 
