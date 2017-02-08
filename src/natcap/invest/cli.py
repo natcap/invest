@@ -285,17 +285,45 @@ def main():
         with utils.prepare_workspace(paramset.args['workspace_dir'],
                                      name=model_module.LABEL):
             LOGGER.info(_format_args(paramset.args))
-            warnings = []
-            try:
-                warnings = getattr(target_mod, 'validate')(paramset.args)
-            except AttributeError:
-                LOGGER.warn(
-                    '%s does not have a defined validation function.',
-                    model_module.LABEL)
-            finally:
-                if warnings:
-                    LOGGER.warn('Warnings found: \n%s',
-                                pprint.pformat(warnings))
+            if not args.validate:
+                LOGGER.info('Skipping validation by user request')
+            else:
+                warnings = []
+                try:
+                    warnings = getattr(target_mod, 'validate')(paramset.args)
+                except AttributeError:
+                    LOGGER.warn(
+                        '%s does not have a defined validation function.',
+                        model_module.LABEL)
+                finally:
+                    if warnings:
+                        LOGGER.warn('Warnings found: \n%s',
+                                    pprint.pformat(warnings))
+
+            # If the workspace exists and we don't have up-front permission to
+            # overwrite the workspace, prompt for permission.
+            if os.path.exists(args.workspace) and not args.overwrite:
+                overwrite_denied = False
+                if not sys.stdout.isatty():
+                    overwrite_denied = True
+                else:
+                    user_response = raw_input(
+                        'Workspace exists: %s\n    Overwrite? (y/n) ' % (
+                            os.path.abspath(args.workspace)))
+                    while user_response not in ('y', 'n'):
+                        user_response = raw_input(
+                            "Response must be either 'y' or 'n': ")
+                    if user_response == 'n':
+                        overwrite_denied = True
+
+                if overwrite_denied:
+                    # Exit the parser with an error message.
+                    parser.exit(2, ('Use --workspace to define an '
+                                    'alternate workspace.  Aborting.'))
+                else:
+                    LOGGER.warning(
+                        'Overwriting the workspace per user input %s',
+                        os.path.abspath(args.workspace))
 
             getattr(model_module, 'execute')(paramset.args)
     else:
