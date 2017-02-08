@@ -200,18 +200,39 @@ def main():
 
     parser.add_argument('--version', action='version',
                         version=natcap.invest.__version__)
-    list_group.add_argument('--list', action=ListModelsAction,
-                            help='List available models')
+    verbosity_group.add_argument('-v', '--verbose', dest='verbosity', default=0,
+                                 action='count', help=('Increase verbosity'))
     verbosity_group.add_argument('--debug', dest='log_level',
                                  default=logging.CRITICAL,
                                  action='store_const', const=logging.DEBUG,
                                  help='Enable debug logging. Alias for -vvvvv')
-    parser.add_argument('--test', action='store_false',
-                        help='Run in headless mode with default args.')
-    parser.add_argument('--scenario', '-s', default=None, nargs='?',
+    list_group.add_argument('--list', action=ListModelsAction,
+                            help='List available models')
+    parser.add_argument('-l', '--headless', action='store_true', dest='headless',
+                        help=('Attempt to run InVEST without its GUI.'))
+    parser.add_argument('-s', '--scenario', default=None, nargs='?',
                         help='Run the specified model with this scenario')
-    verbosity_group.add_argument('--verbose', '-v', dest='verbosity', default=0,
-                                 action='count', help=('Increase verbosity'))
+    parser.add_argument('-w', '--workspace', default=None, nargs='?',
+                        help='The workspace in which outputs will be saved')
+
+    gui_options_group = parser.add_argument_group(
+        'gui options', 'These options are ignored if running in headless mode')
+    gui_options_group.add_argument('-q', '--quickrun', action='store_true',
+                                   help=('Run the target model without '
+                                         'validating and quit with a nonzero '
+                                         'exit status if an exception is '
+                                         'encountered'))
+
+    cli_options_group = parser.add_argument_group('headless options')
+    cli_options_group.add_argument('-y', '--overwrite', action='store_true',
+                                   help=('Overwrite the workspace without '
+                                         'prompting for confirmation'))
+    cli_options_group.add_argument('-n', '--no-validate', action='store_false',
+                                   dest='validate',
+                                   help=('Do not validate inputs before '
+                                         'running the model.'))
+
+
     list_group.add_argument('model', action=SelectModelAction, nargs='?',
                             help=('The model/tool to run. Use --list to show '
                                   'available models/tools. Identifiable model '
