@@ -220,6 +220,7 @@ def execute(args):
         result[valid_mask] = slope_fraction
         return result
 
+    LOGGER.info("Thresholding slope")
     pygeoprocessing.vectorize_datasets(
         [f_reg['slope_path']], threshold_slope,
         f_reg['thresholded_slope_path'], gdal.GDT_Float32, slope_nodata,
@@ -233,6 +234,7 @@ def execute(args):
     out_pixel_size = dem_pixel_size
 
     # align all the input rasters
+    LOGGER.info("Thresholding slope")
     pygeoprocessing.align_dataset_list(
         [args['dem_path'], args['lulc_path'], args['runoff_proxy_path']],
         [f_reg['aligned_dem_path'], f_reg['aligned_lulc_path'],
@@ -240,6 +242,7 @@ def execute(args):
         'dataset', dataset_to_align_index=0, dataset_to_bound_index=0,
         aoi_uri=args['watersheds_path'])
 
+    LOGGER.info("Aggregating runoff proxy to watersheds")
     runoff_proxy_mean = pygeoprocessing.aggregate_raster_values_uri(
         f_reg['aligned_runoff_proxy_path'],
         args['watersheds_path']).pixel_mean[9999]
@@ -254,6 +257,7 @@ def execute(args):
         result[valid_mask] = val[valid_mask] / runoff_proxy_mean
         return result
 
+    LOGGER.info("Nromalizing runoff proxy")
     pygeoprocessing.vectorize_datasets(
         [f_reg['aligned_runoff_proxy_path']], normalize_runoff_proxy_op,
         f_reg['runoff_proxy_index_path'], gdal.GDT_Float32,
@@ -378,6 +382,7 @@ def execute(args):
             subsurface_proportion_type = 'proportion_subsurface_n'
         else:
             subsurface_proportion_type = None
+        LOGGER.info("Mapping %s load to LULC", nutrient)
         pygeoprocessing.vectorize_datasets(
             [f_reg['aligned_lulc_path']], map_load_function(
                 'load_%s' % nutrient, subsurface_proportion_type),
@@ -395,6 +400,7 @@ def execute(args):
                 load[valid_mask] * runoff_proxy_index[valid_mask])
             return result
 
+        LOGGER.info("Calculating runoff proxy for %s", nutrient)
         pygeoprocessing.vectorize_datasets(
             [load_path, f_reg['runoff_proxy_index_path']], modified_load,
             modified_load_path, gdal.GDT_Float32, nodata_load,
@@ -402,6 +408,7 @@ def execute(args):
 
         sub_load_path = f_reg['sub_load_%s_path' % nutrient]
         modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
+        LOGGER.info("Mapping %s subsurface load to LULC", nutrient)
         pygeoprocessing.vectorize_datasets(
             [f_reg['aligned_lulc_path']], map_subsurface_load_function(
                 'load_%s' % nutrient, subsurface_proportion_type),
