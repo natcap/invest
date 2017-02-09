@@ -234,7 +234,7 @@ def execute(args):
     out_pixel_size = dem_pixel_size
 
     # align all the input rasters
-    LOGGER.info("Thresholding slope")
+    LOGGER.info("Aligning rasters")
     pygeoprocessing.align_dataset_list(
         [args['dem_path'], args['lulc_path'], args['runoff_proxy_path']],
         [f_reg['aligned_dem_path'], f_reg['aligned_lulc_path'],
