@@ -212,7 +212,7 @@ def main():
                         help=('Attempt to run InVEST without its GUI.'))
     parser.add_argument('-s', '--scenario', default=None, nargs='?',
                         help='Run the specified model with this scenario')
-    parser.add_argument('-w', '--workspace', default=None, nargs='?',
+    parser.add_argument('-w', '--workspace', default=os.getcwd(), nargs='?',
                         help='The workspace in which outputs will be saved')
 
     gui_options_group = parser.add_argument_group(
@@ -225,10 +225,11 @@ def main():
 
     cli_options_group = parser.add_argument_group('headless options')
     cli_options_group.add_argument('-y', '--overwrite', action='store_true',
+                                   default=False,
                                    help=('Overwrite the workspace without '
                                          'prompting for confirmation'))
-    cli_options_group.add_argument('-n', '--no-validate', action='store_false',
-                                   dest='validate',
+    cli_options_group.add_argument('-n', '--no-validate', action='store_true',
+                                   dest='validate', default=True,
                                    help=('Do not validate inputs before '
                                          'running the model.'))
 
@@ -273,7 +274,7 @@ def main():
                '    pip install natcap.invest[ui]')
         return 3
 
-    if args.scenario:
+    if args.headless:
         from natcap.invest import scenarios
         target_mod = _MODEL_UIS[args.model].pyname
         model_module = importlib.import_module(name=target_mod)
@@ -329,7 +330,14 @@ def main():
     else:
         model_classname = _import_ui_class(_MODEL_UIS[args.model].gui)
         model_form = model_classname()
-        model_form.run()
+
+        if args.scenario:
+            model_form.load_scenario(args.scenario)
+
+        exitcode = model_form.run(quickrun=args.quickrun)
+        if exitcode != 0:
+            parser.exit(exitcode,
+                        'Model terminated with exit code %s' % exitcode)
 
 if __name__ == '__main__':
     main()

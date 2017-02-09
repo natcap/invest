@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import logging
 import os
-from datetime import datetime
+import pprint
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -10,6 +10,7 @@ import natcap.invest
 from natcap.ui import inputs
 
 from .. import utils
+from .. import scenarios
 
 LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
 DATE_FMT = "%m/%d/%Y %H:%M:%S "
@@ -23,6 +24,7 @@ class Model(object):
     localdoc = None
 
     def __init__(self):
+        self._quickrun = False
         self.window = QtWidgets.QWidget()
         self.window.setLayout(QtWidgets.QVBoxLayout())
         if self.label:
@@ -57,6 +59,11 @@ class Model(object):
         self.systray_icon.showMessage(
             'InVEST', 'Model run finished')
 
+    def _close_model(self):
+        # exit with an error code that matches exception status of run.
+        exit_code = self.form.run_dialog.messageArea.error
+        inputs.QT_APP.exit(int(exit_code))
+
     def _make_links(self, qlabel):
         qlabel.setAlignment(QtCore.Qt.AlignRight)
         qlabel.setOpenExternalLinks(True)
@@ -77,24 +84,57 @@ class Model(object):
     def add_input(self, input):
         # Add the model's validator if it hasn't already been set.
         if hasattr(input, 'validator') and input.validator is None:
+            LOGGER.info('Setting validator of %s to %s',
+                        input, self.validator)
             input.validator = self.validator
+        elif not hasattr(input, 'validator'):
+            LOGGER.info('Input does not have a validator at all: %s',
+                        input)
+        else:
+            LOGGER.info('Validator already set for %s: %s',
+                        input, input.validator)
+
         self.form.add_input(input)
 
     def execute_model(self):
         args = self.assemble_args()
 
         def _logged_target():
-            with utils.prepare_workspace(args['workspace_dir']):
+            name = self.target.__name__
+            with utils.prepare_workspace(args['workspace_dir'], name):
                 return self.target(args=args)
 
         self.form.run(target=_logged_target,
                       window_title='Running %s' % self.label,
                       out_folder=args['workspace_dir'])
 
+    def load_scenario(self, scenario_path):
+        LOGGER.info('Loading scenario from %s', scenario_path)
+        paramset = scenarios.read_parameter_set(scenario_path)
+        self.load_args(paramset.args)
+
+    def load_args(self, scenario_args):
+        _inputs = dict((attr.args_key, attr) for attr in
+                       self.__dict__.itervalues()
+                       if isinstance(attr, inputs.Input))
+        LOGGER.debug(pprint.pformat(_inputs))
+
+        for args_key, args_value in scenario_args.iteritems():
+            try:
+                _inputs[args_key].set_value(args_value)
+            except KeyError:
+                LOGGER.warning(('Scenario args_key %s not associated with '
+                                'any inputs'), args_key)
+
     def assemble_args(self):
         raise NotImplementedError
 
-    def run(self):
+    def run(self, quickrun=False):
+        if quickrun:
+            self.form.run_finished.connect(self._close_model)
+            QtCore.QTimer.singleShot(750, self.execute_model)
+
         self.window.show()
         self.window.raise_()  # raise window to top of stack.
-        inputs.QT_APP.exec_()
+
+        return inputs.QT_APP.exec_()
