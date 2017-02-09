@@ -2,6 +2,10 @@
 
 .. Unreleased Changes
 
+Unreleased Changes
+------------------
+* Upgrading dependency of PyGeoprocessing to 0.3.3.  This fixes a memory leak associated with any model that aggregates rasters over complicated overlapping polygons.
+
 3.3.3 (2017-02-06)
 ------------------
 * Fixed an issue in the UI where the carbon model wouldn't accept negative numbers in the price increase of carbon.
