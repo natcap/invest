@@ -1,7 +1,8 @@
 .. :changelog:
 
 .. Unreleased Changes
-Unreleased Changes
+
+3.3.3 (2017-02-06)
 ------------------
 * Fixed an issue in the UI where the carbon model wouldn't accept negative numbers in the price increase of carbon.
 * RouteDEM no longer produces a "tiled_dem.tif" file since that functionality is being deprecated in PyGeoprocessing.
@@ -12,6 +13,13 @@ Unreleased Changes
 * Fixed a broken UI link to Seasonal Water Yield's user's guide.
 * Fixed an issue with DelineateIT that caused ArcGIS users to see both the watershed and inverse watershed polygons when viewing the output of the tool.
 * Upgrading dependency to PyGeoprocessing 0.3.2.
+* Fixed an issue with SDR that caused the LS factor to be an order of magnitue too high in areas where the slope was greater than 9%.  In our sample case this caused sediment export estimates to be about 6% too high, but in cases where analyses are run over steep slopes the error would have been greater.
+* ``paver check`` now warns if the ``PYTHONHOME`` environment variable is set.
+* API docs now correctly reflect installation steps needed for python development headers on linux.
+* Fixed a side effect in the InVEST user interface that would cause ``tempfile.tempdir`` to be set and then not be reset after a model run is finished.
+* The InVEST user interface will now record GDAL/OGR log messages in the log messages window and in the logfile written to the workspace.
+* Updated branding and usability of the InVEST installer for Windows, and the Mac Disk Image (.dmg).
+
 
 3.3.2 (2016-10-17)
 ------------------
