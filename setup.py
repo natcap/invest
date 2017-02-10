@@ -225,7 +225,7 @@ setup(
     ext_modules=EXTENSION_LIST,
     entry_points={
         'console_scripts': [
-            'invest = natcap.invest.iui.cli:main'
+            'invest = natcap.invest.cli:main'
         ],
     },
     extras_require={
