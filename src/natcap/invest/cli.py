@@ -334,6 +334,9 @@ def main():
         if args.scenario:
             model_form.load_scenario(args.scenario)
 
+        if args.workspace:
+            model_form.workspace.set_value(args.workspace)
+
         exitcode = model_form.run(quickrun=args.quickrun)
         if exitcode != 0:
             parser.exit(exitcode,
