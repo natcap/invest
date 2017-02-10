@@ -35,9 +35,9 @@ def run_model(modelname, cwd, binary, workspace, scenario):
     command = ('{binary} {model} --quickrun '
                '--workspace="{workspace}" '
                '--scenario="{scenario}" ').format(binary=binary,
-                                                 model=modelname,
-                                                 workspace=workspace,
-                                                 scenario=scenario),
+                                                  model=modelname,
+                                                  workspace=workspace,
+                                                  scenario=scenario),
     try:
         subprocess.check_call(command, shell=True, cwd=cwd)
     except subprocess.CalledProcessError as error_obj:
