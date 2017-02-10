@@ -15,7 +15,64 @@ LOGGER = logging.getLogger('invest-autotest.py')
 # Mapping of model keys to scenarios to run through the model's UI.
 # Paths are assumed to be relative to the data root.
 SCENARIOS = {
-    'pollination': [os.path.join('Pollination', 'willamette.invs.json')],
+    'carbon': [os.path.join('Carbon', 'carbon_willamette.invs.json')],
+    'coastal_blue_carbon': [
+        os.path.join('CoastalBlueCarbon', 'cbc_galveston_bay.invs.json')],
+    'coastal_blue_carbon_preprocessor': [
+        os.path.join('CoastalBlueCarbon', 'cbc_pre_galveston_bay.invs.json')],
+    'coastal_vulnerability': [
+        os.path.join('CoastalProtection', 'coasatal_vuln_wcvi.invs.json')],
+    'crop_production': [
+        os.path.join('CropProduction', 'crop_production_willamette.invs.json')],
+    'delineateit': [
+        os.path.join('Base_Data', 'Freshwater',
+                     'delineateit_willamette.invs.json')],
+    'finfish_aquaculture': [
+        os.path.join('Aquaculture',
+                     'atlantic_salmon_british_columbia.invs.json')],
+    'fisheries': [
+        os.path.join('Fisheries', 'blue_crab_galveston_bay.invs.json')],
+    'fisheries_hst': [
+        os.path.join('Fisheries', 'fisheries_hst_demo.invs.json')],
+    'forest_carbon_edge_effect': [
+        os.path.join('forest_carbon_edge_effect',
+                     'forest_carbon_amazonia.invs.json')],
+    'globio': [os.path.join('globio', 'globio_demo.invs.json')],
+    'habitat_quality': [
+        os.path.join('HabitatQuality', 'habitat_quality_willamette.invs.json')],
+    'hra': [os.path.join('HabitatRiskAssess', 'hra_wcvi.invs.json')],
+    'hra_preprocessor': [
+        os.path.join('HabitatRiskAssess', 'hra_pre_wcvi.invs.json')],
+    'hydropower_water_yield': [
+        os.path.join('Hydropower', 'annual_water_yield_willamette.invs.json')],
+    'marine_water_quality_biophysical': [
+        os.path.join('MarineWaterQuality', 'marine_floathomes_wcvi.invs.json')],
+    'ndr': [
+        os.path.join('Base_Data', 'Freshwater',
+                     'ndr_n_p_willamette.invs.json')],
+    'overlap_analysis': [
+        os.path.join('OverlapAnalysis', 'overlap_wcvi.invs.json')],
+    'overlap_analysis_mz': [
+        os.path.join('OverlapAnalysis', 'overlap_mz_wcvi.invs.json')],
+    'pollination': [
+        os.path.join('Pollination', 'pollination_willamette.invs.json')],
+    'recreation': [
+        os.path.join('recreation', 'recreation_andros.invs.json')],
+    'routedem': [
+        os.path.join('Base_Data', 'Freshwater',
+                     'routedem_willamette.invs.json')],
+    'scenario_gen_proximity': [
+        os.path.join('scenario_proximity',
+                     'scenario_proximity_amazonia.invs.json')],
+    'scenario_generator': [
+        os.path.join('ScenarioGenerator', 'scenario_generator_demo.invs.json')],
+    'scenic_quality': [
+        os.path.join('ScenicQuality', 'wind_turbines_wcvi.invs.json')],
+    'sdr': [
+        os.path.join('Base_Data', 'Freshwater', 'sdr_willamette.invs.json')],
+    'seasonal_water_yield': [
+        os.path.join('Base_Data', 'Freshwater', 'sdr_willamette.invs.json')],
+    'wind_energy': [os.path.join('WindEnergy', 'new_england.invs.json')],
 }
 
 
