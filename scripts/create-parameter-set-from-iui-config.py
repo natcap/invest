@@ -12,21 +12,21 @@ IUI_SCENARIOS = {
     'carbon': 'Carbon/carbon_willamette',
     'coastal_blue_carbon': 'CoastalBlueCarbon/cbc_galveston_bay',
     'coastal_blue_carbon_preprocessor': 'CoastalBlueCarbon/cbc_pre_galveston_bay',
-    'coastal_vulnerability': 'CoastalVulnerability/coasatal_vuln_wcvi',
+    'coastal_vulnerability': 'CoastalProtection/coasatal_vuln_wcvi',
     'crop_production': 'CropProduction/crop_production_willamette',
     'delineateit': 'Base_Data/Freshwater/delineateit_willamette',
-    'finfish': 'Aquaculture/atlantic_salmon_british_columbia',
+    'finfish_aquaculture': 'Aquaculture/atlantic_salmon_british_columbia',
     'fisheries': 'Fisheries/blue_crab_galveston_bay',
     'fisheries_hst': 'Fisheries/fisheries_hst_demo',
     'forest_carbon_edge_effect': 'forest_carbon_edge_effect/forest_carbon_amazonia',
     'globio': 'globio/globio_demo',
     'habitat_quality': 'HabitatQuality/habitat_quality_willamette',
     'hra': 'HabitatRiskAssess/hra_wcvi',
-    'hra_pre': 'HabitatRiskAssess/hra_pre_wcvi',
+    'hra_preprocessor': 'HabitatRiskAssess/hra_pre_wcvi',
     'hydropower_water_yield': 'Hydropower/annual_water_yield_willamette',
     'marine_water_quality_biophysical': 'MarineWaterQuality/marine_floathomes_wcvi',
     'ndr': 'Base_Data/Freshwater/ndr_n_p_willamette',
-    'overlap_analysis': 'OverlapAalysis/overlap_wcvi',
+    'overlap_analysis': 'OverlapAnalysis/overlap_wcvi',
     'overlap_analysis_mz': 'OverlapAnalysis/overlap_mz_wcvi',
     'pollination': 'Pollination/pollination_willamette',
     'recreation': 'recreation/recreation_andros',
@@ -96,6 +96,21 @@ def extract_parameters(iui_config_path, relative_to):
     return json_config['modelName'], return_args
 
 
+def generate_from_iui():
+    """Regenerate our InVEST scenarios from IUI's config.
+
+    Assumes CWD is the invest repo root.
+    """
+    for model_key, scenario_name in IUI_SCENARIOS.iteritems():
+        print model_key, scenario_name
+        iui_json_path = os.path.join('src', 'natcap', 'invest', 'iui',
+                                     '%s.json' % model_key)
+        assert os.path.exists(iui_json_path), 'File not found: %s' % iui_json_path
+        scenario_path = os.path.join(DATA_DIR, scenario_name + '.invs.json')
+
+        main([iui_json_path, scenario_path])
+
+
 def main(userargs=None):
     if not userargs:
         userargs = sys.argv[1:]
@@ -118,4 +133,5 @@ def main(userargs=None):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    #main(sys.argv[1:])
+    generate_from_iui()
