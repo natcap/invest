@@ -8,6 +8,39 @@ from natcap.invest import scenarios
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 
+IUI_SCENARIOS = {
+    'carbon': 'Carbon/carbon_willamette',
+    'coastal_blue_carbon': 'CoastalBlueCarbon/cbc_galveston_bay',
+    'coastal_blue_carbon_preprocessor': 'CoastalBlueCarbon/cbc_pre_galveston_bay',
+    'coastal_vulnerability': 'CoastalVulnerability/coasatal_vuln_wcvi',
+    'crop_production': 'CropProduction/crop_production_willamette',
+    'delineateit': 'Base_Data/Freshwater/delineateit_willamette',
+    'finfish': 'Aquaculture/atlantic_salmon_british_columbia',
+    'fisheries': 'Fisheries/blue_crab_galveston_bay',
+    'fisheries_hst': 'Fisheries/fisheries_hst_demo',
+    'forest_carbon_edge_effect': 'forest_carbon_edge_effect/forest_carbon_amazonia',
+    'globio': 'globio/globio_demo',
+    'habitat_quality': 'HabitatQuality/habitat_quality_willamette',
+    'hra': 'HabitatRiskAssess/hra_wcvi',
+    'hra_pre': 'HabitatRiskAssess/hra_pre_wcvi',
+    'hydropower_water_yield': 'Hydropower/annual_water_yield_willamette',
+    'marine_water_quality_biophysical': 'MarineWaterQuality/marine_floathomes_wcvi',
+    'ndr': 'Base_Data/Freshwater/ndr_n_p_willamette',
+    'overlap_analysis': 'OverlapAalysis/overlap_wcvi',
+    'overlap_analysis_mz': 'OverlapAnalysis/overlap_mz_wcvi',
+    'pollination': 'Pollination/pollination_willamette',
+    'recreation': 'recreation/recreation_andros',
+    'routedem': 'Base_Data/Freshwater/routedem_willamette',
+    'scenario_gen_proximity': 'scenario_proximity/scenario_proximity_amazonia',
+    'scenario_generator': 'ScenarioGenerator/scenario_generator_demo',
+    'scenic_quality': 'ScenicQuality/wind_turbines_wcvi',
+    'sdr': 'Base_Data/Freshwater/sdr_willamette',
+    'seasonal_water_yield': 'Base_Data/Freshwater/sdr_willamette',
+    'wind_energy': 'WindEnergy/new_england'
+}
+
+# Extra fisheries args
+# Extra wave energy args
 
 def extract_parameters(iui_config_path, relative_to):
     # arguments for all InVEST model UIs are in a flat dictionary.
