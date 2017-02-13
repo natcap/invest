@@ -2,6 +2,8 @@
 
 import json
 import sys
+import ast
+import textwrap
 import warnings
 
 import autopep8
@@ -35,16 +37,33 @@ class {classname}(inputs.Form):
 """
 
 INPUT_ATTRIBUTES_TEMPLATE = "       self.{name} = {classname}({kwargs})\n"
+_TEXTWRAPPER = textwrap.TextWrapper(
+    width=70,
+    initial_indent="\n" + u" "*15 + r'u"',
+    subsequent_indent=" "*15 + r'u"',
+    fix_sentence_endings=True)
 
 
 def format_kwargs(kwargs):
-    def _convert(param):
-        if isinstance(param, basestring):
-            return "\"%s\"" % param
-        return param
+    def _convert(key, param):
+        # Do long-form string formatting if we have a string where the
+        # parameter key and the value are not blank and the length of the total
+        # formatted string is greater than 79 characters.
+        if (isinstance(param, basestring) and
+                (len(param) > 0 and len(key) > 0) and
+                (len(param) + len(key) + 2 >= 79)):
+            line_ending = '"\n'
 
-    return ', '.join(sorted("%s=%s" % (key, _convert(value))
-                            for (key, value) in kwargs.iteritems()))
+            new_param = "({0}\")".format(
+                line_ending.join(_TEXTWRAPPER.wrap(
+                    ast.literal_eval(param))))
+            return key, new_param
+
+        # If we can't do long-string formatting ,just return the value.
+        return key, param
+
+    return '\n{0}'.format(',\n'.join(sorted("%s=%s" % _convert(key, value)
+                                     for (key, value) in kwargs.iteritems())))
 
 
 def convert_ui_structure(json_file, out_python_file):
