@@ -38,7 +38,12 @@ INPUT_ATTRIBUTES_TEMPLATE = "       self.{name} = {classname}({kwargs})\n"
 
 
 def format_kwargs(kwargs):
-    return ', '.join(sorted("%s=%s" % (key, value)
+    def _convert(param):
+        if isinstance(param, basestring):
+            return "\"%s\"" % param
+        return param
+
+    return ', '.join(sorted("%s=%s" % (key, _convert(value))
                             for (key, value) in kwargs.iteritems()))
 
 
