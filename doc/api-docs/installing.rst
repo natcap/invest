@@ -15,6 +15,8 @@ Installing InVEST
     Recreation model on Windows.
 
 
+.. _BinaryDependencies:
+
 Binary Dependencies
 -------------------
 
@@ -94,11 +96,32 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
     :literal:
     :start-line: 9
 
-Additionally, ``PyQt4`` is required to use the ``invest`` cli, but is not
-required for development against ``natcap.invest``.  PyQt4 is not currently
+
+
+Optional Qt User Interface
+--------------------------
+
+InVEST's user interface is built with PyQt.  Because of the hefty binary
+requirement of Qt and the relative difficulty of installing PyQt, these
+dependencies will not be installed with the standard 
+``pip install natcap.invest``.  Several of these dependencies are available
+as extras, however, and can be installed via pip::
+
+    $ pip install natcap.invest[ui]
+
+These extras do not include a distribution of PyQt, so you will need to
+install PyQt in an appropriate way on your system. PyQt4 is not currently
 available from the Python Package Index, but other sources and package managers
 allow for straightforward installation on :ref:`InstallingOnWindows`,
 :ref:`InstallingOnMac`, and :ref:`InstallingOnLinux`.
+
+The InVEST user interface uses a wrapper layer to support both PyQt4 and PyQt5,
+one of which must be installed on your system for the UI to be able to run.
+If both are installed, PyQt5 is preferred, but you can force the UI to use PyQt4
+by defining an environment variable before launching the UI::
+
+    $ QT_API=pyqt4 invest pollination
+
 
 .. _installing-from-source:
 
