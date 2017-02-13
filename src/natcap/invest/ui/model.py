@@ -132,7 +132,7 @@ class Model(object):
     def run(self, quickrun=False):
         if quickrun:
             self.form.run_finished.connect(self._close_model)
-            QtCore.QTimer.singleShot(750, self.execute_model)
+            QtCore.QTimer.singleShot(50, self.execute_model)
 
         self.window.show()
         self.window.raise_()  # raise window to top of stack.
