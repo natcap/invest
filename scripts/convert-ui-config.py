@@ -8,17 +8,17 @@ import autopep8
 
 
 UI_CLASS_TEMPLATE = """
-from natcap.invest.ui import inputs
+from natcap.ui import inputs
 import {target}
-import functools
 
-class {classname}(inputs.ModelForm):
+class {classname}(inputs.Form):
     label = {label}
-    target = {target}
+    target = staticmethod({target})
+    validator = staticmethod({validator})
     localdoc = {localdoc}
 
     def __init__(self):
-        inputs.ModelForm.__init__(self)
+        inputs.Form.__init__(self)
 
 {input_attributes}
 
@@ -203,10 +203,11 @@ def convert_ui_structure(json_file, out_python_file):
     with open(out_python_file, 'w') as out_file:
         out_file.write(UI_CLASS_TEMPLATE.format(
             label=repr(json_dict['label']),
-            target=json_dict['targetScript'],
+            target='%s.execute' % json_dict['targetScript'],
+            validator='%s.validate' % json_dict['targetScript'],
             localdoc=repr(json_dict['localDocURI']),
             input_attributes='\n'.join(input_attributes),
-            classname='%sForm' % json_dict['modelName'].capitalize(),
+            classname=json_dict['modelName'].capitalize(),
             args_key_map='\n'.join(args_values),
             sufficiency_connections='\n'.join(sufficiency_links),
             args_to_maybe_skip='\n'.join(args_to_maybe_skip)
