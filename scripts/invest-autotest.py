@@ -86,7 +86,7 @@ def sh(command, capture=True):
         return p_stdout
 
 
-def run_model(modelname, cwd, binary, workspace, scenario):
+def run_model(modelname, binary, workspace, scenario):
     """Run an InVEST model, checking the error code of the process."""
     workspace = os.path.join(workspace, 'autorun_%s' % modelname)
     command = ('{binary} {model} --quickrun '
@@ -96,7 +96,7 @@ def run_model(modelname, cwd, binary, workspace, scenario):
                                                   workspace=workspace,
                                                   scenario=scenario),
     try:
-        subprocess.check_call(command, shell=True, cwd=cwd)
+        subprocess.check_call(command, shell=True)
     except subprocess.CalledProcessError as error_obj:
         error_code = error_obj.returncode
     else:
@@ -131,7 +131,7 @@ def main(user_args=None):
         default='.',
         help=('The CWD from which to execute the models. '
               'If executing from a checked-out InVEST repo, this will probably '
-              'be ./data/invest-data/Base_Data or a directory at the same '
+              'be ./data/invest-data/ or a directory at the same '
               'level. If executing from a built InVEST binary, this will be '
               'the current directory (".").  Default value: "."'
               ))
@@ -153,8 +153,8 @@ def main(user_args=None):
     pool = multiprocessing.Pool(processes=args.max_cpus)  # cpu_count()-1
     processes = []
     for _modelname, _scenario in pairs:
+        _scenario = os.path.join(args.cwd, _scenario)
         process = pool.apply_async(run_model, (_modelname,
-                                               args.cwd,
                                                args.binary,
                                                args.workspace,
                                                _scenario))
@@ -187,7 +187,7 @@ def main(user_args=None):
                             string.ljust('EXIT CODE', 10),
                             'SCENARIO')
         for (modelname, scenario), exitcode in sorted(
-                [(k, v) for (k, v) in model_results.iteritems() if v != 0],
+                [(k, v) for (k, v) in model_results.iteritems() if v[0] != 0],
                 key=lambda x: x[0]):
             print "%s %s %s" % (string.ljust(modelname, max_width+1),
                                 string.ljust(str(exitcode[0]), 10),
