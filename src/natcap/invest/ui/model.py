@@ -6,6 +6,7 @@ import pprint
 
 from qtpy import QtWidgets
 from qtpy import QtCore
+from qtpy import QtGui
 import natcap.invest
 from natcap.ui import inputs
 
@@ -25,6 +26,8 @@ class Model(object):
 
     def __init__(self):
         self._quickrun = False
+
+        # Main operational widgets for the form
         self.window = QtWidgets.QWidget()
         self.window.setLayout(QtWidgets.QVBoxLayout())
         if self.label:
@@ -54,6 +57,22 @@ class Model(object):
 
         self.form.submitted.connect(self.execute_model)
         self.form.run_finished.connect(self._show_alert)
+
+        # Menu items.
+        self.file_menu = QtWidgets.QMenu('&File')
+        self.save_to_scenario = self.file_menu.addAction(
+            'Save scenario as ...', self._save_scenario_as,
+            QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
+
+    def _save_scenario_as(self):
+        file_dialog = inputs.FileDialog()
+        save_filepath = file_dialog.save_file(
+            title='Save current parameters as scenario',
+            start_dir=None,  # might change later, last dir is fine
+            savefile='%s_scenario.invs.json' % (
+                '.'.join(self.target.__name__.split('.')[2:-1])))
+        LOGGER.info('Saved current parameters to scenario file %s',
+                    save_filepath)
 
     def _show_alert(self):
         self.systray_icon.showMessage(
