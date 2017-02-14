@@ -227,13 +227,15 @@ def convert_ui_structure(json_file, out_python_file):
 
                 if 'args_id' in obj:
                     try:
-                        if (obj['type'].lower() != 'dropdown' and
-                                obj['returns']['ifEmpty'].lower() == 'pass'):
+                        if obj['returns']['ifEmpty'].lower() == 'pass':
                             args_to_maybe_skip.append((
                                 '        if self.{name}.value():\n'
                                 '            args[self.{name}.args_key] = '
                                 'self.{name}.value()').format(name=obj['id']))
-                    except KeyError:
+                    except (KeyError, TypeError):
+                        # KeyError when obj['returns']['ifEmpty'] not present
+                        # TypeError in dropdowns when obj['returns'] is a
+                        # string.
                         args_values.append(
                             '            self.{name}.args_key: self.{name}.value(),'.format(
                                 name=obj['id']))
