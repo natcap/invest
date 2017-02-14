@@ -5,11 +5,12 @@ import sys
 import ast
 import textwrap
 import warnings
+import codecs
 
 import autopep8
 
 
-UI_CLASS_TEMPLATE = """
+UI_CLASS_TEMPLATE = u"""# coding=UTF-8
 from natcap.invest.ui import model
 from natcap.ui import inputs
 import {target}
@@ -37,11 +38,11 @@ class {classname}(model.Model):
         return args
 """
 
-INPUT_ATTRIBUTES_TEMPLATE = "       self.{name} = {classname}({kwargs})\n"
+INPUT_ATTRIBUTES_TEMPLATE = u"       self.{name} = {classname}({kwargs})\n"
 _TEXTWRAPPER = textwrap.TextWrapper(
     width=70,
-    initial_indent="\n" + u" "*15 + r'u"',
-    subsequent_indent=" "*15 + r'u"',
+    initial_indent=u"\n" + u" "*15 + u'u"',
+    subsequent_indent=u" "*15 + u'u"',
     fix_sentence_endings=True)
 
 
@@ -53,17 +54,24 @@ def format_kwargs(kwargs):
         if (isinstance(param, basestring) and
                 (len(param) > 0 and len(key) > 0) and
                 (len(param) + len(key) + 2 >= 79)):
-            line_ending = '"\n'
+            line_ending = u' "\n'
 
-            new_param = "({0}\")".format(
-                line_ending.join(_TEXTWRAPPER.wrap(
-                    ast.literal_eval(param))))
+            try:
+                encoded_param = ast.literal_eval(param)
+            except UnicodeEncodeError:
+                encoded_param = unicode(
+                    ast.literal_eval(repr(param)), 'utf-8')
+
+            formatted_string = _TEXTWRAPPER.wrap(encoded_param)
+
+            new_param = u"({0}\")".format(
+                line_ending.join(formatted_string))
             return key, new_param
 
         # If we can't do long-string formatting ,just return the value.
         return key, param
 
-    return '\n{0}'.format(',\n'.join(sorted("%s=%s" % _convert(key, value)
+    return u'\n{0}'.format(u',\n'.join(sorted(u"%s=%s" % _convert(key, value)
                                      for (key, value) in kwargs.iteritems())))
 
 
@@ -237,16 +245,16 @@ def convert_ui_structure(json_file, out_python_file):
 #        print autopep8.fix_code(line, options={'aggressive': 1}).rstrip()
 
 
-    with open(out_python_file, 'w') as out_file:
+    with codecs.open(out_python_file, 'w', encoding='utf-8') as out_file:
         out_file.write(UI_CLASS_TEMPLATE.format(
             label=repr(json_dict['label']),
-            target='%s' % json_dict['targetScript'],
+            target=u'%s' % json_dict['targetScript'],
             localdoc=repr(json_dict['localDocURI']),
-            input_attributes='\n'.join(input_attributes),
+            input_attributes=u'\n'.join(input_attributes),
             classname=json_dict['modelName'].capitalize(),
-            args_key_map='\n'.join(args_values),
-            sufficiency_connections='\n'.join(sufficiency_links),
-            args_to_maybe_skip='\n'.join(args_to_maybe_skip)
+            args_key_map=u'\n'.join(args_values),
+            sufficiency_connections=u'\n'.join(sufficiency_links),
+            args_to_maybe_skip=u'\n'.join(args_to_maybe_skip)
         ))
 
 
