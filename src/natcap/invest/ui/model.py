@@ -19,6 +19,36 @@ DATE_FMT = "%m/%d/%Y %H:%M:%S "
 LOGGER = logging.getLogger(__name__)
 
 
+class WindowTitle(QtCore.QObject):
+
+    title_changed = QtCore.Signal(unicode)
+    format_string = "{modelname}: {filename}{modified}"
+
+    def __init__(self, modelname=None, filename=None, modified=False):
+        QtCore.QObject.__init__(self)
+        self.modelname = modelname
+        self.filename = filename
+        self.modified = modified
+
+    def __setattr__(self, name, value):
+        LOGGER.info('__setattr__: %s, %s', name, value)
+        old_attr = getattr(self, name, 'None')
+        QtCore.QObject.__setattr__(self, name, value)
+        if old_attr != value:
+            new_value = repr(self)
+            LOGGER.info('Emitting new title %s', new_value)
+            self.title_changed.emit(new_value)
+
+    def __repr__(self):
+        try:
+            return self.format_string.format(
+                modelname=self.modelname if self.modelname else 'InVEST',
+                filename=self.filename if self.filename else 'Scenario',
+                modified='*' if self.modified else '')
+        except AttributeError:
+            return ''
+
+
 class Model(object):
     label = None
     target = None
@@ -40,8 +70,10 @@ class Model(object):
         self.main_window.setStatusBar(self.status_bar)
         self.main_window.menuBar().setNativeMenuBar(True)
         self.window.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
-        if self.label:
-            self.main_window.setWindowTitle(self.label)
+
+        self.window_title = WindowTitle()
+        self.window_title.title_changed.connect(self.main_window.setWindowTitle)
+        self.window_title.modelname = self.label
 
         for attr in ('label', 'target', 'validator', 'localdoc'):
             if not getattr(self, attr):
@@ -153,6 +185,8 @@ class Model(object):
         self.load_args(paramset.args)
         self.status_bar.showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
+
+        self.window_title.filename = os.path.basename(scenario_path)
 
     def load_args(self, scenario_args):
         _inputs = dict((attr.args_key, attr) for attr in
