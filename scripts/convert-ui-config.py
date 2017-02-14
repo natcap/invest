@@ -106,7 +106,8 @@ def convert_ui_structure(json_file, out_python_file):
                 for target_key, source_key in (
                         ('label', 'label'),
                         ('interactive', 'enabled'),
-                        ('collapsible', 'expandable'),
+                        ('expandable', 'collapsible'),
+                        ('expanded', 'defaultValue'),
                         ('args_key', 'args_id')):
                     try:
                         kwargs[target_key] = repr(obj[source_key])
@@ -130,6 +131,12 @@ def convert_ui_structure(json_file, out_python_file):
                 recurse(obj['elements'], container_key)
             elif obj['type'].lower() in ('sliderspinbox', 'embeddedui', 'scrollgroup'):
                 warnings.warn('Type %s has been deprecated' % obj['type'], DeprecationWarning)
+            elif obj['type'].lower() == 'label':
+                input_attributes.append(
+                    INPUT_ATTRIBUTES_TEMPLATE.format(
+                        name=obj['id'],
+                        classname='inputs.Label',
+                        kwargs=format_kwargs({'text': repr(obj['label'])})))
             else:  # object is a primitive.
                 try:
                     if obj['args_id'] in ('workspace_dir', 'results_suffix'):
@@ -165,6 +172,7 @@ def convert_ui_structure(json_file, out_python_file):
                 kwargs['label'] = repr(obj['label'])
 
                 for target_key, source_key in (
+                        ('options', 'options'),
                         ('interactive', 'enabled'),
                         ('helptext', 'helpText'),
                         ('required', 'required'),
