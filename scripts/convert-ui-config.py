@@ -91,7 +91,7 @@ def convert_ui_structure(json_file, out_python_file):
     sufficiency_links = []  # EnabledBy/DisabledBy links
     args_values = [  # these inputs are already provided by the Form.
         '            self.workspace.args_key: self.workspace.value(),',
-        '            self.results_suffix.args_key: self.results_suffix.value(),',
+        '            self.suffix.args_key: self.suffix.value(),',
     ]
     args_to_maybe_skip = []
 
