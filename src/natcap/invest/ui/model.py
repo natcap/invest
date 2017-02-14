@@ -32,6 +32,9 @@ class Model(object):
         self.main_window = QtWidgets.QMainWindow()
         self.window = QtWidgets.QWidget()
         self.main_window.setCentralWidget(self.window)
+        self.main_window.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding,
+            QtWidgets.QSizePolicy.Expanding)
         self.window.setLayout(QtWidgets.QVBoxLayout())
         self.main_window.menuBar().setNativeMenuBar(True)
         self.window.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
@@ -166,49 +169,11 @@ class Model(object):
             self.form.run_finished.connect(self._close_model)
             QtCore.QTimer.singleShot(50, self.execute_model)
 
-        self.main_window.show()
-        self.main_window.raise_()  # raise window to top of stack.
-
-        screen_geometry = QtWidgets.QDesktopWidget().availableGeometry()
-
-        # 50 pads the width by a scrollbar or so
-        # 100 pads the width for the scrollbar and a little more.
-        width = min(screen_geometry.width()-50,
-                    self.form.minimumSizeHint().width()+100)
-
-        screen_height = screen_geometry.height() * 0.95
-        # 100 pads the height for buttons, menu bars.
-        height = min(self.form.minimumSizeHint().height()+100, screen_height)
-        LOGGER.info('Detected screen geometry: H:%s W:%s',
-                    screen_geometry.height(),
-                    screen_geometry.width())
-
-        LOGGER.info('Setting window size to H:%s W:%s', height, width)
-
-        # FINALLY
-        #self.form.scroll_area.setMinimumWidth(
-        #    self.form.scroll_area.widget().minimumSizeHint().width())
-        #self.form.scroll_area.setSizePolicy(
-        #    QtWidgets.QSizePolicy.Expanding,
-        #    QtWidgets.QSizePolicy.Expanding)
-        #self.form.scroll_area.widget().setSizePolicy(
-        #    QtWidgets.QSizePolicy.Expanding,
-        #    QtWidgets.QSizePolicy.Expanding)
-        self.form.scroll_area.viewport().setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Expanding)
-        self.form.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Expanding)
-        self.main_window.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Expanding)
-
-        #self.form.scroll_area.adjustSize()
-        #self.main_window.adjustSize()
-
         self.main_window.resize(
             self.form.scroll_area.widget().minimumSize().width()+100,
             self.form.scroll_area.widget().minimumSize().height())
+
+        self.main_window.show()
+        self.main_window.raise_()  # raise window to top of stack.
 
         return inputs.QT_APP.exec_()
