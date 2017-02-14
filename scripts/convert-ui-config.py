@@ -10,17 +10,18 @@ import autopep8
 
 
 UI_CLASS_TEMPLATE = """
+from natcap.invest.ui import model
 from natcap.ui import inputs
 import {target}
 
-class {classname}(inputs.Form):
+class {classname}(model.Model):
     label = {label}
-    target = staticmethod({target})
-    validator = staticmethod({validator})
+    target = staticmethod({target}.execute)
+    validator = staticmethod({target}.validate)
     localdoc = {localdoc}
 
     def __init__(self):
-        inputs.Form.__init__(self)
+        model.Model.__init__(self)
 
 {input_attributes}
 
@@ -81,8 +82,8 @@ def convert_ui_structure(json_file, out_python_file):
     input_attributes = []  # list of strings to be written
     sufficiency_links = []  # EnabledBy/DisabledBy links
     args_values = [  # these inputs are already provided by the Form.
-        '            self.workspace.args_key: self.workspace.value()',
-        '            self.results_suffix.args_key: self.results_suffix.value()',
+        '            self.workspace.args_key: self.workspace.value(),',
+        '            self.results_suffix.args_key: self.results_suffix.value(),',
     ]
     args_to_maybe_skip = []
 
@@ -93,14 +94,14 @@ def convert_ui_structure(json_file, out_python_file):
 
             if obj['type'].lower() == 'container':
                 kwargs = {}
-                kwargs['label'] = obj['label']
 
                 for target_key, source_key in (
+                        ('label', 'label'),
                         ('interactive', 'enabled'),
-                        ('collapsible', 'collapsible'),
+                        ('collapsible', 'expandable'),
                         ('args_key', 'args_id')):
                     try:
-                        kwargs[target_key] = obj[source_key]
+                        kwargs[target_key] = repr(obj[source_key])
                     except KeyError:
                         pass
 
@@ -114,7 +115,7 @@ def convert_ui_structure(json_file, out_python_file):
                         name=obj['id']))
                 if 'args_id' in obj:
                     args_values.append(
-                        '            self.{name}.args_key: self.{name}.isChecked(),'.format(
+                        '            self.{name}.args_key: self.{name}.value(),'.format(
                             name=obj['id']))
                 recurse(obj['elements'], container_key=obj['id'])
             elif obj['type'].lower() in ('list', 'tabbedgroup'):
@@ -133,6 +134,14 @@ def convert_ui_structure(json_file, out_python_file):
                     kwargs['hideable'] = True
                     kwargs['hidden'] = True
                     obj['type'] = 'file'
+                elif obj['type'].lower() in ('dropdown', 'checkbox'):
+                    # Checkboxes and dropdowns always provide a value. In IUI,
+                    # this redundant 'required' option was ignored for these
+                    # inputs.  In the new UI, this is an error.
+                    try:
+                        del obj['required']
+                    except KeyError:
+                        pass
 
                 classname = obj['type'].capitalize()
                 if classname == 'Multi':
@@ -158,8 +167,8 @@ def convert_ui_structure(json_file, out_python_file):
                         pass
 
                 # Handle EnabledBy/DisabledBy in terms of sufficiency
-                for (key, slot_name) in [('enabledBy', 'set_enabled'),
-                                         ('disabledBy', 'set_disabled')]:
+                for (key, slot_name) in [('enabledBy', 'set_interactive'),
+                                         ('disabledBy', 'set_noninteractive')]:
                     try:
                         enabling_id = obj[key]
                         sufficiency_links.append((
@@ -227,8 +236,7 @@ def convert_ui_structure(json_file, out_python_file):
     with open(out_python_file, 'w') as out_file:
         out_file.write(UI_CLASS_TEMPLATE.format(
             label=repr(json_dict['label']),
-            target='%s.execute' % json_dict['targetScript'],
-            validator='%s.validate' % json_dict['targetScript'],
+            target='%s' % json_dict['targetScript'],
             localdoc=repr(json_dict['localDocURI']),
             input_attributes='\n'.join(input_attributes),
             classname=json_dict['modelName'].capitalize(),
