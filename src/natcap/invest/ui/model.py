@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import logging
 import os
 import pprint
+import warnings
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -32,6 +33,11 @@ class Model(object):
         self.window.setLayout(QtWidgets.QVBoxLayout())
         if self.label:
             self.window.setWindowTitle(self.label)
+
+        for attr in ('label', 'target', 'validator', 'localdoc'):
+            if not getattr(self, attr):
+                warnings.warn('Class attribute %s.%s is not defined' % (
+                    self.__class__.__name__, attr))
 
         self.links = QtWidgets.QLabel()
         self._make_links(self.links)
