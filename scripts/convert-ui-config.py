@@ -166,6 +166,10 @@ def convert_ui_structure(json_file, out_python_file):
                     except KeyError:
                         pass
 
+                # EnabledBy implies noninteractive.
+                if 'enabledBy' in obj:
+                    kwargs['interactive'] = False
+
                 # Handle EnabledBy/DisabledBy in terms of sufficiency
                 for (key, slot_name) in [('enabledBy', 'set_interactive'),
                                          ('disabledBy', 'set_noninteractive')]:
