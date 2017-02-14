@@ -36,10 +36,12 @@ class Model(object):
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
         self.window.setLayout(QtWidgets.QVBoxLayout())
+        self.status_bar = QtWidgets.QStatusBar()
+        self.main_window.setStatusBar(self.status_bar)
         self.main_window.menuBar().setNativeMenuBar(True)
         self.window.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
         if self.label:
-            self.window.setWindowTitle(self.label)
+            self.main_window.setWindowTitle(self.label)
 
         for attr in ('label', 'target', 'validator', 'localdoc'):
             if not getattr(self, attr):
@@ -82,13 +84,15 @@ class Model(object):
 
     def _save_scenario_as(self):
         file_dialog = inputs.FileDialog()
-        save_filepath = file_dialog.save_file(
+        save_filepath, last_filter = file_dialog.save_file(
             title='Save current parameters as scenario',
             start_dir=None,  # might change later, last dir is fine
             savefile='%s_scenario.invs.json' % (
                 '.'.join(self.target.__name__.split('.')[2:-1])))
-        LOGGER.info('Saved current parameters to scenario file %s',
-                    save_filepath)
+        alert_message = (
+            'Saved current parameters to scenario file %s' % save_filepath)
+        LOGGER.info(alert_message)
+        self.status_bar.showMessage(alert_message, 10000)
 
     def _show_alert(self):
         self.systray_icon.showMessage(
@@ -147,6 +151,8 @@ class Model(object):
         LOGGER.info('Loading scenario from %s', scenario_path)
         paramset = scenarios.read_parameter_set(scenario_path)
         self.load_args(paramset.args)
+        self.status_bar.showMessage(
+            'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
 
     def load_args(self, scenario_args):
         _inputs = dict((attr.args_key, attr) for attr in
@@ -160,6 +166,9 @@ class Model(object):
             except KeyError:
                 LOGGER.warning(('Scenario args_key %s not associated with '
                                 'any inputs'), args_key)
+            except Exception:
+                LOGGER.exception('Error setting %s to %s', args_key,
+                                 args_value)
 
     def assemble_args(self):
         raise NotImplementedError
@@ -173,6 +182,7 @@ class Model(object):
             self.form.scroll_area.widget().minimumSize().width()+100,
             self.form.scroll_area.widget().minimumSize().height())
 
+        inputs.center_window(self.main_window)
         self.main_window.show()
         self.main_window.raise_()  # raise window to top of stack.
 
