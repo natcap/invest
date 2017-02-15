@@ -202,7 +202,8 @@ class Model(object):
             scenarios.write_parameter_set(
                 filepath=save_filepath,
                 args=current_args,
-                name=self.target.__module__
+                name=self.target.__module__,
+                relative=use_relative_paths
             )
 
         alert_message = (

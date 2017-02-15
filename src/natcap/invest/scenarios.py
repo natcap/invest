@@ -285,7 +285,7 @@ def extract_scenario_archive(scenario_path, dest_dir_path):
     return new_args
 
 
-def write_parameter_set(filepath, args, name):
+def write_parameter_set(filepath, args, name, relative=False):
     """Record a parameter set to a file on disk.
 
     Parameters:
@@ -294,6 +294,9 @@ def write_parameter_set(filepath, args, name):
         args (dict): The args dictionary to record to the parameter set.
         name (string): An identifier string for the callable or InVEST
             model that would accept the arguments given.
+        relative (bool): Whether to save the paths as relative.  If ``True``,
+            The scenario assumes that paths are relative to the parent
+            directory of ``filepath``.
 
     Returns:
         ``None``
@@ -306,7 +309,11 @@ def write_parameter_set(filepath, args, name):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
             if os.path.exists(args_param):
-                return os.path.normpath(args_param)
+                normalized_path = os.path.normpath(args_param)
+                if relative:
+                    return os.path.relpath(normalized_path,
+                                           os.path.dirname(filepath))
+                return normalized_path
         return args_param
     parameter_data = {
         'name': name,
