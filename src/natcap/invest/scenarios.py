@@ -351,7 +351,7 @@ def read_parameter_set(filepath):
                         args_param.iteritems())
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
-        elif isinstance(args_param, basestring):
+        elif isinstance(args_param, basestring) and len(args_param) > 0:
             expanded_param = os.path.expandvars(
                 os.path.expanduser(args_param))
             if os.path.isabs(expanded_param):
