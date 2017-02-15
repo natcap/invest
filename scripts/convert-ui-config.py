@@ -36,7 +36,7 @@ class {classname}(model.Model):
 {args_key_map}
         }}
 {args_to_maybe_skip}
-
+{args_depending_on_containers}
         return args
 """
 
@@ -105,6 +105,8 @@ def convert_ui_structure(json_file, out_python_file):
         '            self.suffix.args_key: self.suffix.value(),',
     ]
     args_to_maybe_skip = []
+    args_within_containers = {}
+    collapsible_containers = set([])
 
     def recurse(obj, container_key=None):
         if isinstance(obj, dict):
@@ -137,6 +139,14 @@ def convert_ui_structure(json_file, out_python_file):
                     args_values.append(
                         '            self.{name}.args_key: self.{name}.value(),'.format(
                             name=obj['id']))
+                    try:
+                        # Record when the container is collapsible.
+                        # Needed for conditionally including inputs in args.
+                        if bool(kwargs['expandable']) == True:
+                            collapsible_containers.add(obj['id'])
+                    except KeyError:
+                        pass
+
                 recurse(obj['elements'], container_key=obj['id'])
             elif obj['type'].lower() in ('list', 'tabbedgroup'):
                 recurse(obj['elements'], container_key)
@@ -250,9 +260,18 @@ def convert_ui_structure(json_file, out_python_file):
                         # KeyError when obj['returns']['ifEmpty'] not present
                         # TypeError in dropdowns when obj['returns'] is a
                         # string.
-                        args_values.append(
-                            '            self.{name}.args_key: self.{name}.value(),'.format(
-                                name=obj['id']))
+                        if container_key and container_key in collapsible_containers:
+                            formatted_string = (
+                                '            args[self.{name}.args_key] = self.{name}.value()'.format(
+                                    name=obj['id']))
+                            try:
+                                args_within_containers[container_key].append(formatted_string)
+                            except KeyError:
+                                args_within_containers[container_key] = [formatted_string]
+                        else:
+                            args_values.append(
+                                '            self.{name}.args_key: self.{name}.value(),'.format(
+                                    name=obj['id']))
 
 
         elif isinstance(obj, list):
@@ -260,6 +279,14 @@ def convert_ui_structure(json_file, out_python_file):
                 recurse(item, container_key)
 
     recurse(json_dict['elements'])
+
+    formatted_container_args = []
+    for container_key, contained_args_values in args_within_containers.iteritems():
+        formatted_container_args.append(
+            '        if self.{container_id}.value():'.format(container_id=container_key))
+        for args_string in contained_args_values:
+            formatted_container_args.append(args_string)
+        formatted_container_args.append('')
 
     input_attributes = [autopep8.reindent(
         autopep8.fix_code(line, options={'aggressive': 1}), 8).rstrip() for line in input_attributes]
@@ -278,7 +305,8 @@ def convert_ui_structure(json_file, out_python_file):
             classname=json_dict['modelName'].capitalize(),
             args_key_map=u'\n'.join(args_values),
             sufficiency_connections=u'\n'.join(sufficiency_links),
-            args_to_maybe_skip=u'\n'.join(args_to_maybe_skip)
+            args_to_maybe_skip=u'\n'.join(args_to_maybe_skip),
+            args_depending_on_containers=u'\n'.join(formatted_container_args)
         ))
 
 
