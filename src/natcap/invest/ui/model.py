@@ -10,6 +10,7 @@ from qtpy import QtCore
 from qtpy import QtGui
 import natcap.invest
 from natcap.ui import inputs
+import qtawesome
 
 from .. import utils
 from .. import scenarios
@@ -17,6 +18,22 @@ from .. import scenarios
 LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
 DATE_FMT = "%m/%d/%Y %H:%M:%S "
 LOGGER = logging.getLogger(__name__)
+
+_SCENARIO_BASE_FILENAME = 'scenario.invs.%s'
+_SCENARIO_DIALOG_TITLE = 'Select where to save the parameter %s'
+
+_SCENARIO_PARAMETER_SET = 'Parameter set'
+_SCENARIO_DATA_ARCHIVE = 'Data archive'
+_SCENARIO_SAVE_OPTS = {
+    _SCENARIO_PARAMETER_SET: {
+        'title': _SCENARIO_DIALOG_TITLE % 'set',
+        'savefile': _SCENARIO_BASE_FILENAME % 'json',
+    },
+    _SCENARIO_DATA_ARCHIVE: {
+        'title': _SCENARIO_DIALOG_TITLE % 'archive',
+        'savefile': _SCENARIO_BASE_FILENAME % 'tar.gz',
+    }
+}
 
 
 class WindowTitle(QtCore.QObject):
@@ -47,6 +64,48 @@ class WindowTitle(QtCore.QObject):
                 modified='*' if self.modified else '')
         except AttributeError:
             return ''
+
+
+def _prompt_for_scenario_options():
+    dialog = QtWidgets.QDialog()
+    dialog.setLayout(QtWidgets.QVBoxLayout())
+    dialog.setWindowModality(QtCore.Qt.WindowModal)
+
+    prompt = inputs.Container(label='Scenario options')
+    dialog.layout().addWidget(prompt)
+
+    scenario_type = inputs.Dropdown(
+        label='Scenario type',
+        options=_SCENARIO_SAVE_OPTS.keys())
+    scenario_type.set_value(_SCENARIO_PARAMETER_SET)  # default selection
+    prompt.add_input(scenario_type)
+    use_relative_paths = inputs.Checkbox(
+        label='Use relative paths')
+    prompt.add_input(use_relative_paths)
+
+    @QtCore.Slot(unicode)
+    def _optionally_disable(value):
+        use_relative_paths.set_interactive(value == _SCENARIO_PARAMETER_SET)
+    scenario_type.value_changed.connect(_optionally_disable)
+
+    buttonbox = QtWidgets.QDialogButtonBox()
+    ok_button = QtWidgets.QPushButton(' Continue')
+    ok_button.setIcon(inputs.ICON_ENTER)
+    ok_button.pressed.connect(dialog.accept)
+    buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
+    cancel_button = QtWidgets.QPushButton(' Cancel')
+    cancel_button.setIcon(qtawesome.icon('fa.times',
+                                         color='grey'))
+    cancel_button.pressed.connect(dialog.reject)
+    buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
+    dialog.layout().addWidget(buttonbox)
+
+    dialog.raise_()
+    dialog.show()
+    result = dialog.exec_()
+    if result == QtWidgets.QDialog.Accepted:
+        return (scenario_type.value(), use_relative_paths.value())
+    return (None, None)
 
 
 class Model(object):
@@ -115,18 +174,37 @@ class Model(object):
         inputs.center_window(self.window)
 
     def _save_scenario_as(self):
+        scenario_type, use_relative_paths = _prompt_for_scenario_options()
+        if not scenario_type:  # user pressed cancel
+            return
+
         file_dialog = inputs.FileDialog()
         save_filepath, last_filter = file_dialog.save_file(
-            title='Save current parameters as scenario',
+            title=_SCENARIO_SAVE_OPTS[scenario_type]['title'],
             start_dir=None,  # might change later, last dir is fine
-            savefile='%s_scenario.invs.json' % (
-                '.'.join(self.target.__module__.split('.')[2:-1])))
+            savefile='{model}_{file_base}'.format(
+                model='.'.join(self.target.__module__.split('.')[2:-1]),
+                file_base=_SCENARIO_SAVE_OPTS[scenario_type]['savefile']))
+
         if not save_filepath:
             # The user pressed cancel.
             return
 
-        scenarios.write_parameter_set(save_filepath, self.assemble_args(),
-                                      self.target.__module__)
+        current_args = self.assemble_args()
+        LOGGER.info('Current parameters:\n%s', pprint.pformat(current_args))
+
+        if scenario_type == _SCENARIO_DATA_ARCHIVE:
+            scenarios.build_scenario_archive(
+                args=current_args,
+                scenario_path=save_filepath
+            )
+        else:
+            scenarios.write_parameter_set(
+                filepath=save_filepath,
+                args=current_args,
+                name=self.target.__module__
+            )
+
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
