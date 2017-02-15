@@ -153,9 +153,11 @@ class Model(object):
         # start with workspace and suffix inputs
         self.workspace = inputs.Folder(args_key='workspace_dir',
                                        label='Workspace',
+                                       validator=self.validator,
                                        required=True)
         self.suffix = inputs.Text(args_key='suffix',
                                   label='Results suffix',
+                                  validator=self.validator,
                                   required=False)
         self.suffix.textfield.setMaximumWidth(150)
         self.add_input(self.workspace)
