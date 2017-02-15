@@ -277,26 +277,28 @@ class Fisheries(model.Model):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.aoi_uri.args_key: self.aoi_uri.value(),
-            self.total_timesteps.args_key: self.total_timesteps.value(),
             self.population_type.args_key: self.population_type.value(),
             self.sexsp.args_key: self.sexsp.value(),
             self.harvest_units.args_key: self.harvest_units.value(),
             self.do_batch.args_key: self.do_batch.value(),
             self.population_csv_uri.args_key: self.population_csv_uri.value(),
             self.population_csv_dir.args_key: self.population_csv_dir.value(),
-            self.total_init_recruits.args_key: self.total_init_recruits.value(),
             self.recruitment_type.args_key: self.recruitment_type.value(),
             self.spawn_units.args_key: self.spawn_units.value(),
-            self.alpha.args_key: self.alpha.value(),
-            self.beta.args_key: self.beta.value(),
-            self.total_recur_recruits.args_key: self.total_recur_recruits.value(),
             self.migr_cont.args_key: self.migr_cont.value(),
             self.val_cont.args_key: self.val_cont.value(),
         }
 
+        # Cast numeric inputs to a float
+        for numeric_input in (self.alpha, self.beta, self.total_recur_recruits,
+                              self.total_init_recruits, self.total_timesteps):
+            if numeric_input.value():
+                args[numeric_input.args_key] = float(numeric_input.value())
+
         if self.val_cont.value():
-            args[self.frac_post_process.args_key] = self.frac_post_process.value()
-            args[self.unit_price.args_key] = self.unit_price.value()
+            args[self.frac_post_process.args_key] = float(
+                self.frac_post_process.value())
+            args[self.unit_price.args_key] = float(self.unit_price.value())
 
         if self.migr_cont.value():
             args[self.migration_dir.args_key] = self.migration_dir.value()

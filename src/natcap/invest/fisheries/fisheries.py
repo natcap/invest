@@ -9,6 +9,7 @@ import fisheries_io as io
 import fisheries_model as model
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.fisheries')
+LABEL = 'Fisheries'
 
 
 def execute(args, create_outputs=True):
@@ -208,3 +209,7 @@ def execute(args, create_outputs=True):
 
     LOGGER.warning(vars_all_models[0]['results_suffix'])
     return vars_all_models
+
+
+def validate(args, limit_to=None):
+    return []

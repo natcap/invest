@@ -147,30 +147,32 @@ def set_recru_func(vars_dict):
     else:
         Weight = np.ones([sexsp, len(vars_dict['Classes'])])
 
-    alpha = vars_dict['alpha']
-    beta = vars_dict['beta']
-    Matu = vars_dict['Maturity']
-    Fec = vars_dict['Fecundity']
-    fixed = vars_dict['total_recur_recruits']
-
     def spawners(N_prev):
+        Matu = vars_dict['Maturity']
         return (N_prev * Matu * Weight).sum()
 
     def rec_func_BH(N_prev):
+        alpha = vars_dict['alpha']
+        beta = vars_dict['beta']
         N_0 = (LarvDisp * ((alpha * spawners(
             N_prev) / (beta + spawners(N_prev)))) / sexsp)
         return (N_0, spawners(N_prev))
 
     def rec_func_Ricker(N_prev):
+        alpha = vars_dict['alpha']
+        beta = vars_dict['beta']
         N_0 = (LarvDisp * (alpha * spawners(N_prev) * (
             np.e ** (-beta * spawners(N_prev)))) / sexsp)
         return (N_0, spawners(N_prev))
 
     def rec_func_Fecundity(N_prev):
+        Fec = vars_dict['Fecundity']
+        Matu = vars_dict['Maturity']
         N_0 = (LarvDisp * (N_prev * Matu * Fec).sum() / sexsp)
         return (N_0, spawners(N_prev))
 
     def rec_func_Fixed(N_prev):
+        fixed = vars_dict['total_recur_recruits']
         N_0 = LarvDisp * fixed / sexsp
         return (N_0, None)
 
