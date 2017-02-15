@@ -19,6 +19,12 @@ LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'pyname gui')
 
 _MODEL_UIS = {
+    'carbon': _UIMETA(
+        pyname='natcap.invest.carbon',
+        gui='carbon.Carbon'),
+    'fisheries': _UIMETA(
+        pyname='natcap.invest.fisheries.fisheries',
+        gui='fisheries.Fisheries'),
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
         gui='pollination.Pollination'),
