@@ -126,11 +126,12 @@ class Model(object):
             return
 
         scenarios.write_parameter_set(save_filepath, self.assemble_args(),
-                                      self.target.__name__)
+                                      self.target.__module__)
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
         self.status_bar.showMessage(alert_message, 10000)
+        self.window_title.filename = os.path.basename(save_filepath)
 
     def _show_alert(self):
         self.systray_icon.showMessage(
