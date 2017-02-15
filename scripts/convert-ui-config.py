@@ -39,7 +39,6 @@ class {classname}(model.Model):
 {args_depending_on_containers}
         return args
 """
-
 INPUT_ATTRIBUTES_TEMPLATE = u"       self.{name} = {classname}({kwargs})\n"
 _TEXTWRAPPER = textwrap.TextWrapper(
     width=70,
@@ -250,6 +249,13 @@ def convert_ui_structure(json_file, out_python_file):
                     container=container_key, name=obj['id']))
 
                 if 'args_id' in obj:
+                    try:
+                        if obj['dataType'].lower() != 'string':
+                            print 'WARNING: %s requires datatype %s' % (
+                                (obj['id'], obj['dataType'].lower()))
+                    except KeyError:
+                        pass
+
                     try:
                         if obj['returns']['ifEmpty'].lower() == 'pass':
                             args_to_maybe_skip.append((
