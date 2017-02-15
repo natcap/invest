@@ -120,9 +120,15 @@ class Model(object):
             title='Save current parameters as scenario',
             start_dir=None,  # might change later, last dir is fine
             savefile='%s_scenario.invs.json' % (
-                '.'.join(self.target.__name__.split('.')[2:-1])))
+                '.'.join(self.target.__module__.split('.')[2:-1])))
+        if not save_filepath:
+            # The user pressed cancel.
+            return
+
+        scenarios.write_parameter_set(save_filepath, self.assemble_args(),
+                                      self.target.__name__)
         alert_message = (
-            'Saved current parameters to scenario file %s' % save_filepath)
+            'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
         self.status_bar.showMessage(alert_message, 10000)
 
