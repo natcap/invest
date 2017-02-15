@@ -12,6 +12,7 @@ import natcap.invest
 from natcap.ui import inputs
 import qtawesome
 
+from .. import cli
 from .. import utils
 from .. import scenarios
 
@@ -252,6 +253,8 @@ class Model(object):
         def _logged_target():
             name = self.target.__name__
             with utils.prepare_workspace(args['workspace_dir'], name):
+                LOGGER.info('Starting model with parameters: \n%s',
+                            cli._format_args(args))
                 return self.target(args=args)
 
         self.form.run(target=_logged_target,
