@@ -272,6 +272,21 @@ class Fisheries(model.Model):
         self.do_batch.sufficiency_changed.connect(
             self.population_csv_dir.set_interactive)
 
+        # Enable/disable parameters when the recruitment function changes.
+        self.recruitment_type.value_changed.connect(
+            self._control_recruitment_parameters)
+
+    def _control_recruitment_parameters(self, recruit_func):
+        for parameter in (self.spawn_units, self.alpha, self.beta,
+                          self.total_recur_recruits):
+            parameter.set_interactive(False)
+
+        if self.recruitment_type.value() == 'Beverton-Holt':
+            for parameter in (self.spawn_units, self.alpha, self.beta):
+                parameter.set_interactive(True)
+        elif self.recruitment_type.value() == 'Fixed':
+            self.total_recur_recruits.set_interactive(True)
+
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
