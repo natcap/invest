@@ -242,18 +242,6 @@ class Model(object):
         qlabel.setText(' | '.join(links))
 
     def add_input(self, input):
-        # Add the model's validator if it hasn't already been set.
-        if hasattr(input, 'validator') and input.validator is None:
-            LOGGER.info('Setting validator of %s to %s',
-                        input, self.validator)
-            input.validator = self.validator
-        elif not hasattr(input, 'validator'):
-            LOGGER.info('Input does not have a validator at all: %s',
-                        input)
-        else:
-            LOGGER.info('Validator already set for %s: %s',
-                        input, input.validator)
-
         self.form.add_input(input)
 
     def execute_model(self):
