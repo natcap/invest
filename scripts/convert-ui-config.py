@@ -11,6 +11,8 @@ import autopep8
 
 
 UI_CLASS_TEMPLATE = u"""# coding=UTF-8
+import functools
+
 from natcap.invest.ui import model
 from natcap.ui import inputs
 import {target}
@@ -45,6 +47,13 @@ _TEXTWRAPPER = textwrap.TextWrapper(
     subsequent_indent=u" "*15 + u'u"',
     fix_sentence_endings=True)
 
+class Verbatim(object):
+    def __init__(self, other):
+        self.obj = other
+
+    def __repr__(self):
+        return self.obj
+
 
 def format_kwargs(kwargs):
     def _convert(key, param):
@@ -67,6 +76,8 @@ def format_kwargs(kwargs):
             new_param = u"({0}\")".format(
                 line_ending.join(formatted_string))
             return key, new_param
+        elif isinstance(param, Verbatim):
+            return key, repr(param)
 
         # If we can't do long-string formatting ,just return the value.
         return key, param
@@ -168,6 +179,9 @@ def convert_ui_structure(json_file, out_python_file):
                             label=obj['sampleElement']['label'])
                     kwargs['link_text'] = repr(obj['linkText'])
 
+                # These are the validateable classes
+                if classname in ('Text', 'Folder', 'File'):
+                    kwargs['validator'] = Verbatim('self.validator')
 
                 kwargs['label'] = repr(obj['label'])
 
