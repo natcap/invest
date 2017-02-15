@@ -169,6 +169,9 @@ class Model(object):
         self.save_to_scenario = self.file_menu.addAction(
             'Save scenario as ...', self._save_scenario_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
+        self.load_from_scenario = self.file_menu.addAction(
+            'Load scenario ...', self._load_scenario,
+            QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.main_window.menuBar().addMenu(self.file_menu)
 
         inputs.center_window(self.window)
@@ -264,6 +267,11 @@ class Model(object):
         self.form.run(target=_logged_target,
                       window_title='Running %s' % self.label,
                       out_folder=args['workspace_dir'])
+
+    def _load_scenario(self):
+        file_dialog = inputs.FileDialog()
+        scenario_file, last_filter = file_dialog.open_file(title='Select scenario')
+        self.load_scenario(scenario_file)
 
     def load_scenario(self, scenario_path):
         LOGGER.info('Loading scenario from %s', scenario_path)
