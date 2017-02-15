@@ -169,10 +169,10 @@ class Model(object):
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File')
         self.save_to_scenario = self.file_menu.addAction(
-            'Save scenario as ...', self._save_scenario_as,
+            'Save as ...', self._save_scenario_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
         self.load_from_scenario = self.file_menu.addAction(
-            'Load scenario ...', self._load_scenario,
+            'Open ...', self._load_scenario,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.main_window.menuBar().addMenu(self.file_menu)
 
