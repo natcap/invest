@@ -220,11 +220,6 @@ class Model(QtWidgets.QMainWindow):
         self.status_bar.showMessage(alert_message, 10000)
         self.window_title.filename = os.path.basename(save_filepath)
 
-    def _quickrun_close_model(self):
-        # exit with an error code that matches exception status of run.
-        exit_code = self.form.run_dialog.messageArea.error
-        inputs.QT_APP.exit(int(exit_code))
-
     def add_input(self, input):
         self.form.add_input(input)
 
@@ -297,7 +292,13 @@ class Model(QtWidgets.QMainWindow):
 
     def run(self, quickrun=False):
         if quickrun:
-            self.form.run_finished.connect(self._quickrun_close_model)
+            @QtCore.Slot()
+            def _quickrun_close_model():
+                # exit with an error code that matches exception status of run.
+                exit_code = self.form.run_dialog.messageArea.error
+                inputs.QT_APP.exit(int(exit_code))
+
+            self.form.run_finished.connect(_quickrun_close_model)
             QtCore.QTimer.singleShot(50, self.execute_model)
 
         self.resize(
