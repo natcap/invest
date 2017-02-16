@@ -108,49 +108,30 @@ def _prompt_for_scenario_options():
     return (None, None)
 
 
-class ModelWindow(QtWidgets.QMainWindow):
-    def closeEvent(self, event):
-        dialog = QtWidgets.QMessageBox()
-        dialog.setWindowFlags(QtCore.Qt.Dialog)
-        dialog.setText('Are you sure you want to quit?')
-        dialog.setInformativeText(
-            'Any unsaved changes to your parameters will be lost.')
-        dialog.setStandardButtons(
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
-        dialog.setDefaultButton(QtWidgets.QMessageBox.Cancel)
-        dialog.setIconPixmap(
-            qtawesome.icon(
-                'fa.question').pixmap(100, 100))
-
-        button_pressed = dialog.exec_()
-        if button_pressed != QtWidgets.QMessageBox.Yes:
-            event.reject()
-
-
-class Model(object):
+class Model(QtWidgets.QMainWindow):
     label = None
     target = None
     validator = None
     localdoc = None
 
     def __init__(self):
+        QtWidgets.QMainWindow.__init__(self)
         self._quickrun = False
 
         # Main operational widgets for the form
-        self.main_window = ModelWindow()
-        self.window = QtWidgets.QWidget()
-        self.main_window.setCentralWidget(self.window)
-        self.main_window.setSizePolicy(
+        self._central_widget = QtWidgets.QWidget()
+        self.setCentralWidget(self._central_widget)
+        self.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
-        self.window.setLayout(QtWidgets.QVBoxLayout())
+        self._central_widget.setLayout(QtWidgets.QVBoxLayout())
         self.status_bar = QtWidgets.QStatusBar()
-        self.main_window.setStatusBar(self.status_bar)
-        self.main_window.menuBar().setNativeMenuBar(True)
-        self.window.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
+        self.setStatusBar(self.status_bar)
+        self.menuBar().setNativeMenuBar(True)
+        self._central_widget.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
 
         self.window_title = WindowTitle()
-        self.window_title.title_changed.connect(self.main_window.setWindowTitle)
+        self.window_title.title_changed.connect(self.setWindowTitle)
         self.window_title.modelname = self.label
 
         for attr in ('label', 'target', 'validator', 'localdoc'):
@@ -158,16 +139,20 @@ class Model(object):
                 warnings.warn('Class attribute %s.%s is not defined' % (
                     self.__class__.__name__, attr))
 
+        # Format the text links at the top of the window.
         self.links = QtWidgets.QLabel()
-        self._make_links(self.links)
-        self.window.layout().addWidget(self.links)
+        self.links.setAlignment(QtCore.Qt.AlignRight)
+        self.links.setOpenExternalLinks(True)
+        self.links.setText(' | '.join((
+            'InVEST version %s' % natcap.invest.__version__,
+            '<a href="file://%s">Model documentation</a>' % self.localdoc,
+            ('<a href="http://forums.naturalcapitalproject.org">'
+             'Report an issue</a>'))))
+        self._central_widget.layout().addWidget(self.links)
 
         self.form = inputs.Form()
-        self.window.layout().addWidget(self.form)
+        self._central_widget.layout().addWidget(self.form)
         self.run_dialog = inputs.FileSystemRunDialog()
-
-        # set up a system tray icon.
-        self.systray_icon = QtWidgets.QSystemTrayIcon()
 
         # start with workspace and suffix inputs
         self.workspace = inputs.Folder(args_key='workspace_dir',
@@ -183,19 +168,16 @@ class Model(object):
         self.add_input(self.suffix)
 
         self.form.submitted.connect(self.execute_model)
-        self.form.run_finished.connect(self._show_alert)
 
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File')
-        self.save_to_scenario = self.file_menu.addAction(
+        self.file_menu.addAction(
             'Save as ...', self._save_scenario_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
-        self.load_from_scenario = self.file_menu.addAction(
+        self.file_menu.addAction(
             'Open ...', self._load_scenario,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
-        self.main_window.menuBar().addMenu(self.file_menu)
-
-        inputs.center_window(self.window)
+        self.menuBar().addMenu(self.file_menu)
 
     def _save_scenario_as(self):
         scenario_type, use_relative_paths = _prompt_for_scenario_options()
@@ -236,31 +218,10 @@ class Model(object):
         self.status_bar.showMessage(alert_message, 10000)
         self.window_title.filename = os.path.basename(save_filepath)
 
-    def _show_alert(self):
-        self.systray_icon.showMessage(
-            'InVEST', 'Model run finished')
-
-    def _close_model(self):
+    def _quickrun_close_model(self):
         # exit with an error code that matches exception status of run.
         exit_code = self.form.run_dialog.messageArea.error
         inputs.QT_APP.exit(int(exit_code))
-
-    def _make_links(self, qlabel):
-        qlabel.setAlignment(QtCore.Qt.AlignRight)
-        qlabel.setOpenExternalLinks(True)
-        links = ['InVEST version ' + natcap.invest.__version__]
-
-        try:
-            doc_uri = 'file://' + os.path.abspath(self.localdoc)
-            links.append('<a href=\"%s\">Model documentation</a>' % doc_uri)
-        except AttributeError:
-            # When self.localdoc is None, documentation is undefined.
-            LOGGER.info('Skipping docs link; undefined.')
-
-        feedback_uri = 'http://forums.naturalcapitalproject.org/'
-        links.append('<a href=\"%s\">Report an issue</a>' % feedback_uri)
-
-        qlabel.setText(' | '.join(links))
 
     def add_input(self, input):
         self.form.add_input(input)
@@ -333,15 +294,32 @@ class Model(object):
 
     def run(self, quickrun=False):
         if quickrun:
-            self.form.run_finished.connect(self._close_model)
+            self.form.run_finished.connect(self._quickrun_close_model)
             QtCore.QTimer.singleShot(50, self.execute_model)
 
-        self.main_window.resize(
+        self.resize(
             self.form.scroll_area.widget().minimumSize().width()+100,
             self.form.scroll_area.widget().minimumSize().height())
 
-        inputs.center_window(self.main_window)
-        self.main_window.show()
-        self.main_window.raise_()  # raise window to top of stack.
+        inputs.center_window(self)
+        self.show()
+        self.raise_()  # raise window to top of stack.
 
         return inputs.QT_APP.exec_()
+
+    def closeEvent(self, event):
+        dialog = QtWidgets.QMessageBox()
+        dialog.setWindowFlags(QtCore.Qt.Dialog)
+        dialog.setText('Are you sure you want to quit?')
+        dialog.setInformativeText(
+            'Any unsaved changes to your parameters will be lost.')
+        dialog.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        dialog.setDefaultButton(QtWidgets.QMessageBox.Cancel)
+        dialog.setIconPixmap(
+            qtawesome.icon(
+                'fa.question').pixmap(100, 100))
+
+        button_pressed = dialog.exec_()
+        if button_pressed != QtWidgets.QMessageBox.Yes:
+            event.reject()
