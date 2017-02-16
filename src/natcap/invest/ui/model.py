@@ -177,7 +177,7 @@ class Model(QtWidgets.QMainWindow):
             'Save as ...', self._save_scenario_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
         self.file_menu.addAction(
-            'Open ...', self._load_scenario,
+            'Open ...', self.load_scenario,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.menuBar().addMenu(self.file_menu)
 
@@ -261,12 +261,13 @@ class Model(QtWidgets.QMainWindow):
                       window_title='Running %s' % self.label,
                       out_folder=args['workspace_dir'])
 
-    def _load_scenario(self):
-        file_dialog = inputs.FileDialog()
-        scenario_file, last_filter = file_dialog.open_file(title='Select scenario')
-        self.load_scenario(scenario_file)
+    @QtCore.Slot()
+    def load_scenario(self, scenario_path=None):
+        if not scenario_path:
+            file_dialog = inputs.FileDialog()
+            scenario_path, last_filter = file_dialog.open_file(
+                title='Select scenario')
 
-    def load_scenario(self, scenario_path):
         LOGGER.info('Loading scenario from %s', scenario_path)
         paramset = scenarios.read_parameter_set(scenario_path)
         self.load_args(paramset.args)
