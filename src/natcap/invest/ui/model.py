@@ -118,6 +118,12 @@ class Model(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self)
         self._quickrun = False
 
+        # These attributes should be defined in subclass
+        for attr in ('label', 'target', 'validator', 'localdoc'):
+            if not getattr(self, attr):  # None unless overridden in subclass
+                warnings.warn('Class attribute %s.%s is not defined' % (
+                    self.__class__.__name__, attr))
+
         # Main operational widgets for the form
         self._central_widget = QtWidgets.QWidget()
         self.setCentralWidget(self._central_widget)
@@ -128,16 +134,12 @@ class Model(QtWidgets.QMainWindow):
         self.status_bar = QtWidgets.QStatusBar()
         self.setStatusBar(self.status_bar)
         self.menuBar().setNativeMenuBar(True)
-        self._central_widget.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
+        self._central_widget.layout().setSizeConstraint(
+            QtWidgets.QLayout.SetMinimumSize)
 
         self.window_title = WindowTitle()
         self.window_title.title_changed.connect(self.setWindowTitle)
         self.window_title.modelname = self.label
-
-        for attr in ('label', 'target', 'validator', 'localdoc'):
-            if not getattr(self, attr):
-                warnings.warn('Class attribute %s.%s is not defined' % (
-                    self.__class__.__name__, attr))
 
         # Format the text links at the top of the window.
         self.links = QtWidgets.QLabel()
