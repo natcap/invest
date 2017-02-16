@@ -22,7 +22,6 @@ LOGGER = logging.getLogger(__name__)
 
 _SCENARIO_BASE_FILENAME = 'scenario.invs.%s'
 _SCENARIO_DIALOG_TITLE = 'Select where to save the parameter %s'
-
 _SCENARIO_PARAMETER_SET = 'Parameter set'
 _SCENARIO_DATA_ARCHIVE = 'Data archive'
 _SCENARIO_SAVE_OPTS = {
@@ -249,6 +248,25 @@ class Model(object):
 
     def execute_model(self):
         args = self.assemble_args()
+
+        # If the workspace exists, confirm the overwrite.
+        if os.path.exists(args['workspace_dir']):
+            dialog = QtWidgets.QMessageBox()
+            dialog.setWindowFlags(QtCore.Qt.Dialog)
+            dialog.setText('Workspace exists!')
+            dialog.setInformativeText(
+                'Overwrite files from a previous run?')
+            dialog.setStandardButtons(
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            dialog.setDefaultButton(QtWidgets.QMessageBox.No)
+            dialog.setIconPixmap(
+                qtawesome.icon(
+                    'fa.exclamation-triangle',
+                    color='orange').pixmap(100, 100))
+
+            button_pressed = dialog.exec_()
+            if button_pressed != QtWidgets.QMessageBox.Yes:
+                return
 
         def _logged_target():
             name = self.target.__name__
