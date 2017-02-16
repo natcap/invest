@@ -108,6 +108,25 @@ def _prompt_for_scenario_options():
     return (None, None)
 
 
+class ModelWindow(QtWidgets.QMainWindow):
+    def closeEvent(self, event):
+        dialog = QtWidgets.QMessageBox()
+        dialog.setWindowFlags(QtCore.Qt.Dialog)
+        dialog.setText('Are you sure you want to quit?')
+        dialog.setInformativeText(
+            'Any unsaved changes to your parameters will be lost.')
+        dialog.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        dialog.setDefaultButton(QtWidgets.QMessageBox.Cancel)
+        dialog.setIconPixmap(
+            qtawesome.icon(
+                'fa.question').pixmap(100, 100))
+
+        button_pressed = dialog.exec_()
+        if button_pressed != QtWidgets.QMessageBox.Yes:
+            event.reject()
+
+
 class Model(object):
     label = None
     target = None
@@ -118,7 +137,7 @@ class Model(object):
         self._quickrun = False
 
         # Main operational widgets for the form
-        self.main_window = QtWidgets.QMainWindow()
+        self.main_window = ModelWindow()
         self.window = QtWidgets.QWidget()
         self.main_window.setCentralWidget(self.window)
         self.main_window.setSizePolicy(
