@@ -3,6 +3,7 @@ import sys
 import argparse
 import os
 import json
+import itertools
 
 from natcap.invest import scenarios
 
@@ -73,7 +74,8 @@ def extract_parameters(iui_config_path, relative_to):
                         # When we try to call 'replace', on an int or float.
                         possible_path = None
                     if (isinstance(default_value, basestring) and
-                            os.path.exists(possible_path)):
+                            os.path.exists(possible_path) and
+                            len(default_value) > 0):
                         # it's a path!
                         return_value = os.path.relpath(
                             path=possible_path,
@@ -96,21 +98,6 @@ def extract_parameters(iui_config_path, relative_to):
     return json_config['modelName'], return_args
 
 
-def generate_from_iui():
-    """Regenerate our InVEST scenarios from IUI's config.
-
-    Assumes CWD is the invest repo root.
-    """
-    for model_key, scenario_name in IUI_SCENARIOS.iteritems():
-        print model_key, scenario_name
-        iui_json_path = os.path.join('src', 'natcap', 'invest', 'iui',
-                                     '%s.json' % model_key)
-        assert os.path.exists(iui_json_path), 'File not found: %s' % iui_json_path
-        scenario_path = os.path.join(DATA_DIR, scenario_name + '.invs.json')
-
-        main([iui_json_path, scenario_path])
-
-
 def main(userargs=None):
     if not userargs:
         userargs = sys.argv[1:]
@@ -118,20 +105,40 @@ def main(userargs=None):
     parser = argparse.ArgumentParser(description=(
         'Create a json parameter set from an IUI configuration file'),
         prog=os.path.basename(__file__))
-    parser.add_argument('iui_config', nargs=1,
+    parser.add_argument('--convert-all', action='store_true',
+                        help='Run for every known IUI file.')
+    parser.add_argument('iui_config', nargs='?', default=[],
                         help='The IUI configuration file to use')
-    parser.add_argument('scenario_path', nargs=1,
+    parser.add_argument('scenario_path', nargs='?', default=[],
                         help='Where to save the parameter set')
 
     args = parser.parse_args(userargs)
-    modelname, new_params = extract_parameters(
-        iui_config_path=args.iui_config[0],
-        relative_to=os.path.dirname(os.path.abspath(args.scenario_path[0])))
-    scenarios.write_parameter_set(filepath=args.scenario_path[0],
-                                  args=new_params,
-                                  name=modelname)
+    if args.convert_all:
+        for model_key, scenario_name in IUI_SCENARIOS.iteritems():
+            print model_key, scenario_name
+            iui_json_path = os.path.join('src', 'natcap', 'invest', 'iui',
+                                        '%s.json' % model_key)
+            args.iui_config.append(iui_json_path)
+            assert os.path.exists(iui_json_path), 'File not found: %s' % iui_json_path
+            scenario_path = os.path.join(DATA_DIR, scenario_name + '.invs.json')
+            args.scenario_path.append(scenario_path)
+
+    for iui_config, scenario_path in itertools.izip(args.iui_config,
+                                                    args.scenario_path):
+
+        modelname, new_params = extract_parameters(
+            iui_config_path=iui_config,
+            relative_to=os.path.dirname(os.path.abspath(scenario_path)))
+        try:
+            del new_params['workspace_dir']
+        except KeyError:
+            pass
+
+        scenarios.write_parameter_set(filepath=scenario_path,
+                                      args=new_params,
+                                      name=modelname,
+                                      relative=True)
 
 
 if __name__ == '__main__':
-    #main(sys.argv[1:])
-    generate_from_iui()
+    main(sys.argv[1:])
