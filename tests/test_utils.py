@@ -3,6 +3,8 @@ import unittest
 import os
 import tempfile
 import shutil
+import logging
+import threading
 
 from pygeoprocessing.testing import scm
 import pygeoprocessing.testing
@@ -217,3 +219,60 @@ class SandboxTempdirTests(unittest.TestCase):
             # trigger the exception handling for coverage.
             shutil.rmtree(new_dir)
 
+
+class TimeFormattingTests(unittest.TestCase):
+    def test_format_time_hours(self):
+        from natcap.invest.utils import format_time
+
+        seconds = 3667
+        self.assertEqual(format_time(seconds), '1h 1m 7s')
+
+    def test_format_time_minutes(self):
+        from natcap.invest.utils import format_time
+
+        seconds = 67
+        self.assertEqual(format_time(seconds), '1m 7s')
+
+    def test_format_time_seconds(self):
+        from natcap.invest.utils import format_time
+
+        seconds = 7
+        self.assertEqual(format_time(seconds), '7s')
+
+
+class ThreadFilterTests(unittest.TestCast):
+    def test_thread_filter_same_thread(self):
+        from natcap.invest.utils import ThreadFilter
+
+        # name, level, pathname, lineno, msg, args, exc_info, func=None
+        record = logging.LogRecord(
+            name='foo',
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=500,
+            msg='some logging message',
+            args=(),
+            exc_info=None,
+            func='test_thread_filter_same_thread')
+        filterer = ThreadFilter(threading.currentThread().name)
+
+        # The record comes from the same thread.
+        self.assertEqual(filterer.filter(record), True)
+
+    def test_thread_filter_different_thread(self):
+        from natcap.invest.utils import ThreadFilter
+
+        # name, level, pathname, lineno, msg, args, exc_info, func=None
+        record = logging.LogRecord(
+            name='foo',
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=500,
+            msg='some logging message',
+            args=(),
+            exc_info=None,
+            func='test_thread_filter_same_thread')
+        filterer = ThreadFilter('Thread-nonexistent')
+
+        # The record comes from the same thread.
+        self.assertEqual(filterer.filter(record), False)
