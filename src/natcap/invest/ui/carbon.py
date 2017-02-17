@@ -100,7 +100,6 @@ class Carbon(model.Model):
         self.add_input(self.valuation_container)
         self.price_per_metric_ton_of_c = inputs.Text(
             args_key=u'price_per_metric_ton_of_c',
-            interactive=False,
             label=u'Price/Metric ton of carbon',
             required=True,
             validator=self.validator)
@@ -108,7 +107,6 @@ class Carbon(model.Model):
         self.discount_rate = inputs.Text(
             args_key=u'discount_rate',
             helptext=u'The discount rate as a floating point percent.',
-            interactive=False,
             label=u'Market Discount in Price of Carbon (%)',
             required=True,
             validator=self.validator)
@@ -118,7 +116,6 @@ class Carbon(model.Model):
             helptext=(
                 u"The floating point percent increase of the price of "
                 u"carbon per year."),
-            interactive=False,
             label=u'Annual Rate of Change in Price of Carbon (%)',
             required=True,
             validator=self.validator)
@@ -140,12 +137,6 @@ class Carbon(model.Model):
         self.redd.sufficiency_changed.connect(
             self.redd_lulc_raster.set_required)
         self.calc_sequestration.sufficiency_changed.connect(
-            self.price_per_metric_ton_of_c.set_interactive)
-        self.calc_sequestration.sufficiency_changed.connect(
-            self.discount_rate.set_interactive)
-        self.calc_sequestration.sufficiency_changed.connect(
-            self.rate_change.set_interactive)
-        self.calc_sequestration.sufficiency_changed.connect(
             self.valuation_container.set_interactive)
 
     def assemble_args(self):
@@ -159,16 +150,15 @@ class Carbon(model.Model):
 
         if self.calc_sequestration.value():
             args[self.redd_lulc_raster.args_key] = self.redd_lulc_raster.value()
-            args[self.cur_lulc_year.args_key] = int(self.cur_lulc_year.value())
-            args[self.fut_lulc_year.args_key] = int(self.fut_lulc_year.value())
             args[self.fut_lulc_raster.args_key] = self.fut_lulc_raster.value()
 
+            for arg in (self.cur_lulc_year, self.fut_lulc_year):
+                args[arg.args_key] = model.try_cast(arg.value(), int)
+
+            # Attempt to cast valuation parameters to float
             if self.valuation_container.value():
-                args[self.price_per_metric_ton_of_c.args_key] = float(
-                    self.price_per_metric_ton_of_c.value())
-                args[self.discount_rate.args_key] = float(
-                    self.discount_rate.value())
-                args[self.rate_change.args_key] = float(
-                    self.rate_change.value())
+                for arg in (self.price_per_metric_ton_of_c,
+                            self.discount_rate, self.rate_change):
+                    args[arg.args_key] = model.try_cast(arg.value(), float)
 
         return args

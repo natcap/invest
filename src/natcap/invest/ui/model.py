@@ -36,6 +36,13 @@ _SCENARIO_SAVE_OPTS = {
 }
 
 
+def try_cast(value, target_type):
+    try:
+        return target_type(value)
+    except ValueError:
+        return target_type
+
+
 class WindowTitle(QtCore.QObject):
 
     title_changed = QtCore.Signal(unicode)
