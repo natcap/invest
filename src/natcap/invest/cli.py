@@ -218,7 +218,7 @@ def main():
                         help=('Attempt to run InVEST without its GUI.'))
     parser.add_argument('-s', '--scenario', default=None, nargs='?',
                         help='Run the specified model with this scenario')
-    parser.add_argument('-w', '--workspace', default=os.getcwd(), nargs='?',
+    parser.add_argument('-w', '--workspace', default=None, nargs='?',
                         help='The workspace in which outputs will be saved')
 
     gui_options_group = parser.add_argument_group(
@@ -306,6 +306,9 @@ def main():
                     if warnings:
                         LOGGER.warn('Warnings found: \n%s',
                                     pprint.pformat(warnings))
+
+            if not args.workspace:
+                args.workspace = os.getcwd()
 
             # If the workspace exists and we don't have up-front permission to
             # overwrite the workspace, prompt for permission.
