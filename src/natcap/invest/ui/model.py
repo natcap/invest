@@ -4,6 +4,7 @@ import logging
 import os
 import pprint
 import warnings
+import collections
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -72,6 +73,9 @@ class WindowTitle(QtCore.QObject):
         except AttributeError:
             return ''
 
+ScenarioSaveOpts = collections.namedtuple(
+    'ScenarioSaveOpts', 'scenario_type use_relpaths include_workspace')
+
 
 def _prompt_for_scenario_options():
     dialog = QtWidgets.QDialog()
@@ -88,7 +92,11 @@ def _prompt_for_scenario_options():
     prompt.add_input(scenario_type)
     use_relative_paths = inputs.Checkbox(
         label='Use relative paths')
+    include_workspace = inputs.Checkbox(
+        label='Include workspace in scenario')
+    include_workspace.set_value(False)
     prompt.add_input(use_relative_paths)
+    prompt.add_input(include_workspace)
 
     @QtCore.Slot(unicode)
     def _optionally_disable(value):
@@ -111,8 +119,10 @@ def _prompt_for_scenario_options():
     dialog.show()
     result = dialog.exec_()
     if result == QtWidgets.QDialog.Accepted:
-        return (scenario_type.value(), use_relative_paths.value())
-    return (None, None)
+        return ScenarioSaveOpts(
+            scenario_type.value(), use_relative_paths.value(),
+            include_workspace.value())
+    return None
 
 
 class Model(QtWidgets.QMainWindow):
@@ -195,26 +205,31 @@ class Model(QtWidgets.QMainWindow):
         self.menuBar().addMenu(self.file_menu)
 
     def _save_scenario_as(self):
-        scenario_type, use_relative_paths = _prompt_for_scenario_options()
-        if not scenario_type:  # user pressed cancel
+        scenario_opts = _prompt_for_scenario_options()
+        if not scenario_opts:  # user pressed cancel
             return
 
         file_dialog = inputs.FileDialog()
         save_filepath, last_filter = file_dialog.save_file(
-            title=_SCENARIO_SAVE_OPTS[scenario_type]['title'],
+            title=_SCENARIO_SAVE_OPTS[scenario_opts.scenario_type]['title'],
             start_dir=None,  # might change later, last dir is fine
             savefile='{model}_{file_base}'.format(
                 model='.'.join(self.target.__module__.split('.')[2:-1]),
-                file_base=_SCENARIO_SAVE_OPTS[scenario_type]['savefile']))
+                file_base=_SCENARIO_SAVE_OPTS[
+                    scenario_opts.scenario_type]['savefile']))
 
         if not save_filepath:
             # The user pressed cancel.
             return
 
         current_args = self.assemble_args()
+        if (not scenario_opts.include_workspace or
+                scenario_opts.scenario_type == _SCENARIO_DATA_ARCHIVE):
+            del current_args['workspace_dir']
+
         LOGGER.info('Current parameters:\n%s', pprint.pformat(current_args))
 
-        if scenario_type == _SCENARIO_DATA_ARCHIVE:
+        if scenario_opts.scenario_type == _SCENARIO_DATA_ARCHIVE:
             scenarios.build_scenario_archive(
                 args=current_args,
                 scenario_path=save_filepath
@@ -224,7 +239,7 @@ class Model(QtWidgets.QMainWindow):
                 filepath=save_filepath,
                 args=current_args,
                 name=self.target.__module__,
-                relative=use_relative_paths
+                relative=scenario_opts.use_relpaths
             )
 
         alert_message = (
@@ -273,7 +288,7 @@ class Model(QtWidgets.QMainWindow):
     def load_scenario(self, scenario_path=None):
         if not scenario_path:
             file_dialog = inputs.FileDialog()
-            scenario_path, last_filter = file_dialog.open_file(
+            scenario_path = file_dialog.open_file(
                 title='Select scenario')
 
         LOGGER.info('Loading scenario from %s', scenario_path)
