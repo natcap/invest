@@ -163,11 +163,9 @@ class Model(QtWidgets.QMainWindow):
                                        required=True)
 
         # natcap.invest.pollination.pollination --> pollination
-        print self.workspace.value()
         self.workspace.set_value(os.path.normpath(
             os.path.expanduser('~/Documents/{model}_workspace').format(
                 model=self.target.__module__.split('.')[-1])))
-        print self.workspace.value()
 
         self.suffix = inputs.Text(args_key='suffix',
                                   label='Results suffix',
@@ -334,4 +332,4 @@ class Model(QtWidgets.QMainWindow):
 
         button_pressed = dialog.exec_()
         if button_pressed != QtWidgets.QMessageBox.Yes:
-            event.reject()
+            event.ignore()
