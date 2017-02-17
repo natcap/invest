@@ -22,6 +22,9 @@ _MODEL_UIS = {
     'carbon': _UIMETA(
         pyname='natcap.invest.carbon',
         gui='carbon.Carbon'),
+    'coastal_blue_carbon': _UIMETA(
+        pyname='natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
+        gui='cbc.CoastalBlueCarbon'),
     'fisheries': _UIMETA(
         pyname='natcap.invest.fisheries.fisheries',
         gui='fisheries.Fisheries'),
