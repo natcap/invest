@@ -402,3 +402,6 @@ def _generate_report(summary_stats, model_args, html_report_path):
                 '<td>%s</td></tr>' % (
                     result_description, units, value, raw_file_path))
         report_doc.write('</body></html>')
+
+def validate(args, limit_to=None):
+    return []
