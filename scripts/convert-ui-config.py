@@ -308,7 +308,8 @@ def convert_ui_structure(json_file, out_python_file):
             target=u'%s' % json_dict['targetScript'],
             localdoc=repr(json_dict['localDocURI']),
             input_attributes=u'\n'.join(input_attributes),
-            classname=json_dict['modelName'].capitalize(),
+            classname=''.join([x.capitalize() for x in
+                               json_dict['modelName'].split('_')]),
             args_key_map=u'\n'.join(args_values),
             sufficiency_connections=u'\n'.join(sufficiency_links),
             args_to_maybe_skip=u'\n'.join(args_to_maybe_skip),

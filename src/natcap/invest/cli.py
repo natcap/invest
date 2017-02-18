@@ -31,6 +31,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.coastal_blue_carbon.preprocessor',
         gui='cbc.CoastalBlueCarbonPreprocessor',
         aliases=('cbc_pre',)),
+    'coastal_vulnerability': _UIMETA(
+        pyname='natcap.invest.coastal_vulnerability.coastal_vulnerability',
+        gui='cv.CoastalVulnerability',
+        aliases=('cv',)),
     'fisheries': _UIMETA(
         pyname='natcap.invest.fisheries.fisheries',
         gui='fisheries.Fisheries',
