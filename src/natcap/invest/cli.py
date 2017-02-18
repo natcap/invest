@@ -16,24 +16,29 @@ from . import utils
 import six
 
 LOGGER = logging.getLogger(__name__)
-_UIMETA = collections.namedtuple('UIMeta', 'pyname gui')
+_UIMETA = collections.namedtuple('UIMeta', 'pyname gui aliases')
 
 _MODEL_UIS = {
     'carbon': _UIMETA(
         pyname='natcap.invest.carbon',
-        gui='carbon.Carbon'),
+        gui='carbon.Carbon',
+        aliases=()),
     'coastal_blue_carbon': _UIMETA(
         pyname='natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
-        gui='cbc.CoastalBlueCarbon'),
+        gui='cbc.CoastalBlueCarbon',
+        aliases=('cbc',)),
     'fisheries': _UIMETA(
         pyname='natcap.invest.fisheries.fisheries',
-        gui='fisheries.Fisheries'),
+        gui='fisheries.Fisheries',
+        aliases=()),
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
-        gui='pollination.Pollination'),
+        gui='pollination.Pollination',
+        aliases=()),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
-        gui=None),
+        gui=None,
+        aliases=('hs',)),
 }
 
 
@@ -93,15 +98,22 @@ def format_models():
     print 'Available models:'
     model_names = list_models()
     max_model_name_length = max(len(name) for name in model_names)
-    template_string = '    {modelname}   {usage}'
+    max_alias_name_length = max(len(', '.join(meta.aliases))
+                                for meta in _MODEL_UIS.values())
+    template_string = '    {modelname} {aliases}   {usage}'
     strings = []
     for model_name in list_models():
         usage_string = '(No GUI available)'
         if _MODEL_UIS[model_name].gui is not None:
             usage_string = ''
 
+        alias_string = ', '.join(_MODEL_UIS[model_name].aliases)
+        if alias_string:
+            alias_string = '(%s)' % alias_string
+
         strings.append(template_string.format(
                 modelname=model_name.ljust(max_model_name_length),
+                aliases=alias_string.ljust(max_alias_name_length),
                 usage=usage_string))
     return strings
 
@@ -135,16 +147,28 @@ class SelectModelAction(argparse.Action):
             parser.exit()
         else:
             known_models = list_models()
+
+            # map {alias: model}
+            known_aliases = {}
+            for modelname, meta in _MODEL_UIS.iteritems():
+                for alias in meta.aliases:
+                    assert alias not in known_aliases, (
+                        'Alias %s already defined for model %s') % (
+                            alias, known_aliases[alias])
+                    known_aliases[alias] = modelname
+
             matching_models = [model for model in known_models if
                                model.startswith(values)]
 
             exact_matches = [model for model in known_models if
                              model == values]
 
-            if len(matching_models) == 1:
+            if len(matching_models) == 1:  # match an indentifying substring
                 modelname = matching_models[0]
-            elif len(exact_matches) == 1:
+            elif len(exact_matches) == 1:  # match an exact modelname
                 modelname = exact_matches[0]
+            elif values in known_aliases:  # match an alias
+                modelname = known_aliases[values]
             elif len(matching_models) == 0:
                 parser.exit("Error: '%s' not a known model" % values)
             else:
