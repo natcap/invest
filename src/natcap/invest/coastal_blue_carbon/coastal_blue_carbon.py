@@ -675,9 +675,9 @@ def get_inputs(args):
                 d['snapshot_years'][-1])
         else:
             interest_rate = float(args['interest_rate']) * 0.01
-            price = args['price']
+            price = float(args['price'])
             d['price_t'] = (1 + interest_rate) ** numpy.arange(
-                0, d['timesteps']+1) * price
+                0, float(d['timesteps'])+1) * price
 
         d['price_t'] /= (1 + discount_rate) ** numpy.arange(0, d['timesteps']+1)
 
@@ -871,3 +871,7 @@ def _get_price_table(price_table_uri, start_year, end_year):
     except KeyError as missing_year:
         raise KeyError('Carbon price table does not contain a price value for '
                        '%s' % missing_year)
+
+
+def validate(args, limit_to=None):
+    return []
