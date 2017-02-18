@@ -353,3 +353,7 @@ def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
         for code in code_to_lulc_dict.keys():
             row = [code, code_to_lulc_dict[code]] + [''] * 10
             writer.writerow(row)
+
+
+def validate(args, limit_to=None):
+    return []

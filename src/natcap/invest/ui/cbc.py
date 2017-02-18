@@ -3,15 +3,54 @@ import functools
 
 from natcap.invest.ui import model
 from natcap.ui import inputs
-import natcap.invest.coastal_blue_carbon.coastal_blue_carbon
+from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+from natcap.invest.coastal_blue_carbon import preprocessor
+
+
+class CoastalBlueCarbonPreprocessor(model.Model):
+    label = u'Coastal Blue Carbon Preprocessor'
+    target = staticmethod(preprocessor.execute)
+    validator = staticmethod(preprocessor.validate)
+    localdoc = u'../documentation/coastal_blue_carbon.html'
+
+    def __init__(self):
+        model.Model.__init__(self)
+
+        self.lulc_lookup_uri = inputs.File(
+            args_key=u'lulc_lookup_uri',
+            helptext=(
+                u"A CSV table used to map lulc classes to their values "
+                u"in a raster, as well as to indicate whether or not "
+                u"the lulc class is a coastal blue carbon habitat."),
+            label=u'LULC Lookup Table (CSV)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.lulc_lookup_uri)
+        self.lulc_snapshot_list = inputs.Multi(
+            args_key=u'lulc_snapshot_list',
+            callable_=functools.partial(inputs.File, label="Input"),
+            helptext=(
+                u"A set of GDAL-supported rasters representing the "
+                u"land/seascape at particular points in time.  Provided "
+                u"in chronological order."),
+            label=u'Land Use/Land Cover Rasters (GDAL-supported)',
+            link_text=u'Add Another')
+        self.add_input(self.lulc_snapshot_list)
+
+    def assemble_args(self):
+        args = {
+            self.workspace.args_key: self.workspace.value(),
+            self.suffix.args_key: self.suffix.value(),
+            self.lulc_lookup_uri.args_key: self.lulc_lookup_uri.value(),
+            self.lulc_snapshot_list.args_key: self.lulc_snapshot_list.value(),
+        }
+        return args
 
 
 class CoastalBlueCarbon(model.Model):
     label = u'Coastal Blue Carbon'
-    target = staticmethod(
-        natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute)
-    validator = staticmethod(
-        natcap.invest.coastal_blue_carbon.coastal_blue_carbon.validate)
+    target = staticmethod(coastal_blue_carbon.execute)
+    validator = staticmethod(coastal_blue_carbon.validate)
     localdoc = u'../documentation/coastal_blue_carbon.html'
 
     def __init__(self):
