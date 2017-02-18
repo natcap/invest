@@ -181,7 +181,7 @@ def convert_ui_structure(json_file, out_python_file):
                 classname = obj['type'].capitalize()
                 if classname == 'Multi':
                     # additional kwargs needed for Multi elements:
-                    kwargs['callable'] = (
+                    kwargs['callable_'] = (
                         'functools.partial(inputs.{classname}, '
                         'label="{label}")').format(
                             classname=obj['sampleElement']['type'].capitalize(),

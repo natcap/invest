@@ -89,7 +89,7 @@ class CoastalBlueCarbon(model.Model):
         self.add_input(self.lulc_baseline_year)
         self.lulc_transition_maps_list = inputs.Multi(
             args_key=u'lulc_transition_maps_list',
-            callable=functools.partial(inputs.File, label="Input"),
+            callable_=functools.partial(inputs.File, label="Input"),
             helptext=(
                 u"A set of GDAL-supported rasters representing the "
                 u"landscape/seascape at particular points in time. "
@@ -99,7 +99,7 @@ class CoastalBlueCarbon(model.Model):
         self.add_input(self.lulc_transition_maps_list)
         self.lulc_transition_years_list = inputs.Multi(
             args_key=u'lulc_transition_years_list',
-            callable=functools.partial(inputs.Text, label="Input"),
+            callable_=functools.partial(inputs.Text, label="Input"),
             helptext=u'Transition years must be entered in chronological order.',
             label=u'Transition Years',
             link_text=u'Add Another')
