@@ -447,8 +447,8 @@ def execute(args):
 
         # Get a dictionary from the sub-watershed shapefiles attributes based
         # on the fields to be outputted to the CSV table
-        wyield_values_sws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
-                subwatershed_results_uri, 'subws_id')
+        wyield_values_sws = _extract_vector_table_by_key(
+            subwatershed_results_uri, 'subws_id')
 
         wyield_value_dict_sws = filter_dictionary(wyield_values_sws, field_list_sws)
 
@@ -495,8 +495,8 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    wyield_values_ws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id')
+    wyield_values_ws = _extract_vector_table_by_key(
+        watershed_results_uri, 'ws_id')
 
     wyield_value_dict_ws = filter_dictionary(wyield_values_ws, field_list_ws)
 
@@ -576,8 +576,8 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    watershed_values = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id')
+    watershed_values = _extract_vector_table_by_key(
+        watershed_results_uri, 'ws_id')
 
     watershed_dict = filter_dictionary(watershed_values, field_list_ws)
 
@@ -638,8 +638,8 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    watershed_values_ws = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
-            watershed_results_uri, 'ws_id')
+    watershed_values_ws = _extract_vector_table_by_key(
+        watershed_results_uri, 'ws_id')
 
     watershed_dict_ws = filter_dictionary(watershed_values_ws, field_list_ws)
 
@@ -915,3 +915,46 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, key):
         feat.SetField(field_index, field_val)
 
         layer.SetFeature(feat)
+
+
+def _extract_vector_table_by_key(vector_path, key_field):
+    """Return vector attribute table of first layer as dictionary.
+
+    Create a dictionary lookup table of the features in the attribute table
+    of the vector referenced by vector_path.
+
+    Args:
+        vector_path (string): a path to an OGR vector
+        key_field: a field in vector_path that refers to a key value
+            for each row such as a polygon id.
+
+    Returns:
+        attribute_dictionary (dict): returns a dictionary of the
+            form {key_field_0: {field_0: value0, field_1: value1}...}
+    """
+    # Pull apart the vector
+    vector = ogr.Open(vector_path)
+    layer = vector.GetLayer()
+    layer_def = layer.GetLayerDefn()
+
+    # Build up a list of field names for the vector table
+    field_names = []
+    for field_id in xrange(layer_def.GetFieldCount()):
+        field_def = layer_def.GetFieldDefn(field_id)
+        field_names.append(field_def.GetName())
+
+    # Loop through each feature and build up the dictionary representing the
+    # attribute table
+    attribute_dictionary = {}
+    for feature in layer:
+        feature_fields = {}
+        for field_name in field_names:
+            feature_fields[field_name] = feature.GetField(field_name)
+        key_value = feature.GetField(key_field)
+        attribute_dictionary[key_value] = feature_fields
+
+    layer.ResetReading()
+    # Explictly clean up the layers so the files close
+    layer = None
+    vector = None
+    return attribute_dictionary
