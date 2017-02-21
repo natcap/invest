@@ -35,6 +35,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.coastal_vulnerability.coastal_vulnerability',
         gui='cv.CoastalVulnerability',
         aliases=('cv',)),
+    'crop_production': _UIMETA(
+        pyname='natcap.invest.crop_production.crop_production',
+        gui='crop_production.CropProduction',
+        aliases=('cp', 'crop')),
     'fisheries': _UIMETA(
         pyname='natcap.invest.fisheries.fisheries',
         gui='fisheries.Fisheries',

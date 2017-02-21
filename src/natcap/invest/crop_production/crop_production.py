@@ -36,7 +36,7 @@ def execute(args):
     :param str args['workspace_dir']: location into which all intermediate
         and output files should be placed.
 
-    :param str args['results_suffix']: a string to append to output filenames
+    :param str args['suffix']: a string to append to output filenames
 
     :param str args['lookup_table']: filepath to a CSV table used to
         convert the crop code provided in the Crop Map to the crop name that
@@ -84,7 +84,7 @@ def execute(args):
 
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
-            'results_suffix': 'scenario_name',
+            'suffix': 'scenario_name',
             'lookup_table': 'path/to/lookup_table',
             'aoi_raster': 'path/to/aoi_raster',
             'dataset_dir': 'path/to/dataset_dir/',
@@ -112,7 +112,7 @@ def execute(args):
 
     file_registry = invest_utils.build_file_registry(
         [(_OUTPUT, output_dir), (_INTERMEDIATE, cache_dir)],
-        args['results_suffix'])
+        args['suffix'])
 
     reproject_raster(
         args['aoi_raster'], args['aoi_raster'], file_registry['aoi_raster'])
@@ -966,3 +966,7 @@ def compute_financial_analysis(yield_dict, economics_table, aoi_raster,
     writer.writeheader()
     for row in financial_analysis_dict.values():
         writer.writerow(row)
+
+
+def validate(args, limit_to=None):
+    return []
