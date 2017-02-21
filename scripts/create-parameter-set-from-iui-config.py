@@ -10,10 +10,10 @@ from natcap.invest import scenarios
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
 
 IUI_SCENARIOS = {
-    'carbon': 'Carbon/carbon_willamette',
+    'carbon': 'carbon/carbon_willamette',
     'coastal_blue_carbon': 'CoastalBlueCarbon/cbc_galveston_bay',
     'coastal_blue_carbon_preprocessor': 'CoastalBlueCarbon/cbc_pre_galveston_bay',
-    'coastal_vulnerability': 'CoastalProtection/coasatal_vuln_wcvi',
+    'coastal_vulnerability': 'CoastalProtection/coastal_vuln_wcvi',
     'crop_production': 'CropProduction/crop_production_willamette',
     'delineateit': 'Base_Data/Freshwater/delineateit_willamette',
     'finfish_aquaculture': 'Aquaculture/atlantic_salmon_british_columbia',
