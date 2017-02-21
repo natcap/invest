@@ -38,10 +38,14 @@ _MODEL_UIS = {
     'crop_production': _UIMETA(
         pyname='natcap.invest.crop_production.crop_production',
         gui='crop_production.CropProduction',
-        aliases=('cp', 'crop')),
+        aliases=('cp')),
     'delineateit': _UIMETA(
         pyname='natcap.invest.routing.delineateit',
         gui='routing.Delineateit',
+        aliases=()),
+    'finfish_aquaculture': _UIMETA(
+        pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
+        gui='finfish.FinfishAquaculture',
         aliases=()),
     'fisheries': _UIMETA(
         pyname='natcap.invest.fisheries.fisheries',

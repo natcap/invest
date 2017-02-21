@@ -90,15 +90,16 @@ def execute(args):
     ff_aqua_args['workspace_dir'] = args['workspace_dir']
     ff_aqua_args['ff_farm_file'] = args['ff_farm_loc']
     ff_aqua_args['farm_ID'] = args['farm_ID']
-    ff_aqua_args['outplant_buffer'] = args['outplant_buffer']
-    ff_aqua_args['g_param_a'] = args['g_param_a']
-    ff_aqua_args['g_param_b'] = args['g_param_b']
-    ff_aqua_args['g_param_tau'] = args['g_param_tau']
+    ff_aqua_args['outplant_buffer'] = int(args['outplant_buffer'])
+    ff_aqua_args['g_param_a'] = float(args['g_param_a'])
+    ff_aqua_args['g_param_b'] = float(args['g_param_b'])
+    ff_aqua_args['g_param_tau'] = float(args['g_param_tau'])
 
     if args['use_uncertainty']:
         LOGGER.debug('Adding uncertainty parameters')
-        for key in ['g_param_a_sd', 'g_param_b_sd', 'num_monte_carlo_runs']:
-            ff_aqua_args[key] = args[key]
+        ff_aqua_args = int(args['num_monte_carlo_runs'])
+        for key in ['g_param_a_sd', 'g_param_b_sd']:
+            ff_aqua_args[key] = float(args[key])
 
     #Both CSVs are being pulled in, but need to do some maintenance to remove
     #undesirable information before they can be passed into core
@@ -114,9 +115,9 @@ def execute(args):
     if ff_aqua_args['do_valuation'] is True:
         LOGGER.debug('Yes, we want to do valuation')
 
-        ff_aqua_args['p_per_kg'] = args['p_per_kg']
-        ff_aqua_args['frac_p'] = args['frac_p']
-        ff_aqua_args['discount'] = args['discount']
+        ff_aqua_args['p_per_kg'] = float(args['p_per_kg'])
+        ff_aqua_args['frac_p'] = float(args['frac_p'])
+        ff_aqua_args['discount'] = float(args['discount'])
 
     #Fire up the biophysical function in finfish_aquaculture_core with the
     #gathered arguments
@@ -276,3 +277,7 @@ def format_temp_table(temp_path, ff_aqua_args):
         new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
 
     ff_aqua_args['water_temp_dict'] = new_dict_temp
+
+
+def validate(args, limit_to=None):
+    return []
