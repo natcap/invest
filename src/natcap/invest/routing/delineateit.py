@@ -33,7 +33,7 @@ def execute(args):
             selected folder does not exist, it will be created. If
             datasets already exist in the selected folder, they will be
             overwritten. (required)
-        results_suffix (string):  This text will be appended to the end of
+        suffix (string):  This text will be appended to the end of
             output files to help separate multiple runs. (optional)
         dem_uri (string):  A GDAL-supported raster file with an elevation
             for each cell. Make sure the DEM is corrected by filling in sinks,
@@ -55,7 +55,7 @@ def execute(args):
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)
     pygeoprocessing.create_directories([output_directory])
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    file_suffix = utils.make_suffix_string(args, 'suffix')
 
     dem_uri = args['dem_uri']
     outlet_shapefile_uri = args['outlet_shapefile_uri']
@@ -73,3 +73,7 @@ def execute(args):
         dem_uri, outlet_shapefile_uri, snap_distance,
         flow_threshold, watershed_out_uri,
         snapped_outlet_points_uri, stream_out_uri)
+
+
+def validate(args, limit_to=None):
+    return []
