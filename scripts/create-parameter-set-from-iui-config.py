@@ -113,6 +113,14 @@ def main(userargs=None):
                         help='Where to save the parameter set')
 
     args = parser.parse_args(userargs)
+
+    # Convert params to lists if needed.
+    # There's probably a better argparse way to do this, but I can't seem to
+    # make it happen immediately and this works just fine.
+    for attrname in ('iui_config', 'scenario_path'):
+        if not isinstance(getattr(args, attrname), list):
+            setattr(args, attrname, [getattr(args, attrname)])
+
     if args.convert_all:
         for model_key, scenario_name in IUI_SCENARIOS.iteritems():
             print model_key, scenario_name
