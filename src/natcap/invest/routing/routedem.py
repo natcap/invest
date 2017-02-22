@@ -115,3 +115,7 @@ def execute(args):
             output_directory, args['downstream_distance_filename'])
         pygeoprocessing.routing.distance_to_stream(
             flow_direction_uri, v_stream_uri, distance_uri)
+
+
+def validate(args, limit_to=None):
+    return []

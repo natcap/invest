@@ -99,6 +99,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.recreation.recmodel_client',
         gui='recreation.Recreation',
         aliases=()),
+    'routedem': _UIMETA(
+        pyname='natcap.invest.routing.routedem',
+        gui='routing.RouteDEM',
+        aliases=()),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
         gui=None,
