@@ -83,6 +83,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.ndr.ndr',
         gui='ndr.Nutrient',
         aliases=()),
+    'overlap_analysis': _UIMETA(
+        pyname='natcap.invest.overlap_analysis.overlap_analysis',
+        gui='overlap_analysis.OverlapAnalysis',
+        aliases=('oa',)),
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
         gui='pollination.Pollination',
