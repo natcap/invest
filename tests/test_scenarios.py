@@ -363,3 +363,53 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(args, normalized_params)
         self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
+
+    def test_relative_parameter_set(self):
+        from natcap.invest import scenarios, __version__
+
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'nested': {
+                'level1': 123,
+            },
+            'foo': os.path.join(self.workspace, 'foo.txt'),
+            'bar': os.path.join(self.workspace, 'foo.txt'),
+            'file_list': [
+                os.path.join(self.workspace, 'file1.txt'),
+                os.path.join(self.workspace, 'file2.txt'),
+            ],
+            'data_dir': os.path.join(self.workspace, 'data_dir'),
+            'temp_workspace': self.workspace
+        }
+        modelname = 'natcap.invest.foo'
+        paramset_filename = os.path.join(self.workspace, 'paramset.json')
+
+        # make the sample data so filepaths are interpreted correctly
+        for file_base in ('foo', 'bar', 'file1', 'file2'):
+            test_filepath = os.path.join(self.workspace, file_base + '.txt')
+            open(test_filepath, 'w').write('hello!')
+        os.makedirs(params['data_dir'])
+
+        # Write the parameter set
+        scenarios.write_parameter_set(
+            paramset_filename, params, modelname, relative=True)
+
+        # Check that the written parameter set file contains relative paths
+        raw_args = json.load(open(paramset_filename))['args']
+        print raw_args
+        self.assertEqual(raw_args['foo'], 'foo.txt')
+        self.assertEqual(raw_args['bar'], 'foo.txt')
+        self.assertEqual(raw_args['file_list'], ['file1.txt', 'file2.txt'])
+        self.assertEqual(raw_args['data_dir'], 'data_dir')
+        self.assertEqual(raw_args['temp_workspace'], '.')
+
+        # Read back the parameter set and verify the returned paths are
+        # absolute
+        args, invest_version, callable_name = scenarios.read_parameter_set(
+            paramset_filename)
+
+        self.assertEqual(args, params)
+        self.assertEqual(invest_version, __version__)
+        self.assertEqual(callable_name, modelname)

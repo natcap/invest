@@ -7,7 +7,8 @@ import itertools
 
 from natcap.invest import scenarios
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
+DATA_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data'))
 
 IUI_SCENARIOS = {
     'carbon': 'carbon/carbon_willamette',
@@ -64,6 +65,7 @@ def extract_parameters(iui_config_path, relative_to):
                         for type_ in (float, int):
                             try:
                                 default_value = type_(default_value)
+                                break
                             except (TypeError, ValueError):
                                 pass
 

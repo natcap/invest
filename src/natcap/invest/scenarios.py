@@ -311,6 +311,11 @@ def write_parameter_set(filepath, args, name, relative=False):
             if os.path.exists(args_param):
                 normalized_path = os.path.normpath(args_param)
                 if relative:
+                    # Handle special case where python assumes that '.'
+                    # represents the CWD
+                    if (normalized_path == '.' or
+                            os.path.dirname(filepath) == normalized_path):
+                        return '.'
                     return os.path.relpath(normalized_path,
                                            os.path.dirname(filepath))
                 return normalized_path
