@@ -63,6 +63,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.globio',
         gui='globio.GLOBIO',
         aliases=()),
+    'habitat_quality': _UIMETA(
+        pyname='natcap.invest.habitat_quality',
+        gui='habitat_quality.HabitatQuality',
+        aliases=('hq',)),
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
         gui='pollination.Pollination',

@@ -617,3 +617,7 @@ def make_linear_decay_kernel_uri(max_distance, kernel_uri):
             xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
         kernel_row /= integration
         kernel_band.WriteArray(kernel_row, 0, row_index)
+
+
+def validate(args, limit_to=None):
+    return []
