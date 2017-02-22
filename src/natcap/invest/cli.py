@@ -55,6 +55,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.fisheries.fisheries_hst',
         gui='fisheries.FisheriesHST',
         aliases=()),
+    'forest_carbon_edge_effect': _UIMETA(
+        pyname='natcap.invest.forest_carbon_edge_effect',
+        gui='forest_carbon.ForestCarbonEdgeEffect',
+        aliases=('fc',)),
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
         gui='pollination.Pollination',

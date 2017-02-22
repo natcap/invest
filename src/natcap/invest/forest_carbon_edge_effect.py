@@ -644,3 +644,7 @@ def _calculate_tropical_forest_edge_carbon_map(
             result, xoff=edge_distance_data['xoff'],
             yoff=edge_distance_data['yoff'])
     LOGGER.info('carbon edge calculation 100.0% complete')
+
+
+def validate(args, limit_to=None):
+    return []
