@@ -103,6 +103,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.routing.routedem',
         gui='routing.RouteDEM',
         aliases=()),
+    'scenario_generator_proximity': _UIMETA(
+        pyname='natcap.invest.scenario_gen_proximity',
+        gui='scenario_gen.ScenarioGenProximity',
+        aliases=('sgp',)),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
         gui=None,

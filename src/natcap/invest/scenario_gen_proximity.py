@@ -659,3 +659,7 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
         kernel_block /= integration
         kernel_band.WriteArray(
             kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
+
+
+def validate(args, limit_to=None):
+    return []
