@@ -64,8 +64,12 @@ def extract_parameters(iui_config_path, relative_to):
                     if not isinstance(default_value, bool):
                         for type_ in (float, int):
                             try:
-                                default_value = type_(default_value)
-                                break
+                                int_value = int(default_value)
+                                float_value = float(default_value)
+                                if int_value == float_value:
+                                    default_value = int_value
+                                else:
+                                    default_value = float_value
                             except (TypeError, ValueError):
                                 pass
 
