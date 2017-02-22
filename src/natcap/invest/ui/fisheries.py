@@ -2,13 +2,13 @@
 
 from natcap.invest.ui import model
 from natcap.ui import inputs
-import natcap.invest.fisheries.fisheries
+from natcap.invest.fisheries import fisheries, fisheries_hst
 
 
 class Fisheries(model.Model):
     label = u'Fisheries'
-    target = staticmethod(natcap.invest.fisheries.fisheries.execute)
-    validator = staticmethod(natcap.invest.fisheries.fisheries.validate)
+    target = staticmethod(fisheries.execute)
+    validator = staticmethod(fisheries.validate)
     localdoc = u'../documentation/fisheries.html'
 
     def __init__(self):
@@ -317,5 +317,107 @@ class Fisheries(model.Model):
 
         if self.migr_cont.value():
             args[self.migration_dir.args_key] = self.migration_dir.value()
+
+        return args
+
+
+class FisheriesHST(model.Model):
+    label = u'Fisheries Habitat Scenario Tool'
+    target = staticmethod(fisheries_hst.execute)
+    validator = staticmethod(fisheries_hst.validate)
+    localdoc = u'../documentation/fisheries.html'
+
+    def __init__(self):
+        model.Model.__init__(self)
+
+        self.alpha_only = inputs.Label(
+            text=(
+                u"This tool is in an ALPHA testing stage and should "
+                u"not be used for decision making."))
+        self.pop_cont = inputs.Container(
+            args_key=u'pop_cont',
+            expanded=True,
+            label=u'Population Parameters')
+        self.add_input(self.pop_cont)
+        self.population_csv_uri = inputs.File(
+            args_key=u'population_csv_uri',
+            helptext=(
+                u"A CSV file containing all necessary attributes for "
+                u"population classes based on age/stage, sex, and area "
+                u"- excluding possible migration "
+                u"information.<br><br>See the 'Running the Model >> "
+                u"Core Model >> Population Parameters' section in the "
+                u"model's documentation for help on how to format this "
+                u"file."),
+            label=u'Population Parameters File (CSV)',
+            required=True,
+            validator=self.validator)
+        self.pop_cont.add_input(self.population_csv_uri)
+        self.sexsp = inputs.Dropdown(
+            args_key=u'sexsp',
+            helptext=(
+                u"Specifies whether or not the population classes "
+                u"provided in the Populaton Parameters CSV file are "
+                u"distinguished by sex."),
+            label=u'Population Classes are Sex-Specific',
+            options=[u'No', u'Yes'])
+        self.pop_cont.add_input(self.sexsp)
+        self.hab_cont = inputs.Container(
+            args_key=u'hab_cont',
+            expanded=True,
+            label=u'Habitat Parameters')
+        self.add_input(self.hab_cont)
+        self.habitat_csv_dep_uri = inputs.File(
+            args_key=u'habitat_dep_csv_uri',
+            helptext=(
+                u"A CSV file containing the habitat dependencies (0-1) "
+                u"for each life stage or age and for each habitat type "
+                u"included in the Habitat Change CSV File.<br><br>See "
+                u"the 'Running the Model >> Habitat Scenario Tool >> "
+                u"Habitat Parameters' section in the model's "
+                u"documentation for help on how to format this file."),
+            label=u'Habitat Dependency Parameters File (CSV)',
+            required=True,
+            validator=self.validator)
+        self.hab_cont.add_input(self.habitat_csv_dep_uri)
+        self.habitat_chg_csv_uri = inputs.File(
+            args_key=u'habitat_chg_csv_uri',
+            helptext=(
+                u"A CSV file containing the percent changes in habitat "
+                u"area by subregion (if applicable). The habitats "
+                u"included should be those which the population depends "
+                u"on at any life stage.<br><br>See the 'Running the "
+                u"Model >> Habitat Scenario Tool >> Habitat Parameters' "
+                u"section in the model's documentation for help on how "
+                u"to format this file."),
+            label=u'Habitat Area Change File (CSV)',
+            required=True,
+            validator=self.validator)
+        self.hab_cont.add_input(self.habitat_chg_csv_uri)
+        self.gamma = inputs.Text(
+            args_key=u'gamma',
+            helptext=(
+                u"Gamma describes the relationship between a change in "
+                u"habitat area and a change in survival of life stages "
+                u"dependent on that habitat.  Specify a value between 0 "
+                u"and 1.<br><br>See the documentation for advice on "
+                u"selecting a gamma value."),
+            label=u'Gamma',
+            required=True,
+            validator=self.validator)
+        self.hab_cont.add_input(self.gamma)
+
+    def assemble_args(self):
+        args = {
+            self.workspace.args_key: self.workspace.value(),
+            self.suffix.args_key: self.suffix.value(),
+            self.pop_cont.args_key: self.pop_cont.value(),
+            self.population_csv_uri.args_key: self.population_csv_uri.value(),
+            self.sexsp.args_key: self.sexsp.value(),
+            self.hab_cont.args_key: self.hab_cont.value(),
+            self.habitat_csv_dep_uri.args_key: self.habitat_csv_dep_uri.value(),
+            self.habitat_chg_csv_uri.args_key: self.habitat_chg_csv_uri.value(),
+            self.gamma.args_key: self.gamma.value(),
+        }
 
         return args

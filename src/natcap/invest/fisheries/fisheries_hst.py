@@ -163,3 +163,7 @@ def convert_survival_matrix(vars_dict):
     vars_dict['Surv_nat_xsa_mod'] = S_mod_sxa.swapaxes(0, 1)
 
     return vars_dict
+
+
+def validate(args, limit_to=None):
+    return []
