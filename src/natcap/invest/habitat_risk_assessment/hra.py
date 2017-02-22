@@ -200,6 +200,13 @@ def execute(args):
 #            dependent on this.
 #        hra_args['max_risk']- The highest possible risk value for any given
 #            pairing of habitat and stressor.
+    args = args.copy()
+    for key in ('grid_size', 'max_rating', 'max_stress'):
+        try:
+            args[key] = float(args[key])
+        except (KeyError, ValueError):
+            LOGGER.info('Key %s not in args or could not be cast to float',
+                        key)
 
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -1264,3 +1271,7 @@ def unpack_over_dict(csv_uri, args):
 
     for dict_name in dicts:
         args[dict_name] = dicts[dict_name]
+
+
+def validate(self, limit_to=None):
+    return []
