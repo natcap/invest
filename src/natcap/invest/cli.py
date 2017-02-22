@@ -79,6 +79,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.hydropower.hydropower_water_yield',
         gui='hydropower.HydropowerWaterYield',
         aliases=('hwy',)),
+    'ndr': _UIMETA(
+        pyname='natcap.invest.ndr.ndr',
+        gui='ndr.Nutrient',
+        aliases=()),
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
         gui='pollination.Pollination',

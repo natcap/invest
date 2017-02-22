@@ -724,3 +724,7 @@ def _add_fields_to_shapefile(
                 field_name, float(field_summaries[field_name][ws_id]))
         # Save back to datasource
         output_layer.SetFeature(feature)
+
+
+def validate(args, limit_to=None):
+    return []
