@@ -51,3 +51,7 @@ def execute(args):
     mz_args['over_layer_dict'] = file_dict
 
     overlap_analysis_mz_core.execute(mz_args)
+
+
+def validate(args, limit_to=None):
+    return []

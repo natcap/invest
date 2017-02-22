@@ -2,7 +2,8 @@
 
 from natcap.invest.ui import model
 from natcap.ui import inputs
-from natcap.invest.overlap_analysis import overlap_analysis
+from natcap.invest.overlap_analysis import (overlap_analysis,
+                                            overlap_analysis_mz)
 
 
 class OverlapAnalysis(model.Model):
@@ -157,6 +158,50 @@ class OverlapAnalysis(model.Model):
             self.HU_Hubs.args_key: self.HU_Hubs.value(),
             self.HU_Hub_URI.args_key: self.HU_Hub_URI.value(),
             self.hub_decay.args_key: self.hub_decay.value(),
+        }
+
+        return args
+
+
+class OverlapAnalysisMZ(model.Model):
+    label = u'Overlap Analysis Management Zone Model: Fisheries and Recreation'
+    target = staticmethod(overlap_analysis_mz.execute)
+    validator = staticmethod(overlap_analysis_mz.validate)
+    localdoc = u'../documentation/overlap_analysis.html'
+
+    def __init__(self):
+        model.Model.__init__(self)
+
+        self.aoi = inputs.File(
+            args_key=u'zone_layer_loc',
+            helptext=(
+                u"An OGR-supported vector file.  This should be a "
+                u"vector file containing multiple polygons since the "
+                u"Management Zones tool is used to analyze overlap "
+                u"data."),
+            label=u'Analysis Zones Layer (Vector)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.aoi)
+        self.data_dir = inputs.Folder(
+            args_key=u'overlap_data_dir_loc',
+            helptext=(
+                u"The path to a folder containing ONLY the input data "
+                u"for the Overlap Analysis model.  Input data can be "
+                u"point, line or polygon data layers indicating where "
+                u"in the coastal and marine environment the human use "
+                u"activity takes place."),
+            label=u'Overlap Analysis Data Directory',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.data_dir)
+
+    def assemble_args(self):
+        args = {
+            self.workspace.args_key: self.workspace.value(),
+            self.suffix.args_key: self.suffix.value(),
+            self.aoi.args_key: self.aoi.value(),
+            self.data_dir.args_key: self.data_dir.value(),
         }
 
         return args
