@@ -915,3 +915,7 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, key):
         feat.SetField(field_index, field_val)
 
         layer.SetFeature(feat)
+
+
+def validate(args, limit_to=None):
+    return []
