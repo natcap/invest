@@ -193,7 +193,7 @@ def execute(args):
     if args['grid_aoi']:
         LOGGER.info("gridding aoi")
         _grid_vector(
-            args['aoi_path'], args['grid_type'], args['cell_size'],
+            args['aoi_path'], args['grid_type'], float(args['cell_size']),
             file_registry['local_aoi_path'])
     else:
         aoi_vector = ogr.Open(args['aoi_path'])
@@ -1125,3 +1125,7 @@ def _sanitize_path(base_path, raw_path):
         return raw_path
     else:  # assume relative path w.r.t. the response table
         return os.path.join(os.path.dirname(base_path), raw_path)
+
+
+def validate(args, limit_to=None):
+    return []

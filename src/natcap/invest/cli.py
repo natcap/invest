@@ -95,6 +95,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.pollination.pollination',
         gui='pollination.Pollination',
         aliases=()),
+    'recreation': _UIMETA(
+        pyname='natcap.invest.recreation.recmodel_client',
+        gui='recreation.Recreation',
+        aliases=()),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
         gui=None,
