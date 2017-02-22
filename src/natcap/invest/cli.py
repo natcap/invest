@@ -71,6 +71,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.habitat_risk_assessment.hra',
         gui='hra.HabitatRiskAssessment',
         aliases=('hra',)),
+    'habitat_risk_assessment_preprocessor': _UIMETA(
+        pyname='natcap.invest.habitat_risk_assessment.hra_preprocessor',
+        gui='hra.HRAPreprocessor',
+        aliases=('hra_pre',)),
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
         gui='pollination.Pollination',

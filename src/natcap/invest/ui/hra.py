@@ -1,14 +1,15 @@
 # coding=UTF-8
+import functools
 
 from natcap.invest.ui import model
 from natcap.ui import inputs
-import natcap.invest.habitat_risk_assessment.hra
+from natcap.invest.habitat_risk_assessment import hra, hra_preprocessor
 
 
 class HabitatRiskAssessment(model.Model):
     label = u'Habitat Risk Assessment'
-    target = staticmethod(natcap.invest.habitat_risk_assessment.hra.execute)
-    validator = staticmethod(natcap.invest.habitat_risk_assessment.hra.validate)
+    target = staticmethod(hra.execute)
+    validator = staticmethod(hra.validate)
     localdoc = u'../documentation/habitat_risk_assessment.html'
 
     def __init__(self):
@@ -101,5 +102,107 @@ class HabitatRiskAssessment(model.Model):
             self.max_stress.args_key: self.max_stress.value(),
             self.aoi_tables.args_key: self.aoi_tables.value(),
         }
+
+        return args
+
+
+class HRAPreprocessor(model.Model):
+    label = u'Habitat Risk Assessment Preprocessor'
+    target = staticmethod(hra_preprocessor.execute)
+    validator = staticmethod(hra_preprocessor.validate)
+    localdoc = u'../documentation/habitat_risk_assessment.html'
+
+    def __init__(self):
+        model.Model.__init__(self)
+
+        self.habs_dir = inputs.File(
+            args_key=u'habitats_dir',
+            helptext=(
+                u"Checking this box indicates that habitats should be "
+                u"used as a base for overlap with provided stressors. "
+                u"If checked, the path to the habitat layers folder "
+                u"must be provided."),
+            hideable=True,
+            label=u'Calculate Risk to Habitats?',
+            required=False,
+            validator=self.validator)
+        self.add_input(self.habs_dir)
+        self.species_dir = inputs.File(
+            args_key=u'species_dir',
+            helptext=(
+                u"Checking this box indicates that species should be "
+                u"used as a base for overlap with provided stressors. "
+                u"If checked, the path to the species layers folder "
+                u"must be provided."),
+            hideable=True,
+            label=u'Calculate Risk to Species?',
+            required=False,
+            validator=self.validator)
+        self.add_input(self.species_dir)
+        self.stressor_dir = inputs.Folder(
+            args_key=u'stressors_dir',
+            helptext=u'This is the path to the stressors layers folder.',
+            label=u'Stressors Layers Folder',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.stressor_dir)
+        self.cur_lulc_box = inputs.Container(
+            expandable=False,
+            label=u'Criteria')
+        self.add_input(self.cur_lulc_box)
+        self.help_label = inputs.Label(
+            text=(
+                u"(Choose at least 1 criteria for each category below, "
+                u"and at least 4 total.)"))
+        self.exp_crit = inputs.Multi(
+            args_key=u'exposure_crits',
+            callable_=functools.partial(inputs.Text, label="Input Criteria"),
+            label=u'Exposure',
+            link_text=u'Add Another')
+        self.cur_lulc_box.add_input(self.exp_crit)
+        self.sens_crit = inputs.Multi(
+            args_key=u'sensitivity_crits',
+            callable_=functools.partial(inputs.Text, label="Input Criteria"),
+            label=u'Consequence: Sensitivity',
+            link_text=u'Add Another')
+        self.cur_lulc_box.add_input(self.sens_crit)
+        self.res_crit = inputs.Multi(
+            args_key=u'resilience_crits',
+            callable_=functools.partial(inputs.Text, label="Input Criteria"),
+            label=u'Consequence: Resilience',
+            link_text=u'Add Another')
+        self.cur_lulc_box.add_input(self.res_crit)
+        self.crit_dir = inputs.File(
+            args_key=u'criteria_dir',
+            helptext=(
+                u"Checking this box indicates that model should use "
+                u"criteria from provided shapefiles.  Each shapefile in "
+                u"the folder directories will need to contain a "
+                u"'Rating' attribute to be used for calculations in the "
+                u"HRA model.  Refer to the HRA User's Guide for "
+                u"information about the MANDATORY layout of the "
+                u"shapefile directories."),
+            hideable=True,
+            label=u'Use Spatially Explicit Risk Score in Shapefiles',
+            required=False,
+            validator=self.validator)
+        self.add_input(self.crit_dir)
+
+    def assemble_args(self):
+        args = {
+            self.workspace.args_key: self.workspace.value(),
+            self.suffix.args_key: self.suffix.value(),
+            self.habs_dir.args_key: self.habs_dir.value(),
+            self.stressor_dir.args_key: self.stressor_dir.value(),
+            self.exp_crit.args_key: self.exp_crit.value(),
+            self.sens_crit.args_key: self.sens_crit.value(),
+            self.res_crit.args_key: self.res_crit.value(),
+            self.crit_dir.args_key: self.crit_dir.value(),
+        }
+
+        for hideable_input_name in ('habs_dir', 'species_dir', 'crit_dir'):
+            hideable_input = getattr(self, hideable_input_name)
+            if not hideable_input.hidden:
+                args[hideable_input.args_key] = hideable_input.value()
 
         return args

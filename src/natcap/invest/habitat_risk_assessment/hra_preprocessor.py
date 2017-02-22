@@ -1060,3 +1060,7 @@ def parse_stress_buffer(uri):
                     left blank.")
 
     return buff_dict
+
+
+def validate(args, limit_to=None):
+    return []
