@@ -302,7 +302,7 @@ def convert_ui_structure(json_file, out_python_file):
 #        print autopep8.fix_code(line, options={'aggressive': 1}).rstrip()
 
 
-    with codecs.open(out_python_file, 'w', encoding='utf-8') as out_file:
+    with codecs.open(out_python_file, 'a', encoding='utf-8') as out_file:
         out_file.write(UI_CLASS_TEMPLATE.format(
             label=repr(json_dict['label']),
             target=u'%s' % json_dict['targetScript'],
