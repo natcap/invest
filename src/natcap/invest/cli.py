@@ -59,6 +59,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.forest_carbon_edge_effect',
         gui='forest_carbon.ForestCarbonEdgeEffect',
         aliases=('fc',)),
+    'globio': _UIMETA(
+        pyname='natcap.invest.globio',
+        gui='globio.GLOBIO',
+        aliases=()),
     'pollination': _UIMETA(
         pyname='natcap.invest.pollination.pollination',
         gui='pollination.Pollination',

@@ -678,3 +678,7 @@ def _collapse_infrastructure_layers(
     # clean up the temporary filenames
     for filename in infrastructure_tmp_filenames:
         os.remove(filename)
+
+
+def validate(args, limit_to=None):
+    return []
