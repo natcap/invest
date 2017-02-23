@@ -21,7 +21,7 @@ SCENARIOS = {
     'coastal_blue_carbon_preprocessor': [
         os.path.join('CoastalBlueCarbon', 'cbc_pre_galveston_bay.invs.json')],
     'coastal_vulnerability': [
-        os.path.join('CoastalProtection', 'coasatal_vuln_wcvi.invs.json')],
+        os.path.join('CoastalProtection', 'coastal_vuln_wcvi.invs.json')],
     'crop_production': [
         os.path.join('CropProduction', 'crop_production_willamette.invs.json')],
     'delineateit': [
@@ -31,7 +31,11 @@ SCENARIOS = {
         os.path.join('Aquaculture',
                      'atlantic_salmon_british_columbia.invs.json')],
     'fisheries': [
-        os.path.join('Fisheries', 'blue_crab_galveston_bay.invs.json')],
+        os.path.join('Fisheries', 'blue_crab_galveston_bay.invs.json'),
+        os.path.join('Fisheries', 'dungeness_crab_hood_canal.invs.json'),
+        os.path.join('Fisheries', 'spiny_lobster_belize.invs.json'),
+        os.path.join('Fisheries', 'white_shrimp_galveston_bay.invs.json'),
+    ],
     'fisheries_hst': [
         os.path.join('Fisheries', 'fisheries_hst_demo.invs.json')],
     'forest_carbon_edge_effect': [
@@ -41,7 +45,7 @@ SCENARIOS = {
     'habitat_quality': [
         os.path.join('HabitatQuality', 'habitat_quality_willamette.invs.json')],
     'hra': [os.path.join('HabitatRiskAssess', 'hra_wcvi.invs.json')],
-    'hra_preprocessor': [
+    'habitat_risk_assessment_preprocessor': [
         os.path.join('HabitatRiskAssess', 'hra_pre_wcvi.invs.json')],
     'hydropower_water_yield': [
         os.path.join('Hydropower', 'annual_water_yield_willamette.invs.json')],
@@ -61,7 +65,7 @@ SCENARIOS = {
     'routedem': [
         os.path.join('Base_Data', 'Freshwater',
                      'routedem_willamette.invs.json')],
-    'scenario_gen_proximity': [
+    'scenario_generator_proximity': [
         os.path.join('scenario_proximity',
                      'scenario_proximity_amazonia.invs.json')],
     'scenario_generator': [
@@ -71,8 +75,14 @@ SCENARIOS = {
     'sdr': [
         os.path.join('Base_Data', 'Freshwater', 'sdr_willamette.invs.json')],
     'seasonal_water_yield': [
-        os.path.join('Base_Data', 'Freshwater', 'sdr_willamette.invs.json')],
+        os.path.join('seasonal_water_yield', 'swy_willamette.invs.json')],
     'wind_energy': [os.path.join('WindEnergy', 'new_england.invs.json')],
+    'wave_energy': [
+        os.path.join('WaveEnergy', 'wave_energy_aquabuoy_wcvi.invs.json'),
+        os.path.join('WaveEnergy', 'wave_energy_owc_wcvi.invs.json'),
+        os.path.join('WaveEnergy', 'wave_energy_pelamis_wcvi.invs.json'),
+        os.path.join('WaveEnergy', 'wave_energy_wavedragon_wcvi.invs.json'),
+    ],
 }
 
 
@@ -88,7 +98,6 @@ def sh(command, capture=True):
 
 def run_model(modelname, binary, workspace, scenario):
     """Run an InVEST model, checking the error code of the process."""
-    workspace = os.path.join(workspace, 'autorun_%s' % modelname)
     command = ('{binary} {model} --quickrun '
                '--workspace="{workspace}" '
                '--scenario="{scenario}" ').format(binary=binary,
@@ -119,6 +128,7 @@ def main(user_args=None):
     parser.add_argument(
         '--max-cpus',
         default=default_cpu_count,
+        type=int,
         help=('The number of CPUs to use. '
               'Defaults to %s.') % default_cpu_count)
     parser.add_argument(
@@ -147,18 +157,21 @@ def main(user_args=None):
 
     pairs = []
     for name, scenarios in SCENARIOS.iteritems():
-        for scenario in scenarios:
-            pairs.append((name, scenario))
+        for scenario_index, scenario in enumerate(scenarios):
+            pairs.append((name, scenario, scenario_index))
 
     pool = multiprocessing.Pool(processes=args.max_cpus)  # cpu_count()-1
     processes = []
-    for _modelname, _scenario in pairs:
-        _scenario = os.path.join(args.cwd, _scenario)
-        process = pool.apply_async(run_model, (_modelname,
+    for modelname, scenario, scenario_index in pairs:
+        scenario = os.path.join(args.cwd, scenario)
+        workspace = os.path.join(args.workspace,
+                                 'autorun_%s_%s' % (modelname,
+                                                    scenario_index))
+        process = pool.apply_async(run_model, (modelname,
                                                args.binary,
-                                               args.workspace,
-                                               _scenario))
-        processes.append((process, _scenario))
+                                               workspace,
+                                               scenario))
+        processes.append((process, scenario))
 
     # get() blocks until the result is ready.
     model_results = {}
