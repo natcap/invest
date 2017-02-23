@@ -964,3 +964,7 @@ def _generate_report(
         layer.SetFeature(feature)
     original_datasource.Destroy()
     datasource_copy.Destroy()
+
+
+def validate(args, limit_to=None):
+    return []

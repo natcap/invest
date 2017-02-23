@@ -111,6 +111,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.scenic_quality.scenic_quality',
         gui='scenic_quality.ScenicQuality',
         aliases=('sq',)),
+    'sdr': _UIMETA(
+        pyname='natcap.invest.sdr',
+        gui='sdr.SDR',
+        aliases=()),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
         gui=None,
