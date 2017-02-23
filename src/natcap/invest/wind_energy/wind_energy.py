@@ -1935,3 +1935,7 @@ def pixel_size_based_on_coordinate_transform_uri(
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
     return (pixel_diff_x, pixel_diff_y)
+
+
+def validate(args, limit_to=None):
+    return []
