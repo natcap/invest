@@ -70,6 +70,11 @@ def format_kwargs(kwargs):
                 encoded_param = unicode(
                     ast.literal_eval(repr(param)), 'utf-8')
 
+            if not isinstance(encoded_param, basestring):
+                # If the literal evals to not a string, use the original
+                # string
+                encoded_param = param
+
             formatted_string = _TEXTWRAPPER.wrap(encoded_param)
 
             new_param = u"({0}\")".format(

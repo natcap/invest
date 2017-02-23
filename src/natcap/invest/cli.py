@@ -123,6 +123,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.wind_energy.wind_energy',
         gui='wind_energy.WindEnergy',
         aliases=()),
+    'wave_energy': _UIMETA(
+        pyname='natcap.invest.wave_energy.wave_energy',
+        gui='wave_energy.WaveEnergy',
+        aliases=()),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
         gui=None,

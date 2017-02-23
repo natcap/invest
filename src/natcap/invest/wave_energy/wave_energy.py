@@ -1617,3 +1617,7 @@ def _create_rat(dataset_path, attr_dict, column_name):
     # Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
+
+
+def validate(args, limit_to=None):
+    return []
