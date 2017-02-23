@@ -506,6 +506,14 @@ def execute(args):
 
     #create copy of args
     aq_args=args.copy()
+    for float_key in ('cell_size', 'refraction', 'a_coefficient',
+                      'b_coefficient', 'c_coefficient', 'd_coefficient',
+                      'max_valuation_radius'):
+        try:
+            aq_args[float_key] = float(aq_args[float_key])
+        except (KeyError, ValueError):
+            LOGGER.debug('Key %s not in args or could not be cast to float',
+                         float_key)
 
     #validate input
     LOGGER.debug("Validating parameters.")
@@ -749,3 +757,7 @@ def execute(args):
 
         LOGGER.debug("Set area field values.")
         set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
+
+
+def validate(args, limit_to=None):
+    return []

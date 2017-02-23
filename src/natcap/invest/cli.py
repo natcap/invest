@@ -107,6 +107,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.scenario_gen_proximity',
         gui='scenario_gen.ScenarioGenProximity',
         aliases=('sgp',)),
+    'scenic_quality': _UIMETA(
+        pyname='natcap.invest.scenic_quality.scenic_quality',
+        gui='scenic_quality.ScenicQuality',
+        aliases=('sq',)),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
         gui=None,
