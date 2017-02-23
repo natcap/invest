@@ -115,6 +115,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.sdr',
         gui='sdr.SDR',
         aliases=()),
+    'seasonal_water_yield': _UIMETA(
+        pyname='natcap.invest.seasonal_water_yield.seasonal_water_yield',
+        gui='seasonal_water_yield.SeasonalWaterYield',
+        aliases=('swy',)),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
         gui=None,

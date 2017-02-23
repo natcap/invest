@@ -37,7 +37,7 @@ IUI_SCENARIOS = {
     'scenario_generator': 'ScenarioGenerator/scenario_generator_demo',
     'scenic_quality': 'ScenicQuality/wind_turbines_wcvi',
     'sdr': 'Base_Data/Freshwater/sdr_willamette',
-    'seasonal_water_yield': 'Base_Data/Freshwater/sdr_willamette',
+    'seasonal_water_yield': 'seasonal_water_yield/swy_willamette',
     'wind_energy': 'WindEnergy/new_england'
 }
 
