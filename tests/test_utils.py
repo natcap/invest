@@ -215,6 +215,7 @@ class BuildLookupFromCsvTests(unittest.TestCase):
         utils.build_lookup_from_csv(
             table_path, 'a', to_lower=True, numerical_cast=True)
 
+
 class MakeDirectoryTests(unittest.TestCase):
     """Tests for natcap.invest.utils.make_directories."""
 
