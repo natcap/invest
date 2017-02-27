@@ -26,6 +26,7 @@ _NESTING_TYPES = ['cavity', 'ground']
 _SEASON_TYPES = ['spring', 'summer']
 _LANDCOVER_NESTING_INDEX_HEADER = r'nesting_%s_index'
 _SPECIES_NESTING_TYPE_INDEX_HEADER = r'nesting_suitability_%s_index'
+_RELATIVE_FLORAL_ABUDANCE_INDEX_HEADER = r'floral_resources_%s_index'
 
 def execute(args):
     """InVEST Pollination Model.
@@ -92,7 +93,7 @@ def execute(args):
         'headers')
     for nesting_type in _NESTING_TYPES:
         nesting_id = _LANDCOVER_NESTING_INDEX_HEADER % nesting_type
-        landcover_to_nesting_sutability = dict([
+        landcover_to_nesting_sutability_table = dict([
             (lucode, landcover_biophysical_table[lucode][nesting_id]) for
             lucode in landcover_biophysical_table])
 
@@ -101,7 +102,7 @@ def execute(args):
 
         pygeoprocessing.reclassify_raster(
             (args['landcover_raster_path'], 1),
-            landcover_to_nesting_sutability, f_reg[nesting_id],
+            landcover_to_nesting_sutability_table, f_reg[nesting_id],
             gdal.GDT_Float32, _INDEX_NODATA, exception_flag='values_required')
 
     species_list = guild_table.keys()
@@ -143,3 +144,21 @@ def execute(args):
                 for nesting_type in _NESTING_TYPES]],
             _habitat_suitability_index_op, f_reg[species_nesting_id],
             gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
+
+    for season_id in _SEASON_TYPES:
+        relative_floral_abudance_id = (
+            _RELATIVE_FLORAL_ABUDANCE_INDEX_HEADER % (season_id))
+        f_reg[relative_floral_abudance_id] = os.path.join(
+            intermediate_output_dir,
+            relative_floral_abudance_id + "%s.tif" % file_suffix)
+
+        landcover_to_floral_abudance_table = dict([
+            (lucode, landcover_biophysical_table[lucode][
+                relative_floral_abudance_id]) for lucode in
+            landcover_biophysical_table])
+
+        pygeoprocessing.reclassify_raster(
+            (args['landcover_raster_path'], 1),
+            landcover_to_floral_abudance_table,
+            f_reg[relative_floral_abudance_id], gdal.GDT_Float32,
+            _INDEX_NODATA, exception_flag='values_required')
