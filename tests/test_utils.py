@@ -212,8 +212,18 @@ class BuildLookupFromCsvTests(unittest.TestCase):
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as table_file:
             table_file.write(table_str)
-        utils.build_lookup_from_csv(
+        result = utils.build_lookup_from_csv(
             table_path, 'a', to_lower=True, numerical_cast=True)
+        expected_dict = {
+            0.0: {
+                'a': 0.0,
+                'b': 'x',
+                'foo': -1.0,
+                'bar': 'bar',
+                '_': 'apple'
+                },
+            }
+        self.assertEqual(result, expected_dict)
 
 
 class MakeDirectoryTests(unittest.TestCase):

@@ -264,7 +264,7 @@ def build_lookup_from_csv(
                 LOGGER.warn(
                     "There are empty strings in row %s in %s", row,
                     table_path)
-            lookup_dict[row[key_index]] = zip(header_row, row)
+            lookup_dict[row[key_index]] = dict(zip(header_row, row))
         return lookup_dict
 
 
