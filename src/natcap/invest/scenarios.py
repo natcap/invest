@@ -17,6 +17,7 @@ import tempfile
 import codecs
 import pprint
 import collections
+import re
 
 from osgeo import gdal
 from osgeo import ogr
@@ -371,3 +372,38 @@ def read_parameter_set(filepath):
     return ParameterSet(_recurse(read_params['args']),
                         read_params['invest_version'],
                         read_params['name'])
+
+
+def read_parameters_from_logfile(logfile_path):
+    with codecs.open(logfile_path, 'r', encoding='utf-8') as logfile:
+        detected_args = []
+        for line in logfile:
+            # Skip blank lines or lines with only whitespace
+            if not line.strip():
+                continue
+
+            if not re.match('^[0-1][0-9]/[0-3][0-9]/[0-9]{4} ', line):
+                detected_args.append(line)
+
+    print detected_args
+
+    args_dict = {}
+    for argument in detected_args:
+        # args key is everything before the whitespace
+        args_key = re.findall(r'^\w*', argument)[0]
+        print args_key
+        args_value = argument.replace(args_key, '').lstrip().rstrip()
+
+        try:
+            int_value = int(args_value)
+            float_value = float(args_value)
+            if int_value == float_value:
+                args_value = int_value
+            else:
+                args_value = float_value
+        except ValueError:
+            # If we can't cast it to int or float, use the UTF8 string
+            pass
+
+        args_dict[args_key] = args_value
+    return args_dict
