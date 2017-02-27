@@ -160,9 +160,9 @@ def requirements(*pkgnames):
                           'requirements for %s') % list(missing_pkgs))
     return found_pkgnames.values()
 
-
-BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
-                                                        'natcap.versioner')
+BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('natcap.versioner')
+#BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
+#                                                        'natcap.versioner')
 
 
 setup(

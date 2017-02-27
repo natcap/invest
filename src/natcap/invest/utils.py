@@ -241,7 +241,6 @@ def build_lookup_from_csv(
     with open(table_path) as table_file:
         reader = csv.reader(table_file)
         header_row = reader.next()
-        print header_row
         header_row = [unicode(x) for x in header_row]
         key_field = unicode(key_field)
         if to_lower:
@@ -257,7 +256,6 @@ def build_lookup_from_csv(
         key_index = header_row.index(key_field)
         lookup_dict = {}
         for row in reader:
-            print row
             if to_lower:
                 row = [x.lower() for x in row]
             if numerical_cast:
@@ -268,3 +266,19 @@ def build_lookup_from_csv(
                     table_path)
             lookup_dict[row[key_index]] = zip(header_row, row)
         return lookup_dict
+
+
+def make_directories(directory_list):
+    """Create directories in `directory_list` if they do not already exist."""
+    if not isinstance(directory_list, list):
+        raise ValueError(
+            "Expected `directory_list` to be an instance of `list` instead "
+            "got type %s instead", type(directory_list))
+
+    for path in directory_list:
+        # From http://stackoverflow.com/a/14364249/42897
+        try:
+            os.makedirs(path)
+        except OSError:
+            if not os.path.isdir(path):
+                raise

@@ -212,5 +212,45 @@ class BuildLookupFromCsvTests(unittest.TestCase):
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as table_file:
             table_file.write(table_str)
-        print utils.build_lookup_from_csv(
+        utils.build_lookup_from_csv(
             table_path, 'a', to_lower=True, numerical_cast=True)
+
+class MakeDirectoryTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.make_directories."""
+
+    def setUp(self):
+        """Make temporary directory for workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_make_directories(self):
+        """utils: test that make directories works as expected."""
+        from natcap.invest import utils
+        directory_list = [
+            os.path.join(self.workspace_dir, x) for x in [
+                'apple', 'apple/pie', 'foo/bar/baz']]
+        utils.make_directories(directory_list)
+        for path in directory_list:
+            self.assertTrue(os.path.isdir(path))
+
+    def test_make_directories_on_existing(self):
+        """utils: test that no error if directory already exists."""
+        from natcap.invest import utils
+        path = os.path.join(self.workspace_dir, 'foo', 'bar', 'baz')
+        os.makedirs(path)
+        utils.make_directories([path])
+        self.assertTrue(os.path.isdir(path))
+
+    def test_make_directories_on_file(self):
+        """utils: test that value error raised if file exists on directory."""
+        from natcap.invest import utils
+        dir_path = os.path.join(self.workspace_dir, 'foo', 'bar')
+        os.makedirs(dir_path)
+        file_path = os.path.join(dir_path, 'baz')
+        file = open(file_path, 'w')
+        file.close()
+        with self.assertRaises(OSError):
+            utils.make_directories([file_path])

@@ -35,6 +35,7 @@ class PollinationTests(unittest.TestCase):
         args = {
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
+            'guild_table_path': r"C:\Users\rpsharp\Documents\bitbucket_repos\invest\data\invest-data\pollination_20\guild_info.csv",
         }
         pollination.execute(args)
 
