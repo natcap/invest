@@ -2,6 +2,7 @@
 import os
 import logging
 
+from osgeo import gdal
 import pygeoprocessing
 
 from . import utils
@@ -18,7 +19,7 @@ _INTERMEDIATE_BASE_FILES = {
 _TMP_BASE_FILES = {
     }
 
-NODATA_USLE = -1.0
+_INDEX_NODATA = -1.0
 
 _NESTING_TYPES = ['cavity', 'ground']
 _SEASON_TYPES = ['spring', 'summer']
@@ -31,7 +32,8 @@ def execute(args):
             Will overwrite any files that exist if the path already exists.
         args['results_suffix'] (string): string appended to each output
             file path.
-        args['landcover_path'] (string): file path to a landcover raster.
+        args['landcover_raster_path'] (string): file path to a landcover
+            raster.
         args['guild_table_path'] (string): file path to a table indicating
             the bee species to analyize in this model run.  Table headers
             must include:
@@ -65,7 +67,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
-    pygeoprocessing.create_directories(
+    utils.make_directories(
         [output_dir, intermediate_output_dir])
 
     f_reg = utils.build_file_registry(
@@ -85,6 +87,22 @@ def execute(args):
     LOGGER.debug(
         'TODO: make sure landcover biophysical table has all expected '
         'headers')
+    for nesting_type in _NESTING_TYPES:
+        nesting_id = 'n_%s' % nesting_type
+        landcover_to_nesting_sutability = dict([
+            (lucode, landcover_biophysical_table[lucode][nesting_id]) for
+            lucode in landcover_biophysical_table])
+        print landcover_to_nesting_sutability
+
+        nesting_suitability_id = 'n_%s_index' % nesting_type
+        f_reg[nesting_suitability_id] = os.path.join(
+            intermediate_output_dir, 'n_%s_index%s.tif' % (
+                nesting_type, file_suffix))
+
+        pygeoprocessing.reclassify_raster(
+            (args['landcover_raster_path'], 1),
+            landcover_to_nesting_sutability, f_reg[nesting_suitability_id],
+            gdal.GDT_Float32, _INDEX_NODATA, exception_flag='values_required')
 
     species_list = guild_table.keys()
     for species_id in species_list:
@@ -93,8 +111,3 @@ def execute(args):
         f_reg[habitat_nesting_raster_id] = os.path.join(
             output_dir, 'habitat_nesting_suitability_%s%s.tif' % (
                 species_id, file_suffix))
-
-        pygeoprocessing.reclassify_raster(
-            base_raster_path, value_map, target_raster_path, target_datatype,
-            target_nodata, exception_flag='values_required', band_index=1)
-    LOGGER.debug(guild_table)

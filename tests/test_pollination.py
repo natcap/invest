@@ -8,10 +8,7 @@ import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
-REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'pollination')
+    os.path.dirname(__file__), '..', 'data', 'invest-data', 'pollination_20')
 
 
 class PollinationTests(unittest.TestCase):
@@ -28,14 +25,17 @@ class PollinationTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_pollination_regression(self):
         """Pollination: regression testing sample data."""
         from natcap.invest import pollination
         args = {
             'results_suffix': u'',
-            'workspace_dir': self.workspace_dir,
-            'guild_table_path': r"C:\Users\rpsharp\Documents\bitbucket_repos\invest\data\invest-data\pollination_20\guild_info.csv",
+            'workspace_dir': 'test_pollination',
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA, 'landcover.tif'),
+            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_info.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                SAMPLE_DATA, r'habitat_nesting_suitability.csv'),
         }
         pollination.execute(args)
 
