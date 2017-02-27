@@ -192,3 +192,25 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
             os.path.join(
                 ExponentialDecayUtilsTests._REGRESSION_PATH,
                 'kernel_100.tif'), kernel_filepath, 1e-6)
+
+
+class BuildLookupFromCsvTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.build_lookup_from_csv."""
+
+    def setUp(self):
+        """Make temporary directory for workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_build_lookup_from_csv(self):
+        """utils: test build_lookup_from_csv."""
+        from natcap.invest import utils
+        table_str = 'a,b,foo,bar,_\n0.0,x,-1,bar,apple\n'
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(table_str)
+        print utils.build_lookup_from_csv(
+            table_path, 'a', to_lower=True, numerical_cast=True)

@@ -189,7 +189,6 @@ setup(
         'natcap.invest.marine_water_quality',
         'natcap.invest.ndr',
         'natcap.invest.overlap_analysis',
-        'natcap.invest.pollination',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
         'natcap.invest.routing',
