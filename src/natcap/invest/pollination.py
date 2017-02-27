@@ -27,6 +27,7 @@ _SEASON_TYPES = ['spring', 'summer']
 _LANDCOVER_NESTING_INDEX_HEADER = r'nesting_%s_index'
 _SPECIES_NESTING_TYPE_INDEX_HEADER = r'nesting_suitability_%s_index'
 _RELATIVE_FLORAL_ABUDANCE_INDEX_HEADER = r'floral_resources_%s_index'
+_SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER = r'foraging_activity_%s_index'
 
 def execute(args):
     """InVEST Pollination Model.
@@ -162,3 +163,34 @@ def execute(args):
             landcover_to_floral_abudance_table,
             f_reg[relative_floral_abudance_id], gdal.GDT_Float32,
             _INDEX_NODATA, exception_flag='values_required')
+
+        LOGGER.debug(
+            "TODO: consider making species season floral weight relative "
+            "rather than absolute.")
+        relative_floral_abudance_species_id = None
+        for species_id in species_list:
+            species_season_floral_weight = (
+                guild_table[species_id][
+                    _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER % season_id])
+            relative_floral_abudance_species_id = (
+                relative_floral_abudance_id + "_%s" % species_id)
+            f_reg[relative_floral_abudance_species_id] = os.path.join(
+                intermediate_output_dir,
+                relative_floral_abudance_species_id + "%s.tif" % file_suffix)
+
+            def _species_floral_abudance_op(floral_abudance_array):
+                """Calculate species floral abudance."""
+                result = numpy.empty(
+                    floral_abudance_array.shape, dtype=numpy.float32)
+                result[:] = _INDEX_NODATA
+                valid_mask = floral_abudance_array != _INDEX_NODATA
+                result[valid_mask] = (
+                    floral_abudance_array[valid_mask] *
+                    species_season_floral_weight)
+                return result
+
+            pygeoprocessing.raster_calculator(
+                [(f_reg[relative_floral_abudance_id], 1)],
+                _species_floral_abudance_op,
+                f_reg[relative_floral_abudance_species_id], gdal.GDT_Float32,
+                _INDEX_NODATA, calc_raster_stats=False)
