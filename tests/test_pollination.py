@@ -33,7 +33,7 @@ class PollinationTests(unittest.TestCase):
             'workspace_dir': 'test_pollination',
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA, 'landcover.tif'),
-            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_info.csv'),
+            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 SAMPLE_DATA, r'habitat_nesting_suitability.csv'),
         }

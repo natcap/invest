@@ -24,6 +24,8 @@ _INDEX_NODATA = -1.0
 
 _NESTING_TYPES = ['cavity', 'ground']
 _SEASON_TYPES = ['spring', 'summer']
+_LANDCOVER_NESTING_INDEX_HEADER = r'nesting_%s_index'
+_SPECIES_NESTING_TYPE_INDEX_HEADER = r'nesting_suitability_%s_index'
 
 def execute(args):
     """InVEST Pollination Model.
@@ -55,10 +57,10 @@ def execute(args):
             Columns in the table must be at least
                 * 'lucode': representing all the unique landcover codes in
                     the raster ast `args['landcover_path']`
-                * For every nesting types in `_NESTING_TYPES`, a column
-                  named 'N_[nesting_type]'.
-                * For every season in `_SEASON_TYPES`, a column named
-                  'F_[season_type]'
+                * For every nesting type in `_NESTING_TYPES`, a column
+                  matching the pattern in `_LANDCOVER_NESTING_INDEX_HEADER`.
+                * For every season in `_SEASON_TYPES`, a column matching
+                  the pattern in `_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`.
 
     Returns:
         None
@@ -89,53 +91,55 @@ def execute(args):
         'TODO: make sure landcover biophysical table has all expected '
         'headers')
     for nesting_type in _NESTING_TYPES:
-        nesting_id = 'n_%s' % nesting_type
+        nesting_id = _LANDCOVER_NESTING_INDEX_HEADER % nesting_type
         landcover_to_nesting_sutability = dict([
             (lucode, landcover_biophysical_table[lucode][nesting_id]) for
             lucode in landcover_biophysical_table])
-        print landcover_to_nesting_sutability
 
-        nesting_suitability_id = 'n_%s_index' % nesting_type
-        f_reg[nesting_suitability_id] = os.path.join(
-            intermediate_output_dir, 'n_%s_index%s.tif' % (
-                nesting_type, file_suffix))
+        f_reg[nesting_id] = os.path.join(
+            intermediate_output_dir, '%s%s.tif' % (nesting_id, file_suffix))
 
         pygeoprocessing.reclassify_raster(
             (args['landcover_raster_path'], 1),
-            landcover_to_nesting_sutability, f_reg[nesting_suitability_id],
+            landcover_to_nesting_sutability, f_reg[nesting_id],
             gdal.GDT_Float32, _INDEX_NODATA, exception_flag='values_required')
 
     species_list = guild_table.keys()
-    species_nesting_type_suitability = None
+    species_nesting_suitability_index = None
     for species_id in species_list:
-        habitat_nesting_raster_id = (
-            '%s_habitat_nesting_suitability_path' % species_id)
-        f_reg[habitat_nesting_raster_id] = os.path.join(
-            intermediate_output_dir, 'habitat_nesting_suitability_%s%s.tif' % (
-                species_id, file_suffix))
+        species_nesting_id = (
+            _SPECIES_NESTING_TYPE_INDEX_HEADER % species_id)
+        LOGGER.debug(guild_table)
+        species_nesting_suitability_index = numpy.array([
+            guild_table[species_id][
+                _SPECIES_NESTING_TYPE_INDEX_HEADER % nesting_type]
+            for nesting_type in _NESTING_TYPES])
 
-        species_nesting_type_suitability = numpy.array([
-            guild_table[species_id]['ns_%s' % nesting_type] for nesting_type in
-            _NESTING_TYPES])
+        LOGGER.info("Calculate species nesting index for %s", species_id)
 
-        print species_id, species_nesting_type_suitability
-
-        def _habitat_suitability_index_op(*nesting_suitability):
+        def _habitat_suitability_index_op(*nesting_suitability_index):
             """Calculate habitat suitability per species."""
             result = numpy.empty(
-                nesting_suitability[0].shape, dtype=numpy.float32)
-            valid_mask = nesting_suitability[0] != _INDEX_NODATA
+                nesting_suitability_index[0].shape, dtype=numpy.float32)
+            valid_mask = nesting_suitability_index[0] != _INDEX_NODATA
             result[:] = _INDEX_NODATA
 
+            # the species' nesting suitability index is the maximum value of
+            # all nesting substrates multiplied by the species' suitability
+            # index for that substrate
             result[valid_mask] = numpy.max(
-                [array[valid_mask] * scale for array, scale in zip(
-                    nesting_suitability, species_nesting_type_suitability)],
+                [nsi[valid_mask] * snsi for nsi, snsi in zip(
+                    nesting_suitability_index,
+                    species_nesting_suitability_index)],
                 axis=0)
             return result
 
+        f_reg[species_nesting_id] = os.path.join(
+            intermediate_output_dir, '%s%s.tif' % (
+                species_nesting_id, file_suffix))
         pygeoprocessing.raster_calculator(
             [(path, 1) for path in [
-                f_reg['n_%s_index' % nesting_type]
+                f_reg[_LANDCOVER_NESTING_INDEX_HEADER % nesting_type]
                 for nesting_type in _NESTING_TYPES]],
-            _habitat_suitability_index_op, f_reg[habitat_nesting_raster_id],
+            _habitat_suitability_index_op, f_reg[species_nesting_id],
             gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
