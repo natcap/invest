@@ -28,6 +28,9 @@ _LANDCOVER_NESTING_INDEX_HEADER = r'nesting_%s_index'
 _SPECIES_NESTING_TYPE_INDEX_HEADER = r'nesting_suitability_%s_index'
 _RELATIVE_FLORAL_ABUDANCE_INDEX_HEADER = r'floral_resources_%s_index'
 _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER = r'foraging_activity_%s_index'
+_SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
+_ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessable_floral_resources_%s'
+
 
 def execute(args):
     """InVEST Pollination Model.
@@ -79,6 +82,7 @@ def execute(args):
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
+    temp_file_set = set()  # to keep track of temporary files to delete
 
     guild_table = utils.build_lookup_from_csv(
         args['guild_table_path'], 'species', to_lower=True,
@@ -89,6 +93,8 @@ def execute(args):
     landcover_biophysical_table = utils.build_lookup_from_csv(
         args['landcover_biophysical_table_path'], 'lucode', to_lower=True,
         numerical_cast=True)
+    lulc_raster_info = pygeoprocessing.get_raster_info(
+        args['landcover_raster_path'])
     LOGGER.debug(
         'TODO: make sure landcover biophysical table has all expected '
         'headers')
@@ -198,3 +204,31 @@ def execute(args):
             _species_floral_abudance_op,
             f_reg[relative_floral_abudance_species_id], gdal.GDT_Float32,
             _INDEX_NODATA, calc_raster_stats=False)
+
+        LOGGER.warn("TODO: consider case where cell size is not square.")
+        alpha = (
+            guild_table[species_id]['alpha'] /
+            float(lulc_raster_info['mean_pixel_size']))
+        species_file_kernel_id = (
+            _SPECIES_ALPHA_KERNEL_FILE_PATTERN % species_id)
+        f_reg[species_file_kernel_id] = os.path.join(
+            output_dir, species_file_kernel_id + '%s.tif' % file_suffix)
+        utils.exponential_decay_kernel_raster(
+            alpha, f_reg[species_file_kernel_id])
+
+        _accessable_floral_resouces_id = (
+            _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN % species_id)
+        f_reg[_accessable_floral_resouces_id] = os.path.join(
+            output_dir, _accessable_floral_resouces_id +
+            '%s.tif' % file_suffix)
+        temp_file_set.add(f_reg[_accessable_floral_resouces_id])
+        LOGGER.info(
+            "Calculating available floral resources for %s", species_id)
+        pygeoprocessing.convolve_2d(
+            (f_reg[relative_floral_abudance_species_id], 1),
+            (f_reg[species_file_kernel_id], 1),
+            f_reg[_accessable_floral_resouces_id],
+            target_datatype=gdal.GDT_Float32)
+
+    for path in temp_file_set:
+        os.remove(path)
