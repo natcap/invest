@@ -4,6 +4,7 @@ import logging
 
 from osgeo import gdal
 import pygeoprocessing
+import numpy
 
 from . import utils
 
@@ -105,9 +106,36 @@ def execute(args):
             gdal.GDT_Float32, _INDEX_NODATA, exception_flag='values_required')
 
     species_list = guild_table.keys()
+    species_nesting_type_suitability = None
     for species_id in species_list:
         habitat_nesting_raster_id = (
             '%s_habitat_nesting_suitability_path' % species_id)
         f_reg[habitat_nesting_raster_id] = os.path.join(
-            output_dir, 'habitat_nesting_suitability_%s%s.tif' % (
+            intermediate_output_dir, 'habitat_nesting_suitability_%s%s.tif' % (
                 species_id, file_suffix))
+
+        species_nesting_type_suitability = numpy.array([
+            guild_table[species_id]['ns_%s' % nesting_type] for nesting_type in
+            _NESTING_TYPES])
+
+        print species_id, species_nesting_type_suitability
+
+        def _habitat_suitability_index_op(*nesting_suitability):
+            """Calculate habitat suitability per species."""
+            result = numpy.empty(
+                nesting_suitability[0].shape, dtype=numpy.float32)
+            valid_mask = nesting_suitability[0] != _INDEX_NODATA
+            result[:] = _INDEX_NODATA
+
+            result[valid_mask] = numpy.max(
+                [array[valid_mask] * scale for array, scale in zip(
+                    nesting_suitability, species_nesting_type_suitability)],
+                axis=0)
+            return result
+
+        pygeoprocessing.raster_calculator(
+            [(path, 1) for path in [
+                f_reg['n_%s_index' % nesting_type]
+                for nesting_type in _NESTING_TYPES]],
+            _habitat_suitability_index_op, f_reg[habitat_nesting_raster_id],
+            gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
