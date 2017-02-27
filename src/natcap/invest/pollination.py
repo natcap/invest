@@ -164,33 +164,37 @@ def execute(args):
             f_reg[relative_floral_abudance_id], gdal.GDT_Float32,
             _INDEX_NODATA, exception_flag='values_required')
 
-        LOGGER.debug(
-            "TODO: consider making species season floral weight relative "
-            "rather than absolute.")
-        relative_floral_abudance_species_id = None
-        for species_id in species_list:
-            species_season_floral_weight = (
-                guild_table[species_id][
-                    _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER % season_id])
-            relative_floral_abudance_species_id = (
-                relative_floral_abudance_id + "_%s" % species_id)
-            f_reg[relative_floral_abudance_species_id] = os.path.join(
-                intermediate_output_dir,
-                relative_floral_abudance_species_id + "%s.tif" % file_suffix)
+    LOGGER.debug(
+        "TODO: consider making species season floral weight relative "
+        "rather than absolute.")
+    species_season_floral_weight_index = None
+    for species_id in species_list:
+        species_season_floral_weight_index = numpy.array([
+            guild_table[species_id][
+                _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER % season_id]
+            for season_id in _SEASON_TYPES])
+        relative_floral_abudance_species_id = (
+            _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER % species_id)
+        f_reg[relative_floral_abudance_species_id] = os.path.join(
+            intermediate_output_dir,
+            relative_floral_abudance_species_id + "%s.tif" % file_suffix)
 
-            def _species_floral_abudance_op(floral_abudance_array):
-                """Calculate species floral abudance."""
-                result = numpy.empty(
-                    floral_abudance_array.shape, dtype=numpy.float32)
-                result[:] = _INDEX_NODATA
-                valid_mask = floral_abudance_array != _INDEX_NODATA
-                result[valid_mask] = (
-                    floral_abudance_array[valid_mask] *
-                    species_season_floral_weight)
-                return result
+        def _species_floral_abudance_op(*floral_abudance_index):
+            """Calculate species floral abudance."""
+            result = numpy.empty(
+                floral_abudance_index[0].shape, dtype=numpy.float32)
+            result[:] = _INDEX_NODATA
+            valid_mask = floral_abudance_index[0] != _INDEX_NODATA
+            result[valid_mask] = numpy.sum(
+                [fai[valid_mask] * ssfwi for fai, ssfwi in zip(
+                    floral_abudance_index,
+                    species_season_floral_weight_index)], axis=0)
+            return result
 
-            pygeoprocessing.raster_calculator(
-                [(f_reg[relative_floral_abudance_id], 1)],
-                _species_floral_abudance_op,
-                f_reg[relative_floral_abudance_species_id], gdal.GDT_Float32,
-                _INDEX_NODATA, calc_raster_stats=False)
+        pygeoprocessing.raster_calculator(
+            [(path, 1) for path in [
+                f_reg[_RELATIVE_FLORAL_ABUDANCE_INDEX_HEADER % season_id]
+                for season_id in _SEASON_TYPES]],
+            _species_floral_abudance_op,
+            f_reg[relative_floral_abudance_species_id], gdal.GDT_Float32,
+            _INDEX_NODATA, calc_raster_stats=False)
