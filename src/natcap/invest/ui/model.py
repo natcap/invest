@@ -292,8 +292,13 @@ class Model(QtWidgets.QMainWindow):
                 title='Select scenario')
 
         LOGGER.info('Loading scenario from %s', scenario_path)
-        paramset = scenarios.read_parameter_set(scenario_path)
-        self.load_args(paramset.args)
+        try:
+            paramset = scenarios.read_parameter_set(scenario_path)
+            args = paramset.args
+        except ValueError:
+            # when a JSON object cannot be decoded, assume it's a logfile.
+            args = scenarios.read_parameters_from_logfile(scenario_path)
+        self.load_args(args)
         self.status_bar.showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
 
