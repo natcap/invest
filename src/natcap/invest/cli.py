@@ -10,6 +10,7 @@ import logging
 import sys
 import collections
 import pprint
+import warnings
 
 from . import utils
 
@@ -408,30 +409,53 @@ def main():
 
         paramset = scenarios.read_parameter_set(args.scenario)
 
-        with utils.prepare_workspace(paramset.args['workspace_dir'],
-                                     name=model_module.LABEL):
+        # prefer CLI option for workspace dir, but use paramset workspace if
+        # the CLI options do not define a workspace.
+        if args.workspace:
+            workspace = args.workspace
+        else:
+            if 'workspace_dir' in paramset.args:
+                workspace = paramset.args['workspace_dir']
+            else:
+                parser.exit(3, (
+                    'Workspace not defined. \n'
+                    'Use --workspace to specify or add a '
+                    '"workspace_dir" parameter to your scenario.'))
+
+        try:
+            name = model_module.LABEL
+        except AttributeError:
+            name = paramset.name
+            warnings.warn('Model %s does not have a LABEL attribute' % (
+                paramset.name))
+
+        with utils.prepare_workspace(workspace,
+                                     name=paramset.name):
             LOGGER.info(_format_args(paramset.args))
             if not args.validate:
                 LOGGER.info('Skipping validation by user request')
             else:
-                warnings = []
+                model_warnings = []
                 try:
-                    warnings = getattr(target_mod, 'validate')(paramset.args)
+                    model_warnings = getattr(
+                        target_mod, 'validate')(paramset.args)
                 except AttributeError:
                     LOGGER.warn(
                         '%s does not have a defined validation function.',
-                        model_module.LABEL)
+                        name)
                 finally:
-                    if warnings:
+                    if model_warnings:
                         LOGGER.warn('Warnings found: \n%s',
-                                    pprint.pformat(warnings))
+                                    pprint.pformat(model_warnings))
 
             if not args.workspace:
                 args.workspace = os.getcwd()
 
             # If the workspace exists and we don't have up-front permission to
             # overwrite the workspace, prompt for permission.
-            if os.path.exists(args.workspace) and not args.overwrite:
+            if (os.path.exists(args.workspace) and
+                    len(os.listdir(args.workspace)) > 0 and
+                    not args.overwrite):
                 overwrite_denied = False
                 if not sys.stdout.isatty():
                     overwrite_denied = True
@@ -453,6 +477,9 @@ def main():
                     LOGGER.warning(
                         'Overwriting the workspace per user input %s',
                         os.path.abspath(args.workspace))
+
+            if 'workspace_dir' not in paramset.args:
+                paramset.args['workspace_dir'] = args.workspace
 
             getattr(model_module, 'execute')(paramset.args)
     else:
