@@ -5,6 +5,7 @@ import os
 import pprint
 import warnings
 import collections
+import json
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -41,7 +42,7 @@ def try_cast(value, target_type):
     try:
         return target_type(value)
     except ValueError:
-        return target_type
+        return value
 
 
 class WindowTitle(QtCore.QObject):
@@ -68,7 +69,7 @@ class WindowTitle(QtCore.QObject):
         try:
             return self.format_string.format(
                 modelname=self.modelname if self.modelname else 'InVEST',
-                filename=self.filename if self.filename else 'Scenario',
+                filename=self.filename if self.filename else 'Scenario1',
                 modified='*' if self.modified else '')
         except AttributeError:
             return ''
@@ -203,6 +204,13 @@ class Model(QtWidgets.QMainWindow):
             'Open ...', self.load_scenario,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.menuBar().addMenu(self.file_menu)
+
+        # Settings files
+        self.settings = QtCore.QSettings(
+            QtCore.QSettings.IniFormat,
+            QtCore.QSettings.UserScope,
+            'Natural Capital Project',
+            self.label)
 
     def _save_scenario_as(self):
         scenario_opts = _prompt_for_scenario_options()
@@ -339,6 +347,11 @@ class Model(QtWidgets.QMainWindow):
             self.form.scroll_area.widget().minimumSize().height())
 
         inputs.center_window(self)
+
+        # if we're not working off a scenario file, load the last run.
+        if not self.window_title.filename:
+            self.load_lastrun()
+
         self.show()
         self.raise_()  # raise window to top of stack.
 
@@ -360,3 +373,20 @@ class Model(QtWidgets.QMainWindow):
         button_pressed = dialog.exec_()
         if button_pressed != QtWidgets.QMessageBox.Yes:
             event.ignore()
+        else:
+            self.save_lastrun()
+
+    def save_lastrun(self, lastrun_args=None):
+        if not lastrun_args:
+            lastrun_args = self.assemble_args()
+        LOGGER.debug('Saving lastrun args %s', lastrun_args)
+        self.settings.setValue("lastrun", json.dumps(lastrun_args))
+
+    def load_lastrun(self):
+        lastrun_args = self.settings.value("lastrun")
+        # If no lastrun args saved, None is returned.
+        if not lastrun_args:
+            return
+        self.load_args(json.loads(lastrun_args))
+        self.status_bar.showMessage('Loaded parameters from previous run.',
+                                    10000)

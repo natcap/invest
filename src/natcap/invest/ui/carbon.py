@@ -47,6 +47,7 @@ class Carbon(model.Model):
                 u"Check to enable sequestration analysis.  This "
                 u"requires inputs of Land Use/Land Cover maps for both "
                 u"current and future scenarios."),
+            args_key='calc_sequestration',
             label=u'Calculate Sequestration')
         self.add_input(self.calc_sequestration)
         self.fut_lulc_raster = inputs.File(
@@ -78,6 +79,7 @@ class Carbon(model.Model):
                 u"scenario, and one for the future REDD policy "
                 u"scenario."),
             interactive=False,
+            args_key='do_redd',
             label=u'REDD Scenario Analysis')
         self.add_input(self.redd)
         self.redd_lulc_raster = inputs.File(
@@ -146,6 +148,8 @@ class Carbon(model.Model):
             self.cur_lulc_raster.args_key: self.cur_lulc_raster.value(),
             self.carbon_pools_path.args_key: self.carbon_pools_path.value(),
             self.valuation_container.args_key: self.valuation_container.value(),
+            self.calc_sequestration.args_key: self.calc_sequestration.value(),
+            self.redd.args_key: self.redd.value(),
         }
 
         if self.calc_sequestration.value():
