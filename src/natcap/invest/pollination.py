@@ -31,6 +31,7 @@ _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER = r'foraging_activity_%s_index'
 _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
 _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessable_floral_resources_%s'
 _POLLINATOR_SUPPLY_FILE_PATTERN = r'pollinator_supply_%s_index'
+_POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
 
 
 def execute(args):
@@ -222,7 +223,7 @@ def execute(args):
         f_reg[accessable_floral_resouces_id] = os.path.join(
             output_dir, accessable_floral_resouces_id +
             '%s.tif' % file_suffix)
-        temp_file_set.add(f_reg[accessable_floral_resouces_id])
+        temp_file_set.add(f_reg[species_file_kernel_id])
         LOGGER.info(
             "Calculating available floral resources for %s", species_id)
         pygeoprocessing.convolve_2d(
@@ -255,6 +256,18 @@ def execute(args):
              (f_reg[species_nesting_id], 1)], _pollinator_supply_op,
             f_reg[pollinator_supply_id], gdal.GDT_Float32,
             _INDEX_NODATA, calc_raster_stats=False)
+
+        LOGGER.info("Calculating pollinator abundance for %s")
+        pollinator_abudanance_id = (
+            _POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id)
+        f_reg[pollinator_abudanance_id] = os.path.join(
+            output_dir,
+            pollinator_abudanance_id + "%s.tif" % file_suffix)
+        pygeoprocessing.convolve_2d(
+            (f_reg[pollinator_supply_id], 1),
+            (f_reg[species_file_kernel_id], 1),
+            f_reg[pollinator_abudanance_id],
+            target_datatype=gdal.GDT_Float32)
 
     for path in temp_file_set:
         os.remove(path)
