@@ -68,6 +68,8 @@ def execute(args):
                   matching the pattern in `_LANDCOVER_NESTING_INDEX_HEADER`.
                 * For every season in `_SEASON_TYPES`, a column matching
                   the pattern in `_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`.
+        args['farm_vector_path'] (string): path to a polygon shapefile
+            representing farms. TODO: define what all this is for
 
     Returns:
         None
