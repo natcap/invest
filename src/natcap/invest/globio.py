@@ -10,7 +10,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import numpy
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 
 from . import utils
 
@@ -84,12 +84,12 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
 
-    pygeoprocessing.geoprocessing.create_directories(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
         [output_dir, intermediate_dir, tmp_dir])
 
     # cell size should be based on the landcover map
     if not args['predefined_globio']:
-        out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
             args['lulc_uri'])
         globio_lulc_uri = _calculate_globio_lulc_map(
             args['lulc_to_globio_table_uri'], args['lulc_uri'],
@@ -97,12 +97,12 @@ def execute(args):
             float(args['pasture_threshold']), float(args['primary_threshold']),
             file_suffix, intermediate_dir, tmp_dir, out_pixel_size)
     else:
-        out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
             args['globio_lulc_uri'])
         LOGGER.info('no need to calculate GLOBIO LULC because it is passed in')
         globio_lulc_uri = args['globio_lulc_uri']
 
-    globio_nodata = pygeoprocessing.get_nodata_from_uri(globio_lulc_uri)
+    globio_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(globio_lulc_uri)
 
     infrastructure_uri = os.path.join(
         intermediate_dir, 'combined_infrastructure%s.tif' % file_suffix)
@@ -122,7 +122,7 @@ def execute(args):
         return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
 
     LOGGER.info("create mask of primary veg areas")
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [globio_lulc_uri], _primary_veg_mask_op,
         primary_veg_mask_uri, gdal.GDT_Int32, primary_veg_mask_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
@@ -134,7 +134,7 @@ def execute(args):
     make_gaussian_kernel_uri(SIGMA, gaussian_kernel_uri)
     smoothed_primary_veg_mask_uri = os.path.join(
         tmp_dir, 'smoothed_primary_veg_mask%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.convolve_2d_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.convolve_2d_uri(
         primary_veg_mask_uri, gaussian_kernel_uri,
         smoothed_primary_veg_mask_uri)
 
@@ -150,7 +150,7 @@ def execute(args):
             primary_veg_mask_nodata)
 
     LOGGER.info('calculate primary_veg_smooth')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [primary_veg_mask_uri, smoothed_primary_veg_mask_uri],
         _primary_veg_smooth_op, primary_veg_smooth_uri, gdal.GDT_Float32,
         primary_veg_mask_nodata, out_pixel_size, "intersection",
@@ -187,7 +187,7 @@ def execute(args):
 
     LOGGER.info('calculate msa_f')
     msa_f_uri = os.path.join(output_dir, 'msa_f%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [primary_veg_smooth_uri], _msa_f_op, msa_f_uri, gdal.GDT_Float32,
         msa_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
@@ -245,10 +245,10 @@ def execute(args):
     LOGGER.info('calculate msa_i')
     distance_to_infrastructure_uri = os.path.join(
         intermediate_dir, 'distance_to_infrastructure%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.distance_transform_edt(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
         infrastructure_uri, distance_to_infrastructure_uri)
     msa_i_uri = os.path.join(output_dir, 'msa_i%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [globio_lulc_uri, distance_to_infrastructure_uri], _msa_i_op,
         msa_i_uri, gdal.GDT_Float32, msa_nodata, out_pixel_size,
         "intersection", dataset_to_align_index=0, vectorize_op=False)
@@ -257,7 +257,7 @@ def execute(args):
     msa_lu_uri = os.path.join(
         output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reclassify_dataset_uri(
         globio_lulc_uri, msa_parameter_table['msa_lu'], msa_lu_uri,
         gdal.GDT_Float32, globio_nodata, exception_flag='values_required')
 
@@ -270,7 +270,7 @@ def execute(args):
         return numpy.where(
             msa_f != globio_nodata, msa_f * msa_lu * msa_i, globio_nodata)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [msa_f_uri, msa_lu_uri, msa_i_uri], _msa_op, msa_uri,
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
@@ -307,7 +307,7 @@ def execute(args):
         layer.SyncToDisk()
 
         # aggregate by ID
-        msa_summary = pygeoprocessing.aggregate_raster_values_uri(
+        msa_summary = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
             msa_uri, summary_aoi_uri, shapefile_field=poly_id_field)
 
         # add new column to output file
@@ -464,7 +464,7 @@ def _calculate_globio_lulc_map(
     Returns:
         a (string) filename to the generated globio GeoTIFF map
     """
-    lulc_to_globio_table = pygeoprocessing.get_lookup_from_table(
+    lulc_to_globio_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
         lulc_to_globio_table_uri, 'lucode')
 
     lulc_to_globio = dict(
@@ -474,7 +474,7 @@ def _calculate_globio_lulc_map(
     intermediate_globio_lulc_uri = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reclassify_dataset_uri(
         lulc_uri, lulc_to_globio, intermediate_globio_lulc_uri,
         gdal.GDT_Int32, globio_nodata, exception_flag='values_required')
 
@@ -495,7 +495,7 @@ def _calculate_globio_lulc_map(
         return numpy.where(nodata_mask, forest_areas_nodata, result)
 
     LOGGER.info("create mask of natural areas")
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [intermediate_globio_lulc_uri], _forest_area_mask_op,
         forest_areas_uri, gdal.GDT_Int32, forest_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
@@ -507,7 +507,7 @@ def _calculate_globio_lulc_map(
     make_gaussian_kernel_uri(SIGMA, gaussian_kernel_uri)
     smoothed_forest_areas_uri = os.path.join(
         tmp_dir, 'smoothed_forest_areas%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.convolve_2d_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.convolve_2d_uri(
         forest_areas_uri, gaussian_kernel_uri, smoothed_forest_areas_uri)
 
     ffqi_uri = os.path.join(
@@ -521,7 +521,7 @@ def _calculate_globio_lulc_map(
             forest_areas_nodata)
 
     LOGGER.info('calculate ffqi')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [forest_areas_uri, smoothed_forest_areas_uri], _ffqi_op,
         ffqi_uri, gdal.GDT_Float32, forest_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
@@ -580,7 +580,7 @@ def _calculate_globio_lulc_map(
         return numpy.where(nodata_mask, globio_nodata, globio_lulc)
 
     LOGGER.info('create the globio lulc')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [intermediate_globio_lulc_uri, potential_vegetation_uri, pasture_uri,
          ffqi_uri], _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32,
         globio_nodata, out_pixel_size, "intersection",
@@ -621,22 +621,22 @@ def _collapse_infrastructure_layers(
                 infrastructure_filenames.append(
                     os.path.join(root_directory, filename))
                 infrastructure_nodata_list.append(
-                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
                         infrastructure_filenames[-1]))
             if filename.lower().endswith(".shp"):
                 infrastructure_tmp_raster = (
-                    pygeoprocessing.temporary_filename())
-                pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+                    natcap.invest.pygeoprocessing_0_3_3.temporary_filename())
+                natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
                     base_raster_uri, infrastructure_tmp_raster,
                     'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
-                pygeoprocessing.geoprocessing.rasterize_layer_uri(
+                natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
                     infrastructure_tmp_raster,
                     os.path.join(root_directory, filename), burn_values=[1],
                     option_list=["ALL_TOUCHED=TRUE"])
                 infrastructure_filenames.append(infrastructure_tmp_raster)
                 infrastructure_tmp_filenames.append(infrastructure_tmp_raster)
                 infrastructure_nodata_list.append(
-                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
                         infrastructure_filenames[-1]))
 
     if len(infrastructure_filenames) == 0:
@@ -667,9 +667,9 @@ def _collapse_infrastructure_layers(
             nodata_mask, infrastructure_nodata, infrastructure_result)
 
     LOGGER.info('collapse infrastructure into one raster')
-    out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
         base_raster_uri)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         infrastructure_filenames, _collapse_infrastructure_op,
         infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,

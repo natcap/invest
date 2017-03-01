@@ -5,8 +5,8 @@ import shutil
 import os
 
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 from osgeo import ogr
 import numpy
 

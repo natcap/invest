@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 from osgeo import ogr
 import numpy
 
@@ -60,7 +60,7 @@ class MarineWaterQualityTests(unittest.TestCase):
                 REGRESSION_DATA, 'expected_file_list_regression.txt'),
             args['workspace_dir'])
 
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(self.workspace_dir, 'output', 'concentration.tif'),
             os.path.join(
                 REGRESSION_DATA, 'concentration_island.tif'), rel_tol=1e-4,
