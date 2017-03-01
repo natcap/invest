@@ -2,6 +2,8 @@
 import os
 import logging
 
+import pygeoprocessing
+
 from . import utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -35,7 +37,18 @@ def execute(args):
             output file names
         args['landcover_raster_path'] (string): path to landcover raster
         args['landcover_to_crop_table_path'] (string): path to a table that
-            converts landcover types to crop names
+            converts landcover types to crop names that has two headers:
+            * lucode: integer value corresponding to a landcover code in
+              `args['landcover_raster_path']`.
+            * crop_name: a string that must match one of the crops in
+              args['global_data_path']/climate_bin_maps/[cropname]_*
+              A ValueError is raised if strings don't match.
+        args['global_data_path'] (string): path to the InVEST Crop Production
+            global data directory.  This model expects that the following
+            directories are subdirectories of this path
+            * climate_bin_maps (contains [cropname]_climate_bin.tif files)
+            * climate_percentile_yield (contains
+              [cropname]_percentile_yield_table.csv files)
 
     Returns:
         None.
@@ -53,3 +66,55 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
+    LOGGER.debug("TODO: convert landcover map to lat/lng projection ")
+
+    landcover_raster_info = pygeoprocessing.get_raster_info(
+        args['landcover_raster_path'])
+
+    crop_to_landcover_table = utils.build_lookup_from_csv(
+        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
+        numerical_cast=True)
+
+    for crop_name, crop_lucode in crop_to_landcover_table.iteritems():
+        crop_climate_bin_raster_path = os.path.join(
+            args['global_data_path'], 'climate_bin_maps',
+            '%s_climate_bin_map.tif' % crop_name)
+        climate_percentile_yield_table_path = os.path.join(
+            args['global_data_path'], 'climate_percentile_yield',
+            '%s_percentile_yield_table.csv' % crop_name)
+        if not os.path.exists(crop_climate_bin_raster_path):
+            raise ValueError(
+                "Expected climate bin map called %s for crop %s "
+                "specified in %s", crop_climate_bin_raster_path, crop_name,
+                args['landcover_to_crop_table_path'])
+        if not os.path.exists(crop_climate_bin_raster_path):
+            raise ValueError(
+                "Expected climate bin map called %s for crop %s "
+                "specified in %s", crop_climate_bin_raster_path, crop_name,
+                args['landcover_to_crop_table_path'])
+
+        crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
+            crop_climate_bin_raster_path)
+
+        clipping_box = pygeoprocessing.transform_bounding_box(
+            landcover_raster_info['bounding_box'],
+            landcover_raster_info['projection'],
+            crop_climate_bin_raster_info['projection'], edge_samples=11)
+
+        clipped_climate_bin_raster_path = os.path.join(
+            intermediate_output_dir,
+            'clipped_%s_climate_bin_map.tif' % crop_name)
+        pygeoprocessing.warp_raster(
+            crop_climate_bin_raster_path,
+            crop_climate_bin_raster_info['pixel_size'],
+            clipped_climate_bin_raster_path, 'nearest',
+            target_bb=clipping_box)
+
+        local_climate_bin_raster_path = os.path.join(
+            intermediate_output_dir,
+            'local_%s_climate_bin_map.tif' % crop_name)
+        pygeoprocessing.warp_raster(
+            clipped_climate_bin_raster_path,
+            landcover_raster_info['pixel_size'],
+            local_climate_bin_raster_path, 'mode',
+            target_sr_wkt=landcover_raster_info['projection'])
