@@ -6,6 +6,7 @@ import pprint
 import warnings
 import collections
 import json
+import textwrap
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -203,6 +204,11 @@ class Model(QtWidgets.QMainWindow):
         self.file_menu.addAction(
             'Open ...', self.load_scenario,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
+        self.file_menu.addAction(
+            'Quit', self.close,
+            QtGui.QKeySequence(QtGui.QKeySequence.Quit))
+        self.file_menu.addAction(
+            'About', self.about)
         self.menuBar().addMenu(self.file_menu)
 
         # Settings files
@@ -211,6 +217,60 @@ class Model(QtWidgets.QMainWindow):
             QtCore.QSettings.UserScope,
             'Natural Capital Project',
             self.label)
+
+    def about(self):
+        about_dialog = QtWidgets.QDialog()
+        about_dialog.setLayout(QtWidgets.QVBoxLayout())
+        label_text = textwrap.dedent(
+            """
+            <h1>InVEST</h1>
+            <b>Version {version}</b> <br/> <br/>
+
+            Documentation:<br/>
+            Homepage: http://naturalcapitalproject.org<br/>
+            Copyright 2017, The Natural Capital Project<br/>
+            License: BSD 3-clause<br/>
+            Project page: https://bitbucket.org/natcap/invest<br/>
+
+            <h2>Open-Source Licenses</h2>
+            """.format(
+                version=natcap.invest.__version__))
+
+        for lib_name, lib_license, lib_homepage in [
+                ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
+                ('GDAL', 'MIT and others', 'http://gdal.org'),
+                ('matplotlib', 'BSD', 'http://matplotlib.org'),
+                ('natcap.versioner', 'BSD',
+                 'http://bitbucket.org/jdouglass/versioner'),
+                ('numpy', 'BSD', 'http://numpy.org'),
+                ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
+                ('pygeoprocessing', 'BSD',
+                 'http://bitbucket.org/richpsharp/pygeoprocessing'),
+                ('PyQt', 'GPL',
+                 'http://riverbankcomputing.com/software/pyqt/intro'),
+                ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
+                ('scipy', 'BSD', 'http://www.scipy.org/'),
+                ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
+            label_text += '{project} {license} {homepage} <br/>'.format(
+                project=lib_name,
+                license=('<a href="licenses/{project}_license.txt">{license}'
+                         '</a>').format(project=lib_name,
+                                        license=lib_license),
+                homepage='<a href="{0}">{0}</a>'.format(lib_homepage))
+
+        label = QtWidgets.QLabel(label_text)
+        label.setTextFormat(QtCore.Qt.RichText)
+        label.setOpenExternalLinks(True)
+        about_dialog.layout().addWidget(label)
+
+        button_box = QtWidgets.QDialogButtonBox()
+        accept_button = QtWidgets.QPushButton('OK')
+        button_box.addButton(accept_button,
+                             QtWidgets.QDialogButtonBox.AcceptRole)
+        about_dialog.layout().addWidget(button_box)
+        accept_button.pressed.connect(about_dialog.close)
+
+        about_dialog.exec_()
 
     def _save_scenario_as(self):
         scenario_opts = _prompt_for_scenario_options()
