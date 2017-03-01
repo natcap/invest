@@ -32,7 +32,7 @@ import shapely.ops
 from shapely import speedups
 import shapely.prepared
 
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing_core as geoprocessing_core
+import geoprocessing_core
 import fileio
 
 AggregatedValues = collections.namedtuple(
