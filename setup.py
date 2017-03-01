@@ -186,7 +186,6 @@ setup(
     packages=[
         'natcap',
         'natcap.invest',
-        'natcap.invest.crop_production',
         'natcap.invest.coastal_blue_carbon',
         'natcap.invest.coastal_vulnerability',
         'natcap.invest.dbfpy',
