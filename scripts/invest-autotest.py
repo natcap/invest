@@ -96,14 +96,17 @@ def sh(command, capture=True):
         return p_stdout
 
 
-def run_model(modelname, binary, workspace, scenario):
+def run_model(modelname, binary, workspace, scenario, headless=False):
     """Run an InVEST model, checking the error code of the process."""
     command = ('{binary} {model} --quickrun '
                '--workspace="{workspace}" '
-               '--scenario="{scenario}" ').format(binary=binary,
-                                                  model=modelname,
-                                                  workspace=workspace,
-                                                  scenario=scenario),
+               '-y '  # confirm workspace overwrite
+               '--scenario="{scenario}" '
+               '{headless}').format(binary=binary,
+                                    model=modelname,
+                                    workspace=workspace,
+                                    scenario=scenario,
+                                    headless='--headless' if headless else ''),
     try:
         subprocess.check_call(command, shell=True)
     except subprocess.CalledProcessError as error_obj:
@@ -164,30 +167,41 @@ def main(user_args=None):
     processes = []
     for modelname, scenario, scenario_index in pairs:
         scenario = os.path.join(args.cwd, scenario)
-        workspace = os.path.join(args.workspace,
-                                 'autorun_%s_%s' % (modelname,
-                                                    scenario_index))
-        process = pool.apply_async(run_model, (modelname,
-                                               args.binary,
-                                               workspace,
-                                               scenario))
-        processes.append((process, scenario))
+
+        for headless in (True, False):
+            headless_string = ''
+            if headless:
+                headless_string = 'headless'
+            workspace = os.path.join(args.workspace,
+                                     'autorun_%s_%s_%s' % (modelname,
+                                                            headless_string,
+                                                            scenario_index))
+            process = pool.apply_async(run_model, (modelname,
+                                                   args.binary,
+                                                   workspace,
+                                                   scenario,
+                                                   headless))
+        processes.append((process, scenario, headless))
 
     # get() blocks until the result is ready.
     model_results = {}
-    for _process, _scenario in processes:
+    for _process, _scenario, _headless in processes:
         result = _process.get()
-        model_results[(result[0], _scenario)] = result[1:]
+        model_results[(result[0], _scenario, _headless)] = result[1:]
 
-    max_width = max([len(key[0]) for key in model_results.keys()])
+    # add 10 for ' (headless)'
+    max_width = max([len(key[0])+11 for key in model_results.keys()])
     failures = 0
 
-    # print all statuses, sorted by the modelname.
-    print '%s %s %s' % (string.ljust('MODELNAME', max_width+1),
+    # print all statuses, sorted by the modelname, being sure to start on a
+    # new line.
+    print '\n%s %s %s' % (string.ljust('MODELNAME', max_width+1),
                         string.ljust('EXIT CODE', 10),  # len('EXIT CODE')+1
                         'SCENARIO')
-    for (modelname, scenario), exitcode in sorted(
+    for (modelname, scenario, headless), exitcode in sorted(
                 model_results.iteritems(), key=lambda x: x[0]):
+        if headless:
+            modelname += ' (headless)'
         print "%s %s %s" % (string.ljust(modelname, max_width+1),
                             string.ljust(str(exitcode[0]), 10),
                             scenario)
@@ -199,9 +213,12 @@ def main(user_args=None):
         print '%s %s %s' % (string.ljust('MODELNAME', max_width+1),
                             string.ljust('EXIT CODE', 10),
                             'SCENARIO')
-        for (modelname, scenario), exitcode in sorted(
-                [(k, v) for (k, v) in model_results.iteritems() if v[0] != 0],
+        for (modelname, scenario, headless), exitcode in sorted(
+                [(k, v) for (k, v) in model_results.iteritems()
+                 if v[0] != 0],
                 key=lambda x: x[0]):
+            if headless:
+                modelname += ' (headless)'
             print "%s %s %s" % (string.ljust(modelname, max_width+1),
                                 string.ljust(str(exitcode[0]), 10),
                                 scenario)
