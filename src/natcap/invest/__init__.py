@@ -5,8 +5,8 @@ import sys
 import logging
 
 import pkg_resources
-import natcap.invest.pygeoprocessing_0_3_3
 import natcap.versioner
+import pygeoprocessing
 
 
 __all__ = ['local_dir', 'PYGEOPROCESSING_REQUIRED']
