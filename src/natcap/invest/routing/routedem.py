@@ -2,9 +2,9 @@
 import os
 import logging
 
-import pygeoprocessing.geoprocessing
-import pygeoprocessing.routing
-import pygeoprocessing.routing.routing_core
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.routing
+import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
 LOGGER = logging.getLogger('natcap.invest.routing.routedem')
 
@@ -12,7 +12,7 @@ LOGGER = logging.getLogger('natcap.invest.routing.routedem')
 def execute(args):
     """RouteDEM: D-Infinity Routing.
 
-    This model exposes the pygeoprocessing d-infinity routing functionality in
+    This model exposes the natcap.invest.pygeoprocessing_0_3_3 d-infinity routing functionality in
     the InVEST model API.
 
     Parameters:
@@ -57,32 +57,32 @@ def execute(args):
     """
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)
-    pygeoprocessing.create_directories([output_directory])
+    natcap.invest.pygeoprocessing_0_3_3.create_directories([output_directory])
     dem_uri = args['dem_uri']
 
     LOGGER.info('resolving filling pits')
 
     dem_pit_filled_uri = os.path.join(
         output_directory, args['pit_filled_filename'])
-    pygeoprocessing.routing.fill_pits(dem_uri, dem_pit_filled_uri)
+    natcap.invest.pygeoprocessing_0_3_3.routing.fill_pits(dem_uri, dem_pit_filled_uri)
     dem_uri = dem_pit_filled_uri
 
     # Calculate slope
     if args['calculate_slope']:
         LOGGER.info("Calculating slope")
         slope_uri = os.path.join(output_directory, args['slope_filename'])
-        pygeoprocessing.geoprocessing.calculate_slope(dem_uri, slope_uri)
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.calculate_slope(dem_uri, slope_uri)
 
     # Calculate flow accumulation
     LOGGER.info("calculating flow direction")
     flow_direction_uri = os.path.join(
         output_directory, args['flow_direction_filename'])
-    pygeoprocessing.routing.flow_direction_d_inf(dem_uri, flow_direction_uri)
+    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(dem_uri, flow_direction_uri)
 
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
         output_directory, args['flow_accumulation_filename'])
-    pygeoprocessing.routing.flow_accumulation(
+    natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
     # classify streams from the flow accumulation raster
@@ -102,16 +102,16 @@ def execute(args):
                 output_directory, 'v_stream_%s.tif' %
                 (str(threshold_amount),))
 
-            pygeoprocessing.routing.stream_threshold(
+            natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
                 flow_accumulation_uri, threshold_amount, v_stream_uri)
     else:
         v_stream_uri = os.path.join(output_directory, 'v_stream.tif')
-        pygeoprocessing.routing.stream_threshold(
+        natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
             flow_accumulation_uri, float(args['threshold_flow_accumulation']),
             v_stream_uri)
 
     if args['calculate_downstream_distance']:
         distance_uri = os.path.join(
             output_directory, args['downstream_distance_filename'])
-        pygeoprocessing.routing.distance_to_stream(
+        natcap.invest.pygeoprocessing_0_3_3.routing.distance_to_stream(
             flow_direction_uri, v_stream_uri, distance_uri)
