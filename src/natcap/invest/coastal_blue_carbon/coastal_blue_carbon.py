@@ -10,7 +10,7 @@ import re
 
 import numpy
 from osgeo import gdal
-import pygeoprocessing.geoprocessing as geoprocess
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 
 from .. import utils as invest_utils
 
