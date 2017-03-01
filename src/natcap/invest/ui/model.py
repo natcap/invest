@@ -402,9 +402,16 @@ class Model(QtWidgets.QMainWindow):
             self.form.run_finished.connect(_quickrun_close_model)
             QtCore.QTimer.singleShot(50, self.execute_model)
 
+        # The scrollArea defaults to a size that is too small to actually view
+        # the contents of the enclosed widget appropriately.  By adjusting the
+        # size here, we ensure that the widgets are an appropriate height.
+        # Note that self.resize() does take the window size into account, so
+        # all parts of the application window will still be visible, even if
+        # the minimumSize().height() would have it extend over the edge of the
+        # screen.
         self.resize(
             self.form.scroll_area.widget().minimumSize().width()+100,
-            self.form.scroll_area.widget().minimumSize().height())
+            self.form.scroll_area.widget().minimumSize().height()+150)
 
         inputs.center_window(self)
 
