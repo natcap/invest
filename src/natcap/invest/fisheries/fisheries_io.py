@@ -9,8 +9,8 @@ import csv
 from osgeo import ogr
 import numpy as np
 
-import pygeoprocessing.geoprocessing
-import pygeoprocessing.testing
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest import reporting
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
@@ -263,7 +263,7 @@ def read_population_csv(args, uri):
                 "Region vector shapes do not match. %s" % uri)
 
     # Check that information is correct
-    assert pygeoprocessing.testing.isclose(
+    assert natcap.invest.pygeoprocessing_0_3_3.testing.isclose(
         pop_dict['Larvaldispersal'].sum(), 1), (
             "The Larvaldisperal vector does not sum exactly to one.. %s" % uri)
 
@@ -521,7 +521,7 @@ def _verify_single_params(args, create_outputs=True):
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
         params_dict['output_dir'] = output_dir
         params_dict['intermediate_dir'] = intermediate_dir
-        pygeoprocessing.create_directories([args['workspace_dir'],
+        natcap.invest.pygeoprocessing_0_3_3.create_directories([args['workspace_dir'],
                                             output_dir,
                                             intermediate_dir])
 
@@ -995,7 +995,7 @@ def _create_results_aoi(vars_dict):
     LOGGER.info('Copying AOI %s to %s', aoi_uri, output_aoi_uri)
 
     # Copy AOI file to outputs directory
-    pygeoprocessing.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
 
     # Append attributes to Shapefile
     ds = ogr.Open(output_aoi_uri, update=1)

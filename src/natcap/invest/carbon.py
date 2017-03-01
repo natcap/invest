@@ -6,7 +6,7 @@ import time
 
 from osgeo import gdal
 import numpy
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 
 from . import utils
 
@@ -107,7 +107,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = args['workspace_dir']
-    pygeoprocessing.create_directories([intermediate_output_dir, output_dir])
+    natcap.invest.pygeoprocessing_0_3_3.create_directories([intermediate_output_dir, output_dir])
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
@@ -115,7 +115,7 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    carbon_pool_table = pygeoprocessing.get_lookup_from_table(
+    carbon_pool_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
         args['carbon_pools_path'], 'lucode')
 
     cell_sizes = []
@@ -125,14 +125,14 @@ def execute(args):
         lulc_key = "lulc_%s_path" % (scenario_type)
         if lulc_key in args and len(args[lulc_key]) > 0:
             cell_sizes.append(
-                pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+                natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
                     args[lulc_key]))
             valid_lulc_keys.append(lulc_key)
             valid_scenarios.append(scenario_type)
     pixel_size_out = min(cell_sizes)
 
     # align the input datasets
-    pygeoprocessing.align_dataset_list(
+    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
         [args[_] for _ in valid_lulc_keys],
         [file_registry['aligned_' + _] for _ in valid_lulc_keys],
         ['nearest'] * len(valid_lulc_keys),
@@ -226,9 +226,9 @@ def execute(args):
 
 def _accumulate_totals(raster_path):
     """Sum all non-nodata pixels in `raster_path` and return result."""
-    nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
+    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(raster_path)
     raster_sum = 0.0
-    for _, block in pygeoprocessing.iterblocks(raster_path):
+    for _, block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(raster_path):
         raster_sum += numpy.sum(block[block != nodata])
     return raster_sum
 
@@ -247,15 +247,15 @@ def _generate_carbon_map(
     Returns:
         None.
     """
-    nodata = pygeoprocessing.get_nodata_from_uri(lulc_path)
-    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(lulc_path)
+    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(lulc_path)
+    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(lulc_path)
     carbon_stock_by_type = dict([
         (lulcid, stock * pixel_size_out ** 2 / 10**4)
         for lulcid, stock in carbon_pool_by_type.iteritems()])
 
     carbon_stock_by_type[nodata] = _CARBON_NODATA
 
-    pygeoprocessing.reclassify_dataset_uri(
+    natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
         lulc_path, carbon_stock_by_type, out_carbon_stock_path,
         gdal.GDT_Float32, _CARBON_NODATA, exception_flag='values_required',
         assert_dataset_projected=True)
@@ -274,9 +274,9 @@ def _sum_rasters(storage_path_list, output_sum_path):
             _[valid_mask] for _ in storage_arrays], axis=0)
         return result
 
-    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(
+    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         storage_path_list[0])
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         storage_path_list, _sum_op, output_sum_path,
         gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
         vectorize_op=False, datasets_are_pre_aligned=True)
@@ -295,9 +295,9 @@ def _diff_rasters(storage_path_list, output_diff_path):
             future_array[valid_mask] - base_array[valid_mask])
         return result
 
-    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(
+    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         storage_path_list[0])
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         storage_path_list, _diff_op, output_diff_path,
         gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
         vectorize_op=False, datasets_are_pre_aligned=True)
@@ -350,8 +350,8 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
         result[valid_mask] = carbon_array[valid_mask] * valuation_constant
         return result
 
-    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(delta_carbon_path)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(delta_carbon_path)
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [delta_carbon_path], _npv_value_op, npv_out_path, gdal.GDT_Float32,
         _VALUE_NODATA, pixel_size_out, "intersection",
         vectorize_op=False, datasets_are_pre_aligned=True)

@@ -17,8 +17,8 @@ import hashlib
 import numpy as np
 from osgeo import gdal, ogr, osr
 import shapely
-from pygeoprocessing import geoprocessing as geoprocess
-import pygeoprocessing.testing as pygeotest
+from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing as geoprocess
+import natcap.invest.pygeoprocessing_0_3_3.testing as pygeotest
 
 
 SAMPLE_DATA = os.path.join(

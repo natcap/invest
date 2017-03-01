@@ -114,6 +114,16 @@ EXTENSION_LIST = ([
         name="seasonal_water_yield_core",
         sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
         language="c++"),
+    Extension(
+        name="natcap.invest.pygeoprocessing_0_3_3.geoprocessing_core",
+        sources=[
+            'src/natcap/invest/pygeoprocessing_0_3_3/geoprocessing_core.pyx'],
+        language="c++"),
+    Extension(
+        name="natcap.invest.pygeoprocessing_0_3_3.routing.routing_core",
+        sources=[
+            'src/natcap/invest/pygeoprocessing_0_3_3/routing/routing_core.pyx'],
+        language="c++"),
     ])
 
 if not USE_CYTHON:
@@ -160,10 +170,8 @@ def requirements(*pkgnames):
                           'requirements for %s') % list(missing_pkgs))
     return found_pkgnames.values()
 
-BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('natcap.versioner')
-#BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
-#                                                        'natcap.versioner')
-
+BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
+                                                        'natcap.versioner')
 
 setup(
     name='natcap.invest',
@@ -197,6 +205,10 @@ setup(
         'natcap.invest.seasonal_water_yield',
         'natcap.invest.wave_energy',
         'natcap.invest.wind_energy',
+        'natcap.invest.pygeoprocessing_0_3_3',
+        'natcap.invest.pygeoprocessing_0_3_3.routing',
+        'natcap.invest.pygeoprocessing_0_3_3.dbfpy',
+        'natcap.invest.pygeoprocessing_0_3_3.testing',
     ],
     package_dir={
         'natcap': 'src/natcap'

@@ -8,7 +8,7 @@ import fnmatch
 
 import numpy
 from osgeo import ogr
-import pygeoprocessing.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from osgeo import gdal
 from scipy import ndimage
 
@@ -65,7 +65,7 @@ def execute(args):
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
-    pygeoprocessing.geoprocessing.create_directories([output_dir, intermediate_dir])
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories([output_dir, intermediate_dir])
 
     overlap_uris = map(
         lambda x: os.path.join(args['overlap_data_dir_uri'], x),
@@ -88,11 +88,11 @@ def execute(args):
 
     aoi_dataset_uri = os.path.join(intermediate_dir, 'AOI_dataset.tif')
     grid_size = float(args['grid_size'])
-    pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
         args['zone_layer_uri'], grid_size, gdal.GDT_Int32, 0,
         aoi_dataset_uri)
 
-    pygeoprocessing.geoprocessing.rasterize_layer_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
         aoi_dataset_uri, args['zone_layer_uri'], burn_values=[1])
 
     #Want to get each interest layer, and rasterize them, then combine them all
@@ -211,18 +211,18 @@ def create_hubs_raster(hubs_shape_uri, decay, aoi_raster_uri, hubs_out_uri):
 
     #In this case, want to change the nodata value to 1, and the points
     #themselves to 0, since this is what the distance tranform function expects.
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(aoi_raster_uri)
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+    nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(aoi_raster_uri)
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
         aoi_raster_uri, hubs_out_uri, 'GTiff', -1, gdal.GDT_Float32,
         fill_value=1)
 
-    pygeoprocessing.geoprocessing.rasterize_layer_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
         hubs_out_uri, hubs_shape_uri, burn_values=[0])
 
     dataset = gdal.Open(hubs_out_uri, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
     matrix = band.ReadAsArray()
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
+    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
     decay_matrix = numpy.exp(
         -decay * ndimage.distance_transform_edt(matrix, sampling=cell_size))
     band.WriteArray(decay_matrix)
@@ -251,8 +251,8 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
     Returns nothing.
     '''
 
-    aoi_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
-    aoi_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(aoi_raster_uri)
+    aoi_pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
+    aoi_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(aoi_raster_uri)
 
     #When we go to actually burn, should have a "0" where there is AOI, not
     #same as nodata. Need the 0 for later combination function.
@@ -290,7 +290,7 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
 
         return numpy.where(aoi_nodata_mask, aoi_nodata, sum_pixel)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         raster_files_uri, get_raster_sum, activities_uri, gdal.GDT_Int32,
         aoi_nodata, aoi_pixel_size, "intersection", vectorize_op=False)
 
@@ -367,8 +367,8 @@ def create_weighted_raster(
     #n should NOT include the AOI, since it is not an interest layer
     n = len(layers_dict)
     outgoing_uri = os.path.join(out_dir, 'hu_impscore.tif')
-    aoi_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(aoi_raster_uri)
-    pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
+    aoi_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(aoi_raster_uri)
+    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
 
     #If intra-activity weighting is desired, we need to create a whole new set
     #of values, where the burn value of each pixel is the attribute value of the
@@ -471,12 +471,12 @@ def create_weighted_raster(
         return numpy.where(aoi_nodata_mask, aoi_nodata, curr_pix_sum_vector)
 
     if do_intra:
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
             weighted_raster_uris, combine_weighted_pixels_intra, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
             dataset_to_align_index=0, vectorize_op=False)
     else:
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
             raster_uris, combine_weighted_pixels, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
             dataset_to_align_index=0, vectorize_op=False)
@@ -513,7 +513,7 @@ def create_weighted_raster(
         h_rast_uri_list = [hubs_raster_uri, base_raster_uri]
 
         LOGGER.debug("this is the list %s" % h_rast_uri_list)
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
             h_rast_uri_list, combine_hubs_raster, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
             vectorize_op=False)
@@ -581,7 +581,7 @@ def make_indiv_weight_rasters(
         #directly in calculations without messing up the weighted total
         #equations for the second output file.
         nodata = 0
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
             aoi_raster_uri,
             outgoing_uri,
             'GTiff',
@@ -589,7 +589,7 @@ def make_indiv_weight_rasters(
             gdal.GDT_Float32,
             fill_value=nodata)
 
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
             outgoing_uri,
             layer_uri,
             option_list=["ATTRIBUTE=%s" % intra_name])
@@ -637,7 +637,7 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
         outgoing_uri = os.path.join(
             out_dir, element_name + ".tif")
         nodata = 0
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
             aoi_raster_uri,
             outgoing_uri,
             'GTiff',
@@ -646,7 +646,7 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
             fill_value=nodata)
 
         LOGGER.debug('rasterizing %s to %s' % (overlap_uri, outgoing_uri))
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
             outgoing_uri, overlap_uri, burn_values=[1],
             option_list=['ALL_TOUCHED=TRUE'])
 

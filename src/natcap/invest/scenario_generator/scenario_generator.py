@@ -10,7 +10,7 @@ import numpy as np
 import scipy as sp
 from osgeo import gdal, ogr
 
-import pygeoprocessing.geoprocessing as geoprocess
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 from .. import utils as invest_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
