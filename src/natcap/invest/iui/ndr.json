@@ -3,7 +3,7 @@
   "label": "Nutrient Delivery Ratio Model (NDR)",
   "targetScript": "natcap.invest.ndr.ndr",
   "modelName": "nutrient",
-  "localDocURI": "../documentation/waterpurification.html",
+  "localDocURI": "../documentation/ndr.html",
   "height": 600,
   "width": 900,
   "elements": [
