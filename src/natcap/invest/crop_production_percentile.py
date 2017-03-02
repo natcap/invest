@@ -2,6 +2,7 @@
 import os
 import logging
 
+from osgeo import gdal
 import pygeoprocessing
 
 from . import utils
@@ -75,7 +76,10 @@ def execute(args):
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
         numerical_cast=True)
 
-    for crop_name, crop_lucode in crop_to_landcover_table.iteritems():
+    crop_lucode = None
+    for crop_name in crop_to_landcover_table:
+        crop_lucode = crop_to_landcover_table[crop_name]['lucode']
+        print crop_name, crop_lucode
         crop_climate_bin_raster_path = os.path.join(
             args['global_data_path'], 'climate_bin_maps',
             '%s_climate_bin_map.tif' % crop_name)
@@ -95,10 +99,20 @@ def execute(args):
 
         local_climate_bin_raster_path = os.path.join(
             intermediate_output_dir,
-            'local_%s_climate_bin_map.tif' % crop_name)
+            'local_%s_climate_bin_map%s.tif' % (crop_name, file_suffix))
         pygeoprocessing.warp_raster(
             crop_climate_bin_raster_path,
             landcover_raster_info['pixel_size'],
             local_climate_bin_raster_path, 'mode',
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
+
+        LOGGER.info("Mask out crop %s from landcover map", crop_name)
+
+        masked_crop_raster_path = os.path.join(
+            intermediate_output_dir, 'masked_%s%s.tif' % (
+                crop_name, file_suffix))
+        pygeoprocessing.raster_calculator(
+            [(args['landcover_raster_path'], 1)],
+            lambda x: x == int(crop_lucode),
+            masked_crop_raster_path, gdal.GDT_Byte, 255)
