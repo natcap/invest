@@ -23,7 +23,7 @@ _TMP_BASE_FILES = {
     }
 
 _NODATA_CLIMATE_BIN = 255
-
+_NODATA_YIELD = -1.0
 
 def execute(args):
     """Crop Production Percentile Model.
@@ -114,34 +114,46 @@ def execute(args):
         masked_crop_raster_path = os.path.join(
             intermediate_output_dir, 'masked_climate_bin_map_%s%s.tif' % (
                 crop_name, file_suffix))
+
         def _mask_climate_bin(lulc_array, climate_bin_array):
             """Mask in climate bins that intersect with `crop_lucode`."""
             result = numpy.empty(lulc_array.shape, dtype=numpy.int8)
             result[:] = _NODATA_CLIMATE_BIN
             valid_mask = lulc_array != landcover_nodata
+            lulc_mask = lulc_array == crop_lucode
             result[valid_mask] = 0
-            lulc_mask = (lulc_array[valid_mask] == crop_lucode) & valid_mask
-            result[lulc_mask] = climate_bin_array[lulc_mask]
+            result[valid_mask & lulc_mask] = climate_bin_array[
+                valid_mask & lulc_mask]
             return result
 
         pygeoprocessing.raster_calculator(
-            [(args['landcover_raster_path'], 1)],
+            [(args['landcover_raster_path'], 1),
+             (local_climate_bin_raster_path, 1)],
             _mask_climate_bin, masked_crop_raster_path, gdal.GDT_Byte, 255)
 
+        climate_percentile_table_path = os.path.join(
+            args['global_data_path'], 'climate_percentile_yield',
+            '%s_percentile_yield_table.csv' % crop_name)
         crop_climate_percentile_table = utils.build_lookup_from_csv(
-            args['global_data_path'], 'climate_bin', to_lower=True,
+            climate_percentile_table_path, 'climate_bin', to_lower=True,
             numerical_cast=True)
 
         yield_percentile_headers = [
-            x for x in crop_climate_percentile_table.itervalues().first()
+            x for x in crop_climate_percentile_table.itervalues().next()
             if x is not 'climate_bin']
 
-        LOGGER.debug(yield_percentile_headers)
-        for yield_percentile in yield_percentile_headers:
+        for yield_percentile_id in yield_percentile_headers:
             yield_percentile_raster_path = os.path.join(
                 output_dir, '%s_%s%s.tif' % (
-                    crop_name, yield_percentile, file_suffix))
+                    crop_name, yield_percentile_id, file_suffix))
 
-            reclassify_raster(
-                base_raster_path_band, value_map, target_raster_path, target_datatype,
-                target_nodata, exception_flag='values_required')
+            bin_to_percentile_yield = dict([
+                (bin_id,
+                 crop_climate_percentile_table[bin_id][yield_percentile_id])
+                for bin_id in crop_climate_percentile_table])
+            bin_to_percentile_yield[0] = _NODATA_YIELD
+
+            pygeoprocessing.reclassify_raster(
+                (masked_crop_raster_path, 1), bin_to_percentile_yield,
+                yield_percentile_raster_path, gdal.GDT_Float32,
+                _NODATA_YIELD, exception_flag='values_required')
