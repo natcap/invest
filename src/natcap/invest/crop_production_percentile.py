@@ -93,28 +93,12 @@ def execute(args):
                 "specified in %s", crop_climate_bin_raster_path, crop_name,
                 args['landcover_to_crop_table_path'])
 
-        crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
-            crop_climate_bin_raster_path)
-
-        clipping_box = pygeoprocessing.transform_bounding_box(
-            landcover_raster_info['bounding_box'],
-            landcover_raster_info['projection'],
-            crop_climate_bin_raster_info['projection'], edge_samples=11)
-
-        clipped_climate_bin_raster_path = os.path.join(
-            intermediate_output_dir,
-            'clipped_%s_climate_bin_map.tif' % crop_name)
-        pygeoprocessing.warp_raster(
-            crop_climate_bin_raster_path,
-            crop_climate_bin_raster_info['pixel_size'],
-            clipped_climate_bin_raster_path, 'nearest',
-            target_bb=clipping_box)
-
         local_climate_bin_raster_path = os.path.join(
             intermediate_output_dir,
             'local_%s_climate_bin_map.tif' % crop_name)
         pygeoprocessing.warp_raster(
-            clipped_climate_bin_raster_path,
+            crop_climate_bin_raster_path,
             landcover_raster_info['pixel_size'],
             local_climate_bin_raster_path, 'mode',
-            target_sr_wkt=landcover_raster_info['projection'])
+            target_sr_wkt=landcover_raster_info['projection'],
+            target_bb=landcover_raster_info['bounding_box'])
