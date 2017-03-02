@@ -2,6 +2,7 @@
 import os
 import logging
 
+import numpy
 from osgeo import gdal
 import pygeoprocessing
 
@@ -21,7 +22,7 @@ _INTERMEDIATE_BASE_FILES = {
 _TMP_BASE_FILES = {
     }
 
-NODATA_USLE = -1.0
+_NODATA_CLIMATE_BIN = 255
 
 
 def execute(args):
@@ -71,6 +72,7 @@ def execute(args):
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
+    landcover_nodata = landcover_raster_info['nodata'][0]
 
     crop_to_landcover_table = utils.build_lookup_from_csv(
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
@@ -110,9 +112,36 @@ def execute(args):
         LOGGER.info("Mask out crop %s from landcover map", crop_name)
 
         masked_crop_raster_path = os.path.join(
-            intermediate_output_dir, 'masked_%s%s.tif' % (
+            intermediate_output_dir, 'masked_climate_bin_map_%s%s.tif' % (
                 crop_name, file_suffix))
+        def _mask_climate_bin(lulc_array, climate_bin_array):
+            """Mask in climate bins that intersect with `crop_lucode`."""
+            result = numpy.empty(lulc_array.shape, dtype=numpy.int8)
+            result[:] = _NODATA_CLIMATE_BIN
+            valid_mask = lulc_array != landcover_nodata
+            result[valid_mask] = 0
+            lulc_mask = (lulc_array[valid_mask] == crop_lucode) & valid_mask
+            result[lulc_mask] = climate_bin_array[lulc_mask]
+            return result
+
         pygeoprocessing.raster_calculator(
             [(args['landcover_raster_path'], 1)],
-            lambda x: x == int(crop_lucode),
-            masked_crop_raster_path, gdal.GDT_Byte, 255)
+            _mask_climate_bin, masked_crop_raster_path, gdal.GDT_Byte, 255)
+
+        crop_climate_percentile_table = utils.build_lookup_from_csv(
+            args['global_data_path'], 'climate_bin', to_lower=True,
+            numerical_cast=True)
+
+        yield_percentile_headers = [
+            x for x in crop_climate_percentile_table.itervalues().first()
+            if x is not 'climate_bin']
+
+        LOGGER.debug(yield_percentile_headers)
+        for yield_percentile in yield_percentile_headers:
+            yield_percentile_raster_path = os.path.join(
+                output_dir, '%s_%s%s.tif' % (
+                    crop_name, yield_percentile, file_suffix))
+
+            reclassify_raster(
+                base_raster_path_band, value_map, target_raster_path, target_datatype,
+                target_nodata, exception_flag='values_required')
