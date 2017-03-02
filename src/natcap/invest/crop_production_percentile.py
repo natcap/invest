@@ -171,3 +171,21 @@ def execute(args):
             local_observed_yield_raster_path, 'mode',
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
+
+    LOGGER.info("Report table")
+    result_table_path = os.path.join(output_dir, 'result_table%s.csv')
+    with open(result_table_path, 'wb') as result_table:
+        result_table.write(
+            'crop,' + ','.join(sorted(yield_percentile_headers)) +
+            'observed_yield\n')
+        for crop_name in sorted(crop_to_landcover_table):
+            result_table.write(crop_name + ',')
+            for yield_percentile_id in sorted(yield_percentile_headers):
+                yield_percentile_raster_path = os.path.join(
+                    output_dir, '%s_%s%s.tif' % (
+                        crop_name, yield_percentile_id, file_suffix))
+                yield_sum = 0.0
+                for _, yield_block in pygeoprocessing.itervalues(
+                        yield_percentile_raster_path):
+                    yield_sum = numpy.sum(
+                        yield_block[_NODATA_YIELD == yield_block])
