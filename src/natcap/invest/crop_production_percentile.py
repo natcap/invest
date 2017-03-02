@@ -157,3 +157,17 @@ def execute(args):
                 (masked_crop_raster_path, 1), bin_to_percentile_yield,
                 yield_percentile_raster_path, gdal.GDT_Float32,
                 _NODATA_YIELD, exception_flag='values_required')
+
+        LOGGER.info("Calculate observed yield for %s", crop_name)
+        observed_yield_raster_path = os.path.join(
+            args['global_data_path'], 'observed_yield',
+            '%s_yield_map.tif' % crop_name)
+        local_observed_yield_raster_path = os.path.join(
+            output_dir, '%s_local_observed_yield%s.tif' % (
+                crop_name, file_suffix))
+        pygeoprocessing.warp_raster(
+            observed_yield_raster_path,
+            landcover_raster_info['pixel_size'],
+            local_observed_yield_raster_path, 'mode',
+            target_sr_wkt=landcover_raster_info['projection'],
+            target_bb=landcover_raster_info['bounding_box'])
