@@ -30,7 +30,7 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
         args = {
             'results_suffix': u'',
-            'workspace_dir': 'test_pollination',
+            'workspace_dir': r'C:\Users\rpsharp\Documents\delete_test_pollination',
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA, 'landcover.tif'),
             'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),

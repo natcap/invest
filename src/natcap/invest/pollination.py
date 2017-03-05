@@ -26,12 +26,14 @@ _NESTING_TYPES = ['cavity', 'ground']
 _SEASON_TYPES = ['spring', 'summer']
 _LANDCOVER_NESTING_INDEX_HEADER = r'nesting_%s_index'
 _SPECIES_NESTING_TYPE_INDEX_HEADER = r'nesting_suitability_%s_index'
-_RELATIVE_FLORAL_ABUDANCE_INDEX_HEADER = r'floral_resources_%s_index'
+_FLORAL_RESOURCES_AVAILABLE_INDEX_HEADER = r'floral_resources_%s_index'
 _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER = r'foraging_activity_%s_index'
 _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
 _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessable_floral_resources_%s'
-_POLLINATOR_SUPPLY_FILE_PATTERN = r'pollinator_supply_%s_index'
+_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
 _POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
+_LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
+    r'local_floral_resource_availability_%s_index')
 
 
 def execute(args):
@@ -68,8 +70,18 @@ def execute(args):
                   matching the pattern in `_LANDCOVER_NESTING_INDEX_HEADER`.
                 * For every season in `_SEASON_TYPES`, a column matching
                   the pattern in `_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`.
-        args['farm_vector_path'] (string): path to a polygon shapefile
-            representing farms. TODO: define what all this is for
+        args['farm_vector_path'] (string): path to a single layer polygon
+            shapefile representing farms. The layer will have at least the
+            following fields:
+
+            * season (string): season in which the farm needs pollination
+            * half_sat (float): a real in the range [0.0, 1.0] representing
+                the proportion of wild pollinators to achieve a 50% yield
+                of that crop.
+            * p_wild_dep (float): a number in the range [0.0, 1.0]
+                representing the proportion of yield dependant on pollinators.
+            * p_managed (float): proportion of pollinators that come from
+                non-native/managed hives.
 
     Returns:
         None
@@ -158,10 +170,10 @@ def execute(args):
 
     for season_id in _SEASON_TYPES:
         relative_floral_abudance_id = (
-            _RELATIVE_FLORAL_ABUDANCE_INDEX_HEADER % (season_id))
+            _FLORAL_RESOURCES_AVAILABLE_INDEX_HEADER % (season_id))
         f_reg[relative_floral_abudance_id] = os.path.join(
             intermediate_output_dir,
-            relative_floral_abudance_id + "%s.tif" % file_suffix)
+            "%s%s.tif" % (relative_floral_abudance_id, file_suffix))
 
         landcover_to_floral_abudance_table = dict([
             (lucode, landcover_biophysical_table[lucode][
@@ -177,36 +189,36 @@ def execute(args):
     LOGGER.debug(
         "TODO: consider making species season floral weight relative "
         "rather than absolute.")
-    species_season_floral_weight_index = None
+    species_foraging_activity_per_season = None
     for species_id in species_list:
-        species_season_floral_weight_index = numpy.array([
+        species_foraging_activity_per_season = numpy.array([
             guild_table[species_id][
                 _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER % season_id]
             for season_id in _SEASON_TYPES])
-        relative_floral_abudance_species_id = (
-            _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER % species_id)
-        f_reg[relative_floral_abudance_species_id] = os.path.join(
-            intermediate_output_dir,
-            relative_floral_abudance_species_id + "%s.tif" % file_suffix)
+        local_floral_resource_availability_id = (
+            _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN % species_id)
+        f_reg[local_floral_resource_availability_id] = os.path.join(
+            intermediate_output_dir, "%s%s.tif" % (
+                local_floral_resource_availability_id, file_suffix))
 
-        def _species_floral_abudance_op(*floral_abudance_index):
+        def _species_floral_abudance_op(*floral_resources_index_array):
             """Calculate species floral abudance."""
             result = numpy.empty(
-                floral_abudance_index[0].shape, dtype=numpy.float32)
+                floral_resources_index_array[0].shape, dtype=numpy.float32)
             result[:] = _INDEX_NODATA
-            valid_mask = floral_abudance_index[0] != _INDEX_NODATA
+            valid_mask = floral_resources_index_array[0] != _INDEX_NODATA
             result[valid_mask] = numpy.sum(
-                [fai[valid_mask] * ssfwi for fai, ssfwi in zip(
-                    floral_abudance_index,
-                    species_season_floral_weight_index)], axis=0)
+                [fri[valid_mask] * sfa for fri, sfa in zip(
+                    floral_resources_index_array,
+                    species_foraging_activity_per_season)], axis=0)
             return result
 
         pygeoprocessing.raster_calculator(
             [(path, 1) for path in [
-                f_reg[_RELATIVE_FLORAL_ABUDANCE_INDEX_HEADER % season_id]
+                f_reg[_FLORAL_RESOURCES_AVAILABLE_INDEX_HEADER % season_id]
                 for season_id in _SEASON_TYPES]],
             _species_floral_abudance_op,
-            f_reg[relative_floral_abudance_species_id], gdal.GDT_Float32,
+            f_reg[local_floral_resource_availability_id], gdal.GDT_Float32,
             _INDEX_NODATA, calc_raster_stats=False)
 
         LOGGER.warn("TODO: consider case where cell size is not square.")
@@ -223,13 +235,13 @@ def execute(args):
         accessable_floral_resouces_id = (
             _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN % species_id)
         f_reg[accessable_floral_resouces_id] = os.path.join(
-            output_dir, accessable_floral_resouces_id +
+            intermediate_output_dir, accessable_floral_resouces_id +
             '%s.tif' % file_suffix)
         temp_file_set.add(f_reg[species_file_kernel_id])
         LOGGER.info(
             "Calculating available floral resources for %s", species_id)
         pygeoprocessing.convolve_2d(
-            (f_reg[relative_floral_abudance_species_id], 1),
+            (f_reg[local_floral_resource_availability_id], 1),
             (f_reg[species_file_kernel_id], 1),
             f_reg[accessable_floral_resouces_id],
             target_datatype=gdal.GDT_Float32)
@@ -270,6 +282,11 @@ def execute(args):
             (f_reg[species_file_kernel_id], 1),
             f_reg[pollinator_abudanance_id],
             target_datatype=gdal.GDT_Float32)
+
+    #pygeoprocessing.zonal_statistics(
+    #    base_raster_path_band, aggregating_vector_path,
+    #    aggregate_field_name, aggregate_layer_name=None,
+    #    ignore_nodata=True, all_touched=False, polygons_might_overlap=True)
 
     for path in temp_file_set:
         os.remove(path)
