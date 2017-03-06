@@ -1,4 +1,6 @@
 """Pollinator service model for InVEST."""
+import itertools
+import collections
 import re
 import os
 import logging
@@ -23,21 +25,24 @@ _TMP_BASE_FILES = {
 
 _INDEX_NODATA = -1.0
 
-_NESTING_TYPES = ['cavity', 'ground']
-_SEASON_TYPES = ['spring', 'summer']
-_LANDCOVER_NESTING_INDEX_HEADER = r'nesting_%s_index'
-_SPECIES_NESTING_TYPE_INDEX_HEADER = r'nesting_suitability_%s_index'
-_FLORAL_RESOURCES_AVAILABLE_INDEX_HEADER = r'floral_resources_%s_index'
-_SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER = r'foraging_activity_%s_index'
 _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
 _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessable_floral_resources_%s'
-_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
+_LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
 _POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
 _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
     r'local_floral_resource_availability_%s_index')
 
-_NESTING_SUITABILITY_PATTERN = 'nesting_suitability_[^_]+_index'
-_FORAGING_ACTIVITY_PATTERN = 'foraging_activity_[^_]+_index'
+_NESTING_SUITABILITY_SPECIES_PATTERN = r'nesting_suitability_%s_index'
+
+# These patterns are expected in the biophysical table
+_NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
+_FLORAL_RESOURCES_AVAILABLE_PATTERN = 'floral_resources_([^_]+)_index'
+_EXPECTED_BIOPHYSICAL_HEADERS = [
+    'lucode', _NESTING_SUBSTRATE_PATTERN, _FLORAL_RESOURCES_AVAILABLE_PATTERN]
+
+# These are patterns expected in the guilds table
+_NESTING_SUITABILITY_PATTERN = 'nesting_suitability_([^_]+)_index'
+_FORAGING_ACTIVITY_PATTERN = 'foraging_activity_([^_]+)_index'
 _EXPECTED_GUILD_HEADERS = [
     'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_PATTERN,
     'alpha']
@@ -64,18 +69,21 @@ def execute(args):
                     to nest in cavity or ground types.
         args['landcover_biophysical_table_path'] (string): path to a table
             mapping landcover codes in `args['landcover_path']` to indexes of
-            nesting availability for each of `_NESTING_TYPES` as well as
-            indexes of abundance of floral resources on that landcover type
-            per season in `_SEASON_TYPES`.
+            nesting availability for each nesting substrate referenced in
+            guilds table as well as indexes of abundance of floral resources
+            on that landcover type per season in the bee activity columns of
+            the guild table.
 
             All indexes are in the range [0.0, 1.0].
 
             Columns in the table must be at least
                 * 'lucode': representing all the unique landcover codes in
                     the raster ast `args['landcover_path']`
-                * For every nesting type in `_NESTING_TYPES`, a column
-                  matching the pattern in `_LANDCOVER_NESTING_INDEX_HEADER`.
-                * For every season in `_SEASON_TYPES`, a column matching
+                * For every nesting matching _NESTING_SUITABILITY_PATTERN
+                  in the guild stable, a column matching the pattern in
+                  `_LANDCOVER_NESTING_INDEX_HEADER`.
+                * For every season matching _FORAGING_ACTIVITY_PATTERN
+                  in the guilds table, a column matching
                   the pattern in `_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`.
         args['farm_vector_path'] (string): path to a single layer polygon
             shapefile representing farms. The layer will have at least the
@@ -123,7 +131,23 @@ def execute(args):
                 "'%s' but was unable to find one.  Here are all the headers "
                 "from %s: %s" % (
                     header, args['guild_table_path'],
-                    _EXPECTED_GUILD_HEADERS))
+                    guild_headers))
+
+    # this dict to dict will map seasons to guild/biophysical headers
+    # ex season_to_header['spring']['guilds']
+    season_to_header = collections.defaultdict(dict)
+    # this dict to dict will map substrate types to guild/biophysical headers
+    # ex substrate_to_header['cavity']['biophysical']
+    substrate_to_header = collections.defaultdict(dict)
+    for header in guild_headers:
+        match = re.match(_FORAGING_ACTIVITY_PATTERN, header)
+        if match:
+            season = match.group(1)
+            season_to_header[season]['guild'] = match.group()
+        match = re.match(_NESTING_SUITABILITY_PATTERN, header)
+        if match:
+            substrate = match.group(1)
+            substrate_to_header[substrate]['guild'] = match.group()
 
     LOGGER.debug(
         'TODO: grab the seasons from guild table and compare against '
@@ -139,9 +163,43 @@ def execute(args):
     LOGGER.debug(
         'TODO: make sure landcover biophysical table has all expected '
         'headers')
-    for nesting_type in _NESTING_TYPES:
-        nesting_id = _LANDCOVER_NESTING_INDEX_HEADER % nesting_type
-        landcover_to_nesting_sutability_table = dict([
+    biophysical_table_headers = (
+        landcover_biophysical_table.itervalues().next().keys())
+    for header in _EXPECTED_BIOPHYSICAL_HEADERS:
+        matches = re.findall(header, " ".join(biophysical_table_headers))
+        if len(matches) == 0:
+            raise ValueError(
+                "Expected a header in biophysical table that matched the "
+                "pattern '%s' but was unable to find one.  Here are all the "
+                "headers from %s: %s" % (
+                    header, args['landcover_biophysical_table_path'],
+                    biophysical_table_headers))
+
+    for header in biophysical_table_headers:
+        match = re.match(_FLORAL_RESOURCES_AVAILABLE_PATTERN, header)
+        if match:
+            season = match.group(1)
+            season_to_header[season]['biophysical'] = match.group()
+        match = re.match(_NESTING_SUBSTRATE_PATTERN, header)
+        if match:
+            substrate = match.group(1)
+            substrate_to_header[substrate]['biophysical'] = match.group()
+
+    LOGGER.debug(substrate_to_header)
+    for header_type, lookup_table in itertools.chain(
+            substrate_to_header.iteritems(), season_to_header.iteritems()):
+        if len(lookup_table) != 2:
+            raise ValueError(
+                "Expected both a biophysical and guild entry for '%s' but "
+                "instead found only %s. Ensure there are corresponding "
+                "entries of '%s' in both the guilds and biophysical "
+                "table." % (header_type, lookup_table, header_type))
+
+    for nesting_substrate in substrate_to_header:
+        LOGGER.info(
+            "Mapping landcover to nesting substrate %s", nesting_substrate)
+        nesting_id = substrate_to_header[nesting_substrate]['biophysical']
+        landcover_to_nesting_suitability_table = dict([
             (lucode, landcover_biophysical_table[lucode][nesting_id]) for
             lucode in landcover_biophysical_table])
 
@@ -150,21 +208,21 @@ def execute(args):
 
         pygeoprocessing.reclassify_raster(
             (args['landcover_raster_path'], 1),
-            landcover_to_nesting_sutability_table, f_reg[nesting_id],
+            landcover_to_nesting_suitability_table, f_reg[nesting_id],
             gdal.GDT_Float32, _INDEX_NODATA, exception_flag='values_required')
 
-    species_list = guild_table.keys()
-    species_nesting_suitability_index = None
-    for species_id in species_list:
-        species_nesting_id = (
-            _SPECIES_NESTING_TYPE_INDEX_HEADER % species_id)
-        LOGGER.debug(guild_table)
-        species_nesting_suitability_index = numpy.array([
-            guild_table[species_id][
-                _SPECIES_NESTING_TYPE_INDEX_HEADER % nesting_type]
-            for nesting_type in _NESTING_TYPES])
+    nesting_substrate_path_list = [
+        f_reg[substrate_to_header[nesting_substrate]['biophysical']]
+        for nesting_substrate in sorted(substrate_to_header)]
 
+    species_nesting_suitability_index = None
+    for species_id in guild_table.iterkeys():
         LOGGER.info("Calculate species nesting index for %s", species_id)
+        species_nesting_suitability_index = numpy.array([
+            guild_table[species_id][substrate_to_header[substrate]['guild']]
+            for substrate in sorted(substrate_to_header)])
+        species_nesting_suitability_id = (
+            _NESTING_SUITABILITY_SPECIES_PATTERN % species_id)
 
         def _habitat_suitability_index_op(*nesting_suitability_index):
             """Calculate habitat suitability per species."""
@@ -172,7 +230,6 @@ def execute(args):
                 nesting_suitability_index[0].shape, dtype=numpy.float32)
             valid_mask = nesting_suitability_index[0] != _INDEX_NODATA
             result[:] = _INDEX_NODATA
-
             # the species' nesting suitability index is the maximum value of
             # all nesting substrates multiplied by the species' suitability
             # index for that substrate
@@ -183,19 +240,21 @@ def execute(args):
                 axis=0)
             return result
 
-        f_reg[species_nesting_id] = os.path.join(
+        f_reg[species_nesting_suitability_id] = os.path.join(
             intermediate_output_dir, '%s%s.tif' % (
-                species_nesting_id, file_suffix))
+                species_nesting_suitability_id, file_suffix))
         pygeoprocessing.raster_calculator(
-            [(path, 1) for path in [
-                f_reg[_LANDCOVER_NESTING_INDEX_HEADER % nesting_type]
-                for nesting_type in _NESTING_TYPES]],
-            _habitat_suitability_index_op, f_reg[species_nesting_id],
-            gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
+            [(path, 1) for path in nesting_substrate_path_list],
+            _habitat_suitability_index_op,
+            f_reg[species_nesting_suitability_id], gdal.GDT_Float32,
+            _INDEX_NODATA, calc_raster_stats=False)
 
-    for season_id in _SEASON_TYPES:
+    for season_id in season_to_header:
+        LOGGER.info(
+            "Mapping landcover to available floral resources for season %s",
+            season_id)
         relative_floral_abudance_id = (
-            _FLORAL_RESOURCES_AVAILABLE_INDEX_HEADER % (season_id))
+            season_to_header[season_id]['biophysical'])
         f_reg[relative_floral_abudance_id] = os.path.join(
             intermediate_output_dir,
             "%s%s.tif" % (relative_floral_abudance_id, file_suffix))
@@ -211,15 +270,21 @@ def execute(args):
             f_reg[relative_floral_abudance_id], gdal.GDT_Float32,
             _INDEX_NODATA, exception_flag='values_required')
 
+    floral_resources_path_list = [
+        f_reg[season_to_header[season_id]['biophysical']]
+        for season_id in sorted(season_to_header)]
+
     LOGGER.debug(
         "TODO: consider making species season floral weight relative "
         "rather than absolute.")
     species_foraging_activity_per_season = None
-    for species_id in species_list:
+    for species_id in guild_table:
+        LOGGER.info(
+            "Making local floral resources map for species %s", species_id)
         species_foraging_activity_per_season = numpy.array([
             guild_table[species_id][
-                _SPECIES_SEASONAL_FORAGING_ACTIVITY_HEADER % season_id]
-            for season_id in _SEASON_TYPES])
+                season_to_header[season_id]['guild']]
+            for season_id in sorted(season_to_header)])
         local_floral_resource_availability_id = (
             _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN % species_id)
         f_reg[local_floral_resource_availability_id] = os.path.join(
@@ -239,9 +304,7 @@ def execute(args):
             return result
 
         pygeoprocessing.raster_calculator(
-            [(path, 1) for path in [
-                f_reg[_FLORAL_RESOURCES_AVAILABLE_INDEX_HEADER % season_id]
-                for season_id in _SEASON_TYPES]],
+            [(path, 1) for path in floral_resources_path_list],
             _species_floral_abudance_op,
             f_reg[local_floral_resource_availability_id], gdal.GDT_Float32,
             _INDEX_NODATA, calc_raster_stats=False)
@@ -270,8 +333,9 @@ def execute(args):
             (f_reg[species_file_kernel_id], 1),
             f_reg[accessable_floral_resouces_id],
             target_datatype=gdal.GDT_Float32)
-        LOGGER.info("Calculating pollinator supply for %s", species_id)
-        pollinator_supply_id = (_POLLINATOR_SUPPLY_FILE_PATTERN % species_id)
+        LOGGER.info("Calculating local pollinator supply for %s", species_id)
+        pollinator_supply_id = (
+            _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN % species_id)
         f_reg[pollinator_supply_id] = os.path.join(
             intermediate_output_dir,
             pollinator_supply_id + "%s.tif" % file_suffix)
@@ -288,13 +352,13 @@ def execute(args):
                 species_nesting_index[valid_mask])
             return result
 
-        species_nesting_id = (
-            _SPECIES_NESTING_TYPE_INDEX_HEADER % species_id)
+        species_nesting_suitability_id = (
+            _NESTING_SUITABILITY_SPECIES_PATTERN % species_id)
         pygeoprocessing.raster_calculator(
             [(f_reg[accessable_floral_resouces_id], 1),
-             (f_reg[species_nesting_id], 1)], _pollinator_supply_op,
-            f_reg[pollinator_supply_id], gdal.GDT_Float32,
-            _INDEX_NODATA, calc_raster_stats=False)
+             (f_reg[species_nesting_suitability_id], 1)],
+            _pollinator_supply_op, f_reg[pollinator_supply_id],
+            gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
 
         LOGGER.info("Calculating pollinator abundance for %s")
         pollinator_abudanance_id = (

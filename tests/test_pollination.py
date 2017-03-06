@@ -65,6 +65,61 @@ class PollinationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_pollination_bad_biophysical_headers(self):
+        """Pollination: testing that model detects bad biophysical headers."""
+        from natcap.invest import pollination
+
+        temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
+        bad_biophysical_table_path = os.path.join(
+            temp_path, 'bad_biophysical_table.csv')
+        with open(bad_biophysical_table_path, 'wb') as bad_biophysical_table:
+            bad_biophysical_table.write(
+                'lucode,nesting_cavity_availability_index,nesting_ground_index\n'
+                '1,0.3,0.2\n')
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA, 'landcover.tif'),
+            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
+            'landcover_biophysical_table_path': bad_biophysical_table_path,
+        }
+        with self.assertRaises(ValueError):
+            pollination.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_pollination_bad_cross_table_headers(self):
+        """Pollination: ensure detection of missing headers in one table."""
+        from natcap.invest import pollination
+
+        temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
+        bad_biophysical_table_path = os.path.join(
+            temp_path, 'bad_biophysical_table.csv')
+        # one table has only spring the other has only fall.
+        with open(bad_biophysical_table_path, 'wb') as bad_biophysical_table:
+            bad_biophysical_table.write(
+                'lucode,nesting_cavity_availability_index,nesting_ground_index,floral_resources_spring_index\n'
+                '1,0.3,0.2,0.2\n')
+        bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
+        with open(bad_guild_table_path, 'wb') as bad_guild_table:
+            bad_guild_table.write(
+                'species,nesting_suitability_cavity_index,foraging_activity_fall_index,alpha\n')
+            bad_guild_table.write(
+                'apis,0.2,0.5,400\n')
+            bad_guild_table.write(
+                'bee,0.9,0.5,1400\n')
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA, 'landcover.tif'),
+            'guild_table_path': bad_guild_table_path,
+            'landcover_biophysical_table_path': bad_biophysical_table_path,
+        }
+        with self.assertRaises(ValueError):
+            pollination.execute(args)
+
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
