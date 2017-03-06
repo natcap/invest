@@ -39,6 +39,33 @@ class PollinationTests(unittest.TestCase):
         }
         pollination.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_pollination_bad_guild_headers(self):
+        """Pollination: testing that model detects bad guild headers."""
+        from natcap.invest import pollination
+
+        temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
+        bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
+        with open(bad_guild_table_path, 'wb') as bad_guild_table:
+            bad_guild_table.write(
+                'species,nesting_suitability_cavity_index,alpha\n')
+            bad_guild_table.write(
+                'apis,0.2,400\n')
+            bad_guild_table.write(
+                'bee,0.9,1400\n')
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA, 'landcover.tif'),
+            'guild_table_path': bad_guild_table_path,
+            'landcover_biophysical_table_path': os.path.join(
+                SAMPLE_DATA, r'habitat_nesting_suitability.csv'),
+        }
+        with self.assertRaises(ValueError):
+            pollination.execute(args)
+
+
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.

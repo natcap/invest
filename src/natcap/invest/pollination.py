@@ -1,4 +1,5 @@
 """Pollinator service model for InVEST."""
+import re
 import os
 import logging
 
@@ -34,6 +35,12 @@ _POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
 _POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
 _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
     r'local_floral_resource_availability_%s_index')
+
+_NESTING_SUITABILITY_PATTERN = 'nesting_suitability_[^_]+_index'
+_FORAGING_ACTIVITY_PATTERN = 'foraging_activity_[^_]+_index'
+_EXPECTED_GUILD_HEADERS = [
+    'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_PATTERN,
+    'alpha']
 
 
 def execute(args):
@@ -104,7 +111,25 @@ def execute(args):
         args['guild_table_path'], 'species', to_lower=True,
         numerical_cast=True)
 
-    LOGGER.debug('TODO: make sure guild table has all expected headers')
+    LOGGER.debug('Checking to make sure guild table has all expected headers')
+    guild_headers = guild_table.itervalues().next().keys()
+
+    # we need to match at least one of each of expected
+    for header in _EXPECTED_GUILD_HEADERS:
+        matches = re.findall(header, " ".join(guild_headers))
+        if len(matches) == 0:
+            raise ValueError(
+                "Expected a header in guild table that matched the pattern "
+                "'%s' but was unable to find one.  Here are all the headers "
+                "from %s: %s" % (
+                    header, args['guild_table_path'],
+                    _EXPECTED_GUILD_HEADERS))
+
+    LOGGER.debug(
+        'TODO: grab the seasons from guild table and compare against '
+        'habitat nesting suitability seasons.  If different, then report '
+        'otherwise make an index mapping season to an ID and report it in '
+        'an output table and log')
 
     landcover_biophysical_table = utils.build_lookup_from_csv(
         args['landcover_biophysical_table_path'], 'lucode', to_lower=True,
@@ -282,6 +307,12 @@ def execute(args):
             (f_reg[species_file_kernel_id], 1),
             f_reg[pollinator_abudanance_id],
             target_datatype=gdal.GDT_Float32)
+
+    LOGGER.info("Calculating farm polinator index.")
+    # rasterize farm managed pollinators on landscape first
+    # rasterize each farm as a season
+    # raster calcualtor pass managed polinators, farm/season masks, pollinator abundance per season
+    # FP(f,x)=MP(f)+sSPA(x,s)FA(s,j(f))
 
     #pygeoprocessing.zonal_statistics(
     #    base_raster_path_band, aggregating_vector_path,
