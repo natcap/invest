@@ -7,6 +7,7 @@ import os
 import logging
 
 from osgeo import gdal
+from osgeo import ogr
 import pygeoprocessing
 import numpy
 
@@ -26,6 +27,7 @@ _TMP_BASE_FILES = {
 
 _INDEX_NODATA = -1.0
 
+_MANAGED_BEES_RASTER_FILE_PATTERN = r'managed_bees'
 _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
 _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessable_floral_resources_%s'
 _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
@@ -150,20 +152,11 @@ def execute(args):
             substrate = match.group(1)
             substrate_to_header[substrate]['guild'] = match.group()
 
-    LOGGER.debug(
-        'TODO: grab the seasons from guild table and compare against '
-        'habitat nesting suitability seasons.  If different, then report '
-        'otherwise make an index mapping season to an ID and report it in '
-        'an output table and log')
-
     landcover_biophysical_table = utils.build_lookup_from_csv(
         args['landcover_biophysical_table_path'], 'lucode', to_lower=True,
         numerical_cast=True)
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
-    LOGGER.debug(
-        'TODO: make sure landcover biophysical table has all expected '
-        'headers')
     biophysical_table_headers = (
         landcover_biophysical_table.itervalues().next().keys())
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
@@ -275,9 +268,6 @@ def execute(args):
         f_reg[season_to_header[season_id]['biophysical']]
         for season_id in sorted(season_to_header)]
 
-    LOGGER.debug(
-        "TODO: consider making species season floral weight relative "
-        "rather than absolute.")
     species_foraging_activity_per_season = None
     for species_id in guild_table:
         LOGGER.info(
@@ -286,6 +276,10 @@ def execute(args):
             guild_table[species_id][
                 season_to_header[season_id]['guild']]
             for season_id in sorted(season_to_header)])
+        # normalize the species foraging activity so it sums to 1.0
+        species_foraging_activity_per_season = (
+            species_foraging_activity_per_season / sum(
+                species_foraging_activity_per_season))
         local_floral_resource_availability_id = (
             _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN % species_id)
         f_reg[local_floral_resource_availability_id] = os.path.join(
@@ -375,7 +369,22 @@ def execute(args):
 
     LOGGER.info("Calculating farm polinator index.")
     # rasterize farm managed pollinators on landscape first
-    # rasterize each farm as a season
+    managed_bees_raster_path = os.path.join(
+        intermediate_output_dir, "%s%s.tif" % (
+            _MANAGED_BEES_RASTER_FILE_PATTERN, file_suffix))
+    pygeoprocessing.new_raster_from_base(
+        args['landcover_raster_path'], managed_bees_raster_path,
+        gdal.GDT_Float32, [_INDEX_NODATA])
+
+    managed_raster = gdal.Open(managed_bees_raster_path, gdal.GA_Update)
+    shapefile = ogr.Open(args['farm_vector_path'])
+    layer = shapefile.GetLayer()
+    gdal.RasterizeLayer(
+        managed_raster, [1], layer, options=['ATTRIBUTE=p_managed'])
+    gdal.Dataset.__swig_destroy__(managed_raster)
+    del managed_raster
+
+    # per season, rasterize each farm type
     # raster calcualtor pass managed polinators, farm/season masks, pollinator abundance per season
     # FP(f,x)=MP(f)+sSPA(x,s)FA(s,j(f))
 

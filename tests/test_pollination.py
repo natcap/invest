@@ -36,6 +36,7 @@ class PollinationTests(unittest.TestCase):
             'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 SAMPLE_DATA, r'habitat_nesting_suitability.csv'),
+            'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
         }
         pollination.execute(args)
 
@@ -61,6 +62,7 @@ class PollinationTests(unittest.TestCase):
             'guild_table_path': bad_guild_table_path,
             'landcover_biophysical_table_path': os.path.join(
                 SAMPLE_DATA, r'habitat_nesting_suitability.csv'),
+            'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
         }
         with self.assertRaises(ValueError):
             pollination.execute(args)
@@ -84,6 +86,7 @@ class PollinationTests(unittest.TestCase):
                 SAMPLE_DATA, 'landcover.tif'),
             'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
             'landcover_biophysical_table_path': bad_biophysical_table_path,
+            'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
         }
         with self.assertRaises(ValueError):
             pollination.execute(args)
@@ -116,6 +119,7 @@ class PollinationTests(unittest.TestCase):
                 SAMPLE_DATA, 'landcover.tif'),
             'guild_table_path': bad_guild_table_path,
             'landcover_biophysical_table_path': bad_biophysical_table_path,
+            'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
         }
         with self.assertRaises(ValueError):
             pollination.execute(args)
