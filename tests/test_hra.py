@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 
 SAMPLE_DATA = os.path.join(
@@ -52,7 +52,7 @@ class HRATests(unittest.TestCase):
         HRATests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list_euc_none.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'ecosys_risk_euc_none.tif'),
             os.path.join(
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
@@ -82,7 +82,7 @@ class HRATests(unittest.TestCase):
         HRATests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list_mult_none.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'ecosys_risk_mult_none.tif'),
             os.path.join(
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
@@ -111,7 +111,7 @@ class HRATests(unittest.TestCase):
         HRATests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list_euc_lin.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'ecosys_risk_euc_lin.tif'),
             os.path.join(
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
@@ -140,7 +140,7 @@ class HRATests(unittest.TestCase):
         HRATests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'ecosys_risk_euc_exp.tif'),
             os.path.join(
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),

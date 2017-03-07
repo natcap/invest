@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
@@ -63,7 +63,7 @@ class HabitatQualityTests(unittest.TestCase):
                 'deg_sum_out_f_regression.tif',
                 'quality_out_c_regression.tif',
                 'quality_out_f_regression.tif', 'rarity_c_regression.tif']:
-            pygeoprocessing.testing.assert_rasters_equal(
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(REGRESSION_DATA, output_filename),
                 os.path.join(self.workspace_dir, 'output', output_filename),
                 1e-6)
@@ -183,7 +183,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['workspace_dir'])
 
         # reasonable to just check quality out in this case
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'small_quality_out_c.tif'),
             os.path.join(self.workspace_dir, 'output', 'quality_out_c.tif'),
             1e-6)
@@ -214,7 +214,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['workspace_dir'])
 
         # reasonable to just check quality out in this case
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'small_quality_out_c.tif'),
             os.path.join(self.workspace_dir, 'output', 'quality_out_c.tif'),
             1e-6)

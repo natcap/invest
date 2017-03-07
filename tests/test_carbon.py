@@ -5,8 +5,8 @@ import shutil
 import os
 
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 from osgeo import gdal
 from osgeo import ogr
 import numpy
@@ -58,7 +58,7 @@ class CarbonTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'file_list.txt'),
             args['workspace_dir'])
         for npv_filename in ['npv_fut.tif', 'npv_redd.tif']:
-            pygeoprocessing.testing.assert_rasters_equal(
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(REGRESSION_DATA, npv_filename),
                 os.path.join(self.workspace_dir, npv_filename), 1e-6)
 
@@ -86,7 +86,7 @@ class CarbonTests(unittest.TestCase):
         CarbonTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'file_list_fut_only.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'delta_cur_fut.tif'),
             os.path.join(self.workspace_dir, 'delta_cur_fut.tif'), 1e-6)
 

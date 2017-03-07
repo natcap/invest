@@ -5,7 +5,7 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing.assertions
+import natcap.invest.pygeoprocessing_0_3_3.testing.assertions
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
@@ -175,7 +175,7 @@ class HabitatSuitabilityTests(unittest.TestCase):
 
         for result_path, expected_path in zip(
                 result_path_list, expected_result_path_list):
-            pygeoprocessing.testing.assertions.assert_rasters_equal(
+            natcap.invest.pygeoprocessing_0_3_3.testing.assertions.assert_rasters_equal(
                 result_path, expected_path, tolerance)
 
     @staticmethod

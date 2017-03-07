@@ -8,9 +8,9 @@ import tempfile
 
 import numpy as np
 from osgeo import gdal
-from pygeoprocessing import geoprocessing as geoprocess
-import pygeoprocessing.testing as pygeotest
-from pygeoprocessing.testing import scm
+from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing as geoprocess
+import natcap.invest.pygeoprocessing_0_3_3.testing as pygeotest
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')

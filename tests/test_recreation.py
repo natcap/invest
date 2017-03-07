@@ -14,8 +14,8 @@ import functools
 import logging
 
 import Pyro4
-import pygeoprocessing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 import numpy
 from osgeo import ogr
 
@@ -128,7 +128,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_workspace_fetcher
 
-        pygeoprocessing.create_directories([self.workspace_dir])
+        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.workspace_dir])
 
         sample_point_data_path = os.path.join(
             REGRESSION_DATA, 'sample_data.csv')
@@ -208,7 +208,7 @@ class TestRecServer(unittest.TestCase):
                 self.workspace_dir, workspace_id + '.zip')
             zipfile.ZipFile(workspace_zip_path, 'r').extractall(
                 out_workspace_dir)
-            pygeoprocessing.testing.assert_vectors_equal(
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 aoi_path,
                 os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'),
                 1e-5)
@@ -222,7 +222,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_client
 
-        pygeoprocessing.create_directories([self.workspace_dir])
+        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.workspace_dir])
         empty_point_data_path = os.path.join(
             self.workspace_dir, 'empty_table.csv')
         open(empty_point_data_path, 'w').close()  # touch the file
@@ -313,7 +313,7 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, out_vector_filename)
         expected_vector_path = os.path.join(
             REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             expected_vector_path, result_vector_path, 1e-5)
 
         # ensure the remote workspace is as expected
@@ -324,7 +324,7 @@ class TestRecServer(unittest.TestCase):
         workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
         open(workspace_zip_path, 'wb').write(workspace_zip_binary)
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             aoi_path,
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1e-5)
 
@@ -417,7 +417,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
-        pygeoprocessing.create_directories([self.workspace_dir])
+        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.workspace_dir])
         point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
 
         # attempt to get an open port; could result in race condition but
@@ -674,7 +674,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'square_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 0.0)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -702,14 +702,14 @@ class RecreationRegressionTests(unittest.TestCase):
             self.workspace_dir, 'regression_coefficients.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'trivial_regression_coefficients.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1e-5)
 
         out_scenario_path = os.path.join(
             self.workspace_dir, 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'trivial_scenario_results.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_scenario_path, expected_scenario_path, 1e-5)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -728,7 +728,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 0.0)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -803,7 +803,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 0.0)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -841,7 +841,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_coefficient_vector_path, expected_coeff_vector_path, 1e-4)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)

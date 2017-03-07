@@ -7,7 +7,7 @@ import csv
 from osgeo import ogr
 from osgeo import gdal
 import numpy
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 
 from . import marine_water_quality_core
 from .. import utils
@@ -54,7 +54,7 @@ def execute(args):
     output_directory = os.path.join(args['workspace_dir'], 'output')
     intermediate_directory = os.path.join(
         args['workspace_dir'], 'intermediate')
-    pygeoprocessing.create_directories(
+    natcap.invest.pygeoprocessing_0_3_3.create_directories(
         [output_directory, intermediate_directory])
 
     # Create a grid based on the AOI
@@ -64,7 +64,7 @@ def execute(args):
     nodata_out = -1.0
     raster_out_uri = os.path.join(
         intermediate_directory, 'concentration_grid%s.tif' % file_suffix)
-    pygeoprocessing.create_raster_from_vector_extents_uri(
+    natcap.invest.pygeoprocessing_0_3_3.create_raster_from_vector_extents_uri(
         args['aoi_poly_uri'], pixel_size, gdal.GDT_Float32,
         nodata_out, raster_out_uri)
 
@@ -72,21 +72,21 @@ def execute(args):
     LOGGER.info("Creating grids for the interpolated tide E and ADV uv points")
     tide_e_uri = os.path.join(
         intermediate_directory, 'tide_e%s.tif' % file_suffix)
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         raster_out_uri, tide_e_uri, 'GTiff', nodata_out, gdal.GDT_Float32)
     adv_u_uri = os.path.join(
         intermediate_directory, 'adv_u%s.tif' % file_suffix)
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         raster_out_uri, adv_u_uri, 'GTiff', nodata_out, gdal.GDT_Float32,
         fill_value=0)
     adv_v_uri = os.path.join(
         intermediate_directory, 'adv_v%s.tif' % file_suffix)
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         raster_out_uri, adv_v_uri, 'GTiff', nodata_out, gdal.GDT_Float32,
         fill_value=0)
     in_water_uri = os.path.join(
         intermediate_directory, 'in_water%s.tif' % file_suffix)
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         raster_out_uri, in_water_uri, 'GTiff', nodata_out, gdal.GDT_Byte,
         fill_value=1)
 
@@ -105,15 +105,15 @@ def execute(args):
     # Interpolate the datasource points onto a raster the same size as
     # raster_out
     LOGGER.info("Interpolating kh_km2_day onto raster")
-    pygeoprocessing.vectorize_points_uri(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_points_uri(
         args['tide_e_points_uri'], 'E_km2_day', tide_e_uri)
     if 'adv_uv_points_uri' in args and args['adv_uv_points_uri'] != '':
         # if adv_uv_points is not defined, then those are all 0 rasters
         LOGGER.info("Interpolating U_m_sec_ onto raster")
-        pygeoprocessing.vectorize_points_uri(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_points_uri(
             args['adv_uv_points_uri'], 'U_m_sec_', adv_u_uri)
         LOGGER.info("Interpolating V_m_sec_ onto raster")
-        pygeoprocessing.vectorize_points_uri(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_points_uri(
             args['adv_uv_points_uri'], 'V_m_sec_', adv_v_uri)
 
     # Mask the interpolated points to the land polygon
@@ -128,7 +128,7 @@ def execute(args):
 
     source_point_values = {}
 
-    raster_out_gt = pygeoprocessing.get_geotransform_uri(raster_out_uri)
+    raster_out_gt = natcap.invest.pygeoprocessing_0_3_3.get_geotransform_uri(raster_out_uri)
 
     def convert_to_grid_coords(point):
         """Helper to convert source points to numpy grid coordinates
@@ -190,9 +190,9 @@ def execute(args):
     # Convert the georeferenced source coordinates to grid coordinates
     LOGGER.info("Solving advection/diffusion equation")
 
-    tide_e_memory_mapped_uri = pygeoprocessing.temporary_filename()
+    tide_e_memory_mapped_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
     #tide_e_memory_mapped_file = open(tide_e_memory_mapped_uri, 'wb')
-    tide_e_array = pygeoprocessing.load_memory_mapped_array(
+    tide_e_array = natcap.invest.pygeoprocessing_0_3_3.load_memory_mapped_array(
         tide_e_uri, tide_e_memory_mapped_uri)
 
     # convert E from km^2/day to m^2/day
@@ -200,11 +200,11 @@ def execute(args):
     tide_e_array[tide_e_array != nodata_out] *= 1000.0 ** 2
 
     # convert adv u from m/sec to m/day
-    adv_u_memory_mapped_uri = pygeoprocessing.temporary_filename()
-    adv_u_array = pygeoprocessing.load_memory_mapped_array(
+    adv_u_memory_mapped_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
+    adv_u_array = natcap.invest.pygeoprocessing_0_3_3.load_memory_mapped_array(
         adv_u_uri, adv_u_memory_mapped_uri)
-    adv_v_memory_mapped_uri = pygeoprocessing.temporary_filename()
-    adv_v_array = pygeoprocessing.load_memory_mapped_array(
+    adv_v_memory_mapped_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
+    adv_v_array = natcap.invest.pygeoprocessing_0_3_3.load_memory_mapped_array(
         adv_v_uri, adv_v_memory_mapped_uri)
     adv_u_array[adv_u_array != nodata_out] *= 86400.0
     adv_v_array[adv_v_array != nodata_out] *= 86400.0
@@ -212,7 +212,7 @@ def execute(args):
     # If the cells are square then it doesn't matter if we look at x or y
     # but if different, we need just one value, so take the average.  Not the
     # best, but better than nothing.
-    cell_size = pygeoprocessing.get_cell_size_from_uri(raster_out_uri)
+    cell_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(raster_out_uri)
 
     concentration_array = marine_water_quality_core.diffusion_advection_solver(
         source_point_values, args['kps'], in_water_array, tide_e_array,
@@ -232,11 +232,11 @@ def execute(args):
     # rasterize away anything outside of the AOI
     concentration_uri = os.path.join(
         output_directory, 'concentration%s.tif' % file_suffix)
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [raster_out_uri], lambda x: x, concentration_uri, gdal.GDT_Float32,
         nodata_out, cell_size, "intersection", aoi_uri=args['aoi_poly_uri'])
 
-    pygeoprocessing.calculate_raster_stats_uri(
+    natcap.invest.pygeoprocessing_0_3_3.calculate_raster_stats_uri(
         concentration_uri)
 
     LOGGER.info("Done with marine water quality.")

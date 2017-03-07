@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
@@ -55,13 +55,13 @@ class ScenarioProximityTests(unittest.TestCase):
                 REGRESSION_DATA, 'expected_file_list_regression.txt'),
             args['workspace_dir'])
 
-        pygeoprocessing.testing.assertions.assert_csv_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assertions.assert_csv_equal(
             os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
             os.path.join(
                 REGRESSION_DATA, 'farthest_from_edge_regression.csv'),
             rel_tol=1e-6)
 
-        pygeoprocessing.testing.assertions.assert_csv_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assertions.assert_csv_equal(
             os.path.join(self.workspace_dir, 'nearest_to_edge.csv'),
             os.path.join(REGRESSION_DATA, 'nearest_to_edge_regression.csv'),
             rel_tol=1e-6)
@@ -93,7 +93,7 @@ class ScenarioProximityTests(unittest.TestCase):
                 REGRESSION_DATA, 'expected_file_list_small_farthest.txt'),
             args['workspace_dir'])
 
-        pygeoprocessing.testing.assertions.assert_csv_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assertions.assert_csv_equal(
             os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
             os.path.join(
                 REGRESSION_DATA, 'small_farthest_from_edge_regression.csv'),

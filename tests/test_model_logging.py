@@ -12,7 +12,7 @@ import socket
 import Pyro4
 import numpy
 from osgeo import ogr
-from pygeoprocessing.testing import scm
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 
 class ModelLoggingTests(unittest.TestCase):

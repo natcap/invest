@@ -28,11 +28,11 @@ import contextlib
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 import natcap.invest
 import natcap.invest.iui
 from natcap.invest import fileio as fileio
-import pygeoprocessing.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 
 LOGGER = natcap.invest.iui.get_ui_logger(None)
 ENCODING = sys.getfilesystemencoding()
@@ -806,14 +806,14 @@ def _calculate_args_bounding_box(args_dict):
             # opens a table only
             local_bb = [0., 0., 0., 0.]
             if _is_gdal(arg):
-                local_bb = pygeoprocessing.get_bounding_box(arg)
-                projection_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
+                local_bb = natcap.invest.pygeoprocessing_0_3_3.get_bounding_box(arg)
+                projection_wkt = natcap.invest.pygeoprocessing_0_3_3.get_dataset_projection_wkt_uri(
                     arg)
                 spatial_ref = osr.SpatialReference()
                 spatial_ref.ImportFromWkt(projection_wkt)
             elif _is_ogr(arg):
-                local_bb = pygeoprocessing.get_datasource_bounding_box(arg)
-                spatial_ref = pygeoprocessing.get_spatial_ref_uri(arg)
+                local_bb = natcap.invest.pygeoprocessing_0_3_3.get_datasource_bounding_box(arg)
+                spatial_ref = natcap.invest.pygeoprocessing_0_3_3.get_spatial_ref_uri(arg)
 
             try:
                 # means there's a GIS type with a well defined bounding box
