@@ -50,6 +50,11 @@ _EXPECTED_GUILD_HEADERS = [
     'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_PATTERN,
     'alpha']
 
+_FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
+_EXPECTED_FARM_HEADERS = [
+    'season', 'crop_type', 'half_sat', 'p_managed',
+    _FARM_FLORAL_RESOURCES_PATTERN]
+
 
 def execute(args):
     """InVEST Pollination Model.
@@ -169,6 +174,30 @@ def execute(args):
                     header, args['landcover_biophysical_table_path'],
                     biophysical_table_headers))
 
+    LOGGER.info('Checking that farm polygon has expected headers')
+    farm_vector = ogr.Open(args['farm_vector_path'])
+    if farm_vector.GetLayerCount() != 1:
+        raise ValueError(
+            "Farm polygon at %s has %d layers when expecting only 1." % (
+                args['farm_vector_path'], farm_vector.GetLayerCount()))
+    farm_layer = farm_vector.GetLayer()
+    if farm_layer.GetGeomType() not in [
+            ogr.wkbPolygon, ogr.wkbMultiPolygon]:
+        raise ValueError(
+            "Farm layer not a polygon type, instead type %s" % (
+                farm_layer.GetGeomType()))
+    farm_layer_defn = farm_layer.GetLayerDefn()
+    farm_headers = [
+        farm_layer_defn.GetFieldDefn(i).GetName()
+        for i in xrange(farm_layer_defn.GetFieldCount())]
+    for header in _EXPECTED_FARM_HEADERS:
+        matches = re.findall(header, " ".join(farm_headers))
+        if len(matches) == 0:
+            raise ValueError(
+                "Missing an expected headers '%s'from %s.\n"
+                "Got these headers instead %s" % (
+                    header, args['farm_vector_path'], farm_headers))
+
     for header in biophysical_table_headers:
         match = re.match(_FLORAL_RESOURCES_AVAILABLE_PATTERN, header)
         if match:
@@ -179,15 +208,44 @@ def execute(args):
             substrate = match.group(1)
             substrate_to_header[substrate]['biophysical'] = match.group()
 
+    for header in farm_headers:
+        match = re.match(_FARM_FLORAL_RESOURCES_PATTERN, header)
+        if match:
+            season = match.group(1)
+            season_to_header[season]['farm'] = match.group()
+
     LOGGER.debug(substrate_to_header)
-    for header_type, lookup_table in itertools.chain(
-            substrate_to_header.iteritems(), season_to_header.iteritems()):
+    for substrate_type, lookup_table in substrate_to_header.iteritems():
         if len(lookup_table) != 2:
             raise ValueError(
                 "Expected both a biophysical and guild entry for '%s' but "
                 "instead found only %s. Ensure there are corresponding "
                 "entries of '%s' in both the guilds and biophysical "
-                "table." % (header_type, lookup_table, header_type))
+                "table." % (substrate_type, lookup_table, substrate_type))
+
+    for season_type, lookup_table in season_to_header.iteritems():
+        if len(lookup_table) != 3:
+            raise ValueError(
+                "Expected a biophysical, guild, and farm entry for '%s' but "
+                "instead found only %s. Ensure there are corresponding "
+                "entries of '%s' in both the guilds, biophysical "
+                "table, and farm fields." % (
+                    season_type, lookup_table, season_type))
+
+    farm_season_set = set()
+    for farm_feature in farm_layer:
+        farm_season_set.add(farm_feature.GetField('season'))
+
+    if len(farm_season_set.difference(season_to_header)) > 0:
+        raise ValueError(
+            "Found seasons in farm polygon that were not specified in the"
+            "biophysical table: %s.  Expected only these: %s" % (
+                farm_season_set.difference(season_to_header),
+                season_to_header))
+
+    season_to_rasterize_id = [
+        (season, season_id) for season_id, season in enumerate(
+            sorted(farm_season_set))]
 
     for nesting_substrate in substrate_to_header:
         LOGGER.info(
@@ -367,7 +425,7 @@ def execute(args):
             f_reg[pollinator_abudanance_id],
             gdal.GDT_Float32, args['workspace_dir'])
 
-    LOGGER.info("Calculating farm polinator index.")
+    LOGGER.info("Calculating farm pollinator index.")
     # rasterize farm managed pollinators on landscape first
     managed_bees_raster_path = os.path.join(
         intermediate_output_dir, "%s%s.tif" % (
