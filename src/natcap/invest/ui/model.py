@@ -153,7 +153,12 @@ class Model(QtWidgets.QMainWindow):
             QtWidgets.QSizePolicy.Expanding)
         self._central_widget.setLayout(QtWidgets.QVBoxLayout())
         self.status_bar = QtWidgets.QStatusBar()
-        self.validation_warning = QtWidgets.QLabel()
+        self.validation_warning = QtWidgets.QPushButton()
+        self.validation_warning.setStyleSheet(
+            'QPushButton: {padding: 0px; margin: 0px;}')
+        self.validation_warning.setFlat(True)
+        self.validation_warning.setAutoDefault(False)
+        self.validation_warning.setMaximumHeight(20)
         self.status_bar.addPermanentWidget(self.validation_warning)
         self.setStatusBar(self.status_bar)
         self.menuBar().setNativeMenuBar(True)
@@ -401,15 +406,20 @@ class Model(QtWidgets.QMainWindow):
                     validation_warnings)
         # Double-check that there aren't any required inputs that aren't
         # satisfied.
-        if (validation_warnings or any(
-                [input_.required and not input_.valid()
-                 for input_ in self.inputs()])):
-            self.validation_warning.setText('Warnings!')
+        required_warnings = [input_ for input_ in self.inputs()
+                             if input_.required and not input_.valid()]
+        if (validation_warnings or required_warnings):
+            self.validation_warning.setText('(%s)' % (
+                str(len(validation_warnings) + len(required_warnings))))
             icon = qtawesome.icon('fa.times', color='red')
+            self.validation_warning.setStyleSheet(
+                'QPushButton {color: red}')
         else:
-            self.validation_warning.setText('All good!')
+            self.validation_warning.setText('')
             icon = qtawesome.icon('fa.check', color='green')
-        self.validation_warning.setPixmap(icon.pixmap(16, 16))
+            self.validation_warning.setStyleSheet(
+                'QPushButton {color: green;}')
+        self.validation_warning.setIcon(icon)
 
     def inputs(self):
         return [ref for ref in self.__dict__.values()
