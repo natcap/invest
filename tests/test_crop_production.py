@@ -35,7 +35,7 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest import crop_production_percentile
 
         args = {
-            'workspace_dir': 'del_test_crop_production_workspace',
+            'workspace_dir': r'C:\Users\rpsharp\Documents\del_test_crop_production_workspace',
             'results_suffix': '',
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA_PATH, 'landcover.tif'),
