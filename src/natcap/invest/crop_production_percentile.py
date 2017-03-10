@@ -208,8 +208,8 @@ def execute(args):
             gdal.GDT_Float32, observed_yield_nodata)
 
     nutrient_table = utils.build_lookup_from_csv(
-        os.path.join(args['global_data_path'], 'nutrient_contents_table.csv'),
-        'crop', to_lower=False)
+        os.path.join(args['global_data_path'], 'cropNutrient.csv'),
+        'filenm', to_lower=False)
 
     LOGGER.info("Report table")
     result_table_path = os.path.join(
@@ -236,7 +236,7 @@ def execute(args):
             result_table.write(crop_name)
             production_lookup = {}
             nutrient_factor = 1e4 * (
-                1.0 - nutrient_table[crop_name]['fraction_refuse'])
+                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             for yield_percentile_id in sorted(yield_percentile_headers):
                 yield_percentile_raster_path = os.path.join(
                     intermediate_output_dir, '%s_%s%s.tif' % (
