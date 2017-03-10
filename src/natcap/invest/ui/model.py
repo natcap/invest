@@ -127,6 +127,42 @@ def _prompt_for_scenario_options():
     return None
 
 
+class WholeModelValidationErrorDialog(QtWidgets.QDialog):
+    def __init__(self):
+        QtWidgets.QDialog.__init__(self)
+        self.setLayout(QtWidgets.QVBoxLayout())
+
+        self.button = QtWidgets.QPushButton()
+        self.cog_icon = qtawesome.icon('fa.cog',
+                                       animation=qtawesome.Spin(self.button))
+        self.button.setIcon(self.cog_icon)
+        self.button.setFlat(True)
+        self.button.setIconSize(QtCore.QSize(64, 64))
+        self.layout().addWidget(self.button)
+
+        self.label = QtWidgets.QLabel('<h2>Validating inputs ...</h2>')
+        self.layout().addWidget(self.label)
+
+        self.errors_label = QtWidgets.QLabel('')
+        self.layout().addWidget(self.errors_label)
+
+        self.buttonbox = QtWidgets.QDialogButtonBox()
+        self.back_button = QtWidgets.QPushButton('Back')
+        self.buttonbox.addButton(self.back_button,
+                                 QtWidgets.QDialogButtonBox.RejectRole)
+        self.layout().addWidget(self.buttonbox)
+
+    def validation_started(self):
+        # Show spinny cog
+        pass
+
+    def validation_finished(self, validation_warnings):
+        self.errors_label.setText(
+            '<ul>{list_items}</ul>'.format(
+                list_items=''.join(['<li>{text}</li>'.format(
+                    text=warning_) for warning_ in validation_warnings])))
+
+
 class Model(QtWidgets.QMainWindow):
     label = None
     target = None
@@ -138,6 +174,7 @@ class Model(QtWidgets.QMainWindow):
         self._quickrun = False
         self._validator = inputs.Validator(parent=self)
         self._validator.finished.connect(self._validation_finished)
+        self._validation_report_dialog = WholeModelValidationErrorDialog()
 
         # These attributes should be defined in subclass
         for attr in ('label', 'target', 'validator', 'localdoc'):
@@ -160,6 +197,8 @@ class Model(QtWidgets.QMainWindow):
         self.validation_warning.setAutoDefault(False)
         self.validation_warning.setMaximumHeight(20)
         self.status_bar.addPermanentWidget(self.validation_warning)
+        self.validation_warning.pressed.connect(
+            self._validation_report_dialog.show)
         self.setStatusBar(self.status_bar)
         self.menuBar().setNativeMenuBar(True)
         self._central_widget.layout().setSizeConstraint(
