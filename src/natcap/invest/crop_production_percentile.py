@@ -1,4 +1,5 @@
 """InVEST Crop Production Percentile Model."""
+import collections
 import re
 import os
 import logging
@@ -225,29 +226,27 @@ def execute(args):
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
+    total_nutrient_table = collections.defaultdict(
+        lambda: collections.defaultdict(float))
     with open(result_table_path, 'wb') as result_table:
         result_table.write(
             'crop,' + ','.join(production_percentile_headers) +
             ',production_observed' + ',' + ','.join(nutrient_headers) + '\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
-            print crop_name
             production_lookup = {}
-            production_factor = pixel_area_ha * (
+            nutrient_factor = 1e4 * (
                 1.0 - nutrient_table[crop_name]['fraction_refuse'])
             for yield_percentile_id in sorted(yield_percentile_headers):
-                print yield_percentile_id
                 yield_percentile_raster_path = os.path.join(
                     intermediate_output_dir, '%s_%s%s.tif' % (
                         crop_name, yield_percentile_id, file_suffix))
                 yield_sum = 0.0
-
                 for _, yield_block in pygeoprocessing.iterblocks(
                         yield_percentile_raster_path):
                     yield_sum += numpy.sum(
                         yield_block[_NODATA_YIELD != yield_block])
-                print yield_sum
-                production = yield_sum * production_factor
+                production = yield_sum * pixel_area_ha
                 production_lookup[yield_percentile_id] = production
                 result_table.write(",%f" % production)
             yield_sum = 0.0
@@ -261,15 +260,18 @@ def execute(args):
                     local_observed_masked_yield_raster_path):
                 yield_sum += numpy.sum(
                     yield_block[observed_yield_nodata != yield_block])
-            production = yield_sum * production_factor
+            production = yield_sum * pixel_area_ha
             production_lookup['observed'] = production
             result_table.write(",%f" % production)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for yield_percentile_id in sorted(yield_percentile_headers):
-                    result_table.write(
-                        ",%f" % (
-                            production_lookup[yield_percentile_id] *
-                            nutrient_table[crop_name][nutrient_id]))
+                    total_nutrient_table[nutrient_id][yield_percentile_id] += (
+                        nutrient_factor *
+                        production_lookup[yield_percentile_id] *
+                        nutrient_table[crop_name][nutrient_id])
+                    result_table.write(",%f" % (
+                        total_nutrient_table[nutrient_id][yield_percentile_id]
+                        ))
                 result_table.write(
                     ",%f" % (
                         production_lookup['observed'] *

@@ -44,4 +44,3 @@ class CropProductionTests(unittest.TestCase):
             'global_data_path': MODEL_DATA_PATH
         }
         crop_production_percentile.execute(args)
-        self.fail("No test yet.")
