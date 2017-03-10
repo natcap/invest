@@ -1,4 +1,5 @@
 """InVEST Crop Production Percentile Model."""
+import re
 import os
 import logging
 
@@ -212,10 +213,15 @@ def execute(args):
     LOGGER.info("Report table")
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
+    production_percentile_headers = [
+        'production_' + re.match(
+            _YIELD_PERCENTILE_FIELD_PATTERN,
+            yield_percentile_id).group(1) for yield_percentile_id in sorted(
+                yield_percentile_headers)]
     with open(result_table_path, 'wb') as result_table:
         result_table.write(
-            'crop,' + ','.join(sorted(yield_percentile_headers)) +
-            ',observed_production\n')
+            'crop,' + ','.join(production_percentile_headers) +
+            ',production_observed\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
             print crop_name
