@@ -190,11 +190,7 @@ class Model(QtWidgets.QMainWindow):
             QtWidgets.QSizePolicy.Expanding)
         self._central_widget.setLayout(QtWidgets.QVBoxLayout())
         self.status_bar = QtWidgets.QStatusBar()
-        self.validation_warning = QtWidgets.QPushButton()
-        self.validation_warning.setStyleSheet(
-            'QPushButton: {padding: 0px; margin: 0px;}')
-        self.validation_warning.setFlat(True)
-        self.validation_warning.setAutoDefault(False)
+        self.validation_warning = QtWidgets.QToolButton()
         self.validation_warning.setMaximumHeight(20)
         self.status_bar.addPermanentWidget(self.validation_warning)
         self.validation_warning.pressed.connect(
