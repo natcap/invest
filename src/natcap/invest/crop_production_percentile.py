@@ -93,8 +93,8 @@ def execute(args):
         crop_lucode = crop_to_landcover_table[crop_name]['lucode']
         print crop_name, crop_lucode
         crop_climate_bin_raster_path = os.path.join(
-            args['global_data_path'], 'climate_bin_maps',
-            '%s_climate_bin_map.tif' % crop_name)
+            args['global_data_path'], 'extended_climate_bin_maps',
+            'extendedclimatebins%s.tif' % crop_name)
         climate_percentile_yield_table_path = os.path.join(
             args['global_data_path'], 'climate_percentile_yield',
             '%s_percentile_yield_table.csv' % crop_name)
