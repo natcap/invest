@@ -136,6 +136,8 @@ class Model(QtWidgets.QMainWindow):
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
         self._quickrun = False
+        self._validator = inputs.Validator(parent=self)
+        self._validator.finished.connect(self._validation_finished)
 
         # These attributes should be defined in subclass
         for attr in ('label', 'target', 'validator', 'localdoc'):
@@ -151,6 +153,8 @@ class Model(QtWidgets.QMainWindow):
             QtWidgets.QSizePolicy.Expanding)
         self._central_widget.setLayout(QtWidgets.QVBoxLayout())
         self.status_bar = QtWidgets.QStatusBar()
+        self.validation_warning = QtWidgets.QLabel()
+        self.status_bar.addPermanentWidget(self.validation_warning)
         self.setStatusBar(self.status_bar)
         self.menuBar().setNativeMenuBar(True)
         self._central_widget.layout().setSizeConstraint(
@@ -391,7 +395,45 @@ class Model(QtWidgets.QMainWindow):
     def assemble_args(self):
         raise NotImplementedError
 
+    def _validation_finished(self, validation_warnings):
+        inputs.QT_APP.processEvents()
+        LOGGER.info('Whole-model validation finished with: %s',
+                    validation_warnings)
+        # Double-check that there aren't any required inputs that aren't
+        # satisfied.
+        if (validation_warnings or any(
+                [input_.required and not input_.valid()
+                 for input_ in self.inputs()])):
+            self.validation_warning.setText('Warnings!')
+            icon = qtawesome.icon('fa.times', color='red')
+        else:
+            self.validation_warning.setText('All good!')
+            icon = qtawesome.icon('fa.check', color='green')
+        self.validation_warning.setPixmap(icon.pixmap(16, 16))
+
+    def inputs(self):
+        return [ref for ref in self.__dict__.values()
+                if isinstance(ref, inputs.Input)]
+
     def run(self, quickrun=False):
+        # recurse through attributes of self.form.  If the attribute is an
+        # instance of inputs.Input, then link its value_changed signal to the
+        # model-wide validation slot.
+        def _validate_all_inputs(new_value):
+            self._validator.validate(
+                target=self.validator,
+                args=self.assemble_args(),
+                limit_to=None)
+
+        for input_obj in self.inputs():
+            input_obj.value_changed.connect(_validate_all_inputs)
+            try:
+                input_obj.validity_changed.connect(_validate_all_inputs)
+            except AttributeError:
+                # Not all inputs can have validity (e.g. Container, dropdown)
+                pass
+
+        # Set up quickrun options if we're doing a quickrun
         if quickrun:
             @QtCore.Slot()
             def _quickrun_close_model():
