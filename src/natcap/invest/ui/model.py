@@ -7,6 +7,7 @@ import warnings
 import collections
 import json
 import textwrap
+import cgi
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -130,6 +131,7 @@ def _prompt_for_scenario_options():
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
     def __init__(self):
         QtWidgets.QDialog.__init__(self)
+        self.warnings = []
         self.setLayout(QtWidgets.QVBoxLayout())
 
         self.button = QtWidgets.QPushButton()
@@ -143,24 +145,32 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.label = QtWidgets.QLabel('<h2>Validating inputs ...</h2>')
         self.layout().addWidget(self.label)
 
-        self.errors_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.errors_label)
-
         self.buttonbox = QtWidgets.QDialogButtonBox()
         self.back_button = QtWidgets.QPushButton('Back')
+        self.back_button.pressed.connect(self.close)
         self.buttonbox.addButton(self.back_button,
                                  QtWidgets.QDialogButtonBox.RejectRole)
         self.layout().addWidget(self.buttonbox)
 
     def validation_started(self):
         # Show spinny cog
-        pass
+        self.button.setVisible(True)
+        self.label.setText('<h2>Validating inputs ...</h2>')
 
     def validation_finished(self, validation_warnings):
-        self.errors_label.setText(
-            '<ul>{list_items}</ul>'.format(
-                list_items=''.join(['<li>{text}</li>'.format(
-                    text=warning_) for warning_ in validation_warnings])))
+        LOGGER.info('Posting validation warnings to WMV dialog: %s',
+                    validation_warnings)
+        self.warnings = validation_warnings
+
+        if validation_warnings:
+            # cgi.escape handles escaping of characters <, >, &, " for HTML.
+            self.label.setText(
+                '<ul>%s</ul>' % ''.join(
+                    ['<li>%s</li>' % cgi.escape(warning_, quote=True)
+                     for warning_ in validation_warnings]))
+            self.label.repaint()
+            self.label.setVisible(True)
+            LOGGER.info('Label text: %s', self.label.text())
 
 
 class Model(QtWidgets.QMainWindow):
@@ -366,6 +376,12 @@ class Model(QtWidgets.QMainWindow):
     def execute_model(self):
         args = self.assemble_args()
 
+        # If we have validation warnings, show them and return to inputs.
+        if self._validation_report_dialog.warnings:
+            self._validation_report_dialog.show()
+            self._validation_report_dialog.exec_()
+            return
+
         # If the workspace exists, confirm the overwrite.
         if os.path.exists(args['workspace_dir']):
             dialog = QtWidgets.QMessageBox()
@@ -442,7 +458,8 @@ class Model(QtWidgets.QMainWindow):
         # Double-check that there aren't any required inputs that aren't
         # satisfied.
         required_warnings = [input_ for input_ in self.inputs()
-                             if input_.required and not input_.valid()]
+                             if all((input_.required,
+                                     not input_.value()))]
         if (validation_warnings or required_warnings):
             self.validation_warning.setText('(%s)' % (
                 str(len(validation_warnings) + len(required_warnings))))
@@ -455,6 +472,10 @@ class Model(QtWidgets.QMainWindow):
             self.validation_warning.setStyleSheet(
                 'QPushButton {color: green;}')
         self.validation_warning.setIcon(icon)
+
+        # post warnings to the WMV dialog
+        warnings_ = validation_warnings + [str(input_) for input_ in required_warnings]
+        self._validation_report_dialog.validation_finished(warnings_)
 
     def inputs(self):
         return [ref for ref in self.__dict__.values()
