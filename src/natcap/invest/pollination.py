@@ -305,22 +305,39 @@ def execute(args):
         LOGGER.info(
             "Mapping landcover to available floral resources for season %s",
             season_id)
-        relative_floral_abudance_id = (
+        relative_floral_resources_id = (
             season_to_header[season_id]['biophysical'])
-        f_reg[relative_floral_abudance_id] = os.path.join(
+        f_reg[relative_floral_resources_id] = os.path.join(
             intermediate_output_dir,
-            "%s%s.tif" % (relative_floral_abudance_id, file_suffix))
+            "%s%s.tif" % (relative_floral_resources_id, file_suffix))
 
         landcover_to_floral_abudance_table = dict([
             (lucode, landcover_biophysical_table[lucode][
-                relative_floral_abudance_id]) for lucode in
+                relative_floral_resources_id]) for lucode in
             landcover_biophysical_table])
 
         pygeoprocessing.reclassify_raster(
             (args['landcover_raster_path'], 1),
             landcover_to_floral_abudance_table,
-            f_reg[relative_floral_abudance_id], gdal.GDT_Float32,
+            f_reg[relative_floral_resources_id], gdal.GDT_Float32,
             _INDEX_NODATA, exception_flag='values_required')
+
+        LOGGER.info(
+            "Overriding landcover floral resources where a farm polygon is "
+            "available.")
+        floral_resources_raster = gdal.Open(
+            f_reg[relative_floral_resources_id], gdal.GA_Update)
+        farm_vector = ogr.Open(args['farm_vector_path'])
+        farm_layer = farm_vector.GetLayer()
+        gdal.RasterizeLayer(
+            floral_resources_raster, [1], farm_layer,
+            options=['ATTRIBUTE=%s' % (
+                _FARM_FLORAL_RESOURCES_PATTERN.replace(
+                    '([^_]+)', season_id))])
+        del farm_layer
+        del farm_vector
+        gdal.Dataset.__swig_destroy__(floral_resources_raster)
+        del floral_resources_raster
 
     floral_resources_path_list = [
         f_reg[season_to_header[season_id]['biophysical']]
