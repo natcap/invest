@@ -52,9 +52,10 @@ _EXPECTED_GUILD_HEADERS = [
     'alpha']
 
 _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
+_FARM_NESTING_SUBSTRATE_PATTERN = 'n_([^_]+)'
 _EXPECTED_FARM_HEADERS = [
     'season', 'crop_type', 'half_sat', 'p_managed',
-    _FARM_FLORAL_RESOURCES_PATTERN]
+    _FARM_FLORAL_RESOURCES_PATTERN, _FARM_NESTING_SUBSTRATE_PATTERN]
 
 
 def execute(args):
@@ -214,24 +215,21 @@ def execute(args):
         if match:
             season = match.group(1)
             season_to_header[season]['farm'] = match.group()
+        match = re.match(_FARM_NESTING_SUBSTRATE_PATTERN, header)
+        if match:
+            substrate = match.group(1)
+            substrate_to_header[substrate]['farm'] = match.group()
 
     LOGGER.debug(substrate_to_header)
-    for substrate_type, lookup_table in substrate_to_header.iteritems():
-        if len(lookup_table) != 2:
-            raise ValueError(
-                "Expected both a biophysical and guild entry for '%s' but "
-                "instead found only %s. Ensure there are corresponding "
-                "entries of '%s' in both the guilds and biophysical "
-                "table." % (substrate_type, lookup_table, substrate_type))
-
-    for season_type, lookup_table in season_to_header.iteritems():
+    for table_type, lookup_table in itertools.chain(
+            season_to_header.iteritems(), substrate_to_header.iteritems()):
         if len(lookup_table) != 3:
             raise ValueError(
                 "Expected a biophysical, guild, and farm entry for '%s' but "
                 "instead found only %s. Ensure there are corresponding "
                 "entries of '%s' in both the guilds, biophysical "
                 "table, and farm fields." % (
-                    season_type, lookup_table, season_type))
+                    table_type, lookup_table, table_type))
 
     farm_season_set = set()
     for farm_feature in farm_layer:
@@ -263,6 +261,23 @@ def execute(args):
             (args['landcover_raster_path'], 1),
             landcover_to_nesting_suitability_table, f_reg[nesting_id],
             gdal.GDT_Float32, _INDEX_NODATA, exception_flag='values_required')
+
+        LOGGER.info(
+            "Overriding landcover nesting substrates where a farm polygon is "
+            "available.")
+        nesting_substrate_raster = gdal.Open(
+            f_reg[nesting_id], gdal.GA_Update)
+        farm_vector = ogr.Open(args['farm_vector_path'])
+        farm_layer = farm_vector.GetLayer()
+        gdal.RasterizeLayer(
+            nesting_substrate_raster, [1], farm_layer,
+            options=['ATTRIBUTE=%s' % (
+                _FARM_NESTING_SUBSTRATE_PATTERN.replace(
+                    '([^_]+)', nesting_substrate))])
+        del farm_layer
+        del farm_vector
+        gdal.Dataset.__swig_destroy__(nesting_substrate_raster)
+        del nesting_substrate_raster
 
     nesting_substrate_path_list = [
         f_reg[substrate_to_header[nesting_substrate]['biophysical']]
@@ -312,14 +327,14 @@ def execute(args):
             intermediate_output_dir,
             "%s%s.tif" % (relative_floral_resources_id, file_suffix))
 
-        landcover_to_floral_abudance_table = dict([
+        landcover_to_floral_resources_table = dict([
             (lucode, landcover_biophysical_table[lucode][
                 relative_floral_resources_id]) for lucode in
             landcover_biophysical_table])
 
         pygeoprocessing.reclassify_raster(
             (args['landcover_raster_path'], 1),
-            landcover_to_floral_abudance_table,
+            landcover_to_floral_resources_table,
             f_reg[relative_floral_resources_id], gdal.GDT_Float32,
             _INDEX_NODATA, exception_flag='values_required')
 
