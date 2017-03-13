@@ -474,7 +474,9 @@ class Model(QtWidgets.QMainWindow):
         self.validation_warning.setIcon(icon)
 
         # post warnings to the WMV dialog
-        warnings_ = validation_warnings + [str(input_) for input_ in required_warnings]
+        warnings_ = validation_warnings + [
+            '%s: Input is required' % input_.label
+            for input_ in required_warnings]
         self._validation_report_dialog.validation_finished(warnings_)
 
     def inputs(self):
