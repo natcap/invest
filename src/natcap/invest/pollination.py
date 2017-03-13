@@ -32,6 +32,7 @@ _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
 _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessable_floral_resources_%s'
 _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
 _POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
+_RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN = r'raw_pollinator_abundance_%s_index'
 _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
     r'local_floral_resource_availability_%s_index')
 
@@ -344,6 +345,7 @@ def execute(args):
         for season_id in sorted(season_to_header)]
 
     species_foraging_activity_per_season = None
+    raw_abundance_nodata = None
     for species_id in guild_table:
         LOGGER.info(
             "Making local floral resources map for species %s", species_id)
@@ -430,17 +432,46 @@ def execute(args):
             _pollinator_supply_op, f_reg[pollinator_supply_id],
             gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
 
-        LOGGER.info("Calculating pollinator abundance for %s")
+        LOGGER.info("Calculating raw pollinator abundance for %s")
+        raw_pollinator_abundance_id = (
+            _RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id)
+        f_reg[raw_pollinator_abundance_id] = os.path.join(
+            output_dir, "%s%s.tif" % (
+                raw_pollinator_abundance_id, file_suffix))
+        _normalized_convolve_2d(
+            (f_reg[pollinator_supply_id], 1),
+            (f_reg[species_file_kernel_id], 1),
+            f_reg[raw_pollinator_abundance_id],
+            gdal.GDT_Float32, args['workspace_dir'])
+
+        LOGGER.info(
+            "Calculating pollinator abundance by scaling the raw by floral "
+            "resources available for %s")
         pollinator_abudanance_id = (
             _POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id)
         f_reg[pollinator_abudanance_id] = os.path.join(
             output_dir,
             pollinator_abudanance_id + "%s.tif" % file_suffix)
-        _normalized_convolve_2d(
-            (f_reg[pollinator_supply_id], 1),
-            (f_reg[species_file_kernel_id], 1),
-            f_reg[pollinator_abudanance_id],
-            gdal.GDT_Float32, args['workspace_dir'])
+
+        raw_abundance_nodata = pygeoprocessing.get_raster_info(
+            f_reg[raw_pollinator_abundance_id])['nodata'][0]
+
+        def _pollinator_abudance_op(raw_abundance, floral_resources):
+            """Multiply raw_abundance by floral_resources and skip nodata."""
+            result = numpy.empty(raw_abundance.shape, dtype=numpy.float32)
+            result[:] = _INDEX_NODATA
+            valid_mask = (
+                (raw_abundance_nodata != raw_abundance) &
+                (floral_resources != _INDEX_NODATA))
+            result[valid_mask] = (
+                raw_abundance[valid_mask] * floral_resources[valid_mask])
+            return result
+
+        pygeoprocessing.raster_calculator(
+            [(f_reg[raw_pollinator_abundance_id], 1),
+             (f_reg[local_floral_resource_availability_id], 1)],
+            _pollinator_abudance_op, f_reg[pollinator_abudanance_id],
+            gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
 
     LOGGER.info("Calculating farm pollinator index.")
     # rasterize farm managed pollinators on landscape first
