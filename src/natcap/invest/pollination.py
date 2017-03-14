@@ -51,10 +51,12 @@ _EXPECTED_GUILD_HEADERS = [
     'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_PATTERN,
     'alpha']
 
+_HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
 _FARM_NESTING_SUBSTRATE_PATTERN = 'n_([^_]+)'
+_HALF_SATURATION_FARM_HEADER = 'half_sat'
 _EXPECTED_FARM_HEADERS = [
-    'season', 'crop_type', 'half_sat', 'p_managed',
+    'season', 'crop_type', _HALF_SATURATION_FARM_HEADER, 'p_managed',
     _FARM_FLORAL_RESOURCES_PATTERN, _FARM_NESTING_SUBSTRATE_PATTERN]
 
 
@@ -516,13 +518,28 @@ def execute(args):
     del managed_raster
 
     LOGGER.info("Calculating farm yields")
+    farm_vector = ogr.Open(args['farm_vector_path'])
+    farm_layer = farm_vector.GetLayer()
     for season_id in season_to_header:
         LOGGER.info("Calculating yield for season %s")
-        pass
+        half_saturation_file_path = os.path.join(
+            intermediate_output_dir,
+            _HALF_SATURATION_SEASON_FILE_PATTERN % season_id + (
+                '%s.tif' % file_suffix))
+        pygeoprocessing.new_raster_from_base(
+            args['landcover_raster_path'], half_saturation_file_path,
+            gdal.GDT_Float32, [_INDEX_NODATA],
+            fill_value_list=[_INDEX_NODATA])
+        farm_layer.SetAttributeFilter(str("season = '%s'" % season_id))
+        half_saturation_raster = gdal.Open(
+            half_saturation_file_path, gdal.GA_Update)
+        gdal.RasterizeLayer(
+            half_saturation_raster, [1], farm_layer,
+            options=['ATTRIBUTE=%s' % _HALF_SATURATION_FARM_HEADER])
+        gdal.Dataset.__swig_destroy__(half_saturation_raster)
+        half_saturation_raster = None
 
-    # per season, rasterize each farm type
-    # raster calcualtor pass managed polinators, farm/season masks, pollinator abundance per season
-    # FP(f,x)=MP(f)+sSPA(x,s)FA(s,j(f))
+
 
     #pygeoprocessing.zonal_statistics(
     #    base_raster_path_band, aggregating_vector_path,
