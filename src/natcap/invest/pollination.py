@@ -116,7 +116,7 @@ def execute(args):
                 pattern such that `substrate` also matches the nesting
                 substrate headers in the biophysical and guild table.  Any
                 areas that overlap the landcover map will replace nesting
-                substrate suitablity with this value.  Ranges from 0..1.
+                substrate suitability with this value.  Ranges from 0..1.
 
     Returns:
         None
