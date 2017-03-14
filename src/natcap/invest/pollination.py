@@ -107,6 +107,16 @@ def execute(args):
                 representing the proportion of yield dependant on pollinators.
             * p_managed (float): proportion of pollinators that come from
                 non-native/managed hives.
+            * f_[season] (float): any number of fields that match this pattern
+                such that `season` also matches the season headers in the
+                biophysical and guild table.  Any areas that overlap the
+                landcover map will replace seasonal floral resources with
+                this value.  Ranges from 0..1.
+            * n_[substrate] (float): any number of fields that match this
+                pattern such that `substrate` also matches the nesting
+                substrate headers in the biophysical and guild table.  Any
+                areas that overlap the landcover map will replace nesting
+                substrate suitablity with this value.  Ranges from 0..1.
 
     Returns:
         None
