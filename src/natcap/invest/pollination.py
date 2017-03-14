@@ -27,7 +27,7 @@ _TMP_BASE_FILES = {
 
 _INDEX_NODATA = -1.0
 
-_MANAGED_BEES_RASTER_FILE_PATTERN = r'managed_bees'
+_MANAGED_BEES_RASTER_FILE_PATTERN = r'managed_bees_%s'
 _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
 _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessable_floral_resources_%s'
 _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
@@ -52,6 +52,7 @@ _EXPECTED_GUILD_HEADERS = [
     'alpha']
 
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
+_FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
 _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
 _FARM_NESTING_SUBSTRATE_PATTERN = 'n_([^_]+)'
 _HALF_SATURATION_FARM_HEADER = 'half_sat'
@@ -59,6 +60,7 @@ _EXPECTED_FARM_HEADERS = [
     'season', 'crop_type', _HALF_SATURATION_FARM_HEADER, 'p_managed',
     _FARM_FLORAL_RESOURCES_PATTERN, _FARM_NESTING_SUBSTRATE_PATTERN]
 
+_POLLINATOR_YIELD_FILE_PATTERN = 'pollinator_yield_%s'
 
 def execute(args):
     """InVEST Pollination Model.
@@ -463,7 +465,7 @@ def execute(args):
         raw_pollinator_abundance_id = (
             _RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id)
         f_reg[raw_pollinator_abundance_id] = os.path.join(
-            output_dir, "%s%s.tif" % (
+            intermediate_output_dir, "%s%s.tif" % (
                 raw_pollinator_abundance_id, file_suffix))
         _normalized_convolve_2d(
             (f_reg[pollinator_supply_id], 1),
@@ -500,28 +502,11 @@ def execute(args):
             _pollinator_abudance_op, f_reg[pollinator_abudanance_id],
             gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
 
-    LOGGER.info("Calculating farm pollinator index.")
-    # rasterize farm managed pollinators on landscape first
-    managed_bees_raster_path = os.path.join(
-        intermediate_output_dir, "%s%s.tif" % (
-            _MANAGED_BEES_RASTER_FILE_PATTERN, file_suffix))
-    pygeoprocessing.new_raster_from_base(
-        args['landcover_raster_path'], managed_bees_raster_path,
-        gdal.GDT_Float32, [_INDEX_NODATA])
-
-    managed_raster = gdal.Open(managed_bees_raster_path, gdal.GA_Update)
-    shapefile = ogr.Open(args['farm_vector_path'])
-    layer = shapefile.GetLayer()
-    gdal.RasterizeLayer(
-        managed_raster, [1], layer, options=['ATTRIBUTE=p_managed'])
-    gdal.Dataset.__swig_destroy__(managed_raster)
-    del managed_raster
-
     LOGGER.info("Calculating farm yields")
     farm_vector = ogr.Open(args['farm_vector_path'])
     farm_layer = farm_vector.GetLayer()
     for season_id in season_to_header:
-        LOGGER.info("Calculating yield for season %s")
+        LOGGER.info("Rasterizing half saturation for season %s")
         half_saturation_file_path = os.path.join(
             intermediate_output_dir,
             _HALF_SATURATION_SEASON_FILE_PATTERN % season_id + (
@@ -530,7 +515,7 @@ def execute(args):
             args['landcover_raster_path'], half_saturation_file_path,
             gdal.GDT_Float32, [_INDEX_NODATA],
             fill_value_list=[_INDEX_NODATA])
-        farm_layer.SetAttributeFilter(str("season = '%s'" % season_id))
+        farm_layer.SetAttributeFilter(str("season='%s'" % season_id))
         half_saturation_raster = gdal.Open(
             half_saturation_file_path, gdal.GA_Update)
         gdal.RasterizeLayer(
@@ -539,7 +524,84 @@ def execute(args):
         gdal.Dataset.__swig_destroy__(half_saturation_raster)
         half_saturation_raster = None
 
+        LOGGER.info("Rasterizing managed farm pollinators for season %s")
+        # rasterize farm managed pollinators on landscape first
+        managed_bees_raster_path = os.path.join(
+            intermediate_output_dir, "%s%s.tif" % (
+                _MANAGED_BEES_RASTER_FILE_PATTERN % season_id, file_suffix))
+        pygeoprocessing.new_raster_from_base(
+            args['landcover_raster_path'], managed_bees_raster_path,
+            gdal.GDT_Float32, [_INDEX_NODATA])
 
+        managed_raster = gdal.Open(managed_bees_raster_path, gdal.GA_Update)
+        gdal.RasterizeLayer(
+            managed_raster, [1], farm_layer, options=['ATTRIBUTE=p_managed'])
+        gdal.Dataset.__swig_destroy__(managed_raster)
+        del managed_raster
+        LOGGER.info("Calculating farm pollinators for season %s")
+
+        wild_pollinator_activity = [
+            guild_table[species_id][season_to_header[season_id]['guild']]
+            for species_id in sorted(guild_table)]
+
+        def _farm_pollinators_op(
+                managed_pollinator_abundance, *wild_pollinator_abundance):
+            """Calculate the max of all pollinators.
+
+                Wild pollinators need to be scaled by their seasonal foraging
+                activity index included in the closure.
+            """
+            result = numpy.empty(
+                managed_pollinator_abundance.shape, dtype=numpy.float32)
+            valid_mask = wild_pollinator_abundance[0] != _INDEX_NODATA
+            result[:] = _INDEX_NODATA
+            result[valid_mask] = numpy.max(
+                (managed_pollinator_abundance[valid_mask],
+                 numpy.max([
+                    activity * abundance[valid_mask]
+                    for abundance, activity in zip(
+                        wild_pollinator_abundance, wild_pollinator_activity)],
+                    axis=0)), axis=0)
+            return result
+
+        wild_pollinator_abundance_band_paths = [
+            (f_reg[_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id], 1)
+            for species_id in sorted(guild_table)]
+
+        farm_pollinators_path = os.path.join(
+            intermediate_output_dir, '%s%s.tif' % (
+                _FARM_POLLINATORS_FILE_PATTERN % season_id, file_suffix))
+
+        pygeoprocessing.raster_calculator(
+            [(managed_bees_raster_path, 1)] +
+            wild_pollinator_abundance_band_paths, _farm_pollinators_op,
+            farm_pollinators_path, gdal.GDT_Float32, _INDEX_NODATA,
+            calc_raster_stats=False)
+
+        LOGGER.info("Calculating farm yield.")
+
+        def _farm_yield_op(half_sat, farm_pollinators):
+            result = numpy.empty(half_sat.shape, dtype=numpy.float32)
+            result[:] = _INDEX_NODATA
+            valid_mask = (
+                farm_pollinators != _INDEX_NODATA) & (
+                half_sat != _INDEX_NODATA)
+            # the following is a tunable half-saturation half-sigmoid
+            # FP(x,j) = (1-h(x,j))h(x,j) / ((1-2FP(x,j))+FP(x,j))
+            result[valid_mask] = (
+                farm_pollinators[valid_mask] * (1 - half_sat[valid_mask]) / (
+                    half_sat[valid_mask] * (
+                        1 - 2 * farm_pollinators[valid_mask]) +
+                    farm_pollinators[valid_mask]))
+            return result
+
+        pollinator_yield_path = os.path.join(
+            output_dir, '%s%s.tif' % (
+                _POLLINATOR_YIELD_FILE_PATTERN % season_id, file_suffix))
+        pygeoprocessing.raster_calculator(
+            [(half_saturation_file_path, 1), (farm_pollinators_path, 1)],
+            _farm_yield_op, pollinator_yield_path, gdal.GDT_Float32,
+            _INDEX_NODATA, calc_raster_stats=True)
 
     #pygeoprocessing.zonal_statistics(
     #    base_raster_path_band, aggregating_vector_path,
