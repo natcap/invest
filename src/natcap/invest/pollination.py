@@ -515,6 +515,11 @@ def execute(args):
     gdal.Dataset.__swig_destroy__(managed_raster)
     del managed_raster
 
+    LOGGER.info("Calculating farm yields")
+    for season_id in season_to_header:
+        LOGGER.info("Calculating yield for season %s")
+        pass
+
     # per season, rasterize each farm type
     # raster calcualtor pass managed polinators, farm/season masks, pollinator abundance per season
     # FP(f,x)=MP(f)+sSPA(x,s)FA(s,j(f))
