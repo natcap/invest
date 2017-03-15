@@ -5,6 +5,7 @@ import collections
 import re
 import os
 import logging
+import uuid
 
 from osgeo import gdal
 from osgeo import ogr
@@ -61,6 +62,7 @@ _EXPECTED_FARM_HEADERS = [
     _FARM_FLORAL_RESOURCES_PATTERN, _FARM_NESTING_SUBSTRATE_PATTERN]
 
 _POLLINATOR_YIELD_FILE_PATTERN = 'pollinator_yield_%s'
+_TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
 
 def execute(args):
     """InVEST Pollination Model.
@@ -503,7 +505,26 @@ def execute(args):
             gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
 
     LOGGER.info("Calculating farm yields")
-    farm_vector = ogr.Open(args['farm_vector_path'])
+    target_farm_path = os.path.join(
+        output_dir, '%s%s.shp' % (
+            _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN, file_suffix))
+    uuid_fail_count = 0
+    while True:
+        if uuid_fail_count > 10:
+            raise Exception(
+                "Unable to find a find field randomly that wasn't already "
+                "defined.  That's a big deal.  Send this log to someone!")
+        farm_fid_field = str(uuid.uuid4())[-8:-1]
+        try:
+            _add_fid_field(
+                args['farm_vector_path'], target_farm_path, farm_fid_field)
+            break
+        except ValueError:
+            LOGGER.info(
+                "%s field already defined in %s, trying a different one")
+            uuid_fail_count += 1
+
+    farm_vector = ogr.Open(target_farm_path)
     farm_layer = farm_vector.GetLayer()
     for season_id in season_to_header:
         LOGGER.info("Rasterizing half saturation for season %s")
@@ -604,7 +625,7 @@ def execute(args):
             _INDEX_NODATA, calc_raster_stats=True)
 
         farm_stats = pygeoprocessing.zonal_statistics(
-            (pollinator_yield_path, 1), args['farm_vector_path'], None)
+            (pollinator_yield_path, 1), target_farm_path, farm_fid_field)
         print farm_stats
 
     for path in temp_file_set:
