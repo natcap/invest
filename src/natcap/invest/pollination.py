@@ -603,10 +603,9 @@ def execute(args):
             _farm_yield_op, pollinator_yield_path, gdal.GDT_Float32,
             _INDEX_NODATA, calc_raster_stats=True)
 
-    #pygeoprocessing.zonal_statistics(
-    #    base_raster_path_band, aggregating_vector_path,
-    #    aggregate_field_name, aggregate_layer_name=None,
-    #    ignore_nodata=True, all_touched=False, polygons_might_overlap=True)
+        farm_stats = pygeoprocessing.zonal_statistics(
+            (pollinator_yield_path, 1), args['farm_vector_path'], None)
+        print farm_stats
 
     for path in temp_file_set:
         os.remove(path)
@@ -689,3 +688,37 @@ def _normalized_convolve_2d(
 
     for path in [mask_path, base_convolve_path, mask_convolve_path]:
         os.remove(path)
+
+
+def _add_fid_field(base_vector_path, target_vector_path, fid_id):
+    """Make a copy of base vector and an FID field to identify features.
+
+    Parameters:
+        base_vector_path (string): path to a single layer vector
+        target_vector_path (string): path to desired output vector, the
+            directory to the file must exist.
+        fid_id (string): field ID to add to base vector.  Must not already
+            be defined in base_vector_path.  Raises a ValueError if so.
+
+    Returns:
+        None
+    """
+    esri_driver = ogr.GetDriverByName("ESRI Shapefile")
+
+    base_vector = ogr.Open(base_vector_path)
+    base_layer = base_vector.GetLayer()
+    base_defn = base_layer.GetLayerDefn()
+
+    if base_defn.GetFieldIndex(fid_id) != -1:
+        raise ValueError(
+            "Tried to add a new field %s, but is already defined in %s." % (
+                fid_id, base_vector_path))
+    if os.path.exists(target_vector_path):
+        os.remove(target_vector_path)
+    target_vector = esri_driver.CopyDataSource(
+        base_vector, target_vector_path)
+    target_layer = target_vector.GetLayer()
+    target_layer.CreateField(ogr.FieldDefn(fid_id, ogr.OFTInteger))
+    for feature in target_layer:
+        feature.SetField(fid_id, feature.GetFID())
+        target_layer.SetFeature(feature)
