@@ -63,6 +63,8 @@ _EXPECTED_FARM_HEADERS = [
 
 _POLLINATOR_YIELD_FILE_PATTERN = 'pollinator_yield_%s'
 _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
+_FARM_YIELD_FIELD_ID = 'avg_yield'
+
 
 def execute(args):
     """InVEST Pollination Model.
@@ -524,8 +526,11 @@ def execute(args):
                 "%s field already defined in %s, trying a different one")
             uuid_fail_count += 1
 
-    farm_vector = ogr.Open(target_farm_path)
+    wild_pollinator_activity = None
+    farm_vector = ogr.Open(target_farm_path, update=1)
     farm_layer = farm_vector.GetLayer()
+    yield_field_def = ogr.FieldDefn(_FARM_YIELD_FIELD_ID, ogr.OFTReal)
+    farm_layer.CreateField(yield_field_def)
     for season_id in season_to_header:
         LOGGER.info("Rasterizing half saturation for season %s")
         half_saturation_file_path = os.path.join(
@@ -626,7 +631,18 @@ def execute(args):
 
         farm_stats = pygeoprocessing.zonal_statistics(
             (pollinator_yield_path, 1), target_farm_path, farm_fid_field)
-        print farm_stats
+        farm_layer.ResetReading()
+
+        # initialize each feature field to 0.0
+        for feature in farm_layer:
+            fid = feature.GetField(farm_fid_field)
+            if fid not in farm_stats:
+                # this can happen if farm crops aren't active in season_id
+                continue
+            feature.SetField(
+                _FARM_YIELD_FIELD_ID, float(
+                    farm_stats[fid]['sum'] / farm_stats[fid]['count']))
+            farm_layer.SetFeature(feature)
 
     for path in temp_file_set:
         os.remove(path)
