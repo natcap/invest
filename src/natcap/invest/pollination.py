@@ -65,8 +65,8 @@ _EXPECTED_FARM_HEADERS = [
 
 _POLLINATOR_YIELD_FILE_PATTERN = 'pollinator_yield_%s'
 _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
-_FARM_YIELD_FIELD_ID = 'avg_yield'
-
+_POLLINATOR_FARM_YIELD_FIELD_ID = 'p_av_yield'
+_TOTAL_FARM_YIELD_FIELD_ID = 't_av_yield'
 
 def execute(args):
     """InVEST Pollination Model.
@@ -536,8 +536,13 @@ def execute(args):
     wild_pollinator_activity = None
     farm_vector = ogr.Open(target_farm_path, update=1)
     farm_layer = farm_vector.GetLayer()
-    yield_field_def = ogr.FieldDefn(_FARM_YIELD_FIELD_ID, ogr.OFTReal)
-    farm_layer.CreateField(yield_field_def)
+    pollinator_yield_field_def = ogr.FieldDefn(
+        _POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal)
+    farm_layer.CreateField(pollinator_yield_field_def)
+    total_yield_field_def = ogr.FieldDefn(
+        _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal)
+    farm_layer.CreateField(total_yield_field_def)
+
     for season_id in season_to_header:
         LOGGER.info("Rasterizing half saturation for season %s")
         half_saturation_file_path = os.path.join(
@@ -646,9 +651,16 @@ def execute(args):
             if fid not in farm_stats:
                 # this can happen if farm crops aren't active in season_id
                 continue
+            pollinator_dependant_yield = float(
+                    farm_stats[fid]['sum'] / farm_stats[fid]['count'])
             feature.SetField(
-                _FARM_YIELD_FIELD_ID, float(
-                    farm_stats[fid]['sum'] / farm_stats[fid]['count']))
+                _POLLINATOR_FARM_YIELD_FIELD_ID, pollinator_dependant_yield)
+            pollinator_dependance = feature.GetField(
+                _CROP_POLLINATOR_DEPENDANCE_FIELD)
+            total_yield = 1.0 - pollinator_dependance * (
+                1 - pollinator_dependant_yield)
+            feature.SetField(
+                _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
             farm_layer.SetFeature(feature)
 
     for path in temp_file_set:
