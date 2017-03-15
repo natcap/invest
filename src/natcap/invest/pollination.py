@@ -77,14 +77,19 @@ def execute(args):
         args['landcover_raster_path'] (string): file path to a landcover
             raster.
         args['guild_table_path'] (string): file path to a table indicating
-            the bee species to analyize in this model run.  Table headers
+            the bee species to analyze in this model run.  Table headers
             must include:
                 * 'species': a bee species whose column string names will
-                    be refered to in other tables and the model will output
+                    be referred to in other tables and the model will output
                     analyses per species.
-                * 'nesting_cavity' and 'nesting_ground': a number in the range
-                    [0.0, 1.0] indicating the suitability of the given species
-                    to nest in cavity or ground types.
+                * any number of columns matching _NESTING_SUITABILITY_PATTERN
+                    with values in the range [0.0, 1.0] indicating the
+                    suitability of the given species to nest in a particular
+                    substrate.
+                * any number of _FORAGING_ACTIVITY_PATTERN columns with values
+                    in the range [0.0, 1.0] indicating the relative level of
+                    foraging activity for that species during a particular
+                    season.
         args['landcover_biophysical_table_path'] (string): path to a table
             mapping landcover codes in `args['landcover_path']` to indexes of
             nesting availability for each nesting substrate referenced in
