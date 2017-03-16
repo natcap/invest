@@ -63,7 +63,8 @@ _EXPECTED_FARM_HEADERS = [
     _FARM_FLORAL_RESOURCES_PATTERN, _FARM_NESTING_SUBSTRATE_PATTERN,
     _CROP_POLLINATOR_DEPENDANCE_FIELD]
 
-_POLLINATOR_YIELD_FILE_PATTERN = 'pollinator_yield_%s'
+_SEASONAL_POLLINATOR_YIELD_FILE_PATTERN = 'seasonal_pollinator_yield_%s'
+_TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield'
 _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
 _POLLINATOR_FARM_YIELD_FIELD_ID = 'p_av_yield'
 _TOTAL_FARM_YIELD_FIELD_ID = 't_av_yield'
@@ -665,34 +666,55 @@ def execute(args):
 
         pollinator_yield_path = os.path.join(
             output_dir, '%s%s.tif' % (
-                _POLLINATOR_YIELD_FILE_PATTERN % season_id, file_suffix))
+                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id, file_suffix))
         pygeoprocessing.raster_calculator(
             [(half_saturation_file_path, 1), (farm_pollinators_path, 1)],
             _farm_yield_op, pollinator_yield_path, gdal.GDT_Float32,
             _INDEX_NODATA, calc_raster_stats=True)
 
-        farm_stats = pygeoprocessing.zonal_statistics(
-            (pollinator_yield_path, 1), target_farm_path, farm_fid_field)
-        farm_layer.ResetReading()
+    # add the yield pollinators, shouldn't be conflicts since we don't have
+    # overlapping farms
 
-        # initialize each feature field to 0.0
-        for feature in farm_layer:
-            fid = feature.GetField(farm_fid_field)
-            if fid not in farm_stats:
-                # this can happen if farm crops aren't active in season_id
-                continue
-            pollinator_dependant_yield = float(
-                    farm_stats[fid]['sum'] / farm_stats[fid]['count'])
-            feature.SetField(
-                _POLLINATOR_FARM_YIELD_FIELD_ID, pollinator_dependant_yield)
-            pollinator_dependance = feature.GetField(
-                _CROP_POLLINATOR_DEPENDANCE_FIELD)
-            total_yield = 1.0 - pollinator_dependance * (
-                1 - pollinator_dependant_yield)
-            feature.SetField(
-                _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
-            farm_layer.SetFeature(feature)
-            feature = None
+    def _combine_yields(*pollinator_yields):
+        """Set output to defined pixel in the stack of pollinator_yields."""
+        result = numpy.empty(pollinator_yields[0].shape, dtype=numpy.float32)
+        result[:] = _INDEX_NODATA
+        for pollinator_yield in pollinator_yields:
+            valid_mask = pollinator_yield != _INDEX_NODATA
+            result[valid_mask] = pollinator_yield[valid_mask]
+        return result
+
+    seasonal_pollinator_yield_path_band_list = [
+        (os.path.join(
+            output_dir, '%s%s.tif' % (
+                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id, file_suffix)), 1)
+        for season_id in season_to_header]
+    total_pollinator_yield_path = os.path.join(
+        output_dir, '%s%s.tif' % (
+            _TOTAL_POLLINATOR_YIELD_FILE_PATTERN, file_suffix))
+    pygeoprocessing.raster_calculator(
+        seasonal_pollinator_yield_path_band_list, _combine_yields,
+        total_pollinator_yield_path, gdal.GDT_Float32, _INDEX_NODATA,
+        calc_raster_stats=True)
+
+    farm_stats = pygeoprocessing.zonal_statistics(
+        (total_pollinator_yield_path, 1), target_farm_path, farm_fid_field)
+
+    farm_layer.ResetReading()
+    for feature in farm_layer:
+        fid = feature.GetField(farm_fid_field)
+        pollinator_dependant_yield = float(
+            farm_stats[fid]['sum'] / farm_stats[fid]['count'])
+        feature.SetField(
+            _POLLINATOR_FARM_YIELD_FIELD_ID, pollinator_dependant_yield)
+        pollinator_dependance = feature.GetField(
+            _CROP_POLLINATOR_DEPENDANCE_FIELD)
+        total_yield = 1.0 - pollinator_dependance * (
+            1 - pollinator_dependant_yield)
+        feature.SetField(
+            _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
+        farm_layer.SetFeature(feature)
+        feature = None
 
     farm_layer.DeleteField(
         farm_layer.GetLayerDefn().GetFieldIndex(farm_fid_field))
