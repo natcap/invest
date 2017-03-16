@@ -68,6 +68,8 @@ _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
 _POLLINATOR_FARM_YIELD_FIELD_ID = 'p_av_yield'
 _TOTAL_FARM_YIELD_FIELD_ID = 't_av_yield'
 
+_MAX_POLLINATED_SPECIES_FILE_PATTERN = 'max_pollinated_%s'
+
 def execute(args):
     """InVEST Pollination Model.
 
@@ -534,6 +536,7 @@ def execute(args):
             uuid_fail_count += 1
 
     wild_pollinator_activity = None
+    foraging_activity_index = None
     farm_vector = ogr.Open(target_farm_path, update=1)
     farm_layer = farm_vector.GetLayer()
     pollinator_yield_field_def = ogr.FieldDefn(
@@ -616,6 +619,33 @@ def execute(args):
             farm_pollinators_path, gdal.GDT_Float32, _INDEX_NODATA,
             calc_raster_stats=False)
 
+        for species_id in guild_table:
+            max_pollinated_species_path = os.path.join(
+                intermediate_output_dir, "%s%s.tif" % (
+                    _MAX_POLLINATED_SPECIES_FILE_PATTERN % species_id,
+                    file_suffix))
+            foraging_activity_index = (
+                guild_table[species_id][season_to_header[season_id]['guild']])
+
+            def _equal_op(
+                    farm_pollinator_index, species_pollinator_abudance_index):
+                """Return 1 if FP == SP*FA."""
+                result = numpy.empty(
+                    farm_pollinator_index.shape, dtype=numpy.int8)
+                result[:] = _INDEX_NODATA
+                valid_mask = farm_pollinator_index != _INDEX_NODATA
+                result[valid_mask] = farm_pollinator_index[valid_mask] == (
+                    species_pollinator_abudance_index[valid_mask] *
+                    foraging_activity_index)
+                return result
+
+            pygeoprocessing.raster_calculator(
+                [(farm_pollinators_path, 1),
+                 (f_reg[_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id], 1)],
+                _equal_op, max_pollinated_species_path, gdal.GDT_Byte,
+                _INDEX_NODATA, calc_raster_stats=False)
+
+
         LOGGER.info("Calculating farm yield.")
 
         def _farm_yield_op(half_sat, farm_pollinators):
@@ -662,7 +692,10 @@ def execute(args):
             feature.SetField(
                 _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
             farm_layer.SetFeature(feature)
+            feature = None
 
+    farm_layer.DeleteField(
+        farm_layer.GetLayerDefn().GetFieldIndex(farm_fid_field))
     for path in temp_file_set:
         os.remove(path)
 
