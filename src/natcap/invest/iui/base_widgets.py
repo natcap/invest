@@ -515,7 +515,10 @@ class DynamicPrimitive(DynamicElement):
         if error == None or error == '':
             msg = ''
         else:
-            msg = str(error)
+            try:
+                msg = str(error)
+            except UnicodeEncodeError:
+                msg = error.encode('utf-8')
 
         satisfied = False
         if state == 'warning' or state == 'pass' or state == None:
@@ -1503,6 +1506,11 @@ class FileButton(QtGui.QPushButton):
         except TypeError:
             # thrown when we're decoding a unicode to unicode
             oldText = self.URIfield.text()
+        except UnicodeDecodeError:
+            value = self.URIField.text()
+            if not isinstance(value, QString):
+                raise
+            value = unicode(value.toUtf8(), 'utf-8')
         filename = ''
 
         if len(oldText) == 0:
