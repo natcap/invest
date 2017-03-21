@@ -994,6 +994,10 @@ class DynamicText(LabeledElement):
         except TypeError:
             # when casting unicode to unicode
             pass
+        except UnicodeDecodeError:
+            # When our string is encoded as something else, but can't be
+            # decoded to utf-8
+            value = value.encode('utf-8')
         return value
 
     def setValue(self, text):
