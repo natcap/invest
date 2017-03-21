@@ -997,7 +997,9 @@ class DynamicText(LabeledElement):
         except UnicodeDecodeError:
             # When our string is encoded as something else, but can't be
             # decoded to utf-8
-            value = value.encode('utf-8')
+            if not isinstance(value, QString):
+                raise
+            value = unicode(value.toUtf8(), 'utf-8')
         return value
 
     def setValue(self, text):
