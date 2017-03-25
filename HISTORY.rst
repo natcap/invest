@@ -5,6 +5,7 @@
 Unreleased Changes
 ------------------
 * Upgrading dependency of PyGeoprocessing to 0.3.3.  This fixes a memory leak associated with any model that aggregates rasters over complicated overlapping polygons.
+* Adding sample data to Blue Carbon model that were missing.
 
 3.3.3 (2017-02-06)
 ------------------
