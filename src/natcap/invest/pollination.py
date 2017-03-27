@@ -65,6 +65,7 @@ _EXPECTED_FARM_HEADERS = [
 
 _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN = 'seasonal_pollinator_yield_%s'
 _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield'
+_POLLINATOR_YIELD_GAP_FILE_PATTERN = 'pollinator_yield_gap'
 _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
 _POLLINATOR_FARM_YIELD_FIELD_ID = 'p_av_yield'
 _TOTAL_FARM_YIELD_FIELD_ID = 't_av_yield'
@@ -715,6 +716,25 @@ def execute(args):
             _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
         farm_layer.SetFeature(feature)
         feature = None
+
+    # calculate yield gap raster
+    yield_gap_path = os.path.join(
+        output_dir, '%s%s.tif' % (
+            _POLLINATOR_YIELD_GAP_FILE_PATTERN, file_suffix))
+
+    def _invert_op(value):
+        """Invert value and ignore nodata."""
+        result = numpy.empty(value.shape, dtype=numpy.float32)
+        result[:] = _INDEX_NODATA
+        valid_mask = value != _INDEX_NODATA
+        result[valid_mask] = (1 - value[valid_mask])
+        return result
+    pygeoprocessing.raster_calculator(
+        [(total_pollinator_yield_path, 1)], _invert_op, yield_gap_path,
+        gdal.GDT_Float32, _INDEX_NODATA)
+
+    # project yield gap raster to nesting sites
+    # project yield gap valuation to floral resources
 
     farm_layer.DeleteField(
         farm_layer.GetLayerDefn().GetFieldIndex(farm_fid_field))
