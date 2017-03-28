@@ -25,6 +25,7 @@ src/natcap/invest/version.py
 htmlcov/
 .tox/
 .coverage
+cover/
 .cache
 nosetests.xml
 coverage.xml
@@ -36,4 +37,5 @@ doc/api-docs/build
 data/invest-data
 data/invest-test-data
 data/crop-model-data
+data/invest-crop-production-data
 src/pyinstaller
