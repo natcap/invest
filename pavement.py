@@ -3186,7 +3186,7 @@ def jenkins_installer(options):
     for opt_name, build_opts, needed_repo in [
             ('nodata', ['skip_data'], 'data/invest-data'),
             ('nodocs', ['skip_guide', 'skip_api'], 'doc/users-guide'),
-            ('noinstaller', ['skip_installer'], 'src/invest-natcap.default'),
+            ('noinstaller', ['skip_installer'], None),
             ('nopython', ['skip_python'], None),
             ('nobin', ['skip_bin'], 'src/pyinstaller')]:
         # set these options based on whether they were provided.
