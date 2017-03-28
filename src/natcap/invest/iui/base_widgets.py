@@ -1507,7 +1507,7 @@ class FileButton(QtGui.QPushButton):
             # thrown when we're decoding a unicode to unicode
             oldText = self.URIfield.text()
         except UnicodeDecodeError:
-            value = self.URIField.text()
+            value = self.URIfield.text()
             if not isinstance(value, QString):
                 raise
             value = unicode(value.toUtf8(), 'utf-8')
