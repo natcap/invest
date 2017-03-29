@@ -32,6 +32,7 @@ _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
     'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
     'VitK']
+_EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
 _NODATA_CLIMATE_BIN = 255
 _NODATA_YIELD = -1.0
 
@@ -89,10 +90,34 @@ def execute(args):
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
         numerical_cast=True)
 
+    crop_lucodes = [
+        x[_EXPECTED_LUCODE_TABLE_HEADER]
+        for x in crop_to_landcover_table.itervalues()]
+
+    LOGGER.info(
+        "Calculating total land area and warning if the landcover raster "
+        "is missing lucodes")
+    unique_lucodes = numpy.array([])
+    total_area = 0.0
+    for _, lu_band_data in pygeoprocessing.iterblocks(
+            args['landcover_raster_path']):
+        unique_block = numpy.unique(lu_band_data)
+        unique_lucodes = numpy.unique(numpy.concatenate(
+            (unique_lucodes, unique_block)))
+        total_area += numpy.count_nonzero((lu_band_data != _NODATA_YIELD))
+
+    missing_lucodes = set(crop_lucodes).difference(
+        set(unique_lucodes))
+    if len(missing_lucodes) > 0:
+        LOGGER.warn(
+            "The following lucodes are in the landcover to crop table but "
+            "aren't in the landcover raster: %s" % missing_lucodes)
+
     crop_lucode = None
     crop_area = collections.defaultdict(float)
     for crop_name in crop_to_landcover_table:
-        crop_lucode = crop_to_landcover_table[crop_name]['lucode']
+        crop_lucode = crop_to_landcover_table[crop_name][
+            _EXPECTED_LUCODE_TABLE_HEADER]
         print crop_name, crop_lucode
         crop_climate_bin_raster_path = os.path.join(
             args['global_data_path'], 'extended_climate_bin_maps',
