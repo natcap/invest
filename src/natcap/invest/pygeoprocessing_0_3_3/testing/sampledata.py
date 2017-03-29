@@ -48,10 +48,16 @@ LOGGER = logging.getLogger('pygeoprocessing.testing.sampledata')
 ReferenceData = collections.namedtuple('ReferenceData',
                                        'projection origin pixel_size')
 gdal.AllRegister()
-GDAL_DRIVERS = sorted([gdal.GetDriver(i).GetDescription()
-                       for i in range(1, gdal.GetDriverCount())])
-OGR_DRIVERS = sorted([ogr.GetDriver(i).GetName()
-                      for i in range(ogr.GetDriverCount())])
+try:
+    GDAL_DRIVERS = sorted([gdal.GetDriver(i).GetDescription()
+                           for i in range(1, gdal.GetDriverCount())])
+    OGR_DRIVERS = sorted([ogr.GetDriver(i).GetName()
+                          for i in range(ogr.GetDriverCount())])
+except TypeError:
+    # When building InVEST sphinx documentation, gdal.GetDriverCount() doesn't
+    # return an int.
+    GDAL_DRIVERS = OGR_DRIVERS = []
+
 
 # Higher index in list represents more information is stored by the datatype
 # Helpful for debug messages, used when creating sample rasters.
@@ -90,8 +96,10 @@ def projection_wkt(epsg_id):
     """
     reference = osr.SpatialReference()
     result = reference.ImportFromEPSG(epsg_id)
-    if result != 0:
-        raise RuntimeError('EPSG code %s not recognixed' % epsg_id)
+    # if result is not an int, it's not a returned value from OSR.
+    # This generally happens when we're building the sphinx docs.
+    if result != 0 and isinstance(result, int):
+        raise RuntimeError('EPSG code %s not recognized' % epsg_id)
 
     return reference.ExportToWkt()
 
