@@ -90,6 +90,7 @@ def execute(args):
         numerical_cast=True)
 
     crop_lucode = None
+    crop_area = collections.defaultdict(float)
     for crop_name in crop_to_landcover_table:
         crop_lucode = crop_to_landcover_table[crop_name]['lucode']
         print crop_name, crop_lucode
@@ -170,6 +171,15 @@ def execute(args):
                 yield_percentile_raster_path, gdal.GDT_Float32,
                 _NODATA_YIELD, exception_flag='values_required')
 
+        # calculate the non-zero production area for that crop, okay to use
+        # just one of the percentile rasters
+        for _, band_values in pygeoprocessing.iterblocks(
+                yield_percentile_raster_path):
+            crop_area[crop_name] += numpy.count_nonzero(
+                (band_values != _NODATA_YIELD) & (band_values > 0.0))
+
+        crop_area[crop_name] *= pixel_area_ha
+
         LOGGER.info("Calculate observed yield for %s", crop_name)
         observed_yield_raster_path = os.path.join(
             args['global_data_path'], 'observed_yield',
@@ -230,10 +240,11 @@ def execute(args):
         lambda: collections.defaultdict(float))
     with open(result_table_path, 'wb') as result_table:
         result_table.write(
-            'crop,' + ','.join(production_percentile_headers) +
+            'crop,area (ha),' + ','.join(production_percentile_headers) +
             ',production_observed' + ',' + ','.join(nutrient_headers) + '\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
+            result_table.write(',%f' % crop_area[crop_name])
             production_lookup = {}
             nutrient_factor = 1e4 * (
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
@@ -277,3 +288,11 @@ def execute(args):
                         production_lookup['observed'] *
                         nutrient_table[crop_name][nutrient_id]))
             result_table.write('\n')
+
+        total_area = 0.0
+        for _, band_values in pygeoprocessing.iterblocks(
+                args['landcover_raster_path']):
+            total_area += numpy.count_nonzero((band_values != _NODATA_YIELD))
+        result_table.write(
+            '\n,total area (both crop and non-crop)\n,%f\n' % (
+                total_area * pixel_area_ha))
