@@ -644,7 +644,6 @@ REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
     'test-data': SVNRepository('data/invest-test-data', 'svn://scm.naturalcapitalproject.org/svn/invest-test-data'),
-    'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
     'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
     'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
 }
@@ -2671,11 +2670,6 @@ def build_installer(options):
 
     command = options.insttype.lower()
     if command == 'nsis':
-        call_task('check_repo', options={
-            'force_dev': options.build_installer.force_dev,
-            'repo': REPOS_DICT['invest-2'].local_path,
-            'fetch': True,
-        })
         _build_nsis(version, options.build_installer.bindir, 'x86')
     elif command == 'dmg':
         _build_dmg(version, options.build_installer.bindir)
@@ -2747,7 +2741,6 @@ def _build_nsis(version, bindir, arch):
 
     The InVEST NSIS script *requires* the following conditions are met:
         * The User's guide has been built (paver build_docs)
-        * The invest-2 repo has been cloned to src (paver fetch src/invest-natcap.default)
 
     If these two conditions have not been met, the installer will fail.
     """
@@ -2981,7 +2974,6 @@ def build(options):
     for repo, taskname, skip_condition in [
             (REPOS_DICT['users-guide'], 'build_docs', 'skip_guide'),
             (REPOS_DICT['invest-data'], 'build', 'skip_data'),
-            (REPOS_DICT['invest-2'], 'build', 'skip_installer'),
             (REPOS_DICT['pyinstaller'], 'build', 'skip_bin')]:
         tracked_rev = repo.tracked_version()
 
@@ -3194,7 +3186,7 @@ def jenkins_installer(options):
     for opt_name, build_opts, needed_repo in [
             ('nodata', ['skip_data'], 'data/invest-data'),
             ('nodocs', ['skip_guide', 'skip_api'], 'doc/users-guide'),
-            ('noinstaller', ['skip_installer'], 'src/invest-natcap.default'),
+            ('noinstaller', ['skip_installer'], None),
             ('nopython', ['skip_python'], None),
             ('nobin', ['skip_bin'], 'src/pyinstaller')]:
         # set these options based on whether they were provided.
