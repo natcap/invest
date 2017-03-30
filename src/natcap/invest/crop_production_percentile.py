@@ -139,6 +139,13 @@ def execute(args):
         local_climate_bin_raster_path = os.path.join(
             intermediate_output_dir,
             'local_%s_climate_bin_map%s.tif' % (crop_name, file_suffix))
+
+        #TODO: at this point could we query for the lat/lng points that
+        #      intersect crop/climate bins?  Then for each percentile header
+        #      we can calculate a per-pixel yield for the given landcover's
+        #      pixel size?  After that we can
+        #      pygeoprocessing.interpolate_points onto the raster?
+
         pygeoprocessing.warp_raster(
             crop_climate_bin_raster_path,
             landcover_raster_info['pixel_size'],
