@@ -1508,6 +1508,7 @@ class FileButton(QtGui.QPushButton):
             oldText = self.URIfield.text()
         except UnicodeDecodeError:
             value = self.URIfield.text()
+            oldText = value
             if not isinstance(value, QString):
                 raise
             value = unicode(value.toUtf8(), 'utf-8')
@@ -1548,6 +1549,13 @@ class FileButton(QtGui.QPushButton):
                 # when we're trying to decode a unicode to a unicode object,
                 # just use the original object.
                 pass
+            except UnicodeDecodeError:
+                value = self.URIfield.text()
+                oldText = value
+                if not isinstance(value, QString):
+                    raise
+                value = unicode(value.toUtf8(), 'utf-8')
+
             if os.path.isdir(filename):
                 DATA['last_dir'] = filename
             else:
