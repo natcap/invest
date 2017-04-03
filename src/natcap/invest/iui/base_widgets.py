@@ -515,7 +515,10 @@ class DynamicPrimitive(DynamicElement):
         if error == None or error == '':
             msg = ''
         else:
-            msg = str(error)
+            try:
+                msg = str(error)
+            except UnicodeEncodeError:
+                msg = error.encode('utf-8')
 
         satisfied = False
         if state == 'warning' or state == 'pass' or state == None:
@@ -994,6 +997,12 @@ class DynamicText(LabeledElement):
         except TypeError:
             # when casting unicode to unicode
             pass
+        except UnicodeDecodeError:
+            # When our string is encoded as something else, but can't be
+            # decoded to utf-8
+            if not isinstance(value, QString):
+                raise
+            value = unicode(value.toUtf8(), 'utf-8')
         return value
 
     def setValue(self, text):
@@ -1497,6 +1506,12 @@ class FileButton(QtGui.QPushButton):
         except TypeError:
             # thrown when we're decoding a unicode to unicode
             oldText = self.URIfield.text()
+        except UnicodeDecodeError:
+            value = self.URIfield.text()
+            oldText = value
+            if not isinstance(value, QString):
+                raise
+            value = unicode(value.toUtf8(), 'utf-8')
         filename = ''
 
         if len(oldText) == 0:
@@ -1534,6 +1549,13 @@ class FileButton(QtGui.QPushButton):
                 # when we're trying to decode a unicode to a unicode object,
                 # just use the original object.
                 pass
+            except UnicodeDecodeError:
+                value = self.URIfield.text()
+                oldText = value
+                if not isinstance(value, QString):
+                    raise
+                value = unicode(value.toUtf8(), 'utf-8')
+
             if os.path.isdir(filename):
                 DATA['last_dir'] = filename
             else:
