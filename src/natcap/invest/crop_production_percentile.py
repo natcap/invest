@@ -2,10 +2,12 @@
 import collections
 import re
 import os
+import sys
 import logging
 
 import numpy
 from osgeo import gdal
+from osgeo import osr
 import pygeoprocessing
 
 from . import utils
@@ -113,6 +115,14 @@ def execute(args):
             "The following lucodes are in the landcover to crop table but "
             "aren't in the landcover raster: %s" % missing_lucodes)
 
+    # Calculate lat/lng bounding box for landcover map
+    wgs84srs = osr.SpatialReference()
+    wgs84srs.ImportFromEPSG(4326)  # EPSG4326 is WGS84 lat/lng
+    landcover_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
+        landcover_raster_info['bounding_box'],
+        landcover_raster_info['projection'], wgs84srs.ExportToWkt(),
+        edge_samples=11)
+
     crop_lucode = None
     crop_area = collections.defaultdict(float)
     for crop_name in crop_to_landcover_table:
@@ -140,18 +150,65 @@ def execute(args):
             intermediate_output_dir,
             'local_%s_climate_bin_map%s.tif' % (crop_name, file_suffix))
 
+        clipped_climate_bin_raster_path = os.path.join(
+            intermediate_output_dir,
+            'clipped_%s_climate_bin_map%s.tif' % (crop_name, file_suffix))
+
         #TODO: at this point could we query for the lat/lng points that
         #      intersect crop/climate bins?  Then for each percentile header
         #      we can calculate a per-pixel yield for the given landcover's
         #      pixel size?  After that we can
         #      pygeoprocessing.interpolate_points onto the raster?
-
+        crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
+            crop_climate_bin_raster_path)
         pygeoprocessing.warp_raster(
             crop_climate_bin_raster_path,
-            landcover_raster_info['pixel_size'],
-            local_climate_bin_raster_path, 'mode',
-            target_sr_wkt=landcover_raster_info['projection'],
-            target_bb=landcover_raster_info['bounding_box'])
+            crop_climate_bin_raster_info['pixel_size'],
+            clipped_climate_bin_raster_path, 'nearest',
+            target_bb=landcover_wgs84_bounding_box)
+
+        climate_percentile_table_path = os.path.join(
+            args['model_data_path'], 'climate_percentile_yield_tables',
+            '%s_percentile_yield_table.csv' % crop_name)
+        crop_climate_percentile_table = utils.build_lookup_from_csv(
+            climate_percentile_table_path, 'climate_bin', to_lower=True,
+            numerical_cast=True)
+
+        yield_percentile_headers = [
+            x for x in crop_climate_percentile_table.itervalues().next()
+            if x != 'climate_bin']
+
+        clipped_climate_bin_raster_path_info = pygeoprocessing.get_raster_info(
+            clipped_climate_bin_raster_path)
+        for yield_percentile_id in yield_percentile_headers:
+            yield_percentile_raster_path = os.path.join(
+                intermediate_output_dir, '%s_%s%s.tif' % (
+                    crop_name, yield_percentile_id, file_suffix))
+
+            bin_to_percentile_yield = dict([
+                (bin_id,
+                 crop_climate_percentile_table[bin_id][yield_percentile_id])
+                for bin_id in crop_climate_percentile_table])
+            bin_to_percentile_yield[
+                clipped_climate_bin_raster_path_info['nodata'][0]] = 0.0
+
+            coarse_yield_percentile_raster_path = os.path.join(
+                intermediate_output_dir, 'coarse_%s_%s%s.tif' % (
+                    crop_name, yield_percentile_id, file_suffix))
+            pygeoprocessing.reclassify_raster(
+                (clipped_climate_bin_raster_path, 1), bin_to_percentile_yield,
+                coarse_yield_percentile_raster_path, gdal.GDT_Float32,
+                _NODATA_YIELD, exception_flag='values_required')
+
+            pygeoprocessing.warp_raster(
+                coarse_yield_percentile_raster_path,
+                landcover_raster_info['pixel_size'],
+                yield_percentile_raster_path, 'cubic_spline',
+                target_sr_wkt=landcover_raster_info['projection'],
+                target_bb=landcover_raster_info['bounding_box'])
+
+
+        sys.exit()
 
         LOGGER.info("Mask out crop %s from landcover map", crop_name)
 
@@ -176,32 +233,7 @@ def execute(args):
             _mask_climate_bin, masked_crop_raster_path, gdal.GDT_Byte,
             _NODATA_CLIMATE_BIN)
 
-        climate_percentile_table_path = os.path.join(
-            args['model_data_path'], 'climate_percentile_yield_tables',
-            '%s_percentile_yield_table.csv' % crop_name)
-        crop_climate_percentile_table = utils.build_lookup_from_csv(
-            climate_percentile_table_path, 'climate_bin', to_lower=True,
-            numerical_cast=True)
 
-        yield_percentile_headers = [
-            x for x in crop_climate_percentile_table.itervalues().next()
-            if x != 'climate_bin']
-
-        for yield_percentile_id in yield_percentile_headers:
-            yield_percentile_raster_path = os.path.join(
-                intermediate_output_dir, '%s_%s%s.tif' % (
-                    crop_name, yield_percentile_id, file_suffix))
-
-            bin_to_percentile_yield = dict([
-                (bin_id,
-                 crop_climate_percentile_table[bin_id][yield_percentile_id])
-                for bin_id in crop_climate_percentile_table])
-            bin_to_percentile_yield[0] = _NODATA_YIELD
-
-            pygeoprocessing.reclassify_raster(
-                (masked_crop_raster_path, 1), bin_to_percentile_yield,
-                yield_percentile_raster_path, gdal.GDT_Float32,
-                _NODATA_YIELD, exception_flag='values_required')
 
         # calculate the non-zero production area for that crop, okay to use
         # just one of the percentile rasters
