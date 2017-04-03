@@ -1,5 +1,6 @@
 import sys
 import os
+import itertools
 from PyInstaller.compat import is_win, is_darwin
 
 # Global Variables
