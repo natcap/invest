@@ -215,7 +215,7 @@ def execute(args):
                 yield_percentile_id)
 
             percentile_crop_yield_raster_path = os.path.join(
-                intermediate_output_dir, '%s_%s_yield_map%s.tif' % (
+                intermediate_output_dir, '%s_%s_yield_rate_map%s.tif' % (
                     yield_percentile_id, crop_name, file_suffix))
 
             def _crop_yield_op(lulc_array, yield_rate_array):
