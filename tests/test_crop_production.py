@@ -8,11 +8,11 @@ import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
 MODEL_DATA_PATH = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-crop-production-data',
-    'global_dataset_20151210')
+    os.path.dirname(__file__), '..', 'data', 'invest-data',
+    'CropProduction', 'model_data')
 SAMPLE_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'crop_production20')
+    'CropProduction', 'sample_user_data')
 
 
 class CropProductionTests(unittest.TestCase):
@@ -41,6 +41,6 @@ class CropProductionTests(unittest.TestCase):
                 SAMPLE_DATA_PATH, 'landcover.tif'),
             'landcover_to_crop_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'landcover_to_crop_table.csv'),
-            'global_data_path': MODEL_DATA_PATH
+            'model_data_path': MODEL_DATA_PATH
         }
         crop_production_percentile.execute(args)

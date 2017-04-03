@@ -55,9 +55,9 @@ def execute(args):
             * lucode: integer value corresponding to a landcover code in
               `args['landcover_raster_path']`.
             * crop_name: a string that must match one of the crops in
-              args['global_data_path']/climate_bin_maps/[cropname]_*
+              args['model_data_path']/climate_bin_maps/[cropname]_*
               A ValueError is raised if strings don't match.
-        args['global_data_path'] (string): path to the InVEST Crop Production
+        args['model_data_path'] (string): path to the InVEST Crop Production
             global data directory.  This model expects that the following
             directories are subdirectories of this path
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
@@ -120,10 +120,10 @@ def execute(args):
             _EXPECTED_LUCODE_TABLE_HEADER]
         print crop_name, crop_lucode
         crop_climate_bin_raster_path = os.path.join(
-            args['global_data_path'], 'extended_climate_bin_maps',
+            args['model_data_path'], 'extended_climate_bin_maps',
             'extendedclimatebins%s.tif' % crop_name)
         climate_percentile_yield_table_path = os.path.join(
-            args['global_data_path'], 'climate_percentile_yield',
+            args['model_data_path'], 'climate_percentile_yield',
             '%s_percentile_yield_table.csv' % crop_name)
         if not os.path.exists(crop_climate_bin_raster_path):
             raise ValueError(
@@ -177,7 +177,7 @@ def execute(args):
             _NODATA_CLIMATE_BIN)
 
         climate_percentile_table_path = os.path.join(
-            args['global_data_path'], 'climate_percentile_yield',
+            args['model_data_path'], 'climate_percentile_yield_tables',
             '%s_percentile_yield_table.csv' % crop_name)
         crop_climate_percentile_table = utils.build_lookup_from_csv(
             climate_percentile_table_path, 'climate_bin', to_lower=True,
@@ -214,7 +214,7 @@ def execute(args):
 
         LOGGER.info("Calculate observed yield for %s", crop_name)
         observed_yield_raster_path = os.path.join(
-            args['global_data_path'], 'observed_yield',
+            args['model_data_path'], 'observed_yield',
             '%s_yield_map.tif' % crop_name)
         local_observed_yield_raster_path = os.path.join(
             intermediate_output_dir, '%s_local_observed_yield%s.tif' % (
@@ -250,7 +250,7 @@ def execute(args):
             gdal.GDT_Float32, observed_yield_nodata)
 
     nutrient_table = utils.build_lookup_from_csv(
-        os.path.join(args['global_data_path'], 'cropNutrient.csv'),
+        os.path.join(args['model_data_path'], 'cropNutrient.csv'),
         'filenm', to_lower=False)
 
     LOGGER.info("Report table")
