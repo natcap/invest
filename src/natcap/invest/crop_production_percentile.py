@@ -196,7 +196,7 @@ def execute(args):
                 clipped_climate_bin_raster_path_info['nodata'][0]] = 0.0
 
             coarse_yield_percentile_raster_path = os.path.join(
-                intermediate_output_dir, 'coarse_%s_%s%s.tif' % (
+                intermediate_output_dir, 'coarse_yield_rate_%s_%s%s.tif' % (
                     crop_name, yield_percentile_id, file_suffix))
             pygeoprocessing.reclassify_raster(
                 (clipped_climate_bin_raster_path, 1), bin_to_percentile_yield,
@@ -247,7 +247,7 @@ def execute(args):
         LOGGER.info("Calculate observed yield for %s", crop_name)
         global_observed_yield_rate_raster_path = os.path.join(
             args['model_data_path'], 'observed_yield',
-            '%s_yield_map.tif' % crop_name)
+            '%s_yield_map%s.tif' % (crop_name, file_suffix))
         observed_yield_rate_raster_path = os.path.join(
             intermediate_output_dir, '%s_observed_yield_rate%s.tif' % (
                 crop_name, file_suffix))
