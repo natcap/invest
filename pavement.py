@@ -3193,10 +3193,10 @@ def jenkins_installer(options):
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
 
-            # Only prepare data zips and docs if we're on a windows machine.
+            # Only prepare data zips if we're on a windows machine.
             if (platform.system() != 'Windows' and
-                    opt_name in ('nodata', 'nodocs')):
-                LOGGER.debug('Not on Windows; skipping %s', user_option[3:])
+                    opt_name in ('nodata',)):
+                LOGGER.debug('Not on Windows; skipping %s', opt_name[3:])
                 user_option = 'true'
 
             if user_option.lower() in ['true', '1']:
