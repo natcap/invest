@@ -124,6 +124,7 @@ def execute(args):
         edge_samples=11)
 
     crop_lucode = None
+    observed_yield_nodata = None
     crop_area = collections.defaultdict(float)
     for crop_name in crop_to_landcover_table:
         crop_lucode = crop_to_landcover_table[crop_name][
@@ -178,8 +179,10 @@ def execute(args):
             x for x in crop_climate_percentile_table.itervalues().next()
             if x != 'climate_bin']
 
-        clipped_climate_bin_raster_path_info = pygeoprocessing.get_raster_info(
-            clipped_climate_bin_raster_path)
+        clipped_climate_bin_raster_path_info = (
+            pygeoprocessing.get_raster_info(
+                clipped_climate_bin_raster_path))
+
         for yield_percentile_id in yield_percentile_headers:
             yield_percentile_raster_path = os.path.join(
                 intermediate_output_dir, '%s_%s%s.tif' % (
@@ -207,33 +210,30 @@ def execute(args):
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
+            LOGGER.info(
+                "Calculate yield for %s at %s", crop_name,
+                yield_percentile_id)
 
-        sys.exit()
+            percentile_crop_yield_raster_path = os.path.join(
+                intermediate_output_dir, '%s_%s_yield_map%s.tif' % (
+                    yield_percentile_id, crop_name, file_suffix))
 
-        LOGGER.info("Mask out crop %s from landcover map", crop_name)
+            def _crop_yield_op(lulc_array, yield_rate_array):
+                """Mask in climate bins that intersect with `crop_lucode`."""
+                result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
+                result[:] = _NODATA_YIELD
+                valid_mask = lulc_array != landcover_nodata
+                lulc_mask = lulc_array == crop_lucode
+                result[valid_mask] = 0
+                result[lulc_mask] = (
+                    yield_rate_array[lulc_mask] * pixel_area_ha)
+                return result
 
-        masked_crop_raster_path = os.path.join(
-            intermediate_output_dir, 'masked_climate_bin_map_%s%s.tif' % (
-                crop_name, file_suffix))
-
-        def _mask_climate_bin(lulc_array, climate_bin_array):
-            """Mask in climate bins that intersect with `crop_lucode`."""
-            result = numpy.empty(lulc_array.shape, dtype=numpy.int8)
-            result[:] = _NODATA_CLIMATE_BIN
-            valid_mask = lulc_array != landcover_nodata
-            lulc_mask = lulc_array == crop_lucode
-            result[valid_mask] = 0
-            result[valid_mask & lulc_mask] = climate_bin_array[
-                valid_mask & lulc_mask]
-            return result
-
-        pygeoprocessing.raster_calculator(
-            [(args['landcover_raster_path'], 1),
-             (local_climate_bin_raster_path, 1)],
-            _mask_climate_bin, masked_crop_raster_path, gdal.GDT_Byte,
-            _NODATA_CLIMATE_BIN)
-
-
+            pygeoprocessing.raster_calculator(
+                [(args['landcover_raster_path'], 1),
+                 (yield_percentile_raster_path, 1)],
+                _crop_yield_op, percentile_crop_yield_raster_path,
+                gdal.GDT_Float32, _NODATA_YIELD)
 
         # calculate the non-zero production area for that crop, okay to use
         # just one of the percentile rasters
@@ -245,41 +245,41 @@ def execute(args):
         crop_area[crop_name] *= pixel_area_ha
 
         LOGGER.info("Calculate observed yield for %s", crop_name)
-        observed_yield_raster_path = os.path.join(
+        global_observed_yield_rate_raster_path = os.path.join(
             args['model_data_path'], 'observed_yield',
             '%s_yield_map.tif' % crop_name)
-        local_observed_yield_raster_path = os.path.join(
-            intermediate_output_dir, '%s_local_observed_yield%s.tif' % (
+        observed_yield_rate_raster_path = os.path.join(
+            intermediate_output_dir, '%s_observed_yield_rate%s.tif' % (
                 crop_name, file_suffix))
         pygeoprocessing.warp_raster(
-            observed_yield_raster_path,
+            global_observed_yield_rate_raster_path,
             landcover_raster_info['pixel_size'],
-            local_observed_yield_raster_path, 'mode',
+            observed_yield_rate_raster_path, 'cubic_spline',
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
 
-        observed_yield_nodata = pygeoprocessing.get_raster_info(
-            local_observed_yield_raster_path)['nodata'][0]
-        def _mask_observed_yield(lulc_array, observed_yield_array):
+        observed_yield_rate_nodata = pygeoprocessing.get_raster_info(
+            observed_yield_rate_raster_path)['nodata'][0]
+
+        def _observed_yield_op(lulc_array, observed_yield_rate_array):
             """Mask in climate bins that intersect with `crop_lucode`."""
             result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-            result[:] = observed_yield_nodata
+            result[:] = observed_yield_rate_nodata
             valid_mask = lulc_array != landcover_nodata
             lulc_mask = lulc_array == crop_lucode
             result[valid_mask] = 0
-            result[valid_mask & lulc_mask] = observed_yield_array[
-                valid_mask & lulc_mask]
+            result[lulc_mask] = observed_yield_rate_array[lulc_mask]
             return result
 
-        local_observed_masked_yield_raster_path = os.path.join(
+        observed_yield_raster_path = os.path.join(
             intermediate_output_dir,
-            '%s_local_observed_masked_yield%s.tif' % (crop_name, file_suffix))
+            '%s_observed_yield%s.tif' % (crop_name, file_suffix))
 
         pygeoprocessing.raster_calculator(
             [(args['landcover_raster_path'], 1),
-             (local_observed_yield_raster_path, 1)],
-            _mask_observed_yield, local_observed_masked_yield_raster_path,
-            gdal.GDT_Float32, observed_yield_nodata)
+             (observed_yield_rate_raster_path, 1)],
+            _observed_yield_op, observed_yield_raster_path,
+            gdal.GDT_Float32, observed_yield_rate_nodata)
 
     nutrient_table = utils.build_lookup_from_csv(
         os.path.join(args['model_data_path'], 'cropNutrient.csv'),
@@ -325,14 +325,14 @@ def execute(args):
                 production_lookup[yield_percentile_id] = production
                 result_table.write(",%f" % production)
             yield_sum = 0.0
-            local_observed_masked_yield_raster_path = os.path.join(
+            observed_yield_raster_path = os.path.join(
                 intermediate_output_dir,
-                '%s_local_observed_masked_yield%s.tif' % (
+                '%s_observed_yield%s.tif' % (
                     crop_name, file_suffix))
             observed_yield_nodata = pygeoprocessing.get_raster_info(
-                local_observed_masked_yield_raster_path)['nodata'][0]
+                observed_yield_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
-                    local_observed_masked_yield_raster_path):
+                    observed_yield_raster_path):
                 yield_sum += numpy.sum(
                     yield_block[observed_yield_nodata != yield_block])
             production = yield_sum * pixel_area_ha
