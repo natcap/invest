@@ -41,9 +41,34 @@ class CropProductionTests(unittest.TestCase):
                 SAMPLE_DATA_PATH, 'landcover.tif'),
             'landcover_to_crop_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'landcover_to_crop_table.csv'),
-             'aggregate_polygon_path': os.path.join(
+            'aggregate_polygon_path': os.path.join(
                 SAMPLE_DATA_PATH, 'aggreate_shape.shp'),
              'aggregate_polygon_id': 'id',
             'model_data_path': MODEL_DATA_PATH
         }
         crop_production_percentile.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
+    @scm.skip_if_data_missing(MODEL_DATA_PATH)
+    def test_crop_production_regression(self):
+        """Crop Production: test crop production."""
+        from natcap.invest import crop_production_regression
+
+        args = {
+            'workspace_dir': r'C:\Users\rpsharp\Documents\del_test_crop_production_regression_workspace',
+            'results_suffix': '',
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA_PATH, 'landcover.tif'),
+            'landcover_to_crop_table_path': os.path.join(
+                SAMPLE_DATA_PATH, 'landcover_to_crop_table.csv'),
+            'k_raster_path': os.path.join(
+                SAMPLE_DATA_PATH, 'k.tif'),
+            'n_raster_path': os.path.join(
+                SAMPLE_DATA_PATH, 'n.tif'),
+            'pot_raster_path': os.path.join(
+                SAMPLE_DATA_PATH, 'pot.tif'),
+            'irrigation_raster_path': os.path.join(
+                SAMPLE_DATA_PATH, 'irrigation.tif'),
+            'model_data_path': MODEL_DATA_PATH
+            }
+        crop_production_regression.execute(args)

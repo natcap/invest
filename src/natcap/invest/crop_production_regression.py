@@ -1,4 +1,4 @@
-"""InVEST Crop Production Percentile Model."""
+"""InVEST Crop Production Regression Model."""
 import collections
 import re
 import os
@@ -15,7 +15,7 @@ from . import utils
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('natcap.invest.crop_production_percentile')
+LOGGER = logging.getLogger('natcap.invest.crop_production_regression')
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
@@ -81,11 +81,13 @@ _NODATA_YIELD = -1.0
 
 
 def execute(args):
-    """Crop Production Percentile Model.
+    """Crop Production Regression Model.
 
-    This model will take a landcover (crop cover?) map and produce yields,
-    production, and observed crop yields, a nutrient table, and a clipped
-    observed map.
+    This model will take a landcover, information about fertilization of
+    K, N, and Pot, and irrigation information to produce modeled ag
+    production.
+
+    [say equations here and cite reference?]
 
     Parameters:
         args['workspace_dir'] (string): output directory for intermediate,
@@ -100,6 +102,12 @@ def execute(args):
             * crop_name: a string that must match one of the crops in
               args['model_data_path']/climate_bin_maps/[cropname]_*
               A ValueError is raised if strings don't match.
+        args['k_raster_path'] (string): path to K fertilization rates (kg/Ha).
+        args['n_raster_path'] (string): path to N fertilization rates (kg/Ha).
+        args['pot_raster_path'] (string):  path to Pot fertilization rates (
+            kg/Ha).
+        args['irrigation_raster_path'] (string): path to irrigation mask,
+            pixel value of 1 indicates irrigation present while 0 does not.
         args['aggregate_polygon_path'] (string): path to polygon shapefile
             that will be used to aggregate crop yields and total nutrient
             value. (optional, if value is None, then skipped)
