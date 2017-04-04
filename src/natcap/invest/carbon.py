@@ -403,5 +403,13 @@ def _generate_report(summary_stats, model_args, html_report_path):
                     result_description, units, value, raw_file_path))
         report_doc.write('</body></html>')
 
+
 def validate(args, limit_to=None):
-    return []
+    validation_warnings = []
+    if limit_to in ('lulc_cur_year', None):
+        try:
+            int(args['lulc_cur_year'])
+        except (TypeError, ValueError) as error:
+            validation_warnings.append(('lulc_cur_year', str(error)))
+
+    return validation_warnings
