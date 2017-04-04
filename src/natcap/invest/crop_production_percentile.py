@@ -1,4 +1,5 @@
 """InVEST Crop Production Percentile Model."""
+import random
 import collections
 import re
 import os
@@ -7,6 +8,7 @@ import logging
 import numpy
 from osgeo import gdal
 from osgeo import osr
+from osgeo import ogr
 import pygeoprocessing
 
 from . import utils
@@ -60,6 +62,15 @@ _INTERPOLATED_OBSERVED_YIELD_RATE_FILE_PATTERN = os.path.join(
 _OBSERVED_YIELD_FILE_PATTERN = os.path.join(
     '.', '%s_observed_yield%s.tif')
 
+# file_suffix
+_AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, 'aggregate_model_results%s.shp')
+
+# file_suffix
+_AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
+    '.', 'aggregate_results%s.csv')
+
+
 _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 'K', 'Na', 'Zn',
     'Cu', 'Fl', 'Mn', 'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
@@ -94,6 +105,10 @@ def execute(args):
         args['aggregate_polygon_path'] (string): path to polygon shapefile
             that will be used to aggregate crop yields and total nutrient
             value. (optional, if value is None, then skipped)
+        args['aggregate_polygon_id'] (string): if
+            args['aggregate_polygon_path'] is provided, then this value is a
+            id field in that vector that will be used to index the final
+            aggregate results.
         args['model_data_path'] (string): path to the InVEST Crop Production
             global data directory.  This model expects that the following
             directories are subdirectories of this path
@@ -417,10 +432,62 @@ def execute(args):
     if ('aggregate_polygon_path' in args and
             args['aggregate_polygon_path'] is not None):
         LOGGER.info("aggregating result over query polygon")
+        aggregate_vector = ogr.Open(args['aggregate_polygon_path'])
+        if aggregate_vector.GetLayerCount() > 1:
+            LOGGER.warn(
+                "More than 1 layer in %s, model will only aggregate the "
+                "first layer." % args['aggregate_polygon_path'])
+        aggregate_vector = None
         # reproject polygon to LULC
-        # create polygon if not done before?
-        # create crop fields in polygon
-        # create nutrient fields in polygon
+        target_aggregate_vector_path = os.path.join(
+            output_dir, _AGGREGATE_VECTOR_FILE_PATTERN % (file_suffix))
+        pygeoprocessing.reproject_vector(
+            args['aggregate_polygon_path'],
+            landcover_raster_info['projection'],
+            target_aggregate_vector_path, layer_index=0,
+            driver_name='ESRI Shapefile')
+
         # loop over every crop and query with pgp function
+        total_yield_lookup = {}
+        for crop_name in crop_to_landcover_table:
+            # loop over percentiles
+            for yield_percentile_id in yield_percentile_headers:
+                percentile_crop_yield_raster_path = os.path.join(
+                    output_dir,
+                    _PERCENTILE_CROP_YIELD_FILE_PATTERN % (
+                        crop_name, yield_percentile_id, file_suffix))
+                total_yield_lookup['%s_%s' % (
+                    crop_name, yield_percentile_id)] = (
+                        pygeoprocessing.zonal_statistics(
+                            (percentile_crop_yield_raster_path, 1),
+                            target_aggregate_vector_path,
+                            args['aggregate_polygon_id']))
+
+            # process observed
+            observed_yield_path = os.path.join(
+                output_dir, _OBSERVED_YIELD_FILE_PATTERN % (
+                    crop_name, file_suffix))
+            total_yield_lookup['%s_observed' % crop_name] = (
+                pygeoprocessing.zonal_statistics(
+                    (observed_yield_path, 1),
+                    target_aggregate_vector_path,
+                    args['aggregate_polygon_id']))
+
         # use that result to calculate nutrient totals
-        # add everything to polygon
+
+        # report everything to a table
+        aggregate_table_path = os.path.join(
+            output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
+        with open(aggregate_table_path, 'wb') as aggregate_table:
+            # write header
+            aggregate_table.write('%s,' % args['aggregate_polygon_id'])
+            aggregate_table.write(','.join(sorted(total_yield_lookup)))
+            aggregate_table.write('\n')
+
+            # iterate by polygon index
+            for id_index in total_yield_lookup.itervalues().next():
+                aggregate_table.write('%s,' % id_index)
+                aggregate_table.write(','.join([
+                    str(total_yield_lookup[yield_header][id_index]['sum'])
+                    for yield_header in sorted(total_yield_lookup)]))
+                aggregate_table.write('\n')
