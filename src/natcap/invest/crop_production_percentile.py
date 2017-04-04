@@ -43,7 +43,7 @@ _COARSE_YIELD_PERCENTILE_FILE_PATTERN = os.path.join(
 
 # crop_name, yield_percentile_id, file_suffix
 _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN = os.path.join(
-    '.', '%s_%s_yield%s.tif')
+    '.', '%s_%s_production%s.tif')
 
 # crop_name, file_suffix
 _CLIPPED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
@@ -63,7 +63,7 @@ _OBSERVED_PRODUCTION_FILE_PATTERN = os.path.join(
 
 # file_suffix
 _AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'aggregate_model_results%s.shp')
+    _INTERMEDIATE_OUTPUT_DIR, 'aggrgate_vector%s.shp')
 
 # file_suffix
 _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
