@@ -346,8 +346,10 @@ def execute(args):
             _observed_yield_op, observed_production_raster_path,
             gdal.GDT_Float32, observed_yield_nodata)
 
+    # both 'crop_nutrient.csv' and 'crop' are known data/header values for
+    # this model data.
     nutrient_table = utils.build_lookup_from_csv(
-        os.path.join(args['model_data_path'], 'cropNutrient.csv'),
+        os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
         'crop', to_lower=False)
 
     LOGGER.info("Report table")
