@@ -71,13 +71,13 @@ class ModelUI(base_widgets.ExecRoot):
         try:
             architecture = platform.architecture()[0]
             links.append('InVEST Version %s (%s)' % (natcap.invest.__version__,
-                architecture))
+                         architecture))
         except AttributeError:
             links.append('InVEST Version UNKNOWN')
 
         try:
             docs_path = os.path.abspath(self.attributes['localDocURI'])
-            if not (os.path.exists(docs_path) and
+            if (not os.path.exists(docs_path) and not
                     getattr(sys, 'frozen', False)):
                 docs_path = os.path.join(os.path.dirname(sys.executable),
                                          docs_path)
