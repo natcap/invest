@@ -91,6 +91,9 @@ def execute(args):
             * crop_name: a string that must match one of the crops in
               args['model_data_path']/climate_bin_maps/[cropname]_*
               A ValueError is raised if strings don't match.
+        args['aggregate_polygon_path'] (string): path to polygon shapefile
+            that will be used to aggregate crop yields and total nutrient
+            value. (optional, if value is None, then skipped)
         args['model_data_path'] (string): path to the InVEST Crop Production
             global data directory.  This model expects that the following
             directories are subdirectories of this path
@@ -410,3 +413,14 @@ def execute(args):
         result_table.write(
             '\n,total area (both crop and non-crop)\n,%f\n' % (
                 total_area * pixel_area_ha))
+
+    if ('aggregate_polygon_path' in args and
+            args['aggregate_polygon_path'] is not None):
+        LOGGER.info("aggregating result over query polygon")
+        # reproject polygon to LULC
+        # create polygon if not done before?
+        # create crop fields in polygon
+        # create nutrient fields in polygon
+        # loop over every crop and query with pgp function
+        # use that result to calculate nutrient totals
+        # add everything to polygon
