@@ -75,7 +75,7 @@ if is_darwin:
             glob.glob('/usr/local/lib/libgeos*.dylib'),
             glob.glob('/usr/local/lib/libgeotiff*.dylib'),
             glob.glob('/usr/local/lib/libpng*.dylib'),
-            glob.glob('/usr/local/lib/libspatialindex*')
+            glob.glob('/usr/local/lib/libspatialindex*.dylib')
         )]
 
 exe = EXE(
