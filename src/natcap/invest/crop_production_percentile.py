@@ -272,7 +272,7 @@ def execute(args):
         # calculate the non-zero production area for that crop, okay to use
         # just one of the percentile rasters
         for _, band_values in pygeoprocessing.iterblocks(
-                interpolated_yield_percentile_raster_path):
+                percentile_crop_yield_raster_path):
             crop_area[crop_name] += numpy.count_nonzero(
                 (band_values != _NODATA_YIELD) & (band_values > 0.0))
 
@@ -377,6 +377,7 @@ def execute(args):
             result_table.write(crop_name)
             result_table.write(',%f' % crop_area[crop_name])
             production_lookup = {}
+            # convert g to kg and fraction left over from refuse
             nutrient_factor = 1e4 * (
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             for yield_percentile_id in sorted(yield_percentile_headers):
@@ -449,7 +450,13 @@ def execute(args):
 
         # loop over every crop and query with pgp function
         total_yield_lookup = {}
+        total_nutrient_table = collections.defaultdict(
+            lambda: collections.defaultdict(lambda: collections.defaultdict(
+                float)))
         for crop_name in crop_to_landcover_table:
+            # g to kg and percent left over after refuse
+            nutrient_factor = 1e4 * (
+                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             # loop over percentiles
             for yield_percentile_id in yield_percentile_headers:
                 percentile_crop_yield_raster_path = os.path.join(
@@ -463,6 +470,15 @@ def execute(args):
                             target_aggregate_vector_path,
                             args['aggregate_polygon_id']))
 
+                for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
+                    for id_index in total_yield_lookup['%s_%s' % (
+                            crop_name, yield_percentile_id)]:
+                        total_nutrient_table[nutrient_id][yield_percentile_id][id_index] += (
+                            nutrient_factor *
+                            total_yield_lookup['%s_%s' % (
+                                crop_name, yield_percentile_id)][id_index]['sum'] *
+                            nutrient_table[crop_name][nutrient_id])
+
             # process observed
             observed_yield_path = os.path.join(
                 output_dir, _OBSERVED_YIELD_FILE_PATTERN % (
@@ -472,6 +488,12 @@ def execute(args):
                     (observed_yield_path, 1),
                     target_aggregate_vector_path,
                     args['aggregate_polygon_id']))
+            for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
+                for id_index in total_yield_lookup['%s_observed' % crop_name]:
+                    total_nutrient_table[nutrient_id]['observed'][id_index] += (
+                        nutrient_factor *
+                        total_yield_lookup['%s_observed' % crop_name][id_index]['sum'] *
+                        nutrient_table[crop_name][nutrient_id])
 
         # use that result to calculate nutrient totals
 
@@ -482,6 +504,12 @@ def execute(args):
             # write header
             aggregate_table.write('%s,' % args['aggregate_polygon_id'])
             aggregate_table.write(','.join(sorted(total_yield_lookup)))
+            aggregate_table.write(
+                ','.join([
+                    '%s_%s' % (nutrient_id, model_type)
+                    for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
+                    for model_type in sorted(
+                        total_nutrient_table.itervalues().next())]))
             aggregate_table.write('\n')
 
             # iterate by polygon index
@@ -490,4 +518,10 @@ def execute(args):
                 aggregate_table.write(','.join([
                     str(total_yield_lookup[yield_header][id_index]['sum'])
                     for yield_header in sorted(total_yield_lookup)]))
+
+                for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
+                    for model_type in sorted(
+                            total_nutrient_table.itervalues().next()):
+                        aggregate_table.write(
+                            '%s,' % total_nutrient_table[nutrient_id][model_type][id_index])
                 aggregate_table.write('\n')
