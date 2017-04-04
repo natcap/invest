@@ -367,32 +367,14 @@ def execute(args):
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
-    total_nutrient_table = collections.defaultdict(
-        lambda: collections.defaultdict(float))
     with open(result_table_path, 'wb') as result_table:
         result_table.write(
-            'crop,area (ha),' + ','.join(production_percentile_headers) +
-            ',production_observed' + ',' + ','.join(nutrient_headers) + '\n')
+            'crop,area (ha),' + 'production_observed,' +
+            ','.join(production_percentile_headers) + ',' + ','.join(nutrient_headers) + '\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
             result_table.write(',%f' % crop_area[crop_name])
             production_lookup = {}
-            # convert g to kg and fraction left over from refuse
-            nutrient_factor = 1e4 * (
-                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
-            for yield_percentile_id in sorted(yield_percentile_headers):
-                yield_percentile_raster_path = os.path.join(
-                    output_dir,
-                    _INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN % (
-                        crop_name, yield_percentile_id, file_suffix))
-                yield_sum = 0.0
-                for _, yield_block in pygeoprocessing.iterblocks(
-                        yield_percentile_raster_path):
-                    yield_sum += numpy.sum(
-                        yield_block[_NODATA_YIELD != yield_block])
-                production = yield_sum * pixel_area_ha
-                production_lookup[yield_percentile_id] = production
-                result_table.write(",%f" % production)
             yield_sum = 0.0
             observed_yield_raster_path = os.path.join(
                 output_dir,
@@ -404,20 +386,35 @@ def execute(args):
                     observed_yield_raster_path):
                 yield_sum += numpy.sum(
                     yield_block[observed_yield_nodata != yield_block])
-            production = yield_sum * pixel_area_ha
-            production_lookup['observed'] = production
-            result_table.write(",%f" % production)
+            production_lookup['observed'] = yield_sum
+            result_table.write(",%f" % yield_sum)
+
+            for yield_percentile_id in sorted(yield_percentile_headers):
+                yield_percentile_raster_path = os.path.join(
+                    output_dir,
+                    _INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN % (
+                        crop_name, yield_percentile_id, file_suffix))
+                yield_sum = 0.0
+                for _, yield_block in pygeoprocessing.iterblocks(
+                        yield_percentile_raster_path):
+                    yield_sum += numpy.sum(
+                        yield_block[_NODATA_YIELD != yield_block])
+                production_lookup[yield_percentile_id] = yield_sum
+                result_table.write(",%f" % yield_sum)
+
+            # convert 100g to Mg and fraction left over from refuse
+            nutrient_factor = 1e4 * (
+                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for yield_percentile_id in sorted(yield_percentile_headers):
-                    total_nutrient_table[nutrient_id][yield_percentile_id] += (
+                    total_nutrient = (
                         nutrient_factor *
                         production_lookup[yield_percentile_id] *
                         nutrient_table[crop_name][nutrient_id])
-                    result_table.write(",%f" % (
-                        total_nutrient_table[nutrient_id][yield_percentile_id]
-                        ))
+                    result_table.write(",%f" % (total_nutrient))
                 result_table.write(
                     ",%f" % (
+                        nutrient_factor *
                         production_lookup['observed'] *
                         nutrient_table[crop_name][nutrient_id]))
             result_table.write('\n')
@@ -425,7 +422,8 @@ def execute(args):
         total_area = 0.0
         for _, band_values in pygeoprocessing.iterblocks(
                 args['landcover_raster_path']):
-            total_area += numpy.count_nonzero((band_values != _NODATA_YIELD))
+            total_area += numpy.count_nonzero(
+                (band_values != landcover_nodata))
         result_table.write(
             '\n,total area (both crop and non-crop)\n,%f\n' % (
                 total_area * pixel_area_ha))
@@ -454,7 +452,7 @@ def execute(args):
             lambda: collections.defaultdict(lambda: collections.defaultdict(
                 float)))
         for crop_name in crop_to_landcover_table:
-            # g to kg and percent left over after refuse
+            # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             # loop over percentiles
