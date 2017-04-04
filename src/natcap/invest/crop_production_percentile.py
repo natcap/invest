@@ -392,7 +392,7 @@ def execute(args):
             for yield_percentile_id in sorted(yield_percentile_headers):
                 yield_percentile_raster_path = os.path.join(
                     output_dir,
-                    _INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN % (
+                    _PERCENTILE_CROP_YIELD_FILE_PATTERN % (
                         crop_name, yield_percentile_id, file_suffix))
                 yield_sum = 0.0
                 for _, yield_block in pygeoprocessing.iterblocks(
