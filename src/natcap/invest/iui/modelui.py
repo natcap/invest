@@ -77,7 +77,7 @@ class ModelUI(base_widgets.ExecRoot):
 
         try:
             docs_path = os.path.abspath(self.attributes['localDocURI'])
-            if (not os.path.exists(docs_path) and not
+            if (not os.path.exists(docs_path) and
                     getattr(sys, 'frozen', False)):
                 docs_path = os.path.join(os.path.dirname(sys.executable),
                                          docs_path)
