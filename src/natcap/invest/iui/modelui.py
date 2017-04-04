@@ -77,7 +77,7 @@ class ModelUI(base_widgets.ExecRoot):
 
         try:
             docs_path = os.path.abspath(self.attributes['localDocURI'])
-            if getattr(sys, 'frozen', False) and sys.platform() == 'Darwin':
+            if getattr(sys, 'frozen', False) and platform.system() == 'Darwin':
                 docs_path = os.path.join(os.path.dirname(sys.executable),
                                          docs_path)
             doc_uri = 'file:///' + docs_path
