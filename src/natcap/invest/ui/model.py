@@ -135,9 +135,9 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.setLayout(QtWidgets.QVBoxLayout())
 
         self.button = QtWidgets.QPushButton()
-        self.cog_icon = qtawesome.icon('fa.cog',
-                                       animation=qtawesome.Spin(self.button))
-        self.button.setIcon(self.cog_icon)
+        #self.cog_icon = qtawesome.icon('fa.cog',
+        #                               animation=qtawesome.Spin(self.button))
+        #self.button.setIcon(self.cog_icon)
         self.button.setFlat(True)
         self.button.setIconSize(QtCore.QSize(64, 64))
         self.layout().addWidget(self.button)
@@ -165,6 +165,9 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         if validation_warnings:
             # cgi.escape handles escaping of characters <, >, &, " for HTML.
             self.label.setText(
+                '<h2>Validation warnings found</h2>'
+                '<h4>To ensure the model works as expected, please fix these '
+                'erorrs</h4>'
                 '<ul>%s</ul>' % ''.join(
                     ['<li>%s</li>' % cgi.escape(warning_, quote=True)
                      for warning_ in validation_warnings]))
@@ -478,10 +481,10 @@ class Model(QtWidgets.QMainWindow):
         # post warnings to the WMV dialog
         args_to_inputs = dict((input_.args_key, input_) for input_ in
                               self.inputs())
-        warnings_ = ['<b>%s</b>: %s' % (args_to_inputs[key].label, warning)
+        warnings_ = ['%s: %s' % (args_to_inputs[key].label, warning)
                      for (key, warning) in validation_warnings]
         warnings_ += [
-            '<b>%s</b>: Input is required' % input_.label
+            '%s: Input is required' % input_.label
             for input_ in required_warnings]
         self._validation_report_dialog.validation_finished(warnings_)
 
