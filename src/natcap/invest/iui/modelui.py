@@ -76,7 +76,12 @@ class ModelUI(base_widgets.ExecRoot):
             links.append('InVEST Version UNKNOWN')
 
         try:
-            doc_uri = 'file:///' + os.path.abspath(self.attributes['localDocURI'])
+            docs_path = os.path.abspath(self.attributes['localDocURI'])
+            if not (os.path.exists(docs_path) and
+                    getattr(sys, 'frozen', False)):
+                docs_path = os.path.join(os.path.dirname(sys.executable),
+                                         docs_path)
+            doc_uri = 'file:///' + docs_path
             links.append('<a href=\"%s\">Model documentation</a>' % doc_uri)
         except KeyError:
             # Thrown if attributes['localDocURI'] is not present
