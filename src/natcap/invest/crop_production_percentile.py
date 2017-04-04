@@ -1,5 +1,4 @@
 """InVEST Crop Production Percentile Model."""
-import random
 import collections
 import re
 import os
@@ -21,7 +20,7 @@ LOGGER = logging.getLogger('natcap.invest.crop_production')
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
 _YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
-_GLOBAL_OBSERVED_YIELD_RATE_FILE_PATTERN = os.path.join(
+_GLOBAL_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
     'observed_yield', '%s_yield_map.tif')  # crop_name
 _EXTENDED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
     'extended_climate_bin_maps', 'extendedclimatebins%s.tif')  # crop_name
@@ -31,7 +30,7 @@ _CLIMATE_PERCENTILE_TABLE_PATTERN = os.path.join(
 
 # crop_name, yield_percentile_id
 _INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_interpolated_yield_rate%s.tif')
+    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_interpolated_yield%s.tif')
 
 # crop_name, file_suffix
 _CLIPPED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
@@ -40,27 +39,27 @@ _CLIPPED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
 
 # crop_name, yield_percentile_id, file_suffix
 _COARSE_YIELD_PERCENTILE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_coarse_yield_rate%s.tif')
+    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_coarse_yield%s.tif')
 
 # crop_name, yield_percentile_id, file_suffix
-_PERCENTILE_CROP_YIELD_FILE_PATTERN = os.path.join(
+_PERCENTILE_CROP_PRODUCTION_FILE_PATTERN = os.path.join(
     '.', '%s_%s_yield%s.tif')
 
 # crop_name, file_suffix
-_CLIPPED_OBSERVED_YIELD_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_clipped_observed_yield_rate%s.tif')
+_CLIPPED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_clipped_observed_yield%s.tif')
 
 # crop_name, file_suffix
-_ZEROED_OBSERVED_YIELD_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_zeroed_observed_yield_rate%s.tif')
+_ZEROED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_zeroed_observed_yield%s.tif')
 
 # crop_name, file_suffix
-_INTERPOLATED_OBSERVED_YIELD_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_interpolated_observed_yield_rate%s.tif')
+_INTERPOLATED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_interpolated_observed_yield%s.tif')
 
 # crop_name, file_suffix
-_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    '.', '%s_observed_yield%s.tif')
+_OBSERVED_PRODUCTION_FILE_PATTERN = os.path.join(
+    '.', '%s_observed_production%s.tif')
 
 # file_suffix
 _AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
@@ -69,7 +68,6 @@ _AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
 # file_suffix
 _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
     '.', 'aggregate_results%s.csv')
-
 
 _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 'K', 'Na', 'Zn',
@@ -203,8 +201,8 @@ def execute(args):
             args['model_data_path'],
             _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
         crop_climate_percentile_table = utils.build_lookup_from_csv(
-            climate_percentile_yield_table_path, 'climate_bin', to_lower=True,
-            numerical_cast=True)
+            climate_percentile_yield_table_path, 'climate_bin',
+            to_lower=True, numerical_cast=True)
 
         yield_percentile_headers = [
             x for x in crop_climate_percentile_table.itervalues().next()
@@ -247,12 +245,12 @@ def execute(args):
                 "Calculate yield for %s at %s", crop_name,
                 yield_percentile_id)
 
-            percentile_crop_yield_raster_path = os.path.join(
+            percentile_crop_production_raster_path = os.path.join(
                 output_dir,
-                _PERCENTILE_CROP_YIELD_FILE_PATTERN % (
+                _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
                     crop_name, yield_percentile_id, file_suffix))
 
-            def _crop_yield_op(lulc_array, yield_rate_array):
+            def _crop_production_op(lulc_array, yield_array):
                 """Mask in climate bins that intersect with `crop_lucode`."""
                 result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
                 result[:] = _NODATA_YIELD
@@ -260,74 +258,74 @@ def execute(args):
                 lulc_mask = lulc_array == crop_lucode
                 result[valid_mask] = 0
                 result[lulc_mask] = (
-                    yield_rate_array[lulc_mask] * pixel_area_ha)
+                    yield_array[lulc_mask] * pixel_area_ha)
                 return result
 
             pygeoprocessing.raster_calculator(
                 [(args['landcover_raster_path'], 1),
                  (interpolated_yield_percentile_raster_path, 1)],
-                _crop_yield_op, percentile_crop_yield_raster_path,
+                _crop_production_op, percentile_crop_production_raster_path,
                 gdal.GDT_Float32, _NODATA_YIELD)
 
         # calculate the non-zero production area for that crop, okay to use
         # just one of the percentile rasters
         for _, band_values in pygeoprocessing.iterblocks(
-                percentile_crop_yield_raster_path):
+                percentile_crop_production_raster_path):
             crop_area[crop_name] += numpy.count_nonzero(
                 (band_values != _NODATA_YIELD) & (band_values > 0.0))
 
         crop_area[crop_name] *= pixel_area_ha
 
         LOGGER.info("Calculate observed yield for %s", crop_name)
-        global_observed_yield_rate_raster_path = os.path.join(
+        global_observed_yield_raster_path = os.path.join(
             args['model_data_path'],
-            _GLOBAL_OBSERVED_YIELD_RATE_FILE_PATTERN % crop_name)
-        global_observed_yield_rate_raster_info = (
+            _GLOBAL_OBSERVED_YIELD_FILE_PATTERN % crop_name)
+        global_observed_yield_raster_info = (
             pygeoprocessing.get_raster_info(
-                global_observed_yield_rate_raster_path))
+                global_observed_yield_raster_path))
 
-        clipped_observed_yield_rate_raster_path = os.path.join(
-            output_dir, _CLIPPED_OBSERVED_YIELD_RATE_FILE_PATTERN % (
+        clipped_observed_yield_raster_path = os.path.join(
+            output_dir, _CLIPPED_OBSERVED_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
         pygeoprocessing.warp_raster(
-            global_observed_yield_rate_raster_path,
-            global_observed_yield_rate_raster_info['pixel_size'],
-            clipped_observed_yield_rate_raster_path, 'nearest',
+            global_observed_yield_raster_path,
+            global_observed_yield_raster_info['pixel_size'],
+            clipped_observed_yield_raster_path, 'nearest',
             target_bb=landcover_wgs84_bounding_box)
 
         observed_yield_nodata = (
-            global_observed_yield_rate_raster_info['nodata'][0])
+            global_observed_yield_raster_info['nodata'][0])
 
-        zeroed_observed_yield_rate_raster_path = os.path.join(
-            output_dir, _ZEROED_OBSERVED_YIELD_RATE_FILE_PATTERN % (
+        zeroed_observed_yield_raster_path = os.path.join(
+            output_dir, _ZEROED_OBSERVED_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
 
-        def _zero_observed_yield_op(observed_yield_rate_array):
+        def _zero_observed_yield_op(observed_yield_array):
             """Calculate observed 'actual' yield."""
             result = numpy.empty(
-                observed_yield_rate_array.shape, dtype=numpy.float32)
+                observed_yield_array.shape, dtype=numpy.float32)
             result[:] = 0.0
-            valid_mask = observed_yield_rate_array != observed_yield_nodata
-            result[valid_mask] = observed_yield_rate_array[valid_mask]
+            valid_mask = observed_yield_array != observed_yield_nodata
+            result[valid_mask] = observed_yield_array[valid_mask]
             return result
 
         pygeoprocessing.raster_calculator(
-            [(clipped_observed_yield_rate_raster_path, 1)],
-            _zero_observed_yield_op, zeroed_observed_yield_rate_raster_path,
+            [(clipped_observed_yield_raster_path, 1)],
+            _zero_observed_yield_op, zeroed_observed_yield_raster_path,
             gdal.GDT_Float32, observed_yield_nodata)
 
-        interpolated_observed_yield_rate_raster_path = os.path.join(
-            output_dir, _INTERPOLATED_OBSERVED_YIELD_RATE_FILE_PATTERN % (
+        interpolated_observed_yield_raster_path = os.path.join(
+            output_dir, _INTERPOLATED_OBSERVED_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
 
         pygeoprocessing.warp_raster(
-            zeroed_observed_yield_rate_raster_path,
+            zeroed_observed_yield_raster_path,
             landcover_raster_info['pixel_size'],
-            interpolated_observed_yield_rate_raster_path, 'cubic_spline',
+            interpolated_observed_yield_raster_path, 'cubic_spline',
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
 
-        def _observed_yield_op(lulc_array, observed_yield_rate_array):
+        def _observed_yield_op(lulc_array, observed_yield_array):
             """Calculate observed 'actual' yield."""
             result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
             result[:] = observed_yield_nodata
@@ -335,17 +333,17 @@ def execute(args):
             lulc_mask = lulc_array == crop_lucode
             result[valid_mask] = 0
             result[lulc_mask] = (
-                observed_yield_rate_array[lulc_mask] * pixel_area_ha)
+                observed_yield_array[lulc_mask] * pixel_area_ha)
             return result
 
-        observed_yield_raster_path = os.path.join(
-            output_dir, _OBSERVED_YIELD_FILE_PATTERN % (
+        observed_production_raster_path = os.path.join(
+            output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
                 crop_name, file_suffix))
 
         pygeoprocessing.raster_calculator(
             [(args['landcover_raster_path'], 1),
-             (interpolated_observed_yield_rate_raster_path, 1)],
-            _observed_yield_op, observed_yield_raster_path,
+             (interpolated_observed_yield_raster_path, 1)],
+            _observed_yield_op, observed_production_raster_path,
             gdal.GDT_Float32, observed_yield_nodata)
 
     nutrient_table = utils.build_lookup_from_csv(
@@ -370,20 +368,21 @@ def execute(args):
     with open(result_table_path, 'wb') as result_table:
         result_table.write(
             'crop,area (ha),' + 'production_observed,' +
-            ','.join(production_percentile_headers) + ',' + ','.join(nutrient_headers) + '\n')
+            ','.join(production_percentile_headers) + ',' + ','.join(
+                nutrient_headers) + '\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
             result_table.write(',%f' % crop_area[crop_name])
             production_lookup = {}
             yield_sum = 0.0
-            observed_yield_raster_path = os.path.join(
+            observed_production_raster_path = os.path.join(
                 output_dir,
-                _OBSERVED_YIELD_FILE_PATTERN % (
+                _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
             observed_yield_nodata = pygeoprocessing.get_raster_info(
-                observed_yield_raster_path)['nodata'][0]
+                observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
-                    observed_yield_raster_path):
+                    observed_production_raster_path):
                 yield_sum += numpy.sum(
                     yield_block[observed_yield_nodata != yield_block])
             production_lookup['observed'] = yield_sum
@@ -392,7 +391,7 @@ def execute(args):
             for yield_percentile_id in sorted(yield_percentile_headers):
                 yield_percentile_raster_path = os.path.join(
                     output_dir,
-                    _PERCENTILE_CROP_YIELD_FILE_PATTERN % (
+                    _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
                         crop_name, yield_percentile_id, file_suffix))
                 yield_sum = 0.0
                 for _, yield_block in pygeoprocessing.iterblocks(
@@ -457,29 +456,31 @@ def execute(args):
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             # loop over percentiles
             for yield_percentile_id in yield_percentile_headers:
-                percentile_crop_yield_raster_path = os.path.join(
+                percentile_crop_production_raster_path = os.path.join(
                     output_dir,
-                    _PERCENTILE_CROP_YIELD_FILE_PATTERN % (
+                    _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
                         crop_name, yield_percentile_id, file_suffix))
                 total_yield_lookup['%s_%s' % (
                     crop_name, yield_percentile_id)] = (
                         pygeoprocessing.zonal_statistics(
-                            (percentile_crop_yield_raster_path, 1),
+                            (percentile_crop_production_raster_path, 1),
                             target_aggregate_vector_path,
                             args['aggregate_polygon_id']))
 
                 for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                     for id_index in total_yield_lookup['%s_%s' % (
                             crop_name, yield_percentile_id)]:
-                        total_nutrient_table[nutrient_id][yield_percentile_id][id_index] += (
-                            nutrient_factor *
-                            total_yield_lookup['%s_%s' % (
-                                crop_name, yield_percentile_id)][id_index]['sum'] *
-                            nutrient_table[crop_name][nutrient_id])
+                        total_nutrient_table[nutrient_id][
+                            yield_percentile_id][id_index] += (
+                                nutrient_factor *
+                                total_yield_lookup['%s_%s' % (
+                                    crop_name, yield_percentile_id)][
+                                        id_index]['sum'] *
+                                nutrient_table[crop_name][nutrient_id])
 
             # process observed
             observed_yield_path = os.path.join(
-                output_dir, _OBSERVED_YIELD_FILE_PATTERN % (
+                output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
             total_yield_lookup['%s_observed' % crop_name] = (
                 pygeoprocessing.zonal_statistics(
@@ -488,10 +489,12 @@ def execute(args):
                     args['aggregate_polygon_id']))
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for id_index in total_yield_lookup['%s_observed' % crop_name]:
-                    total_nutrient_table[nutrient_id]['observed'][id_index] += (
-                        nutrient_factor *
-                        total_yield_lookup['%s_observed' % crop_name][id_index]['sum'] *
-                        nutrient_table[crop_name][nutrient_id])
+                    total_nutrient_table[
+                        nutrient_id]['observed'][id_index] += (
+                            nutrient_factor *
+                            total_yield_lookup[
+                                '%s_observed' % crop_name][id_index]['sum'] *
+                            nutrient_table[crop_name][nutrient_id])
 
         # use that result to calculate nutrient totals
 
@@ -521,5 +524,6 @@ def execute(args):
                     for model_type in sorted(
                             total_nutrient_table.itervalues().next()):
                         aggregate_table.write(
-                            '%s,' % total_nutrient_table[nutrient_id][model_type][id_index])
+                            '%s,' % total_nutrient_table[
+                                nutrient_id][model_type][id_index])
                 aggregate_table.write('\n')
