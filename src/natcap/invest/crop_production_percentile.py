@@ -348,7 +348,7 @@ def execute(args):
 
     nutrient_table = utils.build_lookup_from_csv(
         os.path.join(args['model_data_path'], 'cropNutrient.csv'),
-        'filenm', to_lower=False)
+        'crop', to_lower=False)
 
     LOGGER.info("Report table")
     result_table_path = os.path.join(
