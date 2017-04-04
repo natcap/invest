@@ -453,13 +453,15 @@ class Model(QtWidgets.QMainWindow):
 
     def _validation_finished(self, validation_warnings):
         inputs.QT_APP.processEvents()
-        LOGGER.info('Whole-model validation finished with: %s',
+        LOGGER.info('Whole-model validation returned: %s',
                     validation_warnings)
         # Double-check that there aren't any required inputs that aren't
         # satisfied.
         required_warnings = [input_ for input_ in self.inputs()
                              if all((input_.required,
                                      not input_.value()))]
+        LOGGER.info('Required inputs detected from the ui: %s',
+                    required_warnings)
         if (validation_warnings or required_warnings):
             self.validation_warning.setText('(%s)' % (
                 str(len(validation_warnings) + len(required_warnings))))
@@ -474,8 +476,12 @@ class Model(QtWidgets.QMainWindow):
         self.validation_warning.setIcon(icon)
 
         # post warnings to the WMV dialog
-        warnings_ = validation_warnings + [
-            '%s: Input is required' % input_.label
+        args_to_inputs = dict((input_.args_key, input_) for input_ in
+                              self.inputs())
+        warnings_ = ['<b>%s</b>: %s' % (args_to_inputs[key].label, warning)
+                     for (key, warning) in validation_warnings]
+        warnings_ += [
+            '<b>%s</b>: Input is required' % input_.label
             for input_ in required_warnings]
         self._validation_report_dialog.validation_finished(warnings_)
 
