@@ -632,12 +632,12 @@ def get_inputs(args):
     lulc_lookup_dict = geoprocess.get_lookup_from_table(
         args['lulc_lookup_uri'], 'lulc-class')
     lulc_to_code_dict = \
-        dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items())
+        dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items() if k)
     initial_dict = geoprocess.get_lookup_from_table(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
     code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
-                     in initial_dict.iteritems())
+                     in initial_dict.iteritems() if k)
     for args_key, col_name in [('lulc_to_Sb', 'biomass'),
                                ('lulc_to_Ss', 'soil'),
                                ('lulc_to_L', 'litter')]:
