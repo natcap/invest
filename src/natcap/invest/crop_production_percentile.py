@@ -529,5 +529,3 @@ def execute(args):
                             '%s,' % total_nutrient_table[
                                 nutrient_id][model_type][id_index])
                 aggregate_table.write('\n')
-
-    foo.bar()
