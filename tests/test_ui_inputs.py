@@ -197,7 +197,7 @@ class InputTest(unittest.TestCase):
         container.add_input(input_instance)
 
     def test_visibility(self):
-        from natcap.ui import inputs
+        from natcap.invest.ui import inputs
         input_instance = self.__class__.create_input(label='foo',
                                                      interactive=False)
         self.assertEqual(input_instance.visible(), True)
@@ -213,7 +213,7 @@ class InputTest(unittest.TestCase):
             self.assertEqual(input_instance.visible(), True)
 
     def test_visiblity_when_shown(self):
-        from natcap.ui import inputs
+        from natcap.invest.ui import inputs
         container = inputs.Container(label='sample container')
         input_instance = self.__class__.create_input(label='foo',
                                                      interactive=False)
@@ -1170,7 +1170,7 @@ class OpenWorkspaceTest(unittest.TestCase):
 
 class ExecutionTest(unittest.TestCase):
     def test_executor_run(self):
-        from natcap.ui.execution import Executor
+        from natcap.invest.ui.execution import Executor
 
         thread_event = threading.Event()
 
@@ -1213,7 +1213,7 @@ class ExecutionTest(unittest.TestCase):
             shutil.rmtree(tempdir)
 
     def test_executor_exception(self):
-        from natcap.ui.execution import Executor
+        from natcap.invest.ui.execution import Executor
 
         thread_event = threading.Event()
 
@@ -1263,7 +1263,7 @@ class ExecutionTest(unittest.TestCase):
 
 class IntegrationTests(unittest.TestCase):
     def test_checkbox_enables_collapsible_container(self):
-        from natcap.ui import inputs
+        from natcap.invest.ui import inputs
         checkbox = inputs.Checkbox(label='Trigger')
         container = inputs.Container(label='Container',
                                      expandable=True,
