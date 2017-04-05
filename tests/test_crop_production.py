@@ -1,4 +1,5 @@
 """Module for Regression Testing the InVEST Crop Production models."""
+import numpy
 import unittest
 import tempfile
 import shutil
@@ -13,6 +14,9 @@ MODEL_DATA_PATH = os.path.join(
 SAMPLE_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
     'CropProduction', 'sample_user_data')
+TEST_DATA_PATH = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'crop_production_model')
 
 
 class CropProductionTests(unittest.TestCase):
@@ -48,6 +52,36 @@ class CropProductionTests(unittest.TestCase):
         }
         crop_production_percentile.execute(args)
 
+        result_table_path = os.path.join(
+            args['workspace_dir'], 'aggregate_results.csv')
+        from natcap.invest import utils
+        result_table = utils.build_lookup_from_csv(
+            result_table_path, 'id', to_lower=True, numerical_cast=True)
+
+        expected_result_table_path = os.path.join(
+            TEST_DATA_PATH, 'expected_aggregate_results.csv')
+
+        expected_result_table = utils.build_lookup_from_csv(
+            expected_result_table_path, 'id', to_lower=True,
+            numerical_cast=True)
+
+        for id_key in expected_result_table:
+            if id_key not in result_table:
+                self.fail("Expected ID %s in result table" % id_key)
+            for column_key in expected_result_table[id_key]:
+                if column_key not in result_table[id_key]:
+                    self.fail(
+                        "Expected column %s in result table" % column_key)
+                # The tolerance of 3 digits after the decimal was determined by
+                # experimentation
+                tolerance_places = 3
+                numpy.testing.assert_almost_equal(
+                    expected_result_table[id_key][column_key],
+                    result_table[id_key][column_key],
+                    decimal=tolerance_places)
+
+
+    @unittest.skip("Still in development.")
     @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
     @scm.skip_if_data_missing(MODEL_DATA_PATH)
     def test_crop_production_regression(self):

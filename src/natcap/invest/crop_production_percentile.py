@@ -506,7 +506,7 @@ def execute(args):
         with open(aggregate_table_path, 'wb') as aggregate_table:
             # write header
             aggregate_table.write('%s,' % args['aggregate_polygon_id'])
-            aggregate_table.write(','.join(sorted(total_yield_lookup)))
+            aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
             aggregate_table.write(
                 ','.join([
                     '%s_%s' % (nutrient_id, model_type)
@@ -526,6 +526,6 @@ def execute(args):
                     for model_type in sorted(
                             total_nutrient_table.itervalues().next()):
                         aggregate_table.write(
-                            '%s,' % total_nutrient_table[
+                            ',%s' % total_nutrient_table[
                                 nutrient_id][model_type][id_index])
                 aggregate_table.write('\n')
