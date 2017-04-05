@@ -1,8 +1,7 @@
 # coding=UTF-8
 import functools
 
-from natcap.invest.ui import model
-from natcap.ui import inputs
+from natcap.invest.ui import model, inputs
 from natcap.invest.habitat_risk_assessment import hra, hra_preprocessor
 
 

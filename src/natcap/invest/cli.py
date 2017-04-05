@@ -162,7 +162,7 @@ def _import_ui_class(gui_class):
 
 # Goal: allow InVEST models to be run at the command-line, without a UI.
 #   problem: how to identify which models have Qt UIs available?
-#       1.  If we can't import natcap.ui, we don't have any qt uis.
+#       1.  If we can't import the ui infrastructure, we don't have any qt uis.
 #       2.  We could iterate through all the model UI files and Identify the
 #           model from its name and attributes.
 #       3.  We could access a pre-processed list of models available, perhaps
@@ -394,9 +394,9 @@ def main():
     LOGGER.debug(args)
 
     try:
-        import natcap.ui
+        from natcap.invest.ui import inputs
     except ImportError:
-        print ('Error: natcap.ui not installed:\n'
+        print ('Error: ui not installed:\n'
                '    pip install natcap.invest[ui]')
         return 3
 

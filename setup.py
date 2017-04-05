@@ -229,7 +229,7 @@ setup(
         ],
     },
     extras_require={
-        'ui': ['natcap.ui'],
+        'ui': ('qtpy', 'six'),
     },
     cmdclass=CMDCLASS,
     package_data={

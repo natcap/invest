@@ -1,8 +1,7 @@
 # coding=UTF-8
 import functools
 
-from natcap.invest.ui import model
-from natcap.ui import inputs
+from natcap.invest.ui import model, inputs
 from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 from natcap.invest.coastal_blue_carbon import preprocessor
 

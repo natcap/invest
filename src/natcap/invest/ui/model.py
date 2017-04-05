@@ -13,9 +13,9 @@ from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
 import natcap.invest
-from natcap.ui import inputs
 import qtawesome
 
+from . import inputs
 from .. import cli
 from .. import utils
 from .. import scenarios

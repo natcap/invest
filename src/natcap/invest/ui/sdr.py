@@ -1,7 +1,6 @@
 # coding=UTF-8
 
-from natcap.invest.ui import model
-from natcap.ui import inputs
+from natcap.invest.ui import model, inputs
 import natcap.invest.sdr
 
 

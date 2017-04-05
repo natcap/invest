@@ -1,8 +1,7 @@
 from __future__ import absolute_import
 import logging
 
-from natcap.ui import inputs
-
+from . import inputs
 from .model import Model
 from ..pollination import pollination
 
