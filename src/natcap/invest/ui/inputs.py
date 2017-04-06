@@ -649,7 +649,7 @@ class GriddedInput(Input):
         self.lock = threading.Lock()
 
         # initialize visibility, as we've changed the input's widgets
-        self.set_visible(self.visible)
+        self.set_visible(self._visible_hint)
 
     def _validate(self):
         self.lock.acquire()
@@ -715,8 +715,12 @@ class GriddedInput(Input):
 
     def _validation_finished(self, validation_warnings):
         new_validity = not bool(validation_warnings)
-        appliccable_warnings = [w[1] for w in validation_warnings
-                                if self.args_key in w[0]]
+        if self.args_key:
+            appliccable_warnings = [w[1] for w in validation_warnings
+                                    if self.args_key in w[0]]
+        else:
+            appliccable_warnings = [w[1] for w in validation_warnings]
+
         LOGGER.info('Cleaning up validation for %s.  Warnings: %s.  Valid: %s',
                     self, appliccable_warnings, new_validity)
         if appliccable_warnings:
