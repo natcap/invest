@@ -578,6 +578,83 @@ class PathTest(TextTest):
             input_instance.path_select_button.path_selected.emit(u'/tmp/foo')
             self.assertTrue(input_instance.value(), '/tmp/foo')
 
+    def test_textfield_drag_n_drop(self):
+        input_instance = self.__class__.create_input(label='text')
+
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Hello world!')
+
+        event = QtGui.QDragEnterEvent(
+            input_instance.textfield.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        input_instance.textfield.dragEnterEvent(event)
+        self.assertEqual(event.isAccepted(), False)
+
+    def test_textfield_drag_n_drop_urls(self):
+        input_instance = self.__class__.create_input(label='text')
+
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Hello world!')
+        mime_data.setUrls([QtCore.QUrl('/foo/bar')])
+
+        event = QtGui.QDragEnterEvent(
+            input_instance.textfield.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        input_instance.textfield.dragEnterEvent(event)
+        self.assertEqual(event.isAccepted(), True)
+
+    def test_textfield_drop(self):
+        pass
+
+    def test_textfield_drop_windows(self):
+        input_instance = self.__class__.create_input(label='text')
+
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Hello world!')
+        # this is what paths look like when Qt receives them.
+        mime_data.setUrls([QtCore.QUrl('/C:/foo/bar')])
+
+        event = QtGui.QDropEvent(
+            input_instance.textfield.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        with mock.patch('platform.system', return_value='Windows'):
+            input_instance.textfield.dropEvent(event)
+
+        self.assertEqual(event.isAccepted(), True)
+        self.assertEqual(input_instance.value(), 'C:/foo/bar')
+
+    def test_textfield_drop_mac(self):
+        input_instance = self.__class__.create_input(label='text')
+
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Hello world!')
+        mime_data.setUrls([QtCore.QUrl('/foo/bar')])
+
+        event = QtGui.QDropEvent(
+            input_instance.textfield.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        with mock.patch('platform.system', return_value='Darwin'):
+            input_instance.textfield.dropEvent(event)
+
+        self.assertEqual(event.isAccepted(), True)
+        self.assertEqual(input_instance.value(), '/foo/bar')
+
 
 class FolderTest(PathTest):
     @staticmethod
