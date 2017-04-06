@@ -11,7 +11,7 @@ gdal>=1.11.2,<2.0
 matplotlib
 natcap.versioner>=0.4.2
 numpy>=1.11.0
-pygeoprocessing>=0.4.0a1
+pygeoprocessing>=0.4.0a2
 rtree>=0.8.2
 scipy>=0.16.1
 shapely

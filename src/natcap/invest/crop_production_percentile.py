@@ -76,7 +76,6 @@ _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
     'VitK']
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
-_NODATA_CLIMATE_BIN = 255
 _NODATA_YIELD = -1.0
 
 
@@ -254,7 +253,7 @@ def execute(args):
                     crop_name, yield_percentile_id, file_suffix))
 
             def _crop_production_op(lulc_array, yield_array):
-                """Mask in climate bins that intersect with `crop_lucode`."""
+                """Mask in yields that overlap with `crop_lucode`."""
                 result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
                 result[:] = _NODATA_YIELD
                 valid_mask = lulc_array != landcover_nodata
@@ -438,13 +437,7 @@ def execute(args):
     if ('aggregate_polygon_path' in args and
             args['aggregate_polygon_path'] is not None):
         LOGGER.info("aggregating result over query polygon")
-        aggregate_vector = ogr.Open(args['aggregate_polygon_path'])
-        if aggregate_vector.GetLayerCount() > 1:
-            LOGGER.warn(
-                "More than 1 layer in %s, model will only aggregate the "
-                "first layer." % args['aggregate_polygon_path'])
-        aggregate_vector = None
-        # reproject polygon to LULC
+        # reproject polygon to LULC's projection
         target_aggregate_vector_path = os.path.join(
             output_dir, _AGGREGATE_VECTOR_FILE_PATTERN % (file_suffix))
         pygeoprocessing.reproject_vector(
