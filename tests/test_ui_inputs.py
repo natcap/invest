@@ -887,9 +887,15 @@ class ContainerTest(InputTest):
         self.assertEqual(input_instance.expandable, True)
 
     def test_expanded(self):
+        from natcap.invest.ui import inputs
         input_instance = self.__class__.create_input(label='foo',
                                                      expandable=True,
                                                      expanded=True)
+        input_instance.show()
+
+        # Add an input so we can text that the input becomes visible.
+        contained_input = inputs.Text(label='some text!')
+        input_instance.add_input(contained_input)
 
         self.assertEqual(input_instance.expandable, True)
         self.assertEqual(input_instance.expanded, True)
@@ -1242,6 +1248,11 @@ class FormTest(unittest.TestCase):
         # close the window by pressing the back button.
         QTest.mouseClick(form.run_dialog.backButton,
                          QtCore.Qt.LeftButton)
+
+    def test_run_target_error(self):
+        form = FormTest.make_ui()
+        with self.assertRaises(ValueError):
+            form.run(target='str does not have a __call__()')
 
     def test_open_workspace_on_success(self):
         thread_event = threading.Event()
