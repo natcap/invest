@@ -126,6 +126,9 @@ class Validator(QtCore.QObject):
         self._validation_thread = QtCore.QThread(parent=self)
         self._validation_worker = None
 
+    def in_progress(self):
+        return self._validation_thread.isRunning()
+
     def validate(self, target, args, limit_to=None):
         if not self._validation_thread.isRunning():
             self._validation_thread.start()
@@ -737,7 +740,7 @@ class GriddedInput(Input):
     def valid(self):
         # TODO: wait until the lock is released.
         try:
-            while not self._validation_worker.isFinished():
+            while self._validator.in_progress():
                 QtCore.QThread.msleep(50)
             return self._valid
         except AttributeError:
