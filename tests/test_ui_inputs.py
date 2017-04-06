@@ -357,6 +357,23 @@ class GriddedInputTest(InputTest):
         self.assertEqual(len(messages), 1)
         self.assertEqual(input_instance.valid(), True)
 
+    def test_validate_required_validator(self):
+        input_instance = self.__class__.create_input(
+            label='some_label', args_key='foo'
+        )
+
+        input_instance.value = mock.MagicMock(
+            input_instance, return_value=u'something')
+
+        self.assertEqual(input_instance.valid(), True)
+        with warnings.catch_warnings(record=True) as messages:
+            input_instance._validate()
+
+        # Validation still passes, but verify warning raised
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(input_instance.valid(), True)
+
+
     def test_nonhideable_default_state(self):
         sample_widget = QtWidgets.QWidget()
         sample_widget.setLayout(QtWidgets.QGridLayout())

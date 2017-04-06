@@ -688,9 +688,9 @@ class GriddedInput(Input):
                 else:
                     # args key defined, but a validator is not; input assumed
                     # to be valid.
-                    LOGGER.info(('Validation: args_key defined, but no '
-                                 'validator defined.  Input assumed to be '
-                                 'valid. %s'), self)
+                    warnings.warn(('Validation: args_key defined, but no '
+                                   'validator defined.  Input assumed to be '
+                                   'valid. %s') % self)
                     self._validation_finished(validation_warnings=None)
                     return
 
