@@ -46,8 +46,8 @@ class CropProductionTests(unittest.TestCase):
             'landcover_to_crop_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'landcover_to_crop_table.csv'),
             'aggregate_polygon_path': os.path.join(
-                SAMPLE_DATA_PATH, 'aggreate_shape.shp'),
-             'aggregate_polygon_id': 'id',
+                SAMPLE_DATA_PATH, 'aggregate_shape.shp'),
+            'aggregate_polygon_id': 'id',
             'model_data_path': MODEL_DATA_PATH
         }
         crop_production_percentile.execute(args)
@@ -94,8 +94,8 @@ class CropProductionTests(unittest.TestCase):
             'landcover_to_crop_table_path': os.path.join(
                 self.workspace_dir, 'landcover_to_badcrop_table.csv'),
             'aggregate_polygon_path': os.path.join(
-                SAMPLE_DATA_PATH, 'aggreate_shape.shp'),
-             'aggregate_polygon_id': 'id',
+                SAMPLE_DATA_PATH, 'aggregate_shape.shp'),
+            'aggregate_polygon_id': 'id',
             'model_data_path': MODEL_DATA_PATH
         }
 

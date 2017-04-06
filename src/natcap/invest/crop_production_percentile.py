@@ -476,7 +476,7 @@ def execute(args):
                         pygeoprocessing.zonal_statistics(
                             (percentile_crop_production_raster_path, 1),
                             target_aggregate_vector_path,
-                            args['aggregate_polygon_id']))
+                            str(args['aggregate_polygon_id'])))
 
                 for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                     for id_index in total_yield_lookup['%s_%s' % (
@@ -497,7 +497,7 @@ def execute(args):
                 pygeoprocessing.zonal_statistics(
                     (observed_yield_path, 1),
                     target_aggregate_vector_path,
-                    args['aggregate_polygon_id']))
+                    str(args['aggregate_polygon_id'])))
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for id_index in total_yield_lookup['%s_observed' % crop_name]:
                     total_nutrient_table[
