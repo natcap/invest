@@ -373,6 +373,20 @@ class GriddedInputTest(InputTest):
         self.assertEqual(len(messages), 1)
         self.assertEqual(input_instance.valid(), True)
 
+    def test_validate_error(self):
+        input_instance = self.__class__.create_input(
+            label='some_label', args_key='foo',
+            validator=lambda args, limit_to=None: []
+        )
+
+        input_instance.value = mock.MagicMock(
+            input_instance, return_value=u'something')
+
+        input_instance._validator.validate = mock.MagicMock(
+            input_instance._validator.validate, side_effect=ValueError('foo'))
+
+        with self.assertRaises(ValueError):
+            input_instance._validate()
 
     def test_nonhideable_default_state(self):
         sample_widget = QtWidgets.QWidget()
@@ -622,6 +636,9 @@ class CheckboxTest(GriddedInputTest):
     def test_validate_required_args_key(self):
         pass
 
+    def test_validate_error(self):
+        pass
+
 
 class DropdownTest(GriddedInputTest):
     @staticmethod
@@ -698,6 +715,9 @@ class DropdownTest(GriddedInputTest):
         pass
 
     def test_validate_required_args_key(self):
+        pass
+
+    def test_validate_error(self):
         pass
 
 

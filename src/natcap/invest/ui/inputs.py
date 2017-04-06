@@ -744,13 +744,9 @@ class GriddedInput(Input):
 
     def valid(self):
         # TODO: wait until the lock is released.
-        try:
-            while self._validator.in_progress():
-                QtCore.QThread.msleep(50)
-            return self._valid
-        except AttributeError:
-            # When validation threads aren't part of the equation.
-            return self._valid
+        while self._validator.in_progress():
+            QtCore.QThread.msleep(50)
+        return self._valid
 
     @QtCore.Slot(int)
     def _hideability_changed(self, show_widgets):
