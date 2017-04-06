@@ -1,4 +1,4 @@
-
+# coding=utf-8
 import unittest
 import functools
 import warnings
@@ -784,6 +784,11 @@ class DropdownTest(GriddedInputTest):
             label='label', options=(1, 2, 3))
         self.assertEqual(input_instance.options, [u'1', u'2', u'3'])
 
+    def test_set_options_unicode(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=(u'Þingvellir',))
+        self.assertEqual(input_instance.options, [u'Þingvellir'])
+
     def test_set_value(self):
         input_instance = self.__class__.create_input(
             label='label', options=('foo', 'bar', 'baz'))
@@ -795,6 +800,12 @@ class DropdownTest(GriddedInputTest):
             label='label', options=(1, 2, 3))
         input_instance.set_value(1)
         self.assertEqual(input_instance.value(), u'1')
+
+    def test_set_value_not_in_options(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=(1, 2, 3))
+        with self.assertRaises(ValueError):
+            input_instance.set_value('foo')
 
     def test_value(self):
         input_instance = self.__class__.create_input(
