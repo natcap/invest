@@ -117,18 +117,9 @@ def execute(args):
     Returns:
         None.
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    output_dir = os.path.join(args['workspace_dir'])
-    utils.make_directories([
-        output_dir, os.path.join(output_dir, _INTERMEDIATE_OUTPUT_DIR)])
-
-    landcover_raster_info = pygeoprocessing.get_raster_info(
-        args['landcover_raster_path'])
-    pixel_area_ha = numpy.product([
-        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
-    landcover_nodata = landcover_raster_info['nodata'][0]
-
+    LOGGER.info(
+        "Calculating total land area and warning if the landcover raster "
+        "is missing lucodes")
     crop_to_landcover_table = utils.build_lookup_from_csv(
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
         numerical_cast=True)
@@ -137,9 +128,6 @@ def execute(args):
         x[_EXPECTED_LUCODE_TABLE_HEADER]
         for x in crop_to_landcover_table.itervalues()]
 
-    LOGGER.info(
-        "Calculating total land area and warning if the landcover raster "
-        "is missing lucodes")
     unique_lucodes = numpy.array([])
     total_area = 0.0
     for _, lu_band_data in pygeoprocessing.iterblocks(
@@ -156,21 +144,10 @@ def execute(args):
             "The following lucodes are in the landcover to crop table but "
             "aren't in the landcover raster: %s", missing_lucodes)
 
-    # Calculate lat/lng bounding box for landcover map
-    wgs84srs = osr.SpatialReference()
-    wgs84srs.ImportFromEPSG(4326)  # EPSG4326 is WGS84 lat/lng
-    landcover_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
-        landcover_raster_info['bounding_box'],
-        landcover_raster_info['projection'], wgs84srs.ExportToWkt(),
-        edge_samples=11)
-
-    crop_lucode = None
-    observed_yield_nodata = None
-    crop_area = collections.defaultdict(float)
+    LOGGER.info("Checking that crops correspond to known types.")
     for crop_name in crop_to_landcover_table:
         crop_lucode = crop_to_landcover_table[crop_name][
             _EXPECTED_LUCODE_TABLE_HEADER]
-        print crop_name, crop_lucode
         crop_climate_bin_raster_path = os.path.join(
             args['model_data_path'],
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
@@ -185,10 +162,41 @@ def execute(args):
                 "specified in %s", crop_climate_bin_raster_path, crop_name,
                 args['landcover_to_crop_table_path'])
 
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    output_dir = os.path.join(args['workspace_dir'])
+    utils.make_directories([
+        output_dir, os.path.join(output_dir, _INTERMEDIATE_OUTPUT_DIR)])
+
+    landcover_raster_info = pygeoprocessing.get_raster_info(
+        args['landcover_raster_path'])
+    pixel_area_ha = numpy.product([
+        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
+    landcover_nodata = landcover_raster_info['nodata'][0]
+
+    # Calculate lat/lng bounding box for landcover map
+    wgs84srs = osr.SpatialReference()
+    wgs84srs.ImportFromEPSG(4326)  # EPSG4326 is WGS84 lat/lng
+    landcover_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
+        landcover_raster_info['bounding_box'],
+        landcover_raster_info['projection'], wgs84srs.ExportToWkt(),
+        edge_samples=11)
+
+    crop_lucode = None
+    observed_yield_nodata = None
+    production_area = collections.defaultdict(float)
+    for crop_name in crop_to_landcover_table:
+        crop_lucode = crop_to_landcover_table[crop_name][
+            _EXPECTED_LUCODE_TABLE_HEADER]
+        LOGGER.info("Processing crop %s", crop_name)
+        crop_climate_bin_raster_path = os.path.join(
+            args['model_data_path'],
+            _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
+
+        LOGGER.info(
+            "Clipping global climate bin raster to landcover bounding box.")
         clipped_climate_bin_raster_path = os.path.join(
             output_dir, _CLIPPED_CLIMATE_BIN_FILE_PATTERN % (
                 crop_name, file_suffix))
-
         crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
             crop_climate_bin_raster_path)
         pygeoprocessing.warp_raster(
@@ -203,7 +211,6 @@ def execute(args):
         crop_climate_percentile_table = utils.build_lookup_from_csv(
             climate_percentile_yield_table_path, 'climate_bin',
             to_lower=True, numerical_cast=True)
-
         yield_percentile_headers = [
             x for x in crop_climate_percentile_table.itervalues().next()
             if x != 'climate_bin']
@@ -213,18 +220,17 @@ def execute(args):
                 clipped_climate_bin_raster_path))
 
         for yield_percentile_id in yield_percentile_headers:
+            LOGGER.info("Map %s to climate bins.", yield_percentile_id)
             interpolated_yield_percentile_raster_path = os.path.join(
                 output_dir,
                 _INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN % (
                     crop_name, yield_percentile_id, file_suffix))
-
             bin_to_percentile_yield = dict([
                 (bin_id,
                  crop_climate_percentile_table[bin_id][yield_percentile_id])
                 for bin_id in crop_climate_percentile_table])
             bin_to_percentile_yield[
-                clipped_climate_bin_raster_path_info['nodata'][0]] = 0.0
-
+                crop_climate_bin_raster_info['nodata'][0]] = 0.0
             coarse_yield_percentile_raster_path = os.path.join(
                 output_dir,
                 _COARSE_YIELD_PERCENTILE_FILE_PATTERN % (
@@ -234,6 +240,9 @@ def execute(args):
                 coarse_yield_percentile_raster_path, gdal.GDT_Float32,
                 _NODATA_YIELD, exception_flag='values_required')
 
+            LOGGER.info(
+                "Interpolate %s %s yield raster to landcover resolution.",
+                crop_name, yield_percentile_id)
             pygeoprocessing.warp_raster(
                 coarse_yield_percentile_raster_path,
                 landcover_raster_info['pixel_size'],
@@ -244,7 +253,6 @@ def execute(args):
             LOGGER.info(
                 "Calculate yield for %s at %s", crop_name,
                 yield_percentile_id)
-
             percentile_crop_production_raster_path = os.path.join(
                 output_dir,
                 _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
@@ -267,14 +275,15 @@ def execute(args):
                 _crop_production_op, percentile_crop_production_raster_path,
                 gdal.GDT_Float32, _NODATA_YIELD)
 
-        # calculate the non-zero production area for that crop, okay to use
-        # just one of the percentile rasters
+        # calculate the non-zero production area for that crop, assuming that
+        # all the percentile rasters have non-zero production so it's okay to
+        # use just one of the percentile rasters
+        LOGGER.info("Calculating production area.")
         for _, band_values in pygeoprocessing.iterblocks(
                 percentile_crop_production_raster_path):
-            crop_area[crop_name] += numpy.count_nonzero(
+            production_area[crop_name] += numpy.count_nonzero(
                 (band_values != _NODATA_YIELD) & (band_values > 0.0))
-
-        crop_area[crop_name] *= pixel_area_ha
+        production_area[crop_name] *= pixel_area_ha
 
         LOGGER.info("Calculate observed yield for %s", crop_name)
         global_observed_yield_raster_path = os.path.join(
@@ -318,6 +327,8 @@ def execute(args):
             output_dir, _INTERPOLATED_OBSERVED_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
 
+        LOGGER.info(
+            "Interpolating observed %s raster to landcover.", crop_name)
         pygeoprocessing.warp_raster(
             zeroed_observed_yield_raster_path,
             landcover_raster_info['pixel_size'],
@@ -325,8 +336,8 @@ def execute(args):
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
 
-        def _observed_yield_op(lulc_array, observed_yield_array):
-            """Calculate observed 'actual' yield."""
+        def _mask_observed_yield(lulc_array, observed_yield_array):
+            """Mask total observed yield to crop lulc type."""
             result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
             result[:] = observed_yield_nodata
             valid_mask = lulc_array != landcover_nodata
@@ -343,7 +354,7 @@ def execute(args):
         pygeoprocessing.raster_calculator(
             [(args['landcover_raster_path'], 1),
              (interpolated_observed_yield_raster_path, 1)],
-            _observed_yield_op, observed_production_raster_path,
+            _mask_observed_yield, observed_production_raster_path,
             gdal.GDT_Float32, observed_yield_nodata)
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
@@ -352,7 +363,7 @@ def execute(args):
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
         'crop', to_lower=False)
 
-    LOGGER.info("Report table")
+    LOGGER.info("Generating report table")
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
     production_percentile_headers = [
@@ -374,7 +385,7 @@ def execute(args):
                 nutrient_headers) + '\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
-            result_table.write(',%f' % crop_area[crop_name])
+            result_table.write(',%f' % production_area[crop_name])
             production_lookup = {}
             yield_sum = 0.0
             observed_production_raster_path = os.path.join(
@@ -462,6 +473,9 @@ def execute(args):
                     output_dir,
                     _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
                         crop_name, yield_percentile_id, file_suffix))
+                LOGGER.info(
+                    "Calculating zonal stats for %s  %s", crop_name,
+                    yield_percentile_id)
                 total_yield_lookup['%s_%s' % (
                     crop_name, yield_percentile_id)] = (
                         pygeoprocessing.zonal_statistics(
