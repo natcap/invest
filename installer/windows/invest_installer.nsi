@@ -357,15 +357,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   ; Actually install the information we want to disk.
   SetOutPath "$INSTDIR"
   File ..\..\LICENSE.txt
-  File ..\..\src\invest-natcap.default\*.tbx
   File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
   file ..\..\HISTORY.rst
-
-  SetOutPath "$INSTDIR\invest_helper_utils\"
-  File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\utils\*
-
-  SetOutPath "$INSTDIR\python\"
-  File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\python\*
 
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
   File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
