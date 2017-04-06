@@ -12,6 +12,7 @@ import sys
 
 import sip
 sip.setapi('QString', 2)  # qtpy assumes api version 2
+import qtpy
 from qtpy import QtCore
 from qtpy import QtGui
 from qtpy import QtWidgets
@@ -961,9 +962,15 @@ class FileDialogTest(unittest.TestCase):
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
+        # Qt4 and Qt4 have different return values.  Mock up accordingly.
+        if int(qtpy.QT_VERSION[0]) == 5:
+            return_value = ('/new/file', 'filter')
+        else:
+            return_value = '/new/file'
+
         dialog.file_dialog.getOpenFileName = mock.MagicMock(
             spec=dialog.file_dialog.getOpenFileName,
-            return_value='/new/file')
+            return_value=return_value)
 
         DATA['last_dir'] = '/tmp/foo/bar'
 
