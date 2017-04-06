@@ -156,11 +156,6 @@ def execute(args):
                 "Expected climate bin map called %s for crop %s "
                 "specified in %s", crop_climate_bin_raster_path, crop_name,
                 args['landcover_to_crop_table_path'])
-        if not os.path.exists(crop_climate_bin_raster_path):
-            raise ValueError(
-                "Expected climate bin map called %s for crop %s "
-                "specified in %s", crop_climate_bin_raster_path, crop_name,
-                args['landcover_to_crop_table_path'])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'])
