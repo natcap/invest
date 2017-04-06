@@ -39,14 +39,24 @@ LOGGER = logging.getLogger(__name__)
 def wait_on_signal(signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
     loop = QtCore.QEventLoop()
+
+    wait_on_signal.signal_called = False
+
+    def _set_signal_called(*args, **kwargs):
+        wait_on_signal.signal_called = True
+
+    signal.connect(_set_signal_called)
     signal.connect(loop.quit)
 
-    yield
+    try:
+        yield
+    finally:
+        if timeout is not None:
+            QtCore.QTimer.singleShot(timeout, loop.quit)
 
-    if timeout is not None:
-        QtCore.QTimer.singleShot(timeout, loop.quit)
-    loop.exec_()
-    signal.disconnect(loop.quit)
+        if not wait_on_signal.signal_called:
+            loop.exec_()
+        signal.disconnect(loop.quit)
 
 
 class InputTest(unittest.TestCase):
