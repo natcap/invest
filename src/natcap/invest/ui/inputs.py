@@ -717,6 +717,11 @@ class GriddedInput(Input):
             raise
 
     def _validation_finished(self, validation_warnings):
+        if validation_warnings is None:
+            warnings.warn(('NoneType return value from model.validate '
+                           'is unsupported and will soon be removed'),
+                          DeprecationWarning)
+            validation_warnings = []
         new_validity = not bool(validation_warnings)
         if self.args_key:
             appliccable_warnings = [w[1] for w in validation_warnings
