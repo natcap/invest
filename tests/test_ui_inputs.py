@@ -815,7 +815,7 @@ class DropdownTest(GriddedInputTest):
         callback.assert_called_with('bar')
 
     def test_label(self):
-        # Override, sinve 'Optional' is irrelevant for Dropdown.
+        # Override, since 'Optional' is irrelevant for Dropdown.
         pass
 
     def test_validator(self):
