@@ -513,6 +513,57 @@ class TextTest(GriddedInputTest):
 
         callback.assert_called_with(u'foo')
 
+    def test_textfield_drag_n_drop(self):
+        input_instance = self.__class__.create_input(label='text')
+
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Hello world!')
+
+        event = QtGui.QDragEnterEvent(
+            input_instance.textfield.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        input_instance.textfield.dragEnterEvent(event)
+        self.assertEqual(event.isAccepted(), True)
+
+    def test_textfield_drag_n_drop_urls(self):
+        input_instance = self.__class__.create_input(label='text')
+
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Hello world!')
+        mime_data.setUrls([QtCore.QUrl('/foo/bar')])
+
+        event = QtGui.QDragEnterEvent(
+            input_instance.textfield.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        input_instance.textfield.dragEnterEvent(event)
+        self.assertEqual(event.isAccepted(), False)
+
+    def test_textfield_drop(self):
+        input_instance = self.__class__.create_input(label='text')
+
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Hello world!')
+        mime_data.setUrls([QtCore.QUrl('/foo/bar')])
+
+        event = QtGui.QDropEvent(
+            input_instance.textfield.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        input_instance.textfield.dropEvent(event)
+        self.assertEqual(event.isAccepted(), True)
+        self.assertEqual(input_instance.value(), 'Hello world!')
+
 
 class PathTest(TextTest):
     @staticmethod
