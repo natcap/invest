@@ -242,20 +242,20 @@ class GriddedInputTest(InputTest):
 
     def test_label(self):
         input_instance = self.__class__.create_input(label='foo')
-        label_text = input_instance.label.text()
+        label_text = input_instance.label
         self.assertEqual(label_text,  u'foo (Optional)')
 
     def test_label_required(self):
         input_instance = self.__class__.create_input(label='foo',
                                                      required=True)
-        label_text = input_instance.label.text()
+        label_text = input_instance.label
         self.assertEqual(label_text, 'foo')
 
     def test_validator(self):
         _callback = mock.MagicMock()
         input_instance = self.__class__.create_input(
             label='foo', validator=_callback)
-        self.assertEqual(input_instance.validator, _callback)
+        self.assertEqual(input_instance.validator_ref, _callback)
 
     def test_helptext(self):
         from natcap.invest.ui.inputs import HelpButton
@@ -318,7 +318,9 @@ class GriddedInputTest(InputTest):
     def test_validate_required_args_key(self):
         """UI: Requirement with no input should raise a warning."""
         input_instance = self.__class__.create_input(
-            label='some_label', required=True)
+            label='some_label', required=True,
+            validator=lambda args, limit_to=None: []
+        )
 
         input_instance.value = mock.MagicMock(
             input_instance, return_value=u'something')
