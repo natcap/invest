@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import time
 import os
 import threading
 import logging
@@ -123,10 +124,11 @@ class Validator(QtCore.QObject):
     def __init__(self, parent):
         QtCore.QObject.__init__(self, parent)
         self._validation_thread = QtCore.QThread(parent=self)
-        self._validation_thread.start()
         self._validation_worker = None
 
     def validate(self, target, args, limit_to=None):
+        if not self._validation_thread.isRunning():
+            self._validation_thread.start()
         self.started.emit()
         self._validation_worker = ValidationWorker(
             target=target,
@@ -142,10 +144,12 @@ class Validator(QtCore.QObject):
 
             LOGGER.debug(warnings_)
             self.finished.emit(warnings_)
-            self._validation_worker.deleteLater()
-            self._validation_thread.quit()
 
+        # Order matters with these callbacks.
+        self._validation_worker.finished.connect(self._validation_thread.quit)
         self._validation_worker.finished.connect(_finished)
+        self._validation_worker.finished.connect(
+            self._validation_worker.deleteLater)
         self._validation_worker.start()
 
 
@@ -412,7 +416,6 @@ class ValidationWorker(QtCore.QObject):
         self.started.emit()
 
     def run(self):
-        QT_APP.processEvents()
         # Target must adhere to InVEST validation API.
         LOGGER.info(('Starting validation thread with target=%s, args=%s, '
                      'limit_to=%s'), self.target, self.args, self.limit_to)
@@ -426,7 +429,6 @@ class ValidationWorker(QtCore.QObject):
                              self.target)
         self._finished = True
         self.finished.emit()
-        QT_APP.processEvents()
 
 
 class FileDialog(object):
