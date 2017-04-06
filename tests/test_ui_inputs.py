@@ -207,18 +207,15 @@ class InputTest(unittest.TestCase):
         container.add_input(input_instance)
 
     def test_visibility(self):
-        from natcap.invest.ui import inputs
         input_instance = self.__class__.create_input(label='foo',
                                                      interactive=False)
         self.assertEqual(input_instance.visible(), True)
 
         input_instance.set_visible(False)
-        inputs.QT_APP.processEvents()
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), False)
 
         input_instance.set_visible(True)
-        inputs.QT_APP.processEvents()
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), True)
 
