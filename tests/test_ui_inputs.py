@@ -780,7 +780,7 @@ class MultiTest(ContainerTest):
         self.assertEqual(input_instance.value(), [])
 
         with wait_on_signal(input_instance.value_changed):
-            input_instance.set_value('aaa', 'bbb')
+            input_instance.set_value(('aaa', 'bbb'))
 
         callback.assert_called_with(['aaa', 'bbb'])
 
@@ -811,7 +811,7 @@ class MultiTest(ContainerTest):
             callable_=self.__class__.create_sample_callable(label='foo'))
 
         self.assertEqual(input_instance.value(), [])  # default value
-        input_instance.set_value('aaa', 'bbb')
+        input_instance.set_value(('aaa', 'bbb'))
         self.assertEqual(input_instance.value(), ['aaa', 'bbb'])
 
     def test_remove_item_by_button(self):
@@ -820,7 +820,7 @@ class MultiTest(ContainerTest):
             callable_=self.__class__.create_sample_callable(label='foo'))
 
         self.assertEqual(input_instance.value(), [])  # default value
-        input_instance.set_value('aaa', 'bbb', 'ccc')
+        input_instance.set_value(('aaa', 'bbb', 'ccc'))
         self.assertEqual(input_instance.value(), ['aaa', 'bbb', 'ccc'])
 
         # reach into the Multi and press the 'bbb' remove button
