@@ -78,6 +78,11 @@ class InputTest(unittest.TestCase):
         input_instance = self.__class__.create_input(label='foo', required=True)
         self.assertEqual(input_instance.required, True)
 
+    def test_set_required(self):
+        input_instance = self.__class__.create_input(label='foo', required=True)
+        input_instance.set_required(False)
+        self.assertEqual(input_instance.required, False)
+
     def test_nonrequired(self):
         input_instance = self.__class__.create_input(label='foo', required=False)
         self.assertEqual(input_instance.required, False)
@@ -104,6 +109,17 @@ class InputTest(unittest.TestCase):
         except NotImplementedError:
             input_instance.value = lambda: 'Value!'
         input_instance.set_interactive(True)
+        self.assertEqual(input_instance.interactive, True)
+
+    def test_set_noninteractive(self):
+        input_instance = self.__class__.create_input(label='foo', interactive=False)
+        self.assertEqual(input_instance.interactive, False)
+        # Silence notimplementederror exceptions on input.value in some cases.
+        try:
+            input_instance.value()
+        except NotImplementedError:
+            input_instance.value = lambda: 'Value!'
+        input_instance.set_noninteractive(False)
         self.assertEqual(input_instance.interactive, True)
 
     def test_interactivity_changed(self):
@@ -562,6 +578,9 @@ class CheckboxTest(GriddedInputTest):
     def test_required(self):
         pass
 
+    def test_set_required(self):
+        pass
+
     def test_nonrequired(self):
         pass
 
@@ -650,6 +669,9 @@ class DropdownTest(GriddedInputTest):
         pass
 
     def test_required(self):
+        pass
+
+    def test_set_required(self):
         pass
 
     def test_nonrequired(self):
@@ -756,6 +778,9 @@ class ContainerTest(InputTest):
     def test_required(self):
         pass
 
+    def test_set_required(self):
+        pass
+
 
 class MultiTest(ContainerTest):
     @staticmethod
@@ -852,6 +877,9 @@ class MultiTest(ContainerTest):
         pass
 
     def test_expandable(self):
+        pass
+
+    def test_set_required(self):
         pass
 
 
