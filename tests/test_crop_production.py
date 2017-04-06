@@ -39,7 +39,7 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest import crop_production_percentile
 
         args = {
-            'workspace_dir': r'C:\Users\rpsharp\Documents\del_test_crop_production_workspace',
+            'workspace_dir': self.workspace_dir,
             'results_suffix': '',
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA_PATH, 'landcover.tif'),
@@ -80,6 +80,33 @@ class CropProductionTests(unittest.TestCase):
                     result_table[id_key][column_key],
                     decimal=tolerance_places)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
+    @scm.skip_if_data_missing(MODEL_DATA_PATH)
+    def test_crop_production_percentile_bad_crop(self):
+        """Crop Production: test crop production."""
+        from natcap.invest import crop_production_percentile
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'results_suffix': '',
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA_PATH, 'landcover.tif'),
+            'landcover_to_crop_table_path': os.path.join(
+                self.workspace_dir, 'landcover_to_badcrop_table.csv'),
+            'aggregate_polygon_path': os.path.join(
+                SAMPLE_DATA_PATH, 'aggreate_shape.shp'),
+             'aggregate_polygon_id': 'id',
+            'model_data_path': MODEL_DATA_PATH
+        }
+
+        with open(args['landcover_to_crop_table_path'],
+                  'wb') as landcover_crop_table:
+            landcover_crop_table.write(
+                'crop_name,lucode\nfakecrop,20\n')
+
+        with self.assertRaises(ValueError):
+            crop_production_percentile.execute(args)
+
 
     @unittest.skip("Still in development.")
     @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
@@ -89,7 +116,7 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest import crop_production_regression
 
         args = {
-            'workspace_dir': r'C:\Users\rpsharp\Documents\del_test_crop_production_regression_workspace',
+            'workspace_dir': self.workspace_dir,
             'results_suffix': '',
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA_PATH, 'landcover.tif'),
