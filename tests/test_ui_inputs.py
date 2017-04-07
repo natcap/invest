@@ -1439,6 +1439,13 @@ class FormTest(unittest.TestCase):
         form = FormTest.make_ui()
         form.show()
 
+    def test_resize_scrollbar(self):
+        form = FormTest.make_ui()
+        form.show()
+        self.assertTrue('border: None' in form.scroll_area.styleSheet())
+        form.update_scroll_border(50, 50)  # simulate form resize
+        self.assertTrue(len(form.scroll_area.styleSheet()) == 0)
+
 
 class OpenWorkspaceTest(unittest.TestCase):
     def test_windows(self):
