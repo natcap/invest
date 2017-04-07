@@ -647,7 +647,6 @@ class GriddedInput(Input):
             self.widgets[1] = self.label_widget
             self.label_widget.stateChanged.connect(self._hideability_changed)
             self._hideability_changed(True)
-            QT_APP.processEvents()
 
         self.lock = threading.Lock()
 
