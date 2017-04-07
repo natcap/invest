@@ -1167,24 +1167,50 @@ class FileDialogTest(unittest.TestCase):
             dialog.file_dialog.getSaveFileName.call_args[0],  # pos. args
             (dialog.file_dialog, 'foo', '/tmp/file.txt'))
 
-    def test_open_file(self):
+    def test_open_file_qt5(self):
         from natcap.invest.ui.inputs import FileDialog, DATA
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
-        # Qt4 and Qt4 have different return values.  Mock up accordingly.
-        if int(qtpy.QT_VERSION[0]) == 5:
-            return_value = ('/new/file', 'filter')
-        else:
-            return_value = '/new/file'
+        # Qt4 and Qt5 have different return values.  Mock up accordingly.
+        # Simulate Qt5 return value.
+        try:
+            _old_qtpy_version = qtpy.QT_VERSION
+            qtpy.QT_VERSION = ('5', '5', '5')
+            dialog.file_dialog.getOpenFileName = mock.MagicMock(
+                spec=dialog.file_dialog.getOpenFileName,
+                return_value=('/new/file', 'filter'))
 
-        dialog.file_dialog.getOpenFileName = mock.MagicMock(
-            spec=dialog.file_dialog.getOpenFileName,
-            return_value=return_value)
+            DATA['last_dir'] = '/tmp/foo/bar'
+            out_file = dialog.open_file(title='foo')
+        finally:
+            qtpy.QT_VERSION = _old_qtpy_version
 
-        DATA['last_dir'] = '/tmp/foo/bar'
+        self.assertEqual(
+            dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
+            (dialog.file_dialog, 'foo', '/tmp/foo/bar'))
+        self.assertEqual(out_file, '/new/file')
+        self.assertEqual(DATA['last_dir'], '/new')
 
-        out_file = dialog.open_file(title='foo')
+    def test_open_file_qt4(self):
+        from natcap.invest.ui.inputs import FileDialog, DATA
+        dialog = FileDialog()
+
+        # patch up the Qt method to get the path to the file to open
+        # Qt4 and Qt5 have different return values.  Mock up accordingly.
+        # Simulate Qt4 return value.
+        try:
+            _old_qtpy_version = qtpy.QT_VERSION
+            qtpy.QT_VERSION = ('4', '5', '6')
+            dialog.file_dialog.getOpenFileName = mock.MagicMock(
+                spec=dialog.file_dialog.getOpenFileName,
+                return_value='/new/file')
+
+            DATA['last_dir'] = '/tmp/foo/bar'
+            out_file = dialog.open_file(title='foo')
+        finally:
+            qtpy.QT_VERSION = _old_qtpy_version
+
         self.assertEqual(
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
             (dialog.file_dialog, 'foo', '/tmp/foo/bar'))
