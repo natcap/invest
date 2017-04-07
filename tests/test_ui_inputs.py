@@ -1210,16 +1210,19 @@ class FileDialogTest(unittest.TestCase):
 
 
 class InfoButtonTest(unittest.TestCase):
-    @unittest.skip("'Always segfaults, don't know why")
     def test_buttonpress(self):
         from natcap.invest.ui.inputs import InfoButton
         button = InfoButton('some text')
         self.assertEqual(button.whatsThis(), 'some text')
 
-        # Execute this, for coverage.
-        button.show()
-        QTest.mouseClick(button, QtCore.Qt.LeftButton)
-        #self.assertTrue(QtGui.QWhatsThis.inWhatsThisMode())
+        # Necessary to mock up the QWhatsThis module because it always
+        # segfaults in a test if I don't.  Haven't yet been able to figure out
+        # why or how to work around, and this allows me to have the test
+        # coverage.
+        with mock.patch('qtpy.QtWidgets.QWhatsThis'):
+            button.show()
+            QTest.mouseClick(button, QtCore.Qt.LeftButton)
+
 
 class FormTest(unittest.TestCase):
     @staticmethod
