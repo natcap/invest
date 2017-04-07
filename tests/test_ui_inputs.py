@@ -1443,6 +1443,12 @@ class FormTest(unittest.TestCase):
         form.update_scroll_border(50, 50)  # simulate form resize
         self.assertTrue(len(form.scroll_area.styleSheet()) == 0)
 
+    def test_add_input(self):
+        from natcap.invest.ui import inputs
+        form = FormTest.make_ui()
+        text_input = inputs.Text('hello there')
+        form.add_input(text_input)
+
 
 class OpenWorkspaceTest(unittest.TestCase):
     def test_windows(self):
