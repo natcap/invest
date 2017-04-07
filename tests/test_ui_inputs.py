@@ -974,6 +974,17 @@ class ContainerTest(InputTest):
         with self.assertRaises(ValueError):
             input_instance.set_value(False)
 
+    def test_add_input_multi_coverage(self):
+        # Multis need a special case because the whole container needs to be
+        # resized via a callback when a new input is added to the multi.
+        from natcap.invest.ui import inputs
+        input_instance = self.__class__.create_input(label='foo')
+        multi = inputs.Multi(label='Some multi element',
+                             callable_=functools.partial(inputs.Text,
+                                                         label='text input'))
+        input_instance.add_input(multi)
+        multi.add_item()
+
     def test_helptext(self):
         pass
 
