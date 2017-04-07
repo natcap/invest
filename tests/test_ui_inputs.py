@@ -1268,20 +1268,27 @@ class FormTest(unittest.TestCase):
 
         form = FormTest.make_ui()
         target = _SampleTarget().execute
-        with wait_on_signal(form.run_finished):
-            form.run(target=target)
 
-            self.assertTrue(form.run_dialog.openWorkspaceCB.isVisible())
-            self.assertFalse(form.run_dialog.openWorkspaceButton.isVisible())
+        # patch open_workspace to avoid lots of open file dialogs.
+        with mock.patch('natcap.invest.ui.inputs.open_workspace',
+                        mock.MagicMock(return_value=None)) as open_workspace:
+            with wait_on_signal(form.run_finished):
+                form.run(target=target)
 
-            form.run_dialog.openWorkspaceCB.setChecked(True)
-            self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
+                self.assertTrue(form.run_dialog.openWorkspaceCB.isVisible())
+                self.assertFalse(
+                    form.run_dialog.openWorkspaceButton.isVisible())
 
-            thread_event.set()
+                form.run_dialog.openWorkspaceCB.setChecked(True)
+                self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-            # close the window by pressing the back button.
-            QTest.mouseClick(form.run_dialog.backButton,
-                            QtCore.Qt.LeftButton)
+                thread_event.set()
+
+                # close the window by pressing the back button.
+                QTest.mouseClick(form.run_dialog.backButton,
+                                 QtCore.Qt.LeftButton)
+
+        open_workspace.assert_called_once()
 
     def test_run_prevent_dialog_close_esc(self):
         thread_event = threading.Event()
