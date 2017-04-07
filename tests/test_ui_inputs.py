@@ -484,6 +484,29 @@ class TextTest(GriddedInputTest):
         self.assertEqual(input_instance.value(), u'foo')
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
+    def test_set_value_int(self):
+        input_instance = self.__class__.create_input(label='text')
+        input_instance.set_value(1)
+        self.assertEqual(input_instance.value(), u'1')
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
+
+    def test_set_value_float(self):
+        input_instance = self.__class__.create_input(label='text')
+        input_instance.set_value(3.14159)
+        self.assertEqual(input_instance.value(), u'3.14159')
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
+
+    def test_set_value_when_hideable(self):
+        input_instance = self.__class__.create_input(label='text',
+                                                     hideable=True)
+        self.assertEqual(input_instance.value(), '')
+        self.assertEqual(input_instance.hideable, True)
+        self.assertEqual(input_instance.hidden(), True)
+        input_instance.set_value('foo')
+        self.assertEqual(input_instance.value(), u'foo')
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
+        self.assertFalse(input_instance.hidden())
+
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(label='text')
         callback = mock.MagicMock()
