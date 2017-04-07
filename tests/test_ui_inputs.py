@@ -1268,19 +1268,20 @@ class FormTest(unittest.TestCase):
 
         form = FormTest.make_ui()
         target = _SampleTarget().execute
-        form.run(target=target)
+        with wait_on_signal(form.run_finished):
+            form.run(target=target)
 
-        self.assertTrue(form.run_dialog.openWorkspaceCB.isVisible())
-        self.assertFalse(form.run_dialog.openWorkspaceButton.isVisible())
+            self.assertTrue(form.run_dialog.openWorkspaceCB.isVisible())
+            self.assertFalse(form.run_dialog.openWorkspaceButton.isVisible())
 
-        form.run_dialog.openWorkspaceCB.setChecked(True)
-        self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
+            form.run_dialog.openWorkspaceCB.setChecked(True)
+            self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-        thread_event.set()
+            thread_event.set()
 
-        # close the window by pressing the back button.
-        QTest.mouseClick(form.run_dialog.backButton,
-                         QtCore.Qt.LeftButton)
+            # close the window by pressing the back button.
+            QTest.mouseClick(form.run_dialog.backButton,
+                            QtCore.Qt.LeftButton)
 
     def test_run_prevent_dialog_close_esc(self):
         thread_event = threading.Event()
