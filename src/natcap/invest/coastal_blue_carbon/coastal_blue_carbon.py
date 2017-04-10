@@ -125,7 +125,9 @@ def execute(args):
     blocks_processed = 0.
     last_time = time.time()
 
-    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
+    # Limit block size here to try to improve memory usage of the application.
+    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster'],
+                                                     largest_block=2**10))
     C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
 
     for block_idx, (offset_dict, C_prior) in block_iterator:
