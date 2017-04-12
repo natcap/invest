@@ -1273,17 +1273,15 @@ class Form(QtWidgets.QWidget):
         else:
             self.scroll_area.setStyleSheet("")
 
-    def run(self, target, logfile=None, args=(), kwargs=None, tempdir=None,
-            window_title='', out_folder='/'):
+    def run(self, target, args=(), kwargs=None, window_title='',
+            out_folder='/'):
 
         if not hasattr(target, '__call__'):
             raise ValueError('Target %s must be callable' % target)
 
         self._thread = execution.Executor(target,
                                           args,
-                                          kwargs,
-                                          logfile=logfile,
-                                          tempdir=tempdir)
+                                          kwargs)
         self._thread.finished.connect(self._run_finished)
 
         self.run_dialog.start(window_title=window_title,

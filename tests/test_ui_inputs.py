@@ -1496,36 +1496,26 @@ class ExecutionTest(unittest.TestCase):
         callback = mock.MagicMock()
         args = ('a', 'b', 'c')
         kwargs = {'d': 1, 'e': 2, 'f': 3}
-        tempdir = tempfile.mkdtemp()
-        log_file = os.path.join(tempdir, 'logfile.txt')
 
-        try:
-            executor = Executor(
-                target=target,
-                args=args,
-                kwargs=kwargs,
-                logfile=log_file,
-                tempdir=tempdir)
+        executor = Executor(
+            target=target,
+            args=args,
+            kwargs=kwargs)
 
-            self.assertEqual(executor.target, target)
-            self.assertEqual(executor.args, args)
-            self.assertEqual(executor.kwargs, kwargs)
-            self.assertEqual(executor.logfile, log_file)
-            self.assertEqual(executor.tempdir, tempdir)
+        self.assertEqual(executor.target, target)
+        self.assertEqual(executor.args, args)
+        self.assertEqual(executor.kwargs, kwargs)
 
-            # register the callback with the finished signal.
-            executor.finished.connect(callback)
+        # register the callback with the finished signal.
+        executor.finished.connect(callback)
 
-            executor.start()
-            thread_event.set()
-            executor.join()
-            QtWidgets.QApplication.instance().processEvents()
-            callback.assert_called_once()
-            target.assert_called_once()
-            target.assert_called_with(*args, **kwargs)
-
-        finally:
-            shutil.rmtree(tempdir)
+        executor.start()
+        thread_event.set()
+        executor.join()
+        QtWidgets.QApplication.instance().processEvents()
+        callback.assert_called_once()
+        target.assert_called_once()
+        target.assert_called_with(*args, **kwargs)
 
     def test_executor_exception(self):
         from natcap.invest.ui.execution import Executor
@@ -1540,40 +1530,31 @@ class ExecutionTest(unittest.TestCase):
         callback = mock.MagicMock()
         args = ('a', 'b', 'c')
         kwargs = {'d': 1, 'e': 2, 'f': 3}
-        tempdir = tempfile.mkdtemp()
-        log_file = os.path.join(tempdir, 'logfile.txt')
 
-        try:
-            executor = Executor(
-                target=target,
-                args=args,
-                kwargs=kwargs,
-                logfile=log_file,
-                tempdir=tempdir)
+        executor = Executor(
+            target=target,
+            args=args,
+            kwargs=kwargs)
 
-            self.assertEqual(executor.target, target)
-            self.assertEqual(executor.args, args)
-            self.assertEqual(executor.kwargs, kwargs)
-            self.assertEqual(executor.logfile, log_file)
-            self.assertEqual(executor.tempdir, tempdir)
+        self.assertEqual(executor.target, target)
+        self.assertEqual(executor.args, args)
+        self.assertEqual(executor.kwargs, kwargs)
 
-            # register the callback with the finished signal.
-            executor.finished.connect(callback)
+        # register the callback with the finished signal.
+        executor.finished.connect(callback)
 
-            executor.start()
-            thread_event.set()
-            executor.join()
-            QtWidgets.QApplication.instance().processEvents()
-            callback.assert_called_once()
-            target.assert_called_once()
-            target.assert_called_with(*args, **kwargs)
+        executor.start()
+        thread_event.set()
+        executor.join()
+        QtWidgets.QApplication.instance().processEvents()
+        callback.assert_called_once()
+        target.assert_called_once()
+        target.assert_called_with(*args, **kwargs)
 
-            self.assertTrue(executor.failed)
-            self.assertEqual(str(executor.exception),
-                             'Some demo exception')
-            self.assertTrue(isinstance(executor.traceback, basestring))
-        finally:
-            shutil.rmtree(tempdir)
+        self.assertTrue(executor.failed)
+        self.assertEqual(str(executor.exception),
+                         'Some demo exception')
+        self.assertTrue(isinstance(executor.traceback, basestring))
 
 
 class IntegrationTests(unittest.TestCase):
