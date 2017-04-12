@@ -243,14 +243,17 @@ class InputTest(unittest.TestCase):
                                                      interactive=False)
         container.add_input(input_instance)
         container.show()
+        inputs.QT_APP.processEvents()
 
         self.assertEqual(input_instance.visible(), True)
 
         input_instance.set_visible(False)
+        inputs.QT_APP.processEvents()
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), False)
 
         input_instance.set_visible(True)
+        inputs.QT_APP.processEvents()
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), True)
 
