@@ -1186,7 +1186,6 @@ class Multi(Container):
                          col_index,
                          1,  # span 1 row
                          1)  # span 1 column
-        QT_APP.processEvents()
         self.setMinimumSize(self.sizeHint())
         self.update()
         self.input_added.emit()
@@ -1289,9 +1288,7 @@ class Form(QtWidgets.QWidget):
 
         self.run_dialog.start(window_title=window_title,
                               out_folder=out_folder)
-        QT_APP.processEvents()
         self.run_dialog.show()
-        QT_APP.processEvents()
         self._thread.start()
 
     def _run_finished(self):

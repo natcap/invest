@@ -9,6 +9,7 @@ from qtpy import QtCore
 
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
 
 
 class Executor(QtCore.QObject, threading.Thread):
