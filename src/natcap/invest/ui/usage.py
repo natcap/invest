@@ -18,6 +18,8 @@ import Pyro4
 import natcap.invest
 import pygeoprocessing
 
+from .. import utils
+
 ENCODING = sys.getfilesystemencoding()
 INVEST_USAGE_LOGGER_URL = ('http://data.naturalcapitalproject.org/'
                            'server_registry/invest_usage_logger/')
@@ -117,18 +119,20 @@ def _calculate_args_bounding_box(args_dict):
             """tests if input argument is a path to a gdal raster"""
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
-                raster = gdal.Open(arg)
-                if raster is not None:
-                    return True
+                with utils.capture_gdal_logging():
+                    raster = gdal.Open(arg)
+                    if raster is not None:
+                        return True
             return False
 
         def _is_ogr(arg):
             """tests if input argument is a path to an ogr vector"""
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
-                vector = ogr.Open(arg)
-                if vector is not None:
-                    return True
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(arg)
+                    if vector is not None:
+                        return True
             return False
 
         if isinstance(arg, dict):
