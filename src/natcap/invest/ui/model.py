@@ -557,12 +557,18 @@ class Model(QtWidgets.QMainWindow):
         dialog.setIconPixmap(
             qtawesome.icon(
                 'fa.question').pixmap(100, 100))
+        checkbox = QtWidgets.QCheckBox('Remember inputs')
+        checkbox.setChecked(
+            self.settings.value('remember_lastrun', False, bool))
+        dialog.layout().addWidget(checkbox, dialog.layout().rowCount()-1,
+                                  0, 1, 1)
 
         button_pressed = dialog.exec_()
         if button_pressed != QtWidgets.QMessageBox.Yes:
             event.ignore()
-        else:
+        elif checkbox.isChecked():
             self.save_lastrun()
+        self.settings.setValue('remember_lastrun', checkbox.isChecked())
 
     def save_lastrun(self, lastrun_args=None):
         if not lastrun_args:
