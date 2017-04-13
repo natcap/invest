@@ -284,16 +284,19 @@ class Model(QtWidgets.QMainWindow):
             <h1>InVEST</h1>
             <b>Version {version}</b> <br/> <br/>
 
-            Documentation:<br/>
-            Homepage: http://naturalcapitalproject.org<br/>
+            Documentation: <a href="http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/">online</a><br/>
+            Homepage: <a href="http://naturalcapitalproject.org">
+                        naturalcapitalproject.org</a><br/>
             Copyright 2017, The Natural Capital Project<br/>
             License: BSD 3-clause<br/>
-            Project page: https://bitbucket.org/natcap/invest<br/>
+            Project page: <a href="https://bitbucket.org/natcap/invest">
+                            bitbucket.org/natcap/invest</a><br/>
 
             <h2>Open-Source Licenses</h2>
             """.format(
                 version=natcap.invest.__version__))
 
+        label_text += "<table>"
         for lib_name, lib_license, lib_homepage in [
                 ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
                 ('GDAL', 'MIT and others', 'http://gdal.org'),
@@ -309,12 +312,17 @@ class Model(QtWidgets.QMainWindow):
                 ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
                 ('scipy', 'BSD', 'http://www.scipy.org/'),
                 ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
-            label_text += '{project} {license} {homepage} <br/>'.format(
+            label_text += ('<tr>'
+                           '<td>{project}  </td>'
+                           '<td>{license}  </td>'
+                           '<td>{homepage}  </td>').format(
                 project=lib_name,
                 license=('<a href="licenses/{project}_license.txt">{license}'
                          '</a>').format(project=lib_name,
                                         license=lib_license),
                 homepage='<a href="{0}">{0}</a>'.format(lib_homepage))
+
+        label_text += "</table>"
 
         label = QtWidgets.QLabel(label_text)
         label.setTextFormat(QtCore.Qt.RichText)
@@ -326,7 +334,7 @@ class Model(QtWidgets.QMainWindow):
         button_box.addButton(accept_button,
                              QtWidgets.QDialogButtonBox.AcceptRole)
         about_dialog.layout().addWidget(button_box)
-        accept_button.pressed.connect(about_dialog.close)
+        accept_button.clicked.connect(about_dialog.close)
 
         about_dialog.exec_()
 
