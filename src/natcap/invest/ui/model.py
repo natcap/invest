@@ -16,6 +16,7 @@ import natcap.invest
 import qtawesome
 
 from . import inputs
+from . import usage
 from .. import cli
 from .. import utils
 from .. import scenarios
@@ -407,9 +408,10 @@ class Model(QtWidgets.QMainWindow):
         def _logged_target():
             name = self.target.__name__
             with utils.prepare_workspace(args['workspace_dir'], name):
-                LOGGER.info('Starting model with parameters: \n%s',
-                            cli._format_args(args))
-                return self.target(args=args)
+                with usage.log_run(name, args):
+                    LOGGER.info('Starting model with parameters: \n%s',
+                                cli._format_args(args))
+                    return self.target(args=args)
 
         self.form.run(target=_logged_target,
                       window_title='Running %s' % self.label,
