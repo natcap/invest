@@ -484,6 +484,20 @@ class TextTest(GriddedInputTest):
         self.assertEqual(input_instance.value(), u'foo')
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
+    def test_set_value_cyrillic_str(self):
+        input_instance = self.__class__.create_input(label='text')
+        self.assertEqual(input_instance.value(), '')
+        input_instance.set_value('fooДЖЩя')
+        self.assertEqual(input_instance.value(), u'fooДЖЩя')
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
+
+    def test_set_value_cyrillic_unicode(self):
+        input_instance = self.__class__.create_input(label='text')
+        self.assertEqual(input_instance.value(), '')
+        input_instance.set_value(u'fooДЖЩя')
+        self.assertEqual(input_instance.value(), u'fooДЖЩя')
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
+
     def test_set_value_int(self):
         input_instance = self.__class__.create_input(label='text')
         input_instance.set_value(1)
@@ -601,11 +615,19 @@ class PathTest(TextTest):
             input_instance.path_select_button.path_selected.emit(u'/tmp/foo')
             self.assertTrue(input_instance.value(), '/tmp/foo')
 
+    def test_path_selected_cyrillic(self):
+        input_instance = self.__class__.create_input(label='foo')
+        # Only run this test on subclasses of path
+        if input_instance.__class__.__name__ != '_Path':
+            input_instance.path_select_button.path_selected.emit(
+                u'/tmp/fooДЖЩя'.encode('cp1251'))
+            self.assertTrue(input_instance.value(), u'/tmp/fooДЖЩя')
+
     def test_textfield_drag_n_drop(self):
         input_instance = self.__class__.create_input(label='text')
 
         mime_data = QtCore.QMimeData()
-        mime_data.setText('Hello world!')
+        mime_data.setText(u'Hello world!ДЖЩя'.encode('cp1251'))
 
         event = QtGui.QDragEnterEvent(
             input_instance.textfield.pos(),
@@ -621,8 +643,8 @@ class PathTest(TextTest):
         input_instance = self.__class__.create_input(label='text')
 
         mime_data = QtCore.QMimeData()
-        mime_data.setText('Hello world!')
-        mime_data.setUrls([QtCore.QUrl('/foo/bar')])
+        mime_data.setText(u'Hello world!ДЖЩя')
+        mime_data.setUrls([QtCore.QUrl(u'/foo/bar/ДЖЩя'.encode('cp1251'))])
 
         event = QtGui.QDragEnterEvent(
             input_instance.textfield.pos(),
@@ -641,9 +663,9 @@ class PathTest(TextTest):
         input_instance = self.__class__.create_input(label='text')
 
         mime_data = QtCore.QMimeData()
-        mime_data.setText('Hello world!')
+        mime_data.setText(u'Hello world!ДЖЩя')
         # this is what paths look like when Qt receives them.
-        mime_data.setUrls([QtCore.QUrl('/C:/foo/bar')])
+        mime_data.setUrls([QtCore.QUrl(u'/C:/foo/bar/ДЖЩя')])
 
         event = QtGui.QDropEvent(
             input_instance.textfield.pos(),
@@ -656,14 +678,15 @@ class PathTest(TextTest):
             input_instance.textfield.dropEvent(event)
 
         self.assertEqual(event.isAccepted(), True)
-        self.assertEqual(input_instance.value(), 'C:/foo/bar')
+        self.assertEqual(input_instance.value(), u'C:/foo/bar/ДЖЩя')
 
     def test_textfield_drop_mac(self):
+        # NOTE: Mac OS's filesystem is UTF-8.
         input_instance = self.__class__.create_input(label='text')
 
         mime_data = QtCore.QMimeData()
-        mime_data.setText('Hello world!')
-        mime_data.setUrls([QtCore.QUrl('/foo/bar')])
+        mime_data.setText(u'Hello world!ДЖЩя')
+        mime_data.setUrls([QtCore.QUrl(u'/foo/bar/ДЖЩя')])
 
         event = QtGui.QDropEvent(
             input_instance.textfield.pos(),
@@ -676,7 +699,7 @@ class PathTest(TextTest):
             input_instance.textfield.dropEvent(event)
 
         self.assertEqual(event.isAccepted(), True)
-        self.assertEqual(input_instance.value(), '/foo/bar')
+        self.assertEqual(input_instance.value(), u'/foo/bar/ДЖЩя')
 
 
 class FolderTest(PathTest):

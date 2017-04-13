@@ -851,8 +851,8 @@ class _Path(Text):
                 # This is only needed on Qt<5.4.1.
                 # See bug report at https://bugreports.qt.io/browse/QTBUG-40449
                 command = (
-                    "osascript -e 'get posix path of my posix file \""
-                    "file://{fileid}\" -- kthx. bai'").format(
+                    u"osascript -e 'get posix path of my posix file \""
+                    u"file://{fileid}\" -- kthx. bai'").format(
                         fileid=path)
                 process = subprocess.Popen(
                     command, shell=True,
