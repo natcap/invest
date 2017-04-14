@@ -5,7 +5,7 @@ import os
 import numpy
 from osgeo import gdal
 from osgeo import osr
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 
 
 def make_suffix_string(args, suffix_key):
@@ -118,7 +118,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     # object in interblocks()
     kernel_dataset.FlushCache()
 
-    for block_data, kernel_block in pygeoprocessing.iterblocks(
+    for block_data, kernel_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(
             kernel_filepath):
         kernel_block /= integration
         kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],

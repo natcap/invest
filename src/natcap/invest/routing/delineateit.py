@@ -1,9 +1,9 @@
-"""DelineateIt wrapper for pygeoprocessing's watershed delineation routine."""
+"""DelineateIt wrapper for natcap.invest.pygeoprocessing_0_3_3's watershed delineation routine."""
 
 import os
 import logging
 
-import pygeoprocessing.routing
+import natcap.invest.pygeoprocessing_0_3_3.routing
 
 from .. import utils
 
@@ -13,7 +13,7 @@ LOGGER = logging.getLogger('natcap.invest.routing.delineateit')
 def execute(args):
     """Delineateit: Watershed Delineation.
 
-    This 'model' provides an InVEST-based wrapper around the pygeoprocessing
+    This 'model' provides an InVEST-based wrapper around the natcap.invest.pygeoprocessing_0_3_3
     routing API for watershed delineation.
 
     Upon successful completion, the following files are written to the
@@ -54,7 +54,7 @@ def execute(args):
     """
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)
-    pygeoprocessing.create_directories([output_directory])
+    natcap.invest.pygeoprocessing_0_3_3.create_directories([output_directory])
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     dem_uri = args['dem_uri']
@@ -69,7 +69,7 @@ def execute(args):
     stream_out_uri = os.path.join(
         output_directory, 'stream%s.tif' % file_suffix)
 
-    pygeoprocessing.routing.delineate_watershed(
+    natcap.invest.pygeoprocessing_0_3_3.routing.delineate_watershed(
         dem_uri, outlet_shapefile_uri, snap_distance,
         flow_threshold, watershed_out_uri,
         snapped_outlet_points_uri, stream_out_uri)

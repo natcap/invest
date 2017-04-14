@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
@@ -58,11 +58,11 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'expected_file_list_regression.txt'),
             args['workspace_dir'])
 
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(self.workspace_dir, 'output', 'frm_avg_cur.tif'),
             os.path.join(REGRESSION_DATA, 'frm_avg_cur_regression.tif'), 1e-6)
 
-        pygeoprocessing.testing.assert_rasters_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(self.workspace_dir, 'output', 'frm_avg_fut.tif'),
             os.path.join(REGRESSION_DATA, 'frm_avg_fut_regression.tif'), 1e-6)
 

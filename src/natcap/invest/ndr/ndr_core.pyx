@@ -25,8 +25,8 @@ cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
-import pygeoprocessing
-import pygeoprocessing.routing.routing_core
+import natcap.invest.pygeoprocessing_0_3_3
+import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -210,14 +210,14 @@ def ndr_eff_calculation(
             nothing"""
 
     cdef float effective_retention_nodata = -9999
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         flow_direction_uri, effective_retention_uri, 'GTiff', effective_retention_nodata,
         gdal.GDT_Float32, fill_value=effective_retention_nodata)
 
     cdef float processed_cell_nodata = 127
     processed_cell_uri = (
         os.path.join(os.path.dirname(flow_direction_uri), 'processed_cell.tif'))
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         flow_direction_uri, processed_cell_uri, 'GTiff', processed_cell_nodata,
         gdal.GDT_Byte, fill_value=0)
 
@@ -229,16 +229,16 @@ def ndr_eff_calculation(
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int n_rows, n_cols
-    n_rows, n_cols = pygeoprocessing.get_row_col_from_uri(
+    n_rows, n_cols = natcap.invest.pygeoprocessing_0_3_3.get_row_col_from_uri(
         flow_direction_uri)
 
     cdef deque[int] visit_stack
 
     stream_ds = gdal.Open(stream_uri)
     stream_band = stream_ds.GetRasterBand(1)
-    cdef float stream_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef float stream_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         stream_uri)
-    cdef float cell_size = pygeoprocessing.get_cell_size_from_uri(stream_uri)
+    cdef float cell_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(stream_uri)
 
     effective_retention_ds = gdal.Open(effective_retention_uri, gdal.GA_Update)
     effective_retention_band = effective_retention_ds.GetRasterBand(1)
@@ -249,17 +249,17 @@ def ndr_eff_calculation(
     crit_len_ds = gdal.Open(crit_len_uri)
     crit_len_band = crit_len_ds.GetRasterBand(1)
 
-    outflow_weights_uri = pygeoprocessing.temporary_filename()
-    outflow_direction_uri = pygeoprocessing.temporary_filename()
-    pygeoprocessing.routing.routing_core.calculate_flow_weights(
+    outflow_weights_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
+    outflow_direction_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
+    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
     outflow_weights_ds = gdal.Open(outflow_weights_uri)
     outflow_weights_band = outflow_weights_ds.GetRasterBand(1)
-    cdef float outflow_weights_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_weights_uri)
     outflow_direction_ds = gdal.Open(outflow_direction_uri)
     outflow_direction_band = outflow_direction_ds.GetRasterBand(1)
-    cdef int outflow_direction_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef int outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_direction_uri)
     cdef int block_col_size, block_row_size
     block_col_size, block_row_size = stream_band.GetBlockSize()

@@ -52,5 +52,8 @@ do
     sed -i '' 's|./invest|`dirname $0`/../../../.invest_dist/invest|g' "$new_command_file"
 done
 
+# copy the docs into the dmg
+cp -r ../../doc/users-guide/build/html $tempdir/documentation
+
 dmgbuild -Dinvestdir="$tempdir" -s dmgconf.py "$title" "$finalDMGName"
     

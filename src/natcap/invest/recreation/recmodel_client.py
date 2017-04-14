@@ -19,7 +19,7 @@ import shapely
 import shapely.geometry
 import shapely.wkt
 import shapely.prepared
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 import numpy
 import numpy.linalg
 import shapely.speedups
@@ -187,7 +187,7 @@ def execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
-    pygeoprocessing.create_directories([output_dir])
+    natcap.invest.pygeoprocessing_0_3_3.create_directories([output_dir])
 
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
@@ -494,7 +494,7 @@ def _build_regression_coefficients(
             'percent', x, y),
         }
 
-    predictor_table = pygeoprocessing.get_lookup_from_csv(
+    predictor_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
         predictor_table_path, 'id')
     out_predictor_id_list[:] = predictor_table.keys()
 
@@ -591,7 +591,7 @@ def _raster_sum_mean(
     fid_field = _build_temporary_indexed_vector(
         response_vector_path, tmp_indexed_vector_path)
 
-    aggregate_results = pygeoprocessing.aggregate_raster_values_uri(
+    aggregate_results = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
         raster_path, tmp_indexed_vector_path, shapefile_field=fid_field)
 
     fid_raster_values = {
@@ -990,7 +990,7 @@ def _validate_same_id_lengths(table_path):
         ValueError if any of the fields in 'id' and 'type' don't match between
         tables.
     """
-    predictor_table = pygeoprocessing.get_lookup_from_csv(table_path, 'id')
+    predictor_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(table_path, 'id')
     too_long = set()
     for p_id in predictor_table:
         if len(p_id) > 10:
@@ -1022,10 +1022,10 @@ def _validate_same_ids_and_types(
         ValueError if any of the fields in 'id' and 'type' don't match between
         tables.
     """
-    predictor_table = pygeoprocessing.get_lookup_from_csv(
+    predictor_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
         predictor_table_path, 'id')
 
-    scenario_predictor_table = pygeoprocessing.get_lookup_from_csv(
+    scenario_predictor_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
         scenario_predictor_table_path, 'id')
 
     predictor_table_pairs = set([
@@ -1058,7 +1058,7 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as paths which we can iterate through without
     # bothering the rest of the table structure
-    data_paths = pygeoprocessing.get_lookup_from_csv(
+    data_paths = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
         table_path, 'path')
 
     base_vector = ogr.Open(base_vector_path)

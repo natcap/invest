@@ -1,39 +1,43 @@
+Syntax: regexp
 # Byte-compiled / optimized / DLL files
 __pycache__/
-.pyc
-.pyd
-.pyo
+\.pyc$
+\.pyd$
+\.pyo$
 
 # C extensions
-.so
+\.so$
 
 # Distribution / packaging
-.Python
-env/
-build/
-develop-eggs/
-dist/
-eggs/
-lib/
-lib64/
-sdist/
-natcap.invest.egg-info/
-.egg
-src/natcap/invest/version.py
+\.Python
+^env/
+^test_env/
+^build/
+^develop-eggs/
+^dist/
+^eggs/
+^lib/
+^lib64/
+^sdist/
+^natcap\.invest\.egg-info/
+\.egg$
+^src/natcap/invest/version\.py$
 
 # Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.cache
-nosetests.xml
-coverage.xml
+^htmlcov/
+^\.tox/
+^\.coverage
+^cover/
+^\.cache
+^nosetests\.xml$
+^coverage\.xml$
 
 # Sphinx documentation
-doc/api-docs/build
+^doc/api-docs/build
 
 # Repositories (tracked in their own SCMs)
-data/invest-data
-data/invest-test-data
-data/crop-model-data
-src/pyinstaller
+^data/invest-data
+^data/invest-test-data
+^data/crop-model-data
+^data/invest-crop-production-data
+^src/pyinstaller

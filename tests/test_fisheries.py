@@ -5,8 +5,8 @@ import shutil
 import os
 
 import numpy
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'Fisheries')
@@ -386,7 +386,7 @@ class FisheriesHSTTest(unittest.TestCase):
         }
         fisheries_hst.execute(args)
 
-        pygeoprocessing.testing.assert_csv_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
             os.path.join(TEST_DATA, 'pop_params_modified.csv'),
             os.path.join(args['workspace_dir'], 'output', 'pop_params_modified.csv'))
 
@@ -409,7 +409,7 @@ class FisheriesHSTTest(unittest.TestCase):
         }
         fisheries_hst.execute(args)
 
-        pygeoprocessing.testing.assert_csv_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
             os.path.join(TEST_DATA, 'hst_pop_params_sexsp_modified.csv'),
             os.path.join(args['workspace_dir'], 'output',
                          'hst_pop_params_sexsp_modified.csv'))
