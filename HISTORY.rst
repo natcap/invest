@@ -4,6 +4,8 @@
 
 Unreleased Changes
 ------------------
+* Updated the Coastal Blue Carbon model to improve handling of blank lines in input CSV tables and improve memory efficiency of the current implementation.
+* Improved the readability of a cryptic error message in Coastal Vulnerability that is normally raised when the depth threshold is too high or the exposure proportion is too low to detect any shoreline segments.
 * Adding InVEST HTML documentation to the Mac disk image distribution.
 * Upgrading dependency of PyGeoprocessing to 0.3.3.  This fixes a memory leak associated with any model that aggregates rasters over complicated overlapping polygons.
 * Adding sample data to Blue Carbon model that were missing.
