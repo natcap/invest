@@ -125,7 +125,9 @@ def execute(args):
     blocks_processed = 0.
     last_time = time.time()
 
-    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
+    # Limit block size here to try to improve memory usage of the application.
+    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster'],
+                                                     largest_block=2**10))
     C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
 
     for block_idx, (offset_dict, C_prior) in block_iterator:
@@ -632,12 +634,12 @@ def get_inputs(args):
     lulc_lookup_dict = geoprocess.get_lookup_from_table(
         args['lulc_lookup_uri'], 'lulc-class')
     lulc_to_code_dict = \
-        dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items())
+        dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items() if k)
     initial_dict = geoprocess.get_lookup_from_table(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
     code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
-                     in initial_dict.iteritems())
+                     in initial_dict.iteritems() if k)
     for args_key, col_name in [('lulc_to_Sb', 'biomass'),
                                ('lulc_to_Ss', 'soil'),
                                ('lulc_to_L', 'litter')]:
