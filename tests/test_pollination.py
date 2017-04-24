@@ -49,11 +49,12 @@ class PollinationTests(unittest.TestCase):
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
         with open(bad_guild_table_path, 'wb') as bad_guild_table:
             bad_guild_table.write(
-                'species,nesting_suitability_cavity_index,alpha\n')
+                'species,nesting_suitability_cavity_index,alpha,'
+                'relative_abundance \n')
             bad_guild_table.write(
-                'apis,0.2,400\n')
+                'apis,0.2,400,1.0\n')
             bad_guild_table.write(
-                'bee,0.9,1400\n')
+                'bee,0.9,1400,0.1\n')
         args = {
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
@@ -107,11 +108,12 @@ class PollinationTests(unittest.TestCase):
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
         with open(bad_guild_table_path, 'wb') as bad_guild_table:
             bad_guild_table.write(
-                'species,nesting_suitability_cavity_index,foraging_activity_fall_index,alpha\n')
+                'species,nesting_suitability_cavity_index,'
+                'foraging_activity_fall_index,alpha,relative_abundance\n')
             bad_guild_table.write(
-                'apis,0.2,0.5,400\n')
+                'apis,0.2,0.5,400,1.0\n')
             bad_guild_table.write(
-                'bee,0.9,0.5,1400\n')
+                'bee,0.9,0.5,1400,0.5\n')
         args = {
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,

@@ -48,9 +48,10 @@ _EXPECTED_BIOPHYSICAL_HEADERS = [
 # These are patterns expected in the guilds table
 _NESTING_SUITABILITY_PATTERN = 'nesting_suitability_([^_]+)_index'
 _FORAGING_ACTIVITY_PATTERN = 'foraging_activity_([^_]+)_index'
+_RELATIVE_POLLINATOR_ABUNDANCE_FIELD = 'relative_abundance'
 _EXPECTED_GUILD_HEADERS = [
     'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_PATTERN,
-    'alpha']
+    'alpha', _RELATIVE_POLLINATOR_ABUNDANCE_FIELD]
 
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
