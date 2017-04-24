@@ -50,7 +50,7 @@ class PollinationTests(unittest.TestCase):
         with open(bad_guild_table_path, 'wb') as bad_guild_table:
             bad_guild_table.write(
                 'species,nesting_suitability_cavity_index,alpha,'
-                'relative_abundance \n')
+                'relative_abundance\n')
             bad_guild_table.write(
                 'apis,0.2,400,1.0\n')
             bad_guild_table.write(
