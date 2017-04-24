@@ -598,13 +598,13 @@ def execute(args):
                 managed_pollinator_abundance.shape, dtype=numpy.float32)
             valid_mask = wild_pollinator_abundance[0] != _INDEX_NODATA
             result[:] = _INDEX_NODATA
-            result[valid_mask] = numpy.max(
-                (managed_pollinator_abundance[valid_mask],
+            result[valid_mask] = numpy.clip(
+                (managed_pollinator_abundance[valid_mask] +
                  numpy.max([
-                    activity * abundance[valid_mask]
-                    for abundance, activity in zip(
-                        wild_pollinator_abundance, wild_pollinator_activity)],
-                    axis=0)), axis=0)
+                     activity * abundance[valid_mask]
+                     for abundance, activity in zip(
+                         wild_pollinator_abundance,
+                         wild_pollinator_activity)], axis=0)), 0, 1)
             return result
 
         wild_pollinator_abundance_band_paths = [
