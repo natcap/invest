@@ -398,6 +398,7 @@ def execute(args):
         for season_id in sorted(season_to_header)]
 
     species_foraging_activity_per_season = None
+    species_abundance = None
     raw_abundance_nodata = None
     for species_id in guild_table:
         LOGGER.info(
@@ -465,16 +466,19 @@ def execute(args):
             intermediate_output_dir,
             pollinator_supply_id + "%s.tif" % file_suffix)
 
+        species_abundance = guild_table[species_id][
+            _RELATIVE_POLLINATOR_ABUNDANCE_FIELD]
+
         def _pollinator_supply_op(
                 accessable_floral_resources, species_nesting_index):
-            """Multiply accesable floral resources by nesting index."""
+            """Supply is floral resources * nesting index * abundance."""
             result = numpy.empty(
                 accessable_floral_resources.shape, dtype=numpy.float32)
             result[:] = _INDEX_NODATA
             valid_mask = (species_nesting_index != _INDEX_NODATA)
             result[valid_mask] = (
                 accessable_floral_resources[valid_mask] *
-                species_nesting_index[valid_mask])
+                species_nesting_index[valid_mask] * species_abundance)
             return result
 
         species_nesting_suitability_id = (
@@ -609,11 +613,11 @@ def execute(args):
             result[:] = _INDEX_NODATA
             result[valid_mask] = numpy.clip(
                 (managed_pollinator_abundance[valid_mask] +
-                 numpy.max([
+                 numpy.sum([
                      activity * abundance[valid_mask]
                      for abundance, activity in zip(
                          wild_pollinator_abundance,
-                         wild_pollinator_activity)], axis=0)), 0, 1)
+                         wild_pollinator_activity)])), 0, 1)
             return result
 
         wild_pollinator_abundance_band_paths = [
