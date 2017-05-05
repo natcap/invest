@@ -97,6 +97,12 @@ def execute(args):
                     in the range [0.0, 1.0] indicating the relative level of
                     foraging activity for that species during a particular
                     season.
+                * 'alpha': the sigma average flight distance of that bee
+                    species in meters.
+                * 'relative_abundance': a weight indicating the relative
+                    abundance of the particular species with respect to the
+                    sum of all relative abundance weights in the table.
+
         args['landcover_biophysical_table_path'] (string): path to a table
             mapping landcover codes in `args['landcover_path']` to indexes of
             nesting availability for each nesting substrate referenced in

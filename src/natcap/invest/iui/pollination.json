@@ -50,7 +50,7 @@
         {
           "id": "landcover_biophysical_table_path",
           "type": "file",
-          "label": "Land Cover Attributes Table (CSV)",
+          "label": "Land Cover Biophysical Table (CSV)",
           "args_id": "landcover_biophysical_table_path",
           "required": true,
           "defaultValue": "../pollination/landcover_biophysical_table.csv",
@@ -60,242 +60,48 @@
               "lucode"
             ]
           },
-          "helpText": "A CSV table mapping landcover codes in the landcover raster to indexes of nesting availability for each nesting substrate referenced in guilds table as well as indexes of abundance of floral resources on that landcover type per season in the bee activity columns of the guild table."
+          "helpText": "A CSV table mapping landcover codes in the landcover raster to indexes of nesting availability for each nesting substrate referenced in guilds table as well as indexes of abundance of floral resources on that landcover type per season in the bee activity columns of the guild table.<br/>All indexes are in the range [0.0, 1.0].<br/>Columns in the table must be at least<br/>* 'lucode': representing all the unique landcover codes in the raster st `args['landcover_path']`<br/>* For every nesting matching _NESTING_SUITABILITY_PATTERN in the guild stable, a column matching the pattern in `_LANDCOVER_NESTING_INDEX_HEADER`.<br/>* For every season matching _FORAGING_ACTIVITY_PATTERN in the guilds table, a column matching the pattern in `_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`."
         },
         {
           "id": "guild_table_path",
           "type": "file",
-          "label": "Land Cover Attributes Table (CSV)",
+          "label": "Guild Table (CSV)",
           "args_id": "guild_table_path",
           "required": true,
           "defaultValue": "../Pollination/Input/LU.csv",
           "validateAs": {
             "type": "CSV",
             "fieldsExist": [
-              "lucode"
+              "species", "alpha", "relative_abundance"
             ]
           },
-          "helpText": "A CSV table mapping landcover codes in the landcover raster to indexes of nesting availability for each nesting substrate referenced in guilds table as well as indexes of abundance of floral resources on that landcover type per season in the bee activity columns of the guild table."
+          "helpText": "A table indicating the bee species to analyze in this model run.  Table headers must include:<br/>* 'species': a bee species whose column string names will be referred to in other tables and the model will output analyses per species.<br/> * any number of columns matching _NESTING_SUITABILITY_PATTERN with values in the range [0.0, 1.0] indicating the suitability of the given species to nest in a particular substrate.<br/>* any number of _FORAGING_ACTIVITY_PATTERN columns with values in the range [0.0, 1.0] indicating the relative level of foraging activity for that species during a particular season.<br/>* 'alpha': the sigma average flight distance of that bee species in meters.<br/>* 'relative_abundance': a weight indicating the relative abundance of the particular species with respect to the sum of all relative abundance weights in the table."
         },
-        args['guild_table_path'] (string): file path to a table indicating
-        args['farm_vector_path'] (string): path to a single layer polygon
-      ]
-    },
-    {
-      "id": "landcover_container",
-      "type": "container",
-      "label": "Land Use/Land Cover",
-      "elements": [
         {
-          "id": "landcover_list",
-          "type": "list",
-          "elements": [
-            {
-              "id": "cur_lulc_raster",
-              "args_id": "landuse_cur_uri",
-              "type": "file",
-              "label": "Current Land Cover Scenario (Raster)",
-              "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
-              "required": true,
-              "validateAs": {
-                "type": "GDAL"
-              },
-              "helpText": "A GDAL-supported vector file."
-            },
-            {
-              "id": "landcover_attribute_table",
-              "type": "file",
-              "label": "Land Cover Attributes Table (CSV)",
-              "args_id": "landuse_attributes_uri",
-              "required": true,
-              "defaultValue": "../Pollination/Input/LU.csv",
-              "validateAs": {
-                "type": "CSV",
-                "fieldsExist": [
-                  "LULC"
-                ],
-                "restrictions": [
-                  {
-                    "field": "LULC",
-                    "validateAs": {
-                      "type": "number"
-                    }
-                  },
-                  {
-                    "field": {
-                      "pattern": "N_.*",
-                      "flag": "ignoreCase"
-                    },
-                    "validateAs": {
-                      "type": "number",
-                      "gteq": 0,
-                      "lteq": 1
-                    }
-                  },
-                  {
-                    "field": {
-                      "pattern": "F_.*",
-                      "flag": "ignoreCase"
-                    },
-                    "validateAs": {
-                      "type": "number",
-                      "gteq": 0,
-                      "lteq": 1
-                    }
-                  }
-                ]
-              },
-              "helpText": "A CSV table of land-cover attributes."
-            },
-            {
-              "id": "fut_lulc_raster",
-              "type": "hideableFileEntry",
-              "label": "Calculate Future Scenario (Raster) (Optional)",
-              "args_id": "landuse_fut_uri",
-              "required": false,
-              "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
-              "validateAs": {
-                "type": "GDAL"
-              },
-              "helpText": "Optional. An GDAL-supported raster file representing a future land-cover scenario.<br/><br/>Providing a future land-cover scenario will cause pollinator supply and abundance to be calculated for both the current and future scenarios.  The future scenario land cover raster should use the same land cover attribute table as the current land cover raster."
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "valuation_container",
-      "type": "container",
-      "collapsible": true,
-      "args_id": "do_valuation",
-      "label": "Valuation Options (enable to trigger valuation)",
-      "elements": [
-        {
-          "id": "valuation_list",
-          "type": "list",
-          "elements": [
-            {
-              "id": "half_saturation_const",
-              "type": "text",
-              "label": "Half-saturation constant",
-              "args_id": "half_saturation",
-              "required": true,
-              "width": 60,
-              "defaultValue": "0.125",
-              "validateAs": {
-                "type": "number",
-                "lteq": 1,
-                "gteq": 0
-              },
-              "dataType": "float",
-              "helpText": "This should be a number between 0 and 1.  It represents the abundance of pollinators required to reach 50% of pollinator-dependent yield."
-            },
-            {
-              "id": "wild_pollination_proportion",
-              "type": "text",
-              "label": "Proportion of Total Yield Due to Wild Pollinators",
-              "args_id": "wild_pollination_proportion",
-              "required": true,
-              "width": 60,
-              "defaultValue": "1",
-              "validateAs": {
-                "type": "number",
-                "lteq": 1,
-                "gteq": 0
-              },
-              "dataType": "float",
-              "helpText": "This should be a number between 0 and 1.  It represents the proportion of all crop yield attributed to wild pollinators on this landscape."
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "remaining_items_list",
-      "type": "list",
-      "elements": [
-        {
-          "id": "guilds",
+          "id": "farm_vector_path",
+          "args_id": "farm_vector_path",
           "type": "file",
-          "label": "Guilds Table (CSV) (Optional)",
-          "defaultValue": "../Pollination/Input/Guild.csv",
-          "args_id": "guilds_uri",
+          "label": "Farm Vector (Vector)",
+          "defaultValue": "../pollination/farms.shp",
           "required": true,
           "validateAs": {
-            "type": "CSV",
-            "fieldsExist": [
-              "SPECIES",
-              "ALPHA",
-              "SPECIES_WEIGHT"
-            ],
-            "restrictions": [
+            "type": "OGR",
+            "layers": [
               {
-                "field": "ALPHA",
-                "validateAs": {
-                  "type": "number"
-                }
-              },
-              {
-                "field": "SPECIES_WEIGHT",
-                "validateAs": {
-                  "type": "number"
-                }
-              },
-              {
-                "field": {
-                  "pattern": "NS_.*",
-                  "flag": "ignoreCase"
+                "name": {
+                  "inheritFrom": "file"
                 },
-                "validateAs": {
-                  "type": "number",
-                  "allowedValues": {
-                    "pattern": "^(1\\.?0*)|(0\\.?0*)$"
-                  }
-                }
-              },
-              {
-                "field": {
-                  "pattern": "FS_.*",
-                  "flag": "ignoreCase"
-                },
-                "validateAs": {
-                  "type": "number",
-                  "gteq": 0,
-                  "lteq": 1
-                }
-              },
-              {
-                "field": {
-                  "pattern": "crp_.*",
-                  "flag": "ignoreCase"
-                },
-                "validateAs": {
-                  "type": "number",
-                  "allowedValues": {
-                    "pattern": "^(1\\.?0*)|(0\\.?0*)$"
-                  }
+                "type": "polygons",
+                "projection": {
+                  "exists": true
                 }
               }
+            ],
+            "fieldsExist": [
+              "crop_type", "half_sat", "season", "p_managed", "p_dep"
             ]
           },
-          "helpText": "A CSV table containing information specific to the various pollinators to be modeled.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If aggregating by crops, the table should contain fields matching 'crp_*', where the value is either 1 or 0."
-        },
-        {
-          "id": "ag_classes",
-          "type": "text",
-          "label": "Agricultural Classes (space-separated) (Optional)",
-          "args_id": "ag_classes",
-          "required": false,
-          "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
-          "validText": "[0-9 ]*",
-          "validateAs": {
-            "type": "string",
-            "allowedValues": {
-              "pattern": "[0-9 ]*"
-            }
-          },
-          "dataType": "string",
-          "helpText": "A space-separated list of agricultural land-cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If agricultural classes are not provided here, the entire land-cover raster will be considered as agricultural."
+          "helpText": "This is a layer of polygons representing farm sites to be analyzed.  The shapefile must have at least the following fields:<br/><br/>* season (string): season in which the farm needs pollination.<br/>* half_sat (float): a real in the range [0.0, 1.0] representing the proportion of wild pollinators to achieve a 50% yield of that crop.<br/>* p_wild_dep (float): a number in the range [0.0, 1.0] representing the proportion of yield dependant on pollinators.<br/>* p_managed (float): proportion of pollinators that come from non-native/managed hives.<br/>* f_[season] (float): any number of fields that match this pattern such that `season` also matches the season headers in the biophysical and guild table.  Any areas that overlap the landcover map will replace seasonal floral resources with this value.  Ranges from 0..1.<br/>* n_[substrate] (float): any number of fields that match this pattern such that `substrate` also matches the nesting substrate headers in the biophysical and guild table.  Any areas that overlap the landcover map will replace nesting substrate suitability with this value.  Ranges from 0..1."
         }
       ]
     }
