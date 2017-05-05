@@ -15,15 +15,26 @@ from . import utils
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('natcap.invest.crop_production_percentile')
+LOGGER = logging.getLogger('natcap.invest.crop_production_regression')
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
+
+_REGRESSION_TABLE_PATTERN = os.path.join(
+    'climate_regression_yield_tables', '%s_regression_yield_table.csv')
+
+_EXPECTED_REGRESSION_TABLE_HEADERS = [
+    'climate_bin', 'yield_ceiling', 'b_nut', 'b_K2O', 'c_N', 'c_P2O5',
+    'c_K2O']
+
+###old constants below
 
 _YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
 _GLOBAL_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
     'observed_yield', '%s_yield_map.tif')  # crop_name
 _EXTENDED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
     'extended_climate_bin_maps', 'extendedclimatebins%s.tif')  # crop_name
+
+
 _CLIMATE_PERCENTILE_TABLE_PATTERN = os.path.join(
     'climate_percentile_yield_tables',
     '%s_percentile_yield_table.csv')  # crop_name
@@ -80,7 +91,7 @@ _NODATA_YIELD = -1.0
 
 
 def execute(args):
-    """Crop Production Percentile Model.
+    """Crop Production Regression Model.
 
     This model will take a landcover (crop cover?), N, P, and K map and
     produce modeled yields, and a nutrient table.
@@ -102,7 +113,6 @@ def execute(args):
         args['n_raster_path'] (string): path to nitrogen fertilization rates.
         args['p_raster_path'] (string): path to phosphorous fertilization
             rates.
-
         args['aggregate_polygon_path'] (string): path to polygon shapefile
             that will be used to aggregate crop yields and total nutrient
             value. (optional, if value is None, then skipped)
@@ -203,12 +213,16 @@ def execute(args):
             clipped_climate_bin_raster_path, 'nearest',
             target_bb=landcover_wgs84_bounding_box)
 
-        climate_percentile_yield_table_path = os.path.join(
-            args['model_data_path'],
-            _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
-        crop_climate_percentile_table = utils.build_lookup_from_csv(
-            climate_percentile_yield_table_path, 'climate_bin',
-            to_lower=True, numerical_cast=True)
+        crop_regression_table_path = os.path.join(
+            args['model_data_path'], _REGRESSION_TABLE_PATTERN % crop_name)
+
+        crop_regression_table = utils.build_lookup_from_csv(
+            crop_regression_table_path, 'climate_bin',
+            to_lower=True, numerical_cast=True, warn_if_missing=False)
+
+        print crop_regression_table
+        os.exit()
+
         yield_percentile_headers = [
             x for x in crop_climate_percentile_table.itervalues().next()
             if x != 'climate_bin']

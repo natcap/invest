@@ -205,7 +205,8 @@ def _attempt_float(value):
 
 
 def build_lookup_from_csv(
-        table_path, key_field, to_lower=True, numerical_cast=True):
+        table_path, key_field, to_lower=True, numerical_cast=True,
+        warn_if_missing=True):
     """Read a CSV table into a dictionary indexed by `key_field`.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
@@ -227,6 +228,8 @@ def build_lookup_from_csv(
             attempt to be cast to a floating point type; if it fails will be
             left as unicode.  If false, all values will be considered raw
             unicode.
+        warn_if_missing (bool): If True, warnings are logged if there are
+            empty headers or value rows.
 
     Returns:
         lookup_dict (dict): a dictionary of the form {
@@ -250,7 +253,7 @@ def build_lookup_from_csv(
             raise ValueError(
                 '%s expected in %s for the CSV file at %s' % (
                     key_field, header_row, table_path))
-        if '' in header_row:
+        if warn_if_missing and '' in header_row:
             LOGGER.warn(
                 "There are empty strings in the header row at %s", table_path)
         key_index = header_row.index(key_field)
@@ -260,7 +263,7 @@ def build_lookup_from_csv(
                 row = [x.lower() for x in row]
             if numerical_cast:
                 row = [_attempt_float(x) for x in row]
-            if '' in row:
+            if warn_if_missing and '' in row:
                 LOGGER.warn(
                     "There are empty strings in row %s in %s", row,
                     table_path)
