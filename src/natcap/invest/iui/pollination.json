@@ -1,7 +1,7 @@
 {
   "id": "window",
   "label": "Crop Pollination",
-  "targetScript": "natcap.invest.pollination.pollination",
+  "targetScript": "natcap.invest.pollination",
   "modelName": "pollination",
   "localDocURI": "../documentation/croppollination.html",
   "condenseElements": true,
@@ -33,8 +33,52 @@
           "required": false,
           "width": 120,
           "dataType": "string",
-          "helpText": "Optional.  The results suffix will be appended to the end of all output filenames. If provided, it must be alphanumeric."
-        }
+          "helpText": "Optional.  The results suffix will be appended to the end of all output filenames."
+        },
+        {
+          "id": "landcover_raster_path",
+          "args_id": "landcover_raster_path",
+          "type": "file",
+          "label": "Land Cover Map (Raster)",
+          "defaultValue": "../pollination/landcover.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "This is the landcover map that's used to map biophyiscal properties about habitat and floral resources of landcover types to a spatial layout."
+        },
+        {
+          "id": "landcover_biophysical_table_path",
+          "type": "file",
+          "label": "Land Cover Attributes Table (CSV)",
+          "args_id": "landcover_biophysical_table_path",
+          "required": true,
+          "defaultValue": "../pollination/landcover_biophysical_table.csv",
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode"
+            ]
+          },
+          "helpText": "A CSV table mapping landcover codes in the landcover raster to indexes of nesting availability for each nesting substrate referenced in guilds table as well as indexes of abundance of floral resources on that landcover type per season in the bee activity columns of the guild table."
+        },
+        {
+          "id": "guild_table_path",
+          "type": "file",
+          "label": "Land Cover Attributes Table (CSV)",
+          "args_id": "guild_table_path",
+          "required": true,
+          "defaultValue": "../Pollination/Input/LU.csv",
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": [
+              "lucode"
+            ]
+          },
+          "helpText": "A CSV table mapping landcover codes in the landcover raster to indexes of nesting availability for each nesting substrate referenced in guilds table as well as indexes of abundance of floral resources on that landcover type per season in the bee activity columns of the guild table."
+        },
+        args['guild_table_path'] (string): file path to a table indicating
+        args['farm_vector_path'] (string): path to a single layer polygon
       ]
     },
     {
