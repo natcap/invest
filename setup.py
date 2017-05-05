@@ -194,7 +194,6 @@ setup(
         'natcap.invest.hydropower',
         'natcap.invest.iui',
         'natcap.invest.iui.dbfpy',
-        'natcap.invest.marine_water_quality',
         'natcap.invest.ndr',
         'natcap.invest.overlap_analysis',
         'natcap.invest.recreation',

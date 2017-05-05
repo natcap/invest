@@ -71,12 +71,16 @@ class ModelUI(base_widgets.ExecRoot):
         try:
             architecture = platform.architecture()[0]
             links.append('InVEST Version %s (%s)' % (natcap.invest.__version__,
-                architecture))
+                         architecture))
         except AttributeError:
             links.append('InVEST Version UNKNOWN')
 
         try:
-            doc_uri = 'file:///' + os.path.abspath(self.attributes['localDocURI'])
+            docs_path = os.path.abspath(self.attributes['localDocURI'])
+            if getattr(sys, 'frozen', False) and platform.system() == 'Darwin':
+                docs_path = os.path.join(os.path.dirname(sys.executable),
+                                         docs_path)
+            doc_uri = 'file:///' + docs_path
             links.append('<a href=\"%s\">Model documentation</a>' % doc_uri)
         except KeyError:
             # Thrown if attributes['localDocURI'] is not present
