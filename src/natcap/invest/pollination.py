@@ -72,6 +72,7 @@ _TOTAL_FARM_YIELD_FIELD_ID = 't_av_yield'
 
 _MAX_POLLINATED_SPECIES_FILE_PATTERN = 'max_pollinated_%s'
 
+
 def execute(args):
     """InVEST Pollination Model.
 
