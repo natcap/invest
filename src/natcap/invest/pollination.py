@@ -685,8 +685,9 @@ def execute(args):
             return result
 
         pollinator_yield_path = os.path.join(
-            output_dir, '%s%s.tif' % (
-                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id, file_suffix))
+            intermediate_output_dir, '%s%s.tif' % (
+                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id,
+                file_suffix))
         pygeoprocessing.raster_calculator(
             [(half_saturation_file_path, 1), (farm_pollinators_path, 1)],
             _farm_yield_op, pollinator_yield_path, gdal.GDT_Float32,
