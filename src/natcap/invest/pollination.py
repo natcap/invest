@@ -719,6 +719,7 @@ def execute(args):
 
     farm_stats = pygeoprocessing.zonal_statistics(
         (total_pollinator_yield_path, 1), target_farm_path, farm_fid_field)
+    LOGGER.debug("farm_stats %s", farm_stats)
 
     farm_layer.ResetReading()
     for feature in farm_layer:
