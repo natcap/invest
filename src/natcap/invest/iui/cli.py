@@ -1,6 +1,7 @@
 """
 Single entry point for all InVEST applications.
 """
+from __future__ import absolute_import
 
 import argparse
 import glob
@@ -156,7 +157,10 @@ def main():
 
     # args.model is '' or None when the user provided no input.
     if args.model == 'launcher':
-        import launcher
+        try:
+            from . import launcher
+        except ImportError:
+            import launcher
         launcher.main()
     elif args.model in ['', None]:
         parser.print_help()
