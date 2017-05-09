@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -ve
 #
 # Arguments:
 #  $1 = the version string to use
@@ -13,7 +13,7 @@ finalDMGName="InVEST ${1}"  # the name of the final DMG file.
 
 # remove temp files that can get in the way
 tempdir=temp/"$appdirname"
-rm *.dmg
+rm -f *.dmg
 if [ -d "$tempdir" ]
 then
     rm -rfd "$tempdir"
@@ -25,13 +25,13 @@ mkdir -p "$tempdir"
 # copy out all the invest shell files and fixup the paths.
 # .command extension makes the scripts runnable by the user.
 # Shell files without the `invest_` prefix will be left alone.
-new_basename=`InVEST`
+new_basename='InVEST'
 _APPDIR="$tempdir/$new_basename.app"
 _MACOSDIR="$_APPDIR/Contents/MacOS"
-cp -r "$2" "$_MACOSDIR/invest_dist"
 _RESOURCEDIR="$_APPDIR/Contents/Resources"
 mkdir -p "${_MACOSDIR}"
 mkdir -p "${_RESOURCEDIR}"
+cp -r "$2" "$_MACOSDIR/invest_dist"
 new_command_file="$_MACOSDIR/$new_basename"
 cp invest.icns "$_RESOURCEDIR/invest.icns"
 
@@ -47,7 +47,11 @@ echo '#!/bin/bash' > $new_command_file
 echo '`dirname $0`/invest_dist/invest launcher' >> $new_command_file
 
 # copy the docs into the dmg
-cp -r ../../doc/users-guide/build/html $tempdir/documentation
+docsdir=../../doc/users-guide/build/html
+if [ -d $docsdir ]
+then
+    cp -r $docsdir $tempdir/documentation
+fi
 
 dmgbuild -Dinvestdir="$tempdir" -s dmgconf.py "$title" "$finalDMGName"
     
