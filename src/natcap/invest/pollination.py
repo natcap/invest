@@ -610,8 +610,8 @@ def execute(args):
                 managed_pollinator_abundance, *wild_pollinator_abundance):
             """Calculate the max of all pollinators.
 
-                Wild pollinators need to be scaled by their seasonal foraging
-                activity index included in the closure.
+            Wild pollinators need to be scaled by their seasonal foraging
+            activity index included in the closure.
             """
             result = numpy.empty(
                 managed_pollinator_abundance.shape, dtype=numpy.float32)
@@ -623,7 +623,7 @@ def execute(args):
                      activity * abundance[valid_mask]
                      for abundance, activity in zip(
                          wild_pollinator_abundance,
-                         wild_pollinator_activity)])), 0, 1)
+                         wild_pollinator_activity)], axis=0)), 0, 1)
             return result
 
         wild_pollinator_abundance_band_paths = [
