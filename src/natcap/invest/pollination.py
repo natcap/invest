@@ -175,7 +175,6 @@ def execute(args):
     for species in guild_table:
         guild_table[species][_RELATIVE_POLLINATOR_ABUNDANCE_FIELD] /= (
             total_relative_abundance)
-    print guild_table
     # we need to match at least one of each of expected
     for header in _EXPECTED_GUILD_HEADERS:
         matches = re.findall(header, " ".join(guild_headers))
