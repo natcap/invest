@@ -270,6 +270,7 @@ def execute(args):
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
+            LOGGER.debug("CALCULATE REGRESSION CROP YIELD HERE.")
         sys.exit()
 
         # calculate the non-zero production area for that crop, assuming that
