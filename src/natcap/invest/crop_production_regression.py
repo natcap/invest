@@ -23,8 +23,16 @@ _REGRESSION_TABLE_PATTERN = os.path.join(
     'climate_regression_yield_tables', '%s_regression_yield_table.csv')
 
 _EXPECTED_REGRESSION_TABLE_HEADERS = [
-    'climate_bin', 'yield_ceiling', 'b_nut', 'b_K2O', 'c_N', 'c_P2O5',
-    'c_K2O']
+    'climate_bin', 'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5',
+    'c_k2o']
+
+# crop_name, yield_regression_id, file_suffix
+_COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_coarse_regression_parameter%s.tif')
+
+# crop_name, yield_regression_id
+_INTERPOLATED_YIELD_REGRESSION_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_interpolated_regression_parameter%s.tif')
 
 ###old constants below
 
@@ -39,20 +47,12 @@ _CLIMATE_PERCENTILE_TABLE_PATTERN = os.path.join(
     'climate_percentile_yield_tables',
     '%s_percentile_yield_table.csv')  # crop_name
 
-# crop_name, yield_percentile_id
-_INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_interpolated_yield%s.tif')
-
 # crop_name, file_suffix
 _CLIPPED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR,
     'clipped_%s_climate_bin_map%s.tif')
 
-# crop_name, yield_percentile_id, file_suffix
-_COARSE_YIELD_PERCENTILE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_coarse_yield%s.tif')
-
-# crop_name, yield_percentile_id, file_suffix
+# crop_name, yield_regression_id, file_suffix
 _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN = os.path.join(
     '.', '%s_%s_production%s.tif')
 
@@ -219,73 +219,58 @@ def execute(args):
         crop_regression_table = utils.build_lookup_from_csv(
             crop_regression_table_path, 'climate_bin',
             to_lower=True, numerical_cast=True, warn_if_missing=False)
+        for bin_id in crop_regression_table:
+            for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
+                if crop_regression_table[bin_id][header.lower()] == '':
+                    crop_regression_table[bin_id][header.lower()] = 0.0
+        print crop_regression_table[1]
+        print crop_regression_table[1]['c_k2o']
+        print "'%s'" % crop_regression_table[2]['c_k2o']
 
-        print crop_regression_table
-        os.exit()
-
-        yield_percentile_headers = [
-            x for x in crop_climate_percentile_table.itervalues().next()
+        yield_regression_headers = [
+            x for x in crop_regression_table.itervalues().next()
             if x != 'climate_bin']
 
         clipped_climate_bin_raster_path_info = (
             pygeoprocessing.get_raster_info(
                 clipped_climate_bin_raster_path))
 
-        for yield_percentile_id in yield_percentile_headers:
-            LOGGER.info("Map %s to climate bins.", yield_percentile_id)
-            interpolated_yield_percentile_raster_path = os.path.join(
+        print yield_regression_headers
+        for yield_regression_id in yield_regression_headers:
+            # there are extra headers in that table
+            if yield_regression_id not in _EXPECTED_REGRESSION_TABLE_HEADERS:
+                continue
+            LOGGER.info("Map %s to climate bins.", yield_regression_id)
+            interpolated_regression_parameter_raster_path = os.path.join(
                 output_dir,
-                _INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN % (
-                    crop_name, yield_percentile_id, file_suffix))
-            bin_to_percentile_yield = dict([
+                _INTERPOLATED_YIELD_REGRESSION_FILE_PATTERN % (
+                    crop_name, yield_regression_id, file_suffix))
+            bin_to_regression_value = dict([
                 (bin_id,
-                 crop_climate_percentile_table[bin_id][yield_percentile_id])
-                for bin_id in crop_climate_percentile_table])
-            bin_to_percentile_yield[
+                 crop_regression_table[bin_id][yield_regression_id])
+                for bin_id in crop_regression_table])
+            bin_to_regression_value[
                 crop_climate_bin_raster_info['nodata'][0]] = 0.0
-            coarse_yield_percentile_raster_path = os.path.join(
+            coarse_regression_parameter_raster_path = os.path.join(
                 output_dir,
-                _COARSE_YIELD_PERCENTILE_FILE_PATTERN % (
-                    crop_name, yield_percentile_id, file_suffix))
+                _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN % (
+                    crop_name, yield_regression_id, file_suffix))
             pygeoprocessing.reclassify_raster(
-                (clipped_climate_bin_raster_path, 1), bin_to_percentile_yield,
-                coarse_yield_percentile_raster_path, gdal.GDT_Float32,
+                (clipped_climate_bin_raster_path, 1), bin_to_regression_value,
+                coarse_regression_parameter_raster_path, gdal.GDT_Float32,
                 _NODATA_YIELD, exception_flag='values_required')
 
             LOGGER.info(
-                "Interpolate %s %s yield raster to landcover resolution.",
-                crop_name, yield_percentile_id)
+                "Interpolate %s %s parameter to landcover resolution.",
+                crop_name, yield_regression_id)
             pygeoprocessing.warp_raster(
-                coarse_yield_percentile_raster_path,
+                coarse_regression_parameter_raster_path,
                 landcover_raster_info['pixel_size'],
-                interpolated_yield_percentile_raster_path, 'cubic_spline',
+                interpolated_regression_parameter_raster_path, 'cubic_spline',
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
-            LOGGER.info(
-                "Calculate yield for %s at %s", crop_name,
-                yield_percentile_id)
-            percentile_crop_production_raster_path = os.path.join(
-                output_dir,
-                _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                    crop_name, yield_percentile_id, file_suffix))
-
-            def _crop_production_op(lulc_array, yield_array):
-                """Mask in yields that overlap with `crop_lucode`."""
-                result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-                result[:] = _NODATA_YIELD
-                valid_mask = lulc_array != landcover_nodata
-                lulc_mask = lulc_array == crop_lucode
-                result[valid_mask] = 0
-                result[lulc_mask] = (
-                    yield_array[lulc_mask] * pixel_area_ha)
-                return result
-
-            pygeoprocessing.raster_calculator(
-                [(args['landcover_raster_path'], 1),
-                 (interpolated_yield_percentile_raster_path, 1)],
-                _crop_production_op, percentile_crop_production_raster_path,
-                gdal.GDT_Float32, _NODATA_YIELD)
+        sys.exit()
 
         # calculate the non-zero production area for that crop, assuming that
         # all the percentile rasters have non-zero production so it's okay to
@@ -381,14 +366,14 @@ def execute(args):
     production_percentile_headers = [
         'production_' + re.match(
             _YIELD_PERCENTILE_FIELD_PATTERN,
-            yield_percentile_id).group(1) for yield_percentile_id in sorted(
-                yield_percentile_headers)]
+            yield_regression_id).group(1) for yield_regression_id in sorted(
+                yield_regression_headers)]
     nutrient_headers = [
         nutrient_id + '_' + re.match(
             _YIELD_PERCENTILE_FIELD_PATTERN,
-            yield_percentile_id).group(1)
+            yield_regression_id).group(1)
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
-        for yield_percentile_id in sorted(yield_percentile_headers) + [
+        for yield_regression_id in sorted(yield_regression_headers) + [
             'yield_observed']]
     with open(result_table_path, 'wb') as result_table:
         result_table.write(
@@ -413,27 +398,27 @@ def execute(args):
             production_lookup['observed'] = yield_sum
             result_table.write(",%f" % yield_sum)
 
-            for yield_percentile_id in sorted(yield_percentile_headers):
+            for yield_regression_id in sorted(yield_regression_headers):
                 yield_percentile_raster_path = os.path.join(
                     output_dir,
                     _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                        crop_name, yield_percentile_id, file_suffix))
+                        crop_name, yield_regression_id, file_suffix))
                 yield_sum = 0.0
                 for _, yield_block in pygeoprocessing.iterblocks(
                         yield_percentile_raster_path):
                     yield_sum += numpy.sum(
                         yield_block[_NODATA_YIELD != yield_block])
-                production_lookup[yield_percentile_id] = yield_sum
+                production_lookup[yield_regression_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-                for yield_percentile_id in sorted(yield_percentile_headers):
+                for yield_regression_id in sorted(yield_regression_headers):
                     total_nutrient = (
                         nutrient_factor *
-                        production_lookup[yield_percentile_id] *
+                        production_lookup[yield_regression_id] *
                         nutrient_table[crop_name][nutrient_id])
                     result_table.write(",%f" % (total_nutrient))
                 result_table.write(
@@ -474,16 +459,16 @@ def execute(args):
             nutrient_factor = 1e4 * (
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             # loop over percentiles
-            for yield_percentile_id in yield_percentile_headers:
+            for yield_regression_id in yield_regression_headers:
                 percentile_crop_production_raster_path = os.path.join(
                     output_dir,
                     _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                        crop_name, yield_percentile_id, file_suffix))
+                        crop_name, yield_regression_id, file_suffix))
                 LOGGER.info(
                     "Calculating zonal stats for %s  %s", crop_name,
-                    yield_percentile_id)
+                    yield_regression_id)
                 total_yield_lookup['%s_%s' % (
-                    crop_name, yield_percentile_id)] = (
+                    crop_name, yield_regression_id)] = (
                         pygeoprocessing.zonal_statistics(
                             (percentile_crop_production_raster_path, 1),
                             target_aggregate_vector_path,
@@ -491,12 +476,12 @@ def execute(args):
 
                 for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                     for id_index in total_yield_lookup['%s_%s' % (
-                            crop_name, yield_percentile_id)]:
+                            crop_name, yield_regression_id)]:
                         total_nutrient_table[nutrient_id][
-                            yield_percentile_id][id_index] += (
+                            yield_regression_id][id_index] += (
                                 nutrient_factor *
                                 total_yield_lookup['%s_%s' % (
-                                    crop_name, yield_percentile_id)][
+                                    crop_name, yield_regression_id)][
                                         id_index]['sum'] *
                                 nutrient_table[crop_name][nutrient_id])
 

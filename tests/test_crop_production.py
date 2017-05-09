@@ -114,7 +114,8 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest import crop_production_regression
 
         args = {
-            'workspace_dir': self.workspace_dir,
+            #'workspace_dir': self.workspace_dir,
+            'workspace_dir': r"C:\Users\rpsharp\Documents\crop_production_regression",
             'results_suffix': '',
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA_PATH, 'landcover.tif'),
