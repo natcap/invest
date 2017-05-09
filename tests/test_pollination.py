@@ -4,8 +4,10 @@ import tempfile
 import shutil
 import os
 
+import shapely.geometry
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
+from pygeoprocessing.testing import sampledata
 from osgeo import ogr
 
 SAMPLE_DATA = os.path.join(
@@ -88,7 +90,7 @@ class PollinationTests(unittest.TestCase):
                 SAMPLE_DATA, 'landcover.tif'),
             'guild_table_path': bad_guild_table_path,
             'landcover_biophysical_table_path': os.path.join(
-                SAMPLE_DATA, r'habitat_nesting_suitability.csv'),
+                SAMPLE_DATA, r'landcover_biophysical_table.csv'),
             'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
         }
         with self.assertRaises(ValueError):
@@ -152,33 +154,37 @@ class PollinationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_pollination_bad_farm_type(self):
+        """Pollination: ensure detection of bad farm geometry type."""
+        from natcap.invest import pollination
 
-    @staticmethod
-    def _test_same_files(base_list_path, directory_path):
-        """Assert files in `base_list_path` are in `directory_path`.
+        # make some fake farm points
+        point_geom = [shapely.geometry.Point(20, - 20)]
 
-        Parameters:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
-            directory_path (string): a path to a directory whose contents will
-                be checked against the files listed in `base_list_file`
+        farm_shape_path = os.path.join(self.workspace_dir, 'point_farm.shp')
+        # Create the point shapefile
+        srs = sampledata.SRS_WILLAMETTE
+        fields = {
+            'crop_type': 'string',
+            'half_sat': 'real',
+            'p_managed': 'real'}
+        attrs = [
+            {'crop_type': 'test', 'half_sat': 0.5, 'p_managed': 0.5}]
 
-        Returns:
-            None
+        pygeoprocessing.testing.create_vector_on_disk(
+            point_geom, srs.projection, fields, attrs,
+            vector_format='ESRI Shapefile', filename=farm_shape_path)
 
-        Raises:
-            AssertionError when there are files listed in `base_list_file`
-                that don't exist in the directory indicated by `path`
-        """
-        missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
-        if len(missing_files) > 0:
-            raise AssertionError(
-                "The following files were expected but not found: " +
-                '\n'.join(missing_files))
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA, 'landcover.tif'),
+            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                SAMPLE_DATA, r'landcover_biophysical_table.csv'),
+            'farm_vector_path': farm_shape_path,
+        }
+        with self.assertRaises(ValueError):
+            pollination.execute(args)

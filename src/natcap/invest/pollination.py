@@ -228,9 +228,9 @@ def execute(args):
     farm_layer = farm_vector.GetLayer()
     if farm_layer.GetGeomType() not in [
             ogr.wkbPolygon, ogr.wkbMultiPolygon]:
-        raise ValueError(
-            "Farm layer not a polygon type, instead type %s" % (
-                farm_layer.GetGeomType()))
+        farm_layer = None
+        farm_vector = None
+        raise ValueError("Farm layer not a polygon type")
     farm_layer_defn = farm_layer.GetLayerDefn()
     farm_headers = [
         farm_layer_defn.GetFieldDefn(i).GetName()
