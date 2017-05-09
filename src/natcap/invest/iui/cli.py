@@ -162,7 +162,11 @@ def main():
         except (ImportError, ValueError):
             # ImportError when launcher can't be found
             # ValueError when attempting a relative import from a non-package.
-            import launcher
+            try:
+                import launcher
+            except ImportError:
+                # ImportError when in pyinstaller build.
+                from natcap.invest.iui import launcher
         launcher.main()
     elif args.model in ['', None]:
         parser.print_help()
