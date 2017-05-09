@@ -159,7 +159,9 @@ def main():
     if args.model == 'launcher':
         try:
             from . import launcher
-        except ImportError:
+        except (ImportError, ValueError):
+            # ImportError when launcher can't be found
+            # ValueError when attempting a relative import from a non-package.
             import launcher
         launcher.main()
     elif args.model in ['', None]:
