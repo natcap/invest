@@ -495,7 +495,7 @@ def execute(args):
             _pollinator_supply_op, f_reg[pollinator_supply_id],
             gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
 
-        LOGGER.info("Calculating raw pollinator abundance for %s")
+        LOGGER.info("Calculating raw pollinator abundance for %s", species_id)
         raw_pollinator_abundance_id = (
             _RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id)
         f_reg[raw_pollinator_abundance_id] = os.path.join(
@@ -509,7 +509,7 @@ def execute(args):
 
         LOGGER.info(
             "Calculating pollinator abundance by scaling the raw by floral "
-            "resources available for %s")
+            "resources available for %s", species_id)
         pollinator_abudanance_id = (
             _POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id)
         f_reg[pollinator_abudanance_id] = os.path.join(
@@ -568,7 +568,7 @@ def execute(args):
     farm_layer.CreateField(total_yield_field_def)
 
     for season_id in season_to_header:
-        LOGGER.info("Rasterizing half saturation for season %s")
+        LOGGER.info("Rasterizing half saturation for season %s", season_id)
         half_saturation_file_path = os.path.join(
             intermediate_output_dir,
             _HALF_SATURATION_SEASON_FILE_PATTERN % season_id + (
@@ -600,7 +600,7 @@ def execute(args):
             managed_raster, [1], farm_layer, options=['ATTRIBUTE=p_managed'])
         gdal.Dataset.__swig_destroy__(managed_raster)
         del managed_raster
-        LOGGER.info("Calculating farm pollinators for season %s")
+        LOGGER.info("Calculating farm pollinators for season %s", season_id)
 
         wild_pollinator_activity = [
             guild_table[species_id][season_to_header[season_id]['guild']]
@@ -707,8 +707,9 @@ def execute(args):
 
     seasonal_pollinator_yield_path_band_list = [
         (os.path.join(
-            output_dir, '%s%s.tif' % (
-                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id, file_suffix)), 1)
+            intermediate_output_dir, '%s%s.tif' % (
+                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id,
+                file_suffix)), 1)
         for season_id in season_to_header]
     total_pollinator_yield_path = os.path.join(
         output_dir, '%s%s.tif' % (
@@ -720,9 +721,14 @@ def execute(args):
 
     farm_stats = pygeoprocessing.zonal_statistics(
         (total_pollinator_yield_path, 1), target_farm_path, farm_fid_field)
-    LOGGER.debug("farm_stats %s", farm_stats)
 
-    farm_layer.ResetReading()
+    # after much debugging, I could only get the first feature to write.
+    # closing and re-opening the vector seemed to reset it enough to work.
+    farm_vector.SyncToDisk()
+    farm_layer = None
+    farm_vector = None
+    farm_vector = ogr.Open(target_farm_path, 1)
+    farm_layer = farm_vector.GetLayer()
     for feature in farm_layer:
         fid = feature.GetField(farm_fid_field)
         pollinator_dependant_yield = float(
@@ -855,3 +861,6 @@ def _add_fid_field(base_vector_path, target_vector_path, fid_id):
     for feature in target_layer:
         feature.SetField(fid_id, feature.GetFID())
         target_layer.SetFeature(feature)
+    target_layer = None
+    target_vector.SyncToDisk()
+    target_vector = None
