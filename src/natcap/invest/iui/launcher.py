@@ -1,9 +1,13 @@
 from __future__ import absolute_import
+import logging
 import sys
+import subprocess
 
 from PyQt4 import QtGui
 
 import cli
+
+LOGGER = logging.getLogger(__name__)
 
 APP = QtGui.QApplication.instance()
 if APP is None:
@@ -17,9 +21,8 @@ class ModelLaunchButton(QtGui.QPushButton):
         self.clicked.connect(self.launch)
 
     def launch(self, attr):
-        print 'Launching %s' % self._model
-        import natcap.invest.iui.modelui
-        natcap.invest.iui.modelui.main(self._model + '.json')
+        LOGGER.info('Launching %s', self._model)
+        subprocess.Popen('invest %s' % self._model, shell=True)
 
 
 def main():
