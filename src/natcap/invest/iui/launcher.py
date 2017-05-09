@@ -5,7 +5,10 @@ import subprocess
 
 from PyQt4 import QtGui
 
-import cli
+try:
+    from . import cli
+except ImportError:
+    import cli
 
 LOGGER = logging.getLogger(__name__)
 
