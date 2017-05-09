@@ -3,7 +3,7 @@ import sys
 
 from PyQt4 import QtGui
 
-from . import cli
+import cli
 
 APP = QtGui.QApplication.instance()
 if APP is None:
@@ -12,24 +12,23 @@ if APP is None:
 
 def main():
     launcher_window = QtGui.QMainWindow()
-    launcher_window.setLayout(QtGui.QGridLayout())
+    layout = QtGui.QGridLayout()
+    main_widget = QtGui.QWidget()
+    main_widget.setLayout(layout)
+    launcher_window.setCentralWidget(main_widget)
 
     labels_and_buttons = []
     for model in cli.list_models():
-        row = launcher_window.layout().rowCount()
+        row = layout.rowCount()
         label = QtGui.QLabel()
         button = QtGui.QPushButton()
         labels_and_buttons.append((label, button))
 
-
-        launcher_window.layout().addWidget(
-            row, 0, QtGui.QLabel(model))
-        launcher_window.layout().addWidget(
-            row, 1, QtGui.QPushButton('foo'))
+        layout.addWidget(QtGui.QLabel(model), row, 0)
+        layout.addWidget(QtGui.QPushButton('Launch'), row, 1)
 
     launcher_window.show()
-    launcher_window.exec_()
+    APP.exec_()
 
 if __name__ == '__main__':
-    #main()
-    pass
+    main()
