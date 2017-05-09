@@ -4,6 +4,8 @@
 
 Unreleased Changes
 ------------------
+* InVEST on mac is now distributed as a single application bundle, allowing InVEST to run as expected on mac OSX Sierra.  Individual models are selected and launched from a new launcher window.
+* The InVEST CLI now has a GUI model launcher:  ``$ invest launcher``
 * Updated the Coastal Blue Carbon model to improve handling of blank lines in input CSV tables and improve memory efficiency of the current implementation.
 * Improved the readability of a cryptic error message in Coastal Vulnerability that is normally raised when the depth threshold is too high or the exposure proportion is too low to detect any shoreline segments.
 * Adding InVEST HTML documentation to the Mac disk image distribution.
