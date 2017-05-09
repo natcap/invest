@@ -6,9 +6,10 @@ import os
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
+from osgeo import ogr
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'pollination_20')
+    os.path.dirname(__file__), '..', 'data', 'invest-data', 'pollination')
 
 
 class PollinationTests(unittest.TestCase):
@@ -30,15 +31,40 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
         args = {
             'results_suffix': u'',
-            'workspace_dir': r'C:\Users\rpsharp\Documents\delete_test_pollination',
+            'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA, 'landcover.tif'),
             'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                SAMPLE_DATA, r'habitat_nesting_suitability.csv'),
+                SAMPLE_DATA, r'landcover_biophysical_table.csv'),
             'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
         }
         pollination.execute(args)
+        expected_farm_yields = {
+            'almonds': {
+                'p_av_yield': 0.99173113255719,
+                't_av_yield': 0.994625236162173
+            },
+            'blueberries': {
+                'p_av_yield': 0.020808936958026,
+                't_av_yield': 0.363525809022717
+            },
+        }
+        result_vector = ogr.Open(
+            os.path.join(self.workspace_dir, 'farm_yield.shp'))
+        result_layer = result_vector.GetLayer()
+        self.assertEqual(
+            result_layer.GetFeatureCount(), len(expected_farm_yields))
+        for feature in result_layer:
+            expected_yields = expected_farm_yields[
+                feature.GetField('crop_type')]
+            for yield_type in expected_yields:
+                self.assertAlmostEqual(
+                    expected_yields[yield_type],
+                    feature.GetField(yield_type))
+        result_layer = None
+        result_vector = None
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_bad_guild_headers(self):
