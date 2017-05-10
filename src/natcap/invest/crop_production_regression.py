@@ -34,6 +34,14 @@ _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN = os.path.join(
 _INTERPOLATED_YIELD_REGRESSION_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, '%s_%s_interpolated_regression_parameter%s.tif')
 
+_NITROGEN_YIELD_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_nitrogen_yield%s.tif')
+
+# file suffix
+_CLIPPED_NITROGEN_RATE_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, 'nitrogen_rate%s.tif')
+
+
 ###old constants below
 
 _YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
@@ -236,15 +244,17 @@ def execute(args):
                 clipped_climate_bin_raster_path))
 
         print yield_regression_headers
+        regression_parameter_raster_path_lookup = {}
         for yield_regression_id in yield_regression_headers:
             # there are extra headers in that table
             if yield_regression_id not in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 continue
             LOGGER.info("Map %s to climate bins.", yield_regression_id)
-            interpolated_regression_parameter_raster_path = os.path.join(
-                output_dir,
-                _INTERPOLATED_YIELD_REGRESSION_FILE_PATTERN % (
-                    crop_name, yield_regression_id, file_suffix))
+            regression_parameter_raster_path_lookup[yield_regression_id] = (
+                os.path.join(
+                    output_dir,
+                    _INTERPOLATED_YIELD_REGRESSION_FILE_PATTERN % (
+                        crop_name, yield_regression_id, file_suffix)))
             bin_to_regression_value = dict([
                 (bin_id,
                  crop_regression_table[bin_id][yield_regression_id])
@@ -266,11 +276,57 @@ def execute(args):
             pygeoprocessing.warp_raster(
                 coarse_regression_parameter_raster_path,
                 landcover_raster_info['pixel_size'],
-                interpolated_regression_parameter_raster_path, 'cubic_spline',
+                regression_parameter_raster_path_lookup[yield_regression_id],
+                'cubic_spline',
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
-            LOGGER.debug("CALCULATE REGRESSION CROP YIELD HERE.")
+        # clip the nutrient path
+        clipped_n_raster_path = os.path.join(
+            output_dir, _CLIPPED_NITROGEN_RATE_FILE_PATTERN % file_suffix)
+        pygeoprocessing.warp_raster(
+            args['n_raster_path'],
+            landcover_raster_info['pixel_size'],
+            clipped_n_raster_path,
+            'cubic_spline',
+            target_sr_wkt=landcover_raster_info['projection'],
+            target_bb=landcover_raster_info['bounding_box'])
+
+
+        LOGGER.debug("CALCULATE REGRESSION CROP YIELD HERE.")
+        #'climate_bin', 'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5', 'c_k2o']
+
+        LOGGER.info('Calc nitrogen yield')
+
+        n_raster_info = pygeoprocessing.get_raster_info(clipped_n_raster_path)
+        def _nitrogen_yield_op(b_n, c_n, n_gc):
+            """Calc Ymax*(b_NP*exp(-cN * N_GC))"""
+            result = numpy.empty(b_n.shape)
+            result[:] = _NODATA_YIELD
+            valid_mask = (
+                (b_n != _NODATA_YIELD) & (c_n != _NODATA_YIELD) &
+                (n_gc != n_raster_info['nodata'][0]))
+            result[valid_mask] = b_n[valid_mask] * numpy.exp(
+                -c_n[valid_mask] * n_gc[valid_mask])
+            return result
+
+        nitrogen_yield_raster_path = os.path.join(
+            output_dir, _NITROGEN_YIELD_FILE_PATTERN % (
+                crop_name, file_suffix))
+
+        pygeoprocessing.raster_calculator(
+            [(regression_parameter_raster_path_lookup['b_nut'], 1),
+             (regression_parameter_raster_path_lookup['c_n'], 1),
+             (clipped_n_raster_path, 1)],
+            _nitrogen_yield_op, nitrogen_yield_raster_path,
+            gdal.GDT_Float32, _NODATA_YIELD)
+
+        LOGGER.info('Calc potash yield')
+        LOGGER.info('Calc potassium yield')
+        LOGGER.info('Calc the min of the three')
+
+
+        #b_NP*exp(-cN * N_GC)), Ymax(1-b_NP*exp(-c_P * P_GC)), Ymax(1-b_K*exp(-cK*K_GC
         sys.exit()
 
         # calculate the non-zero production area for that crop, assuming that
