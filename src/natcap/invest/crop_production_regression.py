@@ -58,6 +58,10 @@ _CLIPPED_POTASH_RATE_FILE_PATTERN = os.path.join(
 _CLIPPED_POTASSIUM_RATE_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, 'potassium_rate%s.tif')
 
+# crop_name, file_suffix
+_CROP_PRODUCTION_FILE_PATTERN = os.path.join(
+    '.', '%s_regression_production%s.tif')
+
 ###old constants below
 
 _YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
@@ -333,7 +337,7 @@ def execute(args):
 
         def _nitrogen_yield_op(b_nut, c_n, n_gc):
             """Calc Ymax*(b_NP*exp(-cN * N_GC))"""
-            result = numpy.empty(b_nut.shape)
+            result = numpy.empty(b_nut.shape, dtype=numpy.float32)
             result[:] = _NODATA_YIELD
             valid_mask = (
                 (b_nut != _NODATA_YIELD) & (c_n != _NODATA_YIELD) &
@@ -358,7 +362,7 @@ def execute(args):
 
         def _potash_yield_op(b_nut, c_p, p_gc):
             """Calc Ymax*(b_NP*exp(-cN * p_GC))"""
-            result = numpy.empty(b_nut.shape)
+            result = numpy.empty(b_nut.shape, dtype=numpy.float32)
             result[:] = _NODATA_YIELD
             valid_mask = (
                 (b_nut != _NODATA_YIELD) & (c_p != _NODATA_YIELD) &
@@ -384,7 +388,7 @@ def execute(args):
 
         def _potassium_yield_op(b_k, c_k, k_gc):
             """Calc Ymax*(1-b_k*exp(-ck * k_GC))"""
-            result = numpy.empty(b_k.shape)
+            result = numpy.empty(b_k.shape, dtype=numpy.float32)
             result[:] = _NODATA_YIELD
             valid_mask = (
                 (b_k != _NODATA_YIELD) & (c_k != _NODATA_YIELD) &
@@ -405,8 +409,31 @@ def execute(args):
             gdal.GDT_Float32, _NODATA_YIELD)
         LOGGER.info('Calc the min of the three')
 
+        #TODO: add y-max and also check that the first equation isn't also 1- something
 
-        #b_NP*exp(-cN * N_GC)), Ymax(1-b_NP*exp(-c_P * P_GC)), Ymax(1-b_K*exp(-cK*K_GC
+        crop_production_raster_path = os.path.join(
+            output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
+                crop_id, file_suffix))
+
+        def _min_op(y_n, y_p, y_k):
+            """Calculate the min of the three inputs."""
+            result = numpy.empty(y_n.shape, dtype=numpy.float32)
+            result[:] = _NODATA_YIELD
+            valid_mask = (
+                (y_n != _NODATA_YIELD) & (y_k != _NODATA_YIELD) &
+                (y_p != _NODATA_YIELD))
+            result[valid_mask] = numpy.min(
+                [y_n[valid_mask], y_k[valid_mask], y_p[valid_mask]], axis=0)
+            return result
+
+        pygeoprocessing.raster_calculator(
+            [(nitrogen_yield_raster_path, 1),
+             (potash_yield_raster_path, 1),
+             (potassium_yield_raster_path, 1)],
+            _min_op, crop_production_raster_path,
+            gdal.GDT_Float32, _NODATA_YIELD)
+        LOGGER.info('Calc the min of the three')
+
         sys.exit()
 
         # calculate the non-zero production area for that crop, assuming that
