@@ -64,25 +64,15 @@ _CROP_PRODUCTION_FILE_PATTERN = os.path.join(
 
 ###old constants below
 
-_YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
 _GLOBAL_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
     'observed_yield', '%s_yield_map.tif')  # crop_name
 _EXTENDED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
     'extended_climate_bin_maps', 'extendedclimatebins%s.tif')  # crop_name
 
-
-_CLIMATE_PERCENTILE_TABLE_PATTERN = os.path.join(
-    'climate_percentile_yield_tables',
-    '%s_percentile_yield_table.csv')  # crop_name
-
 # crop_name, file_suffix
 _CLIPPED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR,
     'clipped_%s_climate_bin_map%s.tif')
-
-# crop_name, yield_regression_id, file_suffix
-_PERCENTILE_CROP_PRODUCTION_FILE_PATTERN = os.path.join(
-    '.', '%s_%s_production%s.tif')
 
 # crop_name, file_suffix
 _CLIPPED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
@@ -384,7 +374,6 @@ def execute(args):
 
         LOGGER.info('Calc potassium yield')
         k_raster_info = pygeoprocessing.get_raster_info(clipped_p_raster_path)
-        #'climate_bin', 'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5', 'c_k2o']
 
         def _potassium_yield_op(b_k, c_k, k_gc):
             """Calc Ymax*(1-b_k*exp(-ck * k_GC))"""
@@ -413,7 +402,7 @@ def execute(args):
 
         crop_production_raster_path = os.path.join(
             output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
-                crop_id, file_suffix))
+                crop_name, file_suffix))
 
         def _min_op(y_n, y_p, y_k):
             """Calculate the min of the three inputs."""
@@ -426,22 +415,18 @@ def execute(args):
                 [y_n[valid_mask], y_k[valid_mask], y_p[valid_mask]], axis=0)
             return result
 
+        LOGGER.info('Calc the min of the three')
         pygeoprocessing.raster_calculator(
             [(nitrogen_yield_raster_path, 1),
              (potash_yield_raster_path, 1),
              (potassium_yield_raster_path, 1)],
             _min_op, crop_production_raster_path,
             gdal.GDT_Float32, _NODATA_YIELD)
-        LOGGER.info('Calc the min of the three')
 
-        sys.exit()
-
-        # calculate the non-zero production area for that crop, assuming that
-        # all the percentile rasters have non-zero production so it's okay to
-        # use just one of the percentile rasters
+        # calculate the non-zero production area for that crop
         LOGGER.info("Calculating production area.")
         for _, band_values in pygeoprocessing.iterblocks(
-                percentile_crop_production_raster_path):
+                crop_production_raster_path):
             production_area[crop_name] += numpy.count_nonzero(
                 (band_values != _NODATA_YIELD) & (band_values > 0.0))
         production_area[crop_name] *= pixel_area_ha
@@ -527,23 +512,14 @@ def execute(args):
     LOGGER.info("Generating report table")
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
-    production_percentile_headers = [
-        'production_' + re.match(
-            _YIELD_PERCENTILE_FIELD_PATTERN,
-            yield_regression_id).group(1) for yield_regression_id in sorted(
-                yield_regression_headers)]
     nutrient_headers = [
-        nutrient_id + '_' + re.match(
-            _YIELD_PERCENTILE_FIELD_PATTERN,
-            yield_regression_id).group(1)
+        nutrient_id + '_' + mode
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
-        for yield_regression_id in sorted(yield_regression_headers) + [
-            'yield_observed']]
+        for mode in ['modeled', 'observed']]
     with open(result_table_path, 'wb') as result_table:
         result_table.write(
-            'crop,area (ha),' + 'production_observed,' +
-            ','.join(production_percentile_headers) + ',' + ','.join(
-                nutrient_headers) + '\n')
+            'crop,area (ha),' + 'production_observed,production_modeled,' +
+            ','.join(nutrient_headers) + '\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
             result_table.write(',%f' % production_area[crop_name])
@@ -562,29 +538,23 @@ def execute(args):
             production_lookup['observed'] = yield_sum
             result_table.write(",%f" % yield_sum)
 
-            for yield_regression_id in sorted(yield_regression_headers):
-                yield_percentile_raster_path = os.path.join(
-                    output_dir,
-                    _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                        crop_name, yield_regression_id, file_suffix))
-                yield_sum = 0.0
-                for _, yield_block in pygeoprocessing.iterblocks(
-                        yield_percentile_raster_path):
-                    yield_sum += numpy.sum(
-                        yield_block[_NODATA_YIELD != yield_block])
-                production_lookup[yield_regression_id] = yield_sum
-                result_table.write(",%f" % yield_sum)
+            yield_sum = 0.0
+            for _, yield_block in pygeoprocessing.iterblocks(
+                    crop_production_raster_path):
+                yield_sum += numpy.sum(
+                    yield_block[_NODATA_YIELD != yield_block])
+            production_lookup['modeled'] = yield_sum
+            result_table.write(",%f" % yield_sum)
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-                for yield_regression_id in sorted(yield_regression_headers):
-                    total_nutrient = (
-                        nutrient_factor *
-                        production_lookup[yield_regression_id] *
-                        nutrient_table[crop_name][nutrient_id])
-                    result_table.write(",%f" % (total_nutrient))
+                total_nutrient = (
+                    nutrient_factor *
+                    production_lookup['modeled'] *
+                    nutrient_table[crop_name][nutrient_id])
+                result_table.write(",%f" % (total_nutrient))
                 result_table.write(
                     ",%f" % (
                         nutrient_factor *
@@ -622,32 +592,22 @@ def execute(args):
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
-            # loop over percentiles
-            for yield_regression_id in yield_regression_headers:
-                percentile_crop_production_raster_path = os.path.join(
-                    output_dir,
-                    _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                        crop_name, yield_regression_id, file_suffix))
-                LOGGER.info(
-                    "Calculating zonal stats for %s  %s", crop_name,
-                    yield_regression_id)
-                total_yield_lookup['%s_%s' % (
-                    crop_name, yield_regression_id)] = (
-                        pygeoprocessing.zonal_statistics(
-                            (percentile_crop_production_raster_path, 1),
-                            target_aggregate_vector_path,
-                            str(args['aggregate_polygon_id'])))
+            LOGGER.info(
+                "Calculating zonal stats for %s", crop_name)
+            total_yield_lookup['%s_modeled' % crop_name] = (
+                pygeoprocessing.zonal_statistics(
+                    (crop_production_raster_path, 1),
+                    target_aggregate_vector_path,
+                    str(args['aggregate_polygon_id'])))
 
-                for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-                    for id_index in total_yield_lookup['%s_%s' % (
-                            crop_name, yield_regression_id)]:
-                        total_nutrient_table[nutrient_id][
-                            yield_regression_id][id_index] += (
-                                nutrient_factor *
-                                total_yield_lookup['%s_%s' % (
-                                    crop_name, yield_regression_id)][
-                                        id_index]['sum'] *
-                                nutrient_table[crop_name][nutrient_id])
+            for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
+                for id_index in total_yield_lookup['%s_modeled' % crop_name]:
+                    total_nutrient_table[nutrient_id][
+                        'modeled'][id_index] += (
+                            nutrient_factor *
+                            total_yield_lookup['%s_modeled' % crop_name][
+                                id_index]['sum'] *
+                            nutrient_table[crop_name][nutrient_id])
 
             # process observed
             observed_yield_path = os.path.join(
