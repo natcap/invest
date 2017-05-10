@@ -326,14 +326,14 @@ def execute(args):
         n_raster_info = pygeoprocessing.get_raster_info(clipped_n_raster_path)
 
         def _nitrogen_yield_op(b_nut, c_n, n_gc):
-            """Calc Ymax*(b_NP*exp(-cN * N_GC))"""
+            """Calc Ymax*(1-b_NP*exp(-cN * N_GC))"""
             result = numpy.empty(b_nut.shape, dtype=numpy.float32)
             result[:] = _NODATA_YIELD
             valid_mask = (
                 (b_nut != _NODATA_YIELD) & (c_n != _NODATA_YIELD) &
                 (n_gc != n_raster_info['nodata'][0]))
-            result[valid_mask] = b_nut[valid_mask] * numpy.exp(
-                -c_n[valid_mask] * n_gc[valid_mask])
+            result[valid_mask] = (1 - b_nut[valid_mask] * numpy.exp(
+                -c_n[valid_mask] * n_gc[valid_mask]))
             return result
 
         nitrogen_yield_raster_path = os.path.join(
@@ -351,7 +351,7 @@ def execute(args):
         p_raster_info = pygeoprocessing.get_raster_info(clipped_p_raster_path)
 
         def _potash_yield_op(b_nut, c_p, p_gc):
-            """Calc Ymax*(b_NP*exp(-cN * p_GC))"""
+            """Calc Ymax*(1-b_NP*exp(-cN * p_GC))"""
             result = numpy.empty(b_nut.shape, dtype=numpy.float32)
             result[:] = _NODATA_YIELD
             valid_mask = (
@@ -405,14 +405,17 @@ def execute(args):
                 crop_name, file_suffix))
 
         def _min_op(y_n, y_p, y_k):
-            """Calculate the min of the three inputs."""
+            """Calculate the min of the three inputs and multiply by Ymax."""
             result = numpy.empty(y_n.shape, dtype=numpy.float32)
             result[:] = _NODATA_YIELD
             valid_mask = (
                 (y_n != _NODATA_YIELD) & (y_k != _NODATA_YIELD) &
                 (y_p != _NODATA_YIELD))
-            result[valid_mask] = numpy.min(
-                [y_n[valid_mask], y_k[valid_mask], y_p[valid_mask]], axis=0)
+            result[valid_mask] = (
+                regression_parameter_raster_path_lookup['yield_ceiling'] *
+                numpy.min(
+                    [y_n[valid_mask], y_k[valid_mask], y_p[valid_mask]],
+                    axis=0))
             return result
 
         LOGGER.info('Calc the min of the three')
