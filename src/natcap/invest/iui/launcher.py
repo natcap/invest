@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import logging
 import sys
 import subprocess
+import os
 
 from PyQt4 import QtGui
 from PyQt4 import QtCore
@@ -28,7 +29,13 @@ class ModelLaunchButton(QtGui.QPushButton):
 
     def launch(self, attr):
         LOGGER.info('Launching %s', self._model)
-        subprocess.Popen('invest %s' % self._model, shell=True)
+        # If we're in a pyinstaller build, run this command from the location
+        # of the application, wherever that is.
+        if getattr(sys, '_MEIPASS', False):
+            cwd = os.path.dirname(sys.executable)
+        else:
+            cwd = None  # subprocess.Popen default value for cwd.
+        subprocess.Popen('invest %s' % self._model, shell=True, cwd=cwd)
 
 
 def main():
