@@ -28,14 +28,17 @@ class ModelLaunchButton(QtGui.QPushButton):
         self.clicked.connect(self.launch)
 
     def launch(self, attr):
-        LOGGER.info('Launching %s', self._model)
         # If we're in a pyinstaller build, run this command from the location
-        # of the application, wherever that is.
+        # of the application, wherever that is.  Otherwise, launch from CWD by
+        # looking through PATH.
         if getattr(sys, '_MEIPASS', False):
             cwd = os.path.dirname(sys.executable)
+            command = './invest'
         else:
             cwd = None  # subprocess.Popen default value for cwd.
-        subprocess.Popen('invest %s' % self._model, shell=True, cwd=cwd)
+            command = 'invest'
+        LOGGER.info('Launching %s from CWD %s', self._model, cwd)
+        subprocess.Popen('%s %s' % (command, self._model), shell=True, cwd=cwd)
 
 
 def main():
@@ -65,7 +68,6 @@ def main():
         '<em>InVEST %s</em>' % natcap.invest.__version__)
     version_label.setStyleSheet('QLabel {color: gray;}')
     layout.addWidget(version_label, layout.rowCount(), 0)
-
 
     scroll_area.setMinimumWidth(layout.sizeHint().width() + 25)
     scroll_area.setMinimumHeight(400)
