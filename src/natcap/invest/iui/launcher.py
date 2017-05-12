@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import logging
 import sys
 import subprocess
+import os
 
 from PyQt4 import QtGui
 from PyQt4 import QtCore
@@ -27,8 +28,17 @@ class ModelLaunchButton(QtGui.QPushButton):
         self.clicked.connect(self.launch)
 
     def launch(self, attr):
-        LOGGER.info('Launching %s', self._model)
-        subprocess.Popen('invest %s' % self._model, shell=True)
+        # If we're in a pyinstaller build, run this command from the location
+        # of the application, wherever that is.  Otherwise, launch from CWD by
+        # looking through PATH.
+        if getattr(sys, '_MEIPASS', False):
+            cwd = os.path.dirname(sys.executable)
+            command = './invest'
+        else:
+            cwd = None  # subprocess.Popen default value for cwd.
+            command = 'invest'
+        LOGGER.info('Launching %s from CWD %s', self._model, cwd)
+        subprocess.Popen('%s %s' % (command, self._model), shell=True, cwd=cwd)
 
 
 def main():
@@ -58,7 +68,6 @@ def main():
         '<em>InVEST %s</em>' % natcap.invest.__version__)
     version_label.setStyleSheet('QLabel {color: gray;}')
     layout.addWidget(version_label, layout.rowCount(), 0)
-
 
     scroll_area.setMinimumWidth(layout.sizeHint().width() + 25)
     scroll_area.setMinimumHeight(400)
