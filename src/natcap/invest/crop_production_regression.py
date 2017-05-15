@@ -302,49 +302,21 @@ def execute(args):
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
-        # clip the input fertilization rate rasters
-        clipped_n_raster_path = os.path.join(
-            output_dir, _CLIPPED_NITROGEN_RATE_FILE_PATTERN % file_suffix)
-        pygeoprocessing.warp_raster(
-            args['n_raster_path'],
-            landcover_raster_info['pixel_size'],
-            clipped_n_raster_path,
-            'cubic_spline',
-            target_sr_wkt=landcover_raster_info['projection'],
-            target_bb=landcover_raster_info['bounding_box'])
-
-        clipped_p_raster_path = os.path.join(
-            output_dir, _CLIPPED_PHOSPHOROUS_RATE_FILE_PATTERN % file_suffix)
-        pygeoprocessing.warp_raster(
-            args['p_raster_path'],
-            landcover_raster_info['pixel_size'],
-            clipped_p_raster_path,
-            'cubic_spline',
-            target_sr_wkt=landcover_raster_info['projection'],
-            target_bb=landcover_raster_info['bounding_box'])
-
-        clipped_k_raster_path = os.path.join(
-            output_dir, _CLIPPED_POTASSIUM_RATE_FILE_PATTERN % file_suffix)
-        pygeoprocessing.warp_raster(
-            args['k_raster_path'],
-            landcover_raster_info['pixel_size'],
-            clipped_k_raster_path,
-            'cubic_spline',
-            target_sr_wkt=landcover_raster_info['projection'],
-            target_bb=landcover_raster_info['bounding_box'])
-
-        def _x_yield_op(y_max, b_x, c_x, x_gc, lulc_array):
-            """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC))"""
-            result = numpy.empty(b_x.shape, dtype=numpy.float32)
-            result[:] = _NODATA_YIELD
-            valid_mask = (
-                (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
-                (lulc_array == crop_lucode))
-            result[valid_mask] = y_max[valid_mask] * (
-                1 - b_x[valid_mask] * numpy.exp(
-                    -c_x[valid_mask] * x_gc[valid_mask]) *
-                pixel_area_ha)
-            return result
+        def _x_yield_op_gen(fert_rate):
+            """Create a raster calc op given the fertlization rate."""
+            def _x_yield_op(y_max, b_x, c_x, lulc_array):
+                """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC))"""
+                result = numpy.empty(b_x.shape, dtype=numpy.float32)
+                result[:] = _NODATA_YIELD
+                valid_mask = (
+                    (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
+                    (lulc_array == crop_lucode))
+                result[valid_mask] = y_max[valid_mask] * (
+                    1 - b_x[valid_mask] * numpy.exp(
+                        -c_x[valid_mask] * fert_rate) *
+                    pixel_area_ha)
+                return result
+            return _x_yield_op
 
         LOGGER.info('Calc nitrogen yield')
         nitrogen_yield_raster_path = os.path.join(
@@ -354,10 +326,9 @@ def execute(args):
             [(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
              (regression_parameter_raster_path_lookup['b_nut'], 1),
              (regression_parameter_raster_path_lookup['c_n'], 1),
-             (clipped_n_raster_path, 1),
              (args['landcover_raster_path'], 1)],
-            _x_yield_op, nitrogen_yield_raster_path,
-            gdal.GDT_Float32, _NODATA_YIELD)
+            _x_yield_op_gen(float(args['nitrogen_fertilization_rate'])),
+            nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc phosphorous yield')
         phosphorous_yield_raster_path = os.path.join(
@@ -367,10 +338,9 @@ def execute(args):
             [(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
              (regression_parameter_raster_path_lookup['b_nut'], 1),
              (regression_parameter_raster_path_lookup['c_p2o5'], 1),
-             (clipped_p_raster_path, 1),
              (args['landcover_raster_path'], 1)],
-            _x_yield_op, phosphorous_yield_raster_path,
-            gdal.GDT_Float32, _NODATA_YIELD)
+            _x_yield_op_gen(float(args['phosphorous_fertilization_rate'])),
+            phosphorous_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc potassium yield')
         potassium_yield_raster_path = os.path.join(
@@ -380,10 +350,9 @@ def execute(args):
             [(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
              (regression_parameter_raster_path_lookup['b_k2o'], 1),
              (regression_parameter_raster_path_lookup['c_k2o'], 1),
-             (clipped_k_raster_path, 1),
              (args['landcover_raster_path'], 1)],
-            _x_yield_op, potassium_yield_raster_path,
-            gdal.GDT_Float32, _NODATA_YIELD)
+            _x_yield_op_gen(float(args['potassium_fertilization_rate'])),
+            potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc the min of N, K, and P')
         crop_production_raster_path = os.path.join(

@@ -121,7 +121,7 @@
         },
         {
           "id": "phosphorous_fertilization_rate ",
-          "args_id": "phosphorous_fertilization_rate ",
+          "args_id": "phosphorous_fertilization_rate",
           "type": "text",
           "label": "Phosphorous Fertilization Rate",
           "defaultValue": "8.4",
