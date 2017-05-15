@@ -384,7 +384,7 @@ def execute(args):
             valid_mask = (
                 (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
                 (lulc_array == crop_lucode))
-            result[valid_mask] = y_max * (
+            result[valid_mask] = y_max[valid_mask] * (
                 1 - b_x[valid_mask] * numpy.exp(
                     -c_x[valid_mask] * x_gc[valid_mask]) *
                 pixel_area_ha)
