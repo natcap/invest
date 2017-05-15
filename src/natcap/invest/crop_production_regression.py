@@ -39,8 +39,8 @@ _NITROGEN_YIELD_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, '%s_nitrogen_yield%s.tif')
 
 # crop_id, file_suffix
-_POTASH_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_potash_yield%s.tif')
+_PHOSPHOROUS_YIELD_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_phosphorous_yield%s.tif')
 
 # crop_id, file_suffix
 _POTASSIUM_YIELD_FILE_PATTERN = os.path.join(
@@ -51,8 +51,8 @@ _CLIPPED_NITROGEN_RATE_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, 'nitrogen_rate%s.tif')
 
 # file suffix
-_CLIPPED_POTASH_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'potash_rate%s.tif')
+_CLIPPED_phosphorous_RATE_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, 'phosphorous_rate%s.tif')
 
 # file suffix
 _CLIPPED_POTASSIUM_RATE_FILE_PATTERN = os.path.join(
@@ -74,7 +74,6 @@ _P_REQ_RF_FILE_PATTERN = os.path.join(
 _K_REQ_RF_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, '%s_k_req_rf_%s.tif')
 
-###old constants below
 
 _GLOBAL_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
     'observed_yield', '%s_yield_map.tif')  # crop_name
@@ -313,7 +312,7 @@ def execute(args):
             target_bb=landcover_raster_info['bounding_box'])
 
         clipped_p_raster_path = os.path.join(
-            output_dir, _CLIPPED_POTASH_RATE_FILE_PATTERN % file_suffix)
+            output_dir, _CLIPPED_phosphorous_RATE_FILE_PATTERN % file_suffix)
         pygeoprocessing.warp_raster(
             args['p_raster_path'],
             landcover_raster_info['pixel_size'],
@@ -332,18 +331,17 @@ def execute(args):
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
 
-
-        def _X_reqRF_op(y_max_rf, y_max, b_X, c_X):
+        def _x_req_rf_op(y_max_rf, y_max, b_x, c_x):
             """Equation S3 from the paper abstracted for N, K, and P."""
             result = numpy.empty(y_max_rf.shape, dtype=numpy.float32)
             result[:] = _NODATA_YIELD
             valid_mask = (
                 (y_max_rf != _NODATA_YIELD) & (y_max != _NODATA_YIELD) &
-                (b_X != _NODATA_YIELD) & (c_X != _NODATA_YIELD) &
-                (c_X != 0.0) & (b_X != 0.0))
+                (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
+                (c_x != 0.0) & (b_x != 0.0))
             result[valid_mask] = -numpy.log((
                 1 - (y_max_rf[valid_mask] / y_max[valid_mask]) / (
-                    b_X[valid_mask]))) / c_X[valid_mask]
+                    b_x[valid_mask]))) / c_x[valid_mask]
             return result
 
         LOGGER.info('Calc N_reqRF')
@@ -354,7 +352,7 @@ def execute(args):
              (regression_parameter_raster_path_lookup['yield_ceiling'], 1),
              (regression_parameter_raster_path_lookup['b_nut'], 1),
              (regression_parameter_raster_path_lookup['c_n'], 1)],
-            _X_reqRF_op, n_reqrf_path,
+            _x_req_rf_op, n_reqrf_path,
             gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc P_reqRF')
@@ -365,7 +363,7 @@ def execute(args):
              (regression_parameter_raster_path_lookup['yield_ceiling'], 1),
              (regression_parameter_raster_path_lookup['b_nut'], 1),
              (regression_parameter_raster_path_lookup['c_p2o5'], 1)],
-            _X_reqRF_op, p_reqrf_path,
+            _x_req_rf_op, p_reqrf_path,
             gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc K_reqRF')
@@ -376,99 +374,62 @@ def execute(args):
              (regression_parameter_raster_path_lookup['yield_ceiling'], 1),
              (regression_parameter_raster_path_lookup['b_k2o'], 1),
              (regression_parameter_raster_path_lookup['c_k2o'], 1)],
-            _X_reqRF_op, k_reqrf_path,
+            _x_req_rf_op, k_reqrf_path,
             gdal.GDT_Float32, _NODATA_YIELD)
 
-        LOGGER.info('Calc nitrogen yield')
-        n_raster_info = pygeoprocessing.get_raster_info(clipped_n_raster_path)
-
-        def _nitrogen_yield_op(b_nut, c_n, n_gc, lulc_array):
-            """Calc Ymax*(1-b_NP*exp(-cN * N_GC))"""
-            result = numpy.empty(b_nut.shape, dtype=numpy.float32)
+        def _x_yield_op(y_max, b_x, c_x, x_gc, lulc_array):
+            """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC))"""
+            result = numpy.empty(b_x.shape, dtype=numpy.float32)
             result[:] = _NODATA_YIELD
             valid_mask = (
-                (b_nut != _NODATA_YIELD) & (c_n != _NODATA_YIELD) &
-                (n_gc != n_raster_info['nodata'][0]) &
+                (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
                 (lulc_array == crop_lucode))
-            result[valid_mask] = (
-                1 - b_nut[valid_mask] * numpy.exp(
-                    -c_n[valid_mask] * n_gc[valid_mask]) *
+            result[valid_mask] = y_max * (
+                1 - b_x[valid_mask] * numpy.exp(
+                    -c_x[valid_mask] * x_gc[valid_mask]) *
                 pixel_area_ha)
             return result
 
+        LOGGER.info('Calc nitrogen yield')
         nitrogen_yield_raster_path = os.path.join(
             output_dir, _NITROGEN_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-
-        LOGGER.debug('"%s"', regression_parameter_raster_path_lookup['yield_ceiling'])
-
         pygeoprocessing.raster_calculator(
-            [(regression_parameter_raster_path_lookup['b_nut'], 1),
+            [(regression_parameter_raster_path_lookup['yield_ceiling_rf'], 1),
+             (regression_parameter_raster_path_lookup['b_nut'], 1),
              (regression_parameter_raster_path_lookup['c_n'], 1),
              (clipped_n_raster_path, 1),
              (args['landcover_raster_path'], 1)],
-            _nitrogen_yield_op, nitrogen_yield_raster_path,
+            _x_yield_op, nitrogen_yield_raster_path,
             gdal.GDT_Float32, _NODATA_YIELD)
 
-        LOGGER.info('Calc potash yield')
-        p_raster_info = pygeoprocessing.get_raster_info(clipped_p_raster_path)
-
-        def _potash_yield_op(b_nut, c_p, p_gc, lulc_array):
-            """Calc Ymax*(1-b_NP*exp(-cN * p_GC))"""
-            result = numpy.empty(b_nut.shape, dtype=numpy.float32)
-            result[:] = _NODATA_YIELD
-            valid_mask = (
-                (b_nut != _NODATA_YIELD) & (c_p != _NODATA_YIELD) &
-                (p_gc != p_raster_info['nodata'][0]) &
-                (lulc_array == crop_lucode))
-            result[valid_mask] = (
-                1 - b_nut[valid_mask] * numpy.exp(
-                    -c_p[valid_mask] * p_gc[valid_mask]) *
-                pixel_area_ha)
-            return result
-
-        potash_yield_raster_path = os.path.join(
-            output_dir, _POTASH_YIELD_FILE_PATTERN % (
+        LOGGER.info('Calc phosphorous yield')
+        phosphorous_yield_raster_path = os.path.join(
+            output_dir, _PHOSPHOROUS_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-
         pygeoprocessing.raster_calculator(
-            [(regression_parameter_raster_path_lookup['b_nut'], 1),
+            [(regression_parameter_raster_path_lookup['yield_ceiling_rf'], 1),
+             (regression_parameter_raster_path_lookup['b_nut'], 1),
              (regression_parameter_raster_path_lookup['c_p2o5'], 1),
              (clipped_p_raster_path, 1),
              (args['landcover_raster_path'], 1)],
-            _potash_yield_op, potash_yield_raster_path,
+            _x_yield_op, phosphorous_yield_raster_path,
             gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc potassium yield')
-        k_raster_info = pygeoprocessing.get_raster_info(clipped_p_raster_path)
-
-        def _potassium_yield_op(b_k, c_k, k_gc, lulc_array):
-            """Calc Ymax*(1-b_k*exp(-ck * k_GC))"""
-            result = numpy.empty(b_k.shape, dtype=numpy.float32)
-            result[:] = _NODATA_YIELD
-            valid_mask = (
-                (b_k != _NODATA_YIELD) & (c_k != _NODATA_YIELD) &
-                (k_gc != k_raster_info['nodata'][0]) &
-                (lulc_array == crop_lucode))
-            result[valid_mask] = (
-                1 - b_k[valid_mask] * numpy.exp(
-                    -c_k[valid_mask] * k_gc[valid_mask]) *
-                pixel_area_ha)
-            return result
-
         potassium_yield_raster_path = os.path.join(
             output_dir, _POTASSIUM_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-
         pygeoprocessing.raster_calculator(
-            [(regression_parameter_raster_path_lookup['b_k2o'], 1),
+            [(regression_parameter_raster_path_lookup['yield_ceiling_rf'], 1),
+             (regression_parameter_raster_path_lookup['b_k2o'], 1),
              (regression_parameter_raster_path_lookup['c_k2o'], 1),
              (clipped_k_raster_path, 1),
              (args['landcover_raster_path'], 1)],
-            _potassium_yield_op, potassium_yield_raster_path,
+            _x_yield_op, potassium_yield_raster_path,
             gdal.GDT_Float32, _NODATA_YIELD)
-        LOGGER.info('Calc the min of the three')
 
+        LOGGER.info('Calc the min of N, K, and P')
         crop_production_raster_path = os.path.join(
             output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
                 crop_name, file_suffix))
@@ -486,10 +447,9 @@ def execute(args):
                     axis=0))
             return result
 
-        LOGGER.info('Calc the min of the three')
         pygeoprocessing.raster_calculator(
             [(nitrogen_yield_raster_path, 1),
-             (potash_yield_raster_path, 1),
+             (phosphorous_yield_raster_path, 1),
              (potassium_yield_raster_path, 1)],
             _min_op, crop_production_raster_path,
             gdal.GDT_Float32, _NODATA_YIELD)
@@ -509,7 +469,6 @@ def execute(args):
         global_observed_yield_raster_info = (
             pygeoprocessing.get_raster_info(
                 global_observed_yield_raster_path))
-
         clipped_observed_yield_raster_path = os.path.join(
             output_dir, _CLIPPED_OBSERVED_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
