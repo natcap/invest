@@ -62,10 +62,6 @@ _CLIPPED_POTASSIUM_RATE_FILE_PATTERN = os.path.join(
 _CLIPPED_IRRIGATION_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, 'irrigation_mask%s.tif')
 
-# crop_id, file_suffix
-_Y_IRR_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_y_irr%s.tif')
-
 # crop_name, file_suffix
 _CROP_PRODUCTION_FILE_PATTERN = os.path.join(
     '.', '%s_regression_production%s.tif')
@@ -150,8 +146,6 @@ def execute(args):
         args['n_raster_path'] (string): path to nitrogen fertilization rates.
         args['p_raster_path'] (string): path to phosphorous fertilization
             rates.
-        args['irrigation_raster_path'] (string): path to irrigation mask. A
-            value of 1 indicates a pixel is irrigated, 0 is not.
         args['aggregate_polygon_path'] (string): path to polygon shapefile
             that will be used to aggregate crop yields and total nutrient
             value. (optional, if value is None, then skipped)
@@ -339,16 +333,6 @@ def execute(args):
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
 
-        clipped_irrigation_raster_path = os.path.join(
-            output_dir, _CLIPPED_IRRIGATION_FILE_PATTERN % file_suffix)
-        pygeoprocessing.warp_raster(
-            args['irrigation_raster_path'],
-            landcover_raster_info['pixel_size'],
-            clipped_irrigation_raster_path,
-            'mode',
-            target_sr_wkt=landcover_raster_info['projection'],
-            target_bb=landcover_raster_info['bounding_box'])
-
         def _x_yield_op(y_max, b_x, c_x, x_gc, lulc_array):
             """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC))"""
             result = numpy.empty(b_x.shape, dtype=numpy.float32)
@@ -402,8 +386,8 @@ def execute(args):
             gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc the min of N, K, and P')
-        y_irr_path = os.path.join(
-            output_dir, _Y_IRR_FILE_PATTERN % (
+        crop_production_raster_path = os.path.join(
+            output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
                 crop_name, file_suffix))
 
         def _min_op(y_n, y_p, y_k):
@@ -423,29 +407,7 @@ def execute(args):
             [(nitrogen_yield_raster_path, 1),
              (phosphorous_yield_raster_path, 1),
              (potassium_yield_raster_path, 1)],
-            _min_op, y_irr_path,
-            gdal.GDT_Float32, _NODATA_YIELD)
-
-        def _calc_real_yield(y_irr, y_max_rf, irr_array):
-            """If irrigated, choose y_irr, otherwise y_max_rf."""
-            result = numpy.empty(y_irr.shape, dtype=numpy.float32)
-            valid_mask = (
-                (y_irr != _NODATA_YIELD) & (y_max_rf != _NODATA_YIELD))
-            result[:] = _NODATA_YIELD
-            result[valid_mask] = numpy.where(
-                irr_array[valid_mask] == 1, y_irr[valid_mask],
-                y_max_rf[valid_mask])
-            return result
-
-        crop_production_raster_path = os.path.join(
-            output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
-                crop_name, file_suffix))
-
-        pygeoprocessing.raster_calculator(
-            [(y_irr_path, 1),
-             (regression_parameter_raster_path_lookup['yield_ceiling_rf'], 1),
-             (clipped_irrigation_raster_path, 1)],
-            _calc_real_yield, crop_production_raster_path,
+            _min_op, crop_production_raster_path,
             gdal.GDT_Float32, _NODATA_YIELD)
 
         # calculate the non-zero production area for that crop
