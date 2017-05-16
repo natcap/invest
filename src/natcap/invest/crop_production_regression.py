@@ -559,6 +559,9 @@ def execute(args):
                 1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
             LOGGER.info(
                 "Calculating zonal stats for %s", crop_name)
+            crop_production_raster_path = os.path.join(
+                output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
+                    crop_name, file_suffix))
             total_yield_lookup['%s_modeled' % crop_name] = (
                 pygeoprocessing.zonal_statistics(
                     (crop_production_raster_path, 1),
