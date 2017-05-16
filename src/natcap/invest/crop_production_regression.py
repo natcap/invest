@@ -142,10 +142,13 @@ def execute(args):
             * crop_name: a string that must match one of the crops in
               args['model_data_path']/climate_regression_yield_tables/[cropname]_*
               A ValueError is raised if strings don't match.
-        args['k_raster_path'] (string): path to potassium fertilization rates.
-        args['n_raster_path'] (string): path to nitrogen fertilization rates.
-        args['p_raster_path'] (string): path to phosphorous fertilization
-            rates.
+        args['fertilization_rate_table_path'] (string): path to CSV table
+            that contains fertilization rates for the crops in the simulation,
+            though it can contain additional crops not used in the simulation.
+            The headers must be 'crop_name', 'nitrogen_rate',
+            'phosphorous_rate', and 'potassium_rate', where 'crop_name' is the
+            name string used to identify crops in the
+            'landcover_to_crop_table_path', and rates are in units kg/Ha.
         args['aggregate_polygon_path'] (string): path to polygon shapefile
             that will be used to aggregate crop yields and total nutrient
             value. (optional, if value is None, then skipped)
@@ -168,6 +171,10 @@ def execute(args):
         "is missing lucodes")
     crop_to_landcover_table = utils.build_lookup_from_csv(
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
+        numerical_cast=True)
+
+    crop_to_fertlization_rate_table = utils.build_lookup_from_csv(
+        args['fertilization_rate_table_path'], 'crop_name', to_lower=True,
         numerical_cast=True)
 
     crop_lucodes = [
@@ -327,7 +334,8 @@ def execute(args):
              (regression_parameter_raster_path_lookup['b_nut'], 1),
              (regression_parameter_raster_path_lookup['c_n'], 1),
              (args['landcover_raster_path'], 1)],
-            _x_yield_op_gen(float(args['nitrogen_fertilization_rate'])),
+            _x_yield_op_gen(crop_to_fertlization_rate_table[crop_name][
+                'nitrogen_rate']),
             nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc phosphorous yield')
@@ -339,7 +347,8 @@ def execute(args):
              (regression_parameter_raster_path_lookup['b_nut'], 1),
              (regression_parameter_raster_path_lookup['c_p2o5'], 1),
              (args['landcover_raster_path'], 1)],
-            _x_yield_op_gen(float(args['phosphorous_fertilization_rate'])),
+            _x_yield_op_gen(crop_to_fertlization_rate_table[crop_name][
+                'phosphorous_rate']),
             phosphorous_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc potassium yield')
@@ -351,7 +360,8 @@ def execute(args):
              (regression_parameter_raster_path_lookup['b_k2o'], 1),
              (regression_parameter_raster_path_lookup['c_k2o'], 1),
              (args['landcover_raster_path'], 1)],
-            _x_yield_op_gen(float(args['potassium_fertilization_rate'])),
+            _x_yield_op_gen(crop_to_fertlization_rate_table[crop_name][
+                'potassium_rate']),
             potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD)
 
         LOGGER.info('Calc the min of N, K, and P')
