@@ -116,36 +116,6 @@
           "required": true,
           "enabledBy": "aggregate_polygon_path",
           "helpText": "If an aggregate polygon is provided, this field is used to indicate the key field of that polygon for aggregation.  The aggregate table produced by this model will index the results by this field value."
-        },
-        {
-          "id": "nitrogen_fertilization_rate",
-          "args_id": "nitrogen_fertilization_rate",
-          "type": "text",
-          "label": "Nitrogen Fertilization Rate",
-          "defaultValue": "29.6",
-          "required": true,
-          "validText": "^[0-9]+$",
-          "helpText": "Nitrogen fertilization rate (kg/Ha)."
-        },
-        {
-          "id": "potassium_fertilization_rate",
-          "args_id": "potassium_fertilization_rate",
-          "type": "text",
-          "label": "Potassium Fertilization Rate",
-          "defaultValue": "14.2",
-          "required": true,
-          "validText": "^[0-9]+$",
-          "helpText": "Potassium fertilization rate (kg/Ha)."
-        },
-        {
-          "id": "phosphorous_fertilization_rate ",
-          "args_id": "phosphorous_fertilization_rate",
-          "type": "text",
-          "label": "Phosphorous Fertilization Rate",
-          "defaultValue": "8.4",
-          "required": true,
-          "validText": "^[0-9]+$",
-          "helpText": "Phosphorous fertilization rate (kg/Ha)."
         }
       ]
     }
