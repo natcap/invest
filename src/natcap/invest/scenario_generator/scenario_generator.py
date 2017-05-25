@@ -635,7 +635,10 @@ def execute(args):
 
     try:
         args['seed'] = int(args['seed'])
-    except KeyError:
+    except (KeyError, ValueError, TypeError):
+        # KeyError when seed not in args.
+        # ValueError when args['seed'] == '' (when UI input is empty).
+        # TypeError when args['seed'] == None
         args['seed'] = None
 
     # SHOULD BE INPUT AND VALIDATION FUNCTIONS
