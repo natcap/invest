@@ -391,12 +391,18 @@
       ]
     },
     {
-        "id": "seed",
-        "args_id": "seed",
-        "type": "text",
-        "label": "Seed for random parcel selection (optional)",
-        "required": false,
-        "helpText": "Under normal conditions, parcels with the same suitability are picked in a random order.  Setting the seed value allows the scenario generator to randomize the order in which parcels are picked, but two runs with the same seed will pick parcels in the same order."
+      "id": "seed_list",
+      "type": "list",
+      "elements": [
+        {
+            "id": "seed",
+            "args_id": "seed",
+            "type": "text",
+            "label": "Seed for random parcel selection (optional)",
+            "required": false,
+            "helpText": "Under normal conditions, parcels with the same suitability are picked in a random order.  Setting the seed value allows the scenario generator to randomize the order in which parcels are picked, but two runs with the same seed will pick parcels in the same order."
+        }
+      ]
     }
   ]
 }
