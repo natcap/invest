@@ -633,7 +633,9 @@ def execute(args):
     """
     LOGGER.info("Starting Scenario Generator model run...")
 
-    if 'seed' not in args:
+    try:
+        args['seed'] = int(args['seed'])
+    except KeyError:
         args['seed'] = None
 
     # SHOULD BE INPUT AND VALIDATION FUNCTIONS
