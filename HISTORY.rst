@@ -4,6 +4,9 @@
 
 Unreleased Changes
 ------------------
+* Scenario Generator - Rule Based now has an optional input to define a seed.
+  This input is used to seed the random shuffling of parcels that have equal
+  priorities.
 * InVEST on mac is now distributed as a single application bundle, allowing InVEST to run as expected on mac OSX Sierra.  Individual models are selected and launched from a new launcher window.
 * The InVEST CLI now has a GUI model launcher:  ``$ invest launcher``
 * Updated the Coastal Blue Carbon model to improve handling of blank lines in input CSV tables and improve memory efficiency of the current implementation.
