@@ -2,7 +2,7 @@
 import os
 import logging
 
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
@@ -12,7 +12,7 @@ LOGGER = logging.getLogger('natcap.invest.routing.routedem')
 def execute(args):
     """RouteDEM: D-Infinity Routing.
 
-    This model exposes the natcap.invest.pygeoprocessing_0_3_3 d-infinity routing functionality in
+    This model exposes the pygeoprocessing_0_3_3 d-infinity routing functionality in
     the InVEST model API.
 
     Parameters:
