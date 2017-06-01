@@ -75,18 +75,22 @@ def execute(args):
         args['dem_path'], flow_direction_path)
 
     if ('calculate_flow_accumulation' in args and
-            args['calculate_flow_accumulation']):
+            bool(args['calculate_flow_accumulation'])):
         LOGGER.info("calculating flow accumulation")
         flow_accumulation_path = os.path.join(
-            args['workspace_dir'], _FLOW_ACCUMULATION_FILE_PATTERN % file_suffix)
+            args['workspace_dir'],
+            _FLOW_ACCUMULATION_FILE_PATTERN % file_suffix)
         natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
             flow_direction_path, args['dem_path'], flow_accumulation_path)
+    else:
+        # Nothing else to do if we don't accumulate flow
+        return
 
     # classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
 
     if ('calculate_stream_threshold' in args and
-            args['calculate_stream_threshold']):
+            bool(args['calculate_stream_threshold'])):
+        LOGGER.info("Classifying streams from flow accumulation raster")
 
         flow_accumulation_threshold = float(
             args['threshold_flow_accumulation'])
@@ -100,11 +104,14 @@ def execute(args):
         natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
             flow_accumulation_path, flow_accumulation_threshold,
             stream_mask_path)
+    else:
+        # Nothing else to do if we don't threshold a stream
+        return
 
-        if ('calculate_downstream_distance' in args and
-                args['calculate_downstream_distance']):
-            distance_path = os.path.join(
-                args['workspace_dir'],
-                _DOWNSTREAM_DISTANCE_FILE_PATTERN % file_suffix)
-            natcap.invest.pygeoprocessing_0_3_3.routing.distance_to_stream(
-                flow_direction_path, stream_mask_path, distance_path)
+    if ('calculate_downstream_distance' in args and
+            bool(args['calculate_downstream_distance'])):
+        distance_path = os.path.join(
+            args['workspace_dir'],
+            _DOWNSTREAM_DISTANCE_FILE_PATTERN % file_suffix)
+        natcap.invest.pygeoprocessing_0_3_3.routing.distance_to_stream(
+            flow_direction_path, stream_mask_path, distance_path)

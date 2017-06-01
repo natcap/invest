@@ -55,10 +55,20 @@
           "helpText": "If selected, calculates slope raster."
         },
         {
+          "id": "calculate_flow_accumulation",
+          "args_id": "calculate_flow_accumulation",
+          "type": "checkbox",
+          "label": "Calculate Flow Accumulation",
+          "defaultValue": false,
+          "required": false,
+          "helpText": "Select to calculate flow accumulation."
+        },
+        {
           "id": "calculate_stream_threshold",
           "args_id": "calculate_stream_threshold",
           "type": "checkbox",
           "label": "Calculate Stream Thresholds",
+          "enabledBy": "calculate_flow_accumulation",
           "defaultValue": false,
           "required": false,
           "helpText": "Select to calculate a stream threshold to flow accumulation."
