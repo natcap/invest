@@ -4,7 +4,7 @@
   "targetScript": "natcap.invest.routing.routedem",
   "modelName": "routedem",
   "localDocURI": "../documentation/routedem.html",
-  "height": 370,
+  "height": 400,
   "width": 500,
   "elements": [
     {
@@ -46,6 +46,15 @@
           "helpText": "A GDAL-supported raster file containing a base Digital Elevation Model to execute the routing functionality across."
         },
         {
+          "id": "calculate_slope",
+          "args_id": "calculate_slope",
+          "type": "checkbox",
+          "label": "Calculate Slope",
+          "defaultValue": false,
+          "required": false,
+          "helpText": "If selected, calculates slope raster."
+        },
+        {
           "id": "calculate_stream_threshold",
           "args_id": "calculate_stream_threshold",
           "type": "checkbox",
@@ -74,15 +83,6 @@
           "required": false,
           "enabledBy": "calculate_stream_threshold",
           "helpText": "If selected, creates a downstream distance raster based on the thresholded flow accumulation stream classification."
-        },
-        {
-          "id": "calculate_slope",
-          "args_id": "calculate_slope",
-          "type": "checkbox",
-          "label": "Calculate Slope",
-          "defaultValue": false,
-          "required": false,
-          "helpText": "If selected, calculates slope raster."
         }
       ]
     }
