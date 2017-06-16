@@ -438,9 +438,36 @@ class Model(QtWidgets.QMainWindow):
         self.window_title.filename = os.path.basename(save_filepath)
 
     def add_input(self, input):
+        """Add an input to the model.
+
+        Parameters:
+            input (natcap.invest.ui.inputs.Input): An Input instance to add to
+                the model.
+
+        Returns:
+            ``None``"""
         self.form.add_input(input)
 
     def execute_model(self):
+        """Run the target model.
+
+        Executing the target model is the objective of the UI.  Once this
+        method is triggered, the following steps are taken:
+
+            * Collect all of the inputs into an ``args`` dictionary.
+            * Verify that all of the ``args`` passes validation.  If not,
+              the model cannot be run, and the user must correct the errors
+              before running it.
+            * If the workspace directory exists, prompt the user to confirm
+              overwriting the files in the workspace.  Return to the inputs
+              if the dialog is cancelled.
+            * Run the model, capturing all GDAL log messages as python logging
+              messages, writing log messages to a logfile within the workspace,
+              and finally executing the model.
+
+        Returns:
+            ``None``
+        """
         args = self.assemble_args()
 
         # If we have validation warnings, show them and return to inputs.
