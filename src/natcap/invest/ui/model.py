@@ -386,6 +386,14 @@ class Model(QtWidgets.QMainWindow):
         about_dialog.exec_()
 
     def _save_scenario_as(self):
+        """Save the current set of inputs as a scenario.
+
+        Presents a dialog to the user for input on how to save the scenario,
+        and then makes it happen.  A status message is displayed to the
+        satus bar when the operation is complete.
+
+        Returns:
+           ``None``."""
         scenario_opts = _prompt_for_scenario_options()
         if not scenario_opts:  # user pressed cancel
             return
