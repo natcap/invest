@@ -179,6 +179,27 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
 
 
 class Model(QtWidgets.QMainWindow):
+
+    """An InVEST model window.
+
+    This class represents an abstraction of a variety of Qt widgets that
+    together comprise an InVEST model window.  This class is designed to be
+    subclassed for each invdividual model.  Subclasses must, at a minimum,
+    override these four attributes at the class level:
+
+        * ``label`` (string): The model label.
+        * ``target`` (function reference): The reference to the target function.
+            For InVEST, this will always be the ``execute`` function of the
+            target model.
+        * ``validator`` (function reference): The reference to the target
+            validator function.  For InVEST, this will always be the
+            ``validate`` function of the target model.
+        * ``localdoc`` (string): The filename of the user's guide chapter for
+            this model.
+
+    If any of these attributes are not overridden, a warning will be raised.
+    """
+
     label = None
     target = None
     validator = None
@@ -278,6 +299,16 @@ class Model(QtWidgets.QMainWindow):
             self.label)
 
     def about(self):
+        """Show a dialog describing InVEST.
+
+        In reasonable accordance with licensing and distribution requirements,
+        this dialog not only has information about InVEST and the Natural
+        Capital Project, but it also has details about the software used to
+        develop and run InVEST and contains links to the licenses for each of
+        these other projects.
+
+        Returns:
+            None."""
         about_dialog = QtWidgets.QDialog()
         about_dialog.setLayout(QtWidgets.QVBoxLayout())
         label_text = textwrap.dedent(
