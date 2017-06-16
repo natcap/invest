@@ -24,6 +24,7 @@ from .. import scenarios
 LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
 DATE_FMT = "%m/%d/%Y %H:%M:%S "
 LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
 
 _SCENARIO_BASE_FILENAME = 'scenario.invs.%s'
 _SCENARIO_DIALOG_TITLE = 'Select where to save the parameter %s'
