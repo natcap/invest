@@ -83,6 +83,21 @@ ScenarioSaveOpts = collections.namedtuple(
 
 
 def _prompt_for_scenario_options():
+    """Provide a GUI model dialog with options for saving a scenario.
+
+    There are two types of scenarios:
+
+        * Parameter sets (a file with the values of the current inputs)
+        * Data archives (all-inclusive archive of current inputs)
+
+    This dialog provides a couple of options to the user depending on which
+    type of scenario is desired.  If a parameter set is selected, paths may
+    be stored relative to the location of the scenario file.  Both types of
+    scenarios may optionally include the value of the workspace input.
+
+    Returns:
+        An instance of :ref:ScenarioSaveOpts namedtuple.
+    """
     dialog = QtWidgets.QDialog()
     dialog.setLayout(QtWidgets.QVBoxLayout())
     dialog.setWindowModality(QtCore.Qt.WindowModal)
