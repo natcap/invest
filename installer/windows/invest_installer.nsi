@@ -63,7 +63,6 @@
 ;           Pollination.zip
 ;           Base_Data.zip
 ;           <other zipfiles, as desired, downloaded from our website>
-
 !include nsProcess.nsh
 !include LogicLib.nsh
 ; HM NIS Edit Wizard helper defines
@@ -147,6 +146,7 @@ Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile ${INSTALLER_NAME}
 InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
 ShowInstDetails show
+RequestExecutionLevel admin
 
 ; This function allows us to test to see if a process is currently running.
 ; If the process name passed in is actually found, a message box is presented
