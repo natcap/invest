@@ -303,7 +303,7 @@ def execute(args):
         pygeoprocessing.reclassify_raster(
             (args['landcover_raster_path'], 1),
             landcover_to_nesting_suitability_table, f_reg[nesting_id],
-            gdal.GDT_Float32, _INDEX_NODATA, exception_flag='values_required')
+            gdal.GDT_Float32, _INDEX_NODATA)
 
         LOGGER.info(
             "Overriding landcover nesting substrates where a farm polygon is "
