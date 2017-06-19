@@ -1491,22 +1491,25 @@ class OpenWorkspaceTest(unittest.TestCase):
         from natcap.invest.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Darwin'):
-                open_workspace('/foo/bar')
-                method.assert_called_with('open /foo/bar', shell=True)
+                with mock.patch('os.path.normpath', return_value='/foo/bar'):
+                    open_workspace('/foo/bar')
+                    method.assert_called_with('open /foo/bar', shell=True)
 
     def test_linux(self):
         from natcap.invest.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Linux'):
-                open_workspace('/foo/bar')
-                method.assert_called_with(['xdg-open', '/foo/bar'])
+                with mock.patch('os.path.normpath', return_value='/foo/bar'):
+                    open_workspace('/foo/bar')
+                    method.assert_called_with(['xdg-open', '/foo/bar'])
 
     def test_error_in_subprocess(self):
         from natcap.invest.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen',
                         side_effect=OSError('error message')) as patch:
-            open_workspace('/foo/bar')
-            patch.assert_called_once()
+            with mock.patch('os.path.normpath', return_value='/foo/bar'):
+                open_workspace('/foo/bar')
+                patch.assert_called_once()
 
 
 class ExecutionTest(unittest.TestCase):
