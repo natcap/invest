@@ -240,7 +240,7 @@ class TimeFormattingTests(unittest.TestCase):
         self.assertEqual(format_time(seconds), '7s')
 
 
-class ThreadFilterTests(unittest.TestCast):
+class ThreadFilterTests(unittest.TestCase):
     def test_thread_filter_same_thread(self):
         from natcap.invest.utils import ThreadFilter
 

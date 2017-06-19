@@ -9,6 +9,8 @@ import pygeoprocessing
 import natcap.versioner
 
 
+LOGGER = logging.getLogger('natcap.invest')
+LOGGER.addHandler(logging.NullHandler())
 __all__ = ['local_dir', 'PYGEOPROCESSING_REQUIRED']
 
 
