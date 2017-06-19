@@ -1,4 +1,5 @@
 """A collection of GDAL dataset and raster utilities."""
+from __future__ import absolute_import
 
 import threading
 import Queue
@@ -32,7 +33,10 @@ import shapely.ops
 from shapely import speedups
 import shapely.prepared
 
-import geoprocessing_core
+try:
+    from . import geoprocessing_core
+except ImportError:
+    from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing_core
 import fileio
 
 AggregatedValues = collections.namedtuple(
