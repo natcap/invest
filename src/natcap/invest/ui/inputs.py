@@ -46,6 +46,7 @@ QLABEL_STYLE_ERROR = _QLABEL_STYLE_TEMPLATE.format(
 def _cleanup():
     # Adding this allows tests to run on linux via `python setup.py nosetests`
     # and `python setup.py test` without segfault.
+    global QT_APP
     QT_APP.deleteLater()  # pragma: no cover
 atexit.register(_cleanup)
 
@@ -648,6 +649,7 @@ class GriddedInput(Input):
             self.widgets[1] = self.label_widget
             self.label_widget.stateChanged.connect(self._hideability_changed)
             self._hideability_changed(True)
+            global QT_APP
             QT_APP.processEvents()
 
         self.lock = threading.Lock()

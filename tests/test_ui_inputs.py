@@ -1323,6 +1323,7 @@ class FormTest(unittest.TestCase):
         return Form()
 
     def test_run_noerror(self):
+        global QT_APP
         form = FormTest.make_ui()
         form.run(target=lambda: None)
         form._thread.join()
@@ -1402,6 +1403,7 @@ class FormTest(unittest.TestCase):
         self.assertEqual(form.run_dialog.result(), QtWidgets.QDialog.Rejected)
 
     def test_run_prevent_dialog_close_event(self):
+        global QT_APP
         thread_event = threading.Event()
 
         class _SampleTarget(object):
@@ -1441,6 +1443,7 @@ class FormTest(unittest.TestCase):
             self.fail(error)
 
     def test_run_error(self):
+        global QT_APP
         class _SampleTarget(object):
             @staticmethod
             def validate(args, limit_to=None):
