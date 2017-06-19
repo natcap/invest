@@ -222,22 +222,22 @@ class SandboxTempdirTests(unittest.TestCase):
 
 class TimeFormattingTests(unittest.TestCase):
     def test_format_time_hours(self):
-        from natcap.invest.utils import format_time
+        from natcap.invest.utils import _format_time
 
         seconds = 3667
-        self.assertEqual(format_time(seconds), '1h 1m 7s')
+        self.assertEqual(_format_time(seconds), '1h 1m 7s')
 
     def test_format_time_minutes(self):
-        from natcap.invest.utils import format_time
+        from natcap.invest.utils import _format_time
 
         seconds = 67
-        self.assertEqual(format_time(seconds), '1m 7s')
+        self.assertEqual(_format_time(seconds), '1m 7s')
 
     def test_format_time_seconds(self):
-        from natcap.invest.utils import format_time
+        from natcap.invest.utils import _format_time
 
         seconds = 7
-        self.assertEqual(format_time(seconds), '7s')
+        self.assertEqual(_format_time(seconds), '7s')
 
 
 class ThreadFilterTests(unittest.TestCase):
