@@ -35,9 +35,10 @@ import shapely.prepared
 
 try:
     from . import geoprocessing_core
+    from . import fileio
 except ImportError:
     from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing_core
-import fileio
+    from natcap.invest.pygeoprocessing_0_3_3 import fileio
 
 AggregatedValues = collections.namedtuple(
     'AggregatedValues',
