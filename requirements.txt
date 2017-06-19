@@ -17,3 +17,6 @@ rtree>=0.8.2
 scipy>=0.16.1
 shapely
 setuptools>=8.0
+qtpy
+qtawesome
+six

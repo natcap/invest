@@ -229,7 +229,7 @@ setup(
         ],
     },
     extras_require={
-        'ui': ('qtpy', 'six'),
+        'ui': ('qtpy', 'qtawesome', 'six'),
     },
     cmdclass=CMDCLASS,
     package_data={
