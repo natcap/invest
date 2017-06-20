@@ -44,28 +44,31 @@ class PollinationTests(unittest.TestCase):
         pollination.execute(args)
         expected_farm_yields = {
             'almonds': {
-                'p_av_yield': 0.99173113255719,
-                't_av_yield': 0.994625236162173
+                'p_av_yield': 0.991723205579275,
+                't_av_yield': 0.994620083626529
             },
             'blueberries': {
-                'p_av_yield': 0.020808936958026,
-                't_av_yield': 0.363525809022717
+                'p_av_yield': 0.020785928668832,
+                't_av_yield': 0.363510853634741
             },
         }
         result_vector = ogr.Open(
             os.path.join(self.workspace_dir, 'farm_yield.shp'))
         result_layer = result_vector.GetLayer()
-        self.assertEqual(
-            result_layer.GetFeatureCount(), len(expected_farm_yields))
-        for feature in result_layer:
-            expected_yields = expected_farm_yields[
-                feature.GetField('crop_type')]
-            for yield_type in expected_yields:
-                self.assertAlmostEqual(
-                    expected_yields[yield_type],
-                    feature.GetField(yield_type))
-        result_layer = None
-        result_vector = None
+        try:
+            self.assertEqual(
+                result_layer.GetFeatureCount(), len(expected_farm_yields))
+            for feature in result_layer:
+                expected_yields = expected_farm_yields[
+                    feature.GetField('crop_type')]
+                for yield_type in expected_yields:
+                    self.assertAlmostEqual(
+                        expected_yields[yield_type],
+                        feature.GetField(yield_type))
+        finally:
+            # make sure vector is closed before removing the workspace
+            result_layer = None
+            result_vector = None
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
