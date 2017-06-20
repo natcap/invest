@@ -696,8 +696,11 @@ class PathTest(TextTest):
             QtCore.Qt.NoModifier)
 
         with mock.patch('platform.system', return_value='Darwin'):
-            input_instance.textfield.dropEvent(event)
+            with mock.patch('subprocess.Popen') as mock_method:
+                input_instance.textfield.dropEvent(event)
 
+        self.assertTrue(mock_method.called)
+        self.assertTrue(mock_method.call_args[0][0].startswith('osascript'))
         self.assertEqual(event.isAccepted(), True)
         self.assertEqual(input_instance.value(), u'/foo/bar/ДЖЩя')
 
