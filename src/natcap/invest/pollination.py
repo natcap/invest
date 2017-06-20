@@ -379,7 +379,7 @@ def execute(args):
             (args['landcover_raster_path'], 1),
             landcover_to_floral_resources_table,
             f_reg[relative_floral_resources_id], gdal.GDT_Float32,
-            _INDEX_NODATA, exception_flag='values_required')
+            _INDEX_NODATA)
 
         LOGGER.info(
             "Overriding landcover floral resources where a farm polygon is "
