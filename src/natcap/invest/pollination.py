@@ -440,7 +440,6 @@ def execute(args):
             f_reg[local_floral_resource_availability_id], gdal.GDT_Float32,
             _INDEX_NODATA, calc_raster_stats=False)
 
-        LOGGER.warn("TODO: consider case where cell size is not square.")
         alpha = (
             guild_table[species_id]['alpha'] /
             float(lulc_raster_info['mean_pixel_size']))
