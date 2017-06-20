@@ -58,11 +58,11 @@ _FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
 _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
 _FARM_NESTING_SUBSTRATE_PATTERN = 'n_([^_]+)'
 _HALF_SATURATION_FARM_HEADER = 'half_sat'
-_CROP_POLLINATOR_DEPENDANCE_FIELD = 'p_dep'
+_CROP_POLLINATOR_DEPENDENCE_FIELD = 'p_dep'
 _EXPECTED_FARM_HEADERS = [
     'season', 'crop_type', _HALF_SATURATION_FARM_HEADER, 'p_managed',
     _FARM_FLORAL_RESOURCES_PATTERN, _FARM_NESTING_SUBSTRATE_PATTERN,
-    _CROP_POLLINATOR_DEPENDANCE_FIELD]
+    _CROP_POLLINATOR_DEPENDENCE_FIELD]
 
 _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN = 'seasonal_pollinator_yield_%s'
 _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield'
@@ -730,14 +730,14 @@ def execute(args):
     farm_layer = farm_vector.GetLayer()
     for feature in farm_layer:
         fid = feature.GetField(farm_fid_field)
+        pollinator_dependence = feature.GetField(
+            _CROP_POLLINATOR_DEPENDENCE_FIELD)
         pollinator_dependant_yield = float(
-            farm_stats[fid]['sum'] / farm_stats[fid]['count'])
+            farm_stats[fid]['sum'] / farm_stats[fid]['count'] *
+            pollinator_dependence)
         feature.SetField(
             _POLLINATOR_FARM_YIELD_FIELD_ID, pollinator_dependant_yield)
-        pollinator_dependance = feature.GetField(
-            _CROP_POLLINATOR_DEPENDANCE_FIELD)
-        total_yield = 1.0 - pollinator_dependance * (
-            1 - pollinator_dependant_yield)
+        total_yield = (1 - pollinator_dependence) + pollinator_dependant_yield
         feature.SetField(
             _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
         farm_layer.SetFeature(feature)

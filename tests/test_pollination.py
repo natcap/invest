@@ -44,11 +44,11 @@ class PollinationTests(unittest.TestCase):
         pollination.execute(args)
         expected_farm_yields = {
             'almonds': {
-                'p_av_yield': 0.991723205579275,
+                'p_av_yield': 0.644620083626529,
                 't_av_yield': 0.994620083626529
             },
             'blueberries': {
-                'p_av_yield': 0.020785928668832,
+                'p_av_yield': 0.013510853634741,
                 't_av_yield': 0.363510853634741
             },
         }
