@@ -38,6 +38,7 @@ LOGGER = logging.getLogger(__name__)
 @contextlib.contextmanager
 def wait_on_signal(signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
+    global QT_APP
     loop = QtCore.QEventLoop()
 
     wait_on_signal.signal_called = False
@@ -46,17 +47,22 @@ def wait_on_signal(signal, timeout=250):
         wait_on_signal.signal_called = True
 
     signal.connect(_set_signal_called)
+    if timeout is not None:
+        QtCore.QTimer.singleShot(timeout, loop.quit)
     signal.connect(loop.quit)
 
     try:
         yield
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
+    except Exception:
+        LOGGER.exception('Error encountered while witing for signal %s',
+                         signal)
     finally:
-        if timeout is not None:
-            QtCore.QTimer.singleShot(timeout, loop.quit)
+        loop.exec_()
 
-        if not wait_on_signal.signal_called:
-            loop.exec_()
-        signal.disconnect(loop.quit)
+    wait_on_signal.signal_called = False
+    loop = None
 
 
 class InputTest(unittest.TestCase):
@@ -131,6 +137,8 @@ class InputTest(unittest.TestCase):
                 input_instance.value()
             except NotImplementedError:
                 input_instance.value = lambda: 'Value!'
+            if QT_APP.hasPendingEvents():
+                QT_APP.processEvents()
             input_instance.set_interactive(True)
 
         callback.assert_called_with(True)
@@ -236,23 +244,27 @@ class InputTest(unittest.TestCase):
             self.assertEqual(input_instance.visible(), True)
 
     def test_visiblity_when_shown(self):
+        global QT_APP
         from natcap.invest.ui import inputs
         container = inputs.Container(label='sample container')
         input_instance = self.__class__.create_input(label='foo',
                                                      interactive=False)
         container.add_input(input_instance)
         container.show()
-        inputs.QT_APP.processEvents()
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
 
         self.assertEqual(input_instance.visible(), True)
 
         input_instance.set_visible(False)
-        inputs.QT_APP.processEvents()
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), False)
 
         input_instance.set_visible(True)
-        inputs.QT_APP.processEvents()
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), True)
 
@@ -1332,12 +1344,14 @@ class FormTest(unittest.TestCase):
         return Form()
 
     def test_run_noerror(self):
-        global QT_APP
         form = FormTest.make_ui()
-        form.run(target=lambda: None)
-        form._thread.join()
-        QT_APP.processEvents()
+        def _target():
+            return
+        with wait_on_signal(form.run_finished, timeout=250):
+            form.run(target=_target)
 
+        global QT_APP
+        QT_APP.processEvents()
         # At the end of the run, the button should be visible.
         self.assertTrue(form.run_dialog.openWorkspaceButton.isVisible())
 
@@ -1360,6 +1374,7 @@ class FormTest(unittest.TestCase):
 
             @staticmethod
             def execute(args):
+                global thread_event
                 thread_event.wait()
 
         form = FormTest.make_ui()
@@ -1380,9 +1395,9 @@ class FormTest(unittest.TestCase):
 
                 thread_event.set()
 
-                # close the window by pressing the back button.
-                QTest.mouseClick(form.run_dialog.backButton,
-                                 QtCore.Qt.LeftButton)
+        # close the window by pressing the back button.
+        QTest.mouseClick(form.run_dialog.backButton,
+                            QtCore.Qt.LeftButton)
 
         open_workspace.assert_called_once()
 
@@ -1422,26 +1437,28 @@ class FormTest(unittest.TestCase):
 
             @staticmethod
             def execute(args):
+                global thread_event
                 thread_event.wait()
 
         form = FormTest.make_ui()
-        QT_APP.processEvents()
         target_mod = _SampleTarget().execute
         try:
             form.run(target=target_mod, kwargs={'args': {'a': 1}})
+            if QT_APP.hasPendingEvents():
+                QT_APP.processEvents()
             self.assertTrue(form.run_dialog.isVisible())
-            QT_APP.processEvents()
             form.run_dialog.close()
-            QT_APP.processEvents()
             self.assertTrue(form.run_dialog.isVisible())
 
             # when the execute function finishes, pressing escape should
             # close the window.
             thread_event.set()
             form._thread.join()
-            QT_APP.processEvents()
+            if QT_APP.hasPendingEvents():
+                QT_APP.processEvents()
             form.run_dialog.close()
-            QT_APP.processEvents()
+            if QT_APP.hasPendingEvents():
+                QT_APP.processEvents()
             self.assertFalse(form.run_dialog.isVisible())
         except Exception as error:
             LOGGER.exception('Something failed')
@@ -1466,7 +1483,8 @@ class FormTest(unittest.TestCase):
         form = FormTest.make_ui()
         form.run(target=target_mod, kwargs={'args': {}})
         form._thread.join()
-        QT_APP.processEvents()
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
 
         self.assertTrue('encountered' in form.run_dialog.messageArea.text())
 
@@ -1550,7 +1568,9 @@ class ExecutionTest(unittest.TestCase):
         executor.start()
         thread_event.set()
         executor.join()
-        QtWidgets.QApplication.instance().processEvents()
+        global QT_APP
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
         callback.assert_called_once()
         target.assert_called_once()
         target.assert_called_with(*args, **kwargs)
@@ -1584,7 +1604,9 @@ class ExecutionTest(unittest.TestCase):
         executor.start()
         thread_event.set()
         executor.join()
-        QtWidgets.QApplication.instance().processEvents()
+        global QT_APP
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
         callback.assert_called_once()
         target.assert_called_once()
         target.assert_called_with(*args, **kwargs)
@@ -1619,7 +1641,9 @@ class IntegrationTests(unittest.TestCase):
         # When the checkbox is enabled, the container should become enabled,
         # but the container's contained widgets should still be noninteractive
         checkbox.set_value(True)
-        inputs.QT_APP.processEvents()
+        global QT_APP
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
 
         self.assertTrue(container.interactive)
         self.assertFalse(container.expanded)
@@ -1629,7 +1653,8 @@ class IntegrationTests(unittest.TestCase):
         # When the container is expanded, the contained input should become
         # interactive and visible
         container.set_value(True)
-        inputs.QT_APP.processEvents()
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
 
         self.assertTrue(container.interactive)
         self.assertTrue(container.expanded)

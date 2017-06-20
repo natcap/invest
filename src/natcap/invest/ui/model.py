@@ -26,6 +26,7 @@ LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
 DATE_FMT = "%m/%d/%Y %H:%M:%S "
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
+QT_APP = inputs.QT_APP
 
 _SCENARIO_BASE_FILENAME = 'scenario.invs.%s'
 _SCENARIO_DIALOG_TITLE = 'Select where to save the parameter %s'
@@ -634,7 +635,8 @@ class Model(QtWidgets.QMainWindow):
         self.show()
         self.raise_()  # raise window to top of stack.
 
-        return inputs.QT_APP.exec_()
+        global QT_APP
+        return QT_APP.exec_()
 
     def closeEvent(self, event):
         dialog = QtWidgets.QMessageBox()
