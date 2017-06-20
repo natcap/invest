@@ -4,11 +4,10 @@ import functools
 import warnings
 import threading
 import logging
-import tempfile
-import shutil
-import os
 import contextlib
 import sys
+import faulthandler
+faulthandler.enable()
 
 import sip
 sip.setapi('QString', 2)  # qtpy assumes api version 2
