@@ -165,7 +165,7 @@ def execute(args):
         args['guild_table_path'], 'species', to_lower=True,
         numerical_cast=True)
 
-    LOGGER.debug('Checking to make sure guild table has all expected headers')
+    LOGGER.info('Checking to make sure guild table has all expected headers')
     guild_headers = guild_table.itervalues().next().keys()
 
     # normalize relative species abundances
