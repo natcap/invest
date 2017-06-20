@@ -9,7 +9,7 @@ from osgeo import gdal
 from osgeo import osr
 import natcap.invest.pygeoprocessing_0_3_3
 
-LOGGER = logging.getLogger('pygeoprocessing.geoprocessing')
+LOGGER = logging.getLogger('natcap.invest.utils')
 
 
 def make_suffix_string(args, suffix_key):
