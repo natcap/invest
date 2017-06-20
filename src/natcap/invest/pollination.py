@@ -755,7 +755,7 @@ def _normalized_convolve_2d(
     """Perform a normalized 2D convolution.
 
     Convolves the raster in `kernel_path_band` over `signal_path_band` and
-    divides the result by a convolution of the kernerl over a non-nodata mask
+    divides the result by a convolution of the kernel over a non-nodata mask
     of the signal.
 
     Parameters:
