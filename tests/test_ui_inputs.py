@@ -683,9 +683,10 @@ class PathTest(TextTest):
         # NOTE: Mac OS's filesystem is UTF-8.
         input_instance = self.__class__.create_input(label='text')
 
+        text_path = u'/foo/bar/ДЖЩя'
         mime_data = QtCore.QMimeData()
         mime_data.setText(u'Hello world!ДЖЩя')
-        mime_data.setUrls([QtCore.QUrl(u'/foo/bar/ДЖЩя')])
+        mime_data.setUrls([QtCore.QUrl(text_path)])
 
         event = QtGui.QDropEvent(
             input_instance.textfield.pos(),
@@ -695,11 +696,16 @@ class PathTest(TextTest):
             QtCore.Qt.NoModifier)
 
         with mock.patch('platform.system', return_value='Darwin'):
-            with mock.patch('subprocess.Popen') as mock_method:
+            with mock.patch('subprocess.Popen') as mock_popen:
+                mock_process = mock.Mock()
+                mock_process.configure_mock(
+                    **{'communicate.return_value': [text_path]})
+                mock_popen.return_value = mock_process
+
                 input_instance.textfield.dropEvent(event)
 
-        self.assertTrue(mock_method.called)
-        self.assertTrue(mock_method.call_args[0][0].startswith('osascript'))
+        self.assertTrue(mock_popen.called)
+        self.assertTrue(mock_popen.call_args[0][0].startswith('osascript'))
         self.assertEqual(event.isAccepted(), True)
         self.assertEqual(input_instance.value(), u'/foo/bar/ДЖЩя')
 
