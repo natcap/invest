@@ -308,19 +308,11 @@ def execute(args):
         LOGGER.info(
             "Overriding landcover nesting substrates where a farm polygon is "
             "available.")
-        nesting_substrate_raster = gdal.Open(
-            f_reg[nesting_id], gdal.GA_Update)
-        farm_vector = ogr.Open(args['farm_vector_path'])
-        farm_layer = farm_vector.GetLayer()
-        gdal.RasterizeLayer(
-            nesting_substrate_raster, [1], farm_layer,
-            options=['ATTRIBUTE=%s' % (
+        pygeoprocessing.rasterize(
+            args['farm_vector_path'], f_reg[nesting_id],
+            None, ['ATTRIBUTE=%s' % (
                 _FARM_NESTING_SUBSTRATE_PATTERN.replace(
                     '([^_]+)', nesting_substrate))])
-        del farm_layer
-        del farm_vector
-        gdal.Dataset.__swig_destroy__(nesting_substrate_raster)
-        del nesting_substrate_raster
 
     nesting_substrate_path_list = [
         f_reg[substrate_to_header[nesting_substrate]['biophysical']]
