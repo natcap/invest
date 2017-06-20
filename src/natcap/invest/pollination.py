@@ -30,7 +30,7 @@ _INDEX_NODATA = -1.0
 
 _MANAGED_BEES_RASTER_FILE_PATTERN = r'managed_bees_%s'
 _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
-_ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessable_floral_resources_%s'
+_ACCESSIBLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessible_floral_resources_%s'
 _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
 _POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
 _RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN = r'raw_pollinator_abundance_%s_index'
@@ -451,10 +451,10 @@ def execute(args):
         utils.exponential_decay_kernel_raster(
             alpha, f_reg[species_file_kernel_id])
 
-        accessable_floral_resouces_id = (
-            _ACCESSABLE_FLORAL_RESOURCES_FILE_PATTERN % species_id)
-        f_reg[accessable_floral_resouces_id] = os.path.join(
-            intermediate_output_dir, accessable_floral_resouces_id +
+        accessible_floral_resouces_id = (
+            _ACCESSIBLE_FLORAL_RESOURCES_FILE_PATTERN % species_id)
+        f_reg[accessible_floral_resouces_id] = os.path.join(
+            intermediate_output_dir, accessible_floral_resouces_id +
             '%s.tif' % file_suffix)
         temp_file_set.add(f_reg[species_file_kernel_id])
         LOGGER.info(
@@ -462,7 +462,7 @@ def execute(args):
         _normalized_convolve_2d(
             (f_reg[local_floral_resource_availability_id], 1),
             (f_reg[species_file_kernel_id], 1),
-            f_reg[accessable_floral_resouces_id],
+            f_reg[accessible_floral_resouces_id],
             gdal.GDT_Float32, args['workspace_dir'])
         LOGGER.info("Calculating local pollinator supply for %s", species_id)
         pollinator_supply_id = (
@@ -475,21 +475,21 @@ def execute(args):
             _RELATIVE_POLLINATOR_ABUNDANCE_FIELD]
 
         def _pollinator_supply_op(
-                accessable_floral_resources, species_nesting_index):
+                accessible_floral_resources, species_nesting_index):
             """Supply is floral resources * nesting index * abundance."""
             result = numpy.empty(
-                accessable_floral_resources.shape, dtype=numpy.float32)
+                accessible_floral_resources.shape, dtype=numpy.float32)
             result[:] = _INDEX_NODATA
             valid_mask = (species_nesting_index != _INDEX_NODATA)
             result[valid_mask] = (
-                accessable_floral_resources[valid_mask] *
+                accessible_floral_resources[valid_mask] *
                 species_nesting_index[valid_mask] * species_abundance)
             return result
 
         species_nesting_suitability_id = (
             _NESTING_SUITABILITY_SPECIES_PATTERN % species_id)
         pygeoprocessing.raster_calculator(
-            [(f_reg[accessable_floral_resouces_id], 1),
+            [(f_reg[accessible_floral_resouces_id], 1),
              (f_reg[species_nesting_suitability_id], 1)],
             _pollinator_supply_op, f_reg[pollinator_supply_id],
             gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
