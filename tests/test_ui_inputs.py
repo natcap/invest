@@ -137,8 +137,6 @@ class InputTest(unittest.TestCase):
                 input_instance.value()
             except NotImplementedError:
                 input_instance.value = lambda: 'Value!'
-            if QT_APP.hasPendingEvents():
-                QT_APP.processEvents()
             input_instance.set_interactive(True)
 
         callback.assert_called_with(True)

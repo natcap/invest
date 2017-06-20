@@ -1289,9 +1289,9 @@ class Form(QtWidgets.QWidget):
                                           kwargs)
         self._thread.finished.connect(self._run_finished)
 
+        self.run_dialog.show()
         self.run_dialog.start(window_title=window_title,
                               out_folder=out_folder)
-        self.run_dialog.show()
         self._thread.start()
 
     def _run_finished(self):
