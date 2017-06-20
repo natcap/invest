@@ -487,7 +487,8 @@ class TextTest(GriddedInputTest):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
         input_instance.set_value('fooДЖЩя')
-        self.assertEqual(input_instance.value(), u'fooДЖЩя')
+        self.assertEqual(input_instance.value(),
+                         unicode('fooДЖЩя', 'utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_cyrillic_unicode(self):

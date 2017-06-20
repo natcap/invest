@@ -819,6 +819,10 @@ class Text(GriddedInput):
 
         if isinstance(value, int) or isinstance(value, float):
             value = str(value)
+
+        if isinstance(value, str):
+            # convert a bytestring into a UTF-8 string.
+            value = value.decode('utf-8')
         self.textfield.setText(value)
 
 
