@@ -382,21 +382,12 @@ def execute(args):
             _INDEX_NODATA)
 
         LOGGER.info(
-            "Overriding landcover floral resources where a farm polygon is "
-            "available.")
-        floral_resources_raster = gdal.Open(
-            f_reg[relative_floral_resources_id], gdal.GA_Update)
-        farm_vector = ogr.Open(args['farm_vector_path'])
-        farm_layer = farm_vector.GetLayer()
-        gdal.RasterizeLayer(
-            floral_resources_raster, [1], farm_layer,
-            options=['ATTRIBUTE=%s' % (
-                _FARM_FLORAL_RESOURCES_PATTERN.replace(
-                    '([^_]+)', season_id))])
-        del farm_layer
-        del farm_vector
-        gdal.Dataset.__swig_destroy__(floral_resources_raster)
-        del floral_resources_raster
+            "Overriding landcover floral resources with a farm's floral "
+            "resources.")
+        pygeoprocessing.rasterize(
+            args['farm_vector_path'], f_reg[relative_floral_resources_id],
+            None, ['ATTRIBUTE=%s' % (_FARM_FLORAL_RESOURCES_PATTERN.replace(
+                '([^_]+)', season_id))])
 
     floral_resources_path_list = [
         f_reg[season_to_header[season_id]['biophysical']]
