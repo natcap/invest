@@ -1540,8 +1540,9 @@ class OpenWorkspaceTest(unittest.TestCase):
         from natcap.invest.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Windows'):
-                open_workspace('/foo/bar')
-                method.assert_called_with('explorer "/foo/bar"')
+                with mock.patch('os.path.normpath', return_value='/foo\\bar'):
+                    open_workspace(os.path.join('/foo', 'bar'))
+                    method.assert_called_with('explorer "/foo\\bar"')
 
     def test_mac(self):
         from natcap.invest.ui.inputs import open_workspace
