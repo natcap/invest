@@ -91,10 +91,7 @@
                 "name": {
                   "inheritFrom": "file"
                 },
-                "type": "polygons",
-                "projection": {
-                  "exists": true
-                }
+                "type": "polygons"
               }
             ],
             "fieldsExist": [
