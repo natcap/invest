@@ -309,6 +309,11 @@ def execute(args):
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
+        # the regression model has identical mathematical equations for
+        # the nitrogen, phosporous, and potassium.  The only difference is
+        # the scalars in the equation.  So making a closure below to simplify
+        # this coding so I don't repeat the same function 3 times for 3
+        # almost identical raster_calculator calls.
         def _x_yield_op_gen(fert_rate):
             """Create a raster calc op given the fertlization rate."""
             def _x_yield_op(y_max, b_x, c_x, lulc_array):
