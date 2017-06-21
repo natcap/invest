@@ -6,9 +6,10 @@ import threading
 import logging
 import contextlib
 import sys
+import os
+
 import faulthandler
 faulthandler.enable()
-
 import sip
 sip.setapi('QString', 2)  # qtpy assumes api version 2
 import qtpy
@@ -40,28 +41,20 @@ def wait_on_signal(signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
     global QT_APP
     loop = QtCore.QEventLoop()
-
-    wait_on_signal.signal_called = False
-
-    def _set_signal_called(*args, **kwargs):
-        wait_on_signal.signal_called = True
-
-    signal.connect(_set_signal_called)
-    if timeout is not None:
-        QtCore.QTimer.singleShot(timeout, loop.quit)
     signal.connect(loop.quit)
 
     try:
         yield
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
-    except Exception:
+    except Exception as error:
         LOGGER.exception('Error encountered while witing for signal %s',
                          signal)
+        raise error
     finally:
+        if timeout is not None:
+            QtCore.QTimer.singleShot(timeout, loop.quit)
         loop.exec_()
-
-    wait_on_signal.signal_called = False
     loop = None
 
 
@@ -1259,13 +1252,15 @@ class FileDialogTest(unittest.TestCase):
         dialog = FileDialog()
         dialog.file_dialog.getSaveFileName = mock.MagicMock(
             spec=dialog.file_dialog.getSaveFileName,
-            return_value='/new/file')
+            return_value=os.path.join('/new','file'))
 
         out_file = dialog.save_file(title='foo', start_dir='/tmp',
                                     savefile='file.txt')
         self.assertEqual(
             dialog.file_dialog.getSaveFileName.call_args[0],  # pos. args
-            (dialog.file_dialog, 'foo', '/tmp/file.txt'))
+            (dialog.file_dialog, 'foo', os.path.join('/tmp', 'file.txt')))
+
+        self.assertEqual(out_file, os.path.join('/new', 'file'))
 
     def test_open_file_qt5(self):
         from natcap.invest.ui.inputs import FileDialog, DATA
@@ -1545,8 +1540,9 @@ class OpenWorkspaceTest(unittest.TestCase):
         from natcap.invest.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Windows'):
-                open_workspace('/foo/bar')
-                method.assert_called_with('explorer "/foo/bar"')
+                with mock.patch('os.path.normpath', return_value='/foo\\bar'):
+                    open_workspace(os.path.join('/foo', 'bar'))
+                    method.assert_called_with('explorer "/foo\\bar"')
 
     def test_mac(self):
         from natcap.invest.ui.inputs import open_workspace
@@ -1702,4 +1698,3 @@ class IntegrationTests(unittest.TestCase):
         self.assertTrue(container.expanded)
         self.assertTrue(contained_file.interactive)
         self.assertTrue(contained_file.visible())
-
