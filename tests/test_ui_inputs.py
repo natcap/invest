@@ -66,6 +66,10 @@ def wait_on_signal(signal, timeout=250):
 
 
 class InputTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     @staticmethod
     def create_input(*args, **kwargs):
         from natcap.invest.ui.inputs import Input
@@ -926,6 +930,10 @@ class DropdownTest(GriddedInputTest):
 
 
 class LabelTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_add_to_layout(self):
         from natcap.invest.ui.inputs import Label
 
@@ -1142,6 +1150,10 @@ class MultiTest(ContainerTest):
 
 
 class ValidationWorkerTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_run(self):
         from natcap.invest.ui.inputs import ValidationWorker
         _callable = mock.MagicMock(return_value=[])
@@ -1170,6 +1182,10 @@ class ValidationWorkerTest(unittest.TestCase):
 
 
 class FileButtonTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_button_clicked(self):
         from natcap.invest.ui.inputs import FileButton
         button = FileButton('Some title')
@@ -1192,6 +1208,10 @@ class FileButtonTest(unittest.TestCase):
 
 
 class FolderButtonTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_button_clicked(self):
         from natcap.invest.ui.inputs import FolderButton
         button = FolderButton('Some title')
@@ -1214,6 +1234,10 @@ class FolderButtonTest(unittest.TestCase):
 
 
 class FileDialogTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_save_file_title_and_last_selection(self):
         from natcap.invest.ui.inputs import FileDialog, DATA
         dialog = FileDialog()
@@ -1312,6 +1336,10 @@ class FileDialogTest(unittest.TestCase):
 
 
 class InfoButtonTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_buttonpress(self):
         from natcap.invest.ui.inputs import InfoButton
         button = InfoButton('some text')
@@ -1327,6 +1355,10 @@ class InfoButtonTest(unittest.TestCase):
 
 
 class FormTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     @staticmethod
     def validate(args, limit_to=None):
         return []
@@ -1505,6 +1537,10 @@ class FormTest(unittest.TestCase):
 
 
 class OpenWorkspaceTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_windows(self):
         from natcap.invest.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
@@ -1538,6 +1574,10 @@ class OpenWorkspaceTest(unittest.TestCase):
 
 
 class ExecutionTest(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_executor_run(self):
         from natcap.invest.ui.execution import Executor
 
@@ -1616,6 +1656,10 @@ class ExecutionTest(unittest.TestCase):
 
 
 class IntegrationTests(unittest.TestCase):
+    def tearDown(self):
+        """Wait for 50ms after each test; helps avoid segfaults."""
+        QTest.qWait(50)
+
     def test_checkbox_enables_collapsible_container(self):
         from natcap.invest.ui import inputs
         checkbox = inputs.Checkbox(label='Trigger')
