@@ -89,14 +89,14 @@ def execute(args):
                 * 'species': a bee species whose column string names will
                     be referred to in other tables and the model will output
                     analyses per species.
-                * any number of columns matching _NESTING_SUITABILITY_PATTERN
+                * one or more columns matching _NESTING_SUITABILITY_PATTERN
                     with values in the range [0.0, 1.0] indicating the
                     suitability of the given species to nest in a particular
                     substrate.
-                * any number of _FORAGING_ACTIVITY_PATTERN columns with values
-                    in the range [0.0, 1.0] indicating the relative level of
-                    foraging activity for that species during a particular
-                    season.
+                * one or more columns matching _FORAGING_ACTIVITY_PATTERN
+                    with values in the range [0.0, 1.0] indicating the
+                    relative level of foraging activity for that species
+                    during a particular season.
                 * 'alpha': the sigma average flight distance of that bee
                     species in meters.
                 * 'relative_abundance': a weight indicating the relative
@@ -133,12 +133,12 @@ def execute(args):
                 representing the proportion of yield dependant on pollinators.
             * p_managed (float): proportion of pollinators that come from
                 non-native/managed hives.
-            * f_[season] (float): any number of fields that match this pattern
+            * fr_[season] (float): one or more fields that match this pattern
                 such that `season` also matches the season headers in the
                 biophysical and guild table.  Any areas that overlap the
                 landcover map will replace seasonal floral resources with
                 this value.  Ranges from 0..1.
-            * n_[substrate] (float): any number of fields that match this
+            * n_[substrate] (float): One or more fields that match this
                 pattern such that `substrate` also matches the nesting
                 substrate headers in the biophysical and guild table.  Any
                 areas that overlap the landcover map will replace nesting
