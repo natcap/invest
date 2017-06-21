@@ -152,8 +152,9 @@ def execute(args):
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
         if not os.path.exists(crop_climate_bin_raster_path):
             raise ValueError(
-                "Expected climate bin map called %s for crop %s "
-                "specified in %s", crop_climate_bin_raster_path, crop_name,
+                "Expected climate bin raster called %s for crop %s "
+                "because it specified in %s, but instead that file was not "
+                "found", crop_climate_bin_raster_path, crop_name,
                 args['landcover_to_crop_table_path'])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
