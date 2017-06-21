@@ -126,11 +126,13 @@ def execute(args):
             following fields:
 
             * season (string): season in which the farm needs pollination
+            * crop_type (string): a text field to identify the crop type for
+                summary statistics.
             * half_sat (float): a real in the range [0.0, 1.0] representing
                 the proportion of wild pollinators to achieve a 50% yield
                 of that crop.
-            * p_wild_dep (float): a number in the range [0.0, 1.0]
-                representing the proportion of yield dependant on pollinators.
+            * p_dep (float): a number in the range [0.0, 1.0]
+                representing the proportion of yield dependent on pollinators.
             * p_managed (float): proportion of pollinators that come from
                 non-native/managed hives.
             * fr_[season] (float): one or more fields that match this pattern
@@ -714,12 +716,12 @@ def execute(args):
         fid = feature.GetField(farm_fid_field)
         pollinator_dependence = feature.GetField(
             _CROP_POLLINATOR_DEPENDENCE_FIELD)
-        pollinator_dependant_yield = float(
+        pollinator_dependent_yield = float(
             farm_stats[fid]['sum'] / farm_stats[fid]['count'] *
             pollinator_dependence)
         feature.SetField(
-            _POLLINATOR_FARM_YIELD_FIELD_ID, pollinator_dependant_yield)
-        total_yield = (1 - pollinator_dependence) + pollinator_dependant_yield
+            _POLLINATOR_FARM_YIELD_FIELD_ID, pollinator_dependent_yield)
+        total_yield = (1 - pollinator_dependence) + pollinator_dependent_yield
         feature.SetField(
             _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
         farm_layer.SetFeature(feature)
