@@ -1395,8 +1395,6 @@ class FormTest(unittest.TestCase):
             form.run(target='str does not have a __call__()')
 
     def test_open_workspace_on_success(self):
-        thread_event = threading.Event()
-
         class _SampleTarget(object):
             @staticmethod
             def validate(args, limit_to=None):
@@ -1404,8 +1402,7 @@ class FormTest(unittest.TestCase):
 
             @staticmethod
             def execute(args):
-                global thread_event
-                thread_event.wait()
+                pass
 
         form = FormTest.make_ui()
         target = _SampleTarget().execute
@@ -1423,7 +1420,9 @@ class FormTest(unittest.TestCase):
                 form.run_dialog.openWorkspaceCB.setChecked(True)
                 self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-                thread_event.set()
+        global QT_APP
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
 
         # close the window by pressing the back button.
         QTest.mouseClick(form.run_dialog.backButton,
@@ -1467,7 +1466,6 @@ class FormTest(unittest.TestCase):
 
             @staticmethod
             def execute(args):
-                global thread_event
                 thread_event.wait()
 
         form = FormTest.make_ui()
@@ -1478,6 +1476,8 @@ class FormTest(unittest.TestCase):
                 QT_APP.processEvents()
             self.assertTrue(form.run_dialog.isVisible())
             form.run_dialog.close()
+            if QT_APP.hasPendingEvents():
+                QT_APP.processEvents()
             self.assertTrue(form.run_dialog.isVisible())
 
             # when the execute function finishes, pressing escape should
