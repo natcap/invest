@@ -6,7 +6,7 @@ import logging
 
 from osgeo import gdal
 
-from pygeoprocessing import geoprocessing
+from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing
 import scenic_quality_cython_core
 
 

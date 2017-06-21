@@ -6,9 +6,9 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 
-import pygeoprocessing
-import pygeoprocessing.routing
-import pygeoprocessing.routing.routing_core
+import natcap.invest.pygeoprocessing_0_3_3
+import natcap.invest.pygeoprocessing_0_3_3.routing
+import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
 from .. import utils
 import ndr_core
@@ -164,7 +164,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
-    pygeoprocessing.create_directories(
+    natcap.invest.pygeoprocessing_0_3_3.create_directories(
         [output_dir, intermediate_output_dir])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
@@ -178,32 +178,32 @@ def execute(args):
     for nutrient_id in ['n', 'p']:
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
-    lucode_to_parameters = pygeoprocessing.get_lookup_from_csv(
+    lucode_to_parameters = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
         args['biophysical_table_path'], 'lucode')
 
     _validate_inputs(nutrients_to_process, lucode_to_parameters)
-    dem_pixel_size = pygeoprocessing.get_cell_size_from_uri(
+    dem_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         args['dem_path'])
 
     # Align all the input rasters
-    pygeoprocessing.align_dataset_list(
+    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
         [args['dem_path']], [f_reg['aligned_dem_path']], ['nearest'],
         dem_pixel_size, 'intersection', dataset_to_align_index=0,
         aoi_uri=args['watersheds_path'])
 
     # Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
-    pygeoprocessing.routing.flow_direction_d_inf(
+    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
         f_reg['aligned_dem_path'], f_reg['flow_direction_path'])
-    pygeoprocessing.routing.flow_accumulation(
+    natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
         f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
         f_reg['flow_accumulation_path'])
 
     # Calculate slope
     LOGGER.info("Calculating slope")
-    pygeoprocessing.calculate_slope(
+    natcap.invest.pygeoprocessing_0_3_3.calculate_slope(
         f_reg['aligned_dem_path'], f_reg['slope_path'])
-    slope_nodata = pygeoprocessing.get_nodata_from_uri(
+    slope_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         f_reg['slope_path'])
 
     def threshold_slope(slope):
@@ -217,30 +217,33 @@ def execute(args):
         result[valid_mask] = slope_fraction
         return result
 
-    pygeoprocessing.vectorize_datasets(
+    LOGGER.info("Thresholding slope")
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [f_reg['slope_path']], threshold_slope,
         f_reg['thresholded_slope_path'], gdal.GDT_Float32, slope_nodata,
         dem_pixel_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
-    dem_pixel_size = pygeoprocessing.get_cell_size_from_uri(
+    dem_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         args['dem_path'])
     # pixel size is m, so square and divide by 10000 to get cell size in Ha
     cell_area_ha = dem_pixel_size ** 2 / 10000.0
     out_pixel_size = dem_pixel_size
 
     # align all the input rasters
-    pygeoprocessing.align_dataset_list(
+    LOGGER.info("Aligning rasters")
+    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
         [args['dem_path'], args['lulc_path'], args['runoff_proxy_path']],
         [f_reg['aligned_dem_path'], f_reg['aligned_lulc_path'],
          f_reg['aligned_runoff_proxy_path']], ['nearest'] * 3, out_pixel_size,
         'dataset', dataset_to_align_index=0, dataset_to_bound_index=0,
         aoi_uri=args['watersheds_path'])
 
-    runoff_proxy_mean = pygeoprocessing.aggregate_raster_values_uri(
+    LOGGER.info("Aggregating runoff proxy to watersheds")
+    runoff_proxy_mean = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
         f_reg['aligned_runoff_proxy_path'],
         args['watersheds_path']).pixel_mean[9999]
-    runoff_proxy_nodata = pygeoprocessing.get_nodata_from_uri(
+    runoff_proxy_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         f_reg['aligned_runoff_proxy_path'])
 
     def normalize_runoff_proxy_op(val):
@@ -251,22 +254,23 @@ def execute(args):
         result[valid_mask] = val[valid_mask] / runoff_proxy_mean
         return result
 
-    pygeoprocessing.vectorize_datasets(
+    LOGGER.info("Nromalizing runoff proxy")
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [f_reg['aligned_runoff_proxy_path']], normalize_runoff_proxy_op,
         f_reg['runoff_proxy_index_path'], gdal.GDT_Float32,
         runoff_proxy_nodata, out_pixel_size, "intersection",
         vectorize_op=False)
 
-    nodata_landuse = pygeoprocessing.get_nodata_from_uri(
+    nodata_landuse = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         f_reg['aligned_lulc_path'])
     nodata_load = -1.0
 
     # classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    pygeoprocessing.routing.stream_threshold(
+    natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
         f_reg['flow_accumulation_path'],
         float(args['threshold_flow_accumulation']), f_reg['stream_path'])
-    nodata_stream = pygeoprocessing.get_nodata_from_uri(
+    nodata_stream = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         f_reg['stream_path'])
 
     def map_load_function(load_type, subsurface_proportion_type=None):
@@ -375,7 +379,8 @@ def execute(args):
             subsurface_proportion_type = 'proportion_subsurface_n'
         else:
             subsurface_proportion_type = None
-        pygeoprocessing.vectorize_datasets(
+        LOGGER.info("Mapping %s load to LULC", nutrient)
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [f_reg['aligned_lulc_path']], map_load_function(
                 'load_%s' % nutrient, subsurface_proportion_type),
             load_path, gdal.GDT_Float32, nodata_load, out_pixel_size,
@@ -392,26 +397,28 @@ def execute(args):
                 load[valid_mask] * runoff_proxy_index[valid_mask])
             return result
 
-        pygeoprocessing.vectorize_datasets(
+        LOGGER.info("Calculating runoff proxy for %s", nutrient)
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [load_path, f_reg['runoff_proxy_index_path']], modified_load,
             modified_load_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
         sub_load_path = f_reg['sub_load_%s_path' % nutrient]
         modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
-        pygeoprocessing.vectorize_datasets(
+        LOGGER.info("Mapping %s subsurface load to LULC", nutrient)
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [f_reg['aligned_lulc_path']], map_subsurface_load_function(
                 'load_%s' % nutrient, subsurface_proportion_type),
             sub_load_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [sub_load_path, f_reg['runoff_proxy_index_path']], modified_load,
             modified_sub_load_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
         sub_eff_path = f_reg['sub_eff_%s_path' % nutrient]
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [f_reg['aligned_lulc_path']], map_const_value(
                 args['subsurface_eff_%s' % nutrient], nodata_load),
             sub_eff_path, gdal.GDT_Float32, nodata_load,
@@ -419,20 +426,20 @@ def execute(args):
             "intersection", vectorize_op=False)
 
         sub_crit_len_path = f_reg['sub_crit_len_%s_path' % nutrient]
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [f_reg['aligned_lulc_path']], map_const_value(
                 args['subsurface_critical_length_%s' % nutrient], nodata_load),
             sub_crit_len_path, gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection", vectorize_op=False)
 
         eff_path = f_reg['eff_%s_path' % nutrient]
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [f_reg['aligned_lulc_path'], f_reg['stream_path']],
             map_eff_function('eff_%s' % nutrient), eff_path, gdal.GDT_Float32,
             nodata_load, out_pixel_size, "intersection", vectorize_op=False)
 
         crit_len_path = f_reg['crit_len_%s_path' % nutrient]
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [f_reg['aligned_lulc_path'], f_reg['stream_path']],
             map_eff_function('crit_len_%s' % nutrient), crit_len_path,
             gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection",
@@ -451,20 +458,20 @@ def execute(args):
     output_layer = output_datasource.GetLayer()
 
     # need this for low level route_flux function
-    pygeoprocessing.make_constant_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.make_constant_raster_from_base_uri(
         f_reg['aligned_dem_path'], 0.0, f_reg['zero_absorption_source_path'])
 
     flow_accumulation_nodata = (
-        pygeoprocessing.get_nodata_from_uri(f_reg['flow_accumulation_path']))
+        natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(f_reg['flow_accumulation_path']))
 
     LOGGER.info("calculating %s", f_reg['s_accumulation_path'])
-    pygeoprocessing.routing.route_flux(
+    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
         f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
         f_reg['thresholded_slope_path'], f_reg['zero_absorption_source_path'],
         f_reg['loss_path'], f_reg['s_accumulation_path'], 'flux_only',
         aoi_uri=args['watersheds_path'])
 
-    s_bar_nodata = pygeoprocessing.get_nodata_from_uri(
+    s_bar_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         f_reg['s_accumulation_path'])
     LOGGER.info("calculating %s", f_reg['s_bar_path'])
 
@@ -479,7 +486,7 @@ def execute(args):
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])
         return result
 
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [f_reg['s_accumulation_path'], f_reg['flow_accumulation_path']],
         bar_op, f_reg['s_bar_path'], gdal.GDT_Float32, s_bar_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
@@ -501,14 +508,14 @@ def execute(args):
                 flow_accumulation[valid_mask] * cell_area))
         return result
 
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [f_reg['s_bar_path'], f_reg['flow_accumulation_path']], d_up,
         f_reg['d_up_path'], gdal.GDT_Float32, d_up_nodata, out_pixel_size,
         "intersection", dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info('calculate inverse S factor')
     s_nodata = -1.0
-    slope_nodata = pygeoprocessing.get_nodata_from_uri(
+    slope_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         f_reg['thresholded_slope_path'])
 
     def s_inverse_op(s_factor):
@@ -518,21 +525,21 @@ def execute(args):
         result[valid_mask] = 1.0 / s_factor[valid_mask]
         return result
 
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [f_reg['thresholded_slope_path']], s_inverse_op,
         f_reg['s_factor_inverse_path'], gdal.GDT_Float32, s_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         vectorize_op=False)
 
     LOGGER.info('calculating d_dn')
-    pygeoprocessing.routing.distance_to_stream(
+    natcap.invest.pygeoprocessing_0_3_3.routing.distance_to_stream(
         f_reg['flow_direction_path'], f_reg['stream_path'], f_reg['d_dn_path'],
         factor_uri=f_reg['s_factor_inverse_path'])
 
     LOGGER.info('calculate ic')
     ic_nodata = -9999.0
-    d_up_nodata = pygeoprocessing.get_nodata_from_uri(f_reg['d_up_path'])
-    d_dn_nodata = pygeoprocessing.get_nodata_from_uri(f_reg['d_dn_path'])
+    d_up_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(f_reg['d_up_path'])
+    d_dn_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(f_reg['d_dn_path'])
 
     def ic_op(d_up, d_dn):
         """Calculate IC0."""
@@ -544,13 +551,13 @@ def execute(args):
         result[valid_mask] = numpy.log10(d_up[valid_mask] / d_dn[valid_mask])
         return result
 
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [f_reg['d_up_path'], f_reg['d_dn_path']], ic_op,
         f_reg['ic_factor_path'], gdal.GDT_Float32, ic_nodata, out_pixel_size,
         "intersection", dataset_to_align_index=0, vectorize_op=False)
 
     ic_min, ic_max, _, _ = (
-        pygeoprocessing.get_statistics_from_uri(f_reg['ic_factor_path']))
+        natcap.invest.pygeoprocessing_0_3_3.get_statistics_from_uri(f_reg['ic_factor_path']))
     ic_0_param = (ic_min + ic_max) / 2.0
     k_param = float(args['k_param'])
 
@@ -572,7 +579,7 @@ def execute(args):
             f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
             crit_len_path, effective_retention_path)
         effective_retention_nodata = (
-            pygeoprocessing.get_nodata_from_uri(
+            natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
                 effective_retention_path))
         LOGGER.info('calculate NDR')
         ndr_path = f_reg['ndr_%s_path' % nutrient]
@@ -591,7 +598,7 @@ def execute(args):
                     (ic_0_param - ic_array[valid_mask]) / k_param)))
             return result
 
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [effective_retention_path, f_reg['ic_factor_path']],
             calculate_ndr, ndr_path, gdal.GDT_Float32, ndr_nodata,
             out_pixel_size, 'intersection', vectorize_op=False)
@@ -603,7 +610,7 @@ def execute(args):
             f_reg['flow_direction_path'], f_reg['stream_path'], sub_eff_path,
             sub_crit_len_path, sub_effective_retention_path)
         sub_effective_retention_nodata = (
-            pygeoprocessing.get_nodata_from_uri(
+            natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
                 sub_effective_retention_path))
         LOGGER.info('calculate sub NDR')
         sub_ndr_path = f_reg['sub_ndr_%s_path' % nutrient]
@@ -619,14 +626,14 @@ def execute(args):
             result[valid_mask] = (1.0 - sub_eff_ret_array[valid_mask])
             return result
 
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [sub_effective_retention_path], calculate_sub_ndr, sub_ndr_path,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
 
         export_path = f_reg['%s_export_path' % nutrient]
 
-        load_nodata = pygeoprocessing.get_nodata_from_uri(
+        load_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
             load_path)
         export_nodata = -1.0
 
@@ -649,7 +656,7 @@ def execute(args):
 
         modified_load_path = f_reg['modified_load_%s_path' % nutrient]
         modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [modified_load_path, ndr_path,
              modified_sub_load_path, sub_ndr_path], calculate_export,
             export_path, gdal.GDT_Float32, export_nodata,
@@ -658,9 +665,9 @@ def execute(args):
         # summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s", nutrient)
         load_path = f_reg['load_%s_path' % nutrient]
-        load_tot = pygeoprocessing.aggregate_raster_values_uri(
+        load_tot = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
             load_path, args['watersheds_path'], 'ws_id').total
-        export_tot = pygeoprocessing.aggregate_raster_values_uri(
+        export_tot = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
             export_path, args['watersheds_path'], 'ws_id').total
 
         field_summaries['%s_load_tot' % nutrient] = load_tot

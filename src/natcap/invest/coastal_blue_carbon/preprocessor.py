@@ -8,9 +8,9 @@ import ast
 import copy
 
 from osgeo import gdal
-import pygeoprocessing.geoprocessing as geoprocess
-from pygeoprocessing.geoprocessing import get_lookup_from_table
-from pygeoprocessing import create_directories
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
+from natcap.invest.pygeoprocessing_0_3_3.geoprocessing import get_lookup_from_table
+from natcap.invest.pygeoprocessing_0_3_3 import create_directories
 
 from .. import utils as invest_utils
 

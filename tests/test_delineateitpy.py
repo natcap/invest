@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 
 SAMPLE_DATA = os.path.join(
@@ -37,9 +37,9 @@ class DelineateItTests(unittest.TestCase):
 
         args = {
             'dem_uri': os.path.join(SAMPLE_DATA, 'dem'),
-            'flow_threshold': '1000',
+            'flow_threshold': '500',
             'outlet_shapefile_uri': os.path.join(SAMPLE_DATA, 'outlets.shp'),
-            'snap_distance': '10',
+            'snap_distance': '20',
             'workspace_dir': self.workspace_dir,
         }
         natcap.invest.routing.delineateit.execute(args)
@@ -47,7 +47,7 @@ class DelineateItTests(unittest.TestCase):
         DelineateItTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'watersheds.shp'),
             os.path.join(self.workspace_dir, 'watersheds.shp'), 1e-6)
 

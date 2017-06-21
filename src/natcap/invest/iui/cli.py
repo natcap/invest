@@ -1,6 +1,7 @@
 """
 Single entry point for all InVEST applications.
 """
+from __future__ import absolute_import
 
 import argparse
 import glob
@@ -144,7 +145,8 @@ def main():
                          help='Run in headless mode with default args.')
     parser.add_argument('model', nargs='?', help=(
         'The model/tool to run. Use --list to show available models/tools. '
-        'Identifiable model prefixes may also be used.'))
+        'Identifiable model prefixes may also be used. Alternatively, specify '
+        '"launcher" as the model name to reveal a model launcher window.'))
 
     args = parser.parse_args()
     user_config = load_config()
@@ -154,7 +156,19 @@ def main():
         return 0
 
     # args.model is '' or None when the user provided no input.
-    if args.model in ['', None]:
+    if args.model == 'launcher':
+        try:
+            from . import launcher
+        except (ImportError, ValueError):
+            # ImportError when launcher can't be found
+            # ValueError when attempting a relative import from a non-package.
+            try:
+                import launcher
+            except ImportError:
+                # ImportError when in pyinstaller build.
+                from natcap.invest.iui import launcher
+        launcher.main()
+    elif args.model in ['', None]:
         parser.print_help()
         print ''
         print_models()

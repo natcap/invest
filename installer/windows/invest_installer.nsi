@@ -63,7 +63,6 @@
 ;           Pollination.zip
 ;           Base_Data.zip
 ;           <other zipfiles, as desired, downloaded from our website>
-
 !include nsProcess.nsh
 !include LogicLib.nsh
 ; HM NIS Edit Wizard helper defines
@@ -147,6 +146,7 @@ Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile ${INSTALLER_NAME}
 InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
 ShowInstDetails show
+RequestExecutionLevel admin
 
 ; This function allows us to test to see if a process is currently running.
 ; If the process name passed in is actually found, a message box is presented
@@ -357,15 +357,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   ; Actually install the information we want to disk.
   SetOutPath "$INSTDIR"
   File ..\..\LICENSE.txt
-  File ..\..\src\invest-natcap.default\*.tbx
   File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
   file ..\..\HISTORY.rst
-
-  SetOutPath "$INSTDIR\invest_helper_utils\"
-  File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\utils\*
-
-  SetOutPath "$INSTDIR\python\"
-  File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\python\*
 
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
   File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*

@@ -4,13 +4,14 @@ import os
 import math
 import struct
 import logging
+import contextlib
 from decimal import Decimal
 
 import numpy as np
 import scipy as sp
 from osgeo import gdal, ogr
 
-import pygeoprocessing.geoprocessing as geoprocess
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 from .. import utils as invest_utils
 
 LOGGER = logging.getLogger(
@@ -527,6 +528,26 @@ def filter_fragments(input_uri, size, output_uri):
     dst_band.WriteArray(dst_array)
 
 
+@contextlib.contextmanager
+def manage_numpy_randomstate(seed):
+    """Set a seed for ``numpy.random`` and reset it on exit.
+
+    Parameters:
+        seed (int or None): The seed to set via ``numpy.random.seed``.  If
+            ``none``, the numpy random number generator will be un-set.
+
+    Returns:
+        ``None``
+
+    Yields:
+        ``None``
+    """
+    seed_state = np.random.get_state()
+    np.random.seed(seed)
+    yield
+    np.random.set_state(seed_state)
+
+
 def execute(args):
     """Scenario Generator: Rule-Based.
 
@@ -562,6 +583,8 @@ def execute(args):
         override (str): path to override shapefile
         override_field (str): shapefile field containing override value
         override_inclusion (int): the rasterization method
+        seed (int or None): a number to use as the randomization seed.
+            If not provided, ``None`` is assumed.
 
     Example Args::
 
@@ -606,6 +629,14 @@ def execute(args):
 
     """
     LOGGER.info("Starting Scenario Generator model run...")
+
+    try:
+        args['seed'] = int(args['seed'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when seed not in args.
+        # ValueError when args['seed'] == '' (when UI input is empty).
+        # TypeError when args['seed'] == None
+        args['seed'] = None
 
     # SHOULD BE INPUT AND VALIDATION FUNCTIONS
     LOGGER.info("Fetching and validating inputs...")
@@ -1405,7 +1436,8 @@ def execute(args):
             patch_locations = sp.ndimage.find_objects(label_im, nb_labels)
 
             # randomize patch order
-            np.random.shuffle(patch_labels)
+            with manage_numpy_randomstate(args['seed']):
+                np.random.shuffle(patch_labels)
 
             # check patches for conversion
             patch_label_count = patch_labels.size

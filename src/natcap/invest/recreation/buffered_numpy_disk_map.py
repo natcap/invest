@@ -8,7 +8,7 @@ import logging
 import sqlite3
 
 import numpy
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 
 
 LOGGER = logging.getLogger(
@@ -41,7 +41,7 @@ class BufferedNumpyDiskMap(object):
         """
         self.manager_filename = manager_filename
         self.manager_directory = os.path.dirname(manager_filename)
-        pygeoprocessing.create_directories([self.manager_directory])
+        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.manager_directory])
         db_connection = sqlite3.connect(
             manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
