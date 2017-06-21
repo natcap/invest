@@ -36,8 +36,8 @@ _POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
 _RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN = r'raw_pollinator_abundance_%s_index'
 _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
     r'local_floral_resource_availability_%s_index')
-
 _NESTING_SUITABILITY_SPECIES_PATTERN = r'nesting_suitability_%s_index'
+_PROJECTED_FARM_VECTOR_FILE_PATTERN = 'projected_farm_vector%s.shp'
 
 # These patterns are expected in the biophysical table
 _NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
@@ -285,6 +285,14 @@ def execute(args):
                 farm_season_set.difference(season_to_header),
                 season_to_header))
 
+    # ensure the farm vector is in the same projection as the landcover map
+    projected_farm_vector_path = os.path.join(
+        intermediate_output_dir,
+        _PROJECTED_FARM_VECTOR_FILE_PATTERN % file_suffix)
+    pygeoprocessing.reproject_vector(
+        args['farm_vector_path'], lulc_raster_info['projection'],
+        projected_farm_vector_path)
+
     season_to_rasterize_id = [
         (season, season_id) for season_id, season in enumerate(
             sorted(farm_season_set))]
@@ -309,7 +317,7 @@ def execute(args):
             "Overriding landcover nesting substrates where a farm polygon is "
             "available.")
         pygeoprocessing.rasterize(
-            args['farm_vector_path'], f_reg[nesting_id],
+            projected_farm_vector_path, f_reg[nesting_id],
             None, ['ATTRIBUTE=%s' % (
                 _FARM_NESTING_SUBSTRATE_PATTERN.replace(
                     '([^_]+)', nesting_substrate))])
@@ -377,7 +385,7 @@ def execute(args):
             "Overriding landcover floral resources with a farm's floral "
             "resources.")
         pygeoprocessing.rasterize(
-            args['farm_vector_path'], f_reg[relative_floral_resources_id],
+            projected_farm_vector_path, f_reg[relative_floral_resources_id],
             None, ['ATTRIBUTE=%s' % (_FARM_FLORAL_RESOURCES_PATTERN.replace(
                 '([^_]+)', season_id))])
 
@@ -526,7 +534,8 @@ def execute(args):
     # colliding with an existing field name are so astronomical we aren't
     # going to test if that happens.
     farm_fid_field = str(uuid.uuid4())[-8:-1]
-    _add_fid_field(args['farm_vector_path'], target_farm_path, farm_fid_field)
+    _add_fid_field(
+        projected_farm_vector_path, target_farm_path, farm_fid_field)
 
     wild_pollinator_activity = None
     foraging_activity_index = None
