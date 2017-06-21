@@ -6,9 +6,10 @@ import threading
 import logging
 import contextlib
 import sys
+import os
+
 import faulthandler
 faulthandler.enable()
-
 import sip
 sip.setapi('QString', 2)  # qtpy assumes api version 2
 import qtpy
@@ -1251,13 +1252,15 @@ class FileDialogTest(unittest.TestCase):
         dialog = FileDialog()
         dialog.file_dialog.getSaveFileName = mock.MagicMock(
             spec=dialog.file_dialog.getSaveFileName,
-            return_value='/new/file')
+            return_value=os.path.join('/new','file'))
 
         out_file = dialog.save_file(title='foo', start_dir='/tmp',
                                     savefile='file.txt')
         self.assertEqual(
             dialog.file_dialog.getSaveFileName.call_args[0],  # pos. args
-            (dialog.file_dialog, 'foo', '/tmp/file.txt'))
+            (dialog.file_dialog, 'foo', os.path.join('/tmp', 'file.txt')))
+
+        self.assertEqual(out_file, os.path.join('/new', 'file'))
 
     def test_open_file_qt5(self):
         from natcap.invest.ui.inputs import FileDialog, DATA
