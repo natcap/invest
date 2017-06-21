@@ -1,6 +1,6 @@
 {
     "data/invest-data": "142",
-    "data/invest-test-data": "118",
+    "data/invest-test-data": "122",
     "doc/users-guide": "f9e5ddf1b141",
     "src/pygeoprocessing": "REQUIREMENTS_TXT:pygeoprocessing",
     "src/pyinstaller": {
