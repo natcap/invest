@@ -4,6 +4,7 @@
 
 Unreleased Changes
 ------------------
+* Redesign/refactor of pollination model. Long term bugs in the model are resolved, managed pollinators added, and many simplifications to the end user's experience.  The updated user's guide chapter is available here: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/croppollination.html
 * Scenario Generator - Rule Based now has an optional input to define a seed.
   This input is used to seed the random shuffling of parcels that have equal
   priorities.

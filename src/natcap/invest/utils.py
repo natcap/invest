@@ -1,11 +1,15 @@
 """InVEST specific code utils."""
 import math
 import os
+import logging
+import csv
 
 import numpy
 from osgeo import gdal
 from osgeo import osr
 import natcap.invest.pygeoprocessing_0_3_3
+
+LOGGER = logging.getLogger('natcap.invest.utils')
 
 
 def make_suffix_string(args, suffix_key):
@@ -190,3 +194,91 @@ def build_file_registry(base_file_path_list, file_suffix):
                 duplicate_keys, duplicate_paths))
 
     return f_reg
+
+
+def _attempt_float(value):
+    """Attempt to cast `value` to a float.  If fail, return original value."""
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
+
+def build_lookup_from_csv(
+        table_path, key_field, to_lower=True, numerical_cast=True):
+    """Read a CSV table into a dictionary indexed by `key_field`.
+
+    Creates a dictionary from a CSV whose keys are unique entries in the CSV
+    table under the column named by `key_field` and values are dictionaries
+    indexed by the other columns in `table_path` including `key_field` whose
+    values are the values on that row of the CSV table.
+
+    Parameters:
+        table_path (string): path to a CSV file containing at
+            least the header key_field
+        key_field: (string): a column in the CSV file at `table_path` that
+            can uniquely identify each row in the table.  If `numerical_cast`
+            is true the values will be cast to floats/ints/unicode if
+            possible.
+        to_lower (string): if True, converts all unicode in the CSV,
+            including headers and values to lowercase, otherwise uses raw
+            string values.
+        numerical_cast (bool): If true, all values in the CSV table will
+            attempt to be cast to a floating point type; if it fails will be
+            left as unicode.  If false, all values will be considered raw
+            unicode.
+
+    Returns:
+        lookup_dict (dict): a dictionary of the form {
+                key_field_0: {csv_header_0: value0, csv_header_1: value1...},
+                key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}
+            }
+
+        if `to_lower` all strings including key_fields and values are
+        converted to lowercase unicde.  if `numerical_cast` all values
+        that can be represented as floats are, otherwise unicode.
+    """
+    with open(table_path) as table_file:
+        reader = csv.reader(table_file)
+        header_row = reader.next()
+        header_row = [unicode(x) for x in header_row]
+        key_field = unicode(key_field)
+        if to_lower:
+            key_field = key_field.lower()
+            header_row = [x.lower() for x in header_row]
+        if key_field not in header_row:
+            raise ValueError(
+                '%s expected in %s for the CSV file at %s' % (
+                    key_field, header_row, table_path))
+        if '' in header_row:
+            LOGGER.warn(
+                "There are empty strings in the header row at %s", table_path)
+        key_index = header_row.index(key_field)
+        lookup_dict = {}
+        for row in reader:
+            if to_lower:
+                row = [x.lower() for x in row]
+            if numerical_cast:
+                row = [_attempt_float(x) for x in row]
+            if '' in row:
+                LOGGER.warn(
+                    "There are empty strings in row %s in %s", row,
+                    table_path)
+            lookup_dict[row[key_index]] = dict(zip(header_row, row))
+        return lookup_dict
+
+
+def make_directories(directory_list):
+    """Create directories in `directory_list` if they do not already exist."""
+    if not isinstance(directory_list, list):
+        raise ValueError(
+            "Expected `directory_list` to be an instance of `list` instead "
+            "got type %s instead", type(directory_list))
+
+    for path in directory_list:
+        # From http://stackoverflow.com/a/14364249/42897
+        try:
+            os.makedirs(path)
+        except OSError:
+            if not os.path.isdir(path):
+                raise
