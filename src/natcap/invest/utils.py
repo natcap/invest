@@ -11,6 +11,8 @@ import pygeoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.utils')
 
+LOGGER = logging.getLogger('natcap.invest.utils')
+
 
 def make_suffix_string(args, suffix_key):
     """Make an InVEST appropriate suffix string.

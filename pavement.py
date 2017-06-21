@@ -3440,7 +3440,7 @@ def test(args):
             # If the user gave us some test names to run, run those instead!
             tests = parsed_args.nose_args
 
-        sh(('nosetests -vs {jenkins_opts} {tests}').format(
+        sh(('nosetests -vsP {jenkins_opts} {tests}').format(
                 jenkins_opts=jenkins_flags,
                 tests=' '.join(tests)
             ))

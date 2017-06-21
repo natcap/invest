@@ -43,6 +43,7 @@ kwargs = {
         'natcap.versioner',
         'natcap.versioner.version',
         'natcap.invest.version',
+        'natcap.invest.iui.launcher',
         'yaml',
         'distutils',
         'distutils.dist',
