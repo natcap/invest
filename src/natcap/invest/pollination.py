@@ -521,21 +521,12 @@ def execute(args):
     target_farm_path = os.path.join(
         output_dir, '%s%s.shp' % (
             _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN, file_suffix))
-    uuid_fail_count = 0
-    while True:
-        if uuid_fail_count > 10:
-            raise Exception(
-                "Unable to find a find field randomly that wasn't already "
-                "defined.  That's a big deal.  Send this log to someone!")
-        farm_fid_field = str(uuid.uuid4())[-8:-1]
-        try:
-            _add_fid_field(
-                args['farm_vector_path'], target_farm_path, farm_fid_field)
-            break
-        except ValueError:
-            LOGGER.info(
-                "%s field already defined in %s, trying a different one")
-            uuid_fail_count += 1
+
+    # make a random string to use as an FID field.  The chances of this
+    # colliding with an existing field name are so astronomical we aren't
+    # going to test if that happens.
+    farm_fid_field = str(uuid.uuid4())[-8:-1]
+    _add_fid_field(args['farm_vector_path'], target_farm_path, farm_fid_field)
 
     wild_pollinator_activity = None
     foraging_activity_index = None
