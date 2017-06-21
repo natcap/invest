@@ -40,28 +40,20 @@ def wait_on_signal(signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
     global QT_APP
     loop = QtCore.QEventLoop()
-
-    wait_on_signal.signal_called = False
-
-    def _set_signal_called(*args, **kwargs):
-        wait_on_signal.signal_called = True
-
-    signal.connect(_set_signal_called)
-    if timeout is not None:
-        QtCore.QTimer.singleShot(timeout, loop.quit)
     signal.connect(loop.quit)
 
     try:
         yield
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
-    except Exception:
+    except Exception as error:
         LOGGER.exception('Error encountered while witing for signal %s',
                          signal)
+        raise error
     finally:
+        if timeout is not None:
+            QtCore.QTimer.singleShot(timeout, loop.quit)
         loop.exec_()
-
-    wait_on_signal.signal_called = False
     loop = None
 
 
@@ -1702,4 +1694,3 @@ class IntegrationTests(unittest.TestCase):
         self.assertTrue(container.expanded)
         self.assertTrue(contained_file.interactive)
         self.assertTrue(contained_file.visible())
-
