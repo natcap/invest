@@ -5,11 +5,7 @@ import sys
 import logging
 
 import pkg_resources
-<<<<<<< working copy
-=======
 import natcap.invest.pygeoprocessing_0_3_3
-import pygeoprocessing
->>>>>>> merge rev
 import natcap.versioner
 import pygeoprocessing
 

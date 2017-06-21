@@ -232,7 +232,7 @@ def execute(args):
             pygeoprocessing.reclassify_raster(
                 (clipped_climate_bin_raster_path, 1), bin_to_percentile_yield,
                 coarse_yield_percentile_raster_path, gdal.GDT_Float32,
-                _NODATA_YIELD, exception_flag='values_required')
+                _NODATA_YIELD)
 
             LOGGER.info(
                 "Interpolate %s %s yield raster to landcover resolution.",

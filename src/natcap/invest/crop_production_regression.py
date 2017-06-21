@@ -296,7 +296,7 @@ def execute(args):
             pygeoprocessing.reclassify_raster(
                 (clipped_climate_bin_raster_path, 1), bin_to_regression_value,
                 coarse_regression_parameter_raster_path, gdal.GDT_Float32,
-                _NODATA_YIELD, exception_flag='values_required')
+                _NODATA_YIELD)
 
             LOGGER.info(
                 "Interpolate %s %s parameter to landcover resolution.",
