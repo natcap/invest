@@ -58,11 +58,19 @@ def wait_on_signal(signal, timeout=250):
     loop = None
 
 
-class InputTest(unittest.TestCase):
+class _QtTest(unittest.TestCase):
     def tearDown(self):
         """Wait for 50ms after each test; helps avoid segfaults."""
+        # Found this through programming my coincidence, but it appear to avoid
+        # the segfaulting issue on all the computers I've tried it on.
+        # I'd prefer to find the root problem of the segfault, but I'm OK with
+        # this because these segfaults only happen when I'm running the suite of
+        # unittests.  If something segfaults in the normal operation of
+        # the model, I will absolutely fix that.
         QTest.qWait(50)
 
+
+class InputTest(_QtTest):
     @staticmethod
     def create_input(*args, **kwargs):
         from natcap.invest.ui.inputs import Input
@@ -922,11 +930,7 @@ class DropdownTest(GriddedInputTest):
         pass
 
 
-class LabelTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class LabelTest(_QtTest):
     def test_add_to_layout(self):
         from natcap.invest.ui.inputs import Label
 
@@ -1142,11 +1146,7 @@ class MultiTest(ContainerTest):
         pass
 
 
-class ValidationWorkerTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class ValidationWorkerTest(_QtTest):
     def test_run(self):
         from natcap.invest.ui.inputs import ValidationWorker
         _callable = mock.MagicMock(return_value=[])
@@ -1174,11 +1174,7 @@ class ValidationWorkerTest(unittest.TestCase):
         self.assertEqual(worker.error, "'missing'")
 
 
-class FileButtonTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class FileButtonTest(_QtTest):
     def test_button_clicked(self):
         from natcap.invest.ui.inputs import FileButton
         button = FileButton('Some title')
@@ -1200,11 +1196,7 @@ class FileButtonTest(unittest.TestCase):
         self.assertEqual(button.dialog_title, 'Some title')
 
 
-class FolderButtonTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class FolderButtonTest(_QtTest):
     def test_button_clicked(self):
         from natcap.invest.ui.inputs import FolderButton
         button = FolderButton('Some title')
@@ -1226,11 +1218,7 @@ class FolderButtonTest(unittest.TestCase):
         self.assertEqual(button.dialog_title, 'Some title')
 
 
-class FileDialogTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class FileDialogTest(_QtTest):
     def test_save_file_title_and_last_selection(self):
         from natcap.invest.ui.inputs import FileDialog, DATA
         dialog = FileDialog()
@@ -1330,11 +1318,7 @@ class FileDialogTest(unittest.TestCase):
         self.assertEqual(DATA['last_dir'], '/existing/folder')
 
 
-class InfoButtonTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class InfoButtonTest(_QtTest):
     def test_buttonpress(self):
         from natcap.invest.ui.inputs import InfoButton
         button = InfoButton('some text')
@@ -1349,11 +1333,7 @@ class InfoButtonTest(unittest.TestCase):
             QTest.mouseClick(button, QtCore.Qt.LeftButton)
 
 
-class FormTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class FormTest(_QtTest):
     @staticmethod
     def validate(args, limit_to=None):
         return []
@@ -1531,11 +1511,7 @@ class FormTest(unittest.TestCase):
         form.add_input(text_input)
 
 
-class OpenWorkspaceTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class OpenWorkspaceTest(_QtTest):
     def test_windows(self):
         from natcap.invest.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
@@ -1569,11 +1545,7 @@ class OpenWorkspaceTest(unittest.TestCase):
                 patch.assert_called_once()
 
 
-class ExecutionTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class ExecutionTest(_QtTest):
     def test_executor_run(self):
         from natcap.invest.ui.execution import Executor
 
@@ -1651,11 +1623,7 @@ class ExecutionTest(unittest.TestCase):
         self.assertTrue(isinstance(executor.traceback, basestring))
 
 
-class IntegrationTests(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        QTest.qWait(50)
-
+class IntegrationTests(_QtTest):
     def test_checkbox_enables_collapsible_container(self):
         from natcap.invest.ui import inputs
         checkbox = inputs.Checkbox(label='Trigger')
