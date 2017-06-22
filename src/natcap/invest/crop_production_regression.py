@@ -162,6 +162,8 @@ def execute(args):
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
             * climate_percentile_yield (contains
               [cropname]_percentile_yield_table.csv files)
+            Please see the InVEST user's guide chapter on crop production for
+            details about how to download these data.
 
     Returns:
         None.
