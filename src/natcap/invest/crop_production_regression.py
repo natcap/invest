@@ -152,10 +152,10 @@ def execute(args):
         args['aggregate_polygon_path'] (string): path to polygon shapefile
             that will be used to aggregate crop yields and total nutrient
             value. (optional, if value is None, then skipped)
-        args['aggregate_polygon_id'] (string): if
-            args['aggregate_polygon_path'] is provided, then this value is a
-            id field in that vector that will be used to index the final
-            aggregate results.
+        args['aggregate_polygon_id'] (string): This is the id field in
+            args['aggregate_polygon_path'] to be used to index the final
+            aggregate results.  If args['aggregate_polygon_path'] is not
+            provided, this value is ignored.
         args['model_data_path'] (string): path to the InVEST Crop Production
             global data directory.  This model expects that the following
             directories are subdirectories of this path
