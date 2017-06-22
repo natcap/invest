@@ -481,14 +481,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
     !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 0
-
-    ; Custom download for the Crop Production Global Datasets.
-    Section "Crop Production Global Datasets (Required for Crop Production)"
-        AddSize "138000"
-        SetOutPath "$INSTDIR\CropProduction"
-        !insertmacro downloadFile "http://data.naturalcapitalproject.org/invest_crop_production/global_dataset_20151210.zip" "crop_data.zip"
-        SetOutPath "$INSTDIR"
-    SectionEnd
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
     !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
