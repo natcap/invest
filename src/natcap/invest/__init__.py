@@ -8,6 +8,7 @@ import pkg_resources
 import natcap.invest.pygeoprocessing_0_3_3
 import pygeoprocessing
 import natcap.versioner
+import pygeoprocessing
 
 
 LOGGER = logging.getLogger('natcap.invest')

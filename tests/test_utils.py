@@ -6,8 +6,8 @@ import shutil
 import logging
 import threading
 
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
-import natcap.invest.pygeoprocessing_0_3_3.testing
+from pygeoprocessing.testing import scm
+import pygeoprocessing.testing
 
 
 class SuffixUtilsTests(unittest.TestCase):
@@ -191,7 +191,7 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
             expected_distance, kernel_filepath)
         shutil.copyfile(kernel_filepath, 'kernel.tif')
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+        pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(
                 ExponentialDecayUtilsTests._REGRESSION_PATH,
                 'kernel_100.tif'), kernel_filepath, abs_tol=1e-6)
