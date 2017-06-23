@@ -94,7 +94,7 @@ _MODEL_UIS = {
         gui='overlap_analysis.OverlapAnalysisMZ',
         aliases=('oa_mz',)),
     'pollination': _UIMETA(
-        pyname='natcap.invest.pollination.pollination',
+        pyname='natcap.invest.pollination',
         gui='pollination.Pollination',
         aliases=()),
     'recreation': _UIMETA(

@@ -847,3 +847,7 @@ def _add_fid_field(base_vector_path, target_vector_path, fid_id):
     target_layer = None
     target_vector.SyncToDisk()
     target_vector = None
+
+
+def validate(args, limit_to=None):
+    return []

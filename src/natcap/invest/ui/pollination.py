@@ -2,106 +2,119 @@ from __future__ import absolute_import
 import logging
 
 from . import inputs
-from .model import Model
-from ..pollination import pollination
+from . import model
+from .. import pollination
 
 LOGGER = logging.getLogger(__name__)
-_validate = lambda args, limit_to: []
 
 
-class Pollination(Model):
-    label = pollination.LABEL
+class Pollination(model.Model):
+    label = u'Crop Pollination'
     target = staticmethod(pollination.execute)
-    validator = staticmethod(_validate)
-    localdoc = 'croppollination.html'
+    validator = staticmethod(pollination.validate)
+    localdoc = u'../documentation/croppollination.html'
 
     def __init__(self):
-        Model.__init__(self)
+        model.Model.__init__(self)
 
-        self.landcover_container = inputs.Container(label='Land Use / Land Cover')
-        self.add_input(self.landcover_container)
-        self.cur_lulc_raster = inputs.File(
-            args_key=u'landuse_cur_uri',
-            helptext=u'A GDAL-supported vector file.',
-            label=u'Current Land Cover Scenario (Raster)',
-            required=True)
-        self.landcover_container.add_input(self.cur_lulc_raster)
-        self.landcover_attribute_table = inputs.File(
-            args_key=u'landuse_attributes_uri',
-            helptext=u'A CSV table of land-cover attributes.',
-            label=u'Land Cover Attributes Table (CSV)',
-            required=True)
-        self.landcover_container.add_input(self.landcover_attribute_table)
-        self.fut_lulc_raster = inputs.File(
-            args_key=u'landuse_fut_uri',
-            helptext=(u'Optional. An GDAL-supported raster file representing '
-                      u'a future land-cover scenario.<br/><br/>Providing a '
-                      u'future land-cover scenario will cause pollinator '
-                      u'supply and abundance to be calculated for both the '
-                      u'current and future scenarios.  The future scenario '
-                      u'land cover raster should use the same land cover '
-                      u'attribute table as the current land cover raster.'),
-            hideable=True,
-            label=u'Calculate Future Scenario (Raster)',
-            required=False)
-        self.landcover_container.add_input(self.fut_lulc_raster)
-        self.valuation_container = inputs.Container(
-            args_key='do_valuation',
-            expandable=True,
-            label='Valuation Options(enable to trigger valuation)')
-        self.add_input(self.valuation_container)
-        self.half_saturation_const = inputs.Text(
-            args_key=u'half_saturation',
-            helptext=(u'This should be a number between 0 and 1.  It '
-                      u'represents the abundance of pollinators required to '
-                      u'reach 50% of pollinator-dependent yield.'),
-            label=u'Half-saturation constant',
-            required=True)
-        self.valuation_container.add_input(self.half_saturation_const)
-        self.wild_pollination_proportion = inputs.Text(
-            args_key=u'wild_pollination_proportion',
-            helptext=(u'This should be a number between 0 and 1.  It '
-                      u'represents the proportion of all crop yield '
-                      u'attributed to wild pollinators on this landscape.'),
-            label=u'Proportion of Total Yield Due to Wild Pollinators',
-            required=True)
-        self.valuation_container.add_input(self.wild_pollination_proportion)
-        self.guilds = inputs.File(
-            args_key=u'guilds_uri',
-            helptext=(u"A CSV table containing information specific to the "
-                      u"various pollinators to be modeled.  Please see the "
-                      u"documentation for details on the structure of this "
-                      u"table.<br/><br/><b>Optional:</b><br/>If aggregating "
-                      u"by crops, the table should contain fields matching "
-                      u"'crp_*', where the value is either 1 or 0."),
-            label=u'Guilds Table (CSV)',
-            required=True)
-        self.add_input(self.guilds)
-        self.ag_classes = inputs.Text(
-            args_key=u'ag_classes',
-            helptext=(u'A space-separated list of agricultural land-cover '
-                      u'classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>'
-                      u'This input is optional.  If agricultural classes are '
-                      u'not provided here, the entire land-cover raster will '
-                      u'be considered as agricultural.'),
-            label=u'Agricultural Classes (space-separated)',
-            required=False)
-        self.add_input(self.ag_classes)
+        self.landcover_raster_path = inputs.File(
+            args_key=u'landcover_raster_path',
+            helptext=(
+                u"This is the landcover map that's used to map "
+                u"biophyiscal properties about habitat and floral "
+                u"resources of landcover types to a spatial layout."),
+            label=u'Land Cover Map (Raster)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.landcover_raster_path)
+        self.landcover_biophysical_table_path = inputs.File(
+            args_key=u'landcover_biophysical_table_path',
+            helptext=(
+                u"A CSV table mapping landcover codes in the landcover "
+                u"raster to indexes of nesting availability for each "
+                u"nesting substrate referenced in guilds table as well "
+                u"as indexes of abundance of floral resources on that "
+                u"landcover type per season in the bee activity columns "
+                u"of the guild table.<br/>All indexes are in the range "
+                u"[0.0, 1.0].<br/>Columns in the table must be at "
+                u"least<br/>* 'lucode': representing all the unique "
+                u"landcover codes in the raster st "
+                u"`args['landcover_path']`<br/>* For every nesting "
+                u"matching _NESTING_SUITABILITY_PATTERN in the guild "
+                u"stable, a column matching the pattern in "
+                u"`_LANDCOVER_NESTING_INDEX_HEADER`.<br/>* For every "
+                u"season matching _FORAGING_ACTIVITY_PATTERN in the "
+                u"guilds table, a column matching the pattern in "
+                u"`_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`."),
+            label=u'Land Cover Biophysical Table (CSV)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.landcover_biophysical_table_path)
+        self.guild_table_path = inputs.File(
+            args_key=u'guild_table_path',
+            helptext=(
+                u"A table indicating the bee species to analyze in "
+                u"this model run.  Table headers must include:<br/>* "
+                u"'species': a bee species whose column string names "
+                u"will be referred to in other tables and the model "
+                u"will output analyses per species.<br/> * any number "
+                u"of columns matching _NESTING_SUITABILITY_PATTERN with "
+                u"values in the range [0.0, 1.0] indicating the "
+                u"suitability of the given species to nest in a "
+                u"particular substrate.<br/>* any number of "
+                u"_FORAGING_ACTIVITY_PATTERN columns with values in the "
+                u"range [0.0, 1.0] indicating the relative level of "
+                u"foraging activity for that species during a "
+                u"particular season.<br/>* 'alpha': the sigma average "
+                u"flight distance of that bee species in meters.<br/>* "
+                u"'relative_abundance': a weight indicating the "
+                u"relative abundance of the particular species with "
+                u"respect to the sum of all relative abundance weights "
+                u"in the table."),
+            label=u'Guild Table (CSV)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.guild_table_path)
+        self.farm_vector_path = inputs.File(
+            args_key=u'farm_vector_path',
+            helptext=(
+                u"This is a layer of polygons representing farm sites "
+                u"to be analyzed.  The shapefile must have at least the "
+                u"following fields:<br/><br/>* season (string): season "
+                u"in which the farm needs pollination.<br/>* half_sat "
+                u"(float): a real in the range [0.0, 1.0] representing "
+                u"the proportion of wild pollinators to achieve a 50% "
+                u"yield of that crop.<br/>* p_wild_dep (float): a "
+                u"number in the range [0.0, 1.0] representing the "
+                u"proportion of yield dependent on pollinators.<br/>* "
+                u"p_managed (float): proportion of pollinators that "
+                u"come from non-native/managed hives.<br/>* f_[season] "
+                u"(float): any number of fields that match this pattern "
+                u"such that `season` also matches the season headers in "
+                u"the biophysical and guild table.  Any areas that "
+                u"overlap the landcover map will replace seasonal "
+                u"floral resources with this value.  Ranges from "
+                u"0..1.<br/>* n_[substrate] (float): any number of "
+                u"fields that match this pattern such that `substrate` "
+                u"also matches the nesting substrate headers in the "
+                u"biophysical and guild table.  Any areas that overlap "
+                u"the landcover map will replace nesting substrate "
+                u"suitability with this value.  Ranges from 0..1."),
+            label=u'Farm Vector (Vector)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.farm_vector_path)
 
     def assemble_args(self):
-        return {
+        args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.cur_lulc_raster.args_key: self.cur_lulc_raster.value(),
-            self.landcover_attribute_table.args_key: (
-                self.landcover_attribute_table.value()),
-            self.fut_lulc_raster.args_key: self.fut_lulc_raster.value(),
-            self.valuation_container.args_key: (
-                self.valuation_container.value()),
-            self.half_saturation_const.args_key: (
-                self.half_saturation_const.value()),
-            self.wild_pollination_proportion.args_key: (
-                self.wild_pollination_proportion.value()),
-            self.guilds.args_key: self.guilds.value(),
-            self.ag_classes.args_key: self.ag_classes.value(),
+            self.landcover_raster_path.args_key:
+                self.landcover_raster_path.value(),
+            self.landcover_biophysical_table_path.args_key:
+                self.landcover_biophysical_table_path.value(),
+            self.guild_table_path.args_key: self.guild_table_path.value(),
+            self.farm_vector_path.args_key: self.farm_vector_path.value(),
         }
+
+        return args
