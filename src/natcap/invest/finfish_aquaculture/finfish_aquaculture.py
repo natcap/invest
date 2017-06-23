@@ -97,7 +97,7 @@ def execute(args):
 
     if args['use_uncertainty']:
         LOGGER.debug('Adding uncertainty parameters')
-        ff_aqua_args = int(args['num_monte_carlo_runs'])
+        ff_aqua_args['num_monte_carlo_runs'] = int(args['num_monte_carlo_runs'])
         for key in ['g_param_a_sd', 'g_param_b_sd']:
             ff_aqua_args[key] = float(args[key])
 
