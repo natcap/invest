@@ -52,17 +52,62 @@ def try_cast(value, target_type):
 
 
 class WindowTitle(QtCore.QObject):
+    """Object to manage the title string for a model window.
+
+    The title string is dependent on several characteristics:
+
+        * The name of the model currently being run.
+        * The filename (basename) of the current scenario file
+        * Whether the scenario has been modified from the time it was last
+            saved.
+
+    The window's title is updated based on the state of three attributes.
+    These attributes may be initialized by using the parameters to
+    ``__init__()``, or by updating the appropriate attribute after object
+    creation:
+
+    When any attributes are changed, this object emits the ``title_changed``
+    signal with the new title string.
+
+    Attributes:
+        modelname (string or None): If a string, this is assumed to be the
+            name of the model.  If ``None``, the string ``"InVEST"`` is
+            assumed in the window title.
+        filename (string or None): If a string, the filename to be displayed
+            to the user in the title bar.  No manipulations are performed on
+            this filename; it will be used verbatim.  If ``None``,
+            ``"Scenario1"`` is assumed.
+        modified (bool): Whether the scenario file has been modified.  If so,
+            a ``'*'`` is displayed next to the scenario filename.
+    """
 
     title_changed = QtCore.Signal(unicode)
     format_string = "{modelname}: {filename}{modified}"
 
     def __init__(self, modelname=None, filename=None, modified=False):
+        """Initialize the WindowTitle.
+
+        Parameters:
+            modelname (string or None): The modelname to use.
+            filename (string or None): The filename to use.
+            modified (bool): Whether the scenario file has been modified.
+        """
         QtCore.QObject.__init__(self)
         self.modelname = modelname
         self.filename = filename
         self.modified = modified
 
     def __setattr__(self, name, value):
+        """Attribute setter.
+
+        Set the given attribute and emit the ``title_changed`` signal with
+        the new window title if the rendered title is different from the
+        previous title.
+
+        Parameters:
+            name (string): the name of the attribute to set.
+            value: The new value for the attribute.
+        """
         LOGGER.info('__setattr__: %s, %s', name, value)
         old_attr = getattr(self, name, 'None')
         QtCore.QObject.__setattr__(self, name, value)
@@ -72,6 +117,10 @@ class WindowTitle(QtCore.QObject):
             self.title_changed.emit(new_value)
 
     def __repr__(self):
+        """Produce a string representation of the window title.
+
+        Returns:
+            The string wundow title."""
         try:
             return self.format_string.format(
                 modelname=self.modelname if self.modelname else 'InVEST',
