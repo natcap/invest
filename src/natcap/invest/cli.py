@@ -494,6 +494,8 @@ def main():
             model_form.workspace.set_value(args.workspace)
 
         exitcode = model_form.run(quickrun=args.quickrun)
+        exitcode = inputs.QT_APP.exec_()
+
         if exitcode != 0:
             parser.exit(exitcode,
                         'Model terminated with exit code %s' % exitcode)

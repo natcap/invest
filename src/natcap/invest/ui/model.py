@@ -682,9 +682,6 @@ class Model(QtWidgets.QMainWindow):
         self.show()
         self.raise_()  # raise window to top of stack.
 
-        global QT_APP
-        return QT_APP.exec_()
-
     def closeEvent(self, event):
         dialog = QtWidgets.QMessageBox()
         dialog.setWindowFlags(QtCore.Qt.Dialog)
