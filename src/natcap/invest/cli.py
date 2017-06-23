@@ -230,7 +230,7 @@ class ListModelsAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string):
         setattr(namespace, self.dest, self.const)
-        parser.exit(message='\n'.join(format_models()))
+        parser.exit(message='\n'.join(format_models()) + '\n')
 
 
 class SelectModelAction(argparse.Action):
