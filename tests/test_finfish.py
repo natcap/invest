@@ -192,7 +192,9 @@ class FinfishTests(unittest.TestCase):
         missing_files = []
         with open(base_list_path, 'r') as file_list:
             for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
+                full_path = os.path.join(
+                    directory_path,
+                    file_path.rstrip().replace('\\', os.path.sep))
                 if full_path == '':
                     continue
                 if not os.path.isfile(full_path):
