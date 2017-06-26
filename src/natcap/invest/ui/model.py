@@ -289,7 +289,7 @@ def _prompt_for_scenario_archive_extraction(archive_path):
     container.add_input(extraction_point)
 
     buttonbox = QtWidgets.QDialogButtonBox()
-    ok_button = QtWidgets.QPushButton(' Continue')
+    ok_button = QtWidgets.QPushButton(' Extract')
     ok_button.setIcon(inputs.ICON_ENTER)
     ok_button.pressed.connect(dialog.accept)
     buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
@@ -305,8 +305,10 @@ def _prompt_for_scenario_archive_extraction(archive_path):
     result = dialog.exec_()
 
     if result == QtWidgets.QDialog.Accepted:
-        return scenarios.extract_scenario_archive(
-            archive_path, extraction_point.value())
+        extract_to_dir = extraction_point.value()
+        args = scenarios.extract_scenario_archive(
+            archive_path, extract_to_dir)
+        return (args, extract_to_dir)
 
 
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
@@ -609,9 +611,11 @@ class Model(QtWidgets.QMainWindow):
         LOGGER.info('Loading scenario from %s', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
             # Where should the tarfile be extracted to?
-            args = _prompt_for_scenario_archive_extraction(scenario_path)
+            args, extract_dir = _prompt_for_scenario_archive_extraction(
+                scenario_path)
             if args is None:
                 return
+            window_title_filename = os.path.basename(extract_dir)
         else:
             try:
                 paramset = scenarios.read_parameter_set(scenario_path)
@@ -619,11 +623,12 @@ class Model(QtWidgets.QMainWindow):
             except ValueError:
                 # when a JSON object cannot be decoded, assume it's a logfile.
                 args = scenarios.read_parameters_from_logfile(scenario_path)
+            window_title_filename = os.path.basename(scenario_path)
+
         self.load_args(args)
+        self.window_title.filename = window_title_filename
         self.status_bar.showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
-
-        self.window_title.filename = os.path.basename(scenario_path)
 
     def load_args(self, scenario_args):
         _inputs = dict((attr.args_key, attr) for attr in
