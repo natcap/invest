@@ -37,10 +37,14 @@ _MODEL_UIS = {
         pyname='natcap.invest.coastal_vulnerability.coastal_vulnerability',
         gui='cv.CoastalVulnerability',
         aliases=('cv',)),
+    'crop_production_percentile': _UIMETA(
+        pyname='natcap.invest.crop_production_percentile',
+        gui='crop_production.CropProductionPercentile',
+        aliases=('cpp',)),
     'crop_production': _UIMETA(
-        pyname='natcap.invest.crop_production.crop_production',
-        gui='crop_production.CropProduction',
-        aliases=('cp',)),
+        pyname='natcap.invest.crop_production_regression',
+        gui='crop_production.CropProductionRegression',
+        aliases=('cpr',)),
     'delineateit': _UIMETA(
         pyname='natcap.invest.routing.delineateit',
         gui='routing.Delineateit',

@@ -1,158 +1,226 @@
 # coding=UTF-8
-
 from natcap.invest.ui import model, inputs
-from natcap.invest.crop_production import crop_production
+
+import natcap.invest.crop_production_percentile
+import natcap.invest.crop_production_regression
 
 
-class CropProduction(model.Model):
-    label = u'Crop Production'
-    target = staticmethod(crop_production.execute)
-    validator = staticmethod(crop_production.validate)
+class CropProductionPercentile(model.Model):
+    label = u'Crop Production Percentile Model'
+    target = staticmethod(natcap.invest.crop_production_percentile.execute)
+    validator = staticmethod(natcap.invest.crop_production_percentile.validate)
     localdoc = u'../documentation/crop_production.html'
 
     def __init__(self):
         model.Model.__init__(self)
 
-        self.lookup_table = inputs.File(
-            args_key=u'lookup_table',
+        self.model_data_path = inputs.Folder(
+            args_key=u'model_data_path',
             helptext=(
-                u"The table should contain three columns: a 'name' "
-                u"column, a 'code' column, and an 'is_crop' column."),
-            label=u'Lookup Table (CSV)',
+                u"A path to the InVEST Crop Production Data directory. "
+                u"These data would have been included with the InVEST "
+                u"installer if selected, or can be manually downloaded "
+                u"from http://data.naturalcapitalproject.org/invest- "
+                u"data/.  If downloaded with InVEST, the default value "
+                u"should be used.</b>"),
+            label=u'Directory to model data',
             required=True,
             validator=self.validator)
-        self.add_input(self.lookup_table)
-        self.aoi_raster = inputs.File(
-            args_key=u'aoi_raster',
+        self.add_input(self.model_data_path)
+        self.landcover_raster_path = inputs.File(
+            args_key=u'landcover_raster_path',
             helptext=(
-                u'A GDAL-supported raster representing a crop management '
-                u'scenario.'),
-            label=u'Crop Management Scenario Map (Raster)',
+                u"A raster file, representing integer land use/land "
+                u"code covers for each cell."),
+            label=u'Land-Use/Land-Cover Map (raster)',
             required=True,
             validator=self.validator)
-        self.add_input(self.aoi_raster)
-        self.dataset_dir = inputs.Folder(
-            args_key=u'dataset_dir',
+        self.add_input(self.landcover_raster_path)
+        self.landcover_to_crop_table_path = inputs.File(
+            args_key=u'landcover_to_crop_table_path',
             helptext=(
-                u"The provided folder should contain a set of folders "
-                u"and data specified in the 'Running the Model' section "
-                u"of the model's User Guide."),
-            label=u'Global Dataset Folder',
+                u"A CSV table mapping canonical crop names to land use "
+                u"codes contained in the landcover/use raster.   The "
+                u"allowed crop names are abaca, agave, alfalfa, almond, "
+                u"aniseetc, apple, apricot, areca, artichoke, "
+                u"asparagus, avocado, bambara, banana, barley, bean, "
+                u"beetfor, berrynes, blueberry, brazil, broadbean, "
+                u"buckwheat, cabbage, cabbagefor, canaryseed, carob, "
+                u"carrot, carrotfor, cashew, cashewapple, cassava, "
+                u"castor, cauliflower, cerealnes, cherry, chestnut, "
+                u"chickpea, chicory, chilleetc, cinnamon, citrusnes, "
+                u"clove, clover, cocoa, coconut, coffee, cotton, "
+                u"cowpea, cranberry, cucumberetc, currant, date, "
+                u"eggplant, fibrenes, fig, flax, fonio, fornes, "
+                u"fruitnes, garlic, ginger, gooseberry, grape, "
+                u"grapefruitetc, grassnes, greenbean, greenbroadbean, "
+                u"greencorn, greenonion, greenpea, groundnut, hazelnut, "
+                u"hemp, hempseed, hop, jute, jutelikefiber, kapokfiber, "
+                u"kapokseed, karite, kiwi, kolanut, legumenes, "
+                u"lemonlime, lentil, lettuce, linseed, lupin, maize, "
+                u"maizefor, mango, mate, melonetc, melonseed, millet, "
+                u"mixedgrain, mixedgrass, mushroom, mustard, nutmeg, "
+                u"nutnes, oats, oilpalm, oilseedfor, oilseednes, okra, "
+                u"olive, onion, orange, papaya, pea, peachetc, pear, "
+                u"pepper, peppermint, persimmon, pigeonpea, pimento, "
+                u"pineapple, pistachio, plantain, plum, poppy, potato, "
+                u"pulsenes, pumpkinetc, pyrethrum, quince, quinoa, "
+                u"ramie, rapeseed, rasberry, rice, rootnes, rubber, "
+                u"rye, ryefor, safflower, sesame, sisal, sorghum, "
+                u"sorghumfor, sourcherry, soybean, spicenes, spinach, "
+                u"stonefruitnes, strawberry, stringbean, sugarbeet, "
+                u"sugarcane, sugarnes, sunflower, swedefor, "
+                u"sweetpotato, tangetc, taro, tea, tobacco, tomato, "
+                u"triticale, tropicalnes, tung, turnipfor, vanilla, "
+                u"vegetablenes, vegfor, vetch,walnut, watermelon, "
+                u"wheat, yam, and yautia."),
+            label=u'Landcover to Crop Table (csv)',
             required=True,
             validator=self.validator)
-        self.add_input(self.dataset_dir)
-        self.yield_function = inputs.Dropdown(
-            args_key=u'yield_function',
-            helptext=u'Determines how yield is estimated in the model.',
-            label=u'Yield Function',
-            options=[u'observed', u'percentile', u'regression'])
-        self.add_input(self.yield_function)
-        self.percentile_column = inputs.Text(
-            args_key=u'percentile_column',
+        self.add_input(self.landcover_to_crop_table_path)
+        self.aggregate_polygon_path = inputs.File(
+            args_key=u'aggregate_polygon_path',
             helptext=(
-                u"Required for Percentile Yield Function.  This input "
-                u"is used to select the column of yield values from the "
-                u"tables in the climate_percentile_yield folder of the "
-                u"global dataset."),
-            interactive=False,
-            label=u'If Percentile Yield: Percentile Column',
+                u"A polygon shapefile to aggregate/summarize final "
+                u"results.  It is fine to have overlapping polygons. "
+                u"The attribute table must contain a keyfield for "
+                u"identifying polygons, be sure to indicate the name of "
+                u"this field in the Aggregate Polygon ID Field below."),
+            label=u'Aggregate results polygon (vector) (optional)',
             required=False,
             validator=self.validator)
-        self.add_input(self.percentile_column)
-        self.fertilizer_dir = inputs.Folder(
-            args_key=u'fertilizer_dir',
+        self.add_input(self.aggregate_polygon_path)
+        self.aggregate_polygon_id = inputs.Text(
+            args_key=u'aggregate_polygon_id',
             helptext=(
-                u"Required for Regression Yield Function.  The folder "
-                u"should contain three rasters: 'nitrogen.tif', "
-                u"'potash.tif', and 'phosphorus.tif' representing the "
-                u"kilograms of fertilizer applied per hectare to each "
-                u"cell.  Please see the model's User Guide for more "
-                u"details."),
+                u"If an aggregate polygon is provided, this field is "
+                u"used to indicate the key field of that polygon for "
+                u"aggregation.  The aggregate table produced by this "
+                u"model will index the results by this field value."),
             interactive=False,
-            label=u'If Regression Yield: Fertilizer Raster Folder',
-            required=False,
-            validator=self.validator)
-        self.add_input(self.fertilizer_dir)
-        self.irrigation_raster = inputs.File(
-            args_key=u'irrigation_raster',
-            helptext=(
-                u"Required for Regression Yield Function.  The raster "
-                u"should contain 1s for cells that are irrigated and 0s "
-                u"for cells that are rainfed.  Please see the model's "
-                u"User Guide for more details."),
-            interactive=False,
-            label=u'If Regression Yield: Irrigation Map (Raster)',
-            required=False,
-            validator=self.validator)
-        self.add_input(self.irrigation_raster)
-        self.compute_nutritional_contents = inputs.Checkbox(
-            args_key=u'compute_nutritional_contents',
-            helptext=(
-                u"If yes, a table of nutrient contents is generated "
-                u"based on total yield of each crop and data provided "
-                u"in table below."),
-            label=u'Compute Nutrient Contents')
-        self.add_input(self.compute_nutritional_contents)
-        self.nutrient_table = inputs.File(
-            args_key=u'nutrient_table',
-            helptext=(
-                u"A table containing data related to the nutrient "
-                u"contents of each crop by weight.  Please see the "
-                u"model's User Guide for more details."),
-            interactive=False,
-            label=u'Crop Nutrient Information (CSV)',
+            label=u'Aggregate polygon ID field',
             required=True,
             validator=self.validator)
-        self.add_input(self.nutrient_table)
-        self.compute_financial_analysis = inputs.Checkbox(
-            args_key=u'compute_financial_analysis',
-            helptext=(
-                u"If yes, a financial analysis table is generated "
-                u"based on total yield of each crop, fertilizer "
-                u"application rates, and data provided in table below."),
-            label=u'Compute Financial Analysis')
-        self.add_input(self.compute_financial_analysis)
-        self.economics_table = inputs.File(
-            args_key=u'economics_table',
-            helptext=(
-                u"A table containing data related to price and costs "
-                u"associated with each crop.  Please see the model's "
-                u"User Guide for more details."),
-            interactive=False,
-            label=u'Crop Economic Information (CSV)',
-            required=True,
-            validator=self.validator)
-        self.add_input(self.economics_table)
+        self.add_input(self.aggregate_polygon_id)
 
         # Set interactivity, requirement as input sufficiency changes
-        self.yield_function.sufficiency_changed.connect(
-            self.percentile_column.set_interactive)
-        self.yield_function.sufficiency_changed.connect(
-            self.fertilizer_dir.set_interactive)
-        self.yield_function.sufficiency_changed.connect(
-            self.irrigation_raster.set_interactive)
-        self.compute_nutritional_contents.sufficiency_changed.connect(
-            self.nutrient_table.set_interactive)
-        self.compute_financial_analysis.sufficiency_changed.connect(
-            self.economics_table.set_interactive)
+        self.aggregate_polygon_path.sufficiency_changed.connect(
+            self.aggregate_polygon_id.set_interactive)
 
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.lookup_table.args_key: self.lookup_table.value(),
-            self.aoi_raster.args_key: self.aoi_raster.value(),
-            self.dataset_dir.args_key: self.dataset_dir.value(),
-            self.yield_function.args_key: self.yield_function.value(),
-            self.percentile_column.args_key: self.percentile_column.value(),
-            self.fertilizer_dir.args_key: self.fertilizer_dir.value(),
-            self.irrigation_raster.args_key: self.irrigation_raster.value(),
-            self.compute_nutritional_contents.args_key: (
-                self.compute_nutritional_contents.value()),
-            self.nutrient_table.args_key: self.nutrient_table.value(),
-            self.compute_financial_analysis.args_key: (
-                self.compute_financial_analysis.value()),
-            self.economics_table.args_key: self.economics_table.value(),
+            self.model_data_path.args_key: self.model_data_path.value(),
+            self.landcover_raster_path.args_key:
+                self.landcover_raster_path.value(),
+            self.landcover_to_crop_table_path.args_key:
+                self.landcover_to_crop_table_path.value(),
+            self.aggregate_polygon_path.args_key:
+                self.aggregate_polygon_path.value(),
+            self.aggregate_polygon_id.args_key:
+                self.aggregate_polygon_id.value(),
         }
+        return args
 
+
+class CropProductionRegression(model.Model):
+    label = u'Crop Production Regression Model'
+    target = staticmethod(natcap.invest.crop_production_regression.execute)
+    validator = staticmethod(natcap.invest.crop_production_regression.validate)
+    localdoc = u'../documentation/crop_production.html'
+
+    def __init__(self):
+        model.Model.__init__(self)
+
+        self.model_data_path = inputs.Folder(
+            args_key=u'model_data_path',
+            helptext=(
+                u"A path to the InVEST Crop Production Data directory. "
+                u"These data would have been included with the InVEST "
+                u"installer if selected, or can be manually downloaded "
+                u"from http://data.naturalcapitalproject.org/invest- "
+                u"data/.  If downloaded with InVEST, the default value "
+                u"should be used.</b>"),
+            label=u'Directory to model data',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.model_data_path)
+        self.landcover_raster_path = inputs.File(
+            args_key=u'landcover_raster_path',
+            helptext=(
+                u"A raster file, representing integer land use/land "
+                u"code covers for each cell."),
+            label=u'Land-Use/Land-Cover Map (raster)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.landcover_raster_path)
+        self.landcover_to_crop_table_path = inputs.File(
+            args_key=u'landcover_to_crop_table_path',
+            helptext=(
+                u"A CSV table mapping canonical crop names to land use "
+                u"codes contained in the landcover/use raster.   The "
+                u"allowed crop names are barley, maize, oilpalm, "
+                u"potato, rice, soybean, sugarbeet, sugarcane, "
+                u"sunflower, and wheat."),
+            label=u'Landcover to Crop Table (csv)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.landcover_to_crop_table_path)
+        self.fertilization_rate_table_path = inputs.File(
+            args_key=u'fertilization_rate_table_path',
+            helptext=(
+                u"A table that maps fertilization rates to crops in "
+                u"the simulation.  Must include the headers "
+                u"'crop_name', 'nitrogen_rate',  'phosphorous_rate', "
+                u"and 'potassium_rate'."),
+            label=u'Fertilization Rate Table Path (csv)',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.fertilization_rate_table_path)
+        self.aggregate_polygon_path = inputs.File(
+            args_key=u'aggregate_polygon_path',
+            helptext=(
+                u"A polygon shapefile to aggregate/summarize final "
+                u"results.  It is fine to have overlapping polygons. "
+                u"The attribute table must contain a keyfield for "
+                u"identifying polygons, be sure to indicate the name of "
+                u"this field in the Aggregate Polygon ID Field below."),
+            label=u'Aggregate results polygon (vector) (optional)',
+            required=False,
+            validator=self.validator)
+        self.add_input(self.aggregate_polygon_path)
+        self.aggregate_polygon_id = inputs.Text(
+            args_key=u'aggregate_polygon_id',
+            helptext=(
+                u"If an aggregate polygon is provided, this field is "
+                u"used to indicate the key field of that polygon for "
+                u"aggregation.  The aggregate table produced by this "
+                u"model will index the results by this field value."),
+            interactive=False,
+            label=u'Aggregate polygon ID field',
+            required=True,
+            validator=self.validator)
+        self.add_input(self.aggregate_polygon_id)
+
+        # Set interactivity, requirement as input sufficiency changes
+        self.aggregate_polygon_path.sufficiency_changed.connect(
+            self.aggregate_polygon_id.set_interactive)
+
+    def assemble_args(self):
+        args = {
+            self.workspace.args_key: self.workspace.value(),
+            self.suffix.args_key: self.suffix.value(),
+            self.model_data_path.args_key: self.model_data_path.value(),
+            self.landcover_raster_path.args_key:
+                self.landcover_raster_path.value(),
+            self.landcover_to_crop_table_path.args_key:
+                self.landcover_to_crop_table_path.value(),
+            self.fertilization_rate_table_path.args_key:
+                self.fertilization_rate_table_path.value(),
+            self.aggregate_polygon_path.args_key:
+                self.aggregate_polygon_path.value(),
+            self.aggregate_polygon_id.args_key:
+                self.aggregate_polygon_id.value(),
+        }
         return args
