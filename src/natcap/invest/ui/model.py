@@ -9,6 +9,7 @@ import collections
 import json
 import textwrap
 import cgi
+import tarfile
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -240,7 +241,7 @@ def _prompt_for_scenario_options():
     use_relative_paths = inputs.Checkbox(
         label='Use relative paths')
     include_workspace = inputs.Checkbox(
-        label='Include workspace in scenario')
+        label='Include workspace path in scenario')
     include_workspace.set_value(False)
     prompt.add_input(use_relative_paths)
     prompt.add_input(include_workspace)
@@ -564,18 +565,25 @@ class Model(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def load_scenario(self, scenario_path=None):
+        file_dialog = inputs.FileDialog()
         if not scenario_path:
-            file_dialog = inputs.FileDialog()
             scenario_path = file_dialog.open_file(
                 title='Select scenario')
 
         LOGGER.info('Loading scenario from %s', scenario_path)
-        try:
-            paramset = scenarios.read_parameter_set(scenario_path)
-            args = paramset.args
-        except ValueError:
-            # when a JSON object cannot be decoded, assume it's a logfile.
-            args = scenarios.read_parameters_from_logfile(scenario_path)
+        if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
+            # Where should the tarfile be extracted to?
+            scenario_extraction_point = file_dialog.open_folder(
+                title='Where should the archive be extracted?')
+            args = scenarios.extract_scenario_archive(
+                scenario_path, scenario_extraction_point)
+        else:
+            try:
+                paramset = scenarios.read_parameter_set(scenario_path)
+                args = paramset.args
+            except ValueError:
+                # when a JSON object cannot be decoded, assume it's a logfile.
+                args = scenarios.read_parameters_from_logfile(scenario_path)
         self.load_args(args)
         self.status_bar.showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)

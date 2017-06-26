@@ -74,10 +74,11 @@ def _collect_spatial_files(filepath, data_dir):
                 LOGGER.info('Manually copying raster files to %s',
                             new_path)
                 for filename in raster.GetFileList():
-                    if os.path.isdir(filename) and (
-                            os.path.abspath(filename) ==
-                            os.path.abspath(filepath)):
+                    if os.path.isdir(filename):
+                        # ESRI Arc/Binary grids include the parent folder in
+                        # the list of all files in the dataset.
                         continue
+
                     new_filename = os.path.join(
                         new_path,
                         os.path.basename(filename))
