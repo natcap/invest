@@ -44,6 +44,13 @@ _SCENARIO_SAVE_OPTS = {
 }
 
 
+def try_cast(value, target_type):
+    try:
+        return target_type(value)
+    except ValueError:
+        return value
+
+
 def about():
     """Show a dialog describing InVEST.
 
