@@ -388,6 +388,7 @@ class Model(QtWidgets.QMainWindow):
 
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
+        self.setAcceptDrops(True)
         self._quickrun = False
         self._validator = inputs.Validator(parent=self)
         self._validator.finished.connect(self._validation_finished)
@@ -478,6 +479,17 @@ class Model(QtWidgets.QMainWindow):
             QtCore.QSettings.UserScope,
             'Natural Capital Project',
             self.label)
+
+    def dragEnterEvent(self, event):
+        # Determine whether to accept or reject a drop
+        # Drag/drop must be a single file and must have a discernable scenario
+        # format.
+        inputs._handle_drag_enter_event(self, event)
+
+    def dropEvent(self, event):
+        # When a file is dropped onto the window
+        scenario_path = inputs._handle_drop_enter_event(self, event)
+        self.load_scenario(scenario_path)
 
     def _save_scenario_as(self):
         """Save the current set of inputs as a scenario.
