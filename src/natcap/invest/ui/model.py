@@ -273,6 +273,42 @@ def _prompt_for_scenario_options():
     return None
 
 
+def _prompt_for_scenario_archive_extraction(archive_path):
+    dialog = QtWidgets.QDialog()
+    dialog.setLayout(QtWidgets.QVBoxLayout())
+    dialog.setWindowModality(QtCore.Qt.WindowModal)
+
+    container = inputs.Container(label='Scenario extraction parameters')
+    dialog.layout().addWidget(container)
+
+    extraction_point = inputs.Folder(
+        label='Where should this archive be extracted?',
+        required=True
+    )
+
+    container.add_input(extraction_point)
+
+    buttonbox = QtWidgets.QDialogButtonBox()
+    ok_button = QtWidgets.QPushButton(' Continue')
+    ok_button.setIcon(inputs.ICON_ENTER)
+    ok_button.pressed.connect(dialog.accept)
+    buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
+    cancel_button = QtWidgets.QPushButton(' Cancel')
+    cancel_button.setIcon(qtawesome.icon('fa.times',
+                                         color='grey'))
+    cancel_button.pressed.connect(dialog.reject)
+    buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
+    dialog.layout().addWidget(buttonbox)
+
+    dialog.raise_()
+    dialog.show()
+    result = dialog.exec_()
+
+    if result == QtWidgets.QDialog.Accepted:
+        return scenarios.extract_scenario_archive(
+            archive_path, extraction_point.value())
+
+
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
     def __init__(self):
         QtWidgets.QDialog.__init__(self)
@@ -573,10 +609,9 @@ class Model(QtWidgets.QMainWindow):
         LOGGER.info('Loading scenario from %s', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
             # Where should the tarfile be extracted to?
-            scenario_extraction_point = file_dialog.open_folder(
-                title='Where should the archive be extracted?')
-            args = scenarios.extract_scenario_archive(
-                scenario_path, scenario_extraction_point)
+            args = _prompt_for_scenario_archive_extraction(scenario_path)
+            if args is None:
+                return
         else:
             try:
                 paramset = scenarios.read_parameter_set(scenario_path)
