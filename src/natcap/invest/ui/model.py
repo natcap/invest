@@ -120,7 +120,6 @@ def about():
     about_dialog.exec_()
 
 
-
 class WindowTitle(QtCore.QObject):
     """Object to manage the title string for a model window.
 
@@ -146,7 +145,7 @@ class WindowTitle(QtCore.QObject):
         filename (string or None): If a string, the filename to be displayed
             to the user in the title bar.  No manipulations are performed on
             this filename; it will be used verbatim.  If ``None``,
-            ``"Scenario1"`` is assumed.
+            ``"new scenario"`` is assumed.
         modified (bool): Whether the scenario file has been modified.  If so,
             a ``'*'`` is displayed next to the scenario filename.
     """
@@ -194,7 +193,7 @@ class WindowTitle(QtCore.QObject):
         try:
             return self.format_string.format(
                 modelname=self.modelname if self.modelname else 'InVEST',
-                filename=self.filename if self.filename else 'Scenario1',
+                filename=self.filename if self.filename else 'new scenario',
                 modified='*' if self.modified else '')
         except AttributeError:
             return ''
@@ -721,3 +720,4 @@ class Model(QtWidgets.QMainWindow):
         self.load_args(json.loads(lastrun_args))
         self.status_bar.showMessage('Loaded parameters from previous run.',
                                     10000)
+        self.window_title.filename = 'loaded from autosave'
