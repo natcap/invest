@@ -71,3 +71,13 @@ class ValidatorTest(unittest.TestCase):
 
         with self.assertRaises(AssertionError):
             validate({})
+
+    def test_error_string_wrong_type(self):
+        from natcap.invest import validation
+
+        @validation.validator
+        def validate(args, limit_to=None):
+            return [(('a',), 1234)]
+
+        with self.assertRaises(AssertionError):
+            validate({})

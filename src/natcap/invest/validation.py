@@ -77,6 +77,30 @@ def test_validity(target_keys, warnings, limit_to):
 
 
 def validator(validate_func):
+    """Decorator to enforce characteristics of validation inputs and outputs.
+
+    Attributes of inputs and outputs that are enforced are:
+
+        * ``args`` parameter to ``validate`` must be a ``dict``
+        * ``limit_to`` parameter to ``validate`` must be either ``None`` or a
+          string (``str`` or ``unicode``) that exists in the ``args`` dict.
+        *  All keys in ``args`` must be strings
+        * Decorated ``validate`` func must return a list of 2-tuples, where
+          each 2-tuple conforms to these rules:
+
+            * The first element of the 2-tuple is an iterable of strings.
+              It is an error for the first element to be a string.
+            * The second element of the 2-tuple is a string error message.
+
+    Raises:
+        AssertionError when an invalid format is found.
+
+    Example:
+        from natcap.invest import validation
+        @validation.validator
+        def validate(args, limit_to=None):
+            # do your validation here
+    """
     def _wrapped_validate_func(args, limit_to=None):
         assert isinstance(args, dict), 'args parameter must be a dictionary.'
         assert (isinstance(limit_to, type(None)) or
@@ -101,5 +125,7 @@ def validator(validate_func):
             for key in keys_iterable:
                 assert key in args, 'Key %s (from %s) must be in args.' % (
                     key, keys_iterable)
+            assert isinstance(error_string, basestring), (
+                'Error string must be a string, not a %s' % type(error_string))
 
     return _wrapped_validate_func
