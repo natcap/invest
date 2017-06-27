@@ -506,6 +506,7 @@ def execute(args):
                 aggregate_table.write('\n')
 
 
+@validation.validator
 def validate(args, limit_to=None):
     warnings = []
     test_validity = validation.build_validation_contextmanager(

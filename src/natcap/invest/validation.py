@@ -1,4 +1,5 @@
 import contextlib
+import collections
 
 from osgeo import gdal
 
@@ -39,7 +40,16 @@ def build_validation_contextmanager(warnings, limit_to):
 
 
 @contextlib.contextmanager
-def _capture_gdal_warnings(warnings_list):
+def append_gdal_warnings(warnings_list):
+    """Append GDAL warnings within this context manager to a list.
+
+    Parameters:
+        warnings_list (list): A list to which formatted GDAL warnings will
+            be appended.
+
+    Example:
+        # Show an example here.
+    """
 
     def _append_gdal_warnings(err_level, err_no, err_msg):
         warnings_list.append('[errno {err}] {msg}'.format(
@@ -64,3 +74,32 @@ def test_validity(target_keys, warnings, limit_to):
             _add_to_warnings('Args key %s is required.' % missing_key)
         except ValueError:
             pass
+
+
+def validator(validate_func):
+    def _wrapped_validate_func(args, limit_to=None):
+        assert isinstance(args, dict), 'args parameter must be a dictionary.'
+        assert (isinstance(limit_to, type(None)) or
+                isinstance(limit_to, basestring)), (
+                    'limit_to parameter must be either a string key or None.')
+        if limit_to is not None:
+            assert limit_to in args, 'limit_to key must exist in args.'
+
+        for key, value in args.iteritems():
+            assert isinstance(key, basestring), (
+                'All args keys must be strings.')
+
+        return_value = validate_func(args, limit_to)
+
+        assert isinstance(return_value, list), (
+            'validate function must return a list of 2-tuples.')
+        for keys_iterable, error_string in return_value:
+            assert (isinstance(keys_iterable, collections.Iterable) and not
+                    isinstance(keys_iterable, basestring)), (
+                        'Keys entry %s must be a non-string iterable' % (
+                            keys_iterable))
+            for key in keys_iterable:
+                assert key in args, 'Key %s (from %s) must be in args.' % (
+                    key, keys_iterable)
+
+    return _wrapped_validate_func
