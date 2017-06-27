@@ -134,5 +134,6 @@ def validator(validate_func):
                     key, keys_iterable)
             assert isinstance(error_string, basestring), (
                 'Error string must be a string, not a %s' % type(error_string))
+        return validation_warnings
 
     return _wrapped_validate_func

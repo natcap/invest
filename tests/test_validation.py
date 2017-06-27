@@ -101,3 +101,16 @@ class ValidatorTest(unittest.TestCase):
 
         with self.assertRaises(AssertionError):
             validate({})
+
+    def test_return_value(self):
+        """Validation: validation errors should be returned from decorator."""
+        from natcap.invest import validation
+
+        errors = [(('a', 'b'), 'Error!')]
+
+        @validation.validator
+        def validate(args, limit_to=None):
+            return errors
+
+        validation_errors = validate({'a': 'foo', 'b': 'bar'})
+        self.assertEqual(validation_errors, errors)
