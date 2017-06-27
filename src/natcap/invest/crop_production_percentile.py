@@ -520,7 +520,7 @@ def validate(args, limit_to=None):
 
     with test_validity('landcover_raster_path') as warn:
         gdal_warnings = []
-        with validation._capture_gdal_warnings(gdal_warnings):
+        with validation.append_gdal_warnings(gdal_warnings):
             dataset = gdal.Open(args['landcover_raster_path'])
         if not dataset:
             warn(('Could not open landcover raster {path}.'
