@@ -120,11 +120,11 @@ def validator(validate_func):
             assert isinstance(key, basestring), (
                 'All args keys must be strings.')
 
-        return_value = validate_func(args, limit_to)
+        validation_warnings = validate_func(args, limit_to)
 
-        assert isinstance(return_value, list), (
+        assert isinstance(validation_warnings, list), (
             'validate function must return a list of 2-tuples.')
-        for keys_iterable, error_string in return_value:
+        for keys_iterable, error_string in validation_warnings:
             assert (isinstance(keys_iterable, collections.Iterable) and not
                     isinstance(keys_iterable, basestring)), (
                         'Keys entry %s must be a non-string iterable' % (
