@@ -41,7 +41,7 @@ _MODEL_UIS = {
         pyname='natcap.invest.crop_production_percentile',
         gui='crop_production.CropProductionPercentile',
         aliases=('cpp',)),
-    'crop_production': _UIMETA(
+    'crop_production_regression': _UIMETA(
         pyname='natcap.invest.crop_production_regression',
         gui='crop_production.CropProductionRegression',
         aliases=('cpr',)),
