@@ -118,10 +118,6 @@ def execute(args):
     Returns:
         None.
     """
-    warnings_ = validate(args)
-    if warnings_:
-        raise ValueError(str(warnings_))
-
     crop_to_landcover_table = utils.build_lookup_from_csv(
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
         numerical_cast=True)
@@ -131,7 +127,6 @@ def execute(args):
         crop_climate_bin_raster_path = os.path.join(
             args['model_data_path'],
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
-
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'])
