@@ -1,5 +1,6 @@
 import contextlib
 import collections
+import inspect
 
 from osgeo import gdal
 
@@ -102,6 +103,12 @@ def validator(validate_func):
             # do your validation here
     """
     def _wrapped_validate_func(args, limit_to=None):
+
+        validate_func_args = inspect.getargspec(validate_func)
+        assert validate_func_args.args == ['args', 'limit_to'], (
+            'validate has invalid parameters: parameters are: %s.' % (
+                validate_func_args.args))
+
         assert isinstance(args, dict), 'args parameter must be a dictionary.'
         assert (isinstance(limit_to, type(None)) or
                 isinstance(limit_to, basestring)), (

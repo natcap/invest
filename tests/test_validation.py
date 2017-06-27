@@ -81,3 +81,13 @@ class ValidatorTest(unittest.TestCase):
 
         with self.assertRaises(AssertionError):
             validate({})
+
+    def test_wrong_parameter_names(self):
+        from natcap.invest import validation
+
+        @validation.validator
+        def validate(foo):
+            return [(('a',), 1234)]
+
+        with self.assertRaises(AssertionError):
+            validate({})
