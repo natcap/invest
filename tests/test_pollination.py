@@ -1,4 +1,5 @@
 """Module for Regression Testing the InVEST Pollination model."""
+import numpy
 import unittest
 import tempfile
 import shutil
@@ -12,6 +13,9 @@ from osgeo import ogr
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'pollination')
+TEST_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'pollination')
 
 
 class PollinationTests(unittest.TestCase):
@@ -69,6 +73,30 @@ class PollinationTests(unittest.TestCase):
             # make sure vector is closed before removing the workspace
             result_layer = None
             result_vector = None
+
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_pollination_no_farm_regression(self):
+        """Pollination: regression testing sample data with no farms."""
+        from natcap.invest import pollination
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                TEST_DATA, 'clipped_landcover.tif'),
+            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                SAMPLE_DATA, r'landcover_biophysical_table.csv')
+        }
+        pollination.execute(args)
+        result_raster_path = os.path.join(
+            self.workspace_dir, 'pollinator_abundance_apis_index.tif')
+        result_sum = 0.0
+        for _, data_block in pygeoprocessing.iterblocks(result_raster_path):
+            result_sum += numpy.sum(data_block)
+        # the number below is just what the sum is when I inspected a run
+        # that appeared to work.
+        self.assertAlmostEqual(result_sum, 5699.7158203125)
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
