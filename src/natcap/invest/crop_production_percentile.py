@@ -7,10 +7,10 @@ import logging
 import numpy
 from osgeo import gdal
 from osgeo import osr
-from osgeo import ogr
 import pygeoprocessing
 
 from . import utils
+from . import validation
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -118,46 +118,20 @@ def execute(args):
     Returns:
         None.
     """
-    LOGGER.info(
-        "Calculating total land area and warning if the landcover raster "
-        "is missing lucodes")
+    warnings_ = validate(args)
+    if warnings_:
+        raise ValueError(str(warnings_))
+
     crop_to_landcover_table = utils.build_lookup_from_csv(
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
         numerical_cast=True)
-
-    crop_lucodes = [
-        x[_EXPECTED_LUCODE_TABLE_HEADER]
-        for x in crop_to_landcover_table.itervalues()]
-
-    unique_lucodes = numpy.array([])
-    total_area = 0.0
-    for _, lu_band_data in pygeoprocessing.iterblocks(
-            args['landcover_raster_path']):
-        unique_block = numpy.unique(lu_band_data)
-        unique_lucodes = numpy.unique(numpy.concatenate(
-            (unique_lucodes, unique_block)))
-        total_area += numpy.count_nonzero((lu_band_data != _NODATA_YIELD))
-
-    missing_lucodes = set(crop_lucodes).difference(
-        set(unique_lucodes))
-    if len(missing_lucodes) > 0:
-        LOGGER.warn(
-            "The following lucodes are in the landcover to crop table but "
-            "aren't in the landcover raster: %s", missing_lucodes)
-
-    LOGGER.info("Checking that crops correspond to known types.")
     for crop_name in crop_to_landcover_table:
         crop_lucode = crop_to_landcover_table[crop_name][
             _EXPECTED_LUCODE_TABLE_HEADER]
         crop_climate_bin_raster_path = os.path.join(
             args['model_data_path'],
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
-        if not os.path.exists(crop_climate_bin_raster_path):
-            raise ValueError(
-                "Expected climate bin raster called %s for crop %s "
-                "because it specified in %s, but instead that file was not "
-                "found", crop_climate_bin_raster_path, crop_name,
-                args['landcover_to_crop_table_path'])
+
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'])
@@ -211,10 +185,6 @@ def execute(args):
         yield_percentile_headers = [
             x for x in crop_climate_percentile_table.itervalues().next()
             if x != 'climate_bin']
-
-        clipped_climate_bin_raster_path_info = (
-            pygeoprocessing.get_raster_info(
-                clipped_climate_bin_raster_path))
 
         for yield_percentile_id in yield_percentile_headers:
             LOGGER.info("Map %s to climate bins.", yield_percentile_id)
@@ -537,4 +507,64 @@ def execute(args):
 
 
 def validate(args, limit_to=None):
-    return []
+    warnings = []
+    test_validity = validation.build_validation_contextmanager(
+        warnings, limit_to)
+
+    # test workspace and suffix.
+
+    with test_validity('model_data_path') as warn:
+        if not os.path.isdir(args['model_data_path']):
+            warn('%s must be a directory' % args['model_data_path'])
+
+    with test_validity('landcover_raster_path') as warn:
+        gdal_warnings = []
+        with validation._capture_gdal_warnings(gdal_warnings):
+            dataset = gdal.Open(args['landcover_raster_path'])
+        if not dataset:
+            warn(('Could not open landcover raster {path}.'
+                  'Errors: {errors}').format(
+                      path=args['landcover_raster_path'],
+                      errors=''.join(gdal_warnings)))
+
+    with test_validity('landcover_to_crop_table_path') as warn:
+        crop_to_landcover_table = utils.build_lookup_from_csv(
+            args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
+            numerical_cast=True)
+
+    with test_validity(validation.CHECK_ALL_KEYS) as warn:
+        LOGGER.info(
+            "Calculating total land area and warning if the landcover raster "
+            "is missing lucodes")
+        crop_lucodes = [
+            x[_EXPECTED_LUCODE_TABLE_HEADER]
+            for x in crop_to_landcover_table.itervalues()]
+
+        unique_lucodes = numpy.array([])
+        total_area = 0.0
+        for _, lu_band_data in pygeoprocessing.iterblocks(
+                args['landcover_raster_path']):
+            unique_block = numpy.unique(lu_band_data)
+            unique_lucodes = numpy.unique(numpy.concatenate(
+                (unique_lucodes, unique_block)))
+            total_area += numpy.count_nonzero((lu_band_data != _NODATA_YIELD))
+
+        missing_lucodes = set(crop_lucodes).difference(
+            set(unique_lucodes))
+        if len(missing_lucodes) > 0:
+            LOGGER.warn(
+                "The following lucodes are in the landcover to crop table but "
+                "aren't in the landcover raster: %s", missing_lucodes)
+
+        LOGGER.info("Checking that crops correspond to known types.")
+        for crop_name in crop_to_landcover_table:
+            crop_climate_bin_raster_path = os.path.join(
+                args['model_data_path'],
+                _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
+            if not os.path.exists(crop_climate_bin_raster_path):
+                warn(("Expected climate bin raster called %s for crop %s "
+                      "because it specified in %s, but instead that file was not "
+                      "found") % (crop_climate_bin_raster_path, crop_name,
+                                  args['landcover_to_crop_table_path']),
+                     keys=('landcover_to_crop_table_path', 'model_data_path'))
+    return warnings
