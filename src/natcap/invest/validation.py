@@ -2,6 +2,7 @@ import contextlib
 import collections
 import inspect
 import logging
+import pprint
 
 from osgeo import gdal
 
@@ -57,6 +58,12 @@ def append_gdal_warnings(warnings_list):
     gdal.PopErrorHandler()
 
 
+def build_validation_contextmanager(warnings, limit_to):
+    def _test_validity(*keys):
+        return test_validity(keys, warnings=warnings, limit_to=limit_to)
+    return _test_validity
+
+
 @contextlib.contextmanager
 def test_validity(target_keys, warnings, limit_to):
     def _add_to_warnings(message, keys=target_keys, exit=False):
@@ -73,27 +80,68 @@ def test_validity(target_keys, warnings, limit_to):
             pass
 
 
+class ValidatorContext(object):
+    class Validator(object):
+        def __init__(self, key, args, limit_to, warnings):
+            self.args = args
+            self.warnings = warnings
+            self.limit_to = limit_to
+            self.key = key
+
+        def warn(self, message, keys=None):
+            if not keys:
+                keys = (self.key,)
+            self.warnings.append((keys, message))
+
+        def require(self, *keys):
+            for key in keys:
+                if key not in self.args or self.args[key] in ('', None):
+                    self.warn('Args key %s is required' % key, keys=(key,))
+
+    def __init__(self, args, limit_to):
+        self.args = args
+        self.limit_to = limit_to
+        self.warnings = []
+
+    def check(self, key, require=False):
+        if key not in self.args:
+            return None
+        elif self.limit_to not in (key, None):
+            return None
+        elif require and self.args[key] in ('', None):
+            return None
+        else:
+            return self.Validator(key, self.args, self.limit_to, self.warnings)
+
+    def warn(self, message, keys):
+        self.warnings.append((keys, message))
+
+
 class ValidationContext(object):
     def __init__(self, warnings, limit_to):
         self._warnings = warnings
         self._limit_to = limit_to
         self._keys = None
 
-    def add_warning(self, keys, message):
+    def add_warning(self, message, keys=None):
+        if not keys:
+            keys = self._keys
         self._warnings.append((keys, message))
 
     def __call__(self, *keys):
         self._keys = keys
-        return self
+        if self._limit_to in tuple(self._keys) + (None,):
+            return self
+        return False
 
     def __enter__(self):
-        if self._limit_to in tuple(self._keys) + (None,):
-            return self.add_warning
-        return self
+        return self.add_warning
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is exc_value is traceback is None:
             return
+        elif exc_type is StopIteration:
+            return True
         else:
             # simulate LOGGER.exception since we're not actually within an
             # exception handler.
@@ -147,7 +195,10 @@ def validator(validate_func):
             assert isinstance(key, basestring), (
                 'All args keys must be strings.')
 
+        _wrapped_validate_func.context = ValidatorContext(args, limit_to)
         validation_warnings = validate_func(args, limit_to)
+        LOGGER.debug('Validation warnings: %s',
+                     pprint.pformat(validation_warnings))
 
         assert isinstance(validation_warnings, list), (
             'validate function must return a list of 2-tuples.')

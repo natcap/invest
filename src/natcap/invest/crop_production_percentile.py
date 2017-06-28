@@ -509,26 +509,34 @@ def validate(args, limit_to=None):
 
     # test workspace and suffix.
 
-    with test_validity('model_data_path') as warn:
-        if not os.path.isdir(args['model_data_path']):
-            warn('%s must be a directory' % args['model_data_path'])
+    # What am I really trying to do here??
 
-    with test_validity('landcover_raster_path') as warn:
+    model_dir_validator = validate.context.check('model_data_path',
+                                                 require=True)
+    if model_dir_validator:
+        if not os.path.isdir(args['model_data_path']):
+            model_dir_validator.warn(
+                '%s must be a directory' % args['model_data_path'])
+
+    lulc_validator = validate.context.check('landcover_raster_path',
+                                            require=True)
+    if lulc_validator:
         gdal_warnings = []
         with validation.append_gdal_warnings(gdal_warnings):
             dataset = gdal.Open(args['landcover_raster_path'])
         if not dataset:
-            warn(('Could not open landcover raster {path}. '
-                  'Errors: {errors}').format(
+            lulc_validator.warn(
+                ('Could not open landcover raster {path}. '
+                 'Errors: {errors}').format(
                       path=args['landcover_raster_path'],
                       errors=''.join(gdal_warnings)))
 
-    with test_validity('landcover_to_crop_table_path') as warn:
+    if validate.context.check('landcover_to_crop_table_path'):
         crop_to_landcover_table = utils.build_lookup_from_csv(
             args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
             numerical_cast=True)
 
-    with test_validity(validation.CHECK_ALL_KEYS) as warn:
+    if limit_to is None:
         LOGGER.info(
             "Calculating total land area and warning if the landcover raster "
             "is missing lucodes")
@@ -558,9 +566,10 @@ def validate(args, limit_to=None):
                 args['model_data_path'],
                 _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
             if not os.path.exists(crop_climate_bin_raster_path):
-                warn(("Expected climate bin raster called %s for crop %s "
-                      "because it specified in %s, but instead that file was not "
-                      "found") % (crop_climate_bin_raster_path, crop_name,
-                                  args['landcover_to_crop_table_path']),
+                validate.context.warn(
+                    ("Expected climate bin raster called %s for crop %s "
+                     "because it specified in %s, but instead that file was not "
+                     "found") % (crop_climate_bin_raster_path, crop_name,
+                                 args['landcover_to_crop_table_path']),
                      keys=('landcover_to_crop_table_path', 'model_data_path'))
-    return warnings
+    return warnings + validate.context.warnings
