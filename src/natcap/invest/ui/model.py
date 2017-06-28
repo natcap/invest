@@ -688,8 +688,10 @@ class Model(QtWidgets.QMainWindow):
         # post warnings to the WMV dialog
         args_to_inputs = dict((input_.args_key, input_) for input_ in
                               self.inputs())
-        warnings_ = ['%s: %s' % (args_to_inputs[key].label, warning)
-                     for (key, warning) in validation_warnings]
+        warnings_ = []
+        for keys, warning in validation_warnings:
+            for key in keys:
+                '%s: %s' % (args_to_inputs[key].label, warning)
         warnings_ += [
             '%s: Input is required' % input_.label
             for input_ in required_warnings]
