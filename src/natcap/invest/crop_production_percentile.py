@@ -1,8 +1,9 @@
 """InVEST Crop Production Percentile Model."""
 import collections
-import re
-import os
+import functools
 import logging
+import os
+import re
 
 import numpy
 from osgeo import gdal
@@ -504,8 +505,7 @@ def execute(args):
 @validation.validator
 def validate(args, limit_to=None):
     warnings = []
-    test_validity = validation.build_validation_contextmanager(
-        warnings, limit_to)
+    test_validity = validation.ValidationContext(warnings, limit_to)
 
     # test workspace and suffix.
 
@@ -518,7 +518,7 @@ def validate(args, limit_to=None):
         with validation.append_gdal_warnings(gdal_warnings):
             dataset = gdal.Open(args['landcover_raster_path'])
         if not dataset:
-            warn(('Could not open landcover raster {path}.'
+            warn(('Could not open landcover raster {path}. '
                   'Errors: {errors}').format(
                       path=args['landcover_raster_path'],
                       errors=''.join(gdal_warnings)))

@@ -1,6 +1,7 @@
 import contextlib
 import collections
 import inspect
+import logging
 
 from osgeo import gdal
 
@@ -8,6 +9,7 @@ from osgeo import gdal
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None
+LOGGER = logging.getLogger(__name__)
 
 
 def require(key, args, warnings_):
@@ -32,12 +34,6 @@ def require(key, args, warnings_):
             raise KeyError
     except KeyError:
         warnings_.append((key, 'Key is required'))
-
-
-def build_validation_contextmanager(warnings, limit_to):
-    def _test_validity(*keys):
-        return test_validity(keys, warnings=warnings, limit_to=limit_to)
-    return _test_validity
 
 
 @contextlib.contextmanager
@@ -75,6 +71,37 @@ def test_validity(target_keys, warnings, limit_to):
             _add_to_warnings('Args key %s is required.' % missing_key)
         except ValueError:
             pass
+
+
+class ValidationContext(object):
+    def __init__(self, warnings, limit_to):
+        self._warnings = warnings
+        self._limit_to = limit_to
+        self._keys = None
+
+    def add_warning(self, keys, message):
+        self._warnings.append((keys, message))
+
+    def __call__(self, *keys):
+        self._keys = keys
+        return self
+
+    def __enter__(self):
+        if self._limit_to in tuple(self._keys) + (None,):
+            return self.add_warning
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is exc_value is traceback is None:
+            return
+        else:
+            # simulate LOGGER.exception since we're not actually within an
+            # exception handler.
+            LOGGER.error('Exception encountered while validating keys %s',
+                         self._keys, exc_info=(exc_type, exc_value, traceback))
+            if exc_type is KeyError:
+                self.add_warning(
+                    [exc_value], 'Args key %s is required' % exc_value)
 
 
 def validator(validate_func):
