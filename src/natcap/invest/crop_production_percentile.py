@@ -504,30 +504,30 @@ def execute(args):
 
 @validation.validator
 def validate(args, limit_to=None):
-    model_dir_validator = validate.check_context('model_data_path',
-                                                 require=True)
-    if model_dir_validator:
+    if validate.is_complete('model_data_path', require=True):
         if not os.path.isdir(args['model_data_path']):
-            model_dir_validator(
-                '%s must be a directory' % args['model_data_path'])
+            validate.warn('%s must be a directory' % args['model_data_path'],
+                          keys=('model_data_path'))
 
-    lulc_validator = validate.check_context('landcover_raster_path',
-                                            require=True)
-    if lulc_validator:
+    if validate.is_complete('landcover_raster_path', require=True):
         gdal_warnings = []
         with validation.append_gdal_warnings(gdal_warnings):
             dataset = gdal.Open(args['landcover_raster_path'])
         if not dataset:
-            lulc_validator(
+            validate.warn(
                 ('Could not open landcover raster {path}. '
                  'Errors: {errors}').format(
                       path=args['landcover_raster_path'],
-                      errors=''.join(gdal_warnings)))
+                      errors=''.join(gdal_warnings)),
+                keys=('landcover_raster_path',))
 
-    if validate.check_context('landcover_to_crop_table_path'):
-        crop_to_landcover_table = utils.build_lookup_from_csv(
-            args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
-            numerical_cast=True)
+    if validate.is_complete('landcover_to_crop_table_path'):
+        try:
+            crop_to_landcover_table = utils.build_lookup_from_csv(
+                args['landcover_to_crop_table_path'], 'crop_name',
+                to_lower=True, numerical_cast=True)
+        except Exception as error:
+            validation.warn(str(error), set('landcover_to_crop_table_path'))
 
     if limit_to is None:
         LOGGER.info(

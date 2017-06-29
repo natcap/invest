@@ -84,17 +84,18 @@ def validator(validate_func):
         warnings_ = []
 
         def _warn(message, keys):
+            if isinstance(keys, basestring):
+                keys = (keys,)
             warnings_.append((keys, message))
         _wrapped_validate_func.warn = _warn
 
-        def _check_context(key, require=False):
+        def _is_complete(key, require=False):
             if (key not in args or
                     limit_to not in (key, None) or
                     require and args[key] in ('', None)):
-                return None
-
-            return functools.partial(_warn, keys=(key,))
-        _wrapped_validate_func.check_context = _check_context
+                return False
+            return True
+        _wrapped_validate_func.is_complete = _is_complete
 
         def _require(*keys):
             for key in keys:
