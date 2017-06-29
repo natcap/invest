@@ -367,8 +367,9 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
                 'erorrs:</h4>')
             self.label.setText(
                 '<ul>%s</ul>' % ''.join(
-                    ['<li>%s</li>' % cgi.escape(warning_, quote=True)
-                     for warning_ in validation_warnings]))
+                    ['<li><b>%s</b>: %s</li>' % (
+                        ', '.join(labels), cgi.escape(warning_, quote=True))
+                     for labels, warning_ in validation_warnings]))
             self.label.repaint()
             self.label.setVisible(True)
 
@@ -697,9 +698,8 @@ class Model(QtWidgets.QMainWindow):
                               self.inputs())
         warnings_ = []
         for keys, warning in validation_warnings:
-            for key in keys:
-                warnings_.append(
-                    '%s: %s' % (args_to_inputs[key].label, warning))
+            warnings_.append(
+                ((args_to_inputs[key].label for key in keys), warning))
         self._validation_report_dialog.validation_finished(warnings_)
 
     def inputs(self):
