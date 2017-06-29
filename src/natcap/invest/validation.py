@@ -38,6 +38,31 @@ def append_gdal_warnings(warnings_list):
     gdal.PopErrorHandler()
 
 
+class ValidationContext:
+    def __init__(self, args, limit_to):
+        self.args = args
+        self.limit_to = limit_to
+        self.warnings = []
+
+    def warn(self, message, keys):
+        if isinstance(keys, basestring):
+            keys = (keys,)
+        self.warnings.append((keys, message))
+
+    def is_arg_complete(self, key, require=False):
+        if (key not in self.args or
+                self.limit_to not in (key, None) or
+                require and self.args[key] in ('', None)):
+            return False
+        return True
+
+    def require(self, *keys):
+        for key in keys:
+            if key not in self.args or self.args[key] in ('', None):
+                self.warn(('Args key %s is required but is missing'
+                           'or has no value') % key, keys=(key,))
+
+
 def validator(validate_func):
     """Decorator to enforce characteristics of validation inputs and outputs.
 
@@ -81,31 +106,7 @@ def validator(validate_func):
             assert isinstance(key, basestring), (
                 'All args keys must be strings.')
 
-        warnings_ = []
-
-        def _warn(message, keys):
-            if isinstance(keys, basestring):
-                keys = (keys,)
-            warnings_.append((keys, message))
-        _wrapped_validate_func.warn = _warn
-
-        def _is_complete(key, require=False):
-            if (key not in args or
-                    limit_to not in (key, None) or
-                    require and args[key] in ('', None)):
-                return False
-            return True
-        _wrapped_validate_func.is_complete = _is_complete
-
-        def _require(*keys):
-            for key in keys:
-                if key not in args or args[key] in ('', None):
-                    warnings_.append(
-                        ((key,), ('Args key %s is required but is missing'
-                                  'or has no value') % key))
-        _wrapped_validate_func.require = _require
-
-        validate_func(args, limit_to)
+        warnings_ = validate_func(args, limit_to)
         LOGGER.debug('Validation warnings: %s',
                      pprint.pformat(warnings_))
 
