@@ -3,6 +3,10 @@ import collections
 import inspect
 import logging
 import pprint
+import functools
+
+import faulthandler
+faulthandler.enable()
 
 from osgeo import gdal
 
@@ -11,30 +15,6 @@ from osgeo import gdal
 #: should be checked.
 CHECK_ALL_KEYS = None
 LOGGER = logging.getLogger(__name__)
-
-
-def require(key, args, warnings_):
-    """Append an error to warnings_ when a required key is missing.
-
-    A warning is recorded about a required key when either of these conditions
-    are met:
-
-        * The key is missing from ``args``.
-        * The key's value is one of ``''`` or ``None``.
-
-    Parameters:
-        key (string): The string key to index into args.
-        args (dict): The full args dict.
-        warnings_ (list): the warnings list.
-
-    Returns:
-        ``None``
-    """
-    try:
-        if args[key] in ('', None):
-            raise KeyError
-    except KeyError:
-        warnings_.append((key, 'Key is required'))
 
 
 @contextlib.contextmanager
@@ -56,60 +36,6 @@ def append_gdal_warnings(warnings_list):
     gdal.PushErrorHandler(_append_gdal_warnings)
     yield
     gdal.PopErrorHandler()
-
-
-def build_validation_contextmanager(warnings, limit_to):
-    def _test_validity(*keys):
-        return test_validity(keys, warnings=warnings, limit_to=limit_to)
-    return _test_validity
-
-
-@contextlib.contextmanager
-def test_validity(target_keys, warnings, limit_to):
-    def _add_to_warnings(message, keys=target_keys, exit=False):
-        warnings.append((keys, message))
-        if exit:
-            raise ValueError()
-
-    if limit_to in tuple(target_keys) + (None,):
-        try:
-            yield _add_to_warnings
-        except KeyError as missing_key:
-            _add_to_warnings('Args key %s is required.' % missing_key)
-        except ValueError:
-            pass
-
-
-class ValidatorContext(object):
-    def __init__(self, args, limit_to):
-        self.args = args
-        self.limit_to = limit_to
-        self.warnings = []
-
-    def check(self, key, require=False):
-        if (key not in self.args or
-                self.limit_to not in (key, None) or
-                require and self.args[key] in ('', None)):
-            return None
-
-        def validator(key):
-            def warn(message, keys=None):
-                if not keys:
-                    keys = (key,)
-                self.warnings.append((keys, message))
-            validator.warn = warn
-
-            def require(*keys):
-                for key in keys:
-                    if key not in self.args or self.args[key] in ('', None):
-                        warn('Args key %s is required' % key, keys=(key,))
-            validator.require = require
-            return validator
-
-        return validator(key)
-
-    def warn(self, message, keys):
-        self.warnings.append((keys, message))
 
 
 def validator(validate_func):
@@ -155,15 +81,36 @@ def validator(validate_func):
             assert isinstance(key, basestring), (
                 'All args keys must be strings.')
 
-        _wrapped_validate_func.context = ValidatorContext(args, limit_to)
-        validate_func(args, limit_to)
-        validation_warnings = _wrapped_validate_func.context.warnings
-        LOGGER.debug('Validation warnings: %s',
-                     pprint.pformat(validation_warnings))
+        warnings_ = []
 
-        assert isinstance(validation_warnings, list), (
+        def _warn(message, keys):
+            warnings_.append((keys, message))
+        _wrapped_validate_func.warn = _warn
+
+        def _check_context(key, require=False):
+            if (key not in args or
+                    limit_to not in (key, None) or
+                    require and args[key] in ('', None)):
+                return None
+
+            return functools.partial(_warn, keys=(key,))
+        _wrapped_validate_func.check_context = _check_context
+
+        def _require(*keys):
+            for key in keys:
+                if key not in args or args[key] in ('', None):
+                    warnings_.append(
+                        ((key,), ('Args key %s is required but is missing'
+                                  'or has no value') % key))
+        _wrapped_validate_func.require = _require
+
+        validate_func(args, limit_to)
+        LOGGER.debug('Validation warnings: %s',
+                     pprint.pformat(warnings_))
+
+        assert isinstance(warnings_, list), (
             'validate function must return a list of 2-tuples.')
-        for keys_iterable, error_string in validation_warnings:
+        for keys_iterable, error_string in warnings_:
             assert (isinstance(keys_iterable, collections.Iterable) and not
                     isinstance(keys_iterable, basestring)), (
                         'Keys entry %s must be a non-string iterable' % (
@@ -173,6 +120,6 @@ def validator(validate_func):
                     key, keys_iterable)
             assert isinstance(error_string, basestring), (
                 'Error string must be a string, not a %s' % type(error_string))
-        return validation_warnings
+        return warnings_
 
     return _wrapped_validate_func
