@@ -5,9 +5,6 @@ import logging
 import pprint
 import functools
 
-import faulthandler
-faulthandler.enable()
-
 from osgeo import gdal
 
 
