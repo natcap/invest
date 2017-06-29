@@ -753,7 +753,7 @@ class Model(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         dialog = QtWidgets.QMessageBox()
         dialog.setWindowFlags(QtCore.Qt.Dialog)
-        dialog.setText('Are you sure you want to quit?')
+        dialog.setText('<h2>Are you sure you want to quit?</h2>')
         dialog.setInformativeText(
             'Any unsaved changes to your parameters will be lost.')
         dialog.setStandardButtons(
