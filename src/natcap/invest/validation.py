@@ -66,8 +66,8 @@ class ValidationContext:
     def require(self, *keys):
         for key in keys:
             if key not in self.args or self.args[key] in ('', None):
-                self.warn(('Args key %s is required but is missing'
-                           'or has no value') % key, keys=(key,))
+                self.warn(('Parameter is required but is missing '
+                           'or has no value'), keys=(key,))
 
 
 def validator(validate_func):
