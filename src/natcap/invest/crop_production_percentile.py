@@ -504,13 +504,6 @@ def execute(args):
 
 @validation.validator
 def validate(args, limit_to=None):
-    warnings = []
-    test_validity = validation.ValidationContext(warnings, limit_to)
-
-    # test workspace and suffix.
-
-    # What am I really trying to do here??
-
     model_dir_validator = validate.context.check('model_data_path',
                                                  require=True)
     if model_dir_validator:
@@ -572,4 +565,3 @@ def validate(args, limit_to=None):
                      "found") % (crop_climate_bin_raster_path, crop_name,
                                  args['landcover_to_crop_table_path']),
                      keys=('landcover_to_crop_table_path', 'model_data_path'))
-    return warnings + validate.context.warnings
