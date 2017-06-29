@@ -30,14 +30,12 @@ class ScenicQuality(model.Model):
                 u"layer that defines their area of interest.  The AOI "
                 u"must intersect the Digital Elevation Model (DEM)."),
             label=u'Area of Interest (Vector)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.aoi_uri)
         self.cell_size = inputs.Text(
             args_key=u'cell_size',
             helptext=u'Length (in meters) of each side of the (square) cell.',
             label=u'Cell Size (meters)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.cell_size)
         self.structure_uri = inputs.File(
@@ -51,7 +49,6 @@ class ScenicQuality(model.Model):
                 u"run correctly, the projection of this input must be "
                 u"consistent with the project of the DEM input."),
             label=u'Features Impacting Scenic Quality (Vector)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.structure_uri)
         self.dem_uri = inputs.File(
@@ -63,7 +60,6 @@ class ScenicQuality(model.Model):
                 u"within the AOI's land-seascape where point features "
                 u"contributing to negative scenic quality are visible."),
             label=u'Digital Elevation Model (Raster)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.dem_uri)
         self.refraction = inputs.Text(
@@ -81,7 +77,6 @@ class ScenicQuality(model.Model):
                 u"curvature of the earth and sets the refractivity "
                 u"coefficient to 0.13."),
             label=u'Refractivity Coefficient',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.refraction)
         self.pop_uri = inputs.File(
@@ -93,7 +88,6 @@ class ScenicQuality(model.Model):
                 u"to negative scenic quality are visible and not "
                 u"visible."),
             label=u'Population (Raster)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.pop_uri)
         self.overlap_uri = inputs.File(
@@ -108,7 +102,6 @@ class ScenicQuality(model.Model):
                 u"polygon feature can see at least one of the point "
                 u"features impacting scenic quality."),
             label=u'Overlap Analysis Features (Vector)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.overlap_uri)
         self.valuation_tab = inputs.Container(
@@ -134,7 +127,6 @@ class ScenicQuality(model.Model):
                 u"First coefficient used either by the polynomial or "
                 u"by the logarithmic valuation function."),
             label=u"'a' Coefficient (polynomial/logarithmic)",
-            required=True,
             validator=self.validator)
         self.valuation_tab.add_input(self.a_coefficient)
         self.b_coefficient = inputs.Text(
@@ -143,21 +135,18 @@ class ScenicQuality(model.Model):
                 u"Second coefficient used either by the polynomial or "
                 u"by the logarithmic valuation function."),
             label=u"'b' Coefficient (polynomial/logarithmic)",
-            required=True,
             validator=self.validator)
         self.valuation_tab.add_input(self.b_coefficient)
         self.c_coefficient = inputs.Text(
             args_key=u'c_coefficient',
             helptext=u"Third coefficient for the polynomial's quadratic term.",
             label=u"'c' Coefficient (polynomial only)",
-            required=True,
             validator=self.validator)
         self.valuation_tab.add_input(self.c_coefficient)
         self.d_coefficient = inputs.Text(
             args_key=u'd_coefficient',
             helptext=u"Fourth coefficient for the polynomial's cubic exponent.",
             label=u"'d' Coefficient (polynomial only)",
-            required=True,
             validator=self.validator)
         self.valuation_tab.add_input(self.d_coefficient)
         self.max_valuation_radius = inputs.Text(
@@ -167,7 +156,6 @@ class ScenicQuality(model.Model):
                 u"The valuation function 'f' cannot be negative at the "
                 u"radius 'r' (f(r)>=0)."),
             label=u'Maximum Valuation Radius (meters)',
-            required=True,
             validator=self.validator)
         self.valuation_tab.add_input(self.max_valuation_radius)
 

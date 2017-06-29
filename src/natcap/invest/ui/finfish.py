@@ -29,7 +29,6 @@ class FinfishAquaculture(model.Model):
                 u"etc.).<br>Sample data set: "
                 u"\InVEST\Aquaculture\Input\Finfish_Netpens.shp"),
             label=u'Finfish Farm Location (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.farm_location)
         self.farm_identifier = inputs.Dropdown(
@@ -55,7 +54,6 @@ class FinfishAquaculture(model.Model):
                 u"taken for a fish to reach a target harvest weight "
                 u"typical for the region of interest is accurate."),
             label=u'Fish Growth Parameter (a)',
-            required=True,
             validator=self.validator)
         self.add_input(self.param_a)
         self.param_b = inputs.Text(
@@ -67,7 +65,6 @@ class FinfishAquaculture(model.Model):
                 u"taken for a fish to reach a target harvest weight "
                 u"typical for the region of interest is accurate."),
             label=u'Fish Growth Parameter (b)',
-            required=True,
             validator=self.validator)
         self.add_input(self.param_b)
         self.param_tau = inputs.Text(
@@ -81,7 +78,6 @@ class FinfishAquaculture(model.Model):
                 u"weight typical for the region of interest is "
                 u"accurate."),
             label=u'Fish Growth Parameter (tau)',
-            required=True,
             validator=self.validator)
         self.add_input(self.param_tau)
         self.uncertainty_data_container = inputs.Container(
@@ -134,7 +130,6 @@ class FinfishAquaculture(model.Model):
                 u"which are the temperatures experienced by the fish in "
                 u"the netpens."),
             label=u'Table of Daily Water Temperature at Farm (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.water_temperature)
         self.farm_operations = inputs.File(
@@ -154,7 +149,6 @@ class FinfishAquaculture(model.Model):
                 u"applicable to Atlantic salmon farming in British "
                 u"Columbia are also included in the sample data table."),
             label=u'Farm Operations Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.farm_operations)
         self.outplant_buffer = inputs.Text(
@@ -164,7 +158,6 @@ class FinfishAquaculture(model.Model):
                 u"start plus or minus the number of days specified "
                 u"here."),
             label=u'Outplant Date Buffer',
-            required=True,
             validator=self.validator)
         self.add_input(self.outplant_buffer)
         self.valuation = inputs.Checkbox(
@@ -181,7 +174,6 @@ class FinfishAquaculture(model.Model):
                 u"sheet reports on price of farmed Atlantic salmon."),
             interactive=False,
             label=u'Market Price per Kilogram of Processed Fish',
-            required=False,
             validator=self.validator)
         self.add_input(self.market_price)
         self.fraction_price = inputs.Text(
@@ -191,7 +183,6 @@ class FinfishAquaculture(model.Model):
                 u"rather than profit.  Default value is 0.3 (30%)."),
             interactive=False,
             label=u'Fraction of Price that Accounts to Costs',
-            required=False,
             validator=self.validator)
         self.add_input(self.fraction_price)
         self.discount_rate = inputs.Text(
@@ -201,7 +192,6 @@ class FinfishAquaculture(model.Model):
                 u"daily rate of 0.000192 for 0.0192% (7%/365 days)."),
             interactive=False,
             label=u'Daily Market Discount Rate',
-            required=False,
             validator=self.validator)
         self.add_input(self.discount_rate)
 
@@ -213,15 +203,9 @@ class FinfishAquaculture(model.Model):
         self.valuation.sufficiency_changed.connect(
             self.market_price.set_interactive)
         self.valuation.sufficiency_changed.connect(
-            self.market_price.set_required)
-        self.valuation.sufficiency_changed.connect(
             self.fraction_price.set_interactive)
         self.valuation.sufficiency_changed.connect(
-            self.fraction_price.set_required)
-        self.valuation.sufficiency_changed.connect(
             self.discount_rate.set_interactive)
-        self.valuation.sufficiency_changed.connect(
-            self.discount_rate.set_required)
 
     def _load_colnames(self, new_interactivity):
         if new_interactivity:

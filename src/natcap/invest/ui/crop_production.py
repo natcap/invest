@@ -24,7 +24,6 @@ class CropProductionPercentile(model.Model):
                 u"data/.  If downloaded with InVEST, the default value "
                 u"should be used.</b>"),
             label=u'Directory to model data',
-            required=True,
             validator=self.validator)
         self.add_input(self.model_data_path)
         self.landcover_raster_path = inputs.File(
@@ -33,7 +32,6 @@ class CropProductionPercentile(model.Model):
                 u"A raster file, representing integer land use/land "
                 u"code covers for each cell."),
             label=u'Land-Use/Land-Cover Map (raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
         self.landcover_to_crop_table_path = inputs.File(
@@ -75,7 +73,6 @@ class CropProductionPercentile(model.Model):
                 u"vegetablenes, vegfor, vetch,walnut, watermelon, "
                 u"wheat, yam, and yautia."),
             label=u'Landcover to Crop Table (csv)',
-            required=True,
             validator=self.validator)
         self.add_input(self.landcover_to_crop_table_path)
         self.aggregate_polygon_path = inputs.File(
@@ -87,7 +84,6 @@ class CropProductionPercentile(model.Model):
                 u"identifying polygons, be sure to indicate the name of "
                 u"this field in the Aggregate Polygon ID Field below."),
             label=u'Aggregate results polygon (vector) (optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)
         self.aggregate_polygon_id = inputs.Text(
@@ -99,7 +95,6 @@ class CropProductionPercentile(model.Model):
                 u"model will index the results by this field value."),
             interactive=False,
             label=u'Aggregate polygon ID field',
-            required=True,
             validator=self.validator)
         self.add_input(self.aggregate_polygon_id)
 
@@ -143,7 +138,6 @@ class CropProductionRegression(model.Model):
                 u"data/.  If downloaded with InVEST, the default value "
                 u"should be used.</b>"),
             label=u'Directory to model data',
-            required=True,
             validator=self.validator)
         self.add_input(self.model_data_path)
         self.landcover_raster_path = inputs.File(
@@ -152,7 +146,6 @@ class CropProductionRegression(model.Model):
                 u"A raster file, representing integer land use/land "
                 u"code covers for each cell."),
             label=u'Land-Use/Land-Cover Map (raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
         self.landcover_to_crop_table_path = inputs.File(
@@ -164,7 +157,6 @@ class CropProductionRegression(model.Model):
                 u"potato, rice, soybean, sugarbeet, sugarcane, "
                 u"sunflower, and wheat."),
             label=u'Landcover to Crop Table (csv)',
-            required=True,
             validator=self.validator)
         self.add_input(self.landcover_to_crop_table_path)
         self.fertilization_rate_table_path = inputs.File(
@@ -175,7 +167,6 @@ class CropProductionRegression(model.Model):
                 u"'crop_name', 'nitrogen_rate',  'phosphorous_rate', "
                 u"and 'potassium_rate'."),
             label=u'Fertilization Rate Table Path (csv)',
-            required=True,
             validator=self.validator)
         self.add_input(self.fertilization_rate_table_path)
         self.aggregate_polygon_path = inputs.File(
@@ -187,7 +178,6 @@ class CropProductionRegression(model.Model):
                 u"identifying polygons, be sure to indicate the name of "
                 u"this field in the Aggregate Polygon ID Field below."),
             label=u'Aggregate results polygon (vector) (optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)
         self.aggregate_polygon_id = inputs.Text(
@@ -199,7 +189,6 @@ class CropProductionRegression(model.Model):
                 u"model will index the results by this field value."),
             interactive=False,
             label=u'Aggregate polygon ID field',
-            required=True,
             validator=self.validator)
         self.add_input(self.aggregate_polygon_id)
 

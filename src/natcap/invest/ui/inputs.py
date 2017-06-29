@@ -569,14 +569,13 @@ class Input(QtCore.QObject):
     interactivity_changed = QtCore.Signal(bool)
     sufficiency_changed = QtCore.Signal(bool)
 
-    def __init__(self, label, helptext=None, required=False, interactive=True,
+    def __init__(self, label, helptext=None, interactive=True,
                  args_key=None):
         QtCore.QObject.__init__(self)
         self.label = label
         self.widgets = []
         self.dirty = False
         self.interactive = interactive
-        self.required = required
         self.args_key = args_key
         self.helptext = helptext
         self.lock = threading.Lock()
@@ -618,9 +617,6 @@ class Input(QtCore.QObject):
     def set_value(self):
         raise NotImplementedError
 
-    def set_required(self, required):
-        self.required = required
-
     def set_noninteractive(self, noninteractive):
         self.set_interactive(not noninteractive)
 
@@ -654,11 +650,9 @@ class GriddedInput(Input):
     hidden_changed = QtCore.Signal(bool)
     validity_changed = QtCore.Signal(bool)
 
-    def __init__(self, label, helptext=None, required=False, interactive=True,
+    def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
-        if not required:
-            label = label + ' (Optional)'
-        Input.__init__(self, label=label, helptext=helptext, required=required,
+        Input.__init__(self, label=label, helptext=helptext,
                        interactive=interactive, args_key=args_key)
 
         self._valid = True
@@ -822,10 +816,10 @@ class Text(GriddedInput):
             event.accept()
             self.setText(text)
 
-    def __init__(self, label, helptext=None, required=False, interactive=True,
+    def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
-                              required=required, interactive=interactive,
+                              interactive=interactive,
                               args_key=args_key, hideable=hideable,
                               validator=validator)
         self.textfield = Text.TextField()
@@ -868,9 +862,9 @@ class _Path(Text):
             path = _handle_drop_enter_event(self, event)
             self.setText(path)
 
-    def __init__(self, label, helptext=None, required=False, interactive=True,
+    def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
-        Text.__init__(self, label, helptext, required, interactive, args_key,
+        Text.__init__(self, label, helptext, interactive, args_key,
                       hideable, validator=validator)
         self.textfield = _Path.FileField()
         self.textfield.textChanged.connect(self._text_changed)
@@ -885,9 +879,9 @@ class _Path(Text):
 
 
 class Folder(_Path):
-    def __init__(self, label, helptext=None, required=False, interactive=True,
+    def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
-        _Path.__init__(self, label, helptext, required, interactive, args_key,
+        _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FolderButton('Select folder')
         self.path_select_button.path_selected.connect(self.textfield.setText)
@@ -898,9 +892,9 @@ class Folder(_Path):
 
 
 class File(_Path):
-    def __init__(self, label, helptext=None, required=False, interactive=True,
+    def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
-        _Path.__init__(self, label, helptext, required, interactive, args_key,
+        _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FileButton('Select file')
         self.path_select_button.path_selected.connect(self.textfield.setText)
@@ -921,7 +915,7 @@ class Checkbox(GriddedInput):
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
-                              hideable=False, validator=None, required=False)
+                              hideable=False, validator=None, )
 
         self.checkbox = QtWidgets.QCheckBox(label)
         self.checkbox.stateChanged.connect(self.value_changed.emit)
@@ -942,12 +936,9 @@ class Checkbox(GriddedInput):
 class Dropdown(GriddedInput):
     def __init__(self, label, helptext=None, interactive=True, args_key=None,
                  hideable=False, options=()):
-        # Dropdowns are always required ... there isn't a way for the dropdown
-        # to *not* provide a value, so it always produces a value and is always
-        # satisfied.
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
-                              hideable=hideable, validator=None, required=True)
+                              hideable=hideable, validator=None)
         self.dropdown = QtWidgets.QComboBox()
         self.widgets[2] = self.dropdown
         self.set_options(options)

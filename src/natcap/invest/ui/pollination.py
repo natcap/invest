@@ -24,7 +24,6 @@ class Pollination(model.Model):
                 u"biophyiscal properties about habitat and floral "
                 u"resources of landcover types to a spatial layout."),
             label=u'Land Cover Map (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
         self.landcover_biophysical_table_path = inputs.File(
@@ -47,7 +46,6 @@ class Pollination(model.Model):
                 u"guilds table, a column matching the pattern in "
                 u"`_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`."),
             label=u'Land Cover Biophysical Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.landcover_biophysical_table_path)
         self.guild_table_path = inputs.File(
@@ -72,7 +70,6 @@ class Pollination(model.Model):
                 u"respect to the sum of all relative abundance weights "
                 u"in the table."),
             label=u'Guild Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.guild_table_path)
         self.farm_vector_path = inputs.File(
@@ -101,7 +98,6 @@ class Pollination(model.Model):
                 u"the landcover map will replace nesting substrate "
                 u"suitability with this value.  Ranges from 0..1."),
             label=u'Farm Vector (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.farm_vector_path)
 

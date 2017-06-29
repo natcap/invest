@@ -24,7 +24,6 @@ class SDR(model.Model):
                 u"the 'Working with the DEM' section of the InVEST "
                 u"User's Guide for more information."),
             label=u'Digital Elevation Model (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.dem_path)
         self.erosivity_path = inputs.File(
@@ -40,7 +39,6 @@ class SDR(model.Model):
                 u"generate a grid using climatic data.  The units are "
                 u"MJ*mm/(ha*h*yr)."),
             label=u'Rainfall Erosivity Index (R) (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.erosivity_path)
         self.erodibility_path = inputs.File(
@@ -52,7 +50,6 @@ class SDR(model.Model):
                 u"and transport by rainfall and runoff.  Units are in "
                 u"T*ha*h/(ha*MJ*mm)."),
             label=u'Soil Erodibility (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.erodibility_path)
         self.lulc_path = inputs.File(
@@ -61,7 +58,6 @@ class SDR(model.Model):
                 u"A GDAL-supported raster file, with an integer LULC "
                 u"code for each cell."),
             label=u'Land-Use/Land-Cover (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.lulc_path)
         self.watersheds_path = inputs.File(
@@ -73,7 +69,6 @@ class SDR(model.Model):
                 u"must have the integer field 'ws_id' where the values "
                 u"uniquely identify each watershed."),
             label=u'Watersheds (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.watersheds_path)
         self.biophysical_table_path = inputs.File(
@@ -86,7 +81,6 @@ class SDR(model.Model):
                 u"Sediment User's Guide for more information about "
                 u"these fields."),
             label=u'Biophysical Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.biophysical_table_path)
         self.threshold_flow_accumulation = inputs.Text(
@@ -98,7 +92,6 @@ class SDR(model.Model):
                 u"exported to the stream.  Used to define streams from "
                 u"the DEM."),
             label=u'Threshold Flow Accumulation',
-            required=True,
             validator=self.validator)
         self.add_input(self.threshold_flow_accumulation)
         self.drainage_path = inputs.File(
@@ -111,28 +104,24 @@ class SDR(model.Model):
                 u"model is most accurate when the drainage raster "
                 u"aligns with the DEM."),
             label=u'Drainages (Raster) (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.drainage_path)
         self.k_param = inputs.Text(
             args_key=u'k_param',
             helptext=u'Borselli k parameter.',
             label=u'Borselli k Parameter',
-            required=True,
             validator=self.validator)
         self.add_input(self.k_param)
         self.ic_0_param = inputs.Text(
             args_key=u'ic_0_param',
             helptext=u'Borselli IC0 parameter.',
             label=u'Borselli IC0 Parameter',
-            required=True,
             validator=self.validator)
         self.add_input(self.ic_0_param)
         self.sdr_max = inputs.Text(
             args_key=u'sdr_max',
             helptext=u'Maximum SDR value.',
             label=u'Max SDR Value',
-            required=True,
             validator=self.validator)
         self.add_input(self.sdr_max)
 

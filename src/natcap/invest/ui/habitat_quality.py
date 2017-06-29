@@ -19,7 +19,6 @@ class HabitatQuality(model.Model):
                 u'A string that will be added to the end of the output file '
                 u'paths.'),
             label=u'Results Suffix (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.results_suffix)
         self.current_landcover = inputs.File(
@@ -34,7 +33,6 @@ class HabitatQuality(model.Model):
                 u"defined.  <b>The LULC codes must match the codes in "
                 u"the Sensitivity table</b>."),
             label=u'Current Land Cover (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.current_landcover)
         self.future_landcover = inputs.File(
@@ -52,7 +50,6 @@ class HabitatQuality(model.Model):
                 u"<b>The LULC codes must match the codes in the "
                 u"Sensitivity table</b>."),
             label=u'Future Land Cover (Raster) (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.future_landcover)
         self.baseline_landcover = inputs.File(
@@ -74,7 +71,6 @@ class HabitatQuality(model.Model):
                 u"should refer to a time when intensive management of "
                 u"the landscape was relatively rare."),
             label=u'Baseline Land Cover (Raster) (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.baseline_landcover)
         self.threat_rasters = inputs.Folder(
@@ -83,8 +79,7 @@ class HabitatQuality(model.Model):
                 u"The selected folder is used as the location to find "
                 u"all threat rasters for the threats listed in the "
                 u"below table."),
-            label=u'Folder Containing Threat Rasters (required)',
-            required=True,
+            label=u'Folder Containing Threat Rasters',
             validator=self.validator)
         self.add_input(self.threat_rasters)
         self.threats_data = inputs.File(
@@ -116,7 +111,6 @@ class HabitatQuality(model.Model):
                 u"threat.<br/><br/>See the user's guide for valid "
                 u"values for these columns."),
             label=u'Threats Data',
-            required=True,
             validator=self.validator)
         self.add_input(self.threats_data)
         self.accessibility_threats = inputs.File(
@@ -131,7 +125,6 @@ class HabitatQuality(model.Model):
                 u"is fully accessible.  Any cells not covered by a "
                 u"polygon will be set to 1."),
             label=u'Accessibility to Threats (Vector) (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.accessibility_threats)
         self.sensitivity_data = inputs.File(
@@ -156,7 +149,6 @@ class HabitatQuality(model.Model):
                 u"guide for more detailed information on proper column "
                 u"values and column names for each threat."),
             label=u'Sensitivity of Land Cover Types to Each Threat, File (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.sensitivity_data)
         self.half_saturation_constant = inputs.Text(
@@ -172,7 +164,6 @@ class HabitatQuality(model.Model):
                 u"k only determines the spread and central tendency of "
                 u"habitat quality cores and does not affect the rank."),
             label=u'Half-Saturation Constant',
-            required=True,
             validator=self.validator)
         self.add_input(self.half_saturation_constant)
 

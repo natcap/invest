@@ -27,7 +27,6 @@ class Fisheries(model.Model):
                 u"attribute.  The 'NAME' attribute can be numeric or "
                 u"alphabetic, but must be unique within the given file."),
             label=u'Area of Interest (Vector) (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.aoi_uri)
         self.total_timesteps = inputs.Text(
@@ -37,7 +36,6 @@ class Fisheries(model.Model):
                 u"execute before completion.<br><br>Must be a positive "
                 u"integer."),
             label=u'Number of Time Steps for Model Run',
-            required=True,
             validator=self.validator)
         self.add_input(self.total_timesteps)
         self.popu_cont = inputs.Container(
@@ -105,7 +103,6 @@ class Fisheries(model.Model):
                 u"to learn more about what content should be provided "
                 u"and how the CSV file should be structured."),
             label=u'Population Parameters File (CSV)',
-            required=True,
             validator=self.validator)
         self.popu_cont.add_input(self.population_csv_uri)
         self.population_csv_dir = inputs.Folder(
@@ -122,7 +119,6 @@ class Fisheries(model.Model):
                 u"the CSV file should be structured."),
             interactive=False,
             label=u'Population Parameters CSV Folder',
-            required=True,
             validator=self.validator)
         self.popu_cont.add_input(self.population_csv_dir)
         self.recr_cont = inputs.Container(
@@ -137,7 +133,6 @@ class Fisheries(model.Model):
                 u"distinguished by sex, this value will be evenly "
                 u"divided and distributed into each sub-population."),
             label=u'Total Initial Recruits',
-            required=True,
             validator=self.validator)
         self.recr_cont.add_input(self.total_init_recruits)
         self.recruitment_type = inputs.Dropdown(
@@ -184,7 +179,6 @@ class Fisheries(model.Model):
                 u"recruitment functions.<br><br>Used only for the "
                 u"Beverton-Holt and Ricker recruitment functions."),
             label=u'Alpha (Beverton-Holt / Ricker)',
-            required=False,
             validator=self.validator)
         self.recr_cont.add_input(self.alpha)
         self.beta = inputs.Text(
@@ -194,7 +188,6 @@ class Fisheries(model.Model):
                 u"curve.<br><br>Used only for the Beverton-Holt and "
                 u"Ricker recruitment functions."),
             label=u'Beta (Beverton-Holt / Ricker)',
-            required=False,
             validator=self.validator)
         self.recr_cont.add_input(self.beta)
         self.total_recur_recruits = inputs.Text(
@@ -205,7 +198,6 @@ class Fisheries(model.Model):
                 u"number).<br><br>Used only for the Fixed recruitment "
                 u"function."),
             label=u'Total Recruits per Time Step (Fixed)',
-            required=False,
             validator=self.validator)
         self.recr_cont.add_input(self.total_recur_recruits)
         self.migr_cont = inputs.Container(
@@ -233,7 +225,6 @@ class Fisheries(model.Model):
                 u"move from one area to another.  Each column should "
                 u"sum to one."),
             label=u'Migration Matrix CSV Folder (Optional)',
-            required=False,
             validator=self.validator)
         self.migr_cont.add_input(self.migration_dir)
         self.val_cont = inputs.Container(
@@ -249,7 +240,6 @@ class Fisheries(model.Model):
                 u"harvested catch remaining after post-harvest "
                 u"processing is complete."),
             label=u'Fraction of Harvest Kept After Processing',
-            required=True,
             validator=self.validator)
         self.val_cont.add_input(self.frac_post_process)
         self.unit_price = inputs.Text(
@@ -261,7 +251,6 @@ class Fisheries(model.Model):
                 u"individual.  If set to ‘Weight’, this should be the "
                 u"price per unit weight."),
             label=u'Unit Price',
-            required=True,
             validator=self.validator)
         self.val_cont.add_input(self.unit_price)
 
@@ -351,7 +340,6 @@ class FisheriesHST(model.Model):
                 u"model's documentation for help on how to format this "
                 u"file."),
             label=u'Population Parameters File (CSV)',
-            required=True,
             validator=self.validator)
         self.pop_cont.add_input(self.population_csv_uri)
         self.sexsp = inputs.Dropdown(
@@ -378,7 +366,6 @@ class FisheriesHST(model.Model):
                 u"Habitat Parameters' section in the model's "
                 u"documentation for help on how to format this file."),
             label=u'Habitat Dependency Parameters File (CSV)',
-            required=True,
             validator=self.validator)
         self.hab_cont.add_input(self.habitat_csv_dep_uri)
         self.habitat_chg_csv_uri = inputs.File(
@@ -392,7 +379,6 @@ class FisheriesHST(model.Model):
                 u"section in the model's documentation for help on how "
                 u"to format this file."),
             label=u'Habitat Area Change File (CSV)',
-            required=True,
             validator=self.validator)
         self.hab_cont.add_input(self.habitat_chg_csv_uri)
         self.gamma = inputs.Text(
@@ -404,7 +390,6 @@ class FisheriesHST(model.Model):
                 u"and 1.<br><br>See the documentation for advice on "
                 u"selecting a gamma value."),
             label=u'Gamma',
-            required=True,
             validator=self.validator)
         self.hab_cont.add_input(self.gamma)
 

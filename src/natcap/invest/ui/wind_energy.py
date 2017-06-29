@@ -19,7 +19,6 @@ class WindEnergy(model.Model):
                 u'A string that will be added to the end of the output file '
                 u'paths.'),
             label=u'Results Suffix (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.results_suffix)
         self.wind_data = inputs.File(
@@ -29,7 +28,6 @@ class WindEnergy(model.Model):
                 u"(Weibull parameters). Please see the User's Guide for "
                 u"a more detailed description of the parameters."),
             label=u'Wind Data Points (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.wind_data)
         self.aoi = inputs.File(
@@ -58,7 +56,6 @@ class WindEnergy(model.Model):
                 u"span of the area of interest and if no AOI is "
                 u"provided then the default global DEM should be used."),
             label=u'Bathymetric Digital Elevation Model (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.bathymetry)
         self.land_polygon = inputs.File(
@@ -88,7 +85,6 @@ class WindEnergy(model.Model):
                 u"before changing these values and to make a new CSV "
                 u"file so that the default one always remains."),
             label=u'Global Wind Energy Parameters (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.global_wind_parameters)
         self.turbine_group = inputs.Container(
@@ -107,7 +103,6 @@ class WindEnergy(model.Model):
                 u"recommended that the existing default CSV files are "
                 u"not overwritten."),
             label=u'Turbine Type Parameters File (CSV)',
-            required=True,
             validator=self.validator)
         self.turbine_group.add_input(self.turbine_parameters)
         self.number_of_machines = inputs.Text(
@@ -116,7 +111,6 @@ class WindEnergy(model.Model):
                 u"An integer value indicating the number of wind "
                 u"turbines per wind farm."),
             label=u'Number Of Turbines',
-            required=True,
             validator=self.validator)
         self.turbine_group.add_input(self.number_of_machines)
         self.min_depth = inputs.Text(
@@ -125,7 +119,6 @@ class WindEnergy(model.Model):
                 u"A floating point value in meters for the minimum "
                 u"depth of the offshore wind farm installation."),
             label=u'Minimum Depth for Offshore Wind Farm Installation (meters)',
-            required=True,
             validator=self.validator)
         self.turbine_group.add_input(self.min_depth)
         self.max_depth = inputs.Text(
@@ -134,7 +127,6 @@ class WindEnergy(model.Model):
                 u"A floating point value in meters for the maximum "
                 u"depth of the offshore wind farm installation."),
             label=u'Maximum Depth for Offshore Wind Farm Installation (meters)',
-            required=True,
             validator=self.validator)
         self.turbine_group.add_input(self.max_depth)
         self.min_distance = inputs.Text(
@@ -177,7 +169,6 @@ class WindEnergy(model.Model):
                 u"depth and turbine choice.  Please see the User's "
                 u"Guide for guidance on properly selecting this value."),
             label=u'Cost of the Foundation Type (USD, in Millions)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.foundation_cost)
         self.discount_rate = inputs.Text(
@@ -189,7 +180,6 @@ class WindEnergy(model.Model):
                 u"from now?). See the User's Guide for guidance on "
                 u"selecting this value."),
             label=u'Discount Rate',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.discount_rate)
         self.grid_points = inputs.File(
@@ -213,7 +203,6 @@ class WindEnergy(model.Model):
                 u"respective points is used for calculations.  See the "
                 u"User's Guide for more information."),
             label=u'Grid Connection Points (Optional)',
-            required=False,
             validator=self.validator)
         self.valuation_container.add_input(self.grid_points)
         self.avg_grid_dist = inputs.Text(
@@ -230,7 +219,6 @@ class WindEnergy(model.Model):
                 u"description of the approach and the method used to "
                 u"calculate the default value."),
             label=u'Average Shore to Grid Distance (Kilometers)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.avg_grid_dist)
         self.price_table = inputs.Checkbox(
@@ -270,7 +258,6 @@ class WindEnergy(model.Model):
                 u"last year."),
             interactive=False,
             label=u'Wind Energy Price Table (CSV)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.wind_schedule)
         self.wind_price = inputs.Text(
@@ -282,7 +269,6 @@ class WindEnergy(model.Model):
                 u"percentage from the input below.  See the User's "
                 u"Guide for guidance about determining this value."),
             label=u'Price of Energy per Kilowatt Hour ($/kWh)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.wind_price)
         self.rate_change = inputs.Text(
@@ -293,31 +279,16 @@ class WindEnergy(model.Model):
                 u"percentage.  For example, 0.1 for a 10% annual price "
                 u"change."),
             label=u'Annual Rate of Change in Price of Wind Energy',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.rate_change)
 
         # Set interactivity, requirement as input sufficiency changes
-        self.valuation_container.sufficiency_changed.connect(
-            self.aoi.set_required)
-        self.land_polygon.sufficiency_changed.connect(
-            self.aoi.set_required)
         self.aoi.sufficiency_changed.connect(
             self.land_polygon.set_interactive)
-        self.min_distance.sufficiency_changed.connect(
-            self.land_polygon.set_required)
-        self.max_distance.sufficiency_changed.connect(
-            self.land_polygon.set_required)
-        self.valuation_container.sufficiency_changed.connect(
-            self.land_polygon.set_required)
         self.land_polygon.sufficiency_changed.connect(
             self.min_distance.set_interactive)
-        self.valuation_container.sufficiency_changed.connect(
-            self.min_distance.set_required)
         self.land_polygon.sufficiency_changed.connect(
             self.max_distance.set_interactive)
-        self.valuation_container.sufficiency_changed.connect(
-            self.max_distance.set_required)
         self.price_table.sufficiency_changed.connect(
             self.wind_schedule.set_interactive)
         self.price_table.sufficiency_changed.connect(

@@ -19,7 +19,6 @@ class ForestCarbonEdgeEffect(model.Model):
                 u"A GDAL-supported raster file, with an integer LULC "
                 u"code for each cell."),
             label=u'Land-Use/Land-Cover Map (raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.lulc_uri)
         self.biophysical_table_uri = inputs.File(
@@ -34,7 +33,6 @@ class ForestCarbonEdgeEffect(model.Model):
                 u"'c_dead'.  See the InVEST Forest Carbon User's Guide "
                 u"for more information about these fields."),
             label=u'Biophysical Table (csv)',
-            required=True,
             validator=self.validator)
         self.add_input(self.biophysical_table_uri)
         self.pools_to_calculate = inputs.Dropdown(
@@ -65,7 +63,6 @@ class ForestCarbonEdgeEffect(model.Model):
                 u"model."),
             interactive=False,
             label=u'Global forest carbon edge regression models (vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.tropical_forest_edge_carbon_model_shape_uri)
         self.n_nearest_model_points = inputs.Text(
@@ -80,7 +77,6 @@ class ForestCarbonEdgeEffect(model.Model):
                 u"point having the highest effect."),
             interactive=False,
             label=u'Number of nearest model points to average',
-            required=True,
             validator=self.validator)
         self.add_input(self.n_nearest_model_points)
         self.biomass_to_carbon_conversion_factor = inputs.Text(
@@ -94,7 +90,6 @@ class ForestCarbonEdgeEffect(model.Model):
                 u"biomass."),
             interactive=False,
             label=u'Forest Edge Biomass to Carbon Conversion Factor',
-            required=True,
             validator=self.validator)
         self.add_input(self.biomass_to_carbon_conversion_factor)
         self.aoi_uri = inputs.File(
@@ -104,7 +99,6 @@ class ForestCarbonEdgeEffect(model.Model):
                 u"aggregate carbon values at the end of the run if "
                 u"provided."),
             label=u'Service areas of interest <em>(optional)</em> (vector)',
-            required=False,
             validator=self.validator)
         self.add_input(self.aoi_uri)
 

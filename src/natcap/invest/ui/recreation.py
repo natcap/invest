@@ -23,14 +23,12 @@ class Recreation(model.Model):
                 u"An OGR-supported vector file representing the area "
                 u"of interest where the model will run the analysis."),
             label=u'Area of Interest (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.aoi_path)
         self.start_year = inputs.Text(
             args_key=u'start_year',
             helptext=u'Year to start PUD calculations, date starts on Jan 1st.',
             label=u'Start Year (inclusive, must be >= 2005)',
-            required=True,
             validator=self.validator)
         self.add_input(self.start_year)
         self.end_year = inputs.Text(
@@ -39,7 +37,6 @@ class Recreation(model.Model):
                 u'Year to end PUD calculations, date ends and includes '
                 u'Dec 31st.'),
             label=u'End Year (inclusive, must be <= 2014)',
-            required=True,
             validator=self.validator)
         self.add_input(self.end_year)
         self.regression_container = inputs.Container(
@@ -56,7 +53,6 @@ class Recreation(model.Model):
                 u"'type'.  The file paths can be absolute, or relative "
                 u"to the table."),
             label=u'Predictor Table',
-            required=True,
             validator=self.validator)
         self.regression_container.add_input(self.predictor_table_path)
         self.scenario_predictor_table_path = inputs.File(
@@ -67,7 +63,6 @@ class Recreation(model.Model):
                 u"'type'.  The file paths can be absolute, or relative "
                 u"to the table."),
             label=u'Scenario Predictor Table (optional)',
-            required=False,
             validator=self.validator)
         self.regression_container.add_input(self.scenario_predictor_table_path)
         self.grid_container = inputs.Container(
@@ -88,7 +83,6 @@ class Recreation(model.Model):
                 u"projection units of the AOI. For example, UTM "
                 u"projections use meters."),
             label=u'Cell Size',
-            required=True,
             validator=self.validator)
         self.grid_container.add_input(self.cell_size)
 

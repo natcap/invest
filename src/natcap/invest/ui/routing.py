@@ -24,7 +24,6 @@ class Delineateit(model.Model):
                 u"the 'Working with the DEM' section of the InVEST "
                 u"User's Guide for more information."),
             label=u'Digital Elevation Model (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.dem_uri)
         self.outlet_shapefile_uri = inputs.File(
@@ -33,7 +32,6 @@ class Delineateit(model.Model):
                 u"This is a layer of points representing outlet points "
                 u"that the watersheds should be built around."),
             label=u'Outlet Points (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.outlet_shapefile_uri)
         self.flow_threshold = inputs.Text(
@@ -45,13 +43,11 @@ class Delineateit(model.Model):
                 u"exported to the stream.  Used to define streams from "
                 u"the DEM."),
             label=u'Threshold Flow Accumulation',
-            required=True,
             validator=self.validator)
         self.add_input(self.flow_threshold)
         self.snap_distance = inputs.Text(
             args_key=u'snap_distance',
             label=u'Pixel Distance to Snap Outlet Points',
-            required=True,
             validator=self.validator)
         self.add_input(self.snap_distance)
 
@@ -87,7 +83,6 @@ class RouteDEM(model.Model):
                 u"Digital Elevation Model to execute the routing "
                 u"functionality across."),
             label=u'Digital Elevation Model (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.dem_path)
         self.calculate_slope = inputs.Checkbox(
@@ -113,7 +108,6 @@ class RouteDEM(model.Model):
                 u"cell before it's classified as a stream."),
             interactive=False,
             label=u'Threshold Flow Accumulation Limit',
-            required=True,
             validator=self.validator)
         self.add_input(self.threshold_flow_accumulation)
         self.calculate_downstream_distance = inputs.Checkbox(

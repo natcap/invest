@@ -24,7 +24,6 @@ class OverlapAnalysis(model.Model):
                 u"order to separate the area, this can be a single "
                 u"polygon shapefile."),
             label=u'Analysis Zones Layer (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.aoi)
         self.grid_size = inputs.Text(
@@ -33,7 +32,6 @@ class OverlapAnalysis(model.Model):
                 u"By specifying a number in the interface, an analysis "
                 u"grid within the AOI of size x size will be created."),
             label=u'Analysis Cell Size (meters)',
-            required=True,
             validator=self.validator)
         self.add_input(self.grid_size)
         self.data_dir = inputs.Folder(
@@ -46,7 +44,6 @@ class OverlapAnalysis(model.Model):
                 u"coastal and marine environment the human use activity "
                 u"takes place."),
             label=u'Overlap Analysis Data Directory',
-            required=True,
             validator=self.validator)
         self.add_input(self.data_dir)
         self.intra = inputs.Checkbox(
@@ -68,7 +65,6 @@ class OverlapAnalysis(model.Model):
                 u"weights."),
             interactive=False,
             label=u'Intra-Activity Attribute Name',
-            required=False,
             validator=self.validator)
         self.add_input(self.IS_field_name)
         self.inter = inputs.Checkbox(
@@ -88,7 +84,6 @@ class OverlapAnalysis(model.Model):
                 u"activity layer to the desired inter-activity weight."),
             interactive=False,
             label=u'Inter-Activity Weight Table (CSV)',
-            required=False,
             validator=self.validator)
         self.add_input(self.IS_tbl)
         self.HU_Hubs = inputs.Checkbox(
@@ -109,7 +104,6 @@ class OverlapAnalysis(model.Model):
                 u"where each point is a hub."),
             interactive=False,
             label=u'Points Layer of Human Use Hubs (Vector)',
-            required=False,
             validator=self.validator)
         self.add_input(self.HU_Hub_URI)
         self.hub_decay = inputs.Text(
@@ -121,27 +115,18 @@ class OverlapAnalysis(model.Model):
                 u"the distance from the closest hub."),
             interactive=False,
             label=u'Distance Decay Rate',
-            required=False,
             validator=self.validator)
         self.add_input(self.hub_decay)
 
         # Set interactivity, requirement as input sufficiency changes
         self.intra.sufficiency_changed.connect(
             self.IS_field_name.set_interactive)
-        self.intra.sufficiency_changed.connect(
-            self.IS_field_name.set_required)
         self.inter.sufficiency_changed.connect(
             self.IS_tbl.set_interactive)
-        self.inter.sufficiency_changed.connect(
-            self.IS_tbl.set_required)
         self.HU_Hubs.sufficiency_changed.connect(
             self.HU_Hub_URI.set_interactive)
         self.HU_Hubs.sufficiency_changed.connect(
-            self.HU_Hub_URI.set_required)
-        self.HU_Hubs.sufficiency_changed.connect(
             self.hub_decay.set_interactive)
-        self.HU_Hubs.sufficiency_changed.connect(
-            self.hub_decay.set_required)
 
     def assemble_args(self):
         args = {
@@ -179,7 +164,6 @@ class OverlapAnalysisMZ(model.Model):
                 u"Management Zones tool is used to analyze overlap "
                 u"data."),
             label=u'Analysis Zones Layer (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.aoi)
         self.data_dir = inputs.Folder(
@@ -191,7 +175,6 @@ class OverlapAnalysisMZ(model.Model):
                 u"in the coastal and marine environment the human use "
                 u"activity takes place."),
             label=u'Overlap Analysis Data Directory',
-            required=True,
             validator=self.validator)
         self.add_input(self.data_dir)
 

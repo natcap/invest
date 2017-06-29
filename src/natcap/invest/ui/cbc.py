@@ -22,7 +22,6 @@ class CoastalBlueCarbonPreprocessor(model.Model):
                 u"in a raster, as well as to indicate whether or not "
                 u"the lulc class is a coastal blue carbon habitat."),
             label=u'LULC Lookup Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.lulc_lookup_uri)
         self.lulc_snapshot_list = inputs.Multi(
@@ -62,7 +61,6 @@ class CoastalBlueCarbon(model.Model):
                 u"in a raster and to indicate whether or not the lulc "
                 u"class is a coastal blue carbon habitat."),
             label=u'LULC Lookup Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.lulc_lookup_uri)
         self.lulc_transition_matrix_uri = inputs.File(
@@ -74,7 +72,6 @@ class CoastalBlueCarbon(model.Model):
                 u"and the top row represents the destination lulc "
                 u"class."),
             label=u'LULC Transition Effect of Carbon Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.lulc_transition_matrix_uri)
         self.carbon_pool_initial_uri = inputs.File(
@@ -89,7 +86,6 @@ class CoastalBlueCarbon(model.Model):
                 u"‘biomass’, ‘soil’, and ‘litter’ should be given in "
                 u"terms of Megatonnes CO2e/ha."),
             label=u'Carbon Pool Initial Variables Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.carbon_pool_initial_uri)
         self.carbon_pool_transient_uri = inputs.File(
@@ -107,7 +103,6 @@ class CoastalBlueCarbon(model.Model):
                 u"distrubed given a transition occurs away from a lulc- "
                 u"class."),
             label=u'Carbon Pool Transient Variables Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.carbon_pool_transient_uri)
         self.lulc_baseline_map_uri = inputs.File(
@@ -116,13 +111,11 @@ class CoastalBlueCarbon(model.Model):
                 u"A GDAL-supported raster representing the baseline "
                 u"landscape/seascape."),
             label=u'Baseline LULC Raster (GDAL-supported)',
-            required=True,
             validator=self.validator)
         self.add_input(self.lulc_baseline_map_uri)
         self.lulc_baseline_year = inputs.Text(
             args_key=u'lulc_baseline_year',
             label=u'Year of baseline LULC raster',
-            required=True,
             validator=self.validator)
         self.add_input(self.lulc_baseline_year)
         self.lulc_transition_maps_list = inputs.Multi(
@@ -148,7 +141,6 @@ class CoastalBlueCarbon(model.Model):
                 u"An analysis year extends the transient analysis "
                 u"beyond the transition years."),
             label=u'Analysis Year (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.analysis_year)
         self.do_economic_analysis = inputs.Container(
@@ -166,7 +158,6 @@ class CoastalBlueCarbon(model.Model):
             args_key=u'price',
             helptext=u'The price per Megatonne CO2e at the base year.',
             label=u'Price',
-            required=True,
             validator=self.validator)
         self.do_economic_analysis.add_input(self.price)
         self.interest_rate = inputs.Text(
@@ -175,7 +166,6 @@ class CoastalBlueCarbon(model.Model):
                 u"The interest rate on the price per Megatonne CO2e, "
                 u"compounded yearly."),
             label=u'Interest Rate (%)',
-            required=True,
             validator=self.validator)
         self.do_economic_analysis.add_input(self.interest_rate)
         self.price_table_uri = inputs.File(
@@ -188,7 +178,6 @@ class CoastalBlueCarbon(model.Model):
                 u"year, if provided."),
             interactive=False,
             label=u'Price Table (CSV)',
-            required=True,
             validator=self.validator)
         self.do_economic_analysis.add_input(self.price_table_uri)
         self.discount_rate = inputs.Text(
@@ -197,7 +186,6 @@ class CoastalBlueCarbon(model.Model):
                 u"The discount rate on future valuations of "
                 u"sequestered carbon, compounded yearly."),
             label=u'Discount Rate (%)',
-            required=True,
             validator=self.validator)
         self.do_economic_analysis.add_input(self.discount_rate)
 

@@ -19,7 +19,6 @@ class WaveEnergy(model.Model):
                 u'A string that will be added to the end of the output file '
                 u'paths.'),
             label=u'Results Suffix (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.results_suffix)
         self.wave_base_data = inputs.Folder(
@@ -28,7 +27,6 @@ class WaveEnergy(model.Model):
                 u'Select the folder that has the packaged Wave Energy '
                 u'Data.'),
             label=u'Wave Base Data Folder',
-            required=True,
             validator=self.validator)
         self.add_input(self.wave_base_data)
         self.analysis_area = inputs.Dropdown(
@@ -56,7 +54,6 @@ class WaveEnergy(model.Model):
                 u"recommended for biophysical runs as well.  The AOI "
                 u"should be projected in linear units of meters."),
             label=u'Area of Interest (Vector)',
-            required=False,
             validator=self.validator)
         self.add_input(self.aoi)
         self.machine_perf_table = inputs.File(
@@ -65,7 +62,6 @@ class WaveEnergy(model.Model):
                 u"A CSV Table that has the performance of a particular "
                 u"wave energy machine at certain sea state conditions."),
             label=u'Machine Performance Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.machine_perf_table)
         self.machine_param_table = inputs.File(
@@ -76,7 +72,6 @@ class WaveEnergy(model.Model):
                 u"maximum capacity of the device and the upper limits "
                 u"for wave height and period."),
             label=u'Machine Parameter Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.machine_param_table)
         self.dem = inputs.File(
@@ -87,7 +82,6 @@ class WaveEnergy(model.Model):
                 u"meters.  Used to get the cable distance for wave "
                 u"energy transmission."),
             label=u'Global Digital Elevation Model (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.dem)
         self.valuation_container = inputs.Container(
@@ -102,7 +96,6 @@ class WaveEnergy(model.Model):
                 u"A CSV Table that has the landing points and grid "
                 u"points locations for computing cable distances."),
             label=u'Grid Connection Points File (CSV)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.land_grid_points)
         self.machine_econ_table = inputs.File(
@@ -111,7 +104,6 @@ class WaveEnergy(model.Model):
                 u"A CSV Table that has the economic parameters for the "
                 u"wave energy machine."),
             label=u'Machine Economic Table (CSV)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.machine_econ_table)
         self.number_of_machines = inputs.Text(
@@ -120,7 +112,6 @@ class WaveEnergy(model.Model):
                 u"An integer for how many wave energy machines will be "
                 u"in the wave farm."),
             label=u'Number of Machines',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.number_of_machines)
 

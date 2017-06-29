@@ -283,7 +283,6 @@ def _prompt_for_scenario_archive_extraction(archive_path):
 
     extraction_point = inputs.Folder(
         label='Where should this archive be extracted?',
-        required=True
     )
 
     container.add_input(extraction_point)
@@ -455,8 +454,7 @@ class Model(QtWidgets.QMainWindow):
         # start with workspace and suffix inputs
         self.workspace = inputs.Folder(args_key='workspace_dir',
                                        label='Workspace',
-                                       validator=self.validator,
-                                       required=True)
+                                       validator=self.validator)
 
         # natcap.invest.pollination.pollination --> pollination
         self.workspace.set_value(os.path.normpath(
@@ -465,8 +463,7 @@ class Model(QtWidgets.QMainWindow):
 
         self.suffix = inputs.Text(args_key='suffix',
                                   label='Results suffix',
-                                  validator=self.validator,
-                                  required=False)
+                                  validator=self.validator)
         self.suffix.textfield.setMaximumWidth(150)
         self.add_input(self.workspace)
         self.add_input(self.suffix)

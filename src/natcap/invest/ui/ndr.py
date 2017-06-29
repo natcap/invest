@@ -24,7 +24,6 @@ class Nutrient(model.Model):
                 u"the Working with the DEM section of the InVEST User's "
                 u"Guide for more information."),
             label=u'DEM (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.dem_path)
         self.land_use = inputs.File(
@@ -34,7 +33,6 @@ class Nutrient(model.Model):
                 u"values representing the LULC code for each cell.  The "
                 u"LULC code should be an integer."),
             label=u'Land Use (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.land_use)
         self.runoff_proxy = inputs.File(
@@ -45,7 +43,6 @@ class Nutrient(model.Model):
                 u"variety of data can be used including precipitation "
                 u"or quickflow."),
             label=u'Nutrient Runoff Proxy (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.runoff_proxy)
         self.watersheds_path = inputs.File(
@@ -57,7 +54,6 @@ class Nutrient(model.Model):
                 u"must have the integer field 'ws_id' where the values "
                 u"uniquely identify each watershed."),
             label=u'Watersheds (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.watersheds_path)
         self.biophysical_table_path = inputs.File(
@@ -70,7 +66,6 @@ class Nutrient(model.Model):
                 u"'crit_len_n' (or p) depending on which nutrients are "
                 u"selected."),
             label=u'Biophysical Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.biophysical_table_path)
         self.calc_p = inputs.Checkbox(
@@ -92,14 +87,12 @@ class Nutrient(model.Model):
                 u"exported to the stream.  Used to define streams from "
                 u"the DEM."),
             label=u'Threshold Flow Accumluation',
-            required=True,
             validator=self.validator)
         self.add_input(self.threshold_flow_accumulation)
         self.k_param = inputs.Text(
             args_key=u'k_param',
             helptext=u'Borselli k parameter.',
             label=u'Borselli k Parameter',
-            required=True,
             validator=self.validator)
         self.add_input(self.k_param)
         self.subsurface_critical_length_n = inputs.Text(
@@ -107,7 +100,6 @@ class Nutrient(model.Model):
             helptext=u'',
             interactive=False,
             label=u'Subsurface Critical Length (Nitrogen)',
-            required=True,
             validator=self.validator)
         self.add_input(self.subsurface_critical_length_n)
         self.subsurface_critical_length_p = inputs.Text(
@@ -115,7 +107,6 @@ class Nutrient(model.Model):
             helptext=u'',
             interactive=False,
             label=u'Subsurface Critical Length (Phosphorous)',
-            required=True,
             validator=self.validator)
         self.add_input(self.subsurface_critical_length_p)
         self.subsurface_eff_n = inputs.Text(
@@ -123,7 +114,6 @@ class Nutrient(model.Model):
             helptext=u'',
             interactive=False,
             label=u'Subsurface Maximum Retention Efficiency (Nitrogen)',
-            required=True,
             validator=self.validator)
         self.add_input(self.subsurface_eff_n)
         self.subsurface_eff_p = inputs.Text(
@@ -131,7 +121,6 @@ class Nutrient(model.Model):
             helptext=u'',
             interactive=False,
             label=u'Subsurface Maximum Retention Efficiency (Phosphorous)',
-            required=True,
             validator=self.validator)
         self.add_input(self.subsurface_eff_p)
 

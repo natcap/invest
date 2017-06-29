@@ -21,7 +21,6 @@ class HydropowerWaterYield(model.Model):
                 u"The precipitation values should be in millimeters "
                 u"(mm)."),
             label=u'Precipitation (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.precipitation)
         self.potential_evapotranspiration = inputs.File(
@@ -32,7 +31,6 @@ class HydropowerWaterYield(model.Model):
                 u"cell.  The reference evapotranspiration values should "
                 u"be in millimeters (mm)."),
             label=u'Reference Evapotranspiration (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.potential_evapotranspiration)
         self.depth_to_root_rest_layer = inputs.File(
@@ -43,7 +41,6 @@ class HydropowerWaterYield(model.Model):
                 u"The root restricting layer depth value should be in "
                 u"millimeters (mm)."),
             label=u'Depth To Root Restricting Layer (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.depth_to_root_rest_layer)
         self.plant_available_water_fraction = inputs.File(
@@ -54,7 +51,6 @@ class HydropowerWaterYield(model.Model):
                 u"plant available water content fraction should be a "
                 u"value between 0 and 1."),
             label=u'Plant Available Water Fraction (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.plant_available_water_fraction)
         self.land_use = inputs.File(
@@ -63,7 +59,6 @@ class HydropowerWaterYield(model.Model):
                 u"A GDAL-supported raster file containing LULC code "
                 u"(expressed as integers) for each cell."),
             label=u'Land Use (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.land_use)
         self.watersheds = inputs.File(
@@ -74,7 +69,6 @@ class HydropowerWaterYield(model.Model):
                 u"watershed is required to have a field 'ws_id' that is "
                 u"a unique integer which identifies that watershed."),
             label=u'Watersheds (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.watersheds)
         self.sub_watersheds = inputs.File(
@@ -87,7 +81,6 @@ class HydropowerWaterYield(model.Model):
                 u"field 'subws_id' that is a unique integer which "
                 u"identifies that sub-watershed."),
             label=u'Sub-Watersheds (Vector) (Optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.sub_watersheds)
         self.biophysical_table = inputs.File(
@@ -99,7 +92,6 @@ class HydropowerWaterYield(model.Model):
                 u"'lucode' (integer), 'root_depth' (mm), 'Kc' "
                 u"(coefficient)."),
             label=u'Biophysical Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.biophysical_table)
         self.seasonality_constant = inputs.Text(
@@ -109,7 +101,6 @@ class HydropowerWaterYield(model.Model):
                 u"corresponding to the seasonal distribution of "
                 u"precipitation."),
             label=u'Z parameter',
-            required=True,
             validator=self.validator)
         self.add_input(self.seasonality_constant)
         self.water_scarcity_container = inputs.Container(
@@ -132,7 +123,6 @@ class HydropowerWaterYield(model.Model):
                 u"important since larger areas will consume more water "
                 u"for the same land-cover type."),
             label=u'Water Demand Table (CSV)',
-            required=True,
             validator=self.validator)
         self.water_scarcity_container.add_input(self.demand_table)
         self.valuation_container = inputs.Container(
@@ -150,7 +140,6 @@ class HydropowerWaterYield(model.Model):
                 u"'height', 'kw_price', 'cost', 'time_span', and "
                 u"'discount'."),
             label=u'Hydropower Valuation Table (CSV)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.hydropower_valuation_table)
 

@@ -19,7 +19,6 @@ class Carbon(model.Model):
                 u"A GDAL-supported raster representing the land-cover "
                 u"of the current scenario."),
             label=u'Current Land Use/Land Cover (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.cur_lulc_raster)
         self.carbon_pools_path = inputs.File(
@@ -31,7 +30,6 @@ class Carbon(model.Model):
                 u"in the User's Guide.  The values in LULC must at "
                 u"least include the LULC IDs in the land cover maps."),
             label=u'Carbon Pools',
-            required=True,
             validator=self.validator)
         self.add_input(self.carbon_pools_path)
         self.cur_lulc_year = inputs.Text(
@@ -39,7 +37,6 @@ class Carbon(model.Model):
             helptext=u'The calendar year of the current scenario.',
             interactive=False,
             label=u'Current Landcover Calendar Year',
-            required=False,
             validator=self.validator)
         self.add_input(self.cur_lulc_year)
         self.calc_sequestration = inputs.Checkbox(
@@ -60,7 +57,6 @@ class Carbon(model.Model):
                 u"the REDD policy scenario."),
             interactive=False,
             label=u'Future Landcover (Raster)',
-            required=False,
             validator=self.validator)
         self.add_input(self.fut_lulc_raster)
         self.fut_lulc_year = inputs.Text(
@@ -68,7 +64,6 @@ class Carbon(model.Model):
             helptext=u'The calendar year of the future scenario.',
             interactive=False,
             label=u'Future Landcover Calendar Year',
-            required=False,
             validator=self.validator)
         self.add_input(self.fut_lulc_year)
         self.redd = inputs.Checkbox(
@@ -90,7 +85,6 @@ class Carbon(model.Model):
                 u"will be compared to the baseline future scenario."),
             interactive=False,
             label=u'REDD Policy (Raster)',
-            required=False,
             validator=self.validator)
         self.add_input(self.redd_lulc_raster)
         self.valuation_container = inputs.Container(
@@ -103,14 +97,12 @@ class Carbon(model.Model):
         self.price_per_metric_ton_of_c = inputs.Text(
             args_key=u'price_per_metric_ton_of_c',
             label=u'Price/Metric ton of carbon',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.price_per_metric_ton_of_c)
         self.discount_rate = inputs.Text(
             args_key=u'discount_rate',
             helptext=u'The discount rate as a floating point percent.',
             label=u'Market Discount in Price of Carbon (%)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.discount_rate)
         self.rate_change = inputs.Text(
@@ -119,7 +111,6 @@ class Carbon(model.Model):
                 u"The floating point percent increase of the price of "
                 u"carbon per year."),
             label=u'Annual Rate of Change in Price of Carbon (%)',
-            required=True,
             validator=self.validator)
         self.valuation_container.add_input(self.rate_change)
 
@@ -129,15 +120,11 @@ class Carbon(model.Model):
         self.calc_sequestration.sufficiency_changed.connect(
             self.fut_lulc_raster.set_interactive)
         self.calc_sequestration.sufficiency_changed.connect(
-            self.fut_lulc_raster.set_required)
-        self.calc_sequestration.sufficiency_changed.connect(
             self.fut_lulc_year.set_interactive)
         self.calc_sequestration.sufficiency_changed.connect(
             self.redd.set_interactive)
         self.redd.sufficiency_changed.connect(
             self.redd_lulc_raster.set_interactive)
-        self.redd.sufficiency_changed.connect(
-            self.redd_lulc_raster.set_required)
         self.calc_sequestration.sufficiency_changed.connect(
             self.valuation_container.set_interactive)
 

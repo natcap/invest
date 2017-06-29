@@ -16,7 +16,6 @@ class ScenarioGenProximity(model.Model):
         self.base_lulc_path = inputs.File(
             args_key=u'base_lulc_path',
             label=u'Base Land Use/Cover (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.base_lulc_path)
         self.aoi_path = inputs.File(
@@ -26,31 +25,26 @@ class ScenarioGenProximity(model.Model):
                 u"aggregate carbon values at the end of the run if "
                 u"provided."),
             label=u'Area of interest (Vector) (optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.aoi_path)
         self.area_to_convert = inputs.Text(
             args_key=u'area_to_convert',
             label=u'Max area to convert (Ha)',
-            required=True,
             validator=self.validator)
         self.add_input(self.area_to_convert)
         self.focal_landcover_codes = inputs.Text(
             args_key=u'focal_landcover_codes',
             label=u'Focal Landcover Codes (list)',
-            required=True,
             validator=self.validator)
         self.add_input(self.focal_landcover_codes)
         self.convertible_landcover_codes = inputs.Text(
             args_key=u'convertible_landcover_codes',
             label=u'Convertible Landcover Codes (list)',
-            required=True,
             validator=self.validator)
         self.add_input(self.convertible_landcover_codes)
         self.replacment_lucode = inputs.Text(
             args_key=u'replacment_lucode',
             label=u'Replacement Landcover Code (int)',
-            required=True,
             validator=self.validator)
         self.add_input(self.replacment_lucode)
         self.convert_farthest_from_edge = inputs.Checkbox(
@@ -79,7 +73,6 @@ class ScenarioGenProximity(model.Model):
                 u"affect the final result if the base types are also "
                 u"convertible types."),
             label=u'Number of Steps in Conversion',
-            required=True,
             validator=self.validator)
         self.add_input(self.n_fragmentation_steps)
 

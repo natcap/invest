@@ -22,7 +22,6 @@ class HabitatRiskAssessment(model.Model):
                 u"stressor pulled from habitat and stressor shapefiles "
                 u"during the run of the HRA Preprocessor."),
             label=u'Criteria Scores CSV Folder',
-            required=True,
             validator=self.validator)
         self.add_input(self.csv_uri)
         self.grid_size = inputs.Text(
@@ -33,7 +32,6 @@ class HabitatRiskAssessment(model.Model):
                 u"value will be the pixel size of the completed raster "
                 u"files."),
             label=u'Resolution of Analysis (meters)',
-            required=True,
             validator=self.validator)
         self.add_input(self.grid_size)
         self.risk_eq = inputs.Dropdown(
@@ -64,7 +62,6 @@ class HabitatRiskAssessment(model.Model):
                 u"be placed within the Rating column of the habitat, "
                 u"species, and stressor CSVs."),
             label=u'Maximum Criteria Score',
-            required=True,
             validator=self.validator)
         self.add_input(self.max_rating)
         self.max_stress = inputs.Text(
@@ -75,7 +72,6 @@ class HabitatRiskAssessment(model.Model):
                 u"make determinations of low, medium, and high risk for "
                 u"any given habitat."),
             label=u'Maximum Overlapping Stressors',
-            required=True,
             validator=self.validator)
         self.add_input(self.max_stress)
         self.aoi_tables = inputs.File(
@@ -85,7 +81,6 @@ class HabitatRiskAssessment(model.Model):
                 u"subregions.  The program will create additional "
                 u"summary outputs across each subregion."),
             label=u'Subregions (Vector)',
-            required=True,
             validator=self.validator)
         self.add_input(self.aoi_tables)
 
@@ -123,7 +118,6 @@ class HRAPreprocessor(model.Model):
                 u"must be provided."),
             hideable=True,
             label=u'Calculate Risk to Habitats?',
-            required=False,
             validator=self.validator)
         self.add_input(self.habs_dir)
         self.species_dir = inputs.File(
@@ -135,14 +129,12 @@ class HRAPreprocessor(model.Model):
                 u"must be provided."),
             hideable=True,
             label=u'Calculate Risk to Species?',
-            required=False,
             validator=self.validator)
         self.add_input(self.species_dir)
         self.stressor_dir = inputs.Folder(
             args_key=u'stressors_dir',
             helptext=u'This is the path to the stressors layers folder.',
             label=u'Stressors Layers Folder',
-            required=True,
             validator=self.validator)
         self.add_input(self.stressor_dir)
         self.cur_lulc_box = inputs.Container(
@@ -183,7 +175,6 @@ class HRAPreprocessor(model.Model):
                 u"shapefile directories."),
             hideable=True,
             label=u'Use Spatially Explicit Risk Score in Shapefiles',
-            required=False,
             validator=self.validator)
         self.add_input(self.crit_dir)
 

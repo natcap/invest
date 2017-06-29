@@ -31,7 +31,6 @@ class CoastalVulnerability(model.Model):
                 u'A string that will be added to the end of the output file '
                 'paths.'),
             label=u'Results Suffix (Optional)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.results_suffix)
         self.area_of_interest = inputs.File(
@@ -40,7 +39,6 @@ class CoastalVulnerability(model.Model):
                 u"An OGR-supported, single-feature polygon vector "
                 u"file.  All outputs will be in the AOI's projection."),
             label=u'Area of Interest (Vector)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.area_of_interest)
         self.landmass_uri = inputs.File(
@@ -50,7 +48,6 @@ class CoastalVulnerability(model.Model):
                 u"polygon from where the coastline will be extracted. "
                 u"The default is the global land polygon."),
             label=u'Land Polygon (Vector)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.landmass_uri)
         self.bathymetry_layer = inputs.File(
@@ -60,7 +57,6 @@ class CoastalVulnerability(model.Model):
                 u"the area of interest.  Used to compute depths along "
                 u"fetch rays, relief and surge potential."),
             label=u'Bathymetry Layer (Raster)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.bathymetry_layer)
         self.bathymetry_constant = inputs.Text(
@@ -73,7 +69,6 @@ class CoastalVulnerability(model.Model):
                 u"both the file and value for the layer are omitted, "
                 u"the layer is skipped altogether."),
             label=u'Layer Value if Path Omitted',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.bathymetry_constant)
         self.relief = inputs.File(
@@ -84,7 +79,6 @@ class CoastalVulnerability(model.Model):
                 u"within a user-defined radius (see Elevation averaging "
                 u"radius)."),
             label=u'Relief (Raster)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.relief)
         self.relief_constant = inputs.Text(
@@ -97,7 +91,6 @@ class CoastalVulnerability(model.Model):
                 u"both the file and value for the layer are omitted, "
                 u"the layer is skipped altogether."),
             label=u'Layer Value If Path Omitted',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.relief_constant)
         self.cell_size = inputs.Text(
@@ -107,7 +100,6 @@ class CoastalVulnerability(model.Model):
                 u"faster the computation, but the coarser the output "
                 u"rasters produced by the model."),
             label=u'Model Resolution (Segment Size)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.cell_size)
         self.depth_threshold = inputs.Text(
@@ -116,7 +108,6 @@ class CoastalVulnerability(model.Model):
                 u"Depth in meters (integer) cutoff to determine if "
                 u"fetch rays project over deep areas."),
             label=u'Depth Threshold (meters)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.depth_threshold)
         self.exposure_proportion = inputs.Text(
@@ -126,7 +117,6 @@ class CoastalVulnerability(model.Model):
                 u"and/or deep areas need to classify a shore segment as "
                 u"exposed."),
             label=u'Exposure Proportion',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.exposure_proportion)
         self.geomorphology_uri = inputs.File(
@@ -136,7 +126,6 @@ class CoastalVulnerability(model.Model):
                 u"called 'RANK' with values between 1 and 5 in the "
                 u"attribute table."),
             label=u'Geomorphology (Vector)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.geomorphology_uri)
         self.geomorphology_constant = inputs.Text(
@@ -149,7 +138,6 @@ class CoastalVulnerability(model.Model):
                 u"both the file and value for the layer are omitted, "
                 u"the layer is skipped altogether."),
             label=u'Layer Value if Path Omitted',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.geomorphology_constant)
         self.habitats_directory_uri = inputs.Folder(
@@ -161,7 +149,6 @@ class CoastalVulnerability(model.Model):
                 u"specified in the natural habitats CSV file provided "
                 u"along with the habitats."),
             label=u'Natural Habitats Directory',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.habitats_directory_uri)
         self.habitats_csv_uri = inputs.File(
@@ -184,7 +171,6 @@ class CoastalVulnerability(model.Model):
                 u"both the file and value for the layer are omitted, "
                 u"the layer is skipped altogether."),
             label=u'Layer Value if Path Omitted',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.habitats_constant)
         self.climatic_forcing_uri = inputs.File(
@@ -193,7 +179,6 @@ class CoastalVulnerability(model.Model):
                 u"An OGR-supported vector containing both wind and "
                 u"wave information across the region of interest."),
             label=u'Climatic Forcing Grid (Vector)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.climatic_forcing_uri)
         self.climatic_forcing_constant = inputs.Text(
@@ -206,7 +191,6 @@ class CoastalVulnerability(model.Model):
                 u"both the file and value for the layer are omitted, "
                 u"the layer is skipped altogether."),
             label=u'Layer Value if Path Omitted',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.climatic_forcing_constant)
         self.continental_shelf_uri = inputs.File(
@@ -217,7 +201,6 @@ class CoastalVulnerability(model.Model):
                 u"continental shelf shapefile.  If omitted, the user "
                 u"can specify depth contour.  See entry below."),
             label=u'Continental Shelf (Vector)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.continental_shelf_uri)
         self.depth_contour = inputs.Text(
@@ -226,7 +209,6 @@ class CoastalVulnerability(model.Model):
                 u"Used to delineate shallow and deep areas. "
                 u"Continental shelf limit is at about 150 meters."),
             label=u'Depth Countour Level (meters)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.depth_contour)
         self.sea_level_rise_uri = inputs.File(
@@ -236,7 +218,6 @@ class CoastalVulnerability(model.Model):
                 u"containing features with 'Trend' fields in the "
                 u"attributes table."),
             label=u'Sea Level Rise (Vector)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.sea_level_rise_uri)
         self.sea_level_rise_constant = inputs.Text(
@@ -249,7 +230,6 @@ class CoastalVulnerability(model.Model):
                 u"both the file and value for the layer are omitted, "
                 u"the layer is skipped altogether."),
             label=u'Layer Value if Path Omitted',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.sea_level_rise_constant)
         self.structures_uri = inputs.File(
@@ -259,7 +239,6 @@ class CoastalVulnerability(model.Model):
                 u"structures used to identify the portions of the coast "
                 u"that is armored."),
             label=u'Structures (Vectors)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.structures_uri)
         self.structures_constant = inputs.Text(
@@ -272,7 +251,6 @@ class CoastalVulnerability(model.Model):
                 u"both the file and value for the layer are omitted, "
                 u"the layer is skipped altogether."),
             label=u'Layer Value if Path Omitted',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.structures_constant)
         self.population_uri = inputs.File(
@@ -281,7 +259,6 @@ class CoastalVulnerability(model.Model):
                 u'A GDAL-supported raster file representing the population '
                 u'density.'),
             label=u'Population Layer (Raster)',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.population_uri)
         self.urban_center_threshold = inputs.Text(
@@ -290,7 +267,6 @@ class CoastalVulnerability(model.Model):
                 u"Minimum population required to consider the shore "
                 u"segment a population center."),
             label=u'Min. Population in Urban Centers',
-            required=True,
             validator=self.validator)
         self.general_tab.add_input(self.urban_center_threshold)
         self.additional_layer_uri = inputs.File(
@@ -301,7 +277,6 @@ class CoastalVulnerability(model.Model):
                 u"vulnerability and coastal vulnerability without "
                 u"habitat."),
             label=u'Additional Layer (Vector)',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.additional_layer_uri)
         self.additional_layer_constant = inputs.Text(
@@ -314,7 +289,6 @@ class CoastalVulnerability(model.Model):
                 u"both the file and value for the layer are omitted, "
                 u"the layer is skipped altogether."),
             label=u'Layer Value if Path Omitted',
-            required=False,
             validator=self.validator)
         self.general_tab.add_input(self.additional_layer_constant)
         self.advanced_tab = inputs.Container(
@@ -327,7 +301,6 @@ class CoastalVulnerability(model.Model):
                 u"Distance in meters (integer). Each pixel average "
                 u"elevation will be computed within this radius."),
             label=u'Elevation Averaging Radius (meters)',
-            required=False,
             validator=self.validator)
         self.advanced_tab.add_input(self.elevation_averaging_radius)
         self.mean_sea_level_datum = inputs.Text(
@@ -341,7 +314,6 @@ class CoastalVulnerability(model.Model):
                 u"(0) elevation, so the value is subtracted from the "
                 u"bathymetry."),
             label=u'Mean Sea Level Datum (meters)',
-            required=False,
             validator=self.validator)
         self.advanced_tab.add_input(self.mean_sea_level_datum)
         self.rays_per_sector = inputs.Text(
@@ -350,7 +322,6 @@ class CoastalVulnerability(model.Model):
                 u"Number of rays used to subsample the fetch distance "
                 u"within each of the 16 sectors."),
             label=u'Rays per Sector',
-            required=True,
             validator=self.validator)
         self.advanced_tab.add_input(self.rays_per_sector)
         self.max_fetch = inputs.Text(
@@ -359,7 +330,6 @@ class CoastalVulnerability(model.Model):
                 u'Maximum fetch distance computed by the model '
                 u'(&gt;=60,000m).'),
             label=u'Maximum Fetch Distance (meters)',
-            required=False,
             validator=self.validator)
         self.advanced_tab.add_input(self.max_fetch)
         self.spread_radius = inputs.Text(
@@ -376,7 +346,6 @@ class CoastalVulnerability(model.Model):
                 u"happens on each side of the coast (n pixels landward, "
                 u"and n pixels seaward)."),
             label=u'Coastal Overlap (meters)',
-            required=True,
             validator=self.validator)
         self.advanced_tab.add_input(self.spread_radius)
         self.population_radius = inputs.Text(
@@ -385,15 +354,12 @@ class CoastalVulnerability(model.Model):
                 u"Radius length in meters used to count the number of "
                 u"people leaving close to the coast."),
             label=u'Coastal Neighborhood (radius in meters)',
-            required=True,
             validator=self.validator)
         self.advanced_tab.add_input(self.population_radius)
 
         # Set interactivity, requirement as input sufficiency changes
         self.habitats_directory_uri.sufficiency_changed.connect(
             self.habitats_csv_uri.set_interactive)
-        self.habitats_directory_uri.sufficiency_changed.connect(
-            self.habitats_csv_uri.set_required)
 
     def assemble_args(self):
         args = {
