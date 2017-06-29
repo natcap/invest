@@ -49,16 +49,17 @@ class ValidationContext:
     def is_arg_complete(self, key, require=False):
         if (key not in self.args or
                 self.limit_to not in (key, None)):
+            return False
 
-            if require:
-                try:
-                    stripped_arg = self.args[key].strip()
-                except AttributeError:
-                    # When args[key] isn't a string, it has no strip()
-                    stripped_arg = self.args[key]
-                if stripped_arg not in ('', None):
-                    return True
-                self.require(key)
+        try:
+            value = self.args[key]
+            if isinstance(value, basestring):
+                value = value.strip()
+        except KeyError:
+            return False
+
+        if value in ('', None) and require:
+            self.require(key)
             return False
         return True
 
