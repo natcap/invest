@@ -697,21 +697,12 @@ class GriddedInput(Input):
         self.lock.acquire()
 
         try:
-            # When input is required but has no value, note requirement without
-            # starting a thread.
-            if self.required:
-                if not self.value():
-                    LOGGER.info('Validation: input is required and has no value')
-                    self._validation_finished(
-                        validation_warnings=['Input is required'])
-                    return
-
-                if self.value() and not self.args_key:
-                    warnings.warn(('Validation: %s instance has no args_key, but '
-                                'must to validate.  Skipping.') %
-                                self.__class__.__name__)
-                    self._validation_finished(validation_warnings=None)
-                    return
+            if self.value() and not self.args_key:
+                warnings.warn(('Validation: %s instance has no args_key, but '
+                            'must to validate.  Skipping.') %
+                            self.__class__.__name__)
+                self._validation_finished(validation_warnings=None)
+                return
 
             if self.validator_ref:
                 LOGGER.info('Validation: validator taken from self.validator_ref: %s',
