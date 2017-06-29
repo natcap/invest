@@ -325,12 +325,26 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.button.setIconSize(QtCore.QSize(64, 64))
         self.layout().addWidget(self.button)
 
-        self.label = QtWidgets.QLabel('<h2>Validating inputs ...</h2>')
-        self.layout().addWidget(self.label)
+        self.title_label = QtWidgets.QLabel('<h2>Validating inputs ...</h2>')
+        self.layout().addWidget(self.title_label)
+
+        self.scroll_widget = QtWidgets.QScrollArea()
+        self.scroll_widget.setWidgetResizable(True)
+        self.scroll_widget_container = QtWidgets.QWidget()
+        self.scroll_widget_container.setLayout(QtWidgets.QVBoxLayout())
+        self.scroll_widget.setWidget(self.scroll_widget_container)
+        self.scroll_widget.setHorizontalScrollBarPolicy(
+            QtCore.Qt.ScrollBarAlwaysOff)
+        self.layout().addWidget(self.scroll_widget)
+
+        self.label = QtWidgets.QLabel('')
+        self.label.setWordWrap(True)
+        self.scroll_widget.widget().layout().addWidget(self.label)
+        self.scroll_widget.widget().layout().insertStretch(-1)
 
         self.buttonbox = QtWidgets.QDialogButtonBox()
         self.back_button = QtWidgets.QPushButton('Back')
-        self.back_button.pressed.connect(self.close)
+        self.back_button.clicked.connect(self.close)
         self.buttonbox.addButton(self.back_button,
                                  QtWidgets.QDialogButtonBox.RejectRole)
         self.layout().addWidget(self.buttonbox)
@@ -347,16 +361,16 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
 
         if validation_warnings:
             # cgi.escape handles escaping of characters <, >, &, " for HTML.
-            self.label.setText(
+            self.title_label.setText(
                 '<h2>Validation warnings found</h2>'
                 '<h4>To ensure the model works as expected, please fix these '
-                'erorrs</h4>'
+                'erorrs:</h4>')
+            self.label.setText(
                 '<ul>%s</ul>' % ''.join(
                     ['<li>%s</li>' % cgi.escape(warning_, quote=True)
                      for warning_ in validation_warnings]))
             self.label.repaint()
             self.label.setVisible(True)
-            LOGGER.info('Label text: %s', self.label.text())
 
 
 class Model(QtWidgets.QMainWindow):
@@ -411,7 +425,7 @@ class Model(QtWidgets.QMainWindow):
         self.validation_warning = QtWidgets.QToolButton()
         self.validation_warning.setMaximumHeight(20)
         self.status_bar.addPermanentWidget(self.validation_warning)
-        self.validation_warning.pressed.connect(
+        self.validation_warning.clicked.connect(
             self._validation_report_dialog.show)
         self.setStatusBar(self.status_bar)
         self.menuBar().setNativeMenuBar(True)
@@ -665,16 +679,9 @@ class Model(QtWidgets.QMainWindow):
         inputs.QT_APP.processEvents()
         LOGGER.info('Whole-model validation returned: %s',
                     validation_warnings)
-        # Double-check that there aren't any required inputs that aren't
-        # satisfied.
-        required_warnings = [input_ for input_ in self.inputs()
-                             if all((input_.required,
-                                     not input_.value()))]
-        LOGGER.info('Required inputs detected from the ui: %s',
-                    required_warnings)
-        if validation_warnings or required_warnings:
+        if validation_warnings:
             self.validation_warning.setText('(%s)' % (
-                str(len(validation_warnings) + len(required_warnings))))
+                str(len(validation_warnings))))
             icon = qtawesome.icon('fa.times', color='red')
             self.validation_warning.setStyleSheet(
                 'QPushButton {color: red}')
@@ -691,10 +698,8 @@ class Model(QtWidgets.QMainWindow):
         warnings_ = []
         for keys, warning in validation_warnings:
             for key in keys:
-                '%s: %s' % (args_to_inputs[key].label, warning)
-        warnings_ += [
-            '%s: Input is required' % input_.label
-            for input_ in required_warnings]
+                warnings_.append(
+                    '%s: %s' % (args_to_inputs[key].label, warning))
         self._validation_report_dialog.validation_finished(warnings_)
 
     def inputs(self):
