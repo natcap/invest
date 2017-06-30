@@ -598,7 +598,7 @@ class Model(QtWidgets.QMainWindow):
         if os.path.exists(args['workspace_dir']):
             dialog = QtWidgets.QMessageBox()
             dialog.setWindowFlags(QtCore.Qt.Dialog)
-            dialog.setText('Workspace exists!')
+            dialog.setText('<h2>Workspace exists!<h2>')
             dialog.setInformativeText(
                 'Overwrite files from a previous run?')
             dialog.setStandardButtons(
