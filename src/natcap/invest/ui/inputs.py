@@ -232,7 +232,8 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
         QtWidgets.QPlainTextEdit.__init__(self)
 
         self.setReadOnly(True)
-        self.setStyleSheet("QWidget { background-color: White }")
+        self.setStyleSheet("QWidget { background-color: White; "
+                           'font-family: monospace;}')
         self.message_received.connect(self._write)
 
     def write(self, message):
