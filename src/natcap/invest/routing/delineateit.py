@@ -1,11 +1,13 @@
 """DelineateIt wrapper for natcap.invest.pygeoprocessing_0_3_3's watershed delineation routine."""
-
+from __future__ import absolute_import
 import os
 import logging
 
 import natcap.invest.pygeoprocessing_0_3_3.routing
 
 from .. import utils
+from .. import validation
+
 
 LOGGER = logging.getLogger('natcap.invest.routing.delineateit')
 
@@ -75,5 +77,29 @@ def execute(args):
         snapped_outlet_points_uri, stream_out_uri)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('dem_uri', require=True):
+        # Implement validation for dem_uri here
+        pass
+
+    if context.is_arg_complete('outlet_shapefile_uri', require=True):
+        # Implement validation for outlet_shapefile_uri here
+        pass
+
+    if context.is_arg_complete('flow_threshold', require=True):
+        # Implement validation for flow_threshold here
+        pass
+
+    if context.is_arg_complete('snap_distance', require=True):
+        # Implement validation for snap_distance here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

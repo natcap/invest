@@ -1,5 +1,6 @@
 """Module that contains the core computational components for the hydropower
     model including the water yield, water scarcity, and valuation functions"""
+from __future__ import absolute_import
 
 import logging
 import os
@@ -11,6 +12,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.hydropower.hydropower_water_yield')
 
@@ -917,10 +919,6 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, key):
         layer.SetFeature(feat)
 
 
-def validate(args, limit_to=None):
-    return []
-
-
 def _extract_vector_table_by_key(vector_path, key_field):
     """Return vector attribute table of first layer as dictionary.
 
@@ -962,3 +960,59 @@ def _extract_vector_table_by_key(vector_path, key_field):
     layer = None
     vector = None
     return attribute_dictionary
+
+
+@validation.validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('precipitation_uri', require=True):
+        # Implement validation for precipitation_uri here
+        pass
+
+    if context.is_arg_complete('eto_uri', require=True):
+        # Implement validation for eto_uri here
+        pass
+
+    if context.is_arg_complete('depth_to_root_rest_layer_uri', require=True):
+        # Implement validation for depth_to_root_rest_layer_uri here
+        pass
+
+    if context.is_arg_complete('pawc_uri', require=True):
+        # Implement validation for pawc_uri here
+        pass
+
+    if context.is_arg_complete('lulc_uri', require=True):
+        # Implement validation for lulc_uri here
+        pass
+
+    if context.is_arg_complete('watersheds_uri', require=True):
+        # Implement validation for watersheds_uri here
+        pass
+
+    if context.is_arg_complete('sub_watersheds_uri', require=False):
+        # Implement validation for sub_watersheds_uri here
+        pass
+
+    if context.is_arg_complete('biophysical_table_uri', require=True):
+        # Implement validation for biophysical_table_uri here
+        pass
+
+    if context.is_arg_complete('seasonality_constant', require=True):
+        # Implement validation for seasonality_constant here
+        pass
+
+    if context.is_arg_complete('demand_table_uri', require=True):
+        # Implement validation for demand_table_uri here
+        pass
+
+    if context.is_arg_complete('valuation_table_uri', require=True):
+        # Implement validation for valuation_table_uri here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

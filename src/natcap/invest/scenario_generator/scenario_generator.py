@@ -1,4 +1,5 @@
 """Scenario Generator Module."""
+from __future__ import absolute_import
 
 import os
 import math
@@ -13,6 +14,7 @@ from osgeo import gdal, ogr
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 from .. import utils as invest_utils
+from .. import validation
 
 LOGGER = logging.getLogger(
     'natcap.invest.scenario_generator.scenario_generator')
@@ -1700,3 +1702,111 @@ def execute(args):
     htm.close()
 
     LOGGER.info("...model run complete.")
+
+
+@validation.validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('landcover', require=True):
+        # Implement validation for landcover here
+        pass
+
+    if context.is_arg_complete('transition', require=False):
+        # Implement validation for transition here
+        pass
+
+    if context.is_arg_complete('calculate_priorities', require=False):
+        # Implement validation for calculate_priorities here
+        pass
+
+    if context.is_arg_complete('priorities_csv_uri', require=True):
+        # Implement validation for priorities_csv_uri here
+        pass
+
+    if context.is_arg_complete('proximity_weight', require=True):
+        # Implement validation for proximity_weight here
+        pass
+
+    if context.is_arg_complete('transition_id', require=True):
+        # Implement validation for transition_id here
+        pass
+
+    if context.is_arg_complete('change_field', require=True):
+        # Implement validation for change_field here
+        pass
+
+    if context.is_arg_complete('area_field', require=True):
+        # Implement validation for area_field here
+        pass
+
+    if context.is_arg_complete('priority_field', require=False):
+        # Implement validation for priority_field here
+        pass
+
+    if context.is_arg_complete('proximity_field', require=False):
+        # Implement validation for proximity_field here
+        pass
+
+    if context.is_arg_complete('suitability_folder', require=True):
+        # Implement validation for suitability_folder here
+        pass
+
+    if context.is_arg_complete('suitability', require=False):
+        # Implement validation for suitability here
+        pass
+
+    if context.is_arg_complete('weight', require=True):
+        # Implement validation for weight here
+        pass
+
+    if context.is_arg_complete('factor_inclusion', require=True):
+        # Implement validation for factor_inclusion here
+        pass
+
+    if context.is_arg_complete('suitability_id', require=True):
+        # Implement validation for suitability_id here
+        pass
+
+    if context.is_arg_complete('suitability_layer', require=True):
+        # Implement validation for suitability_layer here
+        pass
+
+    if context.is_arg_complete('suitability_field', require=True):
+        # Implement validation for suitability_field here
+        pass
+
+    if context.is_arg_complete('distance_field', require=True):
+        # Implement validation for distance_field here
+        pass
+
+    if context.is_arg_complete('constraints', require=False):
+        # Implement validation for constraints here
+        pass
+
+    if context.is_arg_complete('constraints_field', require=False):
+        # Implement validation for constraints_field here
+        pass
+
+    if context.is_arg_complete('override', require=False):
+        # Implement validation for override here
+        pass
+
+    if context.is_arg_complete('override_field', require=False):
+        # Implement validation for override_field here
+        pass
+
+    if context.is_arg_complete('override_inclusion', require=True):
+        # Implement validation for override_inclusion here
+        pass
+
+    if context.is_arg_complete('seed', require=False):
+        # Implement validation for seed here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

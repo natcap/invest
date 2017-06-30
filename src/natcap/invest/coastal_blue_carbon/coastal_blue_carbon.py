@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Model."""
+from __future__ import absolute_import
 
 import os
 import logging
@@ -12,6 +13,7 @@ import numpy
 from osgeo import gdal
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 
+from .. import validation
 from .. import utils as invest_utils
 
 # using largest negative 32-bit floating point number
@@ -875,5 +877,69 @@ def _get_price_table(price_table_uri, start_year, end_year):
                        '%s' % missing_year)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('lulc_lookup_uri', require=True):
+        # Implement validation for lulc_lookup_uri here
+        pass
+
+    if context.is_arg_complete('lulc_transition_matrix_uri', require=True):
+        # Implement validation for lulc_transition_matrix_uri here
+        pass
+
+    if context.is_arg_complete('carbon_pool_initial_uri', require=True):
+        # Implement validation for carbon_pool_initial_uri here
+        pass
+
+    if context.is_arg_complete('carbon_pool_transient_uri', require=True):
+        # Implement validation for carbon_pool_transient_uri here
+        pass
+
+    if context.is_arg_complete('lulc_baseline_map_uri', require=True):
+        # Implement validation for lulc_baseline_map_uri here
+        pass
+
+    if context.is_arg_complete('lulc_baseline_year', require=True):
+        # Implement validation for lulc_baseline_year here
+        pass
+
+    if context.is_arg_complete('lulc_transition_maps_list', require=False):
+        # Implement validation for lulc_transition_maps_list here
+        pass
+
+    if context.is_arg_complete('lulc_transition_years_list', require=False):
+        # Implement validation for lulc_transition_years_list here
+        pass
+
+    if context.is_arg_complete('analysis_year', require=False):
+        # Implement validation for analysis_year here
+        pass
+
+    if context.is_arg_complete('do_price_table', require=True):
+        # Implement validation for do_price_table here
+        pass
+
+    if context.is_arg_complete('price', require=True):
+        # Implement validation for price here
+        pass
+
+    if context.is_arg_complete('interest_rate', require=True):
+        # Implement validation for interest_rate here
+        pass
+
+    if context.is_arg_complete('price_table_uri', require=True):
+        # Implement validation for price_table_uri here
+        pass
+
+    if context.is_arg_complete('discount_rate', require=True):
+        # Implement validation for discount_rate here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

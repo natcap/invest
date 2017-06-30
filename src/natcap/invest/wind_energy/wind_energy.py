@@ -1,4 +1,6 @@
 """InVEST Wind Energy model."""
+from __future__ import absolute_import
+
 import tempfile
 import logging
 import os
@@ -20,6 +22,7 @@ import shapely.ops
 from shapely import speedups
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy.wind_energy')
 
@@ -1937,5 +1940,93 @@ def pixel_size_based_on_coordinate_transform_uri(
     return (pixel_diff_x, pixel_diff_y)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('wind_data_uri', require=True):
+        # Implement validation for wind_data_uri here
+        pass
+
+    # element has requiredIf logic.  See config.
+    if context.is_arg_complete('aoi_uri', require=False):
+        # Implement validation for aoi_uri here
+        pass
+
+    if context.is_arg_complete('bathymetry_uri', require=True):
+        # Implement validation for bathymetry_uri here
+        pass
+
+    # element has requiredIf logic.  See config.
+    if context.is_arg_complete('land_polygon_uri', require=False):
+        # Implement validation for land_polygon_uri here
+        pass
+
+    if context.is_arg_complete('global_wind_parameters_uri', require=True):
+        # Implement validation for global_wind_parameters_uri here
+        pass
+
+    if context.is_arg_complete('turbine_parameters_uri', require=True):
+        # Implement validation for turbine_parameters_uri here
+        pass
+
+    if context.is_arg_complete('number_of_turbines', require=True):
+        # Implement validation for number_of_turbines here
+        pass
+
+    if context.is_arg_complete('min_depth', require=True):
+        # Implement validation for min_depth here
+        pass
+
+    if context.is_arg_complete('max_depth', require=True):
+        # Implement validation for max_depth here
+        pass
+
+    # element has requiredIf logic.  See config.
+    if context.is_arg_complete('min_distance', require=False):
+        # Implement validation for min_distance here
+        pass
+
+    # element has requiredIf logic.  See config.
+    if context.is_arg_complete('max_distance', require=False):
+        # Implement validation for max_distance here
+        pass
+
+    if context.is_arg_complete('foundation_cost', require=True):
+        # Implement validation for foundation_cost here
+        pass
+
+    if context.is_arg_complete('discount_rate', require=True):
+        # Implement validation for discount_rate here
+        pass
+
+    if context.is_arg_complete('grid_points_uri', require=False):
+        # Implement validation for grid_points_uri here
+        pass
+
+    if context.is_arg_complete('avg_grid_distance', require=True):
+        # Implement validation for avg_grid_distance here
+        pass
+
+    if context.is_arg_complete('price_table', require=False):
+        # Implement validation for price_table here
+        pass
+
+    if context.is_arg_complete('wind_schedule', require=True):
+        # Implement validation for wind_schedule here
+        pass
+
+    if context.is_arg_complete('wind_price', require=True):
+        # Implement validation for wind_price here
+        pass
+
+    if context.is_arg_complete('rate_change', require=True):
+        # Implement validation for rate_change here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

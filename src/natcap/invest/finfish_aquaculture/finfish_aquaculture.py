@@ -1,10 +1,13 @@
 """inVEST finfish aquaculture filehandler for biophysical and valuation data"""
+from __future__ import absolute_import
 
 import os
 import csv
 import logging
 
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
+from .. import validation
+
 
 LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.finfish_aquaculture')
 
@@ -279,5 +282,73 @@ def format_temp_table(temp_path, ff_aqua_args):
     ff_aqua_args['water_temp_dict'] = new_dict_temp
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('ff_farm_loc', require=True):
+        # Implement validation for ff_farm_loc here
+        pass
+
+    if context.is_arg_complete('farm_ID', require=True):
+        # Implement validation for farm_ID here
+        pass
+
+    if context.is_arg_complete('g_param_a', require=True):
+        # Implement validation for g_param_a here
+        pass
+
+    if context.is_arg_complete('g_param_b', require=True):
+        # Implement validation for g_param_b here
+        pass
+
+    if context.is_arg_complete('g_param_tau', require=True):
+        # Implement validation for g_param_tau here
+        pass
+
+    if context.is_arg_complete('g_param_a_sd', require=False):
+        # Implement validation for g_param_a_sd here
+        pass
+
+    if context.is_arg_complete('g_param_b_sd', require=False):
+        # Implement validation for g_param_b_sd here
+        pass
+
+    if context.is_arg_complete('num_monte_carlo_runs', require=False):
+        # Implement validation for num_monte_carlo_runs here
+        pass
+
+    if context.is_arg_complete('water_temp_tbl', require=True):
+        # Implement validation for water_temp_tbl here
+        pass
+
+    if context.is_arg_complete('farm_op_tbl', require=True):
+        # Implement validation for farm_op_tbl here
+        pass
+
+    if context.is_arg_complete('outplant_buffer', require=True):
+        # Implement validation for outplant_buffer here
+        pass
+
+    if context.is_arg_complete('do_valuation', require=True):
+        # Implement validation for do_valuation here
+        pass
+
+    if context.is_arg_complete('p_per_kg', require=False):
+        # Implement validation for p_per_kg here
+        pass
+
+    if context.is_arg_complete('frac_p', require=False):
+        # Implement validation for frac_p here
+        pass
+
+    if context.is_arg_complete('discount', require=False):
+        # Implement validation for discount here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

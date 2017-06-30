@@ -30,6 +30,9 @@ def main(args=None):
             for sub_element_config in element_config['elements']:
                 _recurse(sub_element_config)
         else:
+            if 'args_id' not in element_config:
+                return
+
             if 'workspace' in element_config['args_id']:
                 return
             if 'suffix' in element_config['args_id']:

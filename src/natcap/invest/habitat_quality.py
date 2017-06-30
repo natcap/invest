@@ -1,5 +1,5 @@
 """InVEST Habitat Quality model."""
-
+from __future__ import absolute_import
 import collections
 import os
 import logging
@@ -11,6 +11,7 @@ from osgeo import osr
 import natcap.invest.pygeoprocessing_0_3_3
 
 from . import utils
+from . import validation
 
 
 LOGGER = logging.getLogger('natcap.invest.habitat_quality')
@@ -619,5 +620,45 @@ def make_linear_decay_kernel_uri(max_distance, kernel_uri):
         kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('landuse_cur_uri', require=True):
+        # Implement validation for landuse_cur_uri here
+        pass
+
+    if context.is_arg_complete('landuse_fut_uri', require=False):
+        # Implement validation for landuse_fut_uri here
+        pass
+
+    if context.is_arg_complete('landuse_bas_uri', require=False):
+        # Implement validation for landuse_bas_uri here
+        pass
+
+    if context.is_arg_complete('threat_raster_folder', require=True):
+        # Implement validation for threat_raster_folder here
+        pass
+
+    if context.is_arg_complete('threats_uri', require=True):
+        # Implement validation for threats_uri here
+        pass
+
+    if context.is_arg_complete('access_uri', require=False):
+        # Implement validation for access_uri here
+        pass
+
+    if context.is_arg_complete('sensitivity_uri', require=True):
+        # Implement validation for sensitivity_uri here
+        pass
+
+    if context.is_arg_complete('half_saturation_constant', require=True):
+        # Implement validation for half_saturation_constant here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

@@ -1,11 +1,14 @@
 """Entry point for the Habitat Risk Assessment module"""
-
+from __future__ import absolute_import
 import csv
 import os
 import logging
 import json
 import fnmatch
 import shutil
+
+from .. import validation
+
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk.preprocessor')
 
@@ -1062,5 +1065,41 @@ def parse_stress_buffer(uri):
     return buff_dict
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('habitats_dir', require=False):
+        # Implement validation for habitats_dir here
+        pass
+
+    if context.is_arg_complete('species_dir', require=False):
+        # Implement validation for species_dir here
+        pass
+
+    if context.is_arg_complete('stressors_dir', require=True):
+        # Implement validation for stressors_dir here
+        pass
+
+    if context.is_arg_complete('exposure_crits', require=False):
+        # Implement validation for exposure_crits here
+        pass
+
+    if context.is_arg_complete('sensitivity_crits', require=False):
+        # Implement validation for sensitivity_crits here
+        pass
+
+    if context.is_arg_complete('resilience_crits', require=False):
+        # Implement validation for resilience_crits here
+        pass
+
+    if context.is_arg_complete('criteria_dir', require=False):
+        # Implement validation for criteria_dir here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

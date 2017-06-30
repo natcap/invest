@@ -2,11 +2,12 @@
 The Fisheries module contains the high-level code for excuting the fisheries
 model
 '''
-
+from __future__ import absolute_import
 import logging
 
 import fisheries_io as io
 import fisheries_model as model
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.fisheries')
 LABEL = 'Fisheries'
@@ -211,5 +212,81 @@ def execute(args, create_outputs=True):
     return vars_all_models
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('aoi_uri', require=False):
+        # Implement validation for aoi_uri here
+        pass
+
+    if context.is_arg_complete('total_timesteps', require=True):
+        # Implement validation for total_timesteps here
+        pass
+
+    if context.is_arg_complete('population_type', require=True):
+        # Implement validation for population_type here
+        pass
+
+    if context.is_arg_complete('sexsp', require=True):
+        # Implement validation for sexsp here
+        pass
+
+    if context.is_arg_complete('harvest_units', require=True):
+        # Implement validation for harvest_units here
+        pass
+
+    if context.is_arg_complete('do_batch', require=True):
+        # Implement validation for do_batch here
+        pass
+
+    if context.is_arg_complete('population_csv_uri', require=True):
+        # Implement validation for population_csv_uri here
+        pass
+
+    if context.is_arg_complete('population_csv_dir', require=True):
+        # Implement validation for population_csv_dir here
+        pass
+
+    if context.is_arg_complete('total_init_recruits', require=True):
+        # Implement validation for total_init_recruits here
+        pass
+
+    if context.is_arg_complete('recruitment_type', require=True):
+        # Implement validation for recruitment_type here
+        pass
+
+    if context.is_arg_complete('spawn_units', require=True):
+        # Implement validation for spawn_units here
+        pass
+
+    if context.is_arg_complete('alpha', require=False):
+        # Implement validation for alpha here
+        pass
+
+    if context.is_arg_complete('beta', require=False):
+        # Implement validation for beta here
+        pass
+
+    if context.is_arg_complete('total_recur_recruits', require=False):
+        # Implement validation for total_recur_recruits here
+        pass
+
+    if context.is_arg_complete('migration_dir', require=False):
+        # Implement validation for migration_dir here
+        pass
+
+    if context.is_arg_complete('frac_post_process', require=True):
+        # Implement validation for frac_post_process here
+        pass
+
+    if context.is_arg_complete('unit_price', require=True):
+        # Implement validation for unit_price here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

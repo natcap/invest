@@ -3,7 +3,7 @@
 An implementation of the model described in 'Degradation in carbon stocks
 near tropical forest edges', by Chaplin-Kramer et. al (in review).
 """
-
+from __future__ import absolute_import
 import os
 import logging
 import time
@@ -15,6 +15,8 @@ from osgeo import gdal
 from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3
 import scipy.spatial
+
+from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
 
@@ -646,5 +648,45 @@ def _calculate_tropical_forest_edge_carbon_map(
     LOGGER.info('carbon edge calculation 100.0% complete')
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('lulc_uri', require=True):
+        # Implement validation for lulc_uri here
+        pass
+
+    if context.is_arg_complete('biophysical_table_uri', require=True):
+        # Implement validation for biophysical_table_uri here
+        pass
+
+    if context.is_arg_complete('pools_to_calculate', require=True):
+        # Implement validation for pools_to_calculate here
+        pass
+
+    if context.is_arg_complete('compute_forest_edge_effects', require=False):
+        # Implement validation for compute_forest_edge_effects here
+        pass
+
+    if context.is_arg_complete('tropical_forest_edge_carbon_model_shape_uri', require=True):
+        # Implement validation for tropical_forest_edge_carbon_model_shape_uri here
+        pass
+
+    if context.is_arg_complete('n_nearest_model_points', require=True):
+        # Implement validation for n_nearest_model_points here
+        pass
+
+    if context.is_arg_complete('biomass_to_carbon_conversion_factor', require=True):
+        # Implement validation for biomass_to_carbon_conversion_factor here
+        pass
+
+    if context.is_arg_complete('aoi_uri', require=False):
+        # Implement validation for aoi_uri here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

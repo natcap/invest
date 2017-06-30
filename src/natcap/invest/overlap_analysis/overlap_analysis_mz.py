@@ -2,12 +2,15 @@
 This is the preperatory class for the management zone portion of overlap
 analysis.
 '''
+from __future__ import absolute_import
 import os
 
 from osgeo import ogr
 
 from natcap.invest.overlap_analysis import overlap_analysis_mz_core
 from natcap.invest.overlap_analysis import overlap_core
+from .. import validation
+
 
 
 def execute(args):
@@ -53,5 +56,21 @@ def execute(args):
     overlap_analysis_mz_core.execute(mz_args)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('zone_layer_loc', require=True):
+        # Implement validation for zone_layer_loc here
+        pass
+
+    if context.is_arg_complete('overlap_data_dir_loc', require=True):
+        # Implement validation for overlap_data_dir_loc here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

@@ -1,5 +1,7 @@
 """Scenario Generation: Proximity Based."""
 
+from __future__ import absolute_import
+
 import math
 import shutil
 import os
@@ -17,6 +19,7 @@ from osgeo import gdal
 import natcap.invest.pygeoprocessing_0_3_3
 import scipy
 
+from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.scenario_generator_proximity_based')
@@ -661,5 +664,49 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
             kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('base_lulc_path', require=True):
+        # Implement validation for base_lulc_path here
+        pass
+
+    if context.is_arg_complete('aoi_path', require=False):
+        # Implement validation for aoi_path here
+        pass
+
+    if context.is_arg_complete('area_to_convert', require=True):
+        # Implement validation for area_to_convert here
+        pass
+
+    if context.is_arg_complete('focal_landcover_codes', require=True):
+        # Implement validation for focal_landcover_codes here
+        pass
+
+    if context.is_arg_complete('convertible_landcover_codes', require=True):
+        # Implement validation for convertible_landcover_codes here
+        pass
+
+    if context.is_arg_complete('replacment_lucode', require=True):
+        # Implement validation for replacment_lucode here
+        pass
+
+    if context.is_arg_complete('convert_farthest_from_edge', require=False):
+        # Implement validation for convert_farthest_from_edge here
+        pass
+
+    if context.is_arg_complete('convert_nearest_to_edge', require=False):
+        # Implement validation for convert_nearest_to_edge here
+        pass
+
+    if context.is_arg_complete('n_fragmentation_steps', require=True):
+        # Implement validation for n_fragmentation_steps here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

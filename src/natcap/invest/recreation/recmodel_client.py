@@ -1,4 +1,5 @@
 """InVEST Recreation Client."""
+from __future__ import absolute_import
 
 import uuid
 import os
@@ -30,6 +31,7 @@ if shapely.speedups.available:
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
 from .. import utils
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
@@ -1127,5 +1129,41 @@ def _sanitize_path(base_path, raw_path):
         return os.path.join(os.path.dirname(base_path), raw_path)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('aoi_path', require=True):
+        # Implement validation for aoi_path here
+        pass
+
+    if context.is_arg_complete('start_year', require=True):
+        # Implement validation for start_year here
+        pass
+
+    if context.is_arg_complete('end_year', require=True):
+        # Implement validation for end_year here
+        pass
+
+    if context.is_arg_complete('predictor_table_path', require=True):
+        # Implement validation for predictor_table_path here
+        pass
+
+    if context.is_arg_complete('scenario_predictor_table_path', require=False):
+        # Implement validation for scenario_predictor_table_path here
+        pass
+
+    if context.is_arg_complete('grid_type', require=True):
+        # Implement validation for grid_type here
+        pass
+
+    if context.is_arg_complete('cell_size', require=True):
+        # Implement validation for cell_size here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

@@ -4,12 +4,14 @@ generating a new Population Parameters CSV File based on habitat area
 change and the dependencies that particular classes of the given species
 have on particular habitats.
 '''
+from __future__ import absolute_import
 import logging
 import pprint
 
 import numpy as np
 
 from . import fisheries_hst_io as io
+from .. import validation
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -165,5 +167,33 @@ def convert_survival_matrix(vars_dict):
     return vars_dict
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('population_csv_uri', require=True):
+        # Implement validation for population_csv_uri here
+        pass
+
+    if context.is_arg_complete('sexsp', require=True):
+        # Implement validation for sexsp here
+        pass
+
+    if context.is_arg_complete('habitat_dep_csv_uri', require=True):
+        # Implement validation for habitat_dep_csv_uri here
+        pass
+
+    if context.is_arg_complete('habitat_chg_csv_uri', require=True):
+        # Implement validation for habitat_chg_csv_uri here
+        pass
+
+    if context.is_arg_complete('gamma', require=True):
+        # Implement validation for gamma here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

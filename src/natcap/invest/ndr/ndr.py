@@ -1,4 +1,5 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
+from __future__ import absolute_import
 import logging
 import os
 
@@ -10,6 +11,7 @@ import natcap.invest.pygeoprocessing_0_3_3
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
+from .. import validation
 from .. import utils
 import ndr_core
 
@@ -733,5 +735,65 @@ def _add_fields_to_shapefile(
         output_layer.SetFeature(feature)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('dem_path', require=True):
+        # Implement validation for dem_path here
+        pass
+
+    if context.is_arg_complete('lulc_path', require=True):
+        # Implement validation for lulc_path here
+        pass
+
+    if context.is_arg_complete('runoff_proxy_path', require=True):
+        # Implement validation for runoff_proxy_path here
+        pass
+
+    if context.is_arg_complete('watersheds_path', require=True):
+        # Implement validation for watersheds_path here
+        pass
+
+    if context.is_arg_complete('biophysical_table_path', require=True):
+        # Implement validation for biophysical_table_path here
+        pass
+
+    if context.is_arg_complete('calc_p', require=False):
+        # Implement validation for calc_p here
+        pass
+
+    if context.is_arg_complete('calc_n', require=False):
+        # Implement validation for calc_n here
+        pass
+
+    if context.is_arg_complete('threshold_flow_accumulation', require=True):
+        # Implement validation for threshold_flow_accumulation here
+        pass
+
+    if context.is_arg_complete('k_param', require=True):
+        # Implement validation for k_param here
+        pass
+
+    if context.is_arg_complete('subsurface_critical_length_n', require=True):
+        # Implement validation for subsurface_critical_length_n here
+        pass
+
+    if context.is_arg_complete('subsurface_critical_length_p', require=True):
+        # Implement validation for subsurface_critical_length_p here
+        pass
+
+    if context.is_arg_complete('subsurface_eff_n', require=True):
+        # Implement validation for subsurface_eff_n here
+        pass
+
+    if context.is_arg_complete('subsurface_eff_p', require=True):
+        # Implement validation for subsurface_eff_p here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

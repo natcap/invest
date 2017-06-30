@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import os
 import sys
 import math
@@ -14,6 +15,8 @@ from osgeo import osr
 from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing
 from natcap.invest.scenic_quality import scenic_quality_core
 #from natcap.invest.overlap_analysis import overlap_analysis
+from .. import validation
+
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 
@@ -759,5 +762,65 @@ def execute(args):
         set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('aoi_uri', require=True):
+        # Implement validation for aoi_uri here
+        pass
+
+    if context.is_arg_complete('cell_size', require=False):
+        # Implement validation for cell_size here
+        pass
+
+    if context.is_arg_complete('structure_uri', require=True):
+        # Implement validation for structure_uri here
+        pass
+
+    if context.is_arg_complete('dem_uri', require=True):
+        # Implement validation for dem_uri here
+        pass
+
+    if context.is_arg_complete('refraction', require=True):
+        # Implement validation for refraction here
+        pass
+
+    if context.is_arg_complete('pop_uri', require=False):
+        # Implement validation for pop_uri here
+        pass
+
+    if context.is_arg_complete('overlap_uri', require=False):
+        # Implement validation for overlap_uri here
+        pass
+
+    if context.is_arg_complete('valuation_function', require=False):
+        # Implement validation for valuation_function here
+        pass
+
+    if context.is_arg_complete('a_coefficient', require=True):
+        # Implement validation for a_coefficient here
+        pass
+
+    if context.is_arg_complete('b_coefficient', require=True):
+        # Implement validation for b_coefficient here
+        pass
+
+    if context.is_arg_complete('c_coefficient', require=True):
+        # Implement validation for c_coefficient here
+        pass
+
+    if context.is_arg_complete('d_coefficient', require=True):
+        # Implement validation for d_coefficient here
+        pass
+
+    if context.is_arg_complete('max_valuation_radius', require=True):
+        # Implement validation for max_valuation_radius here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

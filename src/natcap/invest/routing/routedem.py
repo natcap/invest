@@ -1,4 +1,6 @@
 """RouteDEM for exposing the natcap.invest's routing package to UI."""
+from __future__ import absolute_import
+
 import os
 import logging
 
@@ -8,6 +10,7 @@ import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
 from .. import utils
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.routing.routedem')
 
@@ -110,5 +113,37 @@ def execute(args):
                     flow_direction_path, stream_mask_path, distance_path)
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('dem_path', require=True):
+        # Implement validation for dem_path here
+        pass
+
+    if context.is_arg_complete('calculate_slope', require=False):
+        # Implement validation for calculate_slope here
+        pass
+
+    if context.is_arg_complete('calculate_flow_accumulation', require=False):
+        # Implement validation for calculate_flow_accumulation here
+        pass
+
+    if context.is_arg_complete('calculate_stream_threshold', require=False):
+        # Implement validation for calculate_stream_threshold here
+        pass
+
+    if context.is_arg_complete('threshold_flow_accumulation', require=True):
+        # Implement validation for threshold_flow_accumulation here
+        pass
+
+    if context.is_arg_complete('calculate_downstream_distance', require=False):
+        # Implement validation for calculate_downstream_distance here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings
