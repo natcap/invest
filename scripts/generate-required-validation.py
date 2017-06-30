@@ -1,3 +1,4 @@
+import argparse
 import json
 import sys
 
@@ -6,8 +7,14 @@ IS_ARG_COMPLETE = ("    if context.is_arg_complete('{args_key}', "
                    "require={required}):")
 
 
-def main(iui_filepath):
-    config_params = json.load(open(iui_filepath))
+def main(args=None):
+    if not args:
+        args = sys.argv[1:]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('iui_config', help='The path to the iui json file')
+    args = parser.parse_args(args)
+
+    config_params = json.load(open(args.iui_config))
     model_location = config_params['targetScript'].replace('natcap.invest.', '')
     relative_import_dots = '.' * len(model_location.split('.'))
 
@@ -53,4 +60,4 @@ def main(iui_filepath):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main()
