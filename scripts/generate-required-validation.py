@@ -3,7 +3,7 @@ import sys
 
 
 IS_ARG_COMPLETE = ("    if context.is_arg_complete('{args_key}', "
-                   "required={required}):")
+                   "require={required}):")
 
 
 def main(iui_filepath):
