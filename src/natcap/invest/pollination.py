@@ -1,4 +1,5 @@
 """Pollinator service model for InVEST."""
+from __future__ import absolute_import
 import tempfile
 import itertools
 import collections
@@ -12,7 +13,9 @@ from osgeo import ogr
 import pygeoprocessing
 import numpy
 
+
 from . import utils
+from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
@@ -849,5 +852,30 @@ def _add_fid_field(base_vector_path, target_vector_path, fid_id):
     target_vector = None
 
 
+@validation.validator
 def validate(args, limit_to=None):
-    return []
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('landcover_raster_path', require=True):
+        # Implement validation for landcover_raster_path here
+        pass
+
+    if context.is_arg_complete('landcover_biophysical_table_path',
+                               require=True):
+        # Implement validation for landcover_biophysical_table_path here
+        pass
+
+    if context.is_arg_complete('guild_table_path', require=True):
+        # Implement validation for guild_table_path here
+        pass
+
+    if context.is_arg_complete('farm_vector_path', require=True):
+        # Implement validation for farm_vector_path here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings
