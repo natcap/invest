@@ -416,6 +416,10 @@ class InfoButton(QtWidgets.QPushButton):
 
 
 class ValidButton(InfoButton):
+    def __init__(self, *args, **kwargs):
+        InfoButton.__init__(self, *args, **kwargs)
+        self.successful = True
+
     def set_errors(self, errors):
         # Set to None or [] or anything such that bool(errors) is False to
         # clear..
@@ -424,11 +428,20 @@ class ValidButton(InfoButton):
             self.setIcon(qtawesome.icon('fa.times',
                                         color='red'))
             error_string = '<br/>'.join(errors)
+            self.successful = False
         else:
             self.setIcon(qtawesome.icon('fa.check',
                                         color='green'))
             error_string = 'Validation successful'
+            self.successful = True
+
         self.setWhatsThis(error_string)
+        self.setToolTip(error_string)
+
+    def enterEvent(self, event):
+        if not self.successful:
+            QtWidgets.QToolTip.showText(event.globalPos(), self.toolTip())
+        InfoButton.enterEvent(self, event)
 
 
 class HelpButton(InfoButton):
