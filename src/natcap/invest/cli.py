@@ -404,6 +404,12 @@ def main():
     LOGGER.debug(args)
 
     try:
+        # Importing model UI files here will usually import qtpy before we can
+        # set the sip API in natcap.invest.ui.inputs.
+        # Set it here, before we can do the actual importing.
+        import sip
+        sip.setapi('QString', 2)
+
         from natcap.invest.ui import inputs
     except ImportError:
         print ('Error: ui not installed:\n'
