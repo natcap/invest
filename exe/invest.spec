@@ -51,7 +51,7 @@ kwargs = {
     ],
 }
 
-cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'iui', 'cli.py')
+cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'cli.py')
 a = Analysis([cli_file], **kwargs)
 
 # Compress pyc and pyo Files into ZlibArchive Objects
