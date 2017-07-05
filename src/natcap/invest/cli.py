@@ -13,7 +13,11 @@ import collections
 import pprint
 import warnings
 
-from . import utils
+try:
+    from . import utils
+except ImportError:
+    # When we're in a pyinstaller build, this isn't a module.
+    from natcap.invest import utils
 
 import six
 
