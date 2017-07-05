@@ -5,8 +5,8 @@ model
 from __future__ import absolute_import
 import logging
 
-import fisheries_io as io
-import fisheries_model as model
+from . import fisheries_io as io
+from . import fisheries_model as model
 from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.fisheries')
