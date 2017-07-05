@@ -5,7 +5,7 @@ def get_size(start_path = '.'):
         for f in filenames:
             fp = os.path.join(dirpath, f)
             total_size += os.path.getsize(fp)
-    return str(total_size/1024 + 1024*10) + 'K'
+    return str(int(total_size/1024.) + 1024*10) + 'K'
 
 size = get_size(defines['investdir'])
 print 'Volume size: %s' % size
