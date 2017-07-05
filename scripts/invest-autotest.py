@@ -15,7 +15,7 @@ LOGGER = logging.getLogger('invest-autotest.py')
 # Mapping of model keys to scenarios to run through the model's UI.
 # Paths are assumed to be relative to the data root.
 SCENARIOS = {
-    'carbon': [os.path.join('Carbon', 'carbon_willamette.invs.json')],
+    'carbon': [os.path.join('carbon', 'carbon_willamette.invs.json')],
     'coastal_blue_carbon': [
         os.path.join('CoastalBlueCarbon', 'cbc_galveston_bay.invs.json')],
     'coastal_blue_carbon_preprocessor': [
@@ -176,8 +176,8 @@ def main(user_args=None):
                 headless_string = 'headless'
             workspace = os.path.join(args.workspace,
                                      'autorun_%s_%s_%s' % (modelname,
-                                                            headless_string,
-                                                            scenario_index))
+                                                           headless_string,
+                                                           scenario_index))
             process = pool.apply_async(run_model, (modelname,
                                                    args.binary,
                                                    workspace,
@@ -195,35 +195,45 @@ def main(user_args=None):
     max_width = max([len(key[0])+11 for key in model_results.keys()])
     failures = 0
 
-    # print all statuses, sorted by the modelname, being sure to start on a
+    # record all statuses, sorted by the modelname, being sure to start on a
     # new line.
-    print '\n%s %s %s' % (string.ljust('MODELNAME', max_width+1),
-                        string.ljust('EXIT CODE', 10),  # len('EXIT CODE')+1
-                        'SCENARIO')
+    status_messages = ''
+    status_messages += '\n%s %s %s\n' % (
+        string.ljust('MODELNAME', max_width+1),
+        string.ljust('EXIT CODE', 10),  # len('EXIT CODE')+1
+        'SCENARIO')
     for (modelname, scenario, headless), exitcode in sorted(
-                model_results.iteritems(), key=lambda x: x[0]):
+            model_results.iteritems(), key=lambda x: x[0]):
         if headless:
             modelname += ' (headless)'
-        print "%s %s %s" % (string.ljust(modelname, max_width+1),
-                            string.ljust(str(exitcode[0]), 10),
-                            scenario)
+        status_messages += "%s %s %s\n" % (
+            string.ljust(modelname, max_width+1),
+            string.ljust(str(exitcode[0]), 10),
+            scenario)
         if exitcode[0] > 0:
             failures += 1
 
     if failures > 0:
-        print '\n********FAILURES********'
-        print '%s %s %s' % (string.ljust('MODELNAME', max_width+1),
-                            string.ljust('EXIT CODE', 10),
-                            'SCENARIO')
+        status_messages += '\n********FAILURES********\n'
+        status_messages += '%s %s %s\n' % (
+            string.ljust('MODELNAME', max_width+1),
+            string.ljust('EXIT CODE', 10),
+            'SCENARIO')
         for (modelname, scenario, headless), exitcode in sorted(
                 [(k, v) for (k, v) in model_results.iteritems()
                  if v[0] != 0],
                 key=lambda x: x[0]):
             if headless:
                 modelname += ' (headless)'
-            print "%s %s %s" % (string.ljust(modelname, max_width+1),
-                                string.ljust(str(exitcode[0]), 10),
-                                scenario)
+            status_messages += "%s %s %s\n" % (
+                string.ljust(modelname, max_width+1),
+                string.ljust(str(exitcode[0]), 10),
+                scenario)
+
+    print status_messages
+    with open(os.path.join(args.workspace, 'model_results.txt'), 'w') as log:
+        log.write(status_messages)
+
 
 if __name__ == '__main__':
     main()
