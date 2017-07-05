@@ -15,7 +15,7 @@ import warnings
 
 try:
     from . import utils
-except ImportError:
+except ValueError:
     # When we're in a pyinstaller build, this isn't a module.
     from natcap.invest import utils
 
