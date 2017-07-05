@@ -12,6 +12,7 @@ import sys
 import collections
 import pprint
 import warnings
+import multiprocessing
 
 try:
     from . import utils
@@ -509,4 +510,5 @@ def main():
                         'Model terminated with exit code %s' % exitcode)
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     main()
