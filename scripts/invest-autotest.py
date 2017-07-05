@@ -22,8 +22,12 @@ SCENARIOS = {
         os.path.join('CoastalBlueCarbon', 'cbc_pre_galveston_bay.invs.json')],
     'coastal_vulnerability': [
         os.path.join('CoastalProtection', 'coastal_vuln_wcvi.invs.json')],
-    'crop_production': [
-        os.path.join('CropProduction', 'crop_production_willamette.invs.json')],
+    'crop_production_percentile': [
+        os.path.join('CropProduction', 'sample_user_data',
+                     'crop_production_percentile_demo.invs.json')],
+    'crop_production_regression': [
+        os.path.join('CropProduction', 'sample_user_data',
+                     'crop_production_regression_demo.invs.json')],
     'delineateit': [
         os.path.join('Base_Data', 'Freshwater',
                      'delineateit_willamette.invs.json')],
@@ -49,8 +53,6 @@ SCENARIOS = {
         os.path.join('HabitatRiskAssess', 'hra_pre_wcvi.invs.json')],
     'hydropower_water_yield': [
         os.path.join('Hydropower', 'annual_water_yield_willamette.invs.json')],
-    'marine_water_quality_biophysical': [
-        os.path.join('MarineWaterQuality', 'marine_floathomes_wcvi.invs.json')],
     'ndr': [
         os.path.join('Base_Data', 'Freshwater',
                      'ndr_n_p_willamette.invs.json')],
@@ -59,7 +61,7 @@ SCENARIOS = {
     'overlap_analysis_mz': [
         os.path.join('OverlapAnalysis', 'overlap_mz_wcvi.invs.json')],
     'pollination': [
-        os.path.join('Pollination', 'pollination_willamette.invs.json')],
+        os.path.join('pollination', 'pollination_willamette.invs.json')],
     'recreation': [
         os.path.join('recreation', 'recreation_andros.invs.json')],
     'routedem': [
