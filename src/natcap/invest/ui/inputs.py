@@ -1,7 +1,6 @@
 # coding=UTF-8
 from __future__ import absolute_import
 
-import time
 import os
 import threading
 import logging
@@ -12,6 +11,8 @@ import sys
 import atexit
 import itertools
 
+import sip
+sip.setapi('QString', 2)
 import qtpy
 from qtpy import QtWidgets
 from qtpy import QtCore
