@@ -15,3 +15,4 @@ paramiko
 paver
 mock
 faulthandler
+future
