@@ -1,7 +1,7 @@
 from PyInstaller.compat import is_darwin, is_win
 import os
 
-if is_darwin:
+if is_darwin or is_win:
     from PyInstaller.utils.hooks import \
         (collect_submodules, collect_data_files)
 else:
