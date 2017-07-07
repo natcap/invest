@@ -480,7 +480,7 @@ class Model(QtWidgets.QMainWindow):
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.file_menu.addAction(
             'Quit', self.close,
-            QtGui.QKeySequence(QtGui.QKeySequence.Quit))
+            QtGui.QKeySequence('Ctrl+Q'))
         self.file_menu.addAction(
             'About', about)
         self.menuBar().addMenu(self.file_menu)
