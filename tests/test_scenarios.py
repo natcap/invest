@@ -10,6 +10,7 @@ from pygeoprocessing.testing import scm
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         '..', 'data', 'invest-data')
 FW_DATA = os.path.join(DATA_DIR, 'Base_Data', 'Freshwater')
+POLLINATION_DATA = os.path.join(DATA_DIR, 'pollination')
 
 
 class ScenariosTest(unittest.TestCase):
@@ -66,6 +67,23 @@ class ScenariosTest(unittest.TestCase):
         pygeoprocessing.testing.assert_rasters_equal(
             params['raster'], os.path.join(out_directory,
                                            archived_params['raster']))
+
+    @scm.skip_if_data_missing(POLLINATION_DATA)
+    def test_collect_geotiff(self):
+        # Necessary test, as this is proving to be an issue.
+        from natcap.invest import scenarios
+        params = {
+            'raster': os.path.join(POLLINATION_DATA, 'landcover.tif'),
+        }
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+
+        dest_dir = os.path.join(self.workspace, 'extracted_archive')
+        archived_params = scenarios.extract_scenario_archive(archive_path,
+                                                             dest_dir)
+        pygeoprocessing.testing.assert_rasters_equal(
+            params['raster'],
+            os.path.join(dest_dir, 'data', archived_params['raster']))
 
     @scm.skip_if_data_missing(FW_DATA)
     def test_collect_multipart_ogr_vector(self):
@@ -399,7 +417,6 @@ class ScenariosTest(unittest.TestCase):
 
         # Check that the written parameter set file contains relative paths
         raw_args = json.load(open(paramset_filename))['args']
-        print raw_args
         self.assertEqual(raw_args['foo'], 'foo.txt')
         self.assertEqual(raw_args['bar'], 'foo.txt')
         self.assertEqual(raw_args['file_list'], ['file1.txt', 'file2.txt'])

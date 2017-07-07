@@ -73,6 +73,7 @@ def _collect_spatial_files(filepath, data_dir):
             if not driver.CreateCopy(new_path, raster, strict=1):
                 LOGGER.info('Manually copying raster files to %s',
                             new_path)
+                new_files = []
                 for filename in raster.GetFileList():
                     if os.path.isdir(filename):
                         # ESRI Arc/Binary grids include the parent folder in
@@ -83,6 +84,10 @@ def _collect_spatial_files(filepath, data_dir):
                         new_path,
                         os.path.basename(filename))
                     shutil.copyfile(filename, new_filename)
+                    new_files.append(new_filename)
+
+                # Pass the first file in the file list
+                new_path = sorted(new_files)[0]
 
             driver = None
             raster = None
