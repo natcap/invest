@@ -463,8 +463,8 @@ class ValidationWorker(QtCore.QObject):
     started = QtCore.Signal()
     finished = QtCore.Signal()
 
-    def __init__(self, target, args, limit_to=None, parent=None):
-        QtCore.QObject.__init__(self, parent)
+    def __init__(self, target, args, limit_to=None):
+        QtCore.QObject.__init__(self)
         self.target = target
         self.args = args
         self.limit_to = limit_to
