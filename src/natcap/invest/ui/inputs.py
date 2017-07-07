@@ -516,7 +516,13 @@ class FileDialog(object):
             # If we pass a folder, the dialog will open to the folder
             default_path = start_dir
 
-        filename = self.file_dialog.getSaveFileName(self.file_dialog, title, default_path)
+        result = self.file_dialog.getSaveFileName(self.file_dialog, title,
+                                                  default_path)
+        if int(qtpy.QT_VERSION[0]) == 5:  # pyqt5
+            filename, last_filter = result
+        else:
+            filename = result
+
         DATA['last_dir'] = os.path.dirname(six.text_type(filename))
         return filename
 
@@ -527,7 +533,8 @@ class FileDialog(object):
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
 
-        result = self.file_dialog.getOpenFileName(self.file_dialog, title, start_dir)
+        result = self.file_dialog.getOpenFileName(self.file_dialog, title,
+                                                  start_dir)
         if int(qtpy.QT_VERSION[0]) == 5:  # pyqt5
             filename, last_filter = result
         else:  # pyqt4
