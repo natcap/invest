@@ -20,6 +20,12 @@ from qtpy import QtGui
 import six
 import qtawesome
 
+try:
+    import faulthandler
+    faulthandler.enable()
+except ImportError:
+    pass
+
 from . import execution
 
 try:
