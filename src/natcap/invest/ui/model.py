@@ -455,11 +455,6 @@ class Model(QtWidgets.QMainWindow):
             QtWidgets.QSizePolicy.Expanding)
         self._central_widget.setLayout(QtWidgets.QVBoxLayout())
         self.status_bar = QtWidgets.QStatusBar()
-        self.validation_warning = QtWidgets.QToolButton()
-        self.validation_warning.setMaximumHeight(20)
-        self.status_bar.addPermanentWidget(self.validation_warning)
-        self.validation_warning.clicked.connect(
-            self._validation_report_dialog.show)
         self.setStatusBar(self.status_bar)
         self.menuBar().setNativeMenuBar(True)
         self._central_widget.layout().setSizeConstraint(
@@ -713,17 +708,10 @@ class Model(QtWidgets.QMainWindow):
         LOGGER.info('Whole-model validation returned: %s',
                     validation_warnings)
         if validation_warnings:
-            self.validation_warning.setText('(%s)' % (
-                str(len(validation_warnings))))
             icon = qtawesome.icon('fa.times', color='red')
-            self.validation_warning.setStyleSheet(
-                'QPushButton {color: red}')
         else:
-            self.validation_warning.setText('')
-            icon = qtawesome.icon('fa.check', color='green')
-            self.validation_warning.setStyleSheet(
-                'QPushButton {color: green;}')
-        self.validation_warning.setIcon(icon)
+            icon = inputs.ICON_ENTER
+        self.form.run_button.setIcon(icon)
 
         # post warnings to the WMV dialog
         args_to_inputs = dict((input_.args_key, input_) for input_ in
