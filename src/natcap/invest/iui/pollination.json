@@ -68,7 +68,7 @@
           "label": "Guild Table (CSV)",
           "args_id": "guild_table_path",
           "required": true,
-          "defaultValue": "../Pollination/Input/LU.csv",
+          "defaultValue": "../pollination/guild_table.csv",
           "validateAs": {
             "type": "CSV",
             "fieldsExist": [
