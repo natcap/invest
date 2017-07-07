@@ -177,8 +177,12 @@ class Validator(QtCore.QObject):
         return self._validation_thread.isRunning()
 
     def validate(self, target, args, limit_to=None):
-        if not self._validation_thread.isRunning():
+        for i in xrange(10):
+            if self._validation_thread.isRunning():
+                break
             self._validation_thread.start()
+            QtCore.QThread.currentThread().msleep(5)
+
         self.started.emit()
         self._validation_worker = ValidationWorker(
             target=target,
@@ -200,7 +204,7 @@ class Validator(QtCore.QObject):
         self._validation_worker.finished.connect(_finished)
         self._validation_worker.finished.connect(
             self._validation_worker.deleteLater)
-        QtCore.QThread.currentThread().wait(25)  # avoids segfault
+        QtCore.QThread.currentThread().msleep(25)  # avoids segfault
         self._validation_worker.start()
 
 

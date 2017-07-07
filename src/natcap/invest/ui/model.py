@@ -29,6 +29,9 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 QT_APP = inputs.QT_APP
 
+_ONLINE_DOCS_LINK = (
+    'http://data.naturalcapitalproject.org/nightly-build/'
+    'invest-users-guide/html/')
 _SCENARIO_BASE_FILENAME = 'scenario.invs.%s'
 _SCENARIO_DIALOG_TITLE = 'Select where to save the parameter %s'
 _SCENARIO_PARAMETER_SET = 'Parameter set'
@@ -126,6 +129,36 @@ def about():
     accept_button.clicked.connect(about_dialog.close)
 
     about_dialog.exec_()
+
+
+def _check_docs_link_exists(link):
+    if link.startswith('file://'):
+        local_link_path = link.replace('file://', '')
+
+        if os.path.exists(local_link_path):
+            QtCore.QDesktopServices.OpenUrl(link)
+        else:
+            LOGGER.info("Can't find docs link %s", local_link_path)
+            dialog = QtWidgets.QMessageBox()
+            dialog.setWindowFlags(QtCore.Qt.Dialog)
+            dialog.setText("<h2>Local docs not found<h2>")
+            remote_link = _ONLINE_DOCS_LINK + os.path.basename(local_link_path)
+            dialog.setInformativeText(
+                'Online docs: [<a href="%s">documentation</a>]'
+                '<br/><br/>Local documentation link could not be found: %s' %
+                (remote_link, local_link_path))
+            dialog.setStandardButtons(
+                QtWidgets.QMessageBox.Ok)
+            dialog.setIconPixmap(
+                qtawesome.icon(
+                    'fa.exclamation-triangle',
+                    color='orange').pixmap(100, 100))
+            dialog.show()
+            dialog.exec_()
+    elif link.startswith(('http', 'ftp')):
+        QtCore.QDesktopServices.OpenUrl(link)
+    else:
+        LOGGER.warning("Don't know how to open link %s", link)
 
 
 class WindowTitle(QtCore.QObject):
@@ -439,13 +472,14 @@ class Model(QtWidgets.QMainWindow):
         # Format the text links at the top of the window.
         self.links = QtWidgets.QLabel()
         self.links.setAlignment(QtCore.Qt.AlignRight)
-        self.links.setOpenExternalLinks(True)
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
-            '<a href="file://%s">Model documentation</a>' % self.localdoc,
+            '<a href="file://%s">Model documentation</a>' % os.path.abspath(
+                self.localdoc),
             ('<a href="http://forums.naturalcapitalproject.org">'
              'Report an issue</a>'))))
         self._central_widget.layout().addWidget(self.links)
+        self.links.linkActivated.connect(_check_docs_link_exists)
 
         self.form = inputs.Form()
         self._central_widget.layout().addWidget(self.form)
