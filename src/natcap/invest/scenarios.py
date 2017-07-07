@@ -159,7 +159,7 @@ class _ArgsKeyFilter(logging.Filter):
         return True
 
 
-def build_scenario_archive(args, scenario_path):
+def build_scenario_archive(args, name, scenario_path):
     """Build an InVEST demonstration scenario from an arguments dict.
 
     Parameters:
@@ -225,7 +225,11 @@ def build_scenario_archive(args, scenario_path):
 
     log_format = "%(args_key)-25s %(name)-25s %(levelname)-8s %(message)s"
     with utils.log_to_file(logfile, log_fmt=log_format) as handler:
-        new_args = _recurse(args, handler)
+        new_args = {
+            'args': _recurse(args, handler),
+            'name': name,
+            'invest_version': __version__
+        }
 
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
     LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
@@ -266,7 +270,7 @@ def extract_scenario_archive(scenario_path, dest_dir_path):
 
     # get the arguments dictionary
     arguments_dict = json.load(open(
-        os.path.join(dest_dir_path, 'parameters.json')))
+        os.path.join(dest_dir_path, 'parameters.json')))['args']
 
     def _recurse(args_param):
         if isinstance(args_param, dict):

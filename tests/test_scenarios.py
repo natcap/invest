@@ -29,7 +29,7 @@ class ScenariosTest(unittest.TestCase):
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
 
         with tarfile.open(archive_path) as tar:
@@ -38,7 +38,8 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(len(os.listdir(out_directory)), 3)
 
         self.assertEqual(
-            json.load(open(os.path.join(out_directory, 'parameters.json'))),
+            json.load(open(os.path.join(out_directory,
+                                        'parameters.json')))['args'],
             {'a': 1, 'b': u'hello there', 'c': u'plain bytestring'})
 
     @scm.skip_if_data_missing(FW_DATA)
@@ -50,7 +51,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -59,7 +60,7 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))
+            open(os.path.join(out_directory, 'parameters.json')))['args']
 
         self.assertEqual(len(archived_params), 1)
         pygeoprocessing.testing.assert_rasters_equal(
@@ -75,7 +76,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -83,7 +84,7 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))
+            open(os.path.join(out_directory, 'parameters.json')))['args']
         pygeoprocessing.testing.assert_vectors_equal(
             params['vector'], os.path.join(out_directory,
                                            archived_params['vector']),
@@ -101,7 +102,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -109,7 +110,7 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))
+            open(os.path.join(out_directory, 'parameters.json')))['args']
         pygeoprocessing.testing.assert_csv_equal(
             params['table'], os.path.join(out_directory,
                                           archived_params['table'])
@@ -128,7 +129,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -136,7 +137,7 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))
+            open(os.path.join(out_directory, 'parameters.json')))['args']
         pygeoprocessing.testing.assert_text_equal(
             params['some_file'], os.path.join(out_directory,
                                               archived_params['some_file'])
@@ -166,7 +167,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -174,7 +175,7 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))
+            open(os.path.join(out_directory, 'parameters.json')))['args']
         dest_datadir_digest = pygeoprocessing.testing.digest_folder(
             os.path.join(out_directory, archived_params['data_dir']))
 
@@ -200,7 +201,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -208,7 +209,7 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))
+            open(os.path.join(out_directory, 'parameters.json')))['args']
         dest_digest = pygeoprocessing.testing.digest_file_list(
             [os.path.join(out_directory, filename)
              for filename in archived_params['file_list']])
@@ -229,7 +230,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -237,7 +238,7 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))
+            open(os.path.join(out_directory, 'parameters.json')))['args']
 
         # Assert that the archived 'foo' and 'bar' params point to the same
         # file.
@@ -283,7 +284,7 @@ class ScenariosTest(unittest.TestCase):
 
         # collect parameters:
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         archive_params = scenarios.extract_scenario_archive(
             archive_path, out_directory)
@@ -317,7 +318,7 @@ class ScenariosTest(unittest.TestCase):
         }
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, archive_path)
+        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         archive_params = scenarios.extract_scenario_archive(
             archive_path, out_directory)

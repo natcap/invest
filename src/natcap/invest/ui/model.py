@@ -539,6 +539,7 @@ class Model(QtWidgets.QMainWindow):
         if scenario_opts.scenario_type == _SCENARIO_DATA_ARCHIVE:
             scenarios.build_scenario_archive(
                 args=current_args,
+                name=self.target.__module__,
                 scenario_path=save_filepath
             )
         else:
