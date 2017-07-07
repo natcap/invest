@@ -205,6 +205,8 @@ def build_scenario_archive(args, name, scenario_path):
         elif isinstance(args_param, list):
             return [_recurse(list_item, handler) for list_item in args_param]
         elif isinstance(args_param, basestring):
+            if args_param.strip() == '':
+                return args_param.strip()
             # It's a string and exists on disk, it's a file!
             possible_path = os.path.abspath(args_param)
             if os.path.exists(possible_path):
@@ -286,6 +288,9 @@ def extract_scenario_archive(scenario_path, dest_dir_path):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
+            if args_param.strip() == '':
+                return args_param.strip()
+
             data_path = os.path.join(dest_dir_path, args_param)
             if os.path.exists(data_path):
                 return os.path.normpath(data_path)
