@@ -420,7 +420,8 @@ class InfoButton(QtWidgets.QPushButton):
 
     def _show_popup(self, clicked=None):
         QtWidgets.QWhatsThis.enterWhatsThisMode()
-        QtWidgets.QWhatsThis.showText(self.pos(), self.whatsThis(), self)
+        QtWidgets.QWhatsThis.showText(self.mapToGlobal(self.pos()),
+                                      self.whatsThis(), self)
 
 
 class ValidButton(InfoButton):
