@@ -766,7 +766,7 @@ class Model(QtWidgets.QMainWindow):
                 'fa.question').pixmap(100, 100))
         checkbox = QtWidgets.QCheckBox('Remember inputs')
         checkbox.setChecked(
-            self.settings.value('remember_lastrun', False, bool))
+            self.settings.value('remember_lastrun', True, bool))
         dialog.layout().addWidget(checkbox, dialog.layout().rowCount()-1,
                                   0, 1, 1)
 
