@@ -521,7 +521,7 @@ class Model(QtWidgets.QMainWindow):
             title=_SCENARIO_SAVE_OPTS[scenario_opts.scenario_type]['title'],
             start_dir=None,  # might change later, last dir is fine
             savefile='{model}_{file_base}'.format(
-                model='.'.join(self.target.__module__.split('.')[2:-1]),
+                model=self.target.__module__.split('.')[-1],
                 file_base=_SCENARIO_SAVE_OPTS[
                     scenario_opts.scenario_type]['savefile']))
 
