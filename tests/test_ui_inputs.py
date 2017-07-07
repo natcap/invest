@@ -84,19 +84,6 @@ class InputTest(_QtTest):
         input_instance = self.__class__.create_input(label='foo', helptext='bar')
         self.assertEqual(input_instance.helptext, 'bar')
 
-    def test_required(self):
-        input_instance = self.__class__.create_input(label='foo', required=True)
-        self.assertEqual(input_instance.required, True)
-
-    def test_set_required(self):
-        input_instance = self.__class__.create_input(label='foo', required=True)
-        input_instance.set_required(False)
-        self.assertEqual(input_instance.required, False)
-
-    def test_nonrequired(self):
-        input_instance = self.__class__.create_input(label='foo', required=False)
-        self.assertEqual(input_instance.required, False)
-
     def test_interactive(self):
         input_instance = self.__class__.create_input(label='foo', interactive=True)
         self.assertEqual(input_instance.interactive, True)
@@ -281,12 +268,6 @@ class GriddedInputTest(InputTest):
     def test_label(self):
         input_instance = self.__class__.create_input(label='foo')
         label_text = input_instance.label
-        self.assertEqual(label_text,  u'foo (Optional)')
-
-    def test_label_required(self):
-        input_instance = self.__class__.create_input(label='foo',
-                                                     required=True)
-        label_text = input_instance.label
         self.assertEqual(label_text, 'foo')
 
     def test_validator(self):
@@ -338,38 +319,6 @@ class GriddedInputTest(InputTest):
 
         # Wait for validation to finish and assert Failure.
         self.assertEqual(input_instance.valid(), False)
-
-    def test_validate_required(self):
-        """UI: Requirement with no input should affect validity."""
-        input_instance = self.__class__.create_input(
-            label='some_label', required=True)
-        try:
-            input_instance.value()
-        except NotImplementedError:
-            input_instance.value = lambda: ''
-
-        self.assertEqual(input_instance.valid(), True)
-        input_instance._validate()
-        # Wait for validation to finish and assert Failure.
-        self.assertEqual(input_instance.valid(), False)
-
-    def test_validate_required_args_key(self):
-        """UI: Requirement with no input should raise a warning."""
-        input_instance = self.__class__.create_input(
-            label='some_label', required=True,
-            validator=lambda args, limit_to=None: []
-        )
-
-        input_instance.value = mock.MagicMock(
-            input_instance, return_value=u'something')
-
-        self.assertEqual(input_instance.valid(), True)
-        with warnings.catch_warnings(record=True) as messages:
-            input_instance._validate()
-
-        # Validation still passes, but verify warning raised
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(input_instance.valid(), True)
 
     def test_validate_required_validator(self):
         input_instance = self.__class__.create_input(
