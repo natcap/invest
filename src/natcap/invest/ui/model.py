@@ -349,14 +349,6 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.warnings = []
         self.setLayout(QtWidgets.QVBoxLayout())
 
-        self.button = QtWidgets.QPushButton()
-        #self.cog_icon = qtawesome.icon('fa.cog',
-        #                               animation=qtawesome.Spin(self.button))
-        #self.button.setIcon(self.cog_icon)
-        self.button.setFlat(True)
-        self.button.setIconSize(QtCore.QSize(64, 64))
-        self.layout().addWidget(self.button)
-
         self.title_label = QtWidgets.QLabel('<h2>Validating inputs ...</h2>')
         self.layout().addWidget(self.title_label)
 
@@ -382,8 +374,6 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.layout().addWidget(self.buttonbox)
 
     def validation_started(self):
-        # Show spinny cog
-        self.button.setVisible(True)
         self.label.setText('<h2>Validating inputs ...</h2>')
 
     def validation_finished(self, validation_warnings):
