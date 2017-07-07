@@ -200,6 +200,7 @@ class Validator(QtCore.QObject):
         self._validation_worker.finished.connect(_finished)
         self._validation_worker.finished.connect(
             self._validation_worker.deleteLater)
+        QtCore.QThread.currentThread().wait(25)  # avoids segfault
         self._validation_worker.start()
 
 
