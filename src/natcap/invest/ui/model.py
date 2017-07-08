@@ -29,6 +29,8 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 QT_APP = inputs.QT_APP
 
+ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
+                           color='grey')
 _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
@@ -367,7 +369,8 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.scroll_widget.widget().layout().insertStretch(-1)
 
         self.buttonbox = QtWidgets.QDialogButtonBox()
-        self.back_button = QtWidgets.QPushButton('Back')
+        self.back_button = QtWidgets.QPushButton(' Back')
+        self.back_button.setIcon(ICON_BACK)
         self.back_button.clicked.connect(self.close)
         self.buttonbox.addButton(self.back_button,
                                  QtWidgets.QDialogButtonBox.RejectRole)
