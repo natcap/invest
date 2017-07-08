@@ -31,6 +31,8 @@ QT_APP = inputs.QT_APP
 
 ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
                            color='grey')
+ICON_ALERT = qtawesome.icon('fa.exclamation-triangle',
+                            color='orange')
 _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
@@ -351,8 +353,16 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.warnings = []
         self.setLayout(QtWidgets.QVBoxLayout())
 
+        self.title_icon = QtWidgets.QLabel()
+        self.title_icon.setPixmap(ICON_ALERT.pixmap(75, 75))
+        self.title_icon.setAlignment(QtCore.Qt.AlignCenter)
+        self.title = QtWidgets.QWidget()
+        self.title.setLayout(QtWidgets.QHBoxLayout())
+        self.title.layout().addWidget(self.title_icon)
+
         self.title_label = QtWidgets.QLabel('<h2>Validating inputs ...</h2>')
-        self.layout().addWidget(self.title_label)
+        self.title.layout().addWidget(self.title_label)
+        self.layout().addWidget(self.title)
 
         self.scroll_widget = QtWidgets.QScrollArea()
         self.scroll_widget.setWidgetResizable(True)
@@ -628,9 +638,7 @@ class Model(QtWidgets.QMainWindow):
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
             dialog.setDefaultButton(QtWidgets.QMessageBox.No)
             dialog.setIconPixmap(
-                qtawesome.icon(
-                    'fa.exclamation-triangle',
-                    color='orange').pixmap(100, 100))
+                ICON_ALERT.pixmap(100, 100))
 
             button_pressed = dialog.exec_()
             if button_pressed != QtWidgets.QMessageBox.Yes:
