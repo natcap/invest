@@ -7,6 +7,7 @@ import logging
 import contextlib
 import sys
 import os
+import time
 
 import faulthandler
 faulthandler.enable()
@@ -331,6 +332,7 @@ class GriddedInputTest(InputTest):
         self.assertEqual(input_instance.valid(), True)
         with warnings.catch_warnings(record=True) as messages:
             input_instance._validate()
+            time.sleep(0.25)  # wait for warnings to register
 
         # Validation still passes, but verify warning raised
         self.assertEqual(len(messages), 1)
@@ -1220,7 +1222,7 @@ class FileDialogTest(_QtTest):
 
         self.assertEqual(
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
-            (dialog.file_dialog, 'foo', '/tmp/foo/bar'))
+            (dialog.file_dialog, 'foo', '/tmp/foo/bar', ()))
         self.assertEqual(out_file, '/new/file')
         self.assertEqual(DATA['last_dir'], '/new')
 
@@ -1245,7 +1247,7 @@ class FileDialogTest(_QtTest):
 
         self.assertEqual(
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
-            (dialog.file_dialog, 'foo', '/tmp/foo/bar'))
+            (dialog.file_dialog, 'foo', '/tmp/foo/bar', ()))
         self.assertEqual(out_file, '/new/file')
         self.assertEqual(DATA['last_dir'], '/new')
 
