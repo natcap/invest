@@ -599,13 +599,13 @@ def execute(args):
         final_pollinator_abundance_task_list.append(
             final_pollinator_abundance_task)
 
-    task_graph.join()
-
     if farm_vector is None:
         LOGGER.info("All done, no farm polygon to process!")
+        task_graph.join()
         for path in temp_file_set:
             os.remove(path)
         return
+
     LOGGER.info("Calculating farm yields")
     target_farm_path = os.path.join(
         output_dir, '%s%s.shp' % (
@@ -668,39 +668,24 @@ def execute(args):
             guild_table[species_id][season_to_header[season_id]['guild']]
             for species_id in sorted(guild_table)]
 
-        def _farm_pollinators_op(
-                managed_pollinator_abundance, *wild_pollinator_abundance):
-            """Calculate the max of all pollinators.
-
-            Wild pollinators need to be scaled by their seasonal foraging
-            activity index included in the closure.
-            """
-            result = numpy.empty(
-                managed_pollinator_abundance.shape, dtype=numpy.float32)
-            valid_mask = wild_pollinator_abundance[0] != _INDEX_NODATA
-            result[:] = _INDEX_NODATA
-            result[valid_mask] = numpy.clip(
-                (managed_pollinator_abundance[valid_mask] +
-                 numpy.sum([
-                     activity * abundance[valid_mask]
-                     for abundance, activity in zip(
-                         wild_pollinator_abundance,
-                         wild_pollinator_activity)], axis=0)), 0, 1)
-            return result
-
         wild_pollinator_abundance_band_paths = [
             (f_reg[_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id], 1)
             for species_id in sorted(guild_table)]
-
         farm_pollinators_path = os.path.join(
             intermediate_output_dir, '%s%s.tif' % (
                 _FARM_POLLINATORS_FILE_PATTERN % season_id, file_suffix))
 
-        pygeoprocessing.raster_calculator(
-            [(managed_bees_raster_path, 1)] +
-            wild_pollinator_abundance_band_paths, _farm_pollinators_op,
-            farm_pollinators_path, gdal.GDT_Float32, _INDEX_NODATA,
-            calc_raster_stats=False)
+        farm_pollinators_task = task_graph.add_task(
+            target=pygeoprocessing.raster_calculator,
+            args=(
+                [(managed_bees_raster_path, 1)] +
+                wild_pollinator_abundance_band_paths, _FarmPollinatorsOp(
+                    wild_pollinator_activity),
+                farm_pollinators_path, gdal.GDT_Float32, _INDEX_NODATA),
+            kwargs={'calc_raster_stats': False},
+            dependent_task_list=final_pollinator_abundance_task_list)
+
+        farm_pollinators_task.join()
 
         for species_id in guild_table:
             max_pollinated_species_path = os.path.join(
@@ -1006,4 +991,31 @@ class _PollinatorAbudanceOp(object):
             (floral_resources != _INDEX_NODATA))
         result[valid_mask] = (
             raw_abundance[valid_mask] * floral_resources[valid_mask])
+        return result
+
+
+class _FarmPollinatorsOp(object):
+    """Closure for calculating farm pollinators."""
+
+    def __init__(self, wild_pollinator_activity):
+        self.wild_pollinator_activity = wild_pollinator_activity
+
+    def __call__(
+            self, managed_pollinator_abundance, *wild_pollinator_abundance):
+        """Calculate the max of all pollinators.
+
+        Wild pollinators need to be scaled by their seasonal foraging
+        activity index included in the closure.
+        """
+        result = numpy.empty(
+            managed_pollinator_abundance.shape, dtype=numpy.float32)
+        valid_mask = wild_pollinator_abundance[0] != _INDEX_NODATA
+        result[:] = _INDEX_NODATA
+        result[valid_mask] = numpy.clip(
+            (managed_pollinator_abundance[valid_mask] +
+             numpy.sum([
+                 activity * abundance[valid_mask]
+                 for abundance, activity in zip(
+                     wild_pollinator_abundance,
+                     self.wild_pollinator_activity)], axis=0)), 0, 1)
         return result
