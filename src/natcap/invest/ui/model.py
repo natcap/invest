@@ -584,6 +584,11 @@ class Model(QtWidgets.QMainWindow):
         if not scenario_opts:  # user pressed cancel
             return
 
+        self.validate(block=True)
+        if not self.is_valid():
+            self.show_validation_window()
+            return
+
         file_dialog = inputs.FileDialog()
         save_filepath = file_dialog.save_file(
             title=_SCENARIO_SAVE_OPTS[scenario_opts.scenario_type]['title'],
