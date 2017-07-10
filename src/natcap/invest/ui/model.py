@@ -95,6 +95,7 @@ def about():
     Returns:
         None."""
     about_dialog = QtWidgets.QDialog()
+    about_dialog.setWindowTitle('About InVEST')
     about_dialog.setLayout(QtWidgets.QVBoxLayout())
     label_text = textwrap.dedent(
         """
