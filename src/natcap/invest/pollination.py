@@ -685,8 +685,7 @@ def execute(args):
             kwargs={'calc_raster_stats': False},
             dependent_task_list=final_pollinator_abundance_task_list)
 
-        farm_pollinators_task.join()
-
+        species_equal_task_list = []
         for species_id in guild_table:
             max_pollinated_species_path = os.path.join(
                 intermediate_output_dir, "%s%s.tif" % (
@@ -695,23 +694,20 @@ def execute(args):
             foraging_activity_index = (
                 guild_table[species_id][season_to_header[season_id]['guild']])
 
-            def _equal_op(
-                    farm_pollinator_index, species_pollinator_abudance_index):
-                """Return 1 if FP == SP*FA."""
-                result = numpy.empty(
-                    farm_pollinator_index.shape, dtype=numpy.int8)
-                result[:] = _INDEX_NODATA
-                valid_mask = farm_pollinator_index != _INDEX_NODATA
-                result[valid_mask] = farm_pollinator_index[valid_mask] == (
-                    species_pollinator_abudance_index[valid_mask] *
-                    foraging_activity_index)
-                return result
-
-            pygeoprocessing.raster_calculator(
-                [(farm_pollinators_path, 1),
-                 (f_reg[_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id], 1)],
-                _equal_op, max_pollinated_species_path, gdal.GDT_Byte,
-                _INDEX_NODATA, calc_raster_stats=False)
+            species_equal_task = task_graph.add_task(
+                target=pygeoprocessing.raster_calculator,
+                args=(
+                    [(farm_pollinators_path, 1),
+                     (f_reg[_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id],
+                      1)],
+                    _EqualOp(foraging_activity_index),
+                    max_pollinated_species_path, gdal.GDT_Byte,
+                    _INDEX_NODATA),
+                kwargs={'calc_raster_stats': False},
+                dependent_task_list=final_pollinator_abundance_task_list + [
+                    farm_pollinators_task])
+            species_equal_task.join()
+            species_equal_task_list.append(species_equal_task)
 
         LOGGER.info("Calculating farm yield.")
 
@@ -1018,4 +1014,23 @@ class _FarmPollinatorsOp(object):
                  for abundance, activity in zip(
                      wild_pollinator_abundance,
                      self.wild_pollinator_activity)], axis=0)), 0, 1)
+        return result
+
+
+class _EqualOp(object):
+    """Closure for determining max species in a pixel."""
+
+    def __init__(self, foraging_activity_index):
+        self.foraging_activity_index = foraging_activity_index
+
+    def __call__(
+            self, farm_pollinator_index, species_pollinator_abudance_index):
+        """Return 1 if FP == SP*FA."""
+        result = numpy.empty(
+            farm_pollinator_index.shape, dtype=numpy.int8)
+        result[:] = _INDEX_NODATA
+        valid_mask = farm_pollinator_index != _INDEX_NODATA
+        result[valid_mask] = farm_pollinator_index[valid_mask] == (
+            species_pollinator_abudance_index[valid_mask] *
+            self.foraging_activity_index)
         return result
