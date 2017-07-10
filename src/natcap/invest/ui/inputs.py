@@ -1296,9 +1296,15 @@ class Form(QtWidgets.QWidget):
         self.buttonbox.addButton(
             self.run_button, QtWidgets.QDialogButtonBox.AcceptRole)
         self.layout().addWidget(self.buttonbox)
-        self.run_button.pressed.connect(self.submitted.emit)
+        self.run_button.pressed.connect(self.emit_submitted)
 
         self.run_dialog = FileSystemRunDialog()
+
+    def emit_submitted(self):
+        # PyQt4 won't recognize self.submitted.emit as a bound slot, so
+        # creating a bound method of Form to handle this.  Useful for MESH
+        # demo.
+        self.submitted.emit()
 
     def update_scroll_border(self, min, max):
         if min == 0 and max == 0:
