@@ -1,4 +1,5 @@
 """Pollinator service model for InVEST."""
+import multiprocessing
 import tempfile
 import itertools
 import collections
@@ -13,6 +14,7 @@ import pygeoprocessing
 import numpy
 
 from . import utils
+from . import Task
 
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
@@ -151,13 +153,15 @@ def execute(args):
     Returns:
         None
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
+    work_token_dir = os.path.join(
+        intermediate_output_dir, '_tmp_work_tokens')
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories(
         [output_dir, intermediate_output_dir])
+
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
@@ -311,6 +315,8 @@ def execute(args):
             (season, season_id) for season_id, season in enumerate(
                 sorted(farm_season_set))]
 
+    task_graph = Task.TaskGraph(work_token_dir, multiprocessing.cpu_count())
+
     for nesting_substrate in substrate_to_header:
         LOGGER.info(
             "Mapping landcover to nesting substrate %s", nesting_substrate)
@@ -322,20 +328,39 @@ def execute(args):
         f_reg[nesting_id] = os.path.join(
             intermediate_output_dir, '%s%s.tif' % (nesting_id, file_suffix))
 
-        pygeoprocessing.reclassify_raster(
-            (args['landcover_raster_path'], 1),
-            landcover_to_nesting_suitability_table, f_reg[nesting_id],
-            gdal.GDT_Float32, _INDEX_NODATA)
+        landcover_nesting_reclass_task = task_graph.add_task(
+            target=pygeoprocessing.reclassify_raster,
+            args=(
+                (args['landcover_raster_path'], 1),
+                landcover_to_nesting_suitability_table, f_reg[nesting_id],
+                gdal.GDT_Float32, _INDEX_NODATA))
+
+        #pygeoprocessing.reclassify_raster(
+        #    (args['landcover_raster_path'], 1),
+        #    landcover_to_nesting_suitability_table, f_reg[nesting_id],
+        #    gdal.GDT_Float32, _INDEX_NODATA)
 
         if farm_vector is not None:
             LOGGER.info(
-                "Overriding landcover nesting substrates where a farm polygon is "
-                "available.")
-            pygeoprocessing.rasterize(
-                projected_farm_vector_path, f_reg[nesting_id],
-                None, ['ATTRIBUTE=%s' % (
-                    _FARM_NESTING_SUBSTRATE_PATTERN.replace(
-                        '([^_]+)', nesting_substrate))])
+                "Overriding landcover nesting substrates where a farm "
+                " polygon is available.")
+
+            landcover_nesting_reclass_task = task_graph.add_task(
+                target=pygeoprocessing.rasterize,
+                args=(
+                    projected_farm_vector_path, f_reg[nesting_id],
+                    None, ['ATTRIBUTE=%s' % (
+                        _FARM_NESTING_SUBSTRATE_PATTERN.replace(
+                            '([^_]+)', nesting_substrate))]),
+                dependent_task_list=[landcover_nesting_reclass_task])
+
+            #pygeoprocessing.rasterize(
+            #    projected_farm_vector_path, f_reg[nesting_id],
+            #    None, ['ATTRIBUTE=%s' % (
+            #        _FARM_NESTING_SUBSTRATE_PATTERN.replace(
+            #            '([^_]+)', nesting_substrate))])
+
+    task_graph.join()
 
     nesting_substrate_path_list = [
         f_reg[substrate_to_header[nesting_substrate]['biophysical']]
