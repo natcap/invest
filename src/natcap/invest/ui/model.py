@@ -106,7 +106,8 @@ def about():
         Homepage: <a href="http://naturalcapitalproject.org">
                     naturalcapitalproject.org</a><br/>
         Copyright 2017, The Natural Capital Project<br/>
-        License: <a href="https://bitbucket.org/natcap/invest/src/tip/LICENSE.txt">
+        License:
+        <a href="https://bitbucket.org/natcap/invest/src/tip/LICENSE.txt">
                     BSD 3-clause</a><br/>
         Project page: <a href="https://bitbucket.org/natcap/invest">
                     bitbucket.org/natcap/invest</a><br/>
@@ -121,13 +122,13 @@ def about():
             ('GDAL', 'MIT and others', 'http://gdal.org'),
             ('matplotlib', 'BSD', 'http://matplotlib.org'),
             ('natcap.versioner', 'BSD',
-                'http://bitbucket.org/jdouglass/versioner'),
+             'http://bitbucket.org/jdouglass/versioner'),
             ('numpy', 'BSD', 'http://numpy.org'),
             ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
             ('pygeoprocessing', 'BSD',
-                'http://bitbucket.org/richpsharp/pygeoprocessing'),
+             'http://bitbucket.org/richpsharp/pygeoprocessing'),
             ('PyQt', 'GPL',
-                'http://riverbankcomputing.com/software/pyqt/intro'),
+             'http://riverbankcomputing.com/software/pyqt/intro'),
             ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
             ('scipy', 'BSD', 'http://www.scipy.org/'),
             ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
