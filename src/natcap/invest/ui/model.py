@@ -40,8 +40,8 @@ _ONLINE_DOCS_LINK = (
     'invest-users-guide/html/')
 _SCENARIO_BASE_FILENAME = 'scenario.invs.%s'
 _SCENARIO_DIALOG_TITLE = 'Select where to save the parameter %s'
-_SCENARIO_PARAMETER_SET = 'Parameter set'
-_SCENARIO_DATA_ARCHIVE = 'Data archive'
+_SCENARIO_PARAMETER_SET = 'Parameter set (archive parameters)'
+_SCENARIO_DATA_ARCHIVE = 'Data archive (archive parameters and files)'
 _SCENARIO_SAVE_OPTS = {
     _SCENARIO_PARAMETER_SET: {
         'title': _SCENARIO_DIALOG_TITLE % 'set',
