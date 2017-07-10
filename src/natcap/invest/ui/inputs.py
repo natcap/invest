@@ -536,15 +536,19 @@ class FileDialog(object):
         DATA['last_dir'] = os.path.dirname(six.text_type(filename))
         return filename
 
-    def open_file(self, title, start_dir=None):
+    def open_file(self, title, start_dir=None, filters=()):
         if not start_dir:
             start_dir = os.path.expanduser(DATA['last_dir'])
 
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
 
+        if filters:
+            filters = ';;'.join(filters)
+        LOGGER.info('Using filters "%s"', filters)
+
         result = self.file_dialog.getOpenFileName(self.file_dialog, title,
-                                                  start_dir)
+                                                  start_dir, filters)
         if int(qtpy.QT_VERSION[0]) == 5:  # pyqt5
             filename, last_filter = result
         else:  # pyqt4

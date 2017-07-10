@@ -693,8 +693,13 @@ class Model(QtWidgets.QMainWindow):
     def load_scenario(self, scenario_path=None):
         file_dialog = inputs.FileDialog()
         if not scenario_path:
+            filters = (
+                'Any file (*.*)',
+                'Parameter set (*.invs.json)',
+                'Parameter archive (*.invs.tar.gz)',
+                'Logfile (*.txt)')
             scenario_path = file_dialog.open_file(
-                title='Select scenario')
+                title='Select scenario', filters=filters)
 
         # When the user pressed cancel, scenario_path == ''
         if not scenario_path:
