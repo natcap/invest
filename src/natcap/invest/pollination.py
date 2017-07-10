@@ -636,18 +636,14 @@ def execute(args):
             intermediate_output_dir,
             _HALF_SATURATION_SEASON_FILE_PATTERN % season_id + (
                 '%s.tif' % file_suffix))
-        pygeoprocessing.new_raster_from_base(
-            args['landcover_raster_path'], half_saturation_file_path,
-            gdal.GDT_Float32, [_INDEX_NODATA],
-            fill_value_list=[_INDEX_NODATA])
-        farm_layer.SetAttributeFilter(str("season='%s'" % season_id))
-        half_saturation_raster = gdal.Open(
-            half_saturation_file_path, gdal.GA_Update)
-        gdal.RasterizeLayer(
-            half_saturation_raster, [1], farm_layer,
-            options=['ATTRIBUTE=%s' % _HALF_SATURATION_FARM_HEADER])
-        gdal.Dataset.__swig_destroy__(half_saturation_raster)
-        half_saturation_raster = None
+
+        rasterize_half_saturation_task = task_graph.add_task(
+            target=_rasterize_half_saturation,
+            args=(
+                args['landcover_raster_path'], season_id, target_farm_path,
+                half_saturation_file_path))
+
+        rasterize_half_saturation_task.join()
 
         LOGGER.info("Rasterizing managed farm pollinators for season %s")
         # rasterize farm managed pollinators on landscape first
@@ -896,6 +892,29 @@ def _add_fid_field(base_vector_path, target_vector_path, fid_id):
     target_layer = None
     target_vector.SyncToDisk()
     target_vector = None
+
+
+def _rasterize_half_saturation(
+        base_raster_path, season_id, target_farm_path,
+        half_saturation_file_path):
+    #TODO: document
+    farm_vector = ogr.Open(target_farm_path)
+    farm_layer = farm_vector.GetLayer()
+
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path, half_saturation_file_path,
+        gdal.GDT_Float32, [_INDEX_NODATA],
+        fill_value_list=[_INDEX_NODATA])
+    farm_layer.SetAttributeFilter(str("season='%s'" % season_id))
+    half_saturation_raster = gdal.Open(
+        half_saturation_file_path, gdal.GA_Update)
+    gdal.RasterizeLayer(
+        half_saturation_raster, [1], farm_layer,
+        options=['ATTRIBUTE=%s' % _HALF_SATURATION_FARM_HEADER])
+    gdal.Dataset.__swig_destroy__(half_saturation_raster)
+    half_saturation_raster = None
+    farm_layer = None
+    farm_vector = None
 
 
 class _HabitatSuitabilityIndexOp(object):
