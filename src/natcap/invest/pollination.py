@@ -643,22 +643,17 @@ def execute(args):
                 args['landcover_raster_path'], season_id, target_farm_path,
                 half_saturation_file_path))
 
-        rasterize_half_saturation_task.join()
-
         LOGGER.info("Rasterizing managed farm pollinators for season %s")
         # rasterize farm managed pollinators on landscape first
         managed_bees_raster_path = os.path.join(
             intermediate_output_dir, "%s%s.tif" % (
                 _MANAGED_BEES_RASTER_FILE_PATTERN % season_id, file_suffix))
-        pygeoprocessing.new_raster_from_base(
-            args['landcover_raster_path'], managed_bees_raster_path,
-            gdal.GDT_Float32, [_INDEX_NODATA])
+        rasterize_farm_pollinators_task = task_graph.add_task(
+            target=_rasterize_managed_farm_pollinators,
+            args=(
+                args['landcover_raster_path'], target_farm_path,
+                managed_bees_raster_path))
 
-        managed_raster = gdal.Open(managed_bees_raster_path, gdal.GA_Update)
-        gdal.RasterizeLayer(
-            managed_raster, [1], farm_layer, options=['ATTRIBUTE=p_managed'])
-        gdal.Dataset.__swig_destroy__(managed_raster)
-        del managed_raster
         LOGGER.info("Calculating farm pollinators for season %s", season_id)
 
         wild_pollinator_activity = [
@@ -680,7 +675,8 @@ def execute(args):
                     wild_pollinator_activity),
                 farm_pollinators_path, gdal.GDT_Float32, _INDEX_NODATA),
             kwargs={'calc_raster_stats': False},
-            dependent_task_list=final_pollinator_abundance_task_list)
+            dependent_task_list=final_pollinator_abundance_task_list + [
+                rasterize_farm_pollinators_task])
 
         species_equal_task_list = []
         for species_id in guild_table:
@@ -719,7 +715,8 @@ def execute(args):
                 _FarmYieldOp(), pollinator_yield_path, gdal.GDT_Float32,
                 _INDEX_NODATA),
             kwargs={'calc_raster_stats': True},
-            dependent_task_list=[])
+            dependent_task_list=[
+                rasterize_half_saturation_task, farm_pollinators_task])
         farm_yield_task_list.append(farm_yield_task)
 
     # add the yield pollinators, shouldn't be conflicts since we don't have
@@ -740,7 +737,8 @@ def execute(args):
         args=(
             seasonal_pollinator_yield_path_band_list, _CombineYieldsOp(),
             total_pollinator_yield_path, gdal.GDT_Float32, _INDEX_NODATA),
-        kwargs={'calc_raster_stats': True})
+        kwargs={'calc_raster_stats': True},
+        dependent_task_list=farm_yield_task_list)
 
     _combine_yields_task.join()
 
@@ -913,6 +911,25 @@ def _rasterize_half_saturation(
         options=['ATTRIBUTE=%s' % _HALF_SATURATION_FARM_HEADER])
     gdal.Dataset.__swig_destroy__(half_saturation_raster)
     half_saturation_raster = None
+    farm_layer = None
+    farm_vector = None
+
+
+def _rasterize_managed_farm_pollinators(
+        base_raster_path, target_farm_path, managed_bees_raster_path):
+    #TODO: document
+    farm_vector = ogr.Open(target_farm_path)
+    farm_layer = farm_vector.GetLayer()
+
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path, managed_bees_raster_path,
+        gdal.GDT_Float32, [_INDEX_NODATA])
+
+    managed_raster = gdal.Open(managed_bees_raster_path, gdal.GA_Update)
+    gdal.RasterizeLayer(
+        managed_raster, [1], farm_layer, options=['ATTRIBUTE=p_managed'])
+    gdal.Dataset.__swig_destroy__(managed_raster)
+    del managed_raster
     farm_layer = None
     farm_vector = None
 
