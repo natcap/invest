@@ -315,8 +315,7 @@ def execute(args):
             (season, season_id) for season_id, season in enumerate(
                 sorted(farm_season_set))]
 
-    #task_graph = Task.TaskGraph(work_token_dir, multiprocessing.cpu_count())
-    task_graph = Task.TaskGraph(work_token_dir, 0)
+    task_graph = Task.TaskGraph(work_token_dir, multiprocessing.cpu_count())
 
     nesting_substrate_task_list = []
     for nesting_substrate in substrate_to_header:
