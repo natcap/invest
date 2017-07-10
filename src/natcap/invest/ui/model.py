@@ -315,12 +315,12 @@ def _prompt_for_scenario_options():
     buttonbox = QtWidgets.QDialogButtonBox()
     ok_button = QtWidgets.QPushButton(' Continue')
     ok_button.setIcon(inputs.ICON_ENTER)
-    ok_button.pressed.connect(dialog.accept)
+    ok_button.clicked.connect(dialog.accept)
     buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
     cancel_button = QtWidgets.QPushButton(' Cancel')
     cancel_button.setIcon(qtawesome.icon('fa.times',
                                          color='grey'))
-    cancel_button.pressed.connect(dialog.reject)
+    cancel_button.clicked.connect(dialog.reject)
     buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
     dialog.layout().addWidget(buttonbox)
 
@@ -351,12 +351,12 @@ def _prompt_for_scenario_archive_extraction(archive_path):
     buttonbox = QtWidgets.QDialogButtonBox()
     ok_button = QtWidgets.QPushButton(' Extract')
     ok_button.setIcon(inputs.ICON_ENTER)
-    ok_button.pressed.connect(dialog.accept)
+    ok_button.clicked.connect(dialog.accept)
     buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
     cancel_button = QtWidgets.QPushButton(' Cancel')
     cancel_button.setIcon(qtawesome.icon('fa.times',
                                          color='grey'))
-    cancel_button.pressed.connect(dialog.reject)
+    cancel_button.clicked.connect(dialog.reject)
     buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
     dialog.layout().addWidget(buttonbox)
 
