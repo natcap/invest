@@ -629,6 +629,7 @@ def execute(args):
         _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal)
     farm_layer.CreateField(total_yield_field_def)
 
+    farm_yield_task_list = []
     for season_id in season_to_header:
         LOGGER.info("Rasterizing half saturation for season %s", season_id)
         half_saturation_file_path = os.path.join(
@@ -723,40 +724,10 @@ def execute(args):
                 _INDEX_NODATA),
             kwargs={'calc_raster_stats': True},
             dependent_task_list=[])
-
-        farm_yield_task.join()
-
-        def _farm_yield_op(half_sat, farm_pollinators):
-            result = numpy.empty(half_sat.shape, dtype=numpy.float32)
-            result[:] = _INDEX_NODATA
-            valid_mask = (
-                farm_pollinators != _INDEX_NODATA) & (
-                half_sat != _INDEX_NODATA)
-            # the following is a tunable half-saturation half-sigmoid
-            # FP(x,j) = (1-h(x,j))h(x,j) / ((1-2FP(x,j))+FP(x,j))
-            result[valid_mask] = (
-                farm_pollinators[valid_mask] * (1 - half_sat[valid_mask]) / (
-                    half_sat[valid_mask] * (
-                        1 - 2 * farm_pollinators[valid_mask]) +
-                    farm_pollinators[valid_mask]))
-            return result
-
-        pygeoprocessing.raster_calculator(
-            [(half_saturation_file_path, 1), (farm_pollinators_path, 1)],
-            _farm_yield_op, pollinator_yield_path, gdal.GDT_Float32,
-            _INDEX_NODATA, calc_raster_stats=True)
+        farm_yield_task_list.append(farm_yield_task)
 
     # add the yield pollinators, shouldn't be conflicts since we don't have
     # overlapping farms
-
-    def _combine_yields(*pollinator_yields):
-        """Set output to defined pixel in the stack of pollinator_yields."""
-        result = numpy.empty(pollinator_yields[0].shape, dtype=numpy.float32)
-        result[:] = _INDEX_NODATA
-        for pollinator_yield in pollinator_yields:
-            valid_mask = pollinator_yield != _INDEX_NODATA
-            result[valid_mask] = pollinator_yield[valid_mask]
-        return result
 
     seasonal_pollinator_yield_path_band_list = [
         (os.path.join(
@@ -767,10 +738,15 @@ def execute(args):
     total_pollinator_yield_path = os.path.join(
         output_dir, '%s%s.tif' % (
             _TOTAL_POLLINATOR_YIELD_FILE_PATTERN, file_suffix))
-    pygeoprocessing.raster_calculator(
-        seasonal_pollinator_yield_path_band_list, _combine_yields,
-        total_pollinator_yield_path, gdal.GDT_Float32, _INDEX_NODATA,
-        calc_raster_stats=True)
+
+    _combine_yields_task = task_graph.add_task(
+        target=pygeoprocessing.raster_calculator,
+        args=(
+            seasonal_pollinator_yield_path_band_list, _CombineYieldsOp(),
+            total_pollinator_yield_path, gdal.GDT_Float32, _INDEX_NODATA),
+        kwargs={'calc_raster_stats': True})
+
+    _combine_yields_task.join()
 
     farm_stats = pygeoprocessing.zonal_statistics(
         (total_pollinator_yield_path, 1), target_farm_path, farm_fid_field)
@@ -1066,4 +1042,20 @@ class _FarmYieldOp(object):
                 half_sat[valid_mask] * (
                     1 - 2 * farm_pollinators[valid_mask]) +
                 farm_pollinators[valid_mask]))
+        return result
+
+
+class _CombineYieldsOp(object):
+    """Combine all farm yields."""
+
+    def __init__(self):
+        pass
+
+    def __call__(self, *pollinator_yields):
+        """Set output to defined pixel in the stack of pollinator_yields."""
+        result = numpy.empty(pollinator_yields[0].shape, dtype=numpy.float32)
+        result[:] = _INDEX_NODATA
+        for pollinator_yield in pollinator_yields:
+            valid_mask = pollinator_yield != _INDEX_NODATA
+            result[valid_mask] = pollinator_yield[valid_mask]
         return result
