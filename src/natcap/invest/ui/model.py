@@ -790,7 +790,7 @@ class Model(QtWidgets.QMainWindow):
         return [ref for ref in self.__dict__.values()
                 if isinstance(ref, inputs.Input)]
 
-    def validate(self, block=True):
+    def validate(self, block=False):
         validate_callable = functools.partial(
             self._validator.validate,
             target=self.validator,
@@ -806,10 +806,14 @@ class Model(QtWidgets.QMainWindow):
         # iterate through attributes of self.form.  If the attribute is an
         # instance of inputs.Input, then link its value_changed signal to the
         # model-wide validation slot.
+        def _validate(new_value):
+            # We want to validate the whole form; discard the individual value
+            self.validate(block=False)
+
         for input_obj in self.inputs():
-            input_obj.value_changed.connect(self.validate)
+            input_obj.value_changed.connect(_validate)
             try:
-                input_obj.validity_changed.connect(self.validate)
+                input_obj.validity_changed.connect(_validate)
             except AttributeError:
                 # Not all inputs can have validity (e.g. Container, dropdown)
                 pass
