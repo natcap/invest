@@ -585,7 +585,7 @@ class Model(QtWidgets.QMainWindow):
             return
 
         file_dialog = inputs.FileDialog()
-        save_filepath, last_filter = file_dialog.save_file(
+        save_filepath = file_dialog.save_file(
             title=_SCENARIO_SAVE_OPTS[scenario_opts.scenario_type]['title'],
             start_dir=None,  # might change later, last dir is fine
             savefile='{model}_{file_base}'.format(
@@ -618,9 +618,13 @@ class Model(QtWidgets.QMainWindow):
                 relative=scenario_opts.use_relpaths
             )
 
+        if len(save_filepath) > 80:
+            save_filepath = '...' + save_filepath[-40:]
+
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
+
         self.status_bar.showMessage(alert_message, 10000)
         self.window_title.filename = os.path.basename(save_filepath)
 
