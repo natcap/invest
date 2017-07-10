@@ -602,7 +602,10 @@ def execute(args):
         LOGGER.info("All done, no farm polygon to process!")
         task_graph.join()
         for path in temp_file_set:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except OSError:
+                pass  # we might have deleted it on another task
         return
 
     LOGGER.info("Calculating farm yields")
