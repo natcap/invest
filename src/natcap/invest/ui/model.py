@@ -106,9 +106,10 @@ def about():
         Homepage: <a href="http://naturalcapitalproject.org">
                     naturalcapitalproject.org</a><br/>
         Copyright 2017, The Natural Capital Project<br/>
-        License: BSD 3-clause<br/>
+        License: <a href="https://bitbucket.org/natcap/invest/src/tip/LICENSE.txt">
+                    BSD 3-clause</a><br/>
         Project page: <a href="https://bitbucket.org/natcap/invest">
-                        bitbucket.org/natcap/invest</a><br/>
+                    bitbucket.org/natcap/invest</a><br/>
 
         <h2>Open-Source Licenses</h2>
         """.format(
