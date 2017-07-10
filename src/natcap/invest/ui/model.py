@@ -532,7 +532,7 @@ class Model(QtWidgets.QMainWindow):
             'Save as ...', self._save_scenario_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
         self.file_menu.addAction(
-            'Open ...', self.load_scenario,
+            'Open parameter file ...', self.load_scenario,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.file_menu.addAction(
             'Quit', self.close,
@@ -695,6 +695,10 @@ class Model(QtWidgets.QMainWindow):
         if not scenario_path:
             scenario_path = file_dialog.open_file(
                 title='Select scenario')
+
+        # When the user pressed cancel, scenario_path == ''
+        if not scenario_path:
+            return
 
         LOGGER.info('Loading scenario from "%s"', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
