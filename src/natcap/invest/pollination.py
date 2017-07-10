@@ -706,10 +706,25 @@ def execute(args):
                 kwargs={'calc_raster_stats': False},
                 dependent_task_list=final_pollinator_abundance_task_list + [
                     farm_pollinators_task])
-            species_equal_task.join()
             species_equal_task_list.append(species_equal_task)
 
         LOGGER.info("Calculating farm yield.")
+
+        pollinator_yield_path = os.path.join(
+            intermediate_output_dir, '%s%s.tif' % (
+                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id,
+                file_suffix))
+
+        farm_yield_task = task_graph.add_task(
+            target=pygeoprocessing.raster_calculator,
+            args=(
+                [(half_saturation_file_path, 1), (farm_pollinators_path, 1)],
+                _FarmYieldOp(), pollinator_yield_path, gdal.GDT_Float32,
+                _INDEX_NODATA),
+            kwargs={'calc_raster_stats': True},
+            dependent_task_list=[])
+
+        farm_yield_task.join()
 
         def _farm_yield_op(half_sat, farm_pollinators):
             result = numpy.empty(half_sat.shape, dtype=numpy.float32)
@@ -726,10 +741,6 @@ def execute(args):
                     farm_pollinators[valid_mask]))
             return result
 
-        pollinator_yield_path = os.path.join(
-            intermediate_output_dir, '%s%s.tif' % (
-                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id,
-                file_suffix))
         pygeoprocessing.raster_calculator(
             [(half_saturation_file_path, 1), (farm_pollinators_path, 1)],
             _farm_yield_op, pollinator_yield_path, gdal.GDT_Float32,
@@ -1033,4 +1044,26 @@ class _EqualOp(object):
         result[valid_mask] = farm_pollinator_index[valid_mask] == (
             species_pollinator_abudance_index[valid_mask] *
             self.foraging_activity_index)
+        return result
+
+
+class _FarmYieldOp(object):
+    """Farm yield closure."""
+
+    def __init__(self):
+        pass
+
+    def __call__(self, half_sat, farm_pollinators):
+        result = numpy.empty(half_sat.shape, dtype=numpy.float32)
+        result[:] = _INDEX_NODATA
+        valid_mask = (
+            farm_pollinators != _INDEX_NODATA) & (
+                half_sat != _INDEX_NODATA)
+        # the following is a tunable half-saturation half-sigmoid
+        # FP(x,j) = (1-h(x,j))h(x,j) / ((1-2FP(x,j))+FP(x,j))
+        result[valid_mask] = (
+            farm_pollinators[valid_mask] * (1 - half_sat[valid_mask]) / (
+                half_sat[valid_mask] * (
+                    1 - 2 * farm_pollinators[valid_mask]) +
+                farm_pollinators[valid_mask]))
         return result
