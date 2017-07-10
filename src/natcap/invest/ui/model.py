@@ -496,12 +496,11 @@ class Model(QtWidgets.QMainWindow):
         self.links.setAlignment(QtCore.Qt.AlignRight)
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
-            '<a href="file://%s">Model documentation</a>' % os.path.abspath(
-                self.localdoc),
+            '<a href="localdocs">Model documentation</a>',
             ('<a href="http://forums.naturalcapitalproject.org">'
              'Report an issue</a>'))))
         self._central_widget.layout().addWidget(self.links)
-        self.links.linkActivated.connect(_check_docs_link_exists)
+        self.links.linkActivated.connect(self._check_local_docs)
 
         self.form = inputs.Form()
         self._central_widget.layout().addWidget(self.form)
@@ -529,17 +528,26 @@ class Model(QtWidgets.QMainWindow):
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File')
         self.file_menu.addAction(
+            qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_scenario_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
         self.file_menu.addAction(
+            qtawesome.icon('fa.arrow-circle-o-up'),
             'Open parameter file ...', self.load_scenario,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.file_menu.addAction(
             'Quit', self.close,
             QtGui.QKeySequence('Ctrl+Q'))
-        self.file_menu.addAction(
-            'About', about)
         self.menuBar().addMenu(self.file_menu)
+
+        self.help_menu = QtWidgets.QMenu('&Help')
+        self.help_menu.addAction(
+            qtawesome.icon('fa.info'),
+            'About InVEST', about)
+        self.help_menu.addAction(
+            qtawesome.icon('fa.external-link'),
+            'View documentation', self._check_local_docs)
+        self.menuBar().addMenu(self.help_menu)
 
         # Settings files
         self.settings = QtCore.QSettings(
@@ -547,6 +555,10 @@ class Model(QtWidgets.QMainWindow):
             QtCore.QSettings.UserScope,
             'Natural Capital Project',
             self.label)
+
+    def _check_local_docs(self, link=None):
+        path = 'file://' + os.path.abspath(self.localdoc)
+        _check_docs_link_exists(path)
 
     def dragEnterEvent(self, event):
         # Determine whether to accept or reject a drop
