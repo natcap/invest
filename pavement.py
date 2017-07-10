@@ -2903,7 +2903,7 @@ def _write_console_files(binary, mode):
                    capture=True).split('\n'):
         # Models always preceded by 4 spaces in printout.
         if line.startswith('    '):
-            model_name = line.replace('UNSTABLE', '').lstrip().rstrip()
+            model_name = re.findall('[a-z_]+', line.strip())[0]
 
             console_filename = os.path.join(bindir, filename_template).format(
                 modelname=model_name, extension=mode)
