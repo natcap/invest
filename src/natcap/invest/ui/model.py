@@ -10,6 +10,8 @@ import json
 import textwrap
 import cgi
 import tarfile
+import contextlib
+import functools
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -57,6 +59,28 @@ def try_cast(value, target_type):
         return target_type(value)
     except ValueError:
         return value
+
+
+@contextlib.contextmanager
+def wait_on_signal(signal, timeout=250):
+    """Block loop until signal emitted, or timeout (ms) elapses."""
+    global QT_APP
+    loop = QtCore.QEventLoop()
+    signal.connect(loop.quit)
+
+    try:
+        yield
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
+    except Exception as error:
+        LOGGER.exception('Error encountered while witing for signal %s',
+                         signal)
+        raise error
+    finally:
+        if timeout is not None:
+            QtCore.QTimer.singleShot(timeout, loop.quit)
+        loop.exec_()
+    loop = None
 
 
 def about():
@@ -599,6 +623,15 @@ class Model(QtWidgets.QMainWindow):
             ``None``"""
         self.form.add_input(input)
 
+    def is_valid(self):
+        if self._validation_report_dialog.warnings:
+            return False
+        return True
+
+    def show_validation_window(self):
+        self._validation_report_dialog.show()
+        return self._validation_report_dialog.exec_()
+
     def execute_model(self):
         """Run the target model.
 
@@ -663,7 +696,7 @@ class Model(QtWidgets.QMainWindow):
             scenario_path = file_dialog.open_file(
                 title='Select scenario')
 
-        LOGGER.info('Loading scenario from %s', scenario_path)
+        LOGGER.info('Loading scenario from "%s"', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
             # Where should the tarfile be extracted to?
             args, extract_dir = _prompt_for_scenario_archive_extraction(
@@ -727,20 +760,26 @@ class Model(QtWidgets.QMainWindow):
         return [ref for ref in self.__dict__.values()
                 if isinstance(ref, inputs.Input)]
 
+    def validate(self, block=True):
+        validate_callable = functools.partial(
+            self._validator.validate,
+            target=self.validator,
+            args=self.assemble_args(),
+            limit_to=None)
+        if block:
+            with wait_on_signal(self._validator.finished):
+                validate_callable()
+        else:
+            validate_callable()
+
     def run(self, quickrun=False):
-        # recurse through attributes of self.form.  If the attribute is an
+        # iterate through attributes of self.form.  If the attribute is an
         # instance of inputs.Input, then link its value_changed signal to the
         # model-wide validation slot.
-        def _validate_all_inputs(new_value):
-            self._validator.validate(
-                target=self.validator,
-                args=self.assemble_args(),
-                limit_to=None)
-
         for input_obj in self.inputs():
-            input_obj.value_changed.connect(_validate_all_inputs)
+            input_obj.value_changed.connect(self.validate)
             try:
-                input_obj.validity_changed.connect(_validate_all_inputs)
+                input_obj.validity_changed.connect(self.validate)
             except AttributeError:
                 # Not all inputs can have validity (e.g. Container, dropdown)
                 pass
