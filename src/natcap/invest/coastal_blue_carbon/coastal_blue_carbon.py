@@ -139,17 +139,20 @@ def execute(args):
             last_time = current_time
 
         # Initialization
+        valid_mask = C_prior != C_nodata
+        valid_C_prior = C_prior[valid_mask]
+
         timesteps = d['timesteps']
 
-        x_size, y_size = C_prior.shape
+        valid_shape = C_prior[valid_mask].shape
 
         # timesteps+1 to include initial conditions
-        stock_shape = (timesteps+1, x_size, y_size)
+        stock_shape = (timesteps+1,) + valid_shape
         S_biomass = numpy.zeros(stock_shape, dtype=numpy.float32)  # Stock
         S_soil = numpy.zeros(stock_shape, dtype=numpy.float32)
         T = numpy.zeros(stock_shape, dtype=numpy.float32)  # Total Carbon Stock
 
-        timestep_shape = (timesteps, x_size, y_size)
+        timestep_shape = (timesteps,) + valid_shape
         A_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Accumulation
         A_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
         E_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Emissions
@@ -159,10 +162,10 @@ def execute(args):
         N_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
         V = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Valuation
 
-        snapshot_shape = (d['transitions']+1, x_size, y_size)
+        snapshot_shape = (d['transitions']+1,) + valid_shape
         L = numpy.zeros(snapshot_shape, dtype=numpy.float32)  # Litter
 
-        transition_shape = (d['transitions'], x_size, y_size)
+        transition_shape = (d['transitions'],) + valid_shape
         # Yearly Accumulation
         Y_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
         Y_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
@@ -176,11 +179,11 @@ def execute(args):
         R_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
 
         # Set Accumulation and Disturbance Values
-        C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
+        C_r = [read_from_raster(i, offset_dict)[valid_mask] for i in d['C_r_rasters']]
         if C_r:
-            C_list = [C_prior] + C_r + [C_r[-1]]  # final transition out to analysis year
+            C_list = [valid_C_prior] + C_r + [C_r[-1]]  # final transition out to analysis year
         else:
-            C_list = [C_prior]*2  # allow for a final analysis
+            C_list = [valid_C_prior]*2  # allow for a final analysis
         for i in xrange(0, d['transitions']):
             D_biomass[i] = reclass_transition(
                 C_list[i],
@@ -214,12 +217,12 @@ def execute(args):
                 nodata_mask=C_nodata)
 
         S_biomass[0] = reclass(
-            C_prior,
+            valid_C_prior,
             d['lulc_to_Sb'],
             out_dtype=numpy.float32,
             nodata_mask=C_nodata)
         S_soil[0] = reclass(
-            C_prior,
+            valid_C_prior,
             d['lulc_to_Ss'],
             out_dtype=numpy.float32,
             nodata_mask=C_nodata)
@@ -315,23 +318,32 @@ def execute(args):
 
         for key, array in raster_tuples:
             for i in xrange(0, len(d['File_Registry'][key])):
+                out_array = numpy.empty_like(C_prior, dtype=numpy.float32)
+                out_array[:] = NODATA_FLOAT
+                out_array[valid_mask] = array[i]
                 write_to_raster(
                     d['File_Registry'][key][i],
-                    array[i],
+                    out_array,
                     offset_dict['xoff'],
                     offset_dict['yoff'])
 
+        N_total_out_array = numpy.empty_like(C_prior, dtype=numpy.float32)
+        N_total_out_array[:] = NODATA_FLOAT
+        N_total_out_array[valid_mask] = N_total
         write_to_raster(
             d['File_Registry']['N_total_raster'],
-            N_total,
+            N_total_out_array,
             offset_dict['xoff'],
             offset_dict['yoff'])
 
         if d['do_economic_analysis']:
             NPV = numpy.sum(V, axis=0)
+            NPV_out_array = numpy.empty_like(C_prior, dtype=numpy.float32)
+            NPV_out_array[:] = NODATA_FLOAT
+            NPV_out_array[valid_mask] = NPV
             write_to_raster(
                 d['File_Registry']['NPV_raster'],
-                NPV,
+                NPV_out_array,
                 offset_dict['xoff'],
                 offset_dict['yoff'])
 
@@ -501,8 +513,11 @@ def write_to_raster(output_raster, array, xoff, yoff):
     ds = gdal.Open(output_raster, gdal.GA_Update)
     band = ds.GetRasterBand(1)
     if numpy.issubdtype(array.dtype, float):
-        array[array == numpy.nan] = NODATA_FLOAT
+        array[numpy.isnan(array)] = NODATA_FLOAT
     band.WriteArray(array, xoff, yoff)
+    band.FlushCache()
+    band = None
+    gdal.Dataset.__swig_destroy__(ds)
     ds = None
 
 
