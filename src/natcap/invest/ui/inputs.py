@@ -904,6 +904,30 @@ class _Path(Text):
             path = _handle_drop_enter_event(self, event)
             self.setText(path)
 
+        @QtCore.Slot
+        def _emit_textchanged(self, triggered):
+            """Slot for re-emitting the textchanged signal with current text.
+
+            Parameters:
+                triggered (bool): Ignored.
+
+            Returns:
+                ``None``
+            """
+            self.textChanged.emit(self.text())
+
+        def contextMenuEvent(self, event=None):
+            """Reimplemented from QtGui.QLineEdit.contextMenuEvent.
+
+            This function allows me to make changes to the context menu when one
+            is requested before I show the menu."""
+            menu = self.createStandardContextMenu()
+            refresh_action = QtWidgets.QAction('Refresh', menu)
+            refresh_action.setIcon(qtawesome.icon('fa.refresh'))
+            refresh_action.triggered.connect(self._emit_textchanged)
+            menu.addAction(refresh_action)
+            menu.exec_(event.globalPos())
+
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
         Text.__init__(self, label, helptext, interactive, args_key,
