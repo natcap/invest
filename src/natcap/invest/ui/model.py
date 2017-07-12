@@ -560,9 +560,13 @@ class Model(QtWidgets.QMainWindow):
                                        validator=self.validator)
 
         # natcap.invest.pollination.pollination --> pollination
+        try:
+            modelname = self.target.__module__.split('.')[-1]
+        except AttributeError:
+            modelname = 'model'
         self.workspace.set_value(os.path.normpath(
             os.path.expanduser('~/Documents/{model}_workspace').format(
-                model=self.target.__module__.split('.')[-1])))
+                model=modelname)))
 
         self.suffix = inputs.Text(args_key='suffix',
                                   label='Results suffix',

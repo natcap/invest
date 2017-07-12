@@ -1617,3 +1617,10 @@ class IntegrationTests(_QtTest):
         self.assertTrue(container.expanded)
         self.assertTrue(contained_file.interactive)
         self.assertTrue(contained_file.visible())
+
+
+class ModelTests(_QtTest):
+    def test_model_defaults(self):
+        from natcap.invest.ui import model
+        model_ui = model.Model()
+
