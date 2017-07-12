@@ -135,13 +135,15 @@ class Task(object):
         self.lock = threading.Lock()
         self.lock.acquire()  # the only release is at the end of __call__
 
-        # Make a unique hash of the input parameters of the function call
-        # TODO: consider file date/time, dependent tasks,
-        # TODO: new implementations (code versions)')
+        # Make a unique hash of the call
+        try:
+            source_code = inspect.getsource(target)
+        except IOError:
+            # we might be in a frozen binary, so just leave blank
+            source_code = ''
         task_string = '%s:%s:%s:%s' % (
             target.__name__, pickle.dumps(args),
-            json.dumps(kwargs, sort_keys=True),
-            inspect.getsource(target))
+            json.dumps(kwargs, sort_keys=True), source_code)
         self.task_id = '%s_%s' % (
             target.__name__, hashlib.sha1(task_string).hexdigest())
 
