@@ -93,39 +93,69 @@ def wait_on_signal(signal, timeout=250):
     loop = None
 
 
-def show_settings_dialog():
-    settings_dialog = QtWidgets.QDialog()
-    settings_dialog.setWindowTitle('InVEST Settings')
-    settings_dialog.setLayout(QtWidgets.QVBoxLayout())
+class OptionsDialog(QtWidgets.QDialog):
+    def __init__(self, window_title=None, modal=False):
+        QtWidgets.QDialog.__init__(self)
+        if window_title:
+            self.setWindowTitle(window_title)
 
-    container = inputs.Container(label='Global options')
-    settings_dialog.layout().addWidget(container)
-    cache_directory = inputs.Folder(
-        label='Cache directory',
-        helptext=('Where local files will be stored.'
-                  'Default value: %s') %
-        _DEFAULT_CACHE_DIRS[platform.system()])
-    cache_directory.set_value(INVEST_SETTINGS.value(
-        'cache_dir', _DEFAULT_CACHE_DIRS[platform.system()],
-        unicode))
-    container.add_input(cache_directory)
+        self.setModal(modal)
+        self.setLayout(QtWidgets.QVBoxLayout())
 
-    # TODO: These buttons are identical to scenario opts buttons.  Refactor?
-    buttonbox = QtWidgets.QDialogButtonBox()
-    ok_button = QtWidgets.QPushButton(' Save')
-    ok_button.setIcon(inputs.ICON_ENTER)
-    ok_button.clicked.connect(settings_dialog.accept)
-    buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
-    cancel_button = QtWidgets.QPushButton(' Cancel')
-    cancel_button.setIcon(qtawesome.icon('fa.times',
-                                        color='grey'))
-    cancel_button.clicked.connect(settings_dialog.reject)
-    buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
-    settings_dialog.layout().addWidget(buttonbox)
+        self._buttonbox = None
 
-    result = settings_dialog.exec_()
-    if result == QtWidgets.QDialog.Accepted:
-        INVEST_SETTINGS.setValue('cache_dir', cache_directory.value())
+        self.finished.connect(self._call_postprocess)
+
+    def _call_postprocess(self, exitcode):
+        # need to have this bound method registered with the signal,
+        # but then we'll call the subclass's postprocess method.
+        try:
+            self.postprocess(exitcode)
+        except NotImplementedError:
+            LOGGER.warning('postprocess method not implemented for object '
+                           '%s' % repr(self))
+
+    def showEvent(self, showEvent):
+        # last thing: add the buttonbox if it hasn't been created yet.
+        if not self._buttonbox:
+            self._buttonbox = QtWidgets.QDialogButtonBox()
+            self._ok_button = QtWidgets.QPushButton(' save')
+            self._ok_button.setIcon(inputs.ICON_ENTER)
+            self._ok_button.clicked.connect(self.accept)
+            self._buttonbox.addButton(self._ok_button,
+                                      QtWidgets.QDialogButtonBox.AcceptRole)
+            self._cancel_button = QtWidgets.QPushButton(' cancel')
+            self._cancel_button.setIcon(qtawesome.icon('fa.times',
+                                                       color='grey'))
+            self._cancel_button.clicked.connect(self.reject)
+            self._buttonbox.addButton(self._cancel_button,
+                                      QtWidgets.QDialogButtonBox.RejectRole)
+            self.layout().addWidget(self._buttonbox)
+
+        QtWidgets.QDialog.show(self)
+
+
+class SettingsDialog(OptionsDialog):
+    def __init__(self):
+        OptionsDialog.__init__(self, window_title='InVEST Settings',
+                               modal=True)
+
+        self._container = inputs.Container(label='Global options')
+        self.layout().addWidget(self._container)
+        self.cache_directory = inputs.Folder(
+            label='Cache directory',
+            helptext=('Where local files will be stored.'
+                      'Default value: %s') %
+            _DEFAULT_CACHE_DIRS[platform.system()])
+        self.cache_directory.set_value(INVEST_SETTINGS.value(
+            'cache_dir', _DEFAULT_CACHE_DIRS[platform.system()],
+            unicode))
+        self._container.add_input(self.cache_directory)
+
+    def postprocess(self, exitcode):
+        if exitcode == QtWidgets.QDialog.Accepted:
+            INVEST_SETTINGS.setValue('cache_dir', self.cache_directory.value())
+
 
 
 def about():
@@ -516,6 +546,13 @@ class Model(QtWidgets.QMainWindow):
         self._validator.finished.connect(self._validation_finished)
         self._validation_report_dialog = WholeModelValidationErrorDialog()
 
+        # dialogs
+        self.settings_dialog = SettingsDialog()
+
+        def _settings_saved_message():
+            self.statusBar().showMessage('Settings saved', 10000)
+        self.settings_dialog.accepted.connect(_settings_saved_message)
+
         # These attributes should be defined in subclass
         for attr in ('label', 'target', 'validator', 'localdoc'):
             if not getattr(self, attr):  # None unless overridden in subclass
@@ -529,8 +566,6 @@ class Model(QtWidgets.QMainWindow):
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
         self._central_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.status_bar = QtWidgets.QStatusBar()
-        self.setStatusBar(self.status_bar)
         self.menuBar().setNativeMenuBar(True)
         self._central_widget.layout().setSizeConstraint(
             QtWidgets.QLayout.SetMinimumSize)
@@ -581,7 +616,7 @@ class Model(QtWidgets.QMainWindow):
         self.file_menu = QtWidgets.QMenu('&File')
         self.file_menu.addAction(
             qtawesome.icon('fa.cog'),
-            'Settings ...', show_settings_dialog,
+            'Settings ...', self.settings_dialog.exec_,
             QtGui.QKeySequence(QtGui.QKeySequence.Preferences))
         self.file_menu.addAction(
             qtawesome.icon('fa.floppy-o'),
@@ -686,7 +721,7 @@ class Model(QtWidgets.QMainWindow):
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
 
-        self.status_bar.showMessage(alert_message, 10000)
+        self.statusBar().showMessage(alert_message, 10000)
         self.window_title.filename = os.path.basename(save_filepath)
 
     def add_input(self, input):
@@ -803,7 +838,7 @@ class Model(QtWidgets.QMainWindow):
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
-        self.status_bar.showMessage(
+        self.statusBar().showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
 
     def load_args(self, scenario_args):
@@ -944,6 +979,6 @@ class Model(QtWidgets.QMainWindow):
         if not lastrun_args:
             return
         self.load_args(json.loads(lastrun_args))
-        self.status_bar.showMessage('Loaded parameters from previous run.',
-                                    10000)
+        self.statusBar().showMessage('Loaded parameters from previous run.',
+                                     10000)
         self.window_title.filename = 'loaded from autosave'
