@@ -141,6 +141,43 @@ class OptionsDialog(QtWidgets.QDialog):
         QtWidgets.QDialog.show(self)
 
 
+class QuitConfirmDialog(QtWidgets.QMessageBox):
+    def __init__(self):
+        QtWidgets.QMessageBox.__init__(self)
+        self.setWindowFlags(QtCore.Qt.Dialog)
+        self.setText('<h2>Are you sure you want to quit?</h2>')
+        self.setInformativeText(
+            'Any unsaved changes to your parameters will be lost.')
+        self.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        self.setDefaultButton(QtWidgets.QMessageBox.Cancel)
+        self.setIconPixmap(
+            qtawesome.icon(
+                'fa.question').pixmap(100, 100))
+        self.checkbox = QtWidgets.QCheckBox('Remember inputs')
+        self.layout().addWidget(self.checkbox,
+                                self.layout().rowCount()-1,
+                                0, 1, 1)
+
+    def exec_(self, starting_checkstate):
+        self.checkbox.setChecked(starting_checkstate)
+        return QtWidgets.QMessageBox.exec_(self)
+
+
+class WorkspaceOverwriteConfirmDialog(QtWidgets.QMessageBox):
+    def __init__(self):
+        QtWidgets.QMessageBox.__init__(self)
+        self.setWindowFlags(QtCore.Qt.Dialog)
+        self.setText('<h2>Workspace exists!<h2>')
+        self.setInformativeText(
+            'Overwrite files from a previous run?')
+        self.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        self.setDefaultButton(QtWidgets.QMessageBox.No)
+        self.setIconPixmap(
+            ICON_ALERT.pixmap(100, 100))
+
+
 class SettingsDialog(OptionsDialog):
     def __init__(self):
         OptionsDialog.__init__(self, title='InVEST Settings',
@@ -532,12 +569,14 @@ class Model(QtWidgets.QMainWindow):
         self._quickrun = False
         self._validator = inputs.Validator(parent=self)
         self._validator.finished.connect(self._validation_finished)
-        self._validation_report_dialog = WholeModelValidationErrorDialog()
 
         # dialogs
         self.settings_dialog = SettingsDialog()
         self.scenario_options_dialog = ScenarioOptionsDialog()
         self.scenario_archive_extract_dialog = ScenarioArchiveExtractionDialog()
+        self.quit_confirm_dialog = QuitConfirmDialog()
+        self.validation_report_dialog = WholeModelValidationErrorDialog()
+        self.worskspace_overwrite_confirm_dialog = WorkspaceOverwriteConfirmDialog()
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved', 10000)
@@ -726,13 +765,13 @@ class Model(QtWidgets.QMainWindow):
         self.form.add_input(input)
 
     def is_valid(self):
-        if self._validation_report_dialog.warnings:
+        if self.validation_report_dialog.warnings:
             return False
         return True
 
     def show_validation_window(self):
-        self._validation_report_dialog.show()
-        return self._validation_report_dialog.exec_()
+        self.validation_report_dialog.show()
+        return self.validation_report_dialog.exec_()
 
     def execute_model(self):
         """Run the target model.
@@ -757,25 +796,14 @@ class Model(QtWidgets.QMainWindow):
         args = self.assemble_args()
 
         # If we have validation warnings, show them and return to inputs.
-        if self._validation_report_dialog.warnings:
-            self._validation_report_dialog.show()
-            self._validation_report_dialog.exec_()
+        if self.validation_report_dialog.warnings:
+            self.validation_report_dialog.show()
+            self.validation_report_dialog.exec_()
             return
 
         # If the workspace exists, confirm the overwrite.
         if os.path.exists(args['workspace_dir']):
-            dialog = QtWidgets.QMessageBox()
-            dialog.setWindowFlags(QtCore.Qt.Dialog)
-            dialog.setText('<h2>Workspace exists!<h2>')
-            dialog.setInformativeText(
-                'Overwrite files from a previous run?')
-            dialog.setStandardButtons(
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-            dialog.setDefaultButton(QtWidgets.QMessageBox.No)
-            dialog.setIconPixmap(
-                ICON_ALERT.pixmap(100, 100))
-
-            button_pressed = dialog.exec_()
+            button_pressed = self.worskspace_overwrite_confirm_dialog.exec_()
             if button_pressed != QtWidgets.QMessageBox.Yes:
                 return
 
@@ -867,7 +895,7 @@ class Model(QtWidgets.QMainWindow):
         for keys, warning in validation_warnings:
             warnings_.append(
                 ((args_to_inputs[key].label for key in keys), warning))
-        self._validation_report_dialog.validation_finished(warnings_)
+        self.validation_report_dialog.validation_finished(warnings_)
 
     def inputs(self):
         return [ref for ref in self.__dict__.values()
@@ -933,29 +961,15 @@ class Model(QtWidgets.QMainWindow):
         self.raise_()  # raise window to top of stack.
 
     def closeEvent(self, event):
-        dialog = QtWidgets.QMessageBox()
-        dialog.setWindowFlags(QtCore.Qt.Dialog)
-        dialog.setText('<h2>Are you sure you want to quit?</h2>')
-        dialog.setInformativeText(
-            'Any unsaved changes to your parameters will be lost.')
-        dialog.setStandardButtons(
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
-        dialog.setDefaultButton(QtWidgets.QMessageBox.Cancel)
-        dialog.setIconPixmap(
-            qtawesome.icon(
-                'fa.question').pixmap(100, 100))
-        checkbox = QtWidgets.QCheckBox('Remember inputs')
-        checkbox.setChecked(
-            self.settings.value('remember_lastrun', True, bool))
-        dialog.layout().addWidget(checkbox, dialog.layout().rowCount()-1,
-                                  0, 1, 1)
-
-        button_pressed = dialog.exec_()
+        starting_checkstate = self.settings.value('remember_lastrun',
+                                                  True, bool)
+        button_pressed = self.quit_confirm_dialog.exec_(starting_checkstate)
         if button_pressed != QtWidgets.QMessageBox.Yes:
             event.ignore()
-        elif checkbox.isChecked():
+        elif self.quit_confirm_dialog.checkbox.isChecked():
             self.save_lastrun()
-        self.settings.setValue('remember_lastrun', checkbox.isChecked())
+        self.settings.setValue('remember_lastrun',
+                               self.quit_confirm_dialog.checkbox.isChecked())
 
     def save_lastrun(self, lastrun_args=None):
         if not lastrun_args:
