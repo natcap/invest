@@ -12,6 +12,7 @@ import cgi
 import tarfile
 import contextlib
 import functools
+import platform
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -25,11 +26,20 @@ from .. import cli
 from .. import utils
 from .. import scenarios
 
-LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
-DATE_FMT = "%m/%d/%Y %H:%M:%S "
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 QT_APP = inputs.QT_APP
+INVEST_SETTINGS = QtCore.QSettings(
+    QtCore.QSettings.IniFormat,
+    QtCore.QSettings.UserScope,
+    'Natural Capital Project',
+    'InVEST')
+_DEFAULT_CACHE_DIRS = {
+    'Windows': os.path.expanduser(
+        os.path.join('~', 'AppData', 'Local', 'NatCap')),
+    'Darwin': os.path.expanduser(os.path.join('~', '.natcap')),
+    'Linux': os.path.expanduser(os.path.join('~', '.natcap'))
+}
 
 ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
                            color='grey')
@@ -81,6 +91,41 @@ def wait_on_signal(signal, timeout=250):
             QtCore.QTimer.singleShot(timeout, loop.quit)
         loop.exec_()
     loop = None
+
+
+def show_settings_dialog():
+    settings_dialog = QtWidgets.QDialog()
+    settings_dialog.setWindowTitle('InVEST Settings')
+    settings_dialog.setLayout(QtWidgets.QVBoxLayout())
+
+    container = inputs.Container(label='Global options')
+    settings_dialog.layout().addWidget(container)
+    cache_directory = inputs.Folder(
+        label='Cache directory',
+        helptext=('Where local files will be stored.'
+                  'Default value: %s') %
+        _DEFAULT_CACHE_DIRS[platform.system()])
+    cache_directory.set_value(INVEST_SETTINGS.value(
+        'cache_dir', _DEFAULT_CACHE_DIRS[platform.system()],
+        unicode))
+    container.add_input(cache_directory)
+
+    # TODO: These buttons are identical to scenario opts buttons.  Refactor?
+    buttonbox = QtWidgets.QDialogButtonBox()
+    ok_button = QtWidgets.QPushButton(' Save')
+    ok_button.setIcon(inputs.ICON_ENTER)
+    ok_button.clicked.connect(settings_dialog.accept)
+    buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
+    cancel_button = QtWidgets.QPushButton(' Cancel')
+    cancel_button.setIcon(qtawesome.icon('fa.times',
+                                        color='grey'))
+    cancel_button.clicked.connect(settings_dialog.reject)
+    buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
+    settings_dialog.layout().addWidget(buttonbox)
+
+    result = settings_dialog.exec_()
+    if result == QtWidgets.QDialog.Accepted:
+        INVEST_SETTINGS.setValue('cache_dir', cache_directory.value())
 
 
 def about():
@@ -530,6 +575,10 @@ class Model(QtWidgets.QMainWindow):
 
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File')
+        self.file_menu.addAction(
+            qtawesome.icon('fa.cog'),
+            'Settings ...', show_settings_dialog,
+            QtGui.QKeySequence(QtGui.QKeySequence.Preferences))
         self.file_menu.addAction(
             qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_scenario_as,
