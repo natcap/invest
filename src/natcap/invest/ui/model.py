@@ -200,8 +200,7 @@ class SettingsDialog(OptionsDialog):
             INVEST_SETTINGS.setValue('cache_dir', self.cache_directory.value())
 
 
-
-def about():
+class AboutDialog(QtWidgets.QDialog):
     """Show a dialog describing InVEST.
 
     In reasonable accordance with licensing and distribution requirements,
@@ -212,72 +211,76 @@ def about():
 
     Returns:
         None."""
-    about_dialog = QtWidgets.QDialog()
-    about_dialog.setWindowTitle('About InVEST')
-    about_dialog.setLayout(QtWidgets.QVBoxLayout())
-    label_text = textwrap.dedent(
-        """
-        <h1>InVEST</h1>
-        <b>Version {version}</b> <br/> <br/>
+    def __init__(self):
+        QtWidgets.QDialog.__init__(self)
+        self.setWindowTitle('About InVEST')
+        self.setLayout(QtWidgets.QVBoxLayout())
+        label_text = textwrap.dedent(
+            """
+            <h1>InVEST</h1>
+            <b>Version {version}</b> <br/> <br/>
 
-        Documentation: <a href="http://data.naturalcapitalproject.org/nightly-
-        build/invest-users-guide/html/">online</a><br/>
-        Homepage: <a href="http://naturalcapitalproject.org">
-                    naturalcapitalproject.org</a><br/>
-        Copyright 2017, The Natural Capital Project<br/>
-        License:
-        <a href="https://bitbucket.org/natcap/invest/src/tip/LICENSE.txt">
-                    BSD 3-clause</a><br/>
-        Project page: <a href="https://bitbucket.org/natcap/invest">
-                    bitbucket.org/natcap/invest</a><br/>
+            Documentation: <a href="http://data.naturalcapitalproject.org/nightly-
+            build/invest-users-guide/html/">online</a><br/>
+            Homepage: <a href="http://naturalcapitalproject.org">
+                        naturalcapitalproject.org</a><br/>
+            Copyright 2017, The Natural Capital Project<br/>
+            License:
+            <a href="https://bitbucket.org/natcap/invest/src/tip/LICENSE.txt">
+                        BSD 3-clause</a><br/>
+            Project page: <a href="https://bitbucket.org/natcap/invest">
+                        bitbucket.org/natcap/invest</a><br/>
 
-        <h2>Open-Source Licenses</h2>
-        """.format(
-            version=natcap.invest.__version__))
+            <h2>Open-Source Licenses</h2>
+            """.format(
+                version=natcap.invest.__version__))
 
-    label_text += "<table>"
-    for lib_name, lib_license, lib_homepage in [
-            ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
-            ('GDAL', 'MIT and others', 'http://gdal.org'),
-            ('matplotlib', 'BSD', 'http://matplotlib.org'),
-            ('natcap.versioner', 'BSD',
-             'http://bitbucket.org/jdouglass/versioner'),
-            ('numpy', 'BSD', 'http://numpy.org'),
-            ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
-            ('pygeoprocessing', 'BSD',
-             'http://bitbucket.org/richpsharp/pygeoprocessing'),
-            ('PyQt', 'GPL',
-             'http://riverbankcomputing.com/software/pyqt/intro'),
-            ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
-            ('scipy', 'BSD', 'http://www.scipy.org/'),
-            ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
-        label_text += (
-            '<tr>'
-            '<td>{project}  </td>'
-            '<td>{license}  </td>'
-            '<td>{homepage}  </td></tr/>').format(
-                project=lib_name,
-                license=(
-                    '<a href="licenses/{project}_license.txt">'
-                    '{license}</a>').format(project=lib_name,
-                                            license=lib_license),
-                homepage='<a href="{0}">{0}</a>'.format(lib_homepage))
+        label_text += "<table>"
+        for lib_name, lib_license, lib_homepage in [
+                ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
+                ('GDAL', 'MIT and others', 'http://gdal.org'),
+                ('matplotlib', 'BSD', 'http://matplotlib.org'),
+                ('natcap.versioner', 'BSD',
+                'http://bitbucket.org/jdouglass/versioner'),
+                ('numpy', 'BSD', 'http://numpy.org'),
+                ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
+                ('pygeoprocessing', 'BSD',
+                'http://bitbucket.org/richpsharp/pygeoprocessing'),
+                ('PyQt', 'GPL',
+                'http://riverbankcomputing.com/software/pyqt/intro'),
+                ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
+                ('scipy', 'BSD', 'http://www.scipy.org/'),
+                ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
+            label_text += (
+                '<tr>'
+                '<td>{project}  </td>'
+                '<td>{license}  </td>'
+                '<td>{homepage}  </td></tr/>').format(
+                    project=lib_name,
+                    license=(
+                        '<a href="licenses/{project}_license.txt">'
+                        '{license}</a>').format(project=lib_name,
+                                                license=lib_license),
+                    homepage='<a href="{0}">{0}</a>'.format(lib_homepage))
 
-    label_text += "</table>"
+        label_text += "</table>"
 
-    label = QtWidgets.QLabel(label_text)
-    label.setTextFormat(QtCore.Qt.RichText)
-    label.setOpenExternalLinks(True)
-    about_dialog.layout().addWidget(label)
+        self.label = QtWidgets.QLabel(label_text)
+        self.label.setTextFormat(QtCore.Qt.RichText)
+        self.label.setOpenExternalLinks(True)
+        self.layout().addWidget(self.label)
 
-    button_box = QtWidgets.QDialogButtonBox()
-    accept_button = QtWidgets.QPushButton('OK')
-    button_box.addButton(accept_button,
-                         QtWidgets.QDialogButtonBox.AcceptRole)
-    about_dialog.layout().addWidget(button_box)
-    accept_button.clicked.connect(about_dialog.close)
+        self.button_box = QtWidgets.QDialogButtonBox()
+        self.accept_button = QtWidgets.QPushButton('OK')
+        self.button_box.addButton(
+            self.accept_button,
+            QtWidgets.QDialogButtonBox.AcceptRole)
+        self.layout().addWidget(self.button_box)
+        self.accept_button.clicked.connect(self.close)
 
-    about_dialog.exec_()
+
+
+
 
 
 def _check_docs_link_exists(link):
@@ -571,6 +574,7 @@ class Model(QtWidgets.QMainWindow):
         self._validator.finished.connect(self._validation_finished)
 
         # dialogs
+        self.about_dialog = AboutDialog()
         self.settings_dialog = SettingsDialog()
         self.scenario_options_dialog = ScenarioOptionsDialog()
         self.scenario_archive_extract_dialog = ScenarioArchiveExtractionDialog()
@@ -663,7 +667,7 @@ class Model(QtWidgets.QMainWindow):
         self.help_menu = QtWidgets.QMenu('&Help')
         self.help_menu.addAction(
             qtawesome.icon('fa.info'),
-            'About InVEST', about)
+            'About InVEST', self.about_dialog.exec_)
         self.help_menu.addAction(
             qtawesome.icon('fa.external-link'),
             'View documentation', self._check_local_docs)
