@@ -34,12 +34,6 @@ INVEST_SETTINGS = QtCore.QSettings(
     QtCore.QSettings.UserScope,
     'Natural Capital Project',
     'InVEST')
-_DEFAULT_CACHE_DIRS = {
-    'Windows': os.path.expanduser(
-        os.path.join('~', 'AppData', 'Local', 'NatCap')),
-    'Darwin': os.path.expanduser(os.path.join('~', '.natcap')),
-    'Linux': os.path.expanduser(os.path.join('~', '.natcap'))
-}
 
 ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
                            color='grey')
@@ -185,14 +179,21 @@ class SettingsDialog(OptionsDialog):
 
         self._container = inputs.Container(label='Global options')
         self.layout().addWidget(self._container)
+
+        try:
+            # Qt4
+            cache_dir = QtGui.QDesktopServices.storageLocation(
+                QtGui.QDesktopServices.CacheLocation)
+        except AttributeError:
+            # Package location changed in Qt5
+            cache_dir = QtCore.QStandardPaths.writableLocation(
+                QtCore.QStandardPaths.CacheLocation)
         self.cache_directory = inputs.Folder(
             label='Cache directory',
             helptext=('Where local files will be stored.'
-                      'Default value: %s') %
-            _DEFAULT_CACHE_DIRS[platform.system()])
+                      'Default value: %s') % cache_dir)
         self.cache_directory.set_value(INVEST_SETTINGS.value(
-            'cache_dir', _DEFAULT_CACHE_DIRS[platform.system()],
-            unicode))
+            'cache_dir', cache_dir, unicode))
         self._container.add_input(self.cache_directory)
 
     def postprocess(self, exitcode):
