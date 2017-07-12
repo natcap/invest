@@ -94,10 +94,13 @@ def wait_on_signal(signal, timeout=250):
 
 
 class OptionsDialog(QtWidgets.QDialog):
-    def __init__(self, window_title=None, modal=False):
+    def __init__(self, title=None, modal=False, accept_text='save',
+                 reject_text='cancel'):
         QtWidgets.QDialog.__init__(self)
-        if window_title:
-            self.setWindowTitle(window_title)
+        self._accept_text = ' ' + accept_text.strip()
+        self._reject_text = ' ' + reject_text.strip()
+        if title:
+            self.setWindowTitle(title)
 
         self.setModal(modal)
         self.setLayout(QtWidgets.QVBoxLayout())
@@ -112,19 +115,22 @@ class OptionsDialog(QtWidgets.QDialog):
         try:
             self.postprocess(exitcode)
         except NotImplementedError:
-            LOGGER.warning('postprocess method not implemented for object '
-                           '%s' % repr(self))
+            LOGGER.info('postprocess method not implemented for object '
+                        '%s' % repr(self))
+
+    def postprocess(self, exitcode):
+        raise NotImplementedError
 
     def showEvent(self, showEvent):
         # last thing: add the buttonbox if it hasn't been created yet.
         if not self._buttonbox:
             self._buttonbox = QtWidgets.QDialogButtonBox()
-            self._ok_button = QtWidgets.QPushButton(' save')
+            self._ok_button = QtWidgets.QPushButton(self._accept_text)
             self._ok_button.setIcon(inputs.ICON_ENTER)
             self._ok_button.clicked.connect(self.accept)
             self._buttonbox.addButton(self._ok_button,
                                       QtWidgets.QDialogButtonBox.AcceptRole)
-            self._cancel_button = QtWidgets.QPushButton(' cancel')
+            self._cancel_button = QtWidgets.QPushButton(self._reject_text)
             self._cancel_button.setIcon(qtawesome.icon('fa.times',
                                                        color='grey'))
             self._cancel_button.clicked.connect(self.reject)
@@ -137,7 +143,7 @@ class OptionsDialog(QtWidgets.QDialog):
 
 class SettingsDialog(OptionsDialog):
     def __init__(self):
-        OptionsDialog.__init__(self, window_title='InVEST Settings',
+        OptionsDialog.__init__(self, title='InVEST Settings',
                                modal=True)
 
         self._container = inputs.Container(label='Global options')
@@ -349,7 +355,7 @@ ScenarioSaveOpts = collections.namedtuple(
     'ScenarioSaveOpts', 'scenario_type use_relpaths include_workspace')
 
 
-def _prompt_for_scenario_options():
+class ScenarioOptionsDialog(OptionsDialog):
     """Provide a GUI model dialog with options for saving a scenario.
 
     There are two types of scenarios:
@@ -365,88 +371,70 @@ def _prompt_for_scenario_options():
     Returns:
         An instance of :ref:ScenarioSaveOpts namedtuple.
     """
-    dialog = QtWidgets.QDialog()
-    dialog.setLayout(QtWidgets.QVBoxLayout())
-    dialog.setWindowModality(QtCore.Qt.WindowModal)
+    def __init__(self):
+        OptionsDialog.__init__(self,
+                               title='Scenario options',
+                               modal=True,
+                               accept_text='Continue',
+                               reject_text='Cancel')
+        self._container= inputs.Container(label='Scenario options')
+        self.layout().addWidget(self._container)
 
-    prompt = inputs.Container(label='Scenario options')
-    dialog.layout().addWidget(prompt)
+        self.scenario_type = inputs.Dropdown(
+            label='Scenario type',
+            options=_SCENARIO_SAVE_OPTS.keys())
+        self.scenario_type.set_value(_SCENARIO_PARAMETER_SET)  # default selection
+        self.use_relative_paths = inputs.Checkbox(
+            label='Use relative paths')
+        self.include_workspace = inputs.Checkbox(
+            label='Include workspace path in scenario')
+        self.include_workspace.set_value(False)
 
-    scenario_type = inputs.Dropdown(
-        label='Scenario type',
-        options=_SCENARIO_SAVE_OPTS.keys())
-    scenario_type.set_value(_SCENARIO_PARAMETER_SET)  # default selection
-    prompt.add_input(scenario_type)
-    use_relative_paths = inputs.Checkbox(
-        label='Use relative paths')
-    include_workspace = inputs.Checkbox(
-        label='Include workspace path in scenario')
-    include_workspace.set_value(False)
-    prompt.add_input(use_relative_paths)
-    prompt.add_input(include_workspace)
+        self._container.add_input(self.scenario_type)
+        self._container.add_input(self.use_relative_paths)
+        self._container.add_input(self.include_workspace)
 
-    @QtCore.Slot(unicode)
-    def _optionally_disable(value):
-        use_relative_paths.set_interactive(value == _SCENARIO_PARAMETER_SET)
-    scenario_type.value_changed.connect(_optionally_disable)
+        @QtCore.Slot(unicode)
+        def _optionally_disable(value):
+            self.use_relative_paths.set_interactive(value == _SCENARIO_PARAMETER_SET)
+        self.scenario_type.value_changed.connect(_optionally_disable)
 
-    buttonbox = QtWidgets.QDialogButtonBox()
-    ok_button = QtWidgets.QPushButton(' Continue')
-    ok_button.setIcon(inputs.ICON_ENTER)
-    ok_button.clicked.connect(dialog.accept)
-    buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
-    cancel_button = QtWidgets.QPushButton(' Cancel')
-    cancel_button.setIcon(qtawesome.icon('fa.times',
-                                         color='grey'))
-    cancel_button.clicked.connect(dialog.reject)
-    buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
-    dialog.layout().addWidget(buttonbox)
-
-    dialog.raise_()
-    dialog.show()
-    result = dialog.exec_()
-    if result == QtWidgets.QDialog.Accepted:
-        return ScenarioSaveOpts(
-            scenario_type.value(), use_relative_paths.value(),
-            include_workspace.value())
-    return None
+    def exec_(self):
+        result = OptionsDialog.exec_(self)
+        if result == QtWidgets.QDialog.Accepted:
+            return ScenarioSaveOpts(
+                self.scenario_type.value(),
+                self.use_relative_paths.value(),
+                self.include_workspace.value())
+        return None
 
 
-def _prompt_for_scenario_archive_extraction(archive_path):
-    dialog = QtWidgets.QDialog()
-    dialog.setLayout(QtWidgets.QVBoxLayout())
-    dialog.setWindowModality(QtCore.Qt.WindowModal)
+class ScenarioArchiveExtractionDialog(OptionsDialog):
+    def __init__(self):
+        OptionsDialog.__init__(self,
+                               title='Extract scenario',
+                               modal=True,
+                               accept_text='Extract',
+                               reject_text='Cancel')
+        self._container = inputs.Container(label='Scenario extraction parameters')
+        self.layout().addWidget(self._container)
 
-    container = inputs.Container(label='Scenario extraction parameters')
-    dialog.layout().addWidget(container)
+        self.extraction_point = inputs.Folder(
+            label='Where should this archive be extracted?',
+        )
+        self._container.add_input(self.extraction_point)
 
-    extraction_point = inputs.Folder(
-        label='Where should this archive be extracted?',
-    )
+    def exec_(self):
+        self.raise_()
+        self.show()
+        result = dialog.exec_()
 
-    container.add_input(extraction_point)
-
-    buttonbox = QtWidgets.QDialogButtonBox()
-    ok_button = QtWidgets.QPushButton(' Extract')
-    ok_button.setIcon(inputs.ICON_ENTER)
-    ok_button.clicked.connect(dialog.accept)
-    buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
-    cancel_button = QtWidgets.QPushButton(' Cancel')
-    cancel_button.setIcon(qtawesome.icon('fa.times',
-                                         color='grey'))
-    cancel_button.clicked.connect(dialog.reject)
-    buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
-    dialog.layout().addWidget(buttonbox)
-
-    dialog.raise_()
-    dialog.show()
-    result = dialog.exec_()
-
-    if result == QtWidgets.QDialog.Accepted:
-        extract_to_dir = extraction_point.value()
-        args = scenarios.extract_scenario_archive(
-            archive_path, extract_to_dir)
-        return (args, extract_to_dir)
+        if result == QtWidgets.QDialog.Accepted:
+            extract_to_dir = extraction_point.value()
+            args = scenarios.extract_scenario_archive(
+                archive_path, extract_to_dir)
+            return (args, extract_to_dir)
+        return None
 
 
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
@@ -548,6 +536,8 @@ class Model(QtWidgets.QMainWindow):
 
         # dialogs
         self.settings_dialog = SettingsDialog()
+        self.scenario_options_dialog = ScenarioOptionsDialog()
+        self.scenario_archive_extract_dialog = ScenarioArchiveExtractionDialog()
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved', 10000)
@@ -671,7 +661,7 @@ class Model(QtWidgets.QMainWindow):
 
         Returns:
            ``None``."""
-        scenario_opts = _prompt_for_scenario_options()
+        scenario_opts = self.scenario_options_dialog.exec_()
         if not scenario_opts:  # user pressed cancel
             return
 
@@ -822,7 +812,7 @@ class Model(QtWidgets.QMainWindow):
         LOGGER.info('Loading scenario from "%s"', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
             # Where should the tarfile be extracted to?
-            args, extract_dir = _prompt_for_scenario_archive_extraction(
+            args, extract_dir = self.scenario_archive_extract_dialog.exec_(
                 scenario_path)
             if args is None:
                 return
