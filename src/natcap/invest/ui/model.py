@@ -280,38 +280,21 @@ class AboutDialog(QtWidgets.QDialog):
         self.accept_button.clicked.connect(self.close)
 
 
-
-
-
-
-def _check_docs_link_exists(link):
-    if link.startswith('file://'):
-        local_link_path = link.replace('file://', '')
-
-        if os.path.exists(local_link_path):
-            QtCore.QDesktopServices.OpenUrl(link)
-        else:
-            LOGGER.info("Can't find docs link %s", local_link_path)
-            dialog = QtWidgets.QMessageBox()
-            dialog.setWindowFlags(QtCore.Qt.Dialog)
-            dialog.setText("<h2>Local docs not found<h2>")
-            remote_link = _ONLINE_DOCS_LINK + os.path.basename(local_link_path)
-            dialog.setInformativeText(
-                'Online docs: [<a href="%s">documentation</a>]'
-                '<br/><br/>Local documentation link could not be found: %s' %
-                (remote_link, local_link_path))
-            dialog.setStandardButtons(
-                QtWidgets.QMessageBox.Ok)
-            dialog.setIconPixmap(
-                qtawesome.icon(
-                    'fa.exclamation-triangle',
-                    color='orange').pixmap(100, 100))
-            dialog.show()
-            dialog.exec_()
-    elif link.startswith(('http', 'ftp')):
-        QtCore.QDesktopServices.OpenUrl(link)
-    else:
-        LOGGER.warning("Don't know how to open link %s", link)
+class LocalDocsMissingDialog(QtWidgets.QMessageBox):
+    def __init__(self, local_docs_link):
+        QtWidgets.QMessageBox.__init__(self)
+        self.setWindowFlags(QtCore.Qt.Dialog)
+        self.setText("<h2>Local docs not found<h2>")
+        remote_link = _ONLINE_DOCS_LINK + os.path.basename(local_docs_link)
+        self.setInformativeText(
+            'Online docs: [<a href="%s">documentation</a>]'
+            '<br/><br/>Local documentation link could not be found: %s' %
+            (remote_link, local_docs_link))
+        self.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        self.setIconPixmap(
+            qtawesome.icon(
+                'fa.exclamation-triangle',
+                color='orange').pixmap(100, 100))
 
 
 class WindowTitle(QtCore.QObject):
@@ -582,6 +565,7 @@ class Model(QtWidgets.QMainWindow):
         self.quit_confirm_dialog = QuitConfirmDialog()
         self.validation_report_dialog = WholeModelValidationErrorDialog()
         self.worskspace_overwrite_confirm_dialog = WorkspaceOverwriteConfirmDialog()
+        self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved', 10000)
@@ -682,8 +666,16 @@ class Model(QtWidgets.QMainWindow):
             self.label)
 
     def _check_local_docs(self, link=None):
-        path = 'file://' + os.path.abspath(self.localdoc)
-        _check_docs_link_exists(path)
+        if not link or link == 'localdocs':
+            link = 'file://' + os.path.abspath(self.localdoc)
+
+        if link.startswith(('http', 'ftp', 'file')):
+            if os.path.exists(link.replace('file://', '')):
+                QtCore.QDesktopServices.openUrl(link)
+            else:
+                self.local_docs_missing_dialog.exec_()
+        else:
+            LOGGER.warning("Don't know how to open link %s", link)
 
     def dragEnterEvent(self, event):
         # Determine whether to accept or reject a drop
