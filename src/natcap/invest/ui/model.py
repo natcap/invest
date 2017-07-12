@@ -12,6 +12,7 @@ import cgi
 import tarfile
 import contextlib
 import functools
+import platform
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -25,11 +26,14 @@ from .. import cli
 from .. import utils
 from .. import scenarios
 
-LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
-DATE_FMT = "%m/%d/%Y %H:%M:%S "
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 QT_APP = inputs.QT_APP
+INVEST_SETTINGS = QtCore.QSettings(
+    QtCore.QSettings.IniFormat,
+    QtCore.QSettings.UserScope,
+    'Natural Capital Project',
+    'InVEST')
 
 ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
                            color='grey')
@@ -83,7 +87,121 @@ def wait_on_signal(signal, timeout=250):
     loop = None
 
 
-def about():
+class OptionsDialog(QtWidgets.QDialog):
+    def __init__(self, title=None, modal=False, accept_text='save',
+                 reject_text='cancel'):
+        QtWidgets.QDialog.__init__(self)
+        self._accept_text = ' ' + accept_text.strip()
+        self._reject_text = ' ' + reject_text.strip()
+        if title:
+            self.setWindowTitle(title)
+
+        self.setModal(modal)
+        self.setLayout(QtWidgets.QVBoxLayout())
+
+        self._buttonbox = None
+
+        self.finished.connect(self._call_postprocess)
+
+    def _call_postprocess(self, exitcode):
+        # need to have this bound method registered with the signal,
+        # but then we'll call the subclass's postprocess method.
+        try:
+            self.postprocess(exitcode)
+        except NotImplementedError:
+            LOGGER.info('postprocess method not implemented for object '
+                        '%s' % repr(self))
+
+    def postprocess(self, exitcode):
+        raise NotImplementedError
+
+    def showEvent(self, showEvent):
+        # last thing: add the buttonbox if it hasn't been created yet.
+        if not self._buttonbox:
+            self._buttonbox = QtWidgets.QDialogButtonBox()
+            self._ok_button = QtWidgets.QPushButton(self._accept_text)
+            self._ok_button.setIcon(inputs.ICON_ENTER)
+            self._ok_button.clicked.connect(self.accept)
+            self._buttonbox.addButton(self._ok_button,
+                                      QtWidgets.QDialogButtonBox.AcceptRole)
+            self._cancel_button = QtWidgets.QPushButton(self._reject_text)
+            self._cancel_button.setIcon(qtawesome.icon('fa.times',
+                                                       color='grey'))
+            self._cancel_button.clicked.connect(self.reject)
+            self._buttonbox.addButton(self._cancel_button,
+                                      QtWidgets.QDialogButtonBox.RejectRole)
+            self.layout().addWidget(self._buttonbox)
+
+        QtWidgets.QDialog.show(self)
+
+
+class QuitConfirmDialog(QtWidgets.QMessageBox):
+    def __init__(self):
+        QtWidgets.QMessageBox.__init__(self)
+        self.setWindowFlags(QtCore.Qt.Dialog)
+        self.setText('<h2>Are you sure you want to quit?</h2>')
+        self.setInformativeText(
+            'Any unsaved changes to your parameters will be lost.')
+        self.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        self.setDefaultButton(QtWidgets.QMessageBox.Cancel)
+        self.setIconPixmap(
+            qtawesome.icon(
+                'fa.question').pixmap(100, 100))
+        self.checkbox = QtWidgets.QCheckBox('Remember inputs')
+        self.layout().addWidget(self.checkbox,
+                                self.layout().rowCount()-1,
+                                0, 1, 1)
+
+    def exec_(self, starting_checkstate):
+        self.checkbox.setChecked(starting_checkstate)
+        return QtWidgets.QMessageBox.exec_(self)
+
+
+class WorkspaceOverwriteConfirmDialog(QtWidgets.QMessageBox):
+    def __init__(self):
+        QtWidgets.QMessageBox.__init__(self)
+        self.setWindowFlags(QtCore.Qt.Dialog)
+        self.setText('<h2>Workspace exists!<h2>')
+        self.setInformativeText(
+            'Overwrite files from a previous run?')
+        self.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        self.setDefaultButton(QtWidgets.QMessageBox.No)
+        self.setIconPixmap(
+            ICON_ALERT.pixmap(100, 100))
+
+
+class SettingsDialog(OptionsDialog):
+    def __init__(self):
+        OptionsDialog.__init__(self, title='InVEST Settings',
+                               modal=True)
+
+        self._container = inputs.Container(label='Global options')
+        self.layout().addWidget(self._container)
+
+        try:
+            # Qt4
+            cache_dir = QtGui.QDesktopServices.storageLocation(
+                QtGui.QDesktopServices.CacheLocation)
+        except AttributeError:
+            # Package location changed in Qt5
+            cache_dir = QtCore.QStandardPaths.writableLocation(
+                QtCore.QStandardPaths.CacheLocation)
+        self.cache_directory = inputs.Folder(
+            label='Cache directory',
+            helptext=('Where local files will be stored.'
+                      'Default value: %s') % cache_dir)
+        self.cache_directory.set_value(INVEST_SETTINGS.value(
+            'cache_dir', cache_dir, unicode))
+        self._container.add_input(self.cache_directory)
+
+    def postprocess(self, exitcode):
+        if exitcode == QtWidgets.QDialog.Accepted:
+            INVEST_SETTINGS.setValue('cache_dir', self.cache_directory.value())
+
+
+class AboutDialog(QtWidgets.QDialog):
     """Show a dialog describing InVEST.
 
     In reasonable accordance with licensing and distribution requirements,
@@ -94,99 +212,89 @@ def about():
 
     Returns:
         None."""
-    about_dialog = QtWidgets.QDialog()
-    about_dialog.setLayout(QtWidgets.QVBoxLayout())
-    label_text = textwrap.dedent(
-        """
-        <h1>InVEST</h1>
-        <b>Version {version}</b> <br/> <br/>
+    def __init__(self):
+        QtWidgets.QDialog.__init__(self)
+        self.setWindowTitle('About InVEST')
+        self.setLayout(QtWidgets.QVBoxLayout())
+        label_text = textwrap.dedent(
+            """
+            <h1>InVEST</h1>
+            <b>Version {version}</b> <br/> <br/>
 
-        Documentation: <a href="http://data.naturalcapitalproject.org/nightly-
-        build/invest-users-guide/html/">online</a><br/>
-        Homepage: <a href="http://naturalcapitalproject.org">
-                    naturalcapitalproject.org</a><br/>
-        Copyright 2017, The Natural Capital Project<br/>
-        License: BSD 3-clause<br/>
-        Project page: <a href="https://bitbucket.org/natcap/invest">
+            Documentation: <a href="http://data.naturalcapitalproject.org/nightly-
+            build/invest-users-guide/html/">online</a><br/>
+            Homepage: <a href="http://naturalcapitalproject.org">
+                        naturalcapitalproject.org</a><br/>
+            Copyright 2017, The Natural Capital Project<br/>
+            License:
+            <a href="https://bitbucket.org/natcap/invest/src/tip/LICENSE.txt">
+                        BSD 3-clause</a><br/>
+            Project page: <a href="https://bitbucket.org/natcap/invest">
                         bitbucket.org/natcap/invest</a><br/>
 
-        <h2>Open-Source Licenses</h2>
-        """.format(
-            version=natcap.invest.__version__))
+            <h2>Open-Source Licenses</h2>
+            """.format(
+                version=natcap.invest.__version__))
 
-    label_text += "<table>"
-    for lib_name, lib_license, lib_homepage in [
-            ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
-            ('GDAL', 'MIT and others', 'http://gdal.org'),
-            ('matplotlib', 'BSD', 'http://matplotlib.org'),
-            ('natcap.versioner', 'BSD',
+        label_text += "<table>"
+        for lib_name, lib_license, lib_homepage in [
+                ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
+                ('GDAL', 'MIT and others', 'http://gdal.org'),
+                ('matplotlib', 'BSD', 'http://matplotlib.org'),
+                ('natcap.versioner', 'BSD',
                 'http://bitbucket.org/jdouglass/versioner'),
-            ('numpy', 'BSD', 'http://numpy.org'),
-            ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
-            ('pygeoprocessing', 'BSD',
+                ('numpy', 'BSD', 'http://numpy.org'),
+                ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
+                ('pygeoprocessing', 'BSD',
                 'http://bitbucket.org/richpsharp/pygeoprocessing'),
-            ('PyQt', 'GPL',
+                ('PyQt', 'GPL',
                 'http://riverbankcomputing.com/software/pyqt/intro'),
-            ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
-            ('scipy', 'BSD', 'http://www.scipy.org/'),
-            ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
-        label_text += (
-            '<tr>'
-            '<td>{project}  </td>'
-            '<td>{license}  </td>'
-            '<td>{homepage}  </td></tr/>').format(
-                project=lib_name,
-                license=(
-                    '<a href="licenses/{project}_license.txt">'
-                    '{license}</a>').format(project=lib_name,
-                                            license=lib_license),
-                homepage='<a href="{0}">{0}</a>'.format(lib_homepage))
+                ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
+                ('scipy', 'BSD', 'http://www.scipy.org/'),
+                ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
+            label_text += (
+                '<tr>'
+                '<td>{project}  </td>'
+                '<td>{license}  </td>'
+                '<td>{homepage}  </td></tr/>').format(
+                    project=lib_name,
+                    license=(
+                        '<a href="licenses/{project}_license.txt">'
+                        '{license}</a>').format(project=lib_name,
+                                                license=lib_license),
+                    homepage='<a href="{0}">{0}</a>'.format(lib_homepage))
 
-    label_text += "</table>"
+        label_text += "</table>"
 
-    label = QtWidgets.QLabel(label_text)
-    label.setTextFormat(QtCore.Qt.RichText)
-    label.setOpenExternalLinks(True)
-    about_dialog.layout().addWidget(label)
+        self.label = QtWidgets.QLabel(label_text)
+        self.label.setTextFormat(QtCore.Qt.RichText)
+        self.label.setOpenExternalLinks(True)
+        self.layout().addWidget(self.label)
 
-    button_box = QtWidgets.QDialogButtonBox()
-    accept_button = QtWidgets.QPushButton('OK')
-    button_box.addButton(accept_button,
-                         QtWidgets.QDialogButtonBox.AcceptRole)
-    about_dialog.layout().addWidget(button_box)
-    accept_button.clicked.connect(about_dialog.close)
+        self.button_box = QtWidgets.QDialogButtonBox()
+        self.accept_button = QtWidgets.QPushButton('OK')
+        self.button_box.addButton(
+            self.accept_button,
+            QtWidgets.QDialogButtonBox.AcceptRole)
+        self.layout().addWidget(self.button_box)
+        self.accept_button.clicked.connect(self.close)
 
-    about_dialog.exec_()
 
-
-def _check_docs_link_exists(link):
-    if link.startswith('file://'):
-        local_link_path = link.replace('file://', '')
-
-        if os.path.exists(local_link_path):
-            QtCore.QDesktopServices.OpenUrl(link)
-        else:
-            LOGGER.info("Can't find docs link %s", local_link_path)
-            dialog = QtWidgets.QMessageBox()
-            dialog.setWindowFlags(QtCore.Qt.Dialog)
-            dialog.setText("<h2>Local docs not found<h2>")
-            remote_link = _ONLINE_DOCS_LINK + os.path.basename(local_link_path)
-            dialog.setInformativeText(
-                'Online docs: [<a href="%s">documentation</a>]'
-                '<br/><br/>Local documentation link could not be found: %s' %
-                (remote_link, local_link_path))
-            dialog.setStandardButtons(
-                QtWidgets.QMessageBox.Ok)
-            dialog.setIconPixmap(
-                qtawesome.icon(
-                    'fa.exclamation-triangle',
-                    color='orange').pixmap(100, 100))
-            dialog.show()
-            dialog.exec_()
-    elif link.startswith(('http', 'ftp')):
-        QtCore.QDesktopServices.OpenUrl(link)
-    else:
-        LOGGER.warning("Don't know how to open link %s", link)
+class LocalDocsMissingDialog(QtWidgets.QMessageBox):
+    def __init__(self, local_docs_link):
+        QtWidgets.QMessageBox.__init__(self)
+        self.setWindowFlags(QtCore.Qt.Dialog)
+        self.setText("<h2>Local docs not found<h2>")
+        remote_link = _ONLINE_DOCS_LINK + os.path.basename(local_docs_link)
+        self.setInformativeText(
+            'Online docs: [<a href="%s">documentation</a>]'
+            '<br/><br/>Local documentation link could not be found: %s' %
+            (remote_link, local_docs_link))
+        self.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        self.setIconPixmap(
+            qtawesome.icon(
+                'fa.exclamation-triangle',
+                color='orange').pixmap(100, 100))
 
 
 class WindowTitle(QtCore.QObject):
@@ -271,7 +379,7 @@ ScenarioSaveOpts = collections.namedtuple(
     'ScenarioSaveOpts', 'scenario_type use_relpaths include_workspace')
 
 
-def _prompt_for_scenario_options():
+class ScenarioOptionsDialog(OptionsDialog):
     """Provide a GUI model dialog with options for saving a scenario.
 
     There are two types of scenarios:
@@ -287,88 +395,70 @@ def _prompt_for_scenario_options():
     Returns:
         An instance of :ref:ScenarioSaveOpts namedtuple.
     """
-    dialog = QtWidgets.QDialog()
-    dialog.setLayout(QtWidgets.QVBoxLayout())
-    dialog.setWindowModality(QtCore.Qt.WindowModal)
+    def __init__(self):
+        OptionsDialog.__init__(self,
+                               title='Scenario options',
+                               modal=True,
+                               accept_text='Continue',
+                               reject_text='Cancel')
+        self._container= inputs.Container(label='Scenario options')
+        self.layout().addWidget(self._container)
 
-    prompt = inputs.Container(label='Scenario options')
-    dialog.layout().addWidget(prompt)
+        self.scenario_type = inputs.Dropdown(
+            label='Scenario type',
+            options=_SCENARIO_SAVE_OPTS.keys())
+        self.scenario_type.set_value(_SCENARIO_PARAMETER_SET)  # default selection
+        self.use_relative_paths = inputs.Checkbox(
+            label='Use relative paths')
+        self.include_workspace = inputs.Checkbox(
+            label='Include workspace path in scenario')
+        self.include_workspace.set_value(False)
 
-    scenario_type = inputs.Dropdown(
-        label='Scenario type',
-        options=_SCENARIO_SAVE_OPTS.keys())
-    scenario_type.set_value(_SCENARIO_PARAMETER_SET)  # default selection
-    prompt.add_input(scenario_type)
-    use_relative_paths = inputs.Checkbox(
-        label='Use relative paths')
-    include_workspace = inputs.Checkbox(
-        label='Include workspace path in scenario')
-    include_workspace.set_value(False)
-    prompt.add_input(use_relative_paths)
-    prompt.add_input(include_workspace)
+        self._container.add_input(self.scenario_type)
+        self._container.add_input(self.use_relative_paths)
+        self._container.add_input(self.include_workspace)
 
-    @QtCore.Slot(unicode)
-    def _optionally_disable(value):
-        use_relative_paths.set_interactive(value == _SCENARIO_PARAMETER_SET)
-    scenario_type.value_changed.connect(_optionally_disable)
+        @QtCore.Slot(unicode)
+        def _optionally_disable(value):
+            self.use_relative_paths.set_interactive(value == _SCENARIO_PARAMETER_SET)
+        self.scenario_type.value_changed.connect(_optionally_disable)
 
-    buttonbox = QtWidgets.QDialogButtonBox()
-    ok_button = QtWidgets.QPushButton(' Continue')
-    ok_button.setIcon(inputs.ICON_ENTER)
-    ok_button.clicked.connect(dialog.accept)
-    buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
-    cancel_button = QtWidgets.QPushButton(' Cancel')
-    cancel_button.setIcon(qtawesome.icon('fa.times',
-                                         color='grey'))
-    cancel_button.clicked.connect(dialog.reject)
-    buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
-    dialog.layout().addWidget(buttonbox)
-
-    dialog.raise_()
-    dialog.show()
-    result = dialog.exec_()
-    if result == QtWidgets.QDialog.Accepted:
-        return ScenarioSaveOpts(
-            scenario_type.value(), use_relative_paths.value(),
-            include_workspace.value())
-    return None
+    def exec_(self):
+        result = OptionsDialog.exec_(self)
+        if result == QtWidgets.QDialog.Accepted:
+            return ScenarioSaveOpts(
+                self.scenario_type.value(),
+                self.use_relative_paths.value(),
+                self.include_workspace.value())
+        return None
 
 
-def _prompt_for_scenario_archive_extraction(archive_path):
-    dialog = QtWidgets.QDialog()
-    dialog.setLayout(QtWidgets.QVBoxLayout())
-    dialog.setWindowModality(QtCore.Qt.WindowModal)
+class ScenarioArchiveExtractionDialog(OptionsDialog):
+    def __init__(self):
+        OptionsDialog.__init__(self,
+                               title='Extract scenario',
+                               modal=True,
+                               accept_text='Extract',
+                               reject_text='Cancel')
+        self._container = inputs.Container(label='Scenario extraction parameters')
+        self.layout().addWidget(self._container)
 
-    container = inputs.Container(label='Scenario extraction parameters')
-    dialog.layout().addWidget(container)
+        self.extraction_point = inputs.Folder(
+            label='Where should this archive be extracted?',
+        )
+        self._container.add_input(self.extraction_point)
 
-    extraction_point = inputs.Folder(
-        label='Where should this archive be extracted?',
-    )
+    def exec_(self):
+        self.raise_()
+        self.show()
+        result = dialog.exec_()
 
-    container.add_input(extraction_point)
-
-    buttonbox = QtWidgets.QDialogButtonBox()
-    ok_button = QtWidgets.QPushButton(' Extract')
-    ok_button.setIcon(inputs.ICON_ENTER)
-    ok_button.clicked.connect(dialog.accept)
-    buttonbox.addButton(ok_button, QtWidgets.QDialogButtonBox.AcceptRole)
-    cancel_button = QtWidgets.QPushButton(' Cancel')
-    cancel_button.setIcon(qtawesome.icon('fa.times',
-                                         color='grey'))
-    cancel_button.clicked.connect(dialog.reject)
-    buttonbox.addButton(cancel_button, QtWidgets.QDialogButtonBox.RejectRole)
-    dialog.layout().addWidget(buttonbox)
-
-    dialog.raise_()
-    dialog.show()
-    result = dialog.exec_()
-
-    if result == QtWidgets.QDialog.Accepted:
-        extract_to_dir = extraction_point.value()
-        args = scenarios.extract_scenario_archive(
-            archive_path, extract_to_dir)
-        return (args, extract_to_dir)
+        if result == QtWidgets.QDialog.Accepted:
+            extract_to_dir = extraction_point.value()
+            args = scenarios.extract_scenario_archive(
+                archive_path, extract_to_dir)
+            return (args, extract_to_dir)
+        return None
 
 
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
@@ -466,7 +556,20 @@ class Model(QtWidgets.QMainWindow):
         self._quickrun = False
         self._validator = inputs.Validator(parent=self)
         self._validator.finished.connect(self._validation_finished)
-        self._validation_report_dialog = WholeModelValidationErrorDialog()
+
+        # dialogs
+        self.about_dialog = AboutDialog()
+        self.settings_dialog = SettingsDialog()
+        self.scenario_options_dialog = ScenarioOptionsDialog()
+        self.scenario_archive_extract_dialog = ScenarioArchiveExtractionDialog()
+        self.quit_confirm_dialog = QuitConfirmDialog()
+        self.validation_report_dialog = WholeModelValidationErrorDialog()
+        self.worskspace_overwrite_confirm_dialog = WorkspaceOverwriteConfirmDialog()
+        self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
+
+        def _settings_saved_message():
+            self.statusBar().showMessage('Settings saved', 10000)
+        self.settings_dialog.accepted.connect(_settings_saved_message)
 
         # These attributes should be defined in subclass
         for attr in ('label', 'target', 'validator', 'localdoc'):
@@ -481,8 +584,6 @@ class Model(QtWidgets.QMainWindow):
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
         self._central_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.status_bar = QtWidgets.QStatusBar()
-        self.setStatusBar(self.status_bar)
         self.menuBar().setNativeMenuBar(True)
         self._central_widget.layout().setSizeConstraint(
             QtWidgets.QLayout.SetMinimumSize)
@@ -512,9 +613,13 @@ class Model(QtWidgets.QMainWindow):
                                        validator=self.validator)
 
         # natcap.invest.pollination.pollination --> pollination
+        try:
+            modelname = self.target.__module__.split('.')[-1]
+        except AttributeError:
+            modelname = 'model'
         self.workspace.set_value(os.path.normpath(
             os.path.expanduser('~/Documents/{model}_workspace').format(
-                model=self.target.__module__.split('.')[-1])))
+                model=modelname)))
 
         self.suffix = inputs.Text(args_key='suffix',
                                   label='Results suffix',
@@ -527,6 +632,10 @@ class Model(QtWidgets.QMainWindow):
 
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File')
+        self.file_menu.addAction(
+            qtawesome.icon('fa.cog'),
+            'Settings ...', self.settings_dialog.exec_,
+            QtGui.QKeySequence(QtGui.QKeySequence.Preferences))
         self.file_menu.addAction(
             qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_scenario_as,
@@ -543,7 +652,7 @@ class Model(QtWidgets.QMainWindow):
         self.help_menu = QtWidgets.QMenu('&Help')
         self.help_menu.addAction(
             qtawesome.icon('fa.info'),
-            'About InVEST', about)
+            'About InVEST', self.about_dialog.exec_)
         self.help_menu.addAction(
             qtawesome.icon('fa.external-link'),
             'View documentation', self._check_local_docs)
@@ -557,8 +666,16 @@ class Model(QtWidgets.QMainWindow):
             self.label)
 
     def _check_local_docs(self, link=None):
-        path = 'file://' + os.path.abspath(self.localdoc)
-        _check_docs_link_exists(path)
+        if not link or link == 'localdocs':
+            link = 'file://' + os.path.abspath(self.localdoc)
+
+        if link.startswith(('http', 'ftp', 'file')):
+            if os.path.exists(link.replace('file://', '')):
+                QtCore.QDesktopServices.openUrl(link)
+            else:
+                self.local_docs_missing_dialog.exec_()
+        else:
+            LOGGER.warning("Don't know how to open link %s", link)
 
     def dragEnterEvent(self, event):
         # Determine whether to accept or reject a drop
@@ -580,7 +697,7 @@ class Model(QtWidgets.QMainWindow):
 
         Returns:
            ``None``."""
-        scenario_opts = _prompt_for_scenario_options()
+        scenario_opts = self.scenario_options_dialog.exec_()
         if not scenario_opts:  # user pressed cancel
             return
 
@@ -630,7 +747,7 @@ class Model(QtWidgets.QMainWindow):
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
 
-        self.status_bar.showMessage(alert_message, 10000)
+        self.statusBar().showMessage(alert_message, 10000)
         self.window_title.filename = os.path.basename(save_filepath)
 
     def add_input(self, input):
@@ -645,13 +762,13 @@ class Model(QtWidgets.QMainWindow):
         self.form.add_input(input)
 
     def is_valid(self):
-        if self._validation_report_dialog.warnings:
+        if self.validation_report_dialog.warnings:
             return False
         return True
 
     def show_validation_window(self):
-        self._validation_report_dialog.show()
-        return self._validation_report_dialog.exec_()
+        self.validation_report_dialog.show()
+        return self.validation_report_dialog.exec_()
 
     def execute_model(self):
         """Run the target model.
@@ -676,32 +793,23 @@ class Model(QtWidgets.QMainWindow):
         args = self.assemble_args()
 
         # If we have validation warnings, show them and return to inputs.
-        if self._validation_report_dialog.warnings:
-            self._validation_report_dialog.show()
-            self._validation_report_dialog.exec_()
+        if self.validation_report_dialog.warnings:
+            self.validation_report_dialog.show()
+            self.validation_report_dialog.exec_()
             return
 
         # If the workspace exists, confirm the overwrite.
         if os.path.exists(args['workspace_dir']):
-            dialog = QtWidgets.QMessageBox()
-            dialog.setWindowFlags(QtCore.Qt.Dialog)
-            dialog.setText('<h2>Workspace exists!<h2>')
-            dialog.setInformativeText(
-                'Overwrite files from a previous run?')
-            dialog.setStandardButtons(
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-            dialog.setDefaultButton(QtWidgets.QMessageBox.No)
-            dialog.setIconPixmap(
-                ICON_ALERT.pixmap(100, 100))
-
-            button_pressed = dialog.exec_()
+            button_pressed = self.worskspace_overwrite_confirm_dialog.exec_()
             if button_pressed != QtWidgets.QMessageBox.Yes:
                 return
 
         def _logged_target():
-            name = self.target.__name__
+            name = getattr(self, 'label', None)
+            if not name:
+                name = self.target.__module__
             with utils.prepare_workspace(args['workspace_dir'], name):
-                with usage.log_run(name.replace('.execute', ''), args):
+                with usage.log_run(self.target.__module__, args):
                     LOGGER.info('Starting model with parameters: \n%s',
                                 cli._format_args(args))
                     return self.target(args=args)
@@ -729,7 +837,7 @@ class Model(QtWidgets.QMainWindow):
         LOGGER.info('Loading scenario from "%s"', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
             # Where should the tarfile be extracted to?
-            args, extract_dir = _prompt_for_scenario_archive_extraction(
+            args, extract_dir = self.scenario_archive_extract_dialog.exec_(
                 scenario_path)
             if args is None:
                 return
@@ -745,7 +853,7 @@ class Model(QtWidgets.QMainWindow):
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
-        self.status_bar.showMessage(
+        self.statusBar().showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
 
     def load_args(self, scenario_args):
@@ -784,7 +892,7 @@ class Model(QtWidgets.QMainWindow):
         for keys, warning in validation_warnings:
             warnings_.append(
                 ((args_to_inputs[key].label for key in keys), warning))
-        self._validation_report_dialog.validation_finished(warnings_)
+        self.validation_report_dialog.validation_finished(warnings_)
 
     def inputs(self):
         return [ref for ref in self.__dict__.values()
@@ -850,29 +958,15 @@ class Model(QtWidgets.QMainWindow):
         self.raise_()  # raise window to top of stack.
 
     def closeEvent(self, event):
-        dialog = QtWidgets.QMessageBox()
-        dialog.setWindowFlags(QtCore.Qt.Dialog)
-        dialog.setText('<h2>Are you sure you want to quit?</h2>')
-        dialog.setInformativeText(
-            'Any unsaved changes to your parameters will be lost.')
-        dialog.setStandardButtons(
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
-        dialog.setDefaultButton(QtWidgets.QMessageBox.Cancel)
-        dialog.setIconPixmap(
-            qtawesome.icon(
-                'fa.question').pixmap(100, 100))
-        checkbox = QtWidgets.QCheckBox('Remember inputs')
-        checkbox.setChecked(
-            self.settings.value('remember_lastrun', True, bool))
-        dialog.layout().addWidget(checkbox, dialog.layout().rowCount()-1,
-                                  0, 1, 1)
-
-        button_pressed = dialog.exec_()
+        starting_checkstate = self.settings.value('remember_lastrun',
+                                                  True, bool)
+        button_pressed = self.quit_confirm_dialog.exec_(starting_checkstate)
         if button_pressed != QtWidgets.QMessageBox.Yes:
             event.ignore()
-        elif checkbox.isChecked():
+        elif self.quit_confirm_dialog.checkbox.isChecked():
             self.save_lastrun()
-        self.settings.setValue('remember_lastrun', checkbox.isChecked())
+        self.settings.setValue('remember_lastrun',
+                               self.quit_confirm_dialog.checkbox.isChecked())
 
     def save_lastrun(self, lastrun_args=None):
         if not lastrun_args:
@@ -886,6 +980,6 @@ class Model(QtWidgets.QMainWindow):
         if not lastrun_args:
             return
         self.load_args(json.loads(lastrun_args))
-        self.status_bar.showMessage('Loaded parameters from previous run.',
-                                    10000)
+        self.statusBar().showMessage('Loaded parameters from previous run.',
+                                     10000)
         self.window_title.filename = 'loaded from autosave'

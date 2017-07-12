@@ -799,8 +799,14 @@ class GriddedInput(Input):
                     self, appliccable_warnings, new_validity)
         if appliccable_warnings:
             self.valid_button.set_errors(appliccable_warnings)
+            tooltip_errors = '<br/>'.join(appliccable_warnings)
         else:
             self.valid_button.set_errors([])
+            tooltip_errors = ''
+
+        for widget in self.widgets[0:2]:  # skip file selection, help buttons
+            if widget:
+                widget.setToolTip(tooltip_errors)
 
         current_validity = self._valid
         self._valid = new_validity
