@@ -133,7 +133,8 @@ def execute(args):
     for block_idx, (offset_dict, C_prior) in block_iterator:
         current_time = time.time()
         blocks_processed += 1.
-        if current_time - last_time >= 5 or blocks_processed in [0, num_blocks-1]:
+        if (current_time - last_time >= 5 or
+                blocks_processed in [0, num_blocks-1]):
             LOGGER.info('Processing model, about %.2f%% complete',
                         (blocks_processed/num_blocks) * 100)
             last_time = current_time
@@ -144,7 +145,7 @@ def execute(args):
 
         timesteps = d['timesteps']
 
-        valid_shape = C_prior[valid_mask].shape
+        valid_shape = valid_C_prior.shape
 
         # timesteps+1 to include initial conditions
         stock_shape = (timesteps+1,) + valid_shape
@@ -153,9 +154,11 @@ def execute(args):
         T = numpy.zeros(stock_shape, dtype=numpy.float32)  # Total Carbon Stock
 
         timestep_shape = (timesteps,) + valid_shape
-        A_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Accumulation
+        A_biomass = numpy.zeros(timestep_shape,
+                                dtype=numpy.float32)  # Accumulation
         A_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
-        E_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Emissions
+        E_biomass = numpy.zeros(timestep_shape,
+                                dtype=numpy.float32)  # Emissions
         E_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
         # Net Sequestration
         N_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)
@@ -172,16 +175,19 @@ def execute(args):
         # Disturbance Percentage
         D_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
         D_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
-        H_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)  # Half-life
+        H_biomass = numpy.zeros(transition_shape,
+                                dtype=numpy.float32)  # Half-life
         H_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
         # Total Disturbed Carbon
         R_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
         R_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
 
         # Set Accumulation and Disturbance Values
-        C_r = [read_from_raster(i, offset_dict)[valid_mask] for i in d['C_r_rasters']]
+        C_r = [read_from_raster(i, offset_dict)[valid_mask]
+               for i in d['C_r_rasters']]
         if C_r:
-            C_list = [valid_C_prior] + C_r + [C_r[-1]]  # final transition out to analysis year
+            # final transition out to analysis year
+            C_list = [valid_C_prior] + C_r + [C_r[-1]]
         else:
             C_list = [valid_C_prior]*2  # allow for a final analysis
         for i in xrange(0, d['transitions']):
@@ -259,7 +265,8 @@ def execute(args):
                     d['snapshot_years'], d['transitions'], i)+1):
 
                 try:
-                    j = d['transition_years'][transition_idx] - d['transition_years'][0]
+                    j = (d['transition_years'][transition_idx] -
+                         d['transition_years'][0])
                 except IndexError:
                     # When we're at the analysis year, we're out of transition
                     # years to calculate for.  Transition years represent years
