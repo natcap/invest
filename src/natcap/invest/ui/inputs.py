@@ -739,7 +739,7 @@ class GriddedInput(Input):
                 warnings.warn(('Validation: %s instance has no args_key, but '
                             'must to validate.  Skipping.') %
                             self.__class__.__name__)
-                self._validation_finished(validation_warnings=None)
+                self._validation_finished(validation_warnings=[])
                 return
 
             if self.validator_ref:
@@ -751,7 +751,7 @@ class GriddedInput(Input):
                     LOGGER.info(('Validation: No validator and no args_id defined; '
                                  'skipping.  Input assumed to be valid. %s'),
                                 self)
-                    self._validation_finished(validation_warnings=None)
+                    self._validation_finished(validation_warnings=[])
                     return
                 else:
                     # args key defined, but a validator is not; input assumed
@@ -759,7 +759,7 @@ class GriddedInput(Input):
                     warnings.warn(('Validation: args_key defined, but no '
                                    'validator defined.  Input assumed to be '
                                    'valid. %s') % self)
-                    self._validation_finished(validation_warnings=None)
+                    self._validation_finished(validation_warnings=[])
                     return
 
             try:
@@ -785,11 +785,6 @@ class GriddedInput(Input):
             raise
 
     def _validation_finished(self, validation_warnings):
-        if validation_warnings is None:
-            warnings.warn(('NoneType return value from model.validate '
-                           'is unsupported and will soon be removed'),
-                          DeprecationWarning)
-            validation_warnings = []
         new_validity = not bool(validation_warnings)
         if self.args_key:
             appliccable_warnings = [w[1] for w in validation_warnings
