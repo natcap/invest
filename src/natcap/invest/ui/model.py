@@ -677,17 +677,6 @@ class Model(QtWidgets.QMainWindow):
         else:
             LOGGER.warning("Don't know how to open link %s", link)
 
-    def dragEnterEvent(self, event):
-        # Determine whether to accept or reject a drop
-        # Drag/drop must be a single file and must have a discernable scenario
-        # format.
-        inputs._handle_drag_enter_event(self, event)
-
-    def dropEvent(self, event):
-        # When a file is dropped onto the window
-        scenario_path = inputs._handle_drop_enter_event(self, event)
-        self.load_scenario(scenario_path)
-
     def _save_scenario_as(self):
         """Save the current set of inputs as a scenario.
 
