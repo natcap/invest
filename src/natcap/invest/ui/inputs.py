@@ -23,7 +23,9 @@ import qtawesome
 try:
     import faulthandler
     faulthandler.enable()
-except ImportError:
+except (ImportError, AttributeError):
+    # ImportError when faulthandler not installed
+    # AttributeError happens all the time on jenkins.
     pass
 
 from . import execution
