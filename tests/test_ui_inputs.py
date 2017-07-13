@@ -1748,6 +1748,24 @@ class ModelTests(_QtTest):
         self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
         self.assertTrue(model_ui.isVisible())
 
+    def test_validation_passes(self):
+        """UI Model: Check what happens when validation passes."""
+        from natcap.invest import validation
+        from natcap.invest.ui import inputs
+
+        @validation.validator
+        def _sample_validate(args, limit_to=None):
+            # no validation errors!
+            return []
+
+        model_ui = ModelTests.build_model(_sample_validate)
+        model_ui.show()
+
+        model_ui.validate(block=True)
+        inputs.QT_APP.processEvents()
+        self.assertEqual(len(model_ui.validation_report_dialog.warnings), 0)
+        self.assertTrue(model_ui.is_valid())
+
     def test_validate_blocking(self):
         """UI Model: Validate that the blocking validation call works."""
         from natcap.invest import validation
