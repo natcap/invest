@@ -1620,7 +1620,68 @@ class IntegrationTests(_QtTest):
 
 
 class ModelTests(_QtTest):
-    def test_model_defaults(self):
+    @staticmethod
+    def build_model():
         from natcap.invest.ui import model
-        model_ui = model.Model()
+        from natcap.invest import validation
 
+        def _target(args):
+            pass
+
+        @validation.validator
+        def _validate(args, limit_to=None):
+            return []
+
+        class _TestModel(model.Model):
+            label = 'Test model'
+            target = _target
+            validator = _validate
+            localdoc = 'testmodel.html'
+
+            def __init__(self):
+                model.Model.__init__(self)
+                # Default model class already has workspace and suffix input.
+
+            def assemble_args(self):
+                return {
+                    self.workspace.args_key: self.workspace.value(),
+                    self.suffix.args_key: self.suffix.value(),
+                }
+
+        return _TestModel()
+
+    def test_model_defaults(self):
+        from natcap.invest.ui import inputs
+
+        model_ui = ModelTests.build_model()
+        try:
+            workspace_input = getattr(model_ui, 'workspace')
+            self.assertTrue(isinstance(workspace_input, inputs.Folder))
+
+            suffix_input = getattr(model_ui, 'suffix')
+            self.assertTrue(isinstance(suffix_input, inputs.Text))
+        except AttributeError as missing_input:
+            self.fail(str(missing_input))
+
+    def test_lastrun(self):
+        """UI Model: Check that lastrun saving/loading works."""
+        model_ui = ModelTests.build_model()
+
+        # clear the model's settings before we run the test.
+        model_ui.settings.clear()
+
+        # Set input values and save the lastrun.
+        model_ui.workspace.set_value('foo')
+        model_ui.suffix.set_value('bar')
+        model_ui.save_lastrun()
+
+        # change the input values
+        model_ui.workspace.set_value('new workspace')
+        model_ui.suffix.set_value('new suffix')
+        self.assertEqual(model_ui.workspace.value(), 'new workspace')
+        self.assertEqual(model_ui.suffix.value(), 'new suffix')
+
+        # load the values from lastrun and assert that the values are correct.
+        model_ui.load_lastrun()
+        self.assertEqual(model_ui.workspace.value(), 'foo')
+        self.assertEqual(model_ui.suffix.value(), 'bar')

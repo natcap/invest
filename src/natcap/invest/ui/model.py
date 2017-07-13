@@ -965,10 +965,8 @@ class Model(QtWidgets.QMainWindow):
         self.settings.setValue("lastrun", json.dumps(lastrun_args))
 
     def load_lastrun(self):
-        lastrun_args = self.settings.value("lastrun")
-        # If no lastrun args saved, None is returned.
-        if not lastrun_args:
-            return
+        # If no lastrun args saved, "{}" (empty json object) is returned
+        lastrun_args = self.settings.value("lastrun", "{}")
         self.load_args(json.loads(lastrun_args))
         self.statusBar().showMessage('Loaded parameters from previous run.',
                                      10000)
