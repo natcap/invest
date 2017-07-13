@@ -1765,3 +1765,28 @@ class ModelTests(_QtTest):
         self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
         self.assertFalse(model_ui.is_valid())
 
+    def test_validate_nonblocking(self):
+        """UI Model: Validate that the nonblocking validation call works."""
+        from natcap.invest import validation
+        from natcap.invest.ui import inputs
+
+        @validation.validator
+        def _sample_validate(args, limit_to=None):
+            return [(('workspace_dir',), 'some error')]
+
+        model_ui = ModelTests.build_model(_sample_validate)
+        model_ui.show()
+
+        model_ui.validate(block=False)
+        inputs.QT_APP.processEvents()
+        self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
+        self.assertFalse(model_ui.is_valid())
+
+    def test_assemble_args_not_implemented(self):
+        """UI Model: Validate exception when assemble_args not implemented."""
+        from natcap.invest.ui import model
+
+        with self.assertRaises(NotImplementedError):
+            model_ui = model.Model()
+            model_ui.assemble_args()
+
