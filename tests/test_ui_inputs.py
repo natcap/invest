@@ -1808,3 +1808,45 @@ class ModelTests(_QtTest):
             model_ui = model.Model()
             model_ui.assemble_args()
 
+    def test_load_args(self):
+        """UI Model: Check that we can load args as expected."""
+        model_ui = ModelTests.build_model()
+        args = {
+            'workspace_dir': 'new workspace!',
+            'suffix': 'a',
+        }
+        model_ui.load_args(args)
+        self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
+        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+
+    def test_load_args_bad_key(self):
+        """UI Model: Check that we can handle loading of bad keys."""
+        model_ui = ModelTests.build_model()
+        model_ui.workspace.set_value('')
+        args = {
+            'bad_key': 'something unexpected!',
+            'suffix': 'a',
+        }
+        model_ui.load_args(args)
+        self.assertEqual(model_ui.workspace.value(), '')  # was never changed
+        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+
+    def test_load_args_error(self):
+        """UI Model: Check that we can handle errors when loading args."""
+        model_ui = ModelTests.build_model()
+        model_ui.workspace.set_value('')
+        args = {
+            'workspace_dir': 'workspace',
+            'suffix': 'a',
+        }
+
+        def _raise_valueerror(new_value):
+            raise ValueError('foo!')
+
+        model_ui.workspace.set_value = _raise_valueerror
+        model_ui.load_args(args)
+
+        self.assertEqual(model_ui.workspace.value(), '')  # was never changed
+        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+
+
