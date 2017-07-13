@@ -1648,7 +1648,17 @@ class ModelTests(_QtTest):
                     self.suffix.args_key: self.suffix.value(),
                 }
 
-        return _TestModel()
+            def __del__(self):
+                # clear the settings for future runs.
+                self.settings.clear()
+                model.Model.__del__(self)
+
+        model = _TestModel()
+
+        # clear the model's settings before we run our test.
+        model.settings.clear()
+
+        return model
 
     def test_model_defaults(self):
         from natcap.invest.ui import inputs
@@ -1667,9 +1677,6 @@ class ModelTests(_QtTest):
         """UI Model: Check that lastrun saving/loading works."""
         model_ui = ModelTests.build_model()
 
-        # clear the model's settings before we run the test.
-        model_ui.settings.clear()
-
         # Set input values and save the lastrun.
         model_ui.workspace.set_value('foo')
         model_ui.suffix.set_value('bar')
@@ -1685,3 +1692,28 @@ class ModelTests(_QtTest):
         model_ui.load_lastrun()
         self.assertEqual(model_ui.workspace.value(), 'foo')
         self.assertEqual(model_ui.suffix.value(), 'bar')
+
+    def test_close_window_confirm(self):
+        """UI Model: Close confirmation dialog 'remember lastrun' checkbox."""
+        model_ui = ModelTests.build_model()
+
+        def _tests():
+            QTest.qWait(50)  # wait for window to show
+
+            # verify 'remember inputs' is checked by default.
+            self.assertTrue(model_ui.quit_confirm_dialog.checkbox.isChecked())
+
+            # click yes.
+            QTest.mouseClick(
+                model_ui.quit_confirm_dialog.button(QtWidgets.QMessageBox.Yes),
+                QtCore.Qt.LeftButton)
+
+            QTest.qWait(50)  # wait for events to finish
+            # verify the 'remember inputs' state
+            self.assertEqual(model_ui.settings.value('remember_lastrun'),
+                             True)
+
+        close_thread = threading.Thread(target=_tests)
+        close_thread.start()
+
+        model_ui.close()
