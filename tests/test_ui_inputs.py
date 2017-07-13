@@ -1621,21 +1621,23 @@ class IntegrationTests(_QtTest):
 
 class ModelTests(_QtTest):
     @staticmethod
-    def build_model():
+    def build_model(validate_func=None):
         from natcap.invest.ui import model
         from natcap.invest import validation
 
         def _target(args):
             pass
 
-        @validation.validator
-        def _validate(args, limit_to=None):
-            return []
+        if validate_func is None:
+            @validation.validator
+            def _validate(args, limit_to=None):
+                return []
+            validate_func = _validate
 
         class _TestModel(model.Model):
             label = 'Test model'
-            target = _target
-            validator = _validate
+            target = staticmethod(_target)
+            validator = staticmethod(validate_func)
             localdoc = 'testmodel.html'
 
             def __init__(self):
@@ -1699,9 +1701,9 @@ class ModelTests(_QtTest):
         model_ui.show()
         QTest.qWait(25)
 
-        def _tests():
-            QTest.qWait(50)  # wait for window to show
+        threading_event = threading.Event()
 
+        def _tests():
             # verify 'remember inputs' is checked by default.
             self.assertTrue(model_ui.quit_confirm_dialog.checkbox.isChecked())
 
@@ -1710,16 +1712,17 @@ class ModelTests(_QtTest):
                 model_ui.quit_confirm_dialog.button(QtWidgets.QMessageBox.Yes),
                 QtCore.Qt.LeftButton)
 
-            QTest.qWait(50)  # wait for events to finish
-            # verify the 'remember inputs' state
-            self.assertEqual(model_ui.settings.value('remember_lastrun'),
-                             True)
+            threading_event.set()
 
-        close_thread = threading.Thread(target=_tests)
-        close_thread.start()
-
+        QtCore.QTimer.singleShot(25, _tests)
         model_ui.close()
         QTest.qWait(25)
+
+        threading_event.wait(0.5)
+
+        # verify the 'remember inputs' state
+        self.assertEqual(model_ui.settings.value('remember_lastrun'),
+                         True)
         self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
         self.assertFalse(model_ui.isVisible())
 
@@ -1727,22 +1730,38 @@ class ModelTests(_QtTest):
         """UI Model: Close confirmation dialog cancel"""
         model_ui = ModelTests.build_model()
         model_ui.show()
-        QTest.qWait(25)
+
+        threading_event = threading.Event()
 
         def _tests():
-            QTest.qWait(50)  # wait for window to show
-
             # click cancel.
             button = QtWidgets.QMessageBox.Cancel
             QTest.mouseClick(
                 model_ui.quit_confirm_dialog.button(button),
                 QtCore.Qt.LeftButton)
-            QTest.qWait(50)  # wait for events to finish
+            threading_event.set()
 
-        close_thread = threading.Thread(target=_tests)
-        close_thread.start()
+        QtCore.QTimer.singleShot(25, _tests)
 
         model_ui.close()
-        QTest.qWait(25)
+        threading_event.wait(0.5)
         self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
         self.assertTrue(model_ui.isVisible())
+
+    def test_validate_blocking(self):
+        """UI Model: Validate that the blocking validation call works."""
+        from natcap.invest import validation
+        from natcap.invest.ui import inputs
+
+        @validation.validator
+        def _sample_validate(args, limit_to=None):
+            return [(('workspace_dir',), 'some error')]
+
+        model_ui = ModelTests.build_model(_sample_validate)
+        model_ui.show()
+
+        model_ui.validate(block=True)
+        inputs.QT_APP.processEvents()
+        self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
+        self.assertFalse(model_ui.is_valid())
+
