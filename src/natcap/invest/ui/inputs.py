@@ -910,7 +910,7 @@ class _Path(Text):
             path = _handle_drop_enter_event(self, event)
             self.setText(path)
 
-        @QtCore.Slot
+        @QtCore.Slot(str)
         def _emit_textchanged(self, triggered):
             """Slot for re-emitting the textchanged signal with current text.
 

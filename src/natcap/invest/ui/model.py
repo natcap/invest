@@ -285,7 +285,12 @@ class LocalDocsMissingDialog(QtWidgets.QMessageBox):
         QtWidgets.QMessageBox.__init__(self)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText("<h2>Local docs not found<h2>")
-        remote_link = _ONLINE_DOCS_LINK + os.path.basename(local_docs_link)
+        if not local_docs_link:
+            local_docs_link = 'None'
+        else:
+            local_docs_link = os.path.basename(local_docs_link)
+
+        remote_link = _ONLINE_DOCS_LINK + local_docs_link
         self.setInformativeText(
             'Online docs: [<a href="%s">documentation</a>]'
             '<br/><br/>Local documentation link could not be found: %s' %
@@ -692,7 +697,8 @@ class Model(QtWidgets.QMainWindow):
 
         self.validate(block=True)
         if not self.is_valid():
-            self.show_validation_window()
+            self.validation_report_dialog.show()
+            self.validation_report_dialog.exec_()
             return
 
         file_dialog = inputs.FileDialog()
@@ -754,10 +760,6 @@ class Model(QtWidgets.QMainWindow):
         if self.validation_report_dialog.warnings:
             return False
         return True
-
-    def show_validation_window(self):
-        self.validation_report_dialog.show()
-        return self.validation_report_dialog.exec_()
 
     def execute_model(self):
         """Run the target model.
@@ -846,9 +848,8 @@ class Model(QtWidgets.QMainWindow):
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
 
     def load_args(self, scenario_args):
-        _inputs = dict((attr.args_key, attr) for attr in
-                       self.__dict__.itervalues()
-                       if isinstance(attr, inputs.Input))
+        _inputs = dict((input.args_key, input) for input in
+                       self.inputs())
         LOGGER.debug(pprint.pformat(_inputs))
 
         for args_key, args_value in scenario_args.iteritems():
@@ -864,6 +865,7 @@ class Model(QtWidgets.QMainWindow):
     def assemble_args(self):
         raise NotImplementedError
 
+    @QtCore.Slot(list)
     def _validation_finished(self, validation_warnings):
         inputs.QT_APP.processEvents()
         LOGGER.info('Whole-model validation returned: %s',
@@ -957,9 +959,8 @@ class Model(QtWidgets.QMainWindow):
         self.settings.setValue('remember_lastrun',
                                self.quit_confirm_dialog.checkbox.isChecked())
 
-    def save_lastrun(self, lastrun_args=None):
-        if not lastrun_args:
-            lastrun_args = self.assemble_args()
+    def save_lastrun(self):
+        lastrun_args = self.assemble_args()
         LOGGER.debug('Saving lastrun args %s', lastrun_args)
         self.settings.setValue("lastrun", json.dumps(lastrun_args))
 
