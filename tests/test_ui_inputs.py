@@ -1696,6 +1696,8 @@ class ModelTests(_QtTest):
     def test_close_window_confirm(self):
         """UI Model: Close confirmation dialog 'remember lastrun' checkbox."""
         model_ui = ModelTests.build_model()
+        model_ui.show()
+        QTest.qWait(25)
 
         def _tests():
             QTest.qWait(50)  # wait for window to show
@@ -1717,3 +1719,30 @@ class ModelTests(_QtTest):
         close_thread.start()
 
         model_ui.close()
+        QTest.qWait(25)
+        self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
+        self.assertFalse(model_ui.isVisible())
+
+    def test_close_window_cancel(self):
+        """UI Model: Close confirmation dialog cancel"""
+        model_ui = ModelTests.build_model()
+        model_ui.show()
+        QTest.qWait(25)
+
+        def _tests():
+            QTest.qWait(50)  # wait for window to show
+
+            # click cancel.
+            button = QtWidgets.QMessageBox.Cancel
+            QTest.mouseClick(
+                model_ui.quit_confirm_dialog.button(button),
+                QtCore.Qt.LeftButton)
+            QTest.qWait(50)  # wait for events to finish
+
+        close_thread = threading.Thread(target=_tests)
+        close_thread.start()
+
+        model_ui.close()
+        QTest.qWait(25)
+        self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
+        self.assertTrue(model_ui.isVisible())
