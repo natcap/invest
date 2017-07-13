@@ -1849,4 +1849,7 @@ class ModelTests(_QtTest):
         self.assertEqual(model_ui.workspace.value(), '')  # was never changed
         self.assertEqual(model_ui.suffix.value(), args['suffix'])
 
-
+    def test_run(self):
+        model_ui = ModelTests.build_model()
+        model_ui.run()
+        self.assertTrue(model_ui.isVisible())

@@ -923,6 +923,8 @@ class Model(QtWidgets.QMainWindow):
             def _quickrun_close_model():
                 # exit with an error code that matches exception status of run.
                 exit_code = self.form.run_dialog.messageArea.error
+                # TODO: There's got to be a safer way to close this than
+                # exiting the qapplication
                 inputs.QT_APP.exit(int(exit_code))
 
             self.form.run_finished.connect(_quickrun_close_model)
