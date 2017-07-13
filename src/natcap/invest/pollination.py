@@ -327,6 +327,8 @@ def execute(args):
             landcover_to_nesting_suitability_table, f_reg[nesting_id],
             gdal.GDT_Float32, _INDEX_NODATA)
 
+        temp_file_set.add(f_reg[nesting_id])
+
         if farm_vector is not None:
             LOGGER.info(
                 "Overriding landcover nesting substrates where a farm polygon is "
@@ -395,6 +397,8 @@ def execute(args):
             landcover_to_floral_resources_table,
             f_reg[relative_floral_resources_id], gdal.GDT_Float32,
             _INDEX_NODATA)
+
+        temp_file_set.add(f_reg[relative_floral_resources_id])
 
         # farm vector is optional
         if farm_vector is not None:
@@ -476,8 +480,7 @@ def execute(args):
         pollinator_supply_id = (
             _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN % species_id)
         f_reg[pollinator_supply_id] = os.path.join(
-            intermediate_output_dir,
-            pollinator_supply_id + "%s.tif" % file_suffix)
+            output_dir, pollinator_supply_id + "%s.tif" % file_suffix)
 
         species_abundance = guild_table[species_id][
             _RELATIVE_POLLINATOR_ABUNDANCE_FIELD]
