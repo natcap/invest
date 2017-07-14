@@ -382,7 +382,7 @@ class WindowTitle(QtCore.QObject):
             return ''
 
 ScenarioSaveOpts = collections.namedtuple(
-    'ScenarioSaveOpts', 'scenario_type use_relpaths include_workspace')
+    'ScenarioSaveOpts', 'scenario_type use_relpaths include_workspace archive_path')
 
 
 class ScenarioOptionsDialog(OptionsDialog):
@@ -466,7 +466,9 @@ class ScenarioOptionsDialog(OptionsDialog):
             return ScenarioSaveOpts(
                 self.scenario_type.value(),
                 self.use_relative_paths.value(),
-                self.include_workspace.value())
+                self.include_workspace.value(),
+                self.save_parameters.value()
+            )
         return None
 
 
@@ -733,25 +735,6 @@ class Model(QtWidgets.QMainWindow):
         if not scenario_opts:  # user pressed cancel
             return
 
-        self.validate(block=True)
-        if not self.is_valid():
-            self.validation_report_dialog.show()
-            self.validation_report_dialog.exec_()
-            return
-
-        file_dialog = inputs.FileDialog()
-        save_filepath = file_dialog.save_file(
-            title=_SCENARIO_SAVE_OPTS[scenario_opts.scenario_type]['title'],
-            start_dir=None,  # might change later, last dir is fine
-            savefile='{model}_{file_base}'.format(
-                model=self.target.__module__.split('.')[-1],
-                file_base=_SCENARIO_SAVE_OPTS[
-                    scenario_opts.scenario_type]['savefile']))
-
-        if not save_filepath:
-            # The user pressed cancel.
-            return
-
         current_args = self.assemble_args()
         if (not scenario_opts.include_workspace or
                 scenario_opts.scenario_type == _SCENARIO_DATA_ARCHIVE):
@@ -763,18 +746,18 @@ class Model(QtWidgets.QMainWindow):
             scenarios.build_scenario_archive(
                 args=current_args,
                 name=self.target.__module__,
-                scenario_path=save_filepath
+                scenario_path=scenario_opts.archive_path
             )
         else:
             scenarios.write_parameter_set(
-                filepath=save_filepath,
+                filepath=scenario_opts.archive_path,
                 args=current_args,
                 name=self.target.__module__,
                 relative=scenario_opts.use_relpaths
             )
 
-        if len(save_filepath) > 80:
-            save_filepath = '...' + save_filepath[-40:]
+        if len(scenario_opts.archive_path) > 80:
+            save_filepath = '...' + scenario_opts.archive_path[-40:]
 
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
