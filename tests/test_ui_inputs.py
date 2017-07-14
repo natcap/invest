@@ -1693,6 +1693,53 @@ class SettingsDialogTest(_QtTest):
             settings_dialog.close()
 
 
+class ScenarioOptionsDialogTests(_QtTest):
+    def test_dialog_return_value(self):
+        """UI Scenario Options: Verify return value of dialog."""
+        from natcap.invest.ui import model
+        from natcap.invest.ui import inputs
+
+        options_dialog = model.ScenarioOptionsDialog()
+
+        # set this option to ensure coverage of the slot
+        options_dialog.scenario_type.set_value(model._SCENARIO_DATA_ARCHIVE)
+        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
+        inputs.QT_APP.processEvents()
+
+        def _press_accept():
+            options_dialog.accept()
+
+        QtCore.QTimer.singleShot(25, _press_accept)
+        return_options = options_dialog.exec_()
+
+        self.assertEqual(
+            model.ScenarioSaveOpts(
+                model._SCENARIO_PARAMETER_SET,  # scenario type
+                False,  # use relative paths
+                False),  # include workpace
+            return_options)
+
+    def test_dialog_cancelled(self):
+        """UI Scenario Options: Verify return value when dialog cancelled."""
+        from natcap.invest.ui import model
+        from natcap.invest.ui import inputs
+
+        options_dialog = model.ScenarioOptionsDialog()
+
+        # set this option to ensure coverage of the slot
+        options_dialog.scenario_type.set_value(model._SCENARIO_DATA_ARCHIVE)
+        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
+        inputs.QT_APP.processEvents()
+
+        def _press_accept():
+            options_dialog.reject()
+
+        QtCore.QTimer.singleShot(25, _press_accept)
+        return_options = options_dialog.exec_()
+
+        self.assertEqual(return_options, None)
+
+
 class ModelTests(_QtTest):
     @staticmethod
     def build_model(validate_func=None):
