@@ -1,6 +1,7 @@
 # coding=UTF-8
 from __future__ import absolute_import
 
+import functools
 import os
 import threading
 import logging
@@ -582,11 +583,17 @@ class _FileSystemButton(QtWidgets.QPushButton):
         self.dialog = FileDialog()
         self.open_method = None  # This should be overridden
         self.clicked.connect(self._get_path)
+        self.save_dialog_kwargs = {
+            'title': self.dialog_title,
+            'start_dir': DATA['last_dir'],
+        }
 
     def _get_path(self):
-        selected_path = self.open_method(title=self.dialog_title,
-                                         start_dir=DATA['last_dir'])
+        selected_path = self.open_method(**self.save_dialog_kwargs)
         self.path_selected.emit(selected_path)
+
+    def set_save_dialog_options(self, **kwargs):
+        self.save_dialog_kwargs = kwargs
 
 
 class FileButton(_FileSystemButton):
@@ -596,6 +603,17 @@ class FileButton(_FileSystemButton):
     def __init__(self, dialog_title):
         _FileSystemButton.__init__(self, dialog_title)
         self.open_method = self.dialog.open_file
+
+
+class SaveFileButton(_FileSystemButton):
+
+    _icon = ICON_FILE
+
+    def __init__(self, dialog_title, default_savefile):
+        _FileSystemButton.__init__(self, dialog_title)
+        self.open_method = functools.partial(
+            self.dialog.save_file,
+            savefile=default_savefile)
 
 
 class FolderButton(_FileSystemButton):
@@ -966,6 +984,21 @@ class File(_Path):
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FileButton('Select file')
+        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.widgets[3] = self.path_select_button
+
+        if self.hideable:
+            self._hideability_changed(False)
+
+
+class SaveFile(_Path):
+    def __init__(self, label, helptext=None, interactive=True,
+                 args_key=None, hideable=False, validator=None,
+                 default_savefile='new_file.txt'):
+        _Path.__init__(self, label, helptext, interactive, args_key,
+                       hideable, validator=validator)
+        self.path_select_button = SaveFileButton('Select file',
+                                                 default_savefile)
         self.path_select_button.path_selected.connect(self.textfield.setText)
         self.widgets[3] = self.path_select_button
 

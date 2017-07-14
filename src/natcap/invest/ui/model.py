@@ -12,7 +12,6 @@ import cgi
 import tarfile
 import contextlib
 import functools
-import platform
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -25,6 +24,7 @@ from . import usage
 from .. import cli
 from .. import utils
 from .. import scenarios
+from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
@@ -401,33 +401,64 @@ class ScenarioOptionsDialog(OptionsDialog):
     Returns:
         An instance of :ref:ScenarioSaveOpts namedtuple.
     """
-    def __init__(self):
+    def __init__(self, paramset_basename):
         OptionsDialog.__init__(self,
                                title='Scenario options',
                                modal=True,
                                accept_text='Continue',
                                reject_text='Cancel')
-        self._container= inputs.Container(label='Scenario options')
+        self._container = inputs.Container(label='Scenario options')
         self.layout().addWidget(self._container)
+        self.paramset_basename = paramset_basename
 
         self.scenario_type = inputs.Dropdown(
             label='Scenario type',
-            options=_SCENARIO_SAVE_OPTS.keys())
-        self.scenario_type.set_value(_SCENARIO_PARAMETER_SET)  # default selection
+            options=sorted(_SCENARIO_SAVE_OPTS.keys()))
+        self.scenario_type.set_value(_SCENARIO_PARAMETER_SET)
         self.use_relative_paths = inputs.Checkbox(
             label='Use relative paths')
         self.include_workspace = inputs.Checkbox(
             label='Include workspace path in scenario')
         self.include_workspace.set_value(False)
 
+        @validation.validator
+        def _validate_parameter_file(args, limit_to=None):
+            warnings = []
+            archive_dir = os.path.dirname(args['archive_path'])
+            if not os.access(archive_dir, os.W_OK):
+                warnings.append(('archive_path',),
+                                ('You do not have write access to the folder '
+                                 '%s') % archive_dir)
+            return warnings
+
+        self.save_parameters = inputs.SaveFile(
+            label=_SCENARIO_SAVE_OPTS[_SCENARIO_PARAMETER_SET]['title'],
+            args_key='archive_path',
+            validator=_validate_parameter_file,
+            default_savefile='{model}_{file_base}'.format(
+                model=self.paramset_basename,
+                file_base=_SCENARIO_SAVE_OPTS[
+                    _SCENARIO_PARAMETER_SET]['savefile']))
+
         self._container.add_input(self.scenario_type)
         self._container.add_input(self.use_relative_paths)
         self._container.add_input(self.include_workspace)
+        self._container.add_input(self.save_parameters)
+        self.ok_button.setEnabled(False)  # initially disable the ok button
 
         @QtCore.Slot(unicode)
         def _optionally_disable(value):
-            self.use_relative_paths.set_interactive(value == _SCENARIO_PARAMETER_SET)
+            self.use_relative_paths.set_interactive(
+                value == _SCENARIO_PARAMETER_SET)
+
+            self.save_parameters.path_select_button.set_save_dialog_options(
+                title=_SCENARIO_SAVE_OPTS[value]['title'],
+                savefile='{model}_{file_base}'.format(
+                    model=self.paramset_basename,
+                    file_base=_SCENARIO_SAVE_OPTS[value]['savefile']))
+
         self.scenario_type.value_changed.connect(_optionally_disable)
+        self.save_parameters.validity_changed.connect(self.ok_button.setEnabled)
 
     def exec_(self):
         result = OptionsDialog.exec_(self)
@@ -446,7 +477,8 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
                                modal=True,
                                accept_text='Extract',
                                reject_text='Cancel')
-        self._container = inputs.Container(label='Scenario extraction parameters')
+        self._container = inputs.Container(
+            label='Scenario extraction parameters')
         self.layout().addWidget(self._container)
 
         self.extraction_point = inputs.Folder(
@@ -454,13 +486,11 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
         )
         self._container.add_input(self.extraction_point)
 
-    def exec_(self):
-        self.raise_()
-        self.show()
-        result = dialog.exec_()
+    def exec_(self, archive_path):
+        result = OptionsDialog.exec_()
 
         if result == QtWidgets.QDialog.Accepted:
-            extract_to_dir = extraction_point.value()
+            extract_to_dir = self.extraction_point.value()
             args = scenarios.extract_scenario_archive(
                 archive_path, extract_to_dir)
             return (args, extract_to_dir)
@@ -566,7 +596,14 @@ class Model(QtWidgets.QMainWindow):
         # dialogs
         self.about_dialog = AboutDialog()
         self.settings_dialog = SettingsDialog()
-        self.scenario_options_dialog = ScenarioOptionsDialog()
+
+        try:
+            paramset_basename = self.target.__module__.split('.')[-1]
+        except AttributeError:
+            paramset_basename = 'scenario'
+        self.scenario_options_dialog = ScenarioOptionsDialog(
+            paramset_basename=paramset_basename)
+
         self.scenario_archive_extract_dialog = ScenarioArchiveExtractionDialog()
         self.quit_confirm_dialog = QuitConfirmDialog()
         self.validation_report_dialog = WholeModelValidationErrorDialog()
