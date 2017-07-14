@@ -100,9 +100,17 @@ class OptionsDialog(QtWidgets.QDialog):
         self.setLayout(QtWidgets.QVBoxLayout())
 
         self._buttonbox = None
+        self.ok_button = QtWidgets.QPushButton(self._accept_text)
+        self.ok_button.setIcon(inputs.ICON_ENTER)
+        self.ok_button.clicked.connect(self.accept)
+        self.cancel_button = QtWidgets.QPushButton(self._reject_text)
+        self.cancel_button.setIcon(qtawesome.icon('fa.times',
+                                                  color='grey'))
+        self.cancel_button.clicked.connect(self.reject)
 
         self.finished.connect(self._call_postprocess)
 
+    @QtCore.Slot(int)
     def _call_postprocess(self, exitcode):
         # need to have this bound method registered with the signal,
         # but then we'll call the subclass's postprocess method.
@@ -112,23 +120,16 @@ class OptionsDialog(QtWidgets.QDialog):
             LOGGER.info('postprocess method not implemented for object '
                         '%s' % repr(self))
 
-    def postprocess(self, exitcode):
+    def postprocess(self, exitcode=0):
         raise NotImplementedError
 
     def showEvent(self, showEvent):
         # last thing: add the buttonbox if it hasn't been created yet.
         if not self._buttonbox:
             self._buttonbox = QtWidgets.QDialogButtonBox()
-            self._ok_button = QtWidgets.QPushButton(self._accept_text)
-            self._ok_button.setIcon(inputs.ICON_ENTER)
-            self._ok_button.clicked.connect(self.accept)
-            self._buttonbox.addButton(self._ok_button,
+            self._buttonbox.addButton(self.ok_button,
                                       QtWidgets.QDialogButtonBox.AcceptRole)
-            self._cancel_button = QtWidgets.QPushButton(self._reject_text)
-            self._cancel_button.setIcon(qtawesome.icon('fa.times',
-                                                       color='grey'))
-            self._cancel_button.clicked.connect(self.reject)
-            self._buttonbox.addButton(self._cancel_button,
+            self._buttonbox.addButton(self.cancel_button,
                                       QtWidgets.QDialogButtonBox.RejectRole)
             self.layout().addWidget(self._buttonbox)
 

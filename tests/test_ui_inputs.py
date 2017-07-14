@@ -1619,6 +1619,80 @@ class IntegrationTests(_QtTest):
         self.assertTrue(contained_file.visible())
 
 
+class OptionsDialogTest(_QtTest):
+    def test_postprocess_not_implemented_coverage(self):
+        """UI OptionsDialog: Coverage for postprocess method."""
+        from natcap.invest.ui import model
+        from natcap.invest.ui import inputs
+
+        options_dialog = model.OptionsDialog()
+        options_dialog.open()
+        options_dialog.accept()
+        inputs.QT_APP.processEvents()
+
+    def test_postprocess_not_implemented(self):
+        """UI OptionsDialog: postprocess() raises NotImplementedError."""
+        from natcap.invest.ui import model
+
+        options_dialog = model.OptionsDialog()
+        with self.assertRaises(NotImplementedError):
+            options_dialog.postprocess()
+
+
+class SettingsDialogTest(_QtTest):
+    def setUp(self):
+        _QtTest.setUp(self)
+        from natcap.invest.ui import model
+
+        # back up the QSettings options for the test run so we don't disrupt
+        # whatever settings exist on this computer
+        self.settings = dict(
+            (key, model.INVEST_SETTINGS.value(key)) for key in
+            model.INVEST_SETTINGS.allKeys())
+        model.INVEST_SETTINGS.clear()
+
+    def tearDown(self):
+        _QtTest.tearDown(self)
+        from natcap.invest.ui import model
+        model.INVEST_SETTINGS.clear()
+        for key, value in self.settings.iteritems():
+            model.INVEST_SETTINGS.setValue(key, value)
+
+    def test_cache_dir_initialized_correctly(self):
+        """UI SettingsDialog: check initialization of inputs."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        try:
+            # Qt4
+            cache_dir = QtGui.QDesktopServices.storageLocation(
+                QtGui.QDesktopServices.CacheLocation)
+        except AttributeError:
+            # Package location changed in Qt5
+            cache_dir = QtCore.QStandardPaths.writableLocation(
+                QtCore.QStandardPaths.CacheLocation)
+
+        self.assertEqual(settings_dialog.cache_directory.value(),
+                         cache_dir)
+
+    def test_cache_dir_setting_set_correctly(self):
+        """UI SettingsDialog: check settings values when input changed."""
+        from natcap.invest.ui import model
+        from natcap.invest.ui import inputs
+
+        settings_dialog = model.SettingsDialog()
+        settings_dialog.show()
+        settings_dialog.cache_directory.set_value('new_dir')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        inputs.QT_APP.processEvents()
+        try:
+            self.assertEqual(settings_dialog.cache_directory.value(),
+                             'new_dir')
+        finally:
+            settings_dialog.close()
+
+
 class ModelTests(_QtTest):
     @staticmethod
     def build_model(validate_func=None):
@@ -1663,6 +1737,7 @@ class ModelTests(_QtTest):
         return model
 
     def test_model_defaults(self):
+        """UI Model: Check that workspace and suffix are added."""
         from natcap.invest.ui import inputs
 
         model_ui = ModelTests.build_model()
