@@ -45,6 +45,7 @@ def log_run(module, args):
         yield
     except Exception:
         exit_status_message = traceback.format_exc()
+        raise
     else:
         exit_status_message = ':)'
     finally:
