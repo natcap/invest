@@ -717,7 +717,7 @@ class GriddedInput(Input):
         Input.__init__(self, label=label, helptext=helptext,
                        interactive=interactive, args_key=args_key)
 
-        self._valid = True
+        self._valid = None
         self.validator_ref = validator
         self._validator = Validator(self)
         self._validator.finished.connect(self._validation_finished)
@@ -889,6 +889,7 @@ class Text(GriddedInput):
         self.textfield.textChanged.connect(self._text_changed)
         self.widgets[2] = self.textfield
 
+    @QtCore.Slot(unicode)
     def _text_changed(self, new_text):
         self.dirty = True
         self.value_changed.emit(new_text)

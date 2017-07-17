@@ -43,16 +43,16 @@ _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
 _SCENARIO_BASE_FILENAME = 'scenario.invs.%s'
-_SCENARIO_DIALOG_TITLE = 'Select where to save the parameter %s'
+_SCENARIO_DIALOG_TITLE = 'Select where to save the scenario'
 _SCENARIO_PARAMETER_SET = 'Parameter set (archive parameters)'
 _SCENARIO_DATA_ARCHIVE = 'Data archive (archive parameters and files)'
 _SCENARIO_SAVE_OPTS = {
     _SCENARIO_PARAMETER_SET: {
-        'title': _SCENARIO_DIALOG_TITLE % 'set',
+        'title': _SCENARIO_DIALOG_TITLE,
         'savefile': _SCENARIO_BASE_FILENAME % 'json',
     },
     _SCENARIO_DATA_ARCHIVE: {
-        'title': _SCENARIO_DIALOG_TITLE % 'archive',
+        'title': _SCENARIO_DIALOG_TITLE,
         'savefile': _SCENARIO_BASE_FILENAME % 'tar.gz',
     }
 }
@@ -405,7 +405,7 @@ class ScenarioOptionsDialog(OptionsDialog):
         OptionsDialog.__init__(self,
                                title='Scenario options',
                                modal=True,
-                               accept_text='Continue',
+                               accept_text='Save scenario',
                                reject_text='Cancel')
         self._container = inputs.Container(label='Scenario options')
         self.layout().addWidget(self._container)
@@ -425,10 +425,15 @@ class ScenarioOptionsDialog(OptionsDialog):
         def _validate_parameter_file(args, limit_to=None):
             warnings = []
             archive_dir = os.path.dirname(args['archive_path'])
+
+            if not os.path.exists(archive_dir):
+                warnings.append((('archive_path',),
+                                 'The specified path does not exist.'))
+
             if not os.access(archive_dir, os.W_OK):
-                warnings.append(('archive_path',),
-                                ('You do not have write access to the folder '
-                                 '%s') % archive_dir)
+                warnings.append((('archive_path',),
+                                 ('You do not have write access to the folder '
+                                  '%s') % archive_dir))
             return warnings
 
         self.save_parameters = inputs.SaveFile(
@@ -457,8 +462,12 @@ class ScenarioOptionsDialog(OptionsDialog):
                     model=self.paramset_basename,
                     file_base=_SCENARIO_SAVE_OPTS[value]['savefile']))
 
+        @QtCore.Slot(bool)
+        def _enable_continue_button(new_validity):
+            self.ok_button.setEnabled(new_validity)
+
         self.scenario_type.value_changed.connect(_optionally_disable)
-        self.save_parameters.validity_changed.connect(self.ok_button.setEnabled)
+        self.save_parameters.validity_changed.connect(_enable_continue_button)
 
     def exec_(self):
         result = OptionsDialog.exec_(self)
@@ -756,8 +765,9 @@ class Model(QtWidgets.QMainWindow):
                 relative=scenario_opts.use_relpaths
             )
 
-        if len(scenario_opts.archive_path) > 80:
-            save_filepath = '...' + scenario_opts.archive_path[-40:]
+        save_filepath = scenario_opts.archive_path
+        if len(save_filepath) > 80:
+            save_filepath = '...' + save_filepath[-40:]
 
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
