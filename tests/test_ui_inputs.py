@@ -8,6 +8,8 @@ import contextlib
 import sys
 import os
 import time
+import tempfile
+import shutil
 
 import faulthandler
 faulthandler.enable()
@@ -322,6 +324,7 @@ class GriddedInputTest(InputTest):
         self.assertEqual(input_instance.valid(), False)
 
     def test_validate_required_validator(self):
+        from natcap.invest.ui import inputs
         input_instance = self.__class__.create_input(
             label='some_label', args_key='foo'
         )
@@ -329,10 +332,12 @@ class GriddedInputTest(InputTest):
         input_instance.value = mock.MagicMock(
             input_instance, return_value=u'something')
 
-        self.assertEqual(input_instance.valid(), True)
+        # Verify we're starting with an unvalidated input
+        self.assertEqual(input_instance.valid(), None)
         with warnings.catch_warnings(record=True) as messages:
             input_instance._validate()
             time.sleep(0.25)  # wait for warnings to register
+        inputs.QT_APP.processEvents()
 
         # Validation still passes, but verify warning raised
         self.assertEqual(len(messages), 1)
@@ -737,6 +742,27 @@ class CheckboxTest(GriddedInputTest):
         self.assertEqual(input_instance.value(), False)
         self.assertEqual(input_instance.valid(), True)
         input_instance.set_value(True)
+        self.assertEqual(input_instance.valid(), True)
+
+    def test_validate_required_validator(self):
+        # Override from GriddedInputTest, as checkbox is always valid.
+        from natcap.invest.ui import inputs
+        input_instance = self.__class__.create_input(
+            label='some_label', args_key='foo'
+        )
+
+        input_instance.value = mock.MagicMock(
+            input_instance, return_value=u'something')
+
+        # Verify we're starting with an unvalidated input
+        self.assertEqual(input_instance.valid(), True)
+        with warnings.catch_warnings(record=True) as messages:
+            input_instance._validate()
+            time.sleep(0.25)  # wait for warnings to register
+        inputs.QT_APP.processEvents()
+
+        # Validation still passes, but verify warning raised
+        self.assertEqual(len(messages), 1)
         self.assertEqual(input_instance.valid(), True)
 
     def test_label(self):
@@ -1694,17 +1720,27 @@ class SettingsDialogTest(_QtTest):
 
 
 class ScenarioOptionsDialogTests(_QtTest):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
     def test_dialog_return_value(self):
         """UI Scenario Options: Verify return value of dialog."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog()
+        options_dialog = model.ScenarioOptionsDialog(
+            paramset_basename='test_model')
 
         # set this option to ensure coverage of the slot
         options_dialog.scenario_type.set_value(model._SCENARIO_DATA_ARCHIVE)
         options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
         inputs.QT_APP.processEvents()
+
+        new_paramset_path = os.path.join(self.workspace, 'test.invs.json')
+        options_dialog.save_parameters.set_value(new_paramset_path)
 
         def _press_accept():
             options_dialog.accept()
@@ -1716,7 +1752,8 @@ class ScenarioOptionsDialogTests(_QtTest):
             model.ScenarioSaveOpts(
                 model._SCENARIO_PARAMETER_SET,  # scenario type
                 False,  # use relative paths
-                False),  # include workpace
+                False,  # include workpace
+                new_paramset_path),  # scenario path
             return_options)
 
     def test_dialog_cancelled(self):
@@ -1724,7 +1761,8 @@ class ScenarioOptionsDialogTests(_QtTest):
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog()
+        options_dialog = model.ScenarioOptionsDialog(
+            paramset_basename='test_model')
 
         # set this option to ensure coverage of the slot
         options_dialog.scenario_type.set_value(model._SCENARIO_DATA_ARCHIVE)
