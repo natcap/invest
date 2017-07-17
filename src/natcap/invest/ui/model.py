@@ -824,7 +824,14 @@ class Model(QtWidgets.QMainWindow):
                 with usage.log_run(self.target.__module__, args):
                     LOGGER.info('Starting model with parameters: \n%s',
                                 cli._format_args(args))
-                    return self.target(args=args)
+                    try:
+                        return self.target(args=args)
+                    except:
+                        LOGGER.exception('Exception while executing %s',
+                                         self.target)
+                        raise
+                    finally:
+                        LOGGER.info('Execution finished')
 
         self.form.run(target=_logged_target,
                       window_title='Running %s' % self.label,
