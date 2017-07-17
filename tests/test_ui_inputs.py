@@ -1726,6 +1726,23 @@ class ScenarioOptionsDialogTests(_QtTest):
     def tearDown(self):
         shutil.rmtree(self.workspace)
 
+    def test_dialog_invalid_scenario_path(self):
+        """UI Scenario Options: verify scenario file validity."""
+        from natcap.invest.ui import model
+
+        options_dialog = model.ScenarioOptionsDialog(
+            paramset_basename='test_model')
+        new_paramset_path = os.path.join(
+            self.workspace, 'testdir1', 'test.invs.json')
+
+        # I can't use os.chmod to set writeable permissions on Windows, per the
+        # python docs (https://docs.python.org/2/library/os.html#os.chmod).
+        # Mock allows me to simulate the change.
+        with mock.patch('os.access', return_value=False):
+            options_dialog.save_parameters.set_value(new_paramset_path)
+            self.assertFalse(options_dialog.ok_button.isEnabled())
+            self.assertFalse(options_dialog.save_parameters.valid())
+
     def test_dialog_return_value(self):
         """UI Scenario Options: Verify return value of dialog."""
         from natcap.invest.ui import model
