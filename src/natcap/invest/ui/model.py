@@ -725,11 +725,12 @@ class Model(QtWidgets.QMainWindow):
 
         if link.startswith(('http', 'ftp', 'file')):
             if os.path.exists(link.replace('file://', '')):
-                QtCore.QDesktopServices.openUrl(link)
+                try:
+                    QtCore.QDesktopServices.openUrl(link)
+                except AttributeError:
+                    QtGui.QDesktopServices.openUrl(QtCore.QUrl(link))
             else:
                 self.local_docs_missing_dialog.exec_()
-        else:
-            LOGGER.warning("Don't know how to open link %s", link)
 
     def _save_scenario_as(self):
         """Save the current set of inputs as a scenario.

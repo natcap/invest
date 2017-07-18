@@ -2027,6 +2027,38 @@ class ModelTests(_QtTest):
         self.assertEqual(model_ui.suffix.value(), args['suffix'])
 
     def test_run(self):
+        """UI Model: Check that we can run the model."""
         model_ui = ModelTests.build_model()
         model_ui.run()
         self.assertTrue(model_ui.isVisible())
+
+    def test_local_docs_from_hyperlink(self):
+        """UI Model: Check that we can open the local docs missing dialog."""
+        model_ui = ModelTests.build_model()
+        model_ui.run()
+
+        def _check_dialog_and_close():
+            self.assertTrue(model_ui.local_docs_missing_dialog.isVisible())
+            model_ui.local_docs_missing_dialog.accept()
+
+        QtCore.QTimer.singleShot(25, _check_dialog_and_close)
+
+        # simulate a mouse click on the localdocs hyperlink.
+        model_ui.links.linkActivated.emit('localdocs')
+
+    def test_local_docs_launch(self):
+        """UI Model: Check that we can launch local documentation."""
+        model_ui = ModelTests.build_model()
+        model_ui.run()
+
+        if hasattr(QtCore, 'QDesktopServices'):
+            patch_object = mock.patch('qtpy.QtCore.QDesktopServices.openUrl')
+        else:
+            # PyQt5 changed the location of this.
+            patch_object = mock.patch('qtpy.QtGui.QDesktopServices.openUrl')
+
+        # simulate a mouse click on the localdocs hyperlink.
+        with patch_object:
+            with mock.patch('os.path.exists', return_value=True):
+                # simulate about --> view documentation menu.
+                model_ui._check_local_docs('http://some_file_that_exists')
