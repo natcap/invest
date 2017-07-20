@@ -398,10 +398,11 @@ def read_parameters_from_logfile(logfile_path):
                 continue
 
             if not re.match('^[0-1][0-9]/[0-3][0-9]/[0-9]{4} ', line):
-                detected_args.append(line)
+                detected_args.append(line.strip())
 
     args_dict = {}
     for argument in detected_args:
+        print argument
         # args key is everything before the whitespace
         args_key = re.findall(r'^\w*', argument)[0]
         args_value = argument.replace(args_key, '').lstrip().rstrip()

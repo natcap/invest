@@ -498,7 +498,7 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
         self._container.add_input(self.extraction_point)
 
     def exec_(self, archive_path):
-        result = OptionsDialog.exec_()
+        result = OptionsDialog.exec_(self)
 
         if result == QtWidgets.QDialog.Accepted:
             extract_to_dir = self.extraction_point.value()
@@ -607,6 +607,7 @@ class Model(QtWidgets.QMainWindow):
         # dialogs
         self.about_dialog = AboutDialog()
         self.settings_dialog = SettingsDialog()
+        self.file_dialog = inputs.FileDialog()
 
         try:
             paramset_basename = self.target.__module__.split('.')[-1]
@@ -850,19 +851,17 @@ class Model(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def load_scenario(self, scenario_path=None):
-        file_dialog = inputs.FileDialog()
         if not scenario_path:
-            filters = (
-                'Any file (*.*)',
-                'Parameter set (*.invs.json)',
-                'Parameter archive (*.invs.tar.gz)',
-                'Logfile (*.txt)')
-            scenario_path = file_dialog.open_file(
-                title='Select scenario', filters=filters)
+            scenario_path = self.file_dialog.open_file(
+                title='Select scenario', filters=(
+                    'Any file (*.*)',
+                    'Parameter set (*.invs.json)',
+                    'Parameter archive (*.invs.tar.gz)',
+                    'Logfile (*.txt)'))
 
-        # When the user pressed cancel, scenario_path == ''
-        if not scenario_path:
-            return
+            # When the user pressed cancel, scenario_path == ''
+            if not scenario_path:
+                return
 
         LOGGER.info('Loading scenario from "%s"', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!

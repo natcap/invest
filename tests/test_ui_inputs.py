@@ -10,6 +10,7 @@ import os
 import time
 import tempfile
 import shutil
+import textwrap
 
 import faulthandler
 faulthandler.enable()
@@ -1796,6 +1797,14 @@ class ScenarioOptionsDialogTests(_QtTest):
 
 
 class ModelTests(_QtTest):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+        _QtTest.setUp(self)
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+        _QtTest.tearDown(self)
+
     @staticmethod
     def build_model(validate_func=None):
         from natcap.invest.ui import model
@@ -2062,3 +2071,66 @@ class ModelTests(_QtTest):
             with mock.patch('os.path.exists', return_value=True):
                 # simulate about --> view documentation menu.
                 model_ui._check_local_docs('http://some_file_that_exists')
+
+    def test_load_scenario_paramset(self):
+        """UI Model: Check that we can load a parameter set scenario."""
+        from natcap.invest import scenarios
+        args = {
+            'workspace_dir': 'foodir',
+            'suffix': 'suffix',
+        }
+        scenario_filepath = os.path.join(self.workspace, 'paramset.json')
+        scenarios.write_parameter_set(
+            scenario_filepath,
+            args=args,
+            name='test_model',
+            relative=False)
+
+        model_ui = ModelTests.build_model()
+        model_ui.load_scenario(scenario_filepath)
+
+        self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
+        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+
+    def test_load_scenario_archive(self):
+        """UI Model: Check that we can load a parameter archive."""
+        from natcap.invest import scenarios
+        args = {
+            'workspace_dir': 'foodir',
+            'suffix': 'suffix',
+        }
+        scenario_filepath = os.path.join(self.workspace, 'archive.tar.gz')
+        scenarios.build_scenario_archive(args, 'test_model', scenario_filepath)
+
+        extracted_archive = os.path.join(self.workspace, 'archive_dir')
+        model_ui = ModelTests.build_model()
+        def _set_extraction_dir():
+            model_ui.scenario_archive_extract_dialog.extraction_point.set_value(
+                extracted_archive)
+            model_ui.scenario_archive_extract_dialog.accept()
+
+        QtCore.QTimer.singleShot(25, _set_extraction_dir)
+        model_ui.load_scenario(scenario_filepath)
+
+        # Workspace isn't saved in a parameter archive, so just test suffix
+        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+
+    @unittest.skip('Fails at the moment')
+    def test_load_scenario_from_logfile(self):
+        """UI Model: Check that we can load parameters from a logfile."""
+        # write a sample logfile
+        logfile_path = os.path.join(self.workspace, 'logfile')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO
+                Arguments:
+                suffix                           foo
+                workspace_dir                    some_workspace_dir
+
+            """))
+
+        model_ui = ModelTests.build_model()
+        model_ui.load_scenario(logfile_path)
+
+        self.assertEqual(model_ui.workspace.value(), 'some_workspace_dir')
+        self.assertEqual(model_ui.suffix.value(), 'foo')
