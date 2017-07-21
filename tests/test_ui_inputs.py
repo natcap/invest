@@ -2256,3 +2256,16 @@ class ModelTests(_QtTest):
         QtCore.QTimer.singleShot(25, _set_archive_options)
         model_ui._save_scenario_as()
         self.assertNotEqual(starting_window_title, model_ui.windowTitle())
+
+    def test_settings_saved_message(self):
+        """UI Model: Verify that saving settings posts status to statusbar."""
+        model_ui = ModelTests.build_model()
+
+        def _save_settings():
+            model_ui.settings_dialog.accept()
+
+        QtCore.QTimer.singleShot(25, _save_settings)
+        model_ui.settings_dialog.exec_()
+
+        QT_APP.processEvents()
+        self.assertEqual(model_ui.statusBar().currentMessage(), 'Settings saved')
