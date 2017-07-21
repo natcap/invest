@@ -2324,3 +2324,14 @@ class ModelTests(_QtTest):
             model_ui.execute_model()
 
         self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+
+    def test_overwrite_reject(self):
+        """UI Model: Verify coverage when overwrite dialog is rejected."""
+
+        model_ui = ModelTests.build_model()
+
+        def _cancel_workspace_overwrite():
+            model_ui.workspace_overwrite_confirm_dialog.reject()
+
+        QtCore.QTimer.singleShot(50, _cancel_workspace_overwrite)
+        model_ui.execute_model()
