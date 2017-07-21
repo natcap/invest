@@ -238,27 +238,20 @@ class InputTest(_QtTest):
             self.assertEqual(input_instance.visible(), True)
 
     def test_visiblity_when_shown(self):
-        global QT_APP
         from natcap.invest.ui import inputs
         container = inputs.Container(label='sample container')
         input_instance = self.__class__.create_input(label='foo',
                                                      interactive=False)
         container.add_input(input_instance)
         container.show()
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
 
         self.assertEqual(input_instance.visible(), True)
 
         input_instance.set_visible(False)
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), False)
 
         input_instance.set_visible(True)
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), True)
 

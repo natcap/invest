@@ -76,10 +76,6 @@ def wait_on_signal(signal, timeout=250):
         yield
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
-    except Exception as error:
-        LOGGER.exception('Error encountered while witing for signal %s',
-                         signal)
-        raise error
     finally:
         if timeout is not None:
             QtCore.QTimer.singleShot(timeout, loop.quit)
