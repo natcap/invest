@@ -769,10 +769,7 @@ class Model(QtWidgets.QMainWindow):
                 relative=scenario_opts.use_relpaths
             )
 
-        save_filepath = scenario_opts.archive_path
-        if len(save_filepath) > 80:
-            save_filepath = '...' + save_filepath[-40:]
-
+        save_filepath = os.path.basename(scenario_opts.archive_path)
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)

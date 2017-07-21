@@ -2208,3 +2208,51 @@ class ModelTests(_QtTest):
 
         QtCore.QTimer.singleShot(25, _cancel_scenario_dialog)
         model_ui._save_scenario_as()
+
+    def test_save_scenario_as_archive(self):
+        """UI Model: Test coverage for saving parameter archives."""
+        from natcap.invest.ui import model
+        model_ui = ModelTests.build_model()
+
+        starting_window_title = model_ui.windowTitle()
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+
+        def _set_archive_options():
+            model_ui.scenario_options_dialog.scenario_type.set_value(
+                model._SCENARIO_DATA_ARCHIVE)
+            model_ui.scenario_options_dialog.save_parameters.set_value(
+                archive_path)
+            global QT_APP
+            QT_APP.processEvents()
+            model_ui.scenario_options_dialog.accept()
+
+        QtCore.QTimer.singleShot(25, _set_archive_options)
+        model_ui._save_scenario_as()
+        self.assertNotEqual(starting_window_title, model_ui.windowTitle())
+
+    def test_save_scenario_as_parameter_set(self):
+        """UI Model: Test coverage for saving parameter set."""
+        from natcap.invest.ui import model
+        model_ui = ModelTests.build_model()
+
+        starting_window_title = model_ui.windowTitle()
+
+        archive_path = os.path.join(self.workspace, 'parameters.invs.json')
+
+        def _set_archive_options():
+            model_ui.scenario_options_dialog.scenario_type.set_value(
+                model._SCENARIO_PARAMETER_SET)
+            model_ui.scenario_options_dialog.use_relative_paths.set_value(
+                True)
+            model_ui.scenario_options_dialog.include_workspace.set_value(
+                True)
+            model_ui.scenario_options_dialog.save_parameters.set_value(
+                archive_path)
+            global QT_APP
+            QT_APP.processEvents()
+            model_ui.scenario_options_dialog.accept()
+
+        QtCore.QTimer.singleShot(25, _set_archive_options)
+        model_ui._save_scenario_as()
+        self.assertNotEqual(starting_window_title, model_ui.windowTitle())
