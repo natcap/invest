@@ -1180,6 +1180,7 @@ class FolderButtonTest(_QtTest):
         button.open_method = mock.MagicMock(return_value='/some/path')
         _callback = mock.MagicMock()
         button.path_selected.connect(_callback)
+        button.show()  # seems to avoid a segfault
 
         with wait_on_signal(button.path_selected):
             QTest.mouseClick(button, QtCore.Qt.LeftButton)

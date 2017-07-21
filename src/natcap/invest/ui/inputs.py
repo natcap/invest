@@ -1229,8 +1229,7 @@ class Multi(Container):
                            interactive=interactive,
                            args_key=args_key,
                            expandable=False,
-                           expanded=True,
-                           helptext=helptext)
+                           expanded=True)
 
         if not hasattr(callable_, '__call__'):
             raise ValueError("Callable passed to Multi is not callable.")
