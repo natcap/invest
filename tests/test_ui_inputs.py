@@ -2167,14 +2167,13 @@ class ModelTests(_QtTest):
 
     def test_load_scenario_file_dialog_cancelled(self):
         """UI Model: coverage for when the file select dialog is cancelled."""
-        model_ui = ModelTests.build_model()
-
-        def _cancel_dialog():
-            global QT_APP
-            QT_APP.activeModalWidget().reject()
-
-        QtCore.QTimer.singleShot(25, _cancel_dialog)
-        model_ui.load_scenario()
+        # I'm mocking up the file dialog because I can't figure out how to
+        # programmatically press the cancel button in a way that works on both
+        # mac and linux.
+        with mock.patch('qtpy.QtWidgets.QFileDialog.getOpenFileName',
+                        return_value=(None, None)):
+            model_ui = ModelTests.build_model()
+            model_ui.load_scenario()
 
     def test_model_quickrun(self):
         """UI Model: Test the quickrun path through model.run()."""
