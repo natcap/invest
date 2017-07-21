@@ -2115,7 +2115,6 @@ class ModelTests(_QtTest):
         # Workspace isn't saved in a parameter archive, so just test suffix
         self.assertEqual(model_ui.suffix.value(), args['suffix'])
 
-    @unittest.skip('Fails at the moment')
     def test_load_scenario_from_logfile(self):
         """UI Model: Check that we can load parameters from a logfile."""
         # write a sample logfile
