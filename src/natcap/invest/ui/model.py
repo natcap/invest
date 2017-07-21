@@ -547,9 +547,6 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
                                  QtWidgets.QDialogButtonBox.RejectRole)
         self.layout().addWidget(self.buttonbox)
 
-    def validation_started(self):
-        self.label.setText('<h2>Validating inputs ...</h2>')
-
     def validation_finished(self, validation_warnings):
         LOGGER.info('Posting validation warnings to WMV dialog: %s',
                     validation_warnings)
