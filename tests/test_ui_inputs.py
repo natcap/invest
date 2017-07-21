@@ -1818,12 +1818,14 @@ class ModelTests(_QtTest):
         _QtTest.tearDown(self)
 
     @staticmethod
-    def build_model(validate_func=None):
+    def build_model(validate_func=None, target_func=None):
         from natcap.invest.ui import model
         from natcap.invest import validation
 
-        def _target(args):
-            pass
+        if target_func is None:
+            def _target(args):
+                pass
+            target_func = _target
 
         if validate_func is None:
             @validation.validator
@@ -1833,7 +1835,7 @@ class ModelTests(_QtTest):
 
         class _TestModel(model.Model):
             label = 'Test model'
-            target = staticmethod(_target)
+            target = staticmethod(target_func)
             validator = staticmethod(validate_func)
             localdoc = 'testmodel.html'
 
@@ -2304,3 +2306,18 @@ class ModelTests(_QtTest):
 
         QtCore.QTimer.singleShot(25, _close_validation_report)
         model_ui.execute_model()
+
+    def test_exception_raised_in_target(self):
+        """UI Model: Verify coverage when exception raised in target."""
+        def _target(args):
+            raise Exception('foo!')
+
+        model_ui = ModelTests.build_model(target_func=_target)
+        model_ui.workspace.set_value(os.path.join(self.workspace,
+                                                  'dir_not_there'))
+        QT_APP.processEvents()
+
+        with wait_on_signal(model_ui.form.run_finished):
+            model_ui.execute_model()
+
+        self.assertEqual(str(model_ui.form._thread.exception), 'foo!')

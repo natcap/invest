@@ -108,7 +108,7 @@ def prepare_workspace(workspace, name):
     logging.captureWarnings(True)
     with capture_gdal_logging(), log_to_file(logfile):
         with sandbox_tempdir(dir=workspace,
-                             set_tempdir=True):
+                             set_tempdir=False):
             LOGGER.info('Writing log messages to %s', logfile)
             start_time = time.time()
             yield
