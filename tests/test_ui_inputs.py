@@ -1187,6 +1187,7 @@ class FolderButtonTest(_QtTest):
 
         with wait_on_signal(button.path_selected):
             QTest.mouseClick(button, QtCore.Qt.LeftButton)
+            QTest.qWait(50)
 
         _callback.assert_called_with('/some/path')
 
