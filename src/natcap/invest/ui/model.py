@@ -831,9 +831,7 @@ class Model(QtWidgets.QMainWindow):
                 return
 
         def _logged_target():
-            name = getattr(self, 'label', None)
-            if not name:
-                name = self.target.__module__
+            name = getattr(self, 'label', self.target.__module__)
             with utils.prepare_workspace(args['workspace_dir'], name):
                 with usage.log_run(self.target.__module__, args):
                     LOGGER.info('Starting model with parameters: \n%s',
