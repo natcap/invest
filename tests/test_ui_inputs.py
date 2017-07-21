@@ -2151,3 +2151,14 @@ class ModelTests(_QtTest):
         QtCore.QTimer.singleShot(25, _cancel_dialog)
         model_ui.load_scenario(scenario_filepath)
         self.assertFalse(model_ui.isVisible())
+
+    def test_load_scenario_file_dialog_cancelled(self):
+        """UI Model: coverage for when the file select dialog is cancelled."""
+        model_ui = ModelTests.build_model()
+
+        def _cancel_dialog():
+            global QT_APP
+            QT_APP.activeModalWidget().reject()
+
+        QtCore.QTimer.singleShot(25, _cancel_dialog)
+        model_ui.load_scenario()
