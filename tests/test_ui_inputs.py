@@ -2280,3 +2280,27 @@ class ModelTests(_QtTest):
 
         QT_APP.processEvents()
         self.assertEqual(model_ui.statusBar().currentMessage(), 'Settings saved')
+
+    def test_run_with_validation_errors(self):
+        """UI Model: Verify coverage when validation errors before a run."""
+        from natcap.invest import validation
+
+        @validation.validator
+        def _validate(args, limit_to=None):
+            context = validation.ValidationContext(args, limit_to)
+            # require workspace dir input.
+            if context.is_arg_complete('workspace_dir', require=True):
+                pass
+
+            return context.warnings
+
+        model_ui = ModelTests.build_model(_validate)
+        model_ui.workspace.set_value('')
+        model_ui.validate(block=True)
+        self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
+
+        def _close_validation_report():
+            model_ui.validation_report_dialog.accept()
+
+        QtCore.QTimer.singleShot(25, _close_validation_report)
+        model_ui.execute_model()
