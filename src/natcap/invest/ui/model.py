@@ -505,7 +505,7 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
             args = scenarios.extract_scenario_archive(
                 archive_path, extract_to_dir)
             return (args, extract_to_dir)
-        return None
+        return (None, None)
 
 
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):

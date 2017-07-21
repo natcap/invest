@@ -2133,3 +2133,21 @@ class ModelTests(_QtTest):
 
         self.assertEqual(model_ui.workspace.value(), 'some_workspace_dir')
         self.assertEqual(model_ui.suffix.value(), 'foo')
+
+    def test_load_scenario_extraction_dialog_cancelled(self):
+        """UI Model: coverage when user clicks cancel in scenario dialog."""
+        from natcap.invest import scenarios
+        args = {
+            'workspace_dir': 'foodir',
+            'suffix': 'suffix',
+        }
+        scenario_filepath = os.path.join(self.workspace, 'archive.tar.gz')
+        scenarios.build_scenario_archive(args, 'test_model', scenario_filepath)
+        model_ui = ModelTests.build_model()
+
+        def _cancel_dialog():
+            model_ui.scenario_archive_extract_dialog.reject()
+
+        QtCore.QTimer.singleShot(25, _cancel_dialog)
+        model_ui.load_scenario(scenario_filepath)
+        self.assertFalse(model_ui.isVisible())
