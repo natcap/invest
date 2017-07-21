@@ -392,31 +392,37 @@ def read_parameter_set(filepath):
 def read_parameters_from_logfile(logfile_path):
     with codecs.open(logfile_path, 'r', encoding='utf-8') as logfile:
         detected_args = []
+        args_started = False
         for line in logfile:
             # Skip blank lines or lines with only whitespace
             if not line.strip():
                 continue
 
-            if not re.match('^[0-1][0-9]/[0-3][0-9]/[0-9]{4} ', line):
-                detected_args.append(line.strip())
+            if line.strip().startswith('Arguments'):
+                args_started = True
+                continue
+
+            # Anything before we match the next date regexp should be
+            # considered.
+            if re.match('^[0-1][0-9]/[0-3][0-9]/[0-9]{4} ', line):
+                if args_started:
+                    break
+                else:
+                    continue
+            detected_args.append(line.strip())
 
     args_dict = {}
     for argument in detected_args:
-        print argument
         # args key is everything before the whitespace
         args_key = re.findall(r'^\w*', argument)[0]
-        args_value = argument.replace(args_key, '').lstrip().rstrip()
+        args_value = re.sub('^%s' % args_key, '', argument).strip()
 
-        try:
-            int_value = int(args_value)
-            float_value = float(args_value)
-            if int_value == float_value:
-                args_value = int_value
-            else:
-                args_value = float_value
-        except ValueError:
-            # If we can't cast it to int or float, use the UTF8 string
-            pass
+        for cast_to_type in (float, int):
+            try:
+                args_value = cast_to_type(args_value)
+                break
+            except ValueError:
+                pass
 
         args_dict[args_key] = args_value
     return args_dict

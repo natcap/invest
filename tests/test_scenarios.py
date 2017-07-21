@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import json
 import tarfile
+import textwrap
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -431,3 +432,26 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(args, params)
         self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
+
+    def test_read_parameters_from_logfile(self):
+        """Scenarios: Verify we can read args from a logfile."""
+        from natcap.invest import scenarios
+        logfile_path = os.path.join(self.workspace, 'logfile')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO
+                Arguments:
+                suffix                           foo
+                some_int                         1
+                some_float                       2.33
+                workspace_dir                    some_workspace_dir
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
+
+            """))
+
+        params = scenarios.read_parameters_from_logfile(logfile_path)
+
+        self.assertEqual(params, {u'suffix': u'foo',
+                                  u'some_int': 1,
+                                  u'some_float': 2.33,
+                                  u'workspace_dir': u'some_workspace_dir'})
