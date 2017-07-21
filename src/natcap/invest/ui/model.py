@@ -428,12 +428,9 @@ class ScenarioOptionsDialog(OptionsDialog):
 
             if not os.path.exists(archive_dir):
                 warnings.append((('archive_path',),
-                                 'The specified path does not exist.'))
+                                 'The parent folder of the specified path '
+                                 'does not exist.'))
 
-            if not os.access(archive_dir, os.W_OK):
-                warnings.append((('archive_path',),
-                                 ('You do not have write access to the folder '
-                                  '%s') % archive_dir))
             return warnings
 
         self.save_parameters = inputs.SaveFile(

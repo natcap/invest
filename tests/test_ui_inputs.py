@@ -1796,6 +1796,24 @@ class ScenarioOptionsDialogTests(_QtTest):
 
         self.assertEqual(return_options, None)
 
+    def test_dialog_savefile_validation_fails(self):
+        """UI Scenario Options: Verify validation fails when expected."""
+        from natcap.invest.ui import model
+        from natcap.invest.ui import inputs
+
+        options_dialog = model.ScenarioOptionsDialog(
+            paramset_basename='test_model')
+
+        save_path_with_missing_dir = os.path.join(
+            self.workspace, 'foo', 'parameters.invs.json')
+
+        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
+        options_dialog.save_parameters.set_value(save_path_with_missing_dir)
+        inputs.QT_APP.processEvents()
+
+        self.assertFalse(options_dialog.save_parameters.valid())
+
+
 
 class ModelTests(_QtTest):
     def setUp(self):
