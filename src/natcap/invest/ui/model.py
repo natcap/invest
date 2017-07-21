@@ -167,8 +167,8 @@ class WorkspaceOverwriteConfirmDialog(QtWidgets.QMessageBox):
         self.setInformativeText(
             'Overwrite files from a previous run?')
         self.setStandardButtons(
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-        self.setDefaultButton(QtWidgets.QMessageBox.No)
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        self.setDefaultButton(QtWidgets.QMessageBox.Yes)
         self.setIconPixmap(
             ICON_ALERT.pixmap(100, 100))
 
@@ -604,6 +604,7 @@ class Model(QtWidgets.QMainWindow):
         self._validator = inputs.Validator(parent=self)
         self._validator.finished.connect(self._validation_finished)
         self.propmpt_on_close = True
+        self.exit_code = None
 
         # dialogs
         self.about_dialog = AboutDialog()
@@ -620,7 +621,7 @@ class Model(QtWidgets.QMainWindow):
         self.scenario_archive_extract_dialog = ScenarioArchiveExtractionDialog()
         self.quit_confirm_dialog = QuitConfirmDialog()
         self.validation_report_dialog = WholeModelValidationErrorDialog()
-        self.worskspace_overwrite_confirm_dialog = WorkspaceOverwriteConfirmDialog()
+        self.workspace_overwrite_confirm_dialog = WorkspaceOverwriteConfirmDialog()
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
 
         def _settings_saved_message():
@@ -825,7 +826,7 @@ class Model(QtWidgets.QMainWindow):
 
         # If the workspace exists, confirm the overwrite.
         if os.path.exists(args['workspace_dir']):
-            button_pressed = self.worskspace_overwrite_confirm_dialog.exec_()
+            button_pressed = self.workspace_overwrite_confirm_dialog.exec_()
             if button_pressed != QtWidgets.QMessageBox.Yes:
                 return
 
@@ -962,9 +963,10 @@ class Model(QtWidgets.QMainWindow):
             def _quickrun_close_model():
                 # exit with an error code that matches exception status of run.
                 exit_code = self.form.run_dialog.messageArea.error
-                # TODO: There's got to be a safer way to close this than
-                # exiting the qapplication
-                inputs.QT_APP.exit(int(exit_code))
+                if exit_code is None:
+                    exit_code = 0
+                self.exit_code = int(exit_code)
+                self.close(prompt=False)
 
             self.form.run_finished.connect(_quickrun_close_model)
             QtCore.QTimer.singleShot(50, self.execute_model)

@@ -508,12 +508,17 @@ def main():
         if args.workspace:
             model_form.workspace.set_value(args.workspace)
 
-        exitcode = model_form.run(quickrun=args.quickrun)
-        exitcode = inputs.QT_APP.exec_()
+        model_form.run(quickrun=args.quickrun)
+        model_exitcode = model_form.exit_code
+        app_exitcode = inputs.QT_APP.exec_()
 
-        if exitcode != 0:
-            parser.exit(exitcode,
-                        'Model terminated with exit code %s' % exitcode)
+        if model_exitcode != 0:
+            parser.exit(model_exitcode,
+                        'Model terminated with exit code %s' % model_exitcode)
+
+        if app_exitcode != 0:
+            parser.exit(app_exitcode,
+                        'App terminated with exit code %s' % app_exitcode)
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

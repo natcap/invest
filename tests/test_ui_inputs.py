@@ -2175,3 +2175,26 @@ class ModelTests(_QtTest):
 
         QtCore.QTimer.singleShot(25, _cancel_dialog)
         model_ui.load_scenario()
+
+    def test_model_quickrun(self):
+        """UI Model: Test the quickrun path through model.run()."""
+        model_ui = ModelTests.build_model()
+        model_ui.workspace.set_value(self.workspace)
+
+        def _confirm_workspace_overwrite():
+            # Just using dialog.accept() didn't work here, and I can't seem to
+            # figure out why.
+            QTest.mouseClick(
+                model_ui.workspace_overwrite_confirm_dialog.button(
+                    QtWidgets.QMessageBox.Yes),
+                QtCore.Qt.LeftButton)
+
+        # Need to wait a little longer on this one to compensate for other
+        # singleshot timers in model.run().
+        QtCore.QTimer.singleShot(100, _confirm_workspace_overwrite)
+        model_ui.run(quickrun=True)
+
+        while model_ui.isVisible():
+            QTest.qWait(25)
+
+        self.assertEqual(model_ui.exit_code, 0)
