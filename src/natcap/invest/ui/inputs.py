@@ -1110,13 +1110,10 @@ class Container(QtWidgets.QGroupBox, Input):
     sufficiency_changed = QtCore.Signal(bool)
 
     def __init__(self, label, interactive=True, expandable=False,
-                 expanded=True, args_key=None, helptext=None):
+                 expanded=True, args_key=None):
         QtWidgets.QGroupBox.__init__(self)
         Input.__init__(self, label=label, interactive=interactive,
                        args_key=args_key)
-        self.helptext = helptext
-        if self.helptext:
-            warnings.warn('helptext option is currently ignored for Containers')
         self.widgets = [self]
         self.setCheckable(expandable)
         if expandable:
