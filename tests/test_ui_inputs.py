@@ -2037,7 +2037,20 @@ class ModelTests(_QtTest):
 
     def test_run(self):
         """UI Model: Check that we can run the model."""
+        from natcap.invest.ui import inputs
         model_ui = ModelTests.build_model()
+        model_ui.test_container = inputs.Container('test')
+        model_ui.add_input(model_ui.test_container)
+
+        def _close_window():
+            # trigger whole-model validation for coverage of callback.
+            model_ui.workspace.set_value('foo')
+
+            global QT_APP
+            QT_APP.processEvents()
+
+            model_ui.close(prompt=False)
+
         model_ui.run()
         self.assertTrue(model_ui.isVisible())
 

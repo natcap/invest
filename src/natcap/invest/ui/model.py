@@ -603,6 +603,7 @@ class Model(QtWidgets.QMainWindow):
         self._quickrun = False
         self._validator = inputs.Validator(parent=self)
         self._validator.finished.connect(self._validation_finished)
+        self.propmpt_on_close = True
 
         # dialogs
         self.about_dialog = AboutDialog()
@@ -988,16 +989,22 @@ class Model(QtWidgets.QMainWindow):
         self.show()
         self.raise_()  # raise window to top of stack.
 
+    def close(self, prompt=True):
+        self.prompt_on_close = prompt
+        QtWidgets.QMainWindow.close(self)
+
     def closeEvent(self, event):
-        starting_checkstate = self.settings.value('remember_lastrun',
-                                                  True, bool)
-        button_pressed = self.quit_confirm_dialog.exec_(starting_checkstate)
-        if button_pressed != QtWidgets.QMessageBox.Yes:
-            event.ignore()
-        elif self.quit_confirm_dialog.checkbox.isChecked():
-            self.save_lastrun()
-        self.settings.setValue('remember_lastrun',
-                               self.quit_confirm_dialog.checkbox.isChecked())
+        if self.prompt_on_close:
+            starting_checkstate = self.settings.value('remember_lastrun',
+                                                    True, bool)
+            button_pressed = self.quit_confirm_dialog.exec_(starting_checkstate)
+            if button_pressed != QtWidgets.QMessageBox.Yes:
+                event.ignore()
+            elif self.quit_confirm_dialog.checkbox.isChecked():
+                self.save_lastrun()
+            self.settings.setValue('remember_lastrun',
+                                self.quit_confirm_dialog.checkbox.isChecked())
+        self.prompt_on_close = True
 
     def save_lastrun(self):
         lastrun_args = self.assemble_args()
