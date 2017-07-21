@@ -71,7 +71,10 @@ class _QtTest(unittest.TestCase):
         # this because these segfaults only happen when I'm running the suite of
         # unittests.  If something segfaults in the normal operation of
         # the model, I will absolutely fix that.
-        QTest.qWait(50)
+        global QT_APP
+        if QT_APP.hasPendingEvents():
+            QT_APP.processEvents()
+        #QTest.qWait(50)
 
 
 class InputTest(_QtTest):
