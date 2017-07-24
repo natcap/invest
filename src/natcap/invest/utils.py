@@ -105,15 +105,15 @@ def prepare_workspace(workspace, name):
             modelname='-'.join(name.replace(':', '').split(' ')),
             timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
 
-    logging.captureWarnings(True)
     with capture_gdal_logging(), log_to_file(logfile):
         with sandbox_tempdir(dir=workspace):
+            logging.captureWarnings(True)
             LOGGER.info('Writing log messages to %s', logfile)
             start_time = time.time()
             yield
             LOGGER.info('Elapsed time: %s',
                         _format_time(round(time.time() - start_time, 2)))
-    logging.captureWarnings(False)
+            logging.captureWarnings(False)
 
 
 class ThreadFilter(logging.Filter):

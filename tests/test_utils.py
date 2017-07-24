@@ -5,6 +5,9 @@ import tempfile
 import shutil
 import logging
 import threading
+import warnings
+import re
+import glob
 
 from pygeoprocessing.testing import scm
 import pygeoprocessing.testing
@@ -446,3 +449,37 @@ class GDALWarningsLoggingTests(unittest.TestCase):
                     if msg]
 
         self.assertEqual(len(messages), 1)
+
+
+class PrepareWorkspaceTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
+    def test_prepare_workspace(self):
+        """utils: test that prepare_workspace does what is expected."""
+        from natcap.invest import utils
+
+        workspace = os.path.join(self.workspace, 'foo')
+
+        try:
+            with utils.prepare_workspace(workspace,
+                                        'some_model'):
+                warnings.warn('deprecated', UserWarning)
+                gdal.Open('file should not exist')
+        except Warning as warning_raised:
+            self.fail('Warning was not captured: %s' % warning_raised)
+
+        self.assertTrue(os.path.exists(workspace))
+        logfile_glob = glob.glob(os.path.join(workspace, '*.txt'))
+        self.assertEqual(len(logfile_glob), 1)
+        self.assertTrue(
+            os.path.basename(logfile_glob[0]).startswith('InVEST-some_model'))
+        with open(logfile_glob[0]) as logfile:
+            logfile_text = logfile.read()
+            print logfile_text
+            self.assertTrue('osgeo' in logfile_text)  # gdal error captured
+            self.assertEqual(len(re.findall('WARNING', logfile_text)), 1)
+            self.assertTrue('Elapsed time:' in logfile_text)
