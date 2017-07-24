@@ -447,8 +447,8 @@ class ScenariosTest(unittest.TestCase):
                 some_int                         1
                 some_float                       2.33
                 workspace_dir                    some_workspace_dir
-                07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
 
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
             """))
 
         params = scenarios.read_parameters_from_logfile(logfile_path)
@@ -457,3 +457,16 @@ class ScenariosTest(unittest.TestCase):
                                   u'some_int': 1,
                                   u'some_float': 2.33,
                                   u'workspace_dir': u'some_workspace_dir'})
+
+    def test_read_parameters_from_logfile_valueerror(self):
+        """Scenarios: verify that valuerror raised when no params found."""
+        from natcap.invest import scenarios
+        logfile_path = os.path.join(self.workspace, 'logfile')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
+            """))
+
+        with self.assertRaises(ValueError):
+            scenarios.read_parameters_from_logfile(logfile_path)

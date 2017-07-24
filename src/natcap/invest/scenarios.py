@@ -394,26 +394,39 @@ def read_parameter_set(filepath):
 
 
 def read_parameters_from_logfile(logfile_path):
+    """Parse an InVEST logfile for the parameters (args) dictionary.
+
+    Argument key-value pairs are parsed, one pair per line, starting the line
+    after the line matching ``Arguments:``, and ending with a blank line.
+    If no such section exists within the logfile, ``ValueError`` will be
+    raised.
+
+    Parameters:
+        logfile_path (string): The path to an InVEST logfile on disk.
+
+    Returns:
+        args (dict): A dictionary of key-value pairs parsed from the logfile.
+
+    Raises:
+        ValueError - when no arguments could be parsed from the logfile.
+    """
     with codecs.open(logfile_path, 'r', encoding='utf-8') as logfile:
         detected_args = []
         args_started = False
         for line in logfile:
-            # Skip blank lines or lines with only whitespace
-            if not line.strip():
-                continue
+            line = line.strip()
 
-            if line.strip().startswith('Arguments'):
-                args_started = True
-                continue
-
-            # Anything before we match the next date regexp should be
-            # considered.
-            if re.match('^[0-1][0-9]/[0-3][0-9]/[0-9]{4} ', line):
-                if args_started:
-                    break
-                else:
+            if not args_started:
+                if line == 'Arguments:':
+                    args_started = True
                     continue
-            detected_args.append(line.strip())
+            else:
+                if line == '':
+                    break
+                detected_args.append(line)
+
+    if not detected_args:
+        raise ValueError('No arguments could be parsed from %s' % logfile_path)
 
     args_dict = {}
     for argument in detected_args:
