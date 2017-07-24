@@ -1174,13 +1174,14 @@ class FolderButtonTest(_QtTest):
     def test_button_clicked(self):
         from natcap.invest.ui.inputs import FolderButton
         button = FolderButton('Some title')
+        button.show()  # seems to avoid a segfault
+        QT_APP.processEvents()
 
         # Patch up the open_method to return a known path.
         # Would block on user input otherwise.
         button.open_method = mock.MagicMock(return_value='/some/path')
         _callback = mock.MagicMock()
         button.path_selected.connect(_callback)
-        button.show()  # seems to avoid a segfault
 
         QTest.mouseClick(button, QtCore.Qt.LeftButton)
         QT_APP.processEvents()
