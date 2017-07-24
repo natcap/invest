@@ -250,6 +250,69 @@ class FormatTimeTests(unittest.TestCase):
         self.assertEqual(formatted_string,
                          '27h 46m 40s')
 
+class LogToFileTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
+    def test_log_to_file_no_thread(self):
+        """Utils: Verify that we can exclude messages not from this thread."""
+        from natcap.invest.utils import log_to_file
+
+        logfile = os.path.join(self.workspace, 'logfile.txt')
+
+        def _log_from_other_thread():
+            thread_logger = logging.getLogger()
+            thread_logger.info('this should not be logged')
+
+        local_logger = logging.getLogger()
+
+        # create the file before we log to it, so we know a warning should
+        # be logged.
+        with open(logfile, 'w') as new_file:
+            new_file.write(' ')
+
+        with log_to_file(logfile) as handler:
+            thread = threading.Thread(target=_log_from_other_thread)
+            thread.start()
+            local_logger.info('this should be logged')
+            local_logger.info('this should also be logged')
+
+            thread.join()
+            handler.flush()
+
+        messages = [msg for msg in open(logfile).read().split('\n')
+                    if msg if msg]
+        self.assertEqual(len(messages), 2)
+
+    def test_log_to_file_from_thread(self):
+        """Utils: Verify that we can filter from a threading.Thread."""
+        from natcap.invest.utils import log_to_file
+
+        logfile = os.path.join(self.workspace, 'logfile.txt')
+
+        def _log_from_other_thread():
+            thread_logger = logging.getLogger()
+            thread_logger.info('this should be logged')
+
+        local_logger = logging.getLogger()
+
+        thread = threading.Thread(target=_log_from_other_thread)
+
+        with log_to_file(logfile, threadname=thread.name) as handler:
+            thread.start()
+            local_logger.info('this should not be logged')
+            local_logger.info('neither should this message')
+
+            thread.join()
+            handler.flush()
+
+        messages = [msg for msg in open(logfile).read().split('\n')
+                    if msg if msg]
+        self.assertEqual(len(messages), 1)
+
 
 class ThreadFilterTests(unittest.TestCase):
     def test_thread_filter_same_thread(self):
