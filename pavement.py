@@ -3443,7 +3443,7 @@ def test(args):
             # If the user gave us some test names to run, run those instead!
             tests = parsed_args.nose_args
 
-        sh(('nosetests -vsP --stop --nologcapture {opts} {tests}').format(
+        sh(('nosetests -vsP --nologcapture {opts} {tests}').format(
                 opts=flags,
                 tests=' '.join(tests)
             ))
