@@ -114,3 +114,44 @@ class ValidatorTest(unittest.TestCase):
 
         validation_errors = validate({'a': 'foo', 'b': 'bar'})
         self.assertEqual(validation_errors, errors)
+
+
+class ValidationContextTests(unittest.TestCase):
+    def test_is_arg_complete_require(self):
+        """Validation: context returns a warning for incomplete args."""
+        from natcap.invest import validation
+        context = validation.ValidationContext(
+            args={}, limit_to=None)
+        is_complete = context.is_arg_complete('some_key', require=True)
+
+        self.assertEqual(is_complete, False)
+        self.assertEqual(len(context.warnings), 1)
+
+    def test_is_arg_complete_require_and_present(self):
+        """Validation: context ok when arg complete."""
+        from natcap.invest import validation
+
+        context = validation.ValidationContext(
+            args={'some_key': 'foo'}, limit_to=None)
+        is_complete = context.is_arg_complete('some_key', require=True)
+
+        self.assertEqual(is_complete, True)
+        self.assertEqual(context.warnings, [])
+
+    def test_warn_single_key(self):
+        """Validation: check warnings when single key is given."""
+        from natcap.invest import validation
+
+        context = validation.ValidationContext(
+            args={'some_key': 'foo'}, limit_to=None)
+        context.warn('some error', 'some_key')
+        self.assertEqual(context.warnings, [(('some_key',), 'some error')])
+
+    def test_warn_iterable_keys(self):
+        """Validation: check warnings when keys are iterable."""
+        from natcap.invest import validation
+
+        context = validation.ValidationContext(
+            args={'some_key': 'foo'}, limit_to=None)
+        context.warn('some error', keys=['some_key'])
+        self.assertEqual(context.warnings, [(('some_key',), 'some error')])

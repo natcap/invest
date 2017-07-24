@@ -44,22 +44,21 @@ class ValidationContext:
     def warn(self, message, keys):
         if isinstance(keys, basestring):
             keys = (keys,)
+        keys = tuple(sorted(keys))
         self.warnings.append((keys, message))
 
     def is_arg_complete(self, key, require=False):
-        if (key not in self.args or
-                self.limit_to not in (key, None)):
-            return False
-
         try:
             value = self.args[key]
             if isinstance(value, basestring):
                 value = value.strip()
         except KeyError:
-            return False
+            value = None
 
-        if value in ('', None) and require:
-            self.require(key)
+        if (value in ('', None) or
+                self.limit_to not in (key, None)):
+            if require:
+                self.require(key)
             return False
         return True
 
