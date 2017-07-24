@@ -1182,9 +1182,9 @@ class FolderButtonTest(_QtTest):
         button.path_selected.connect(_callback)
         button.show()  # seems to avoid a segfault
 
-        with wait_on_signal(button.path_selected):
-            QTest.mouseClick(button, QtCore.Qt.LeftButton)
-            QTest.qWait(50)
+        QTest.mouseClick(button, QtCore.Qt.LeftButton)
+        QT_APP.processEvents()
+        QTest.qWait(50)
 
         _callback.assert_called_with('/some/path')
 
