@@ -290,8 +290,10 @@ def extract_scenario_archive(scenario_path, dest_dir_path):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
+            # Special case: if the value is blank, return an empty string
+            # rather than assuming it's the CWD.
             if args_param.strip() == '':
-                return args_param.strip()
+                return ''
 
             data_path = os.path.join(dest_dir_path, args_param)
             if os.path.exists(data_path):

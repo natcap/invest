@@ -274,6 +274,7 @@ class ScenariosTest(unittest.TestCase):
     def test_archive_extraction(self):
         from natcap.invest import scenarios
         params = {
+            'blank': '',
             'a': 1,
             'b': u'hello there',
             'c': 'plain bytestring',
@@ -314,7 +315,7 @@ class ScenariosTest(unittest.TestCase):
             archive_params['vector'], params['vector'], field_tolerance=1e-6)
         pygeoprocessing.testing.assert_csv_equal(
             archive_params['table'], params['table'])
-        for key in ('a', 'b', 'c'):
+        for key in ('blank', 'a', 'b', 'c'):
             self.assertEqual(archive_params[key],
                              params[key],
                              'Params differ for key %s' % key)
