@@ -26,7 +26,8 @@ class ScenariosTest(unittest.TestCase):
         params = {
             'a': 1,
             'b': u'hello there',
-            'c': 'plain bytestring'
+            'c': 'plain bytestring',
+            'd': '',
         }
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
@@ -42,7 +43,7 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(
             json.load(open(os.path.join(out_directory,
                                         'parameters.json')))['args'],
-            {'a': 1, 'b': u'hello there', 'c': u'plain bytestring'})
+            {'a': 1, 'b': u'hello there', 'c': u'plain bytestring', 'd': ''})
 
     @scm.skip_if_data_missing(FW_DATA)
     def test_collect_multipart_gdal_raster(self):

@@ -205,8 +205,10 @@ def build_scenario_archive(args, name, scenario_path):
         elif isinstance(args_param, list):
             return [_recurse(list_item, handler) for list_item in args_param]
         elif isinstance(args_param, basestring):
+            # If the parameter string is blank, return an empty string.
             if args_param.strip() == '':
-                return args_param.strip()
+                return ''
+
             # It's a string and exists on disk, it's a file!
             possible_path = os.path.abspath(args_param)
             if os.path.exists(possible_path):
