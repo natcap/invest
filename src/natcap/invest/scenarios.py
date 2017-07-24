@@ -106,6 +106,9 @@ def _collect_spatial_files(filepath, data_dir):
             LOGGER.info('[%s] Saving new vector to %s',
                         driver.GetName(), new_path)
             new_vector = driver.CopyDataSource(vector, new_path)
+
+            # This is needed for copying GeoJSON files, and presumably other
+            # formats as well.
             if not new_vector:
                 new_path = os.path.join(new_path,
                                         os.path.basename(filepath))

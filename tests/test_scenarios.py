@@ -8,6 +8,7 @@ import textwrap
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
+from osgeo import ogr
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         '..', 'data', 'invest-data')
 FW_DATA = os.path.join(DATA_DIR, 'Base_Data', 'Freshwater')
@@ -88,30 +89,45 @@ class ScenariosTest(unittest.TestCase):
             os.path.join(dest_dir, 'data', archived_params['raster']))
 
     @scm.skip_if_data_missing(FW_DATA)
-    def test_collect_multipart_ogr_vector(self):
+    def test_collect_ogr_vector(self):
         from natcap.invest import scenarios
-        params = {
-            'vector': os.path.join(FW_DATA, 'watersheds.shp'),
-        }
+        source_vector_path = os.path.join(FW_DATA, 'watersheds.shp')
+        source_vector = ogr.Open(source_vector_path)
 
-        # Collect the raster's files into a single archive
-        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
 
-        # extract the archive
-        out_directory = os.path.join(self.workspace, 'extracted_archive')
-        with tarfile.open(archive_path) as tar:
-            tar.extractall(out_directory)
+        for format_name, extension in (('ESRI Shapefile', 'shp'),
+                                       ('GeoJSON', 'geojson')):
+            dest_dir = os.path.join(self.workspace, format_name)
+            os.makedirs(dest_dir)
+            dest_vector_path = os.path.join(dest_dir,
+                                            'vector.%s' % extension)
+            params = {
+                'vector': dest_vector_path,
+            }
+            driver = ogr.GetDriverByName(format_name)
+            driver.CopyDataSource(source_vector, dest_vector_path)
 
-        archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
-        pygeoprocessing.testing.assert_vectors_equal(
-            params['vector'], os.path.join(out_directory,
-                                           archived_params['vector']),
-            field_tolerance=1e-6,
-        )
+            archive_path = os.path.join(dest_dir,
+                                        'archive.invs.tar.gz')
 
-        self.assertEqual(len(archived_params), 1)  # sanity check
+            # Collect the vector's files into a single archive
+            scenarios.build_scenario_archive(params, 'sample_model',
+                                             archive_path)
+
+            # extract the archive
+            out_directory = os.path.join(dest_dir, 'extracted_archive')
+            with tarfile.open(archive_path) as tar:
+                tar.extractall(out_directory)
+
+            archived_params = json.load(
+                open(os.path.join(out_directory, 'parameters.json')))['args']
+            pygeoprocessing.testing.assert_vectors_equal(
+                params['vector'], os.path.join(out_directory,
+                                               archived_params['vector']),
+                field_tolerance=1e-6,
+            )
+
+            self.assertEqual(len(archived_params), 1)  # sanity check
 
     @scm.skip_if_data_missing(FW_DATA)
     def test_collect_ogr_table(self):
