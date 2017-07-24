@@ -241,6 +241,16 @@ class TimeFormattingTests(unittest.TestCase):
         self.assertEqual(_format_time(seconds), '7s')
 
 
+class FormatTimeTests(unittest.TestCase):
+    def test_formatting(self):
+        """Utils: Verify that we can format long-running times."""
+        from natcap.invest.utils import _format_time
+        elapsed_seconds = 100000
+        formatted_string = _format_time(elapsed_seconds)
+        self.assertEqual(formatted_string,
+                         '27h 46m 40s')
+
+
 class ThreadFilterTests(unittest.TestCase):
     def test_thread_filter_same_thread(self):
         from natcap.invest.utils import ThreadFilter
@@ -350,3 +360,4 @@ class MakeDirectoryTests(unittest.TestCase):
         file.close()
         with self.assertRaises(OSError):
             utils.make_directories([file_path])
+
