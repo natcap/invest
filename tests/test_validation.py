@@ -174,3 +174,4 @@ class GdalWarningsCaptureTests(unittest.TestCase):
         # verify that errors are only captured within the context manager.
         gdal.Open('this_raster_should_also_not_exist.tif')
         self.assertEqual(len(warnings_list), 1)
+

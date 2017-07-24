@@ -8,6 +8,7 @@ import threading
 
 from pygeoprocessing.testing import scm
 import pygeoprocessing.testing
+from osgeo import gdal
 
 
 class SuffixUtilsTests(unittest.TestCase):
@@ -241,15 +242,6 @@ class TimeFormattingTests(unittest.TestCase):
         self.assertEqual(_format_time(seconds), '7s')
 
 
-class FormatTimeTests(unittest.TestCase):
-    def test_formatting(self):
-        """Utils: Verify that we can format long-running times."""
-        from natcap.invest.utils import _format_time
-        elapsed_seconds = 100000
-        formatted_string = _format_time(elapsed_seconds)
-        self.assertEqual(formatted_string,
-                         '27h 46m 40s')
-
 class LogToFileTests(unittest.TestCase):
     def setUp(self):
         self.workspace = tempfile.mkdtemp()
@@ -424,3 +416,33 @@ class MakeDirectoryTests(unittest.TestCase):
         with self.assertRaises(OSError):
             utils.make_directories([file_path])
 
+
+class GDALWarningsLoggingTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
+    def test_log_warnings(self):
+        """utils: test that we can capture GDAL warnings to logging."""
+        from natcap.invest import utils
+
+        logfile = os.path.join(self.workspace, 'logfile.txt')
+
+        # this warning should go to stdout.
+        gdal.Open('this_file_should_not_exist.tif')
+
+        with utils.log_to_file(logfile) as handler:
+            with utils.capture_gdal_logging():
+                # warning should be captured.
+                gdal.Open('file_file_should_also_not_exist.tif')
+            handler.flush()
+
+        # warning should go to stdout
+        gdal.Open('this_file_should_not_exist.tif')
+
+        messages = [msg for msg in open(logfile).read().split('\n')
+                    if msg]
+
+        self.assertEqual(len(messages), 1)
