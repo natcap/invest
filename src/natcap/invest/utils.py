@@ -107,8 +107,7 @@ def prepare_workspace(workspace, name):
 
     logging.captureWarnings(True)
     with capture_gdal_logging(), log_to_file(logfile):
-        with sandbox_tempdir(dir=workspace,
-                             set_tempdir=False):
+        with sandbox_tempdir(dir=workspace):
             LOGGER.info('Writing log messages to %s', logfile)
             start_time = time.time()
             yield
@@ -178,7 +177,7 @@ def log_to_file(logfile, threadname=None, log_fmt=LOG_FMT, date_fmt=DATE_FMT):
 
 
 @contextlib.contextmanager
-def sandbox_tempdir(suffix='', prefix='tmp', dir=None, set_tempdir=False):
+def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
     """Create a temporary directory for this context and clean it up on exit.
 
     Parameters are identical to those for :py:func:`tempfile.mkdtemp`.
@@ -193,9 +192,6 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None, set_tempdir=False):
             the parent directory of the new temporary directory.  If None,
             tempfile will determine the appropriate tempdir to use as the
             parent folder.
-        set_tempdir=False (bool): If True, ``tempfile.tempdir`` will be set
-            to the newly created folder, forcing all tempfiles to be written
-            to this directory.
 
     Yields:
         ``sandbox`` (string): The path to the new folder on disk.
@@ -204,10 +200,6 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None, set_tempdir=False):
         ``None``"""
     sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
 
-    if set_tempdir:
-        LOGGER.debug('Setting tempfile.tempdir to %s', sandbox)
-        previous_tempdir = tempfile.tempdir
-        tempfile.tempdir = sandbox
     try:
         yield sandbox
     finally:
@@ -215,10 +207,6 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None, set_tempdir=False):
             shutil.rmtree(sandbox)
         except OSError:
             LOGGER.exception('Could not remove sandbox %s', sandbox)
-
-    if set_tempdir:
-        LOGGER.debug('Resetting tempfile.tempdir to %s', previous_tempdir)
-        tempfile.tempdir = previous_tempdir
 
 
 def make_suffix_string(args, suffix_key):
