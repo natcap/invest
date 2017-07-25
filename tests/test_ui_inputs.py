@@ -303,6 +303,24 @@ class GriddedInputTest(InputTest):
         # Wait for validation to finish.
         self.assertEqual(input_instance.valid(), True)
 
+    def test_validate_missing_args_key(self):
+        from natcap.invest.ui import inputs
+        input_instance = self.__class__.create_input(
+            label='some_label')
+
+        input_instance.value = mock.MagicMock(
+            input_instance, return_value=u'something')
+
+        # Verify we're starting with an unvalidated input
+        self.assertEqual(input_instance.valid(), None)
+        with warnings.catch_warnings(record=True) as messages:
+            input_instance._validate()
+            time.sleep(0.25)  # wait for warnings to register
+        inputs.QT_APP.processEvents()
+
+        # Validation still passes
+        self.assertEqual(input_instance.valid(), True)
+
     def test_validate_fails(self):
         #"""UI: Validation that fails should affect validity."""
         _validation_func = mock.MagicMock(
@@ -762,6 +780,26 @@ class CheckboxTest(GriddedInputTest):
         self.assertEqual(len(messages), 1)
         self.assertEqual(input_instance.valid(), True)
 
+    def test_validate_missing_args_key(self):
+        # Override from GriddedInputTest, as checkbox is always valid.
+        from natcap.invest.ui import inputs
+        input_instance = self.__class__.create_input(
+            label='some_label')
+
+        input_instance.value = mock.MagicMock(
+            input_instance, return_value=u'something')
+
+        # Verify we're starting with an unvalidated input
+        self.assertEqual(input_instance.valid(), True)
+        with warnings.catch_warnings(record=True) as messages:
+            input_instance._validate()
+            time.sleep(0.25)  # wait for warnings to register
+        inputs.QT_APP.processEvents()
+
+        # Validation still passes
+        self.assertEqual(input_instance.valid(), True)
+
+
     def test_label(self):
         # Override, sinve 'Optional' is irrelevant for Checkbox.
         pass
@@ -1150,32 +1188,9 @@ class ValidationWorkerTest(_QtTest):
 
 class FileButtonTest(_QtTest):
     def test_button_clicked(self):
+        global QT_APP
         from natcap.invest.ui.inputs import FileButton
         button = FileButton('Some title')
-
-        # Patch up the open_method to return a known path.
-        # Would block on user input otherwise.
-        button.open_method = mock.MagicMock(return_value='/some/path')
-        _callback = mock.MagicMock()
-        button.path_selected.connect(_callback)
-
-        with wait_on_signal(button.path_selected):
-            QTest.mouseClick(button, QtCore.Qt.LeftButton)
-
-        _callback.assert_called_with('/some/path')
-
-    def test_button_title(self):
-        from natcap.invest.ui.inputs import FileButton
-        button = FileButton('Some title')
-        self.assertEqual(button.dialog_title, 'Some title')
-
-
-class FolderButtonTest(_QtTest):
-    def test_button_clicked(self):
-        from natcap.invest.ui.inputs import FolderButton
-        button = FolderButton('Some title')
-        button.show()  # seems to avoid a segfault
-        QT_APP.processEvents()
 
         # Patch up the open_method to return a known path.
         # Would block on user input otherwise.
@@ -1185,9 +1200,33 @@ class FolderButtonTest(_QtTest):
 
         QTest.mouseClick(button, QtCore.Qt.LeftButton)
         QT_APP.processEvents()
-        QTest.qWait(50)
 
         _callback.assert_called_with('/some/path')
+        QT_APP.processEvents()
+
+    def test_button_title(self):
+        from natcap.invest.ui.inputs import FileButton
+        button = FileButton('Some title')
+        self.assertEqual(button.dialog_title, 'Some title')
+
+
+class FolderButtonTest(_QtTest):
+    def test_button_clicked(self):
+        global QT_APP
+        from natcap.invest.ui.inputs import FolderButton
+        button = FolderButton('Some title')
+
+        # Patch up the open_method to return a known path.
+        # Would block on user input otherwise.
+        button.open_method = mock.MagicMock(return_value='/some/path')
+        _callback = mock.MagicMock()
+        button.path_selected.connect(_callback)
+
+        QTest.mouseClick(button, QtCore.Qt.LeftButton)
+        QT_APP.processEvents()
+
+        _callback.assert_called_with('/some/path')
+        QT_APP.processEvents()
 
     def test_button_title(self):
         from natcap.invest.ui.inputs import FolderButton

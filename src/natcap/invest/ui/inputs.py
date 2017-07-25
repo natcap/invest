@@ -568,11 +568,12 @@ class FileDialog(object):
 
 class _FileSystemButton(QtWidgets.QPushButton):
 
-    _icon = ICON_FOLDER
     path_selected = QtCore.Signal(six.text_type)
 
     def __init__(self, dialog_title):
         QtWidgets.QPushButton.__init__(self)
+        if not hasattr(self, '_icon'):
+            self._icon = ICON_FOLDER
         self.setIcon(self._icon)
         self.dialog_title = dialog_title
         self.dialog = FileDialog()
@@ -592,19 +593,15 @@ class _FileSystemButton(QtWidgets.QPushButton):
 
 
 class FileButton(_FileSystemButton):
-
-    _icon = ICON_FILE
-
     def __init__(self, dialog_title):
+        self._icon = ICON_FILE
         _FileSystemButton.__init__(self, dialog_title)
         self.open_method = self.dialog.open_file
 
 
 class SaveFileButton(_FileSystemButton):
-
-    _icon = ICON_FILE
-
     def __init__(self, dialog_title, default_savefile):
+        self._icon = ICON_FILE
         _FileSystemButton.__init__(self, dialog_title)
         self.open_method = functools.partial(
             self.dialog.save_file,
@@ -612,9 +609,6 @@ class SaveFileButton(_FileSystemButton):
 
 
 class FolderButton(_FileSystemButton):
-
-    _icon = ICON_FOLDER
-
     def __init__(self, dialog_title):
         _FileSystemButton.__init__(self, dialog_title)
         self.open_method = self.dialog.open_folder
@@ -748,13 +742,6 @@ class GriddedInput(Input):
         self.lock.acquire()
 
         try:
-            if self.value() and not self.args_key:
-                warnings.warn(('Validation: %s instance has no args_key, but '
-                            'must to validate.  Skipping.') %
-                            self.__class__.__name__)
-                self._validation_finished(validation_warnings=[])
-                return
-
             if self.validator_ref:
                 LOGGER.info('Validation: validator taken from self.validator_ref: %s',
                             self.validator_ref)
