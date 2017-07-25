@@ -593,7 +593,7 @@ class Model(QtWidgets.QMainWindow):
         self._quickrun = False
         self._validator = inputs.Validator(parent=self)
         self._validator.finished.connect(self._validation_finished)
-        self.propmpt_on_close = True
+        self.prompt_on_close = True
         self.exit_code = None
 
         # dialogs
