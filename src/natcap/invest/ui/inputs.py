@@ -454,11 +454,6 @@ class ValidButton(InfoButton):
         self.setWhatsThis(error_string)
         self.setToolTip(error_string)
 
-    def enterEvent(self, event):
-        if not self.successful:
-            QtWidgets.QToolTip.showText(event.globalPos(), self.toolTip())
-        InfoButton.enterEvent(self, event)
-
 
 class HelpButton(InfoButton):
     def __init__(self, default_message=None):
