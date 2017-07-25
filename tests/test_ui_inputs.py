@@ -733,6 +733,13 @@ class FileTest(PathTest):
         return File(*args, **kwargs)
 
 
+class SaveFileTest(PathTest):
+    @staticmethod
+    def create_input(*args, **kwargs):
+        from natcap.invest.ui.inputs import SaveFile
+        return SaveFile(*args, **kwargs)
+
+
 class CheckboxTest(GriddedInputTest):
     @staticmethod
     def create_input(*args, **kwargs):
