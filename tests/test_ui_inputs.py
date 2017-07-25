@@ -594,6 +594,28 @@ class PathTest(TextTest):
         from natcap.invest.ui.inputs import _Path
         return _Path(*args, **kwargs)
 
+    def test_path_context_menu_coverage(self):
+        input_instance = self.__class__.create_input(label='foo')
+
+        _callback = mock.MagicMock()
+        input_instance.textfield.textChanged.connect(_callback)
+
+        event = QtGui.QContextMenuEvent(
+            QtGui.QContextMenuEvent.Mouse,
+            input_instance.textfield.mapToGlobal(
+                input_instance.textfield.pos()))
+
+        def _click_out_of_contextmenu():
+            QT_APP.activePopupWidget().close()
+
+        QtCore.QTimer.singleShot(25, _click_out_of_contextmenu)
+        input_instance.textfield.contextMenuEvent(event)
+
+        # simulate textchanged signal (expects a bool)
+        input_instance.textfield._emit_textchanged(True)
+        QT_APP.processEvents()
+        _callback.assert_called_once()
+
     def test_path_selected(self):
         input_instance = self.__class__.create_input(label='foo')
         # Only run this test on subclasses of path

@@ -908,7 +908,7 @@ class _Path(Text):
             path = _handle_drop_enter_event(self, event)
             self.setText(path)
 
-        @QtCore.Slot(str)
+        @QtCore.Slot(bool)
         def _emit_textchanged(self, triggered):
             """Slot for re-emitting the textchanged signal with current text.
 
@@ -920,7 +920,7 @@ class _Path(Text):
             """
             self.textChanged.emit(self.text())
 
-        def contextMenuEvent(self, event=None):
+        def contextMenuEvent(self, event):
             """Reimplemented from QtGui.QLineEdit.contextMenuEvent.
 
             This function allows me to make changes to the context menu when one
@@ -930,6 +930,7 @@ class _Path(Text):
             refresh_action.setIcon(qtawesome.icon('fa.refresh'))
             refresh_action.triggered.connect(self._emit_textchanged)
             menu.addAction(refresh_action)
+
             menu.exec_(event.globalPos())
 
     def __init__(self, label, helptext=None, interactive=True,
