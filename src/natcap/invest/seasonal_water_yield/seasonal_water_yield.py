@@ -326,13 +326,12 @@ def _execute(args):
         l_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(file_registry['l_path'])
 
         def l_avail_op(l_array):
-            """Calculate equation [8] L_avail = max(gamma*L, 0)."""
+            """Calculate equation [8] L_avail = min(gamma*L, L)"""
             result = numpy.empty(l_array.shape)
             result[:] = l_nodata
             valid_mask = (l_array != l_nodata)
-            valid_l_array = l_array[valid_mask]
-            valid_l_array[valid_l_array < 0.0] = 0.0
-            result[valid_mask] = valid_l_array * gamma
+            result[valid_mask] = numpy.min(numpy.stack(
+                (gamma*l_array, l_array)), axis=0)
             return result
         natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [file_registry['l_path']], l_avail_op,
@@ -490,13 +489,13 @@ def _execute(args):
         file_registry['b_sum_path'])
 
     def op_b(b_sum, l_avail, l_sum):
-        """Calculate B=B_sum*Lavail/L_sum."""
+        """Calculate B=max(B_sum*Lavail/L_sum, 0)."""
         valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
         result = numpy.empty(b_sum.shape)
         result[:] = b_sum_nodata
         result[valid_mask] = (
             b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
-
+        result[result < 0 & valid_mask] = 0
         return result
 
     natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
