@@ -313,10 +313,6 @@ def execute(args):
         projected_farm_vector_path = os.path.join(
             intermediate_output_dir,
             _PROJECTED_FARM_VECTOR_FILE_PATTERN % file_suffix)
-        pygeoprocessing.reproject_vector(
-            args['farm_vector_path'], lulc_raster_info['projection'],
-            projected_farm_vector_path)
-
         reproject_farm_task = task_graph.add_task(
             target=pygeoprocessing.reproject_vector,
             args=(
@@ -597,25 +593,15 @@ def execute(args):
     target_farm_path = os.path.join(
         output_dir, '%s%s.shp' % (
             _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN, file_suffix))
-
-    # make a random string to use as an FID field.  The chances of this
-    # colliding with an existing field name are so astronomical we aren't
-    # going to test if that happens.
     farm_fid_field = str(uuid.uuid4())[-8:-1]
-    _add_fid_field(
-        projected_farm_vector_path, target_farm_path, farm_fid_field)
+    create_target_farm_task = task_graph.add_task(
+        target=_create_fid_vector_copy,
+        args=(projected_farm_vector_path, farm_fid_field, target_farm_path),
+        target_path_list=[target_farm_path],
+        dependent_task_list=[reproject_farm_task])
 
     wild_pollinator_activity = None
     foraging_activity_index = None
-    farm_vector = ogr.Open(target_farm_path, update=1)
-    farm_layer = farm_vector.GetLayer()
-    pollinator_yield_field_def = ogr.FieldDefn(
-        _POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal)
-    farm_layer.CreateField(pollinator_yield_field_def)
-    total_yield_field_def = ogr.FieldDefn(
-        _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal)
-    farm_layer.CreateField(total_yield_field_def)
-
     farm_yield_task_list = []
     for season_id in season_to_header:
         LOGGER.info("Rasterizing half saturation for season %s", season_id)
@@ -628,7 +614,8 @@ def execute(args):
             target=_rasterize_half_saturation,
             args=(
                 args['landcover_raster_path'], season_id, target_farm_path,
-                half_saturation_file_path))
+                half_saturation_file_path),
+            dependent_task_list=[create_target_farm_task])
 
         LOGGER.info("Rasterizing managed farm pollinators for season %s")
         # rasterize farm managed pollinators on landscape first
@@ -642,7 +629,6 @@ def execute(args):
                 managed_bees_raster_path))
 
         LOGGER.info("Calculating farm pollinators for season %s", season_id)
-
         wild_pollinator_activity = [
             guild_table[species_id][season_to_header[season_id]['guild']]
             for species_id in sorted(guild_table)]
@@ -919,6 +905,41 @@ def _rasterize_managed_farm_pollinators(
     del managed_raster
     farm_layer = None
     farm_vector = None
+
+
+def _create_fid_vector_copy(
+        base_vector_path, fid_field, target_vector_path):
+    """Create a copy of `base_vector_path` and add FID field to it."""
+    # make a random string to use as an FID field.  The chances of this
+    # colliding with an existing field name are so astronomical we aren't
+    # going to test if that happens.
+    esri_driver = ogr.GetDriverByName("ESRI Shapefile")
+    base_vector = ogr.Open(base_vector_path)
+    base_layer = base_vector.GetLayer()
+    base_defn = base_layer.GetLayerDefn()
+
+    if base_defn.GetFieldIndex(fid_field) != -1:
+        raise ValueError(
+            "Tried to add a new field %s, but is already defined in %s." % (
+                fid_field, base_vector_path))
+    if os.path.exists(target_vector_path):
+        os.remove(target_vector_path)
+    target_vector = esri_driver.CopyDataSource(
+        base_vector, target_vector_path)
+    target_layer = target_vector.GetLayer()
+    target_layer.CreateField(ogr.FieldDefn(fid_field, ogr.OFTInteger))
+    for feature in target_layer:
+        feature.SetField(fid_field, feature.GetFID())
+        target_layer.SetFeature(feature)
+
+    target_layer.CreateField(ogr.FieldDefn(
+        _POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal))
+    target_layer.CreateField(ogr.FieldDefn(
+        _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal))
+
+    target_layer = None
+    target_vector.SyncToDisk()
+    target_vector = None
 
 
 class _HabitatSuitabilityIndexOp(object):
