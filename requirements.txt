@@ -16,5 +16,5 @@ rtree>=0.8.2
 scipy>=0.16.1
 shapely
 setuptools>=8.0
-taskgraph>=0.1.1,<0.2.0
+taskgraph>=0.1.2,<0.2.0
 psutil>=5.2.2
