@@ -85,6 +85,7 @@ _TOTAL_POLLINATOR_DEPENDENT_YIELD_FILE_PATTERN = (
 _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
 _POLLINATOR_FARM_YIELD_FIELD_ID = 'p_av_yield'
 _TOTAL_FARM_YIELD_FIELD_ID = 't_av_yield'
+_WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'wp_av_yiel'
 
 _MAX_POLLINATED_SPECIES_FILE_PATTERN = 'max_pollinated_%s'
 
@@ -796,8 +797,11 @@ def execute(args):
 
     task_graph.join()
 
-    farm_stats = pygeoprocessing.zonal_statistics(
+    total_farm_stats = pygeoprocessing.zonal_statistics(
         (total_farm_yield_path, 1), target_farm_path, farm_fid_field)
+    pollinator_farm_stats = pygeoprocessing.zonal_statistics(
+        (total_pollinator_dependent_yield_path, 1), target_farm_path,
+        farm_fid_field)
 
     # after much debugging, I could only get the first feature to write.
     # closing and re-opening the vector seemed to reset it enough to work.
@@ -810,17 +814,28 @@ def execute(args):
         fid = feature.GetField(farm_fid_field)
         pollinator_dependence = feature.GetField(
             _CROP_POLLINATOR_DEPENDENCE_FIELD)
-        if farm_stats[fid]['sum'] > 0:
-            pollinator_dependent_yield = float(
-                farm_stats[fid]['sum'] / farm_stats[fid]['count'] *
+        if pollinator_farm_stats[fid]['sum'] > 0:
+            wild_pollinator_yield = float(
+                pollinator_farm_stats[fid]['sum'] /
+                pollinator_farm_stats[fid]['count'] * pollinator_dependence)
+        else:
+            wild_pollinator_yield = 0.0
+
+        if total_farm_stats[fid]['sum'] > 0:
+            total_pollinator_yield = float(
+                total_farm_stats[fid]['sum'] / total_farm_stats[fid]['count'] *
                 pollinator_dependence)
         else:
-            pollinator_dependent_yield = 0
+            total_pollinator_yield = 0.0
+
         feature.SetField(
-            _POLLINATOR_FARM_YIELD_FIELD_ID, pollinator_dependent_yield)
-        total_yield = (1 - pollinator_dependence) + pollinator_dependent_yield
+            _POLLINATOR_FARM_YIELD_FIELD_ID, total_pollinator_yield)
+        total_yield = (1 - pollinator_dependence) + total_pollinator_yield
         feature.SetField(
             _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
+        feature.SetField(
+            _WILD_POLLINATOR_FARM_YIELD_FIELD_ID, wild_pollinator_yield)
+
         farm_layer.SetFeature(feature)
         feature = None
 
@@ -1014,6 +1029,8 @@ def _create_fid_vector_copy(
         _POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal))
     target_layer.CreateField(ogr.FieldDefn(
         _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal))
+    target_layer.CreateField(ogr.FieldDefn(
+        _WILD_POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal))
 
     target_layer = None
     target_vector.SyncToDisk()
