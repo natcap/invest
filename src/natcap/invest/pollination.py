@@ -43,6 +43,7 @@ _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
     r'local_floral_resource_availability_%s_index')
 _NESTING_SUITABILITY_SPECIES_PATTERN = r'nesting_suitability_%s_index'
 _PROJECTED_FARM_VECTOR_FILE_PATTERN = 'projected_farm_vector%s.shp'
+_TOTAL_FARM_POLLINATOR_FILE_PATTERN = 'total_farm_pollinators_%s'
 
 # These patterns are expected in the biophysical table
 _NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
@@ -636,7 +637,7 @@ def execute(args):
     managed_bees_raster_path = os.path.join(
         intermediate_output_dir, "%s%s.tif" % (
             _MANAGED_BEES_RASTER_FILE_PATTERN, file_suffix))
-    rasterize_farm_pollinators_task = task_graph.add_task(
+    create_managed_bees_raster_task = task_graph.add_task(
         target=_rasterize_vector_from_base,
         args=(
             args['landcover_raster_path'], target_farm_path,
@@ -665,6 +666,31 @@ def execute(args):
                 },
             dependent_task_list=[create_target_farm_task])
 
+        total_farm_pollinator_path = os.path.join(
+            intermediate_output_dir, '%s%s.tif' % (
+                _TOTAL_FARM_POLLINATOR_FILE_PATTERN % (season_id),
+                file_suffix))
+
+        # these are the rasters that are going to calculate total farm pol.
+        total_farm_polinator_raster_band_list = [
+            (managed_bees_raster_path, 1),
+            (total_seasonal_pollinator_abundance_path_lookup[season_id], 1)]
+
+        calculate_total_farm_pollinator_supply_task = task_graph.add_task(
+            target=pygeoprocessing.raster_calculator,
+            args=(
+                total_farm_polinator_raster_band_list,
+                _SumNoGreaterThan1(
+                    total_farm_polinator_raster_band_list, numpy.float32,
+                    _INDEX_NODATA),
+                total_farm_pollinator_path, gdal.GDT_Float32, _INDEX_NODATA),
+            dependent_task_list=[
+                create_managed_bees_raster_task,
+                total_seasonal_pollinator_abundance_task_lookup[season_id]])
+
+
+        sys.exit()
+
         #############
 
         LOGGER.info("Calculating farm pollinators for season %s", season_id)
@@ -689,7 +715,7 @@ def execute(args):
                 farm_pollinators_path, gdal.GDT_Float32, _INDEX_NODATA),
             kwargs={'calc_raster_stats': False},
             seasonaldent_task_list=final_pollinator_abundance_task_list + [
-                rasterize_farm_pollinators_task])
+                create_managed_bees_raster_task])
 
         species_equal_task_list = []
         for species_id in guild_table:
@@ -1155,4 +1181,34 @@ class _CombineYieldsOp(object):
         for pollinator_yield in pollinator_yields:
             valid_mask = pollinator_yield != _INDEX_NODATA
             result[valid_mask] = pollinator_yield[valid_mask]
+        return result
+
+
+class _SumNoGreaterThan1(object):
+    """Sum all rasters so they don't exceed 1.0."""
+
+    def __init__(self, raster_path_band_list, target_datatype, target_nodata):
+        """Remember raster path band list to build nodata set."""
+        self.raster_path_band_list = raster_path_band_list
+        self.nodata_list = None  # we won't know until other rasters define
+        self.target_nodata = target_nodata
+        self.target_datatype = target_datatype
+
+    def __call__(self, *value_arrays):
+        """Add all the non-nodata values of value_array."""
+        if self.nodata_list is None:
+            self.nodata_list = [
+                pygeoprocessing.get_raster_info(path)['nodata'][band_num-1]
+                for path, band_num in self.raster_path_band_list]
+
+        result = numpy.zeros(
+            value_arrays[0].shape, dtype=self.target_datatype)
+        valid_mask = numpy.ones(
+            value_arrays[0].shape, dtype=numpy.bool)
+        for value_array, nodata in zip(value_arrays, self.nodata_list):
+            valid_mask &= value_array != nodata
+            result[valid_mask] += value_array[valid_mask]
+        result[~valid_mask] = self.target_nodata
+        # clamp to 1.0
+        result[valid_mask & (result > 1.0)] = 1.0
         return result
