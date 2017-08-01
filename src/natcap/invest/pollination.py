@@ -34,9 +34,8 @@ _MANAGED_BEES_RASTER_FILE_PATTERN = r'managed_bees_%s'
 _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
 _ACCESSIBLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessible_floral_resources_%s'
 _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
-_POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
 _SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
-    r'seasonal_pollinator_abundance_%s_%s_index')
+    r'seasonal_pollinator_abundance_%s_%s_index')  # species_id, season_id
 _TOTAL_SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
     r'total_seasonal_pollinator_abundance_%s_index')
 _RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN = r'raw_pollinator_abundance_%s_index'
@@ -670,7 +669,8 @@ def execute(args):
             for species_id in sorted(guild_table)]
 
         wild_pollinator_abundance_band_paths = [
-            (f_reg[_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id], 1)
+            (f_reg[_SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
+                species_id, season_id)], 1)
             for species_id in sorted(guild_table)]
         farm_pollinators_path = os.path.join(
             intermediate_output_dir, '%s%s.tif' % (
