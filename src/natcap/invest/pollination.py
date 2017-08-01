@@ -44,6 +44,7 @@ _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
 _NESTING_SUITABILITY_SPECIES_PATTERN = r'nesting_suitability_%s_index'
 _PROJECTED_FARM_VECTOR_FILE_PATTERN = 'projected_farm_vector%s.shp'
 _TOTAL_FARM_POLLINATOR_FILE_PATTERN = 'total_farm_pollinators_%s'
+_FARM_YIELD_SEASONAL_FILE_PATTERN = 'farm_yield_%s%s.tif'
 
 # These patterns are expected in the biophysical table
 _NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
@@ -553,6 +554,7 @@ def execute(args):
                 (f_reg[species_file_kernel_id], 1),
                 f_reg[raw_pollinator_abundance_id],
                 gdal.GDT_Float32, convolve_2d_nodata, args['workspace_dir']),
+            target_path_list=[f_reg[raw_pollinator_abundance_id]],
             dependent_task_list=[
                 pollinator_supply_task, alpha_kernel_raster_task])
 
@@ -647,7 +649,7 @@ def execute(args):
 
     wild_pollinator_activity = None
     foraging_activity_index = None
-    farm_yield_task_list = []
+    farm_yield_seasonal_task_list = []
     for season_id in season_to_header:
         LOGGER.info("Rasterizing half saturation for season %s", season_id)
         half_saturation_file_path = os.path.join(
@@ -664,6 +666,7 @@ def execute(args):
             kwargs={
                 'filter_string': "%s='%s'" % (_FARM_SEASON_FIELD, season_id)
                 },
+            target_path_list=[half_saturation_file_path],
             dependent_task_list=[create_target_farm_task])
 
         total_farm_pollinator_path = os.path.join(
@@ -684,10 +687,29 @@ def execute(args):
                     total_farm_polinator_raster_band_list, numpy.float32,
                     _INDEX_NODATA),
                 total_farm_pollinator_path, gdal.GDT_Float32, _INDEX_NODATA),
+            target_path_list=[total_farm_pollinator_path],
             dependent_task_list=[
                 create_managed_bees_raster_task,
                 total_seasonal_pollinator_abundance_task_lookup[season_id]])
 
+        farm_yield_seasonal_path = os.path.join(
+            intermediate_output_dir, _FARM_YIELD_SEASONAL_FILE_PATTERN % (
+                season_id, file_suffix))
+
+        calculate_total_farm_yield_seasonal = task_graph.add_task(
+            target=pygeoprocessing.raster_calculator,
+            args=(
+                [(half_saturation_file_path, 1),
+                 (total_farm_pollinator_path, 1)],
+                _FarmYieldOp(), farm_yield_seasonal_path, gdal.GDT_Float32,
+                _INDEX_NODATA),
+            kwargs={'calc_raster_stats': True},
+            target_path_list=[farm_yield_seasonal_path],
+            dependent_task_list=[
+                rasterize_half_saturation_task,
+                calculate_total_farm_pollinator_supply_task])
+        farm_yield_seasonal_task_list.append(
+            calculate_total_farm_yield_seasonal)
 
         sys.exit()
 
