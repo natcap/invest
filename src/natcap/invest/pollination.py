@@ -45,6 +45,12 @@ _NESTING_SUITABILITY_SPECIES_PATTERN = r'nesting_suitability_%s_index'
 _PROJECTED_FARM_VECTOR_FILE_PATTERN = 'projected_farm_vector%s.shp'
 _TOTAL_FARM_POLLINATOR_FILE_PATTERN = 'total_farm_pollinators_%s'
 _FARM_YIELD_SEASONAL_FILE_PATTERN = 'farm_yield_%s%s.tif'
+_FARM_YIELD_MANAGED_BEES_SEASONAL_FILE_PATTERN = (
+    'farm_yield_managed_bees_%s%s.tif')
+_FARM_YIELD_POLLINATOR_DEPENDENT_SEASONAL_FILE_PATTERN = (
+    'farm_yield_polinator_dependent_%s%s.tif')
+_TOTAL_FARM_YIELD_FILE_PATTERN = (
+    'total_farm_yield%s.tif')
 
 # These patterns are expected in the biophysical table
 _NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
@@ -74,7 +80,8 @@ _EXPECTED_FARM_HEADERS = [
     _FARM_NESTING_SUBSTRATE_PATTERN, _CROP_POLLINATOR_DEPENDENCE_FIELD]
 
 _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN = 'seasonal_pollinator_yield_%s'
-_TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield'
+_TOTAL_POLLINATOR_DEPENDENT_YIELD_FILE_PATTERN = (
+    'total_pollinator_yield%s.tif')
 _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
 _POLLINATOR_FARM_YIELD_FIELD_ID = 'p_av_yield'
 _TOTAL_FARM_YIELD_FIELD_ID = 't_av_yield'
@@ -650,6 +657,9 @@ def execute(args):
     wild_pollinator_activity = None
     foraging_activity_index = None
     farm_yield_seasonal_task_list = []
+    farm_yield_seasonal_path_band_list = []
+    pollinator_dependent_yield_seasonal_path_band_list = []
+    pollinator_dependent_yield_seasonal_task_list = []
     for season_id in season_to_header:
         LOGGER.info("Rasterizing half saturation for season %s", season_id)
         half_saturation_file_path = os.path.join(
@@ -696,7 +706,7 @@ def execute(args):
             intermediate_output_dir, _FARM_YIELD_SEASONAL_FILE_PATTERN % (
                 season_id, file_suffix))
 
-        calculate_total_farm_yield_seasonal = task_graph.add_task(
+        calculate_total_farm_yield_seasonal_task = task_graph.add_task(
             target=pygeoprocessing.raster_calculator,
             args=(
                 [(half_saturation_file_path, 1),
@@ -709,102 +719,85 @@ def execute(args):
                 rasterize_half_saturation_task,
                 calculate_total_farm_pollinator_supply_task])
         farm_yield_seasonal_task_list.append(
-            calculate_total_farm_yield_seasonal)
+            calculate_total_farm_yield_seasonal_task)
+        farm_yield_seasonal_path_band_list.append(
+            (farm_yield_seasonal_path, 1))
 
-        sys.exit()
-
-        #############
-
-        LOGGER.info("Calculating farm pollinators for season %s", season_id)
-        wild_pollinator_activity = [
-            guild_table[species_id][season_to_header[season_id]['guild']]
-            for species_id in sorted(guild_table)]
-
-        wild_pollinator_abundance_band_paths = [
-            (f_reg[_SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
-                species_id, season_id)], 1)
-            for species_id in sorted(guild_table)]
-        farm_pollinators_path = os.path.join(
-            intermediate_output_dir, '%s%s.tif' % (
-                _FARM_POLLINATORS_FILE_PATTERN % season_id, file_suffix))
-
-        farm_pollinators_task = task_graph.add_task(
-            target=pygeoprocessing.raster_calculator,
-            args=(
-                [(managed_bees_raster_path, 1)] +
-                wild_pollinator_abundance_band_paths, _FarmPollinatorsOp(
-                    wild_pollinator_activity),
-                farm_pollinators_path, gdal.GDT_Float32, _INDEX_NODATA),
-            kwargs={'calc_raster_stats': False},
-            seasonaldent_task_list=final_pollinator_abundance_task_list + [
-                create_managed_bees_raster_task])
-
-        species_equal_task_list = []
-        for species_id in guild_table:
-            max_pollinated_species_path = os.path.join(
-                intermediate_output_dir, "%s%s.tif" % (
-                    _MAX_POLLINATED_SPECIES_FILE_PATTERN % species_id,
-                    file_suffix))
-            foraging_activity_index = (
-                guild_table[species_id][season_to_header[season_id]['guild']])
-
-            species_equal_task = task_graph.add_task(
+        farm_yield_managed_bees_seasonal_path = os.path.join(
+            intermediate_output_dir,
+            _FARM_YIELD_MANAGED_BEES_SEASONAL_FILE_PATTERN % (
+                season_id, file_suffix))
+        calculate_managed_pollinators_farm_yield_seasonal_task = (
+            task_graph.add_task(
                 target=pygeoprocessing.raster_calculator,
                 args=(
-                    [(farm_pollinators_path, 1),
-                     (f_reg[_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id],
-                      1)],
-                    _EqualOp(foraging_activity_index),
-                    max_pollinated_species_path, gdal.GDT_Byte,
-                    _INDEX_NODATA),
-                kwargs={'calc_raster_stats': False},
-                seasonaldent_task_list=final_pollinator_abundance_task_list + [
-                    farm_pollinators_task])
-            species_equal_task_list.append(species_equal_task)
+                    [(half_saturation_file_path, 1),
+                     (managed_bees_raster_path, 1)],
+                    _FarmYieldOp(), farm_yield_managed_bees_seasonal_path,
+                    gdal.GDT_Float32, _INDEX_NODATA),
+                kwargs={'calc_raster_stats': True},
+                target_path_list=[farm_yield_managed_bees_seasonal_path],
+                dependent_task_list=[
+                    rasterize_half_saturation_task,
+                    create_managed_bees_raster_task]))
 
-        LOGGER.info("Calculating farm yield.")
+        pollinator_dependent_yield_seasonal_path = os.path.join(
+            intermediate_output_dir,
+            _FARM_YIELD_POLLINATOR_DEPENDENT_SEASONAL_FILE_PATTERN % (
+                season_id, file_suffix))
+        calculate_pollinator_dependent_yield_seasonal_task = (
+            task_graph.add_task(
+                target=pygeoprocessing.raster_calculator,
+                args=(
+                    [(farm_yield_seasonal_path, 1),
+                     (farm_yield_managed_bees_seasonal_path, 1)],
+                    _Subtract2(_INDEX_NODATA),
+                    pollinator_dependent_yield_seasonal_path,
+                    gdal.GDT_Float32, _INDEX_NODATA),
+                kwargs={'calc_raster_stats': True},
+                target_path_list=[
+                    pollinator_dependent_yield_seasonal_path],
+                dependent_task_list=[
+                    rasterize_half_saturation_task,
+                    create_managed_bees_raster_task]))
+        pollinator_dependent_yield_seasonal_path_band_list.append(
+            (pollinator_dependent_yield_seasonal_path, 1))
+        pollinator_dependent_yield_seasonal_task_list.append(
+            calculate_pollinator_dependent_yield_seasonal_task)
 
-        pollinator_yield_path = os.path.join(
-            intermediate_output_dir, '%s%s.tif' % (
-                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id,
-                file_suffix))
-
-        farm_yield_task = task_graph.add_task(
-            target=pygeoprocessing.raster_calculator,
-            args=(
-                [(half_saturation_file_path, 1), (farm_pollinators_path, 1)],
-                _FarmYieldOp(), pollinator_yield_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
-            kwargs={'calc_raster_stats': True},
-            dependent_task_list=[
-                rasterize_half_saturation_task, farm_pollinators_task])
-        farm_yield_task_list.append(farm_yield_task)
-
-    # add the yield pollinators, shouldn't be conflicts since we don't have
-    # overlapping farms
-
-    seasonal_pollinator_yield_path_band_list = [
-        (os.path.join(
-            intermediate_output_dir, '%s%s.tif' % (
-                _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN % season_id,
-                file_suffix)), 1)
-        for season_id in season_to_header]
-    total_pollinator_yield_path = os.path.join(
-        output_dir, '%s%s.tif' % (
-            _TOTAL_POLLINATOR_YIELD_FILE_PATTERN, file_suffix))
-
-    _combine_yields_task = task_graph.add_task(
+    total_pollinator_dependent_yield_path = os.path.join(
+        output_dir, _TOTAL_POLLINATOR_DEPENDENT_YIELD_FILE_PATTERN % (
+            file_suffix))
+    calculate_total_pollinator_dependent_yield_task = task_graph.add_task(
         target=pygeoprocessing.raster_calculator,
         args=(
-            seasonal_pollinator_yield_path_band_list, _CombineYieldsOp(),
-            total_pollinator_yield_path, gdal.GDT_Float32, _INDEX_NODATA),
-        kwargs={'calc_raster_stats': True},
-        dependent_task_list=farm_yield_task_list)
+            pollinator_dependent_yield_seasonal_path_band_list,
+            _SumRasterPassNodata(
+                pollinator_dependent_yield_seasonal_path_band_list,
+                numpy.float32, _INDEX_NODATA),
+            total_pollinator_dependent_yield_path, gdal.GDT_Float32,
+            _INDEX_NODATA),
+        target_path_list=[total_pollinator_dependent_yield_path],
+        dependent_task_list=pollinator_dependent_yield_seasonal_task_list)
 
-    _combine_yields_task.join()
+    total_farm_yield_path = os.path.join(
+        output_dir, _TOTAL_FARM_YIELD_FILE_PATTERN % (file_suffix))
+    calculate_total_farm_yield_task = task_graph.add_task(
+        target=pygeoprocessing.raster_calculator,
+        args=(
+            farm_yield_seasonal_path_band_list,
+            _SumRasterPassNodata(
+                farm_yield_seasonal_path_band_list,
+                numpy.float32, _INDEX_NODATA),
+            total_farm_yield_path, gdal.GDT_Float32,
+            _INDEX_NODATA),
+        target_path_list=[total_farm_yield_path],
+        dependent_task_list=farm_yield_seasonal_task_list)
+
+    task_graph.join()
 
     farm_stats = pygeoprocessing.zonal_statistics(
-        (total_pollinator_yield_path, 1), target_farm_path, farm_fid_field)
+        (total_farm_yield_path, 1), target_farm_path, farm_fid_field)
 
     # after much debugging, I could only get the first feature to write.
     # closing and re-opening the vector seemed to reset it enough to work.
@@ -817,9 +810,12 @@ def execute(args):
         fid = feature.GetField(farm_fid_field)
         pollinator_dependence = feature.GetField(
             _CROP_POLLINATOR_DEPENDENCE_FIELD)
-        pollinator_dependent_yield = float(
-            farm_stats[fid]['sum'] / farm_stats[fid]['count'] *
-            pollinator_dependence)
+        if farm_stats[fid]['sum'] > 0:
+            pollinator_dependent_yield = float(
+                farm_stats[fid]['sum'] / farm_stats[fid]['count'] *
+                pollinator_dependence)
+        else:
+            pollinator_dependent_yield = 0
         feature.SetField(
             _POLLINATOR_FARM_YIELD_FIELD_ID, pollinator_dependent_yield)
         total_yield = (1 - pollinator_dependence) + pollinator_dependent_yield
@@ -1233,4 +1229,48 @@ class _SumNoGreaterThan1(object):
         result[~valid_mask] = self.target_nodata
         # clamp to 1.0
         result[valid_mask & (result > 1.0)] = 1.0
+        return result
+
+
+class _SumRasterPassNodata(object):
+    """Sum all rasters so they overlap and ignore nodata."""
+
+    def __init__(self, raster_path_band_list, target_datatype, target_nodata):
+        """Remember raster path band list to build nodata set."""
+        self.raster_path_band_list = raster_path_band_list
+        self.nodata_list = None  # we won't know until other rasters define
+        self.target_nodata = target_nodata
+        self.target_datatype = target_datatype
+
+    def __call__(self, *value_arrays):
+        """Add all the non-nodata values of value_array."""
+        if self.nodata_list is None:
+            self.nodata_list = [
+                pygeoprocessing.get_raster_info(path)['nodata'][band_num-1]
+                for path, band_num in self.raster_path_band_list]
+
+        result = numpy.zeros(
+            value_arrays[0].shape, dtype=self.target_datatype)
+        valid_mask = numpy.zeros(
+            value_arrays[0].shape, dtype=numpy.bool)
+        for value_array, nodata in zip(value_arrays, self.nodata_list):
+            local_mask = value_array != nodata
+            valid_mask |= local_mask
+            result[local_mask] += value_array[local_mask]
+        result[~valid_mask] = self.target_nodata
+        return result
+
+
+class _Subtract2(object):
+    """Subtract two aligned and equally masked rasters."""
+
+    def __init__(self, nodata):
+        self.nodata = nodata
+
+    def __call__(self, array_a, array_b):
+        """Calculate array_a - array_b."""
+        result = numpy.empty_like(array_a)
+        result[:] = self.nodata
+        valid_mask = array_a != self.nodata
+        result[valid_mask] = array_a[valid_mask] - array_b[valid_mask]
         return result
