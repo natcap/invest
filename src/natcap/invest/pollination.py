@@ -37,6 +37,8 @@ _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
 _POLLINATOR_ABUNDANCE_FILE_PATTERN = r'pollinator_abundance_%s_index'
 _SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
     r'seasonal_pollinator_abundance_%s_%s_index')
+_TOTAL_SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
+    r'total_seasonal_pollinator_abundance_%s_index')
 _RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN = r'raw_pollinator_abundance_%s_index'
 _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
     r'local_floral_resource_availability_%s_index')
@@ -443,7 +445,10 @@ def execute(args):
     species_foraging_activity_per_season = None
     species_abundance = None
     raw_abundance_nodata = None
-    final_pollinator_abundance_task_list = []
+    seasonal_pollinator_abundance_task_list_lookup = collections.defaultdict(
+        list)
+    seasonal_pollinator_abundance_path_band_list_lookup = (
+        collections.defaultdict(list))
     for species_id in guild_table:
         LOGGER.info(
             "Making local floral resources map for species %s", species_id)
@@ -554,14 +559,14 @@ def execute(args):
                 "Calculating seasonal pollinator abundance by scaling the raw by "
                 "floral resources available for %s during season %s",
                 species_id, season_id)
-            seasonal_pollinator_abudanance_id = (
+            seasonal_pollinator_abundance_id = (
                 _SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
                     species_id, season_id))
-            f_reg[seasonal_pollinator_abudanance_id] = os.path.join(
+            f_reg[seasonal_pollinator_abundance_id] = os.path.join(
                 output_dir,
-                seasonal_pollinator_abudanance_id + "%s.tif" % file_suffix)
+                seasonal_pollinator_abundance_id + "%s.tif" % file_suffix)
 
-            final_pollinator_abundance_task = task_graph.add_task(
+            seasonal_pollinator_abundance_task = task_graph.add_task(
                 target=pygeoprocessing.raster_calculator,
                 args=(
                     [(f_reg[raw_pollinator_abundance_id], 1),
@@ -569,15 +574,40 @@ def execute(args):
                     _PollinatorAbudanceOp(
                         species_foraging_activity_per_season[season_index],
                         convolve_2d_nodata),
-                    f_reg[seasonal_pollinator_abudanance_id], gdal.GDT_Float32,
+                    f_reg[seasonal_pollinator_abundance_id], gdal.GDT_Float32,
                     _INDEX_NODATA),
                 kwargs={'calc_raster_stats': False},
-                target_path_list=[f_reg[seasonal_pollinator_abudanance_id]],
+                target_path_list=[f_reg[seasonal_pollinator_abundance_id]],
                 dependent_task_list=[
                     raw_pollinator_abundance_task,
                     convolve_local_floral_resource_task])
-            final_pollinator_abundance_task_list.append(
-                final_pollinator_abundance_task)
+            seasonal_pollinator_abundance_path_band_list_lookup[season_id].append(
+                (f_reg[seasonal_pollinator_abundance_id], 1))
+            seasonal_pollinator_abundance_task_list_lookup[season_id].append(
+                seasonal_pollinator_abundance_task)
+
+    total_seasonal_pollinator_abundance_task_lookup = {}
+    total_seasonal_pollinator_abundance_path_lookup = {}
+    for season_id in season_to_header:
+        total_seasonal_pollinator_abundance_id = (
+            _TOTAL_SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % season_id)
+        f_reg[total_seasonal_pollinator_abundance_id] = os.path.join(
+            output_dir, total_seasonal_pollinator_abundance_id +
+            "%s.tif" % file_suffix)
+        total_seasonal_pollinator_abundance_task = task_graph.add_task(
+            target=pygeoprocessing.raster_calculator,
+            args=(
+                seasonal_pollinator_abundance_path_band_list_lookup[
+                    season_id], _AddRasterOp(_INDEX_NODATA),
+                f_reg[total_seasonal_pollinator_abundance_id],
+                gdal.GDT_Float32, _INDEX_NODATA),
+            target_path_list=[f_reg[total_seasonal_pollinator_abundance_id]],
+            dependent_task_list=(
+                seasonal_pollinator_abundance_task_list_lookup[season_id]))
+        total_seasonal_pollinator_abundance_task_lookup[season_id] = (
+            total_seasonal_pollinator_abundance_task)
+        total_seasonal_pollinator_abundance_path_lookup[season_id] = (
+            f_reg[total_seasonal_pollinator_abundance_id])
 
     if farm_vector is None:
         LOGGER.info("All done, no farm polygon to process!")
@@ -604,6 +634,12 @@ def execute(args):
     foraging_activity_index = None
     farm_yield_task_list = []
     for season_id in season_to_header:
+        LOGGER.info("Calculating total pollinator abundance")
+        seasonal_pollinator_abundance_id = (
+            _SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
+                species_id, season_id))
+        f_reg[seasonal_pollinator_abundance_id]
+
         LOGGER.info("Rasterizing half saturation for season %s", season_id)
         half_saturation_file_path = os.path.join(
             intermediate_output_dir,
@@ -648,7 +684,7 @@ def execute(args):
                     wild_pollinator_activity),
                 farm_pollinators_path, gdal.GDT_Float32, _INDEX_NODATA),
             kwargs={'calc_raster_stats': False},
-            dependent_task_list=final_pollinator_abundance_task_list + [
+            seasonaldent_task_list=final_pollinator_abundance_task_list + [
                 rasterize_farm_pollinators_task])
 
         species_equal_task_list = []
@@ -670,7 +706,7 @@ def execute(args):
                     max_pollinated_species_path, gdal.GDT_Byte,
                     _INDEX_NODATA),
                 kwargs={'calc_raster_stats': False},
-                dependent_task_list=final_pollinator_abundance_task_list + [
+                seasonaldent_task_list=final_pollinator_abundance_task_list + [
                     farm_pollinators_task])
             species_equal_task_list.append(species_equal_task)
 
@@ -940,6 +976,21 @@ def _create_fid_vector_copy(
     target_layer = None
     target_vector.SyncToDisk()
     target_vector = None
+
+
+class _AddRasterOp(object):
+    """Closure for adding rasters together."""
+
+    def __init__(self, raster_stack_nodata):
+        self.raster_stack_nodata = raster_stack_nodata
+
+    def __call__(self, *raster_stack):
+        result = numpy.empty(raster_stack[0].shape)
+        valid_mask = raster_stack[0] != self.raster_stack_nodata
+        result[:] = self.raster_stack_nodata
+        result[valid_mask] = (
+            numpy.sum(numpy.stack(raster_stack, axis=2)[valid_mask], axis=1))
+        return result
 
 
 class _HabitatSuitabilityIndexOp(object):
