@@ -64,10 +64,11 @@ _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
 _FARM_NESTING_SUBSTRATE_PATTERN = 'n_([^_]+)'
 _HALF_SATURATION_FARM_HEADER = 'half_sat'
 _CROP_POLLINATOR_DEPENDENCE_FIELD = 'p_dep'
-_MANAGED_POLLINATORS_HEADER = 'p_managed'
+_MANAGED_POLLINATORS_FIELD = 'p_managed'
+_FARM_SEASON_FIELD = 'season'
 _EXPECTED_FARM_HEADERS = [
     'season', 'crop_type', _HALF_SATURATION_FARM_HEADER,
-    _MANAGED_POLLINATORS_HEADER, _FARM_FLORAL_RESOURCES_PATTERN,
+    _MANAGED_POLLINATORS_FIELD, _FARM_FLORAL_RESOURCES_PATTERN,
     _FARM_NESTING_SUBSTRATE_PATTERN, _CROP_POLLINATOR_DEPENDENCE_FIELD]
 
 _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN = 'seasonal_pollinator_yield_%s'
@@ -639,11 +640,9 @@ def execute(args):
         target=_rasterize_vector_from_base,
         args=(
             args['landcover_raster_path'], target_farm_path,
-            _MANAGED_POLLINATORS_HEADER, managed_bees_raster_path),
+            _MANAGED_POLLINATORS_FIELD, managed_bees_raster_path),
         target_path_list=[managed_bees_raster_path],
         dependent_task_list=[create_target_farm_task])
-
-    os.exit()
 
     wild_pollinator_activity = None
     foraging_activity_index = None
@@ -656,10 +655,14 @@ def execute(args):
                 '%s.tif' % file_suffix))
 
         rasterize_half_saturation_task = task_graph.add_task(
-            target=_rasterize_half_saturation,
+            target=_rasterize_vector_from_base,
             args=(
-                args['landcover_raster_path'], season_id, target_farm_path,
-                half_saturation_file_path),
+                args['landcover_raster_path'], target_farm_path,
+                _HALF_SATURATION_FARM_HEADER, half_saturation_file_path,
+                ),
+            kwargs={
+                'filter_string': "%s='%s'" % (_FARM_SEASON_FIELD, season_id)
+                },
             dependent_task_list=[create_target_farm_task])
 
         #############
@@ -902,39 +905,17 @@ def _add_fid_field(base_vector_path, target_vector_path, fid_id):
     target_vector = None
 
 
-def _rasterize_half_saturation(
-        base_raster_path, season_id, target_farm_path,
-        half_saturation_file_path):
-    #TODO: document
-    farm_vector = ogr.Open(target_farm_path)
-    farm_layer = farm_vector.GetLayer()
-
-    pygeoprocessing.new_raster_from_base(
-        base_raster_path, half_saturation_file_path,
-        gdal.GDT_Float32, [_INDEX_NODATA],
-        fill_value_list=[_INDEX_NODATA])
-    farm_layer.SetAttributeFilter(str("season='%s'" % season_id))
-    half_saturation_raster = gdal.Open(
-        half_saturation_file_path, gdal.GA_Update)
-    gdal.RasterizeLayer(
-        half_saturation_raster, [1], farm_layer,
-        options=['ATTRIBUTE=%s' % _HALF_SATURATION_FARM_HEADER])
-    gdal.Dataset.__swig_destroy__(half_saturation_raster)
-    half_saturation_raster = None
-    farm_layer = None
-    farm_vector = None
-
-
 def _rasterize_vector_from_base(
-        base_raster_path, base_vector_path, attribute_id, target_raster_path):
-    """Rasterize a vector to a copy of a base raster.
+        base_raster_path, base_vector_path, attribute_id,
+        target_raster_path, filter_string=None):
+    """Rasterize half saturation coefficient for particular season.
 
     Parameters:
-        base_raster_path (string): path to a base raster whose target
-            will be same size, datatype, projection, etc.
-        base_vector_path (string): path to shapefile to rasterize
+        base_raster_path (string): path to a base raster file
         attribute_id (string): id in `base_vector_path` to rasterize.
-        target_raster_path (string): path to target output raster file.
+        base_vector_path (string): path to vector
+        target_raster_path (string): path to rasterized file.
+        filter_string (string): filtering string to select from farm layer
 
     Returns:
         None.
@@ -944,13 +925,18 @@ def _rasterize_vector_from_base(
 
     pygeoprocessing.new_raster_from_base(
         base_raster_path, target_raster_path,
-        gdal.GDT_Float32, [_INDEX_NODATA])
-
-    managed_raster = gdal.Open(target_raster_path, gdal.GA_Update)
+        gdal.GDT_Float32, [_INDEX_NODATA],
+        fill_value_list=[_INDEX_NODATA])
+    if filter_string is not None:
+        layer.SetAttributeFilter(str(filter_string))
+    target_raster = gdal.Open(
+        target_raster_path, gdal.GA_Update)
     gdal.RasterizeLayer(
-        managed_raster, [1], layer, options=['ATTRIBUTE=%s' % attribute_id])
-    managed_raster.FlushCache()
-    managed_raster = None
+        target_raster, [1], layer,
+        options=['ATTRIBUTE=%s' % attribute_id])
+    target_raster.FlushCache()
+    gdal.Dataset.__swig_destroy__(target_raster)
+    target_raster = None
     layer = None
     vector = None
 
