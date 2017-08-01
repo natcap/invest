@@ -15,7 +15,7 @@ import numpy
 import taskgraph
 
 from . import utils
-
+logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
 
@@ -182,7 +182,6 @@ def execute(args):
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
-    temp_file_set = set()  # to keep track of temporary files to delete
 
     guild_table = utils.build_lookup_from_csv(
         args['guild_table_path'], 'species', to_lower=True,
@@ -305,8 +304,7 @@ def execute(args):
                 "table." % (
                     table_type, lookup_table, table_type))
 
-    task_graph = taskgraph.TaskGraph(
-        work_token_dir, 2 * multiprocessing.cpu_count())
+    task_graph = taskgraph.TaskGraph(work_token_dir, 0)
 
     # farms can be optional
     reproject_farm_task = None
@@ -507,7 +505,6 @@ def execute(args):
         f_reg[accessible_floral_resouces_id] = os.path.join(
             intermediate_output_dir, accessible_floral_resouces_id +
             '%s.tif' % file_suffix)
-        temp_file_set.add(f_reg[species_file_kernel_id])
         LOGGER.info(
             "Calculating available floral resources for %s", species_id)
 
@@ -624,11 +621,6 @@ def execute(args):
     if farm_vector is None:
         LOGGER.info("All done, no farm polygon to process!")
         task_graph.join()
-        for path in temp_file_set:
-            try:
-                os.remove(path)
-            except OSError:
-                pass  # we might have deleted it on another task
         return
 
     LOGGER.info("Calculating farm yields")
@@ -759,8 +751,8 @@ def execute(args):
                 target_path_list=[
                     pollinator_dependent_yield_seasonal_path],
                 dependent_task_list=[
-                    rasterize_half_saturation_task,
-                    create_managed_bees_raster_task]))
+                    calculate_total_farm_yield_seasonal_task,
+                    calculate_managed_pollinators_farm_yield_seasonal_task]))
         pollinator_dependent_yield_seasonal_path_band_list.append(
             (pollinator_dependent_yield_seasonal_path, 1))
         pollinator_dependent_yield_seasonal_task_list.append(
@@ -841,12 +833,6 @@ def execute(args):
 
     farm_layer.DeleteField(
         farm_layer.GetLayerDefn().GetFieldIndex(farm_fid_field))
-    for path in temp_file_set:
-        try:
-            os.remove(path)
-        except OSError:
-            pass
-            # it's possible this was removed in an earlier run
 
 
 def _normalized_convolve_2d(
