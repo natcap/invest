@@ -30,7 +30,7 @@ _TMP_BASE_FILES = {
 
 _INDEX_NODATA = -1.0
 
-_MANAGED_BEES_RASTER_FILE_PATTERN = r'managed_bees_%s'
+_MANAGED_BEES_RASTER_FILE_PATTERN = r'managed_bees'
 _SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
 _ACCESSIBLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessible_floral_resources_%s'
 _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
@@ -64,10 +64,11 @@ _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
 _FARM_NESTING_SUBSTRATE_PATTERN = 'n_([^_]+)'
 _HALF_SATURATION_FARM_HEADER = 'half_sat'
 _CROP_POLLINATOR_DEPENDENCE_FIELD = 'p_dep'
+_MANAGED_POLLINATORS_HEADER = 'p_managed'
 _EXPECTED_FARM_HEADERS = [
-    'season', 'crop_type', _HALF_SATURATION_FARM_HEADER, 'p_managed',
-    _FARM_FLORAL_RESOURCES_PATTERN, _FARM_NESTING_SUBSTRATE_PATTERN,
-    _CROP_POLLINATOR_DEPENDENCE_FIELD]
+    'season', 'crop_type', _HALF_SATURATION_FARM_HEADER,
+    _MANAGED_POLLINATORS_HEADER, _FARM_FLORAL_RESOURCES_PATTERN,
+    _FARM_NESTING_SUBSTRATE_PATTERN, _CROP_POLLINATOR_DEPENDENCE_FIELD]
 
 _SEASONAL_POLLINATOR_YIELD_FILE_PATTERN = 'seasonal_pollinator_yield_%s'
 _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield'
@@ -629,16 +630,25 @@ def execute(args):
         target_path_list=[target_farm_path],
         dependent_task_list=[reproject_farm_task])
 
+    LOGGER.info("Rasterizing managed farm pollinators for season %s")
+    # rasterize farm managed pollinators on landscape first
+    managed_bees_raster_path = os.path.join(
+        intermediate_output_dir, "%s%s.tif" % (
+            _MANAGED_BEES_RASTER_FILE_PATTERN, file_suffix))
+    rasterize_farm_pollinators_task = task_graph.add_task(
+        target=_rasterize_vector_from_base,
+        args=(
+            args['landcover_raster_path'], target_farm_path,
+            _MANAGED_POLLINATORS_HEADER, managed_bees_raster_path),
+        target_path_list=[managed_bees_raster_path],
+        dependent_task_list=[create_target_farm_task])
+
+    os.exit()
+
     wild_pollinator_activity = None
     foraging_activity_index = None
     farm_yield_task_list = []
     for season_id in season_to_header:
-        LOGGER.info("Calculating total pollinator abundance")
-        seasonal_pollinator_abundance_id = (
-            _SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
-                species_id, season_id))
-        f_reg[seasonal_pollinator_abundance_id]
-
         LOGGER.info("Rasterizing half saturation for season %s", season_id)
         half_saturation_file_path = os.path.join(
             intermediate_output_dir,
@@ -652,16 +662,7 @@ def execute(args):
                 half_saturation_file_path),
             dependent_task_list=[create_target_farm_task])
 
-        LOGGER.info("Rasterizing managed farm pollinators for season %s")
-        # rasterize farm managed pollinators on landscape first
-        managed_bees_raster_path = os.path.join(
-            intermediate_output_dir, "%s%s.tif" % (
-                _MANAGED_BEES_RASTER_FILE_PATTERN % season_id, file_suffix))
-        rasterize_farm_pollinators_task = task_graph.add_task(
-            target=_rasterize_managed_farm_pollinators,
-            args=(
-                args['landcover_raster_path'], target_farm_path,
-                managed_bees_raster_path))
+        #############
 
         LOGGER.info("Calculating farm pollinators for season %s", season_id)
         wild_pollinator_activity = [
@@ -924,23 +925,34 @@ def _rasterize_half_saturation(
     farm_vector = None
 
 
-def _rasterize_managed_farm_pollinators(
-        base_raster_path, target_farm_path, managed_bees_raster_path):
-    #TODO: document
-    farm_vector = ogr.Open(target_farm_path)
-    farm_layer = farm_vector.GetLayer()
+def _rasterize_vector_from_base(
+        base_raster_path, base_vector_path, attribute_id, target_raster_path):
+    """Rasterize a vector to a copy of a base raster.
+
+    Parameters:
+        base_raster_path (string): path to a base raster whose target
+            will be same size, datatype, projection, etc.
+        base_vector_path (string): path to shapefile to rasterize
+        attribute_id (string): id in `base_vector_path` to rasterize.
+        target_raster_path (string): path to target output raster file.
+
+    Returns:
+        None.
+    """
+    vector = ogr.Open(base_vector_path)
+    layer = vector.GetLayer()
 
     pygeoprocessing.new_raster_from_base(
-        base_raster_path, managed_bees_raster_path,
+        base_raster_path, target_raster_path,
         gdal.GDT_Float32, [_INDEX_NODATA])
 
-    managed_raster = gdal.Open(managed_bees_raster_path, gdal.GA_Update)
+    managed_raster = gdal.Open(target_raster_path, gdal.GA_Update)
     gdal.RasterizeLayer(
-        managed_raster, [1], farm_layer, options=['ATTRIBUTE=p_managed'])
-    gdal.Dataset.__swig_destroy__(managed_raster)
-    del managed_raster
-    farm_layer = None
-    farm_vector = None
+        managed_raster, [1], layer, options=['ATTRIBUTE=%s' % attribute_id])
+    managed_raster.FlushCache()
+    managed_raster = None
+    layer = None
+    vector = None
 
 
 def _create_fid_vector_copy(
