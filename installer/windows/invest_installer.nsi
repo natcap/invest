@@ -298,7 +298,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}"
 
   CreateDirectory "${SMPATH}"
-  CreateShortCut "${SMPATH}\Crop Production (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Crop Production (Percentile) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production_percentile.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Crop Production (Regression) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production_regression.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Scenic Quality (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenic_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"
@@ -486,7 +487,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
-    !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
+    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 176
     !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 0
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd

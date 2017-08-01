@@ -645,7 +645,7 @@ REPOS_DICT = {
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
     'test-data': SVNRepository('data/invest-test-data', 'svn://scm.naturalcapitalproject.org/svn/invest-test-data'),
     'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
-    'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
+    'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richsharp/pygeoprocessing'),
 }
 REPOS = REPOS_DICT.values()
 

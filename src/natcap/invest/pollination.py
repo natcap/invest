@@ -353,6 +353,8 @@ def execute(args):
 
         nesting_substrate_task_list.append(landcover_nesting_reclass_task)
 
+        temp_file_set.add(f_reg[nesting_id])
+
         if farm_vector is not None:
             LOGGER.info(
                 "Overriding landcover nesting substrates where a farm "
@@ -427,6 +429,8 @@ def execute(args):
             target_path_list=[f_reg[relative_floral_resources_id]])
         floral_resources_task_lookup[season_id] = (
             floral_resources_reclassify_task)
+
+        temp_file_set.add(f_reg[relative_floral_resources_id])
 
         # farm vector is optional
         if farm_vector is not None:
@@ -525,8 +529,7 @@ def execute(args):
         pollinator_supply_id = (
             _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN % species_id)
         f_reg[pollinator_supply_id] = os.path.join(
-            intermediate_output_dir,
-            pollinator_supply_id + "%s.tif" % file_suffix)
+            output_dir, pollinator_supply_id + "%s.tif" % file_suffix)
 
         species_abundance = guild_table[species_id][
             _RELATIVE_SPECIES_ABUNDANCE_FIELD]
