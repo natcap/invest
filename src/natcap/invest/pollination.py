@@ -306,7 +306,7 @@ def execute(args):
                     table_type, lookup_table, table_type))
 
     task_graph = taskgraph.TaskGraph(
-        work_token_dir, 0)#multiprocessing.cpu_count())
+        work_token_dir, 2 * multiprocessing.cpu_count())
 
     # farms can be optional
     reproject_farm_task = None
