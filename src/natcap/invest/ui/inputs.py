@@ -547,10 +547,15 @@ class FileDialog(object):
 
         result = self.file_dialog.getOpenFileName(self.file_dialog, title,
                                                   start_dir, filters)
-        if int(qtpy.QT_VERSION[0]) == 5:  # pyqt5
+        # Different versions of PyQt5 variously return a single filename or a
+        # tuple of (filename, last_filter).  I haven't been able to figure out
+        # where this break is as of yet, so just catching the ValueError when
+        # there's only one return value should be good enough.
+        try:
             filename, last_filter = result
-        else:  # pyqt4
+        except ValueError:
             filename = result
+
         DATA['last_dir'] = os.path.dirname(six.text_type(filename))
         return filename
 
