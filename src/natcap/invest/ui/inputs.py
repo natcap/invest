@@ -1,4 +1,6 @@
 # coding=UTF-8
+"""Input classes for the InVEST UI, a Qt-based UI abstraction layer."""
+
 from __future__ import absolute_import
 
 import functools
@@ -68,6 +70,17 @@ def _apply_sizehint(widget):
 
 
 def open_workspace(dirname):
+    """Call the correct program to open a folder on disk.
+
+    The program called will depend on the operating system:
+
+        * On mac: ``open``
+        * On Windows: ``explorer``
+        * On Linux: ``xdg-open``
+
+    Parameters:
+        dirname (string): The folder to open.
+    """
     LOGGER.debug("Opening dirname %s", dirname)
     # Try opening up a file explorer to see the results.
     try:
@@ -93,45 +106,6 @@ def open_workspace(dirname):
         LOGGER.error(
             ('Cannot find default file browser. Platform: %s |'
                 ' folder: %s'), platform.system(), dirname)
-
-
-def _handle_drag_enter_event(instance, event):
-    """Overriding the default dragEnterEvent function for when a file is
-    dragged and dropped onto this qlineedit.  This reimplementation is
-    necessary for the dropEvent function to work on Windows."""
-    # If the user tries to drag multiple files into this text field,
-    # reject the event!
-    if event.mimeData().hasUrls() and len(event.mimeData().urls()) == 1:
-        LOGGER.info('Accepting drag enter event for "%s"',
-                    event.mimeData().text())
-        event.accept()
-    else:
-        LOGGER.info('Rejecting drag enter event for "%s"',
-                    event.mimeData().text())
-        event.ignore()
-
-
-def _handle_drop_enter_event(instance, event):
-    path = event.mimeData().urls()[0].path()
-    if platform.system() == 'Windows':
-        path = path[1:]  # Remove the '/' ahead of disk letter
-    elif platform.system() == 'Darwin':
-        # On mac, we need to ask the OS nicely for the fileid.
-        # This is only needed on Qt<5.4.1.
-        # See bug report at https://bugreports.qt.io/browse/QTBUG-40449
-        command = (
-            u"osascript -e 'get posix path of my posix file \""
-            u"file://{fileid}\" -- kthx. bai'").format(
-                fileid=path)
-        process = subprocess.Popen(
-            command, shell=True,
-            stderr=subprocess.STDOUT,
-            stdout=subprocess.PIPE)
-        path = process.communicate()[0].lstrip().rstrip()
-
-    LOGGER.info('Accepting drop event with path: "%s"', path)
-    event.accept()
-    return path
 
 
 class ThreadSafeDataManager(object):
@@ -905,12 +879,43 @@ class _Path(Text):
             self.setAcceptDrops(True)
 
         def dragEnterEvent(self, event=None):
-            _handle_drag_enter_event(self, event)
+            """Overriding the default dragEnterEvent function for when a file is
+            dragged and dropped onto this qlineedit.  This reimplementation is
+            necessary for the dropEvent function to work on Windows."""
+            # If the user tries to drag multiple files into this text field,
+            # reject the event!
+            if event.mimeData().hasUrls() and len(event.mimeData().urls()) == 1:
+                LOGGER.info('Accepting drag enter event for "%s"',
+                            event.mimeData().text())
+                event.accept()
+            else:
+                LOGGER.info('Rejecting drag enter event for "%s"',
+                            event.mimeData().text())
+                event.ignore()
 
         def dropEvent(self, event=None):
             """Overriding the default Qt DropEvent function when a file is
             dragged and dropped onto this qlineedit."""
-            path = _handle_drop_enter_event(self, event)
+
+            path = event.mimeData().urls()[0].path()
+            if platform.system() == 'Windows':
+                path = path[1:]  # Remove the '/' ahead of disk letter
+            elif platform.system() == 'Darwin':
+                # On mac, we need to ask the OS nicely for the fileid.
+                # This is only needed on Qt<5.4.1.
+                # See bug report at https://bugreports.qt.io/browse/QTBUG-40449
+                command = (
+                    u"osascript -e 'get posix path of my posix file \""
+                    u"file://{fileid}\" -- kthx. bai'").format(
+                        fileid=path)
+                process = subprocess.Popen(
+                    command, shell=True,
+                    stderr=subprocess.STDOUT,
+                    stdout=subprocess.PIPE)
+                path = process.communicate()[0].lstrip().rstrip()
+
+            LOGGER.info('Accepting drop event with path: "%s"', path)
+            event.accept()
             self.setText(path)
 
         @QtCore.Slot(bool)
