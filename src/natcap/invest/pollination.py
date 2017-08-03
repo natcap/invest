@@ -133,129 +133,27 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories(
         [output_dir, intermediate_output_dir])
-
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    guild_table = utils.build_lookup_from_csv(
-        args['guild_table_path'], 'species', to_lower=True,
-        numerical_cast=True)
+    # validate inputs
+        # get seasons - J (season_list)
+        # get substrates - N (substrate_list)
+        # get landcover to substrate table - ln(l, n) (landcover_substrate_index[(landcover, substrate)])
+        # get species - S (species_list)
+        # get species abundance sa(s) (normalized) (species_abundance[species])
+        # get species nesting suitability index - ns(s,n) nesting_suitability_index[species, substrate]
+        # get species foraging activity index - fa(s,j) (normalized) foraging_activity_index[species, season]
 
-    LOGGER.info('Checking to make sure guild table has all expected headers')
-    guild_headers = guild_table.itervalues().next().keys()
+    if 'farm_path' in args and args['farm_path'] != '':
+        farm_path = args['farm_path']
+    else:
+        farm_path = None
+    scenario_variables = _parse_scenario_variables(
+        args['guild_table_path'], args['landcover_biophysical_table_path'],
+        farm_path)
 
-    # normalize relative species abundances
-    total_relative_abundance = numpy.sum([
-        guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD]
-        for species in guild_table])
-    for species in guild_table:
-        guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD] /= (
-            total_relative_abundance)
-    # we need to match at least one of each of expected
-    for header in _EXPECTED_GUILD_HEADERS:
-        matches = re.findall(header, " ".join(guild_headers))
-        if len(matches) == 0:
-            raise ValueError(
-                "Expected a header in guild table that matched the pattern "
-                "'%s' but was unable to find one.  Here are all the headers "
-                "from %s: %s" % (
-                    header, args['guild_table_path'],
-                    guild_headers))
-
-    # this dict to dict will map seasons to guild/biophysical headers
-    # ex season_to_header['spring']['guilds']
-    season_to_header = collections.defaultdict(dict)
-    # this dict to dict will map substrate types to guild/biophysical headers
-    # ex substrate_to_header['cavity']['biophysical']
-    substrate_to_header = collections.defaultdict(dict)
-    for header in guild_headers:
-        match = re.match(_FORAGING_ACTIVITY_PATTERN, header)
-        if match:
-            season = match.group(1)
-            season_to_header[season]['guild'] = match.group()
-        match = re.match(_NESTING_SUITABILITY_PATTERN, header)
-        if match:
-            substrate = match.group(1)
-            substrate_to_header[substrate]['guild'] = match.group()
-
-    landcover_biophysical_table = utils.build_lookup_from_csv(
-        args['landcover_biophysical_table_path'], 'lucode', to_lower=True,
-        numerical_cast=True)
-    lulc_raster_info = pygeoprocessing.get_raster_info(
-        args['landcover_raster_path'])
-    biophysical_table_headers = (
-        landcover_biophysical_table.itervalues().next().keys())
-    for header in _EXPECTED_BIOPHYSICAL_HEADERS:
-        matches = re.findall(header, " ".join(biophysical_table_headers))
-        if len(matches) == 0:
-            raise ValueError(
-                "Expected a header in biophysical table that matched the "
-                "pattern '%s' but was unable to find one.  Here are all the "
-                "headers from %s: %s" % (
-                    header, args['landcover_biophysical_table_path'],
-                    biophysical_table_headers))
-
-    farm_vector = None
-    if 'farm_vector_path' in args and args['farm_vector_path'] != '':
-        LOGGER.info('Checking that farm polygon has expected headers')
-        farm_vector = ogr.Open(args['farm_vector_path'])
-        if farm_vector.GetLayerCount() != 1:
-            raise ValueError(
-                "Farm polygon at %s has %d layers when expecting only 1." % (
-                    args['farm_vector_path'], farm_vector.GetLayerCount()))
-        farm_layer = farm_vector.GetLayer()
-        if farm_layer.GetGeomType() not in [
-                ogr.wkbPolygon, ogr.wkbMultiPolygon]:
-            farm_layer = None
-            farm_vector = None
-            raise ValueError("Farm layer not a polygon type")
-        farm_layer_defn = farm_layer.GetLayerDefn()
-        farm_headers = [
-            farm_layer_defn.GetFieldDefn(i).GetName()
-            for i in xrange(farm_layer_defn.GetFieldCount())]
-        for header in _EXPECTED_FARM_HEADERS:
-            matches = re.findall(header, " ".join(farm_headers))
-            if len(matches) == 0:
-                raise ValueError(
-                    "Missing an expected headers '%s'from %s.\n"
-                    "Got these headers instead %s" % (
-                        header, args['farm_vector_path'], farm_headers))
-
-        for header in farm_headers:
-            match = re.match(_FARM_FLORAL_RESOURCES_PATTERN, header)
-            if match:
-                season = match.group(1)
-                season_to_header[season]['farm'] = match.group()
-            match = re.match(_FARM_NESTING_SUBSTRATE_PATTERN, header)
-            if match:
-                substrate = match.group(1)
-                substrate_to_header[substrate]['farm'] = match.group()
-
-    for header in biophysical_table_headers:
-        match = re.match(_FLORAL_RESOURCES_AVAILABLE_PATTERN, header)
-        if match:
-            season = match.group(1)
-            season_to_header[season]['biophysical'] = match.group()
-        match = re.match(_NESTING_SUBSTRATE_PATTERN, header)
-        if match:
-            substrate = match.group(1)
-            substrate_to_header[substrate]['biophysical'] = match.group()
-
-    for table_type, lookup_table in itertools.chain(
-            season_to_header.iteritems(), substrate_to_header.iteritems()):
-        if len(lookup_table) != 3 and farm_vector is not None:
-            raise ValueError(
-                "Expected a biophysical, guild, and farm entry for '%s' but "
-                "instead found only %s. Ensure there are corresponding "
-                "entries of '%s' in both the guilds, biophysical "
-                "table, and farm fields." % (
-                    table_type, lookup_table, table_type))
-        elif len(lookup_table) != 2 and farm_vector is None:
-            raise ValueError(
-                "Expected a biophysical, and guild entry for '%s' but "
-                "instead found only %s. Ensure there are corresponding "
-                "entries of '%s' in both the guilds and biophysical "
-                "table." % (
-                    table_type, lookup_table, table_type))
+    LOGGER.debug(scenario_variables)
+    return
 
     task_graph = taskgraph.TaskGraph(work_token_dir, 0)
 
@@ -317,512 +215,6 @@ def execute(args):
                 args['farm_vector_path'], lulc_raster_info['projection'],
                 projected_farm_vector_path),
             target_path_list=[projected_farm_vector_path])
-
-    nesting_substrate_task_list = []
-    for nesting_substrate in substrate_to_header:
-        LOGGER.info(
-            "Mapping landcover to nesting substrate %s", nesting_substrate)
-        nesting_id = substrate_to_header[nesting_substrate]['biophysical']
-        landcover_to_nesting_suitability_table = dict([
-            (lucode, landcover_biophysical_table[lucode][nesting_id]) for
-            lucode in landcover_biophysical_table])
-
-        f_reg[nesting_id] = os.path.join(
-            intermediate_output_dir, '%s%s.tif' % (nesting_id, file_suffix))
-
-        landcover_nesting_reclass_task = task_graph.add_task(
-            target=pygeoprocessing.reclassify_raster,
-            args=(
-                (args['landcover_raster_path'], 1),
-                landcover_to_nesting_suitability_table, f_reg[nesting_id],
-                gdal.GDT_Float32, _INDEX_NODATA),
-            target_path_list=[f_reg[nesting_id]])
-
-        nesting_substrate_task_list.append(landcover_nesting_reclass_task)
-
-        temp_file_set.add(f_reg[nesting_id])
-
-        if farm_vector is not None:
-            LOGGER.info(
-                "Overriding landcover nesting substrates where a farm "
-                " polygon is available.")
-
-            farm_substrate_rasterize_task = task_graph.add_task(
-                target=pygeoprocessing.rasterize,
-                args=(
-                    projected_farm_vector_path, f_reg[nesting_id],
-                    None, ['ATTRIBUTE=%s' % (
-                        _FARM_NESTING_SUBSTRATE_PATTERN.replace(
-                            '([^_]+)', nesting_substrate))]),
-                target_path_list=[f_reg[nesting_id]],
-                dependent_task_list=[
-                    landcover_nesting_reclass_task, reproject_farm_task])
-            nesting_substrate_task_list.append(farm_substrate_rasterize_task)
-
-    nesting_substrate_path_list = [
-        f_reg[substrate_to_header[nesting_substrate]['biophysical']]
-        for nesting_substrate in sorted(substrate_to_header)]
-
-    species_nesting_suitability_index = None
-    species_nesting_task_lookup = {}
-    for species_id in guild_table.iterkeys():
-        LOGGER.info("Calculate species nesting index for %s", species_id)
-        species_nesting_suitability_index = numpy.array([
-            guild_table[species_id][substrate_to_header[substrate]['guild']]
-            for substrate in sorted(substrate_to_header)])
-        species_nesting_suitability_id = (
-            _NESTING_SUITABILITY_SPECIES_PATTERN % species_id)
-
-        f_reg[species_nesting_suitability_id] = os.path.join(
-            intermediate_output_dir, '%s%s.tif' % (
-                species_nesting_suitability_id, file_suffix))
-
-        species_nesting_task = task_graph.add_task(
-            target=pygeoprocessing.raster_calculator,
-            args=(
-                [(path, 1) for path in nesting_substrate_path_list],
-                _HabitatSuitabilityIndexOp(species_nesting_suitability_index),
-                f_reg[species_nesting_suitability_id], gdal.GDT_Float32,
-                _INDEX_NODATA),
-            kwargs={'calc_raster_stats': False},
-            target_path_list=[f_reg[species_nesting_suitability_id]],
-            dependent_task_list=nesting_substrate_task_list)
-        species_nesting_task_lookup[species_id] = species_nesting_task
-
-    floral_resources_task_lookup = {}
-    farm_floral_resources_task_lookup = {}
-    for season_id in season_to_header:
-        LOGGER.info(
-            "Mapping landcover to available floral resources for season %s",
-            season_id)
-        relative_floral_resources_id = (
-            season_to_header[season_id]['biophysical'])
-        f_reg[relative_floral_resources_id] = os.path.join(
-            intermediate_output_dir,
-            "%s%s.tif" % (relative_floral_resources_id, file_suffix))
-
-        landcover_to_floral_resources_table = dict([
-            (lucode, landcover_biophysical_table[lucode][
-                relative_floral_resources_id]) for lucode in
-            landcover_biophysical_table])
-
-        floral_resources_reclassify_task = task_graph.add_task(
-            target=pygeoprocessing.reclassify_raster,
-            args=(
-                (args['landcover_raster_path'], 1),
-                landcover_to_floral_resources_table,
-                f_reg[relative_floral_resources_id], gdal.GDT_Float32,
-                _INDEX_NODATA),
-            target_path_list=[f_reg[relative_floral_resources_id]])
-        floral_resources_task_lookup[season_id] = (
-            floral_resources_reclassify_task)
-
-        temp_file_set.add(f_reg[relative_floral_resources_id])
-
-        # farm vector is optional
-        if farm_vector is not None:
-            LOGGER.info(
-                "Overriding landcover floral resources with a farm's floral "
-                "resources.")
-
-            farm_floral_resources_raster_task = task_graph.add_task(
-                target=pygeoprocessing.rasterize,
-                args=(
-                    projected_farm_vector_path,
-                    f_reg[relative_floral_resources_id], None,
-                    ['ATTRIBUTE=%s' % (_FARM_FLORAL_RESOURCES_PATTERN.replace(
-                        '([^_]+)', season_id))]),
-                target_path_list=[f_reg[relative_floral_resources_id]],
-                dependent_task_list=[
-                    floral_resources_reclassify_task, reproject_farm_task])
-            farm_floral_resources_task_lookup[season_id] = (
-                farm_floral_resources_raster_task)
-
-    floral_resources_path_list = [
-        f_reg[season_to_header[season_id]['biophysical']]
-        for season_id in sorted(season_to_header)]
-
-    species_foraging_activity_per_season = None
-    species_abundance = None
-    raw_abundance_nodata = None
-    seasonal_pollinator_abundance_task_list_lookup = collections.defaultdict(
-        list)
-    seasonal_pollinator_abundance_path_band_list_lookup = (
-        collections.defaultdict(list))
-    for species_id in guild_table:
-        LOGGER.info(
-            "Making local floral resources map for species %s", species_id)
-        species_foraging_activity_per_season = numpy.array([
-            guild_table[species_id][
-                season_to_header[season_id]['guild']]
-            for season_id in sorted(season_to_header)])
-        # normalize the species foraging activity so it sums to 1.0
-        species_foraging_activity_per_season = (
-            species_foraging_activity_per_season / sum(
-                species_foraging_activity_per_season))
-        local_floral_resource_availability_id = (
-            _LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN % species_id)
-        f_reg[local_floral_resource_availability_id] = os.path.join(
-            intermediate_output_dir, "%s%s.tif" % (
-                local_floral_resource_availability_id, file_suffix))
-
-        species_floral_resources_task = task_graph.add_task(
-            target=pygeoprocessing.raster_calculator,
-            args=(
-                [(path, 1) for path in floral_resources_path_list],
-                _SpeciesFloralAbudanceOp(
-                    species_foraging_activity_per_season),
-                f_reg[local_floral_resource_availability_id],
-                gdal.GDT_Float32, _INDEX_NODATA),
-            kwargs={'calc_raster_stats': False},
-            target_path_list=[f_reg[local_floral_resource_availability_id]],
-            dependent_task_list=floral_resources_task_lookup.values())
-
-        alpha = (
-            guild_table[species_id]['alpha'] /
-            float(lulc_raster_info['mean_pixel_size']))
-        species_file_kernel_id = (
-            _SPECIES_ALPHA_KERNEL_FILE_PATTERN % species_id)
-        f_reg[species_file_kernel_id] = os.path.join(
-            output_dir, species_file_kernel_id + '%s.tif' % file_suffix)
-
-        alpha_kernel_raster_task = task_graph.add_task(
-            target=utils.exponential_decay_kernel_raster,
-            args=(alpha, f_reg[species_file_kernel_id]),
-            target_path_list=[f_reg[species_file_kernel_id]])
-
-        accessible_floral_resouces_id = (
-            _ACCESSIBLE_FLORAL_RESOURCES_FILE_PATTERN % species_id)
-        f_reg[accessible_floral_resouces_id] = os.path.join(
-            intermediate_output_dir, accessible_floral_resouces_id +
-            '%s.tif' % file_suffix)
-        LOGGER.info(
-            "Calculating available floral resources for %s", species_id)
-
-        convolve_2d_nodata = numpy.finfo(numpy.float32).min
-        convolve_local_floral_resource_task = task_graph.add_task(
-            target=_normalized_convolve_2d,
-            args=(
-                (f_reg[local_floral_resource_availability_id], 1),
-                (f_reg[species_file_kernel_id], 1),
-                f_reg[accessible_floral_resouces_id],
-                gdal.GDT_Float32, convolve_2d_nodata, args['workspace_dir']),
-            target_path_list=[f_reg[accessible_floral_resouces_id]],
-            ignore_path_list=[args['workspace_dir']],
-            dependent_task_list=[
-                species_floral_resources_task, alpha_kernel_raster_task])
-
-        LOGGER.info("Calculating local pollinator supply for %s", species_id)
-        pollinator_supply_id = (
-            _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN % species_id)
-        f_reg[pollinator_supply_id] = os.path.join(
-            output_dir, pollinator_supply_id + "%s.tif" % file_suffix)
-
-        species_abundance = guild_table[species_id][
-            _RELATIVE_SPECIES_ABUNDANCE_FIELD]
-
-        species_nesting_suitability_id = (
-            _NESTING_SUITABILITY_SPECIES_PATTERN % species_id)
-
-        pollinator_supply_task = task_graph.add_task(
-            target=pygeoprocessing.raster_calculator,
-            args=(
-                [(f_reg[accessible_floral_resouces_id], 1),
-                 (f_reg[species_nesting_suitability_id], 1)],
-                _PollinatorSupplyOp(species_abundance),
-                f_reg[pollinator_supply_id],
-                gdal.GDT_Float32, _INDEX_NODATA),
-            kwargs={'calc_raster_stats': False},
-            target_path_list=[f_reg[pollinator_supply_id]],
-            dependent_task_list=[convolve_local_floral_resource_task])
-
-        LOGGER.info("Calculating raw pollinator abundance for %s", species_id)
-        raw_pollinator_abundance_id = (
-            _RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id)
-        f_reg[raw_pollinator_abundance_id] = os.path.join(
-            intermediate_output_dir, "%s%s.tif" % (
-                raw_pollinator_abundance_id, file_suffix))
-        raw_pollinator_abundance_task = task_graph.add_task(
-            target=_normalized_convolve_2d,
-            args=(
-                (f_reg[pollinator_supply_id], 1),
-                (f_reg[species_file_kernel_id], 1),
-                f_reg[raw_pollinator_abundance_id],
-                gdal.GDT_Float32, convolve_2d_nodata, args['workspace_dir']),
-            target_path_list=[f_reg[raw_pollinator_abundance_id]],
-            dependent_task_list=[
-                pollinator_supply_task, alpha_kernel_raster_task])
-
-        for season_index, season_id in enumerate(sorted(season_to_header)):
-            LOGGER.info(
-                "Calculating seasonal pollinator abundance by scaling the raw by "
-                "floral resources available for %s during season %s",
-                species_id, season_id)
-            seasonal_pollinator_abundance_id = (
-                _SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
-                    species_id, season_id))
-            f_reg[seasonal_pollinator_abundance_id] = os.path.join(
-                output_dir,
-                seasonal_pollinator_abundance_id + "%s.tif" % file_suffix)
-
-            seasonal_pollinator_abundance_task = task_graph.add_task(
-                target=pygeoprocessing.raster_calculator,
-                args=(
-                    [(f_reg[raw_pollinator_abundance_id], 1),
-                     (f_reg[local_floral_resource_availability_id], 1)],
-                    _PollinatorAbudanceOp(
-                        species_foraging_activity_per_season[season_index],
-                        convolve_2d_nodata),
-                    f_reg[seasonal_pollinator_abundance_id], gdal.GDT_Float32,
-                    _INDEX_NODATA),
-                kwargs={'calc_raster_stats': False},
-                target_path_list=[f_reg[seasonal_pollinator_abundance_id]],
-                dependent_task_list=[
-                    raw_pollinator_abundance_task,
-                    convolve_local_floral_resource_task])
-            seasonal_pollinator_abundance_path_band_list_lookup[season_id].append(
-                (f_reg[seasonal_pollinator_abundance_id], 1))
-            seasonal_pollinator_abundance_task_list_lookup[season_id].append(
-                seasonal_pollinator_abundance_task)
-
-    total_seasonal_pollinator_abundance_task_lookup = {}
-    total_seasonal_pollinator_abundance_path_lookup = {}
-    for season_id in season_to_header:
-        total_seasonal_pollinator_abundance_id = (
-            _TOTAL_SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % season_id)
-        f_reg[total_seasonal_pollinator_abundance_id] = os.path.join(
-            output_dir, total_seasonal_pollinator_abundance_id +
-            "%s.tif" % file_suffix)
-        total_seasonal_pollinator_abundance_task = task_graph.add_task(
-            target=pygeoprocessing.raster_calculator,
-            args=(
-                seasonal_pollinator_abundance_path_band_list_lookup[
-                    season_id], _AddRasterOp(_INDEX_NODATA),
-                f_reg[total_seasonal_pollinator_abundance_id],
-                gdal.GDT_Float32, _INDEX_NODATA),
-            target_path_list=[f_reg[total_seasonal_pollinator_abundance_id]],
-            dependent_task_list=(
-                seasonal_pollinator_abundance_task_list_lookup[season_id]))
-        total_seasonal_pollinator_abundance_task_lookup[season_id] = (
-            total_seasonal_pollinator_abundance_task)
-        total_seasonal_pollinator_abundance_path_lookup[season_id] = (
-            f_reg[total_seasonal_pollinator_abundance_id])
-
-    if farm_vector is None:
-        LOGGER.info("All done, no farm polygon to process!")
-        task_graph.join()
-        return
-
-    LOGGER.info("Calculating farm yields")
-    target_farm_path = os.path.join(
-        output_dir, '%s%s.shp' % (
-            _TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN, file_suffix))
-    farm_fid_field = str(uuid.uuid4())[-8:-1]
-    create_target_farm_task = task_graph.add_task(
-        target=_create_fid_vector_copy,
-        args=(projected_farm_vector_path, farm_fid_field, target_farm_path),
-        target_path_list=[target_farm_path],
-        dependent_task_list=[reproject_farm_task])
-
-    LOGGER.info("Rasterizing managed farm pollinators for season %s")
-    # rasterize farm managed pollinators on landscape first
-    managed_bees_raster_path = os.path.join(
-        intermediate_output_dir, "%s%s.tif" % (
-            _MANAGED_BEES_RASTER_FILE_PATTERN, file_suffix))
-    create_managed_bees_raster_task = task_graph.add_task(
-        target=_rasterize_vector_from_base,
-        args=(
-            args['landcover_raster_path'], target_farm_path,
-            _MANAGED_POLLINATORS_FIELD, managed_bees_raster_path),
-        target_path_list=[managed_bees_raster_path],
-        dependent_task_list=[create_target_farm_task])
-
-    wild_pollinator_activity = None
-    foraging_activity_index = None
-    farm_yield_seasonal_task_list = []
-    farm_yield_seasonal_path_band_list = []
-    pollinator_dependent_yield_seasonal_path_band_list = []
-    pollinator_dependent_yield_seasonal_task_list = []
-    for season_id in season_to_header:
-        LOGGER.info("Rasterizing half saturation for season %s", season_id)
-        half_saturation_file_path = os.path.join(
-            intermediate_output_dir,
-            _HALF_SATURATION_SEASON_FILE_PATTERN % season_id + (
-                '%s.tif' % file_suffix))
-
-        rasterize_half_saturation_task = task_graph.add_task(
-            target=_rasterize_vector_from_base,
-            args=(
-                args['landcover_raster_path'], target_farm_path,
-                _HALF_SATURATION_FARM_HEADER, half_saturation_file_path,
-                ),
-            kwargs={
-                'filter_string': "%s='%s'" % (_FARM_SEASON_FIELD, season_id)
-                },
-            target_path_list=[half_saturation_file_path],
-            dependent_task_list=[create_target_farm_task])
-
-        total_farm_pollinator_path = os.path.join(
-            intermediate_output_dir, '%s%s.tif' % (
-                _TOTAL_FARM_POLLINATOR_FILE_PATTERN % (season_id),
-                file_suffix))
-
-        # these are the rasters that are going to calculate total farm pol.
-        total_farm_polinator_raster_band_list = [
-            (managed_bees_raster_path, 1),
-            (total_seasonal_pollinator_abundance_path_lookup[season_id], 1)]
-
-        calculate_total_farm_pollinator_supply_task = task_graph.add_task(
-            target=pygeoprocessing.raster_calculator,
-            args=(
-                total_farm_polinator_raster_band_list,
-                _SumNoGreaterThan1(
-                    total_farm_polinator_raster_band_list, numpy.float32,
-                    _INDEX_NODATA),
-                total_farm_pollinator_path, gdal.GDT_Float32, _INDEX_NODATA),
-            target_path_list=[total_farm_pollinator_path],
-            dependent_task_list=[
-                create_managed_bees_raster_task,
-                total_seasonal_pollinator_abundance_task_lookup[season_id]])
-
-        farm_yield_seasonal_path = os.path.join(
-            intermediate_output_dir, _FARM_YIELD_SEASONAL_FILE_PATTERN % (
-                season_id, file_suffix))
-
-        calculate_total_farm_yield_seasonal_task = task_graph.add_task(
-            target=pygeoprocessing.raster_calculator,
-            args=(
-                [(half_saturation_file_path, 1),
-                 (total_farm_pollinator_path, 1)],
-                _FarmYieldOp(), farm_yield_seasonal_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
-            kwargs={'calc_raster_stats': True},
-            target_path_list=[farm_yield_seasonal_path],
-            dependent_task_list=[
-                rasterize_half_saturation_task,
-                calculate_total_farm_pollinator_supply_task])
-        farm_yield_seasonal_task_list.append(
-            calculate_total_farm_yield_seasonal_task)
-        farm_yield_seasonal_path_band_list.append(
-            (farm_yield_seasonal_path, 1))
-
-        farm_yield_managed_bees_seasonal_path = os.path.join(
-            intermediate_output_dir,
-            _FARM_YIELD_MANAGED_BEES_SEASONAL_FILE_PATTERN % (
-                season_id, file_suffix))
-        calculate_managed_pollinators_farm_yield_seasonal_task = (
-            task_graph.add_task(
-                target=pygeoprocessing.raster_calculator,
-                args=(
-                    [(half_saturation_file_path, 1),
-                     (managed_bees_raster_path, 1)],
-                    _FarmYieldOp(), farm_yield_managed_bees_seasonal_path,
-                    gdal.GDT_Float32, _INDEX_NODATA),
-                kwargs={'calc_raster_stats': True},
-                target_path_list=[farm_yield_managed_bees_seasonal_path],
-                dependent_task_list=[
-                    rasterize_half_saturation_task,
-                    create_managed_bees_raster_task]))
-
-        pollinator_dependent_yield_seasonal_path = os.path.join(
-            intermediate_output_dir,
-            _FARM_YIELD_POLLINATOR_DEPENDENT_SEASONAL_FILE_PATTERN % (
-                season_id, file_suffix))
-        calculate_pollinator_dependent_yield_seasonal_task = (
-            task_graph.add_task(
-                target=pygeoprocessing.raster_calculator,
-                args=(
-                    [(farm_yield_seasonal_path, 1),
-                     (farm_yield_managed_bees_seasonal_path, 1)],
-                    _Subtract2(_INDEX_NODATA),
-                    pollinator_dependent_yield_seasonal_path,
-                    gdal.GDT_Float32, _INDEX_NODATA),
-                kwargs={'calc_raster_stats': True},
-                target_path_list=[
-                    pollinator_dependent_yield_seasonal_path],
-                dependent_task_list=[
-                    calculate_total_farm_yield_seasonal_task,
-                    calculate_managed_pollinators_farm_yield_seasonal_task]))
-        pollinator_dependent_yield_seasonal_path_band_list.append(
-            (pollinator_dependent_yield_seasonal_path, 1))
-        pollinator_dependent_yield_seasonal_task_list.append(
-            calculate_pollinator_dependent_yield_seasonal_task)
-
-    total_pollinator_dependent_yield_path = os.path.join(
-        output_dir, _TOTAL_POLLINATOR_DEPENDENT_YIELD_FILE_PATTERN % (
-            file_suffix))
-    calculate_total_pollinator_dependent_yield_task = task_graph.add_task(
-        target=pygeoprocessing.raster_calculator,
-        args=(
-            pollinator_dependent_yield_seasonal_path_band_list,
-            _SumRasterPassNodata(
-                pollinator_dependent_yield_seasonal_path_band_list,
-                numpy.float32, _INDEX_NODATA),
-            total_pollinator_dependent_yield_path, gdal.GDT_Float32,
-            _INDEX_NODATA),
-        target_path_list=[total_pollinator_dependent_yield_path],
-        dependent_task_list=pollinator_dependent_yield_seasonal_task_list)
-
-    total_farm_yield_path = os.path.join(
-        output_dir, _TOTAL_FARM_YIELD_FILE_PATTERN % (file_suffix))
-    calculate_total_farm_yield_task = task_graph.add_task(
-        target=pygeoprocessing.raster_calculator,
-        args=(
-            farm_yield_seasonal_path_band_list,
-            _SumRasterPassNodata(
-                farm_yield_seasonal_path_band_list,
-                numpy.float32, _INDEX_NODATA),
-            total_farm_yield_path, gdal.GDT_Float32,
-            _INDEX_NODATA),
-        target_path_list=[total_farm_yield_path],
-        dependent_task_list=farm_yield_seasonal_task_list)
-
-    task_graph.join()
-
-    total_farm_stats = pygeoprocessing.zonal_statistics(
-        (total_farm_yield_path, 1), target_farm_path, farm_fid_field)
-    pollinator_farm_stats = pygeoprocessing.zonal_statistics(
-        (total_pollinator_dependent_yield_path, 1), target_farm_path,
-        farm_fid_field)
-
-    # after much debugging, I could only get the first feature to write.
-    # closing and re-opening the vector seemed to reset it enough to work.
-    farm_vector.SyncToDisk()
-    farm_layer = None
-    farm_vector = None
-    farm_vector = ogr.Open(target_farm_path, 1)
-    farm_layer = farm_vector.GetLayer()
-    for feature in farm_layer:
-        fid = feature.GetField(farm_fid_field)
-        pollinator_dependence = feature.GetField(
-            _CROP_POLLINATOR_DEPENDENCE_FIELD)
-        if pollinator_farm_stats[fid]['sum'] > 0:
-            wild_pollinator_yield = float(
-                pollinator_farm_stats[fid]['sum'] /
-                pollinator_farm_stats[fid]['count'] * pollinator_dependence)
-        else:
-            wild_pollinator_yield = 0.0
-
-        if total_farm_stats[fid]['sum'] > 0:
-            total_pollinator_yield = float(
-                total_farm_stats[fid]['sum'] / total_farm_stats[fid]['count'] *
-                pollinator_dependence)
-        else:
-            total_pollinator_yield = 0.0
-
-        feature.SetField(
-            _POLLINATOR_FARM_YIELD_FIELD_ID, total_pollinator_yield)
-        total_yield = (1 - pollinator_dependence) + total_pollinator_yield
-        feature.SetField(
-            _TOTAL_FARM_YIELD_FIELD_ID, total_yield)
-        feature.SetField(
-            _WILD_POLLINATOR_FARM_YIELD_FIELD_ID, wild_pollinator_yield)
-
-        farm_layer.SetFeature(feature)
-        feature = None
-
-    farm_layer.DeleteField(
-        farm_layer.GetLayerDefn().GetFieldIndex(farm_fid_field))
 
 
 def _normalized_convolve_2d(
@@ -1013,257 +405,179 @@ def _create_fid_vector_copy(
     target_vector = None
 
 
-class _AddRasterOp(object):
-    """Closure for adding rasters together."""
+def _parse_scenario_variables(
+        guild_table_path, landcover_biophysical_table_path, farm_vector_path):
+    """Parse out scenario variables from input parameters.
 
-    def __init__(self, raster_stack_nodata):
-        self.raster_stack_nodata = raster_stack_nodata
+    This function parses through the guild table, biophysical table, and
+    farm polygons (if available) to generate
 
-    def __call__(self, *raster_stack):
-        result = numpy.empty(raster_stack[0].shape)
-        valid_mask = raster_stack[0] != self.raster_stack_nodata
-        result[:] = self.raster_stack_nodata
-        result[valid_mask] = (
-            numpy.sum(numpy.stack(raster_stack, axis=2)[valid_mask], axis=1))
-        return result
+    Returns:
+        A dictionary with the keys:
+            * season_list (list of string)
+            * substrate_list (list of string)
+            * species_list (list of string)
+            * landcover_substrate_index[(landcover, substrate)] (tuple->float)
+            * species_abundance[species] (string->float)
+            * nesting_suitability_index[(species, substrate)] (tuple->float)
+            * foraging_activity_index[(species, season)] (tuple->float)
+    """
 
+    guild_table = utils.build_lookup_from_csv(
+        guild_table_path, 'species', to_lower=True,
+        numerical_cast=True)
 
-class _HabitatSuitabilityIndexOp(object):
-    """Closure for nesting suitability raster calculator."""
+    LOGGER.info('Checking to make sure guild table has all expected headers')
+    guild_headers = guild_table.itervalues().next().keys()
+    for header in _EXPECTED_GUILD_HEADERS:
+        matches = re.findall(header, " ".join(guild_headers))
+        if len(matches) == 0:
+            raise ValueError(
+                "Expected a header in guild table that matched the pattern "
+                "'%s' but was unable to find one.  Here are all the headers "
+                "from %s: %s" % (
+                    header, guild_table_path,
+                    guild_headers))
 
-    def __init__(self, species_nesting_suitability_index):
-        self.species_nesting_suitability_index = (
-            species_nesting_suitability_index)
+    landcover_biophysical_table = utils.build_lookup_from_csv(
+        landcover_biophysical_table_path, 'lucode', to_lower=True,
+        numerical_cast=True)
+    biophysical_table_headers = (
+        landcover_biophysical_table.itervalues().next().keys())
+    for header in _EXPECTED_BIOPHYSICAL_HEADERS:
+        matches = re.findall(header, " ".join(biophysical_table_headers))
+        if len(matches) == 0:
+            raise ValueError(
+                "Expected a header in biophysical table that matched the "
+                "pattern '%s' but was unable to find one.  Here are all the "
+                "headers from %s: %s" % (
+                    header, landcover_biophysical_table_path,
+                    biophysical_table_headers))
 
-    def __call__(self, *nesting_suitability_index):
-        result = numpy.empty(
-            nesting_suitability_index[0].shape, dtype=numpy.float32)
-        valid_mask = nesting_suitability_index[0] != _INDEX_NODATA
-        result[:] = _INDEX_NODATA
-        # the species' nesting suitability index is the maximum value
-        # of all nesting substrates multiplied by the species'
-        # suitability index for that substrate
-        result[valid_mask] = numpy.max(
-            [nsi[valid_mask] * snsi for nsi, snsi in zip(
-                nesting_suitability_index,
-                self.species_nesting_suitability_index)],
-            axis=0)
-        return result
+    # this dict to dict will map seasons to guild/biophysical headers
+    # ex season_to_header['spring']['guilds']
+    season_to_header = collections.defaultdict(dict)
+    # this dict to dict will map substrate types to guild/biophysical headers
+    # ex substrate_to_header['cavity']['biophysical']
+    substrate_to_header = collections.defaultdict(dict)
+    for header in guild_headers:
+        match = re.match(_FORAGING_ACTIVITY_PATTERN, header)
+        if match:
+            season = match.group(1)
+            season_to_header[season]['guild'] = match.group()
+        match = re.match(_NESTING_SUITABILITY_PATTERN, header)
+        if match:
+            substrate = match.group(1)
+            substrate_to_header[substrate]['guild'] = match.group()
 
+    farm_vector = None
+    if farm_vector_path is not None:
+        LOGGER.info('Checking that farm polygon has expected headers')
+        farm_vector = ogr.Open(farm_vector_path)
+        if farm_vector.GetLayerCount() != 1:
+            raise ValueError(
+                "Farm polygon at %s has %d layers when expecting only 1." % (
+                    farm_vector_path, farm_vector.GetLayerCount()))
+        farm_layer = farm_vector.GetLayer()
+        if farm_layer.GetGeomType() not in [
+                ogr.wkbPolygon, ogr.wkbMultiPolygon]:
+            farm_layer = None
+            farm_vector = None
+            raise ValueError("Farm layer not a polygon type")
+        farm_layer_defn = farm_layer.GetLayerDefn()
+        farm_headers = [
+            farm_layer_defn.GetFieldDefn(i).GetName()
+            for i in xrange(farm_layer_defn.GetFieldCount())]
+        for header in _EXPECTED_FARM_HEADERS:
+            matches = re.findall(header, " ".join(farm_headers))
+            if len(matches) == 0:
+                raise ValueError(
+                    "Missing an expected headers '%s'from %s.\n"
+                    "Got these headers instead %s" % (
+                        header, farm_vector_path, farm_headers))
 
-class _SpeciesFloralAbudanceOp(object):
-    """Closure for species floral abundance raster calculator."""
+        for header in farm_headers:
+            match = re.match(_FARM_FLORAL_RESOURCES_PATTERN, header)
+            if match:
+                season = match.group(1)
+                season_to_header[season]['farm'] = match.group()
+            match = re.match(_FARM_NESTING_SUBSTRATE_PATTERN, header)
+            if match:
+                substrate = match.group(1)
+                substrate_to_header[substrate]['farm'] = match.group()
 
-    def __init__(self, species_foraging_activity_per_season):
-        self.species_foraging_activity_per_season = (
-            species_foraging_activity_per_season)
+    for header in biophysical_table_headers:
+        match = re.match(_FLORAL_RESOURCES_AVAILABLE_PATTERN, header)
+        if match:
+            season = match.group(1)
+            season_to_header[season]['biophysical'] = match.group()
+        match = re.match(_NESTING_SUBSTRATE_PATTERN, header)
+        if match:
+            substrate = match.group(1)
+            substrate_to_header[substrate]['biophysical'] = match.group()
 
-    def __call__(self, *floral_resources_index_array):
-        """Calculate species floral abudance."""
-        result = numpy.empty(
-            floral_resources_index_array[0].shape, dtype=numpy.float32)
-        result[:] = _INDEX_NODATA
-        valid_mask = floral_resources_index_array[0] != _INDEX_NODATA
-        result[valid_mask] = numpy.sum(
-            [fri[valid_mask] * sfa for fri, sfa in zip(
-                floral_resources_index_array,
-                self.species_foraging_activity_per_season)], axis=0)
-        return result
+    for table_type, lookup_table in itertools.chain(
+            season_to_header.iteritems(), substrate_to_header.iteritems()):
+        if len(lookup_table) != 3 and farm_vector is not None:
+            raise ValueError(
+                "Expected a biophysical, guild, and farm entry for '%s' but "
+                "instead found only %s. Ensure there are corresponding "
+                "entries of '%s' in both the guilds, biophysical "
+                "table, and farm fields." % (
+                    table_type, lookup_table, table_type))
+        elif len(lookup_table) != 2 and farm_vector is None:
+            raise ValueError(
+                "Expected a biophysical, and guild entry for '%s' but "
+                "instead found only %s. Ensure there are corresponding "
+                "entries of '%s' in both the guilds and biophysical "
+                "table." % (
+                    table_type, lookup_table, table_type))
 
+    result = {}
+    # * season_list (list of string)
+    result['season_list'] = sorted(season_to_header)
+    # * substrate_list (list of string)
+    result['substrate_list'] = sorted(substrate_to_header)
+    # * species_list (list of string)
+    result['species_list'] = sorted(guild_table)
 
-class _PollinatorSupplyOp(object):
-    """Closure for pollinator supply raster calculator."""
+    # * species_abundance[species] (string->float)
+    total_relative_abundance = numpy.sum([
+        guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD]
+        for species in result['species_list']])
+    result['species_abundance'] = {}
+    for species in result['species_list']:
+        result['species_abundance'][species] = (
+            guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD] /
+            total_relative_abundance)
 
-    def __init__(self, species_abundance):
-        self.species_abundance = species_abundance
+    # * landcover_substrate_index[(landcover, substrate)] (tuple->float)
+    result['landcover_substrate_index'] = {}
+    for landcover_id in landcover_biophysical_table:
+        for substrate in result['substrate_list']:
+            key = (int(landcover_id), substrate)
+            substrate_biophysical_header = (
+                substrate_to_header[substrate]['biophysical'])
+            result['landcover_substrate_index'][key] = (
+                landcover_biophysical_table[landcover_id][
+                    substrate_biophysical_header])
 
-    def __call__(self, accessible_floral_resources, species_nesting_index):
-        """Supply is floral resources * nesting index * abundance."""
-        result = numpy.empty(
-            accessible_floral_resources.shape, dtype=numpy.float32)
-        result[:] = _INDEX_NODATA
-        valid_mask = (species_nesting_index != _INDEX_NODATA)
-        result[valid_mask] = (
-            accessible_floral_resources[valid_mask] *
-            species_nesting_index[valid_mask] * self.species_abundance)
-        return result
+    # * nesting_suitability_index[(species, substrate)] (tuple->float)
+    result['nesting_suitability_index'] = {}
+    for species in result['species_list']:
+        for substrate in result['substrate_list']:
+            substrate_guild_header = substrate_to_header[substrate]['guild']
+            key = (species, substrate)
+            result['nesting_suitability_index'][key] = (
+                guild_table[species][substrate_guild_header])
 
+    # * foraging_activity_index[(species, season)] (tuple->float)
+    result['foraging_activity_index'] = {}
+    for species in result['species_list']:
+        for season in result['season_list']:
+            key = (species, season)
+            foraging_biophyiscal_header = season_to_header[season]['guild']
+            result['foraging_activity_index'][key] = (
+                guild_table[species][foraging_biophyiscal_header])
 
-class _PollinatorAbudanceOp(object):
-    """Closure for pollinator abundance operation."""
-
-    def __init__(
-            self, species_seasonal_foraging_activity, raw_abundance_nodata):
-        self.raw_abundance_nodata = raw_abundance_nodata
-        self.species_seasonal_foraging_activity = (
-            species_seasonal_foraging_activity)
-
-    def __call__(self, raw_abundance, floral_resources):
-        """Multiply raw_abundance by floral_resources and skip nodata."""
-        result = numpy.empty(raw_abundance.shape, dtype=numpy.float32)
-        result[:] = _INDEX_NODATA
-        valid_mask = (
-            (self.raw_abundance_nodata != raw_abundance) &
-            (floral_resources != _INDEX_NODATA))
-        result[valid_mask] = (
-            self.species_seasonal_foraging_activity *
-            raw_abundance[valid_mask] * floral_resources[valid_mask])
-        return result
-
-
-class _FarmPollinatorsOp(object):
-    """Closure for calculating farm pollinators."""
-
-    def __init__(self, wild_pollinator_activity):
-        self.wild_pollinator_activity = wild_pollinator_activity
-
-    def __call__(
-            self, managed_pollinator_abundance, *wild_pollinator_abundance):
-        """Calculate the max of all pollinators.
-
-        Wild pollinators need to be scaled by their seasonal foraging
-        activity index included in the closure.
-        """
-        result = numpy.empty(
-            managed_pollinator_abundance.shape, dtype=numpy.float32)
-        valid_mask = wild_pollinator_abundance[0] != _INDEX_NODATA
-        result[:] = _INDEX_NODATA
-        result[valid_mask] = numpy.clip(
-            (managed_pollinator_abundance[valid_mask] +
-             numpy.sum([
-                 activity * abundance[valid_mask]
-                 for abundance, activity in zip(
-                     wild_pollinator_abundance,
-                     self.wild_pollinator_activity)], axis=0)), 0, 1)
-        return result
-
-
-class _EqualOp(object):
-    """Closure for determining max species in a pixel."""
-
-    def __init__(self, foraging_activity_index):
-        self.foraging_activity_index = foraging_activity_index
-
-    def __call__(
-            self, farm_pollinator_index, species_pollinator_abudance_index):
-        """Return 1 if FP == SP*FA."""
-        result = numpy.empty(
-            farm_pollinator_index.shape, dtype=numpy.int8)
-        result[:] = _INDEX_NODATA
-        valid_mask = farm_pollinator_index != _INDEX_NODATA
-        result[valid_mask] = farm_pollinator_index[valid_mask] == (
-            species_pollinator_abudance_index[valid_mask] *
-            self.foraging_activity_index)
-        return result
-
-
-class _FarmYieldOp(object):
-    """Farm yield closure."""
-
-    def __init__(self):
-        pass
-
-    def __call__(self, half_sat, farm_pollinators):
-        result = numpy.empty(half_sat.shape, dtype=numpy.float32)
-        result[:] = _INDEX_NODATA
-        valid_mask = (
-            farm_pollinators != _INDEX_NODATA) & (
-                half_sat != _INDEX_NODATA)
-        # the following is a tunable half-saturation half-sigmoid
-        # FP(x,j) = (1-h(x,j))h(x,j) / ((1-2FP(x,j))+FP(x,j))
-        result[valid_mask] = (
-            farm_pollinators[valid_mask] * (1 - half_sat[valid_mask]) / (
-                half_sat[valid_mask] * (
-                    1 - 2 * farm_pollinators[valid_mask]) +
-                farm_pollinators[valid_mask]))
-        return result
-
-
-class _CombineYieldsOp(object):
-    """Combine all farm yields."""
-
-    def __init__(self):
-        pass
-
-    def __call__(self, *pollinator_yields):
-        """Set output to defined pixel in the stack of pollinator_yields."""
-        result = numpy.empty(pollinator_yields[0].shape, dtype=numpy.float32)
-        result[:] = _INDEX_NODATA
-        for pollinator_yield in pollinator_yields:
-            valid_mask = pollinator_yield != _INDEX_NODATA
-            result[valid_mask] = pollinator_yield[valid_mask]
-        return result
-
-
-class _SumNoGreaterThan1(object):
-    """Sum all rasters so they don't exceed 1.0."""
-
-    def __init__(self, raster_path_band_list, target_datatype, target_nodata):
-        """Remember raster path band list to build nodata set."""
-        self.raster_path_band_list = raster_path_band_list
-        self.nodata_list = None  # we won't know until other rasters define
-        self.target_nodata = target_nodata
-        self.target_datatype = target_datatype
-
-    def __call__(self, *value_arrays):
-        """Add all the non-nodata values of value_array."""
-        if self.nodata_list is None:
-            self.nodata_list = [
-                pygeoprocessing.get_raster_info(path)['nodata'][band_num-1]
-                for path, band_num in self.raster_path_band_list]
-
-        result = numpy.zeros(
-            value_arrays[0].shape, dtype=self.target_datatype)
-        valid_mask = numpy.ones(
-            value_arrays[0].shape, dtype=numpy.bool)
-        for value_array, nodata in zip(value_arrays, self.nodata_list):
-            valid_mask &= value_array != nodata
-            result[valid_mask] += value_array[valid_mask]
-        result[~valid_mask] = self.target_nodata
-        # clamp to 1.0
-        result[valid_mask & (result > 1.0)] = 1.0
-        return result
-
-
-class _SumRasterPassNodata(object):
-    """Sum all rasters so they overlap and ignore nodata."""
-
-    def __init__(self, raster_path_band_list, target_datatype, target_nodata):
-        """Remember raster path band list to build nodata set."""
-        self.raster_path_band_list = raster_path_band_list
-        self.nodata_list = None  # we won't know until other rasters define
-        self.target_nodata = target_nodata
-        self.target_datatype = target_datatype
-
-    def __call__(self, *value_arrays):
-        """Add all the non-nodata values of value_array."""
-        if self.nodata_list is None:
-            self.nodata_list = [
-                pygeoprocessing.get_raster_info(path)['nodata'][band_num-1]
-                for path, band_num in self.raster_path_band_list]
-
-        result = numpy.zeros(
-            value_arrays[0].shape, dtype=self.target_datatype)
-        valid_mask = numpy.zeros(
-            value_arrays[0].shape, dtype=numpy.bool)
-        for value_array, nodata in zip(value_arrays, self.nodata_list):
-            local_mask = value_array != nodata
-            valid_mask |= local_mask
-            result[local_mask] += value_array[local_mask]
-        result[~valid_mask] = self.target_nodata
-        return result
-
-
-class _Subtract2(object):
-    """Subtract two aligned and equally masked rasters."""
-
-    def __init__(self, nodata):
-        self.nodata = nodata
-
-    def __call__(self, array_a, array_b):
-        """Calculate array_a - array_b."""
-        result = numpy.empty_like(array_a)
-        result[:] = self.nodata
-        valid_mask = array_a != self.nodata
-        result[valid_mask] = array_a[valid_mask] - array_b[valid_mask]
-        return result
+    return result
