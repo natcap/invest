@@ -77,6 +77,26 @@ class _QtTest(unittest.TestCase):
         #QTest.qWait(50)
 
 
+class _SettingsSandbox(_QtTest):
+    def setUp(self):
+        _QtTest.setUp(self)
+        from natcap.invest.ui import inputs
+
+        # back up the QSettings options for the test run so we don't disrupt
+        # whatever settings exist on this computer
+        self.settings = dict(
+            (key, inputs.INVEST_SETTINGS.value(key)) for key in
+            inputs.INVEST_SETTINGS.allKeys())
+        inputs.INVEST_SETTINGS.clear()
+
+    def tearDown(self):
+        _QtTest.tearDown(self)
+        from natcap.invest.ui import inputs
+        inputs.INVEST_SETTINGS.clear()
+        for key, value in self.settings.iteritems():
+            inputs.INVEST_SETTINGS.setValue(key, value)
+
+
 class InputTest(_QtTest):
     @staticmethod
     def create_input(*args, **kwargs):
@@ -1263,22 +1283,23 @@ class FolderButtonTest(_QtTest):
         self.assertEqual(button.dialog_title, 'Some title')
 
 
-class FileDialogTest(_QtTest):
+class FileDialogTest(_SettingsSandbox):
     def test_save_file_title_and_last_selection(self):
-        from natcap.invest.ui.inputs import FileDialog, DATA
+        from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
         dialog = FileDialog()
         dialog.file_dialog.getSaveFileName = mock.MagicMock(
             spec=dialog.file_dialog.getSaveFileName,
             return_value='/new/file')
 
-        DATA['last_dir'] = '/tmp/foo/bar'
+        INVEST_SETTINGS.setValue('last_dir', '/tmp/foo/bar')
 
         out_file = dialog.save_file(title='foo', start_dir=None)
         self.assertEqual(
             dialog.file_dialog.getSaveFileName.call_args[0],  # pos. args
             (dialog.file_dialog, 'foo', '/tmp/foo/bar'))
         self.assertEqual(out_file, '/new/file')
-        self.assertEqual(DATA['last_dir'], u'/new')
+        self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode),
+                         u'/new')
 
     def test_save_file_defined_savefile(self):
         from natcap.invest.ui.inputs import FileDialog
@@ -1296,7 +1317,7 @@ class FileDialogTest(_QtTest):
         self.assertEqual(out_file, os.path.join('/new', 'file'))
 
     def test_open_file_qt5(self):
-        from natcap.invest.ui.inputs import FileDialog, DATA
+        from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
@@ -1309,7 +1330,7 @@ class FileDialogTest(_QtTest):
                 spec=dialog.file_dialog.getOpenFileName,
                 return_value=('/new/file', 'filter'))
 
-            DATA['last_dir'] = '/tmp/foo/bar'
+            INVEST_SETTINGS.setValue('last_dir', '/tmp/foo/bar')
             out_file = dialog.open_file(title='foo')
         finally:
             qtpy.QT_VERSION = _old_qtpy_version
@@ -1318,10 +1339,10 @@ class FileDialogTest(_QtTest):
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
             (dialog.file_dialog, 'foo', '/tmp/foo/bar', ()))
         self.assertEqual(out_file, '/new/file')
-        self.assertEqual(DATA['last_dir'], '/new')
+        self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode), '/new')
 
     def test_open_file_qt4(self):
-        from natcap.invest.ui.inputs import FileDialog, DATA
+        from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
@@ -1334,7 +1355,7 @@ class FileDialogTest(_QtTest):
                 spec=dialog.file_dialog.getOpenFileName,
                 return_value='/new/file')
 
-            DATA['last_dir'] = '/tmp/foo/bar'
+            INVEST_SETTINGS.setValue('last_dir', '/tmp/foo/bar')
             out_file = dialog.open_file(title='foo')
         finally:
             qtpy.QT_VERSION = _old_qtpy_version
@@ -1343,10 +1364,10 @@ class FileDialogTest(_QtTest):
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
             (dialog.file_dialog, 'foo', '/tmp/foo/bar', ()))
         self.assertEqual(out_file, '/new/file')
-        self.assertEqual(DATA['last_dir'], '/new')
+        self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode), '/new')
 
     def test_open_folder(self):
-        from natcap.invest.ui.inputs import FileDialog, DATA
+        from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
@@ -1354,13 +1375,14 @@ class FileDialogTest(_QtTest):
             spec=dialog.file_dialog.getExistingDirectory,
             return_value='/existing/folder')
 
-        DATA['last_dir'] = '/tmp/foo/bar'
+        INVEST_SETTINGS.setValue('last_dir', '/tmp/foo/bar')
         new_folder = dialog.open_folder('foo', start_dir=None)
 
         self.assertEqual(dialog.file_dialog.getExistingDirectory.call_args[0],
                          (dialog.file_dialog, 'Select folder: foo', '/tmp/foo/bar'))
         self.assertEqual(new_folder, '/existing/folder')
-        self.assertEqual(DATA['last_dir'], '/existing/folder')
+        self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode),
+                         '/existing/folder')
 
 
 class InfoButtonTest(_QtTest):
@@ -1733,25 +1755,7 @@ class OptionsDialogTest(_QtTest):
             options_dialog.postprocess()
 
 
-class SettingsDialogTest(_QtTest):
-    def setUp(self):
-        _QtTest.setUp(self)
-        from natcap.invest.ui import model
-
-        # back up the QSettings options for the test run so we don't disrupt
-        # whatever settings exist on this computer
-        self.settings = dict(
-            (key, model.INVEST_SETTINGS.value(key)) for key in
-            model.INVEST_SETTINGS.allKeys())
-        model.INVEST_SETTINGS.clear()
-
-    def tearDown(self):
-        _QtTest.tearDown(self)
-        from natcap.invest.ui import model
-        model.INVEST_SETTINGS.clear()
-        for key, value in self.settings.iteritems():
-            model.INVEST_SETTINGS.setValue(key, value)
-
+class SettingsDialogTest(_SettingsSandbox):
     def test_cache_dir_initialized_correctly(self):
         """UI SettingsDialog: check initialization of inputs."""
         from natcap.invest.ui import model

@@ -54,6 +54,12 @@ QLABEL_STYLE_INFO = _QLABEL_STYLE_TEMPLATE.format(
     padding='15px', bg_color='#d4efcc', border='2px solid #3e895b')
 QLABEL_STYLE_ERROR = _QLABEL_STYLE_TEMPLATE.format(
     padding='15px', bg_color='#ebabb6', border='2px solid #a23332')
+INVEST_SETTINGS = QtCore.QSettings(
+    QtCore.QSettings.IniFormat,
+    QtCore.QSettings.UserScope,
+    'Natural Capital Project',
+    'InVEST')
+DEFAULT_LASTDIR = ''
 
 def _cleanup():
     # Adding this allows tests to run on linux via `python setup.py nosetests`
@@ -106,27 +112,6 @@ def open_workspace(dirname):
         LOGGER.error(
             ('Cannot find default file browser. Platform: %s |'
                 ' folder: %s'), platform.system(), dirname)
-
-
-class ThreadSafeDataManager(object):
-    """A thread-safe data management object for saving data across the multiple
-    threads of the Qt GUI."""
-    def __init__(self):
-        self.data = {
-            'last_dir': '',
-        }
-        self.lock = threading.Lock()
-
-    def __getitem__(self, key):
-        with self.lock:
-            data = self.data[key]
-        return data
-
-    def __setitem__(self, key, value):
-        with self.lock:
-            self.data[key] = value
-
-DATA = ThreadSafeDataManager()  # common data stored here
 
 
 def center_window(window_ptr):
@@ -483,7 +468,8 @@ class FileDialog(object):
 
     def save_file(self, title, start_dir=None, savefile=None):
         if not start_dir:
-            start_dir = os.path.expanduser(DATA['last_dir'])
+            start_dir = os.path.expanduser(
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
 
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
@@ -505,12 +491,14 @@ class FileDialog(object):
         except ValueError:
             filename = result
 
-        DATA['last_dir'] = os.path.dirname(six.text_type(filename))
+        INVEST_SETTINGS.setValue('last_dir',
+                                 os.path.dirname(six.text_type(filename)))
         return filename
 
     def open_file(self, title, start_dir=None, filters=()):
         if not start_dir:
-            start_dir = os.path.expanduser(DATA['last_dir'])
+            start_dir = os.path.expanduser(
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
 
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
@@ -530,18 +518,20 @@ class FileDialog(object):
         except ValueError:
             filename = result
 
-        DATA['last_dir'] = os.path.dirname(six.text_type(filename))
+        INVEST_SETTINGS.setValue('last_dir',
+                                 os.path.dirname(six.text_type(filename)))
         return filename
 
     def open_folder(self, title, start_dir=None):
         if not start_dir:
-            start_dir = os.path.expanduser(DATA['last_dir'])
+            start_dir = os.path.expanduser(
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
         dialog_title = 'Select folder: ' + title
 
         dirname = self.file_dialog.getExistingDirectory(self.file_dialog, dialog_title,
                                                         start_dir)
         dirname = six.text_type(dirname)
-        DATA['last_dir'] = dirname
+        INVEST_SETTINGS.setValue('last_dir', dirname)
         return dirname
 
 
@@ -560,7 +550,9 @@ class _FileSystemButton(QtWidgets.QPushButton):
         self.clicked.connect(self._get_path)
         self.save_dialog_kwargs = {
             'title': self.dialog_title,
-            'start_dir': DATA['last_dir'],
+            'start_dir': INVEST_SETTINGS.value('last_dir',
+                                               DEFAULT_LASTDIR,
+                                               unicode),
         }
 
     def _get_path(self):

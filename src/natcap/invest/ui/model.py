@@ -29,11 +29,6 @@ from .. import validation
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 QT_APP = inputs.QT_APP
-INVEST_SETTINGS = QtCore.QSettings(
-    QtCore.QSettings.IniFormat,
-    QtCore.QSettings.UserScope,
-    'Natural Capital Project',
-    'InVEST')
 
 ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
                            color='grey')
@@ -189,13 +184,13 @@ class SettingsDialog(OptionsDialog):
             label='Cache directory',
             helptext=('Where local files will be stored.'
                       'Default value: %s') % cache_dir)
-        self.cache_directory.set_value(INVEST_SETTINGS.value(
+        self.cache_directory.set_value(inputs.INVEST_SETTINGS.value(
             'cache_dir', cache_dir, unicode))
         self._container.add_input(self.cache_directory)
 
     def postprocess(self, exitcode):
         if exitcode == QtWidgets.QDialog.Accepted:
-            INVEST_SETTINGS.setValue('cache_dir', self.cache_directory.value())
+            inputs.INVEST_SETTINGS.setValue('cache_dir', self.cache_directory.value())
 
 
 class AboutDialog(QtWidgets.QDialog):
