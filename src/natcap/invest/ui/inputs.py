@@ -237,7 +237,15 @@ class MessageArea(QtWidgets.QLabel):
 
 
 class QLogHandler(logging.StreamHandler):
+    """A ``logging.StreamHandler`` subclass for writing to a stream widget."""
+
     def __init__(self, stream_widget):
+        """Initialize the logging handler.
+
+        Parameters:
+            stream_widget (QtWidgets.QWidget): A QWidget that supports the
+                python streams API.
+        """
         logging.StreamHandler.__init__(self, stream=stream_widget)
         self._stream = stream_widget
         self.setLevel(logging.NOTSET)  # capture everything
@@ -249,10 +257,19 @@ class QLogHandler(logging.StreamHandler):
 
 
 class LogMessagePane(QtWidgets.QPlainTextEdit):
+    """A subclass of ``QtWidgets.QPlainTextEdit`` to support write().
+
+    Uses the signals/slots framework to support writing text to the
+    QPlainTextEdit from different threads.
+    """
 
     message_received = QtCore.Signal(six.text_type)
 
     def __init__(self):
+        """Initialize the LogMessagePane instance.
+
+        Sets the stylesheet for the QPlainTextEdit, and sets it to read-only.
+        """
         QtWidgets.QPlainTextEdit.__init__(self)
 
         self.setReadOnly(True)
@@ -261,9 +278,34 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
         self.message_received.connect(self._write)
 
     def write(self, message):
+        """'Write' the message to the message pane.
+
+        In actuality, this emits the ``message_received`` signal, with the
+        message as the value.  This allows this ``write`` method  to be
+        called from any thread, and the signal/slot framework will cause the
+        message to actually be rendered on an iteration of the event loop.
+
+        Parameters:
+            message (string): The message to be written to the message pane.
+
+        Returns:
+            ``None``
+        """
         self.message_received.emit(message)
 
     def _write(self, message):
+        """Write the message provided to the message pane.
+
+        Calling this method from a thread other than the main thread will
+        cause an error from within Qt.
+
+        Parameters:
+            message (string): The message to be appended to the end of the
+                QMessagePane.
+
+        Returns:
+            ``None``
+        """
         self.insertPlainText(message)
         self.textCursor().movePosition(QtGui.QTextCursor.End)
         self.setTextCursor(self.textCursor())
