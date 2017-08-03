@@ -6,7 +6,8 @@ import collections
 import re
 import os
 import logging
-import uuid
+
+logging.basicConfig(level=logging.INFO)
 
 from osgeo import gdal
 from osgeo import ogr
@@ -15,9 +16,7 @@ import numpy
 import taskgraph
 
 from . import utils
-logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
-
 
 _INDEX_NODATA = -1.0
 
@@ -34,6 +33,9 @@ _RELATIVE_SPECIES_ABUNDANCE_FIELD = 'relative_abundance'
 _EXPECTED_GUILD_HEADERS = [
     'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_PATTERN,
     'alpha', _RELATIVE_SPECIES_ABUNDANCE_FIELD]
+
+_NESTING_SUBSTRATE_INDEX_FILEPATTERN = 'nesting_substrate_index_%s%s.tif'
+
 
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
@@ -152,22 +154,44 @@ def execute(args):
         args['guild_table_path'], args['landcover_biophysical_table_path'],
         farm_path)
 
-    LOGGER.debug(scenario_variables)
-    return
+    # scenario_variables:
+    # 'season_list' (list of string)
+    # 'substrate_list' (list of string)
+    # 'species_list' (list of string)
+    # 'landcover_substrate_index'[substrate][landcover] (float)
+    # 'species_abundance'[species] (string->float)
+    # 'nesting_suitability_index'[(species, substrate)] (tuple->float)
+    # 'foraging_activity_index'[(species, season)] (tuple->float)
 
     task_graph = taskgraph.TaskGraph(work_token_dir, 0)
 
-    # validate inputs
-        # get seasons - J (season_list)
-        # get substrates - N (substrate_list)
-        # get landcover to substrate table - ln(l, n) (landcover_substrate_index[(landcover, substrate)])
-        # get species - S (species_list)
-        # get species abundance sa(s) (normalized) (species_abundance[species])
-        # get species nesting suitability index - ns(s,n) nesting_suitability_index[species, substrate]
-        # get species foraging activity index - fa(s,j) (normalized) foraging_activity_index[species, season]
+    # calculate nesting_substrate_index[substrate] substrate maps N(x, n) = ln(l(x), n)
+    scenario_variables['nesting_substrate_index_path'] = {}
+
+    landcover_substrate_index_tasks = {}
+    for substrate in scenario_variables['substrate_list']:
+        nesting_substrate_index_path = os.path.join(
+            intermediate_output_dir,
+            _NESTING_SUBSTRATE_INDEX_FILEPATTERN % (substrate, file_suffix))
+        scenario_variables['nesting_substrate_index_path'][substrate] = (
+            nesting_substrate_index_path)
+
+        landcover_substrate_index_tasks[substrate] = task_graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=(
+                (args['landcover_raster_path'], 1),
+                scenario_variables['landcover_substrate_index'][substrate],
+                nesting_substrate_index_path, gdal.GDT_Float32,
+                _INDEX_NODATA),
+            kwargs={'values_required': True},
+            target_path_list=[nesting_substrate_index_path])
+
+    task_graph.close()
+    task_graph.join()
+    return
 
     # per substrate n
-        # calculate nesting_substrate_index[substrate] to substrate maps N(x, n) = ln(l(x), n)
+        #
             # if farms, then overlay substrate
 
     # per species
@@ -417,7 +441,7 @@ def _parse_scenario_variables(
             * season_list (list of string)
             * substrate_list (list of string)
             * species_list (list of string)
-            * landcover_substrate_index[(landcover, substrate)] (tuple->float)
+            * landcover_substrate_index[substrate][landcover] (float)
             * species_abundance[species] (string->float)
             * nesting_suitability_index[(species, substrate)] (tuple->float)
             * foraging_activity_index[(species, season)] (tuple->float)
@@ -551,14 +575,14 @@ def _parse_scenario_variables(
             guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD] /
             total_relative_abundance)
 
-    # * landcover_substrate_index[(landcover, substrate)] (tuple->float)
-    result['landcover_substrate_index'] = {}
-    for landcover_id in landcover_biophysical_table:
+    # * landcover_substrate_index[substrate][landcover] (float)
+    result['landcover_substrate_index'] = collections.defaultdict(dict)
+    for raw_landcover_id in landcover_biophysical_table:
+        landcover_id = int(raw_landcover_id)
         for substrate in result['substrate_list']:
-            key = (int(landcover_id), substrate)
             substrate_biophysical_header = (
                 substrate_to_header[substrate]['biophysical'])
-            result['landcover_substrate_index'][key] = (
+            result['landcover_substrate_index'][substrate][landcover_id] = (
                 landcover_biophysical_table[landcover_id][
                     substrate_biophysical_header])
 
