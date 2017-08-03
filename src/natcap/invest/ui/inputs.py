@@ -115,10 +115,11 @@ def open_workspace(dirname):
 
 
 def center_window(window_ptr):
-    """Center a window on whatever screen it appears.
-            window_ptr - a pointer to a Qt window, whether an application or a
-                QDialog.
-        returns nothing."""
+    """Center the provided window on the current screen.
+
+    Parameters:
+        window_ptr (QtWidgets.QWidget): a reference to a Qt window.
+    """
     geometry = window_ptr.frameGeometry()
     center = QtWidgets.QDesktopWidget().availableGeometry().center()
     geometry.moveCenter(center)
@@ -126,19 +127,44 @@ def center_window(window_ptr):
 
 
 class Validator(QtCore.QObject):
+    """A class to manage alidating in a separate Qt thread."""
 
     started = QtCore.Signal()
     finished = QtCore.Signal(list)
 
     def __init__(self, parent):
+        """Initialize the Validator instance.
+
+        Parameters:
+            parent (QtWidgets.QWidget): The parent qwidget.  This will be the
+                parent of the validation thread.
+        """
         QtCore.QObject.__init__(self, parent)
         self._validation_thread = QtCore.QThread(parent=self)
         self._validation_worker = None
 
     def in_progress(self):
+        """Whether the validation thread is running.
+
+        Returns:
+            is_running (bool): Whether the validation thread is running.
+        """
         return self._validation_thread.isRunning()
 
     def validate(self, target, args, limit_to=None):
+        """Validate the provided args with the provided target.
+
+        Parameters:
+            target (callable): The validation callable.  Must adhere to the
+                InVEST validation API.
+            args (dict): The arguments dictionary to validate.
+            limit_to=None (string or None): Optional. If provided, this is the
+                validation key that should be validated.  All other keys will
+                be excluded.  Part of the InVEST Validation API.
+
+        Returns:
+            ``None``
+        """
         for i in xrange(10):
             if self._validation_thread.isRunning():
                 break
@@ -153,10 +179,9 @@ class Validator(QtCore.QObject):
         self._validation_worker.moveToThread(self._validation_thread)
 
         def _finished():
+            """Slot to process warnings and emit ``self.finished``."""
             LOGGER.info('Finished validation for args_key %s', limit_to)
             warnings_ = [w for w in self._validation_worker.warnings]
-            #    warnings_ = [w[1] for w in self._validation_worker.warnings
-            #                 if limit_to in w[0] or not limit_to]
 
             LOGGER.debug(warnings_)
             self.finished.emit(warnings_)
@@ -171,13 +196,38 @@ class Validator(QtCore.QObject):
 
 
 class MessageArea(QtWidgets.QLabel):
+    """An object to represent the status box in the model progress dialog.
+
+    Example:
+        area = MessageArea()
+        area.setText('some success text')
+        area.set_error(False)  # sets the stylesheet for non-error messages.
+    """
+
     def __init__(self):
+        """Initialize the MessageArea.
+
+        From a Qt perspective, this is little more than calling
+        ``QLabel.__init__`` and ensuring that the qlabel has word wrapping and
+        rich text enabled.
+        """
         QtWidgets.QLabel.__init__(self)
         self.setWordWrap(True)
         self.setTextFormat(QtCore.Qt.RichText)
         self.error = False
 
     def set_error(self, is_error):
+        """Set the label stylesheet for error or success.
+
+        The label is shown when the error status is set.
+
+        Parameters:
+            is_error (bool): If ``True``, a green success style will be used.
+                If ``False``, a red failure style will be used instead.
+
+        Returns:
+            ``None``
+        """
         self.error = is_error
         if is_error:
             self.setStyleSheet(QLABEL_STYLE_ERROR)
