@@ -35,12 +35,16 @@ _EXPECTED_GUILD_HEADERS = [
     'alpha', _RELATIVE_SPECIES_ABUNDANCE_FIELD]
 
 _NESTING_SUBSTRATE_INDEX_FILEPATTERN = 'nesting_substrate_index_%s%s.tif'
-
+# this is used if there is a farm polygon present
+_FARM_NESTING_SUBSTRATE_INDEX_FILEPATTERN = (
+    'farm_nesting_substrate_index_%s%s.tif')
 
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
 _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
-_FARM_NESTING_SUBSTRATE_PATTERN = 'n_([^_]+)'
+_FARM_NESTING_SUBSTRATE_HEADER_PATTERN = 'n_%s'
+_FARM_NESTING_SUBSTRATE_RE_PATTERN = (
+    _FARM_NESTING_SUBSTRATE_HEADER_PATTERN % '([^_]+)')
 _HALF_SATURATION_FARM_HEADER = 'half_sat'
 _CROP_POLLINATOR_DEPENDENCE_FIELD = 'p_dep'
 _MANAGED_POLLINATORS_FIELD = 'p_managed'
@@ -48,7 +52,7 @@ _FARM_SEASON_FIELD = 'season'
 _EXPECTED_FARM_HEADERS = [
     'season', 'crop_type', _HALF_SATURATION_FARM_HEADER,
     _MANAGED_POLLINATORS_FIELD, _FARM_FLORAL_RESOURCES_PATTERN,
-    _FARM_NESTING_SUBSTRATE_PATTERN, _CROP_POLLINATOR_DEPENDENCE_FIELD]
+    _FARM_NESTING_SUBSTRATE_RE_PATTERN, _CROP_POLLINATOR_DEPENDENCE_FIELD]
 
 def execute(args):
     """InVEST Pollination Model.
@@ -146,13 +150,13 @@ def execute(args):
         # get species nesting suitability index - ns(s,n) nesting_suitability_index[species, substrate]
         # get species foraging activity index - fa(s,j) (normalized) foraging_activity_index[species, season]
 
-    if 'farm_path' in args and args['farm_path'] != '':
-        farm_path = args['farm_path']
+    if 'farm_vector_path' in args and args['farm_vector_path'] != '':
+        farm_vector_path = args['farm_vector_path']
     else:
-        farm_path = None
+        farm_vector_path = None
     scenario_variables = _parse_scenario_variables(
         args['guild_table_path'], args['landcover_biophysical_table_path'],
-        farm_path)
+        farm_vector_path)
 
     # scenario_variables:
     # 'season_list' (list of string)
@@ -186,13 +190,33 @@ def execute(args):
             kwargs={'values_required': True},
             target_path_list=[nesting_substrate_index_path])
 
+    if farm_vector_path is not None:
+        scenario_variables['farm_nesting_substrate_index_path'] = (
+            collections.defaultdict(dict))
+        # calculate farm_nesting_substrate_index[substrate] substrate maps
+        # farm substrate rasterized over N(x, n)
+        farm_substrate_rasterize_tasks = {}
+        for substrate in scenario_variables['substrate_list']:
+            farm_substrate_id = (
+                _FARM_NESTING_SUBSTRATE_HEADER_PATTERN % substrate)
+            farm_nesting_substrate_index_path = os.path.join(
+                intermediate_output_dir,
+                _FARM_NESTING_SUBSTRATE_INDEX_FILEPATTERN % (
+                    substrate, file_suffix))
+            scenario_variables['farm_nesting_substrate_index_path'] = (
+                farm_nesting_substrate_index_path)
+            _rasterize_vector_onto_base(
+                scenario_variables['nesting_substrate_index_path'][substrate],
+                farm_vector_path, farm_substrate_id,
+                farm_nesting_substrate_index_path)
+
+        # per substrate n
+            # if farms, then overlay substrate
+
     task_graph.close()
     task_graph.join()
     return
 
-    # per substrate n
-        #
-            # if farms, then overlay substrate
 
     # per species
         # calculate habitat_nesting_index[species] HN(x, s) = max_n(N(x, n) ns(s,n))
@@ -356,37 +380,35 @@ def _add_fid_field(base_vector_path, target_vector_path, fid_id):
     target_vector = None
 
 
-def _rasterize_vector_from_base(
+def _rasterize_vector_onto_base(
         base_raster_path, base_vector_path, attribute_id,
         target_raster_path, filter_string=None):
-    """Rasterize half saturation coefficient for particular season.
+    """Rasterize attribute from vector onto a copy of base.
 
     Parameters:
         base_raster_path (string): path to a base raster file
         attribute_id (string): id in `base_vector_path` to rasterize.
-        base_vector_path (string): path to vector
-        target_raster_path (string): path to rasterized file.
+        target_raster_path (string): a copy of `base_raster_path` with
+            `base_vector_path[attribute_id]` rasterized on top.
         filter_string (string): filtering string to select from farm layer
 
     Returns:
         None.
     """
+    base_raster = gdal.Open(base_raster_path)
+    raster_driver = base_raster.GetDriver()
+    target_raster = raster_driver.CreateCopy(target_raster_path, base_raster)
+    base_raster = None
+
     vector = ogr.Open(base_vector_path)
     layer = vector.GetLayer()
 
-    pygeoprocessing.new_raster_from_base(
-        base_raster_path, target_raster_path,
-        gdal.GDT_Float32, [_INDEX_NODATA],
-        fill_value_list=[_INDEX_NODATA])
     if filter_string is not None:
         layer.SetAttributeFilter(str(filter_string))
-    target_raster = gdal.Open(
-        target_raster_path, gdal.GA_Update)
     gdal.RasterizeLayer(
         target_raster, [1], layer,
         options=['ATTRIBUTE=%s' % attribute_id])
     target_raster.FlushCache()
-    gdal.Dataset.__swig_destroy__(target_raster)
     target_raster = None
     layer = None
     vector = None
@@ -525,7 +547,7 @@ def _parse_scenario_variables(
             if match:
                 season = match.group(1)
                 season_to_header[season]['farm'] = match.group()
-            match = re.match(_FARM_NESTING_SUBSTRATE_PATTERN, header)
+            match = re.match(_FARM_NESTING_SUBSTRATE_RE_PATTERN, header)
             if match:
                 substrate = match.group(1)
                 substrate_to_header[substrate]['farm'] = match.group()
