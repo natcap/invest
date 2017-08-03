@@ -19,38 +19,7 @@ logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
 
-_OUTPUT_BASE_FILES = {
-    }
-
-_INTERMEDIATE_BASE_FILES = {
-    }
-
-_TMP_BASE_FILES = {
-    }
-
 _INDEX_NODATA = -1.0
-
-_MANAGED_BEES_RASTER_FILE_PATTERN = r'managed_bees'
-_SPECIES_ALPHA_KERNEL_FILE_PATTERN = r'alpha_kernel_%s'
-_ACCESSIBLE_FLORAL_RESOURCES_FILE_PATTERN = r'accessible_floral_resources_%s'
-_LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN = r'local_pollinator_supply_%s_index'
-_SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
-    r'seasonal_pollinator_abundance_%s_%s_index')  # species_id, season_id
-_TOTAL_SEASONAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
-    r'total_seasonal_pollinator_abundance_%s_index')
-_RAW_POLLINATOR_ABUNDANCE_FILE_PATTERN = r'raw_pollinator_abundance_%s_index'
-_LOCAL_FLORAL_RESOURCE_AVAILABILITY_FILE_PATTERN = (
-    r'local_floral_resource_availability_%s_index')
-_NESTING_SUITABILITY_SPECIES_PATTERN = r'nesting_suitability_%s_index'
-_PROJECTED_FARM_VECTOR_FILE_PATTERN = 'projected_farm_vector%s.shp'
-_TOTAL_FARM_POLLINATOR_FILE_PATTERN = 'total_farm_pollinators_%s'
-_FARM_YIELD_SEASONAL_FILE_PATTERN = 'farm_yield_%s%s.tif'
-_FARM_YIELD_MANAGED_BEES_SEASONAL_FILE_PATTERN = (
-    'farm_yield_managed_bees_%s%s.tif')
-_FARM_YIELD_POLLINATOR_DEPENDENT_SEASONAL_FILE_PATTERN = (
-    'farm_yield_polinator_dependent_%s%s.tif')
-_TOTAL_FARM_YIELD_FILE_PATTERN = (
-    'total_farm_yield%s.tif')
 
 # These patterns are expected in the biophysical table
 _NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
@@ -78,17 +47,6 @@ _EXPECTED_FARM_HEADERS = [
     'season', 'crop_type', _HALF_SATURATION_FARM_HEADER,
     _MANAGED_POLLINATORS_FIELD, _FARM_FLORAL_RESOURCES_PATTERN,
     _FARM_NESTING_SUBSTRATE_PATTERN, _CROP_POLLINATOR_DEPENDENCE_FIELD]
-
-_SEASONAL_POLLINATOR_YIELD_FILE_PATTERN = 'seasonal_pollinator_yield_%s'
-_TOTAL_POLLINATOR_DEPENDENT_YIELD_FILE_PATTERN = (
-    'total_pollinator_yield%s.tif')
-_TARGET_AGGREGATE_FARM_VECTOR_FILE_PATTERN = 'farm_yield'
-_POLLINATOR_FARM_YIELD_FIELD_ID = 'p_av_yield'
-_TOTAL_FARM_YIELD_FIELD_ID = 't_av_yield'
-_WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'wp_av_yiel'
-
-_MAX_POLLINATED_SPECIES_FILE_PATTERN = 'max_pollinated_%s'
-
 
 def execute(args):
     """InVEST Pollination Model.
@@ -177,11 +135,6 @@ def execute(args):
         [output_dir, intermediate_output_dir])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    f_reg = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     guild_table = utils.build_lookup_from_csv(
         args['guild_table_path'], 'species', to_lower=True,
@@ -305,6 +258,40 @@ def execute(args):
                     table_type, lookup_table, table_type))
 
     task_graph = taskgraph.TaskGraph(work_token_dir, 0)
+
+    # validate inputs
+        # get seasons - J (season_list)
+        # get substrates - N (substrate_list)
+        # get landcover to substrate table - ln(l, n) (landcover_substrate_index[(landcover, substrate)])
+        # get species - S (species_list)
+        # get species abundance sa(s) (normalized) (species_abundance[species])
+        # get species nesting suitability index - ns(s,n) nesting_suitability_index[species, substrate]
+        # get species foraging activity index - fa(s,j) (normalized) foraging_activity_index[species, season]
+
+    # per substrate n
+        # calculate nesting_substrate_index[substrate] to substrate maps N(x, n) = ln(l(x), n)
+            # if farms, then overlay substrate
+
+    # per species
+        # calculate habitat_nesting_index[species] HN(x, s) = max_n(N(x, n) ns(s,n))
+
+    # per season j
+        # calculate relative_floral_abundance_index[season] per season RA(l(x), j)
+        # per species s
+            # local foraging effectiveness foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
+
+    # per species
+        # accessable_floral_resources_index[species] FR(x,s) = convolve(FE(x, s), \alpha_s)
+        # pollinator_supply_index[species] PS(x,s) = FR(x,s) * HN(x,s) * sa(s)
+
+    # per species s
+        # per season j
+            # pollinator_abundance_index[species, season] PA(x,s,j) = RA(l(x),j)fa(s,j) convolve(PS(x',s), \alpha_s)
+
+    # per season j
+        # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
+
+
 
     # farms can be optional
     reproject_farm_task = None
