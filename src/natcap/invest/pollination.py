@@ -132,6 +132,7 @@ def execute(args):
     Returns:
         None
     """
+    # create initial working directories and determine file suffixes
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     work_token_dir = os.path.join(
@@ -141,37 +142,22 @@ def execute(args):
         [output_dir, intermediate_output_dir])
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    # validate inputs
-        # get seasons - J (season_list)
-        # get substrates - N (substrate_list)
-        # get landcover to substrate table - ln(l, n) (landcover_substrate_index[(landcover, substrate)])
-        # get species - S (species_list)
-        # get species abundance sa(s) (normalized) (species_abundance[species])
-        # get species nesting suitability index - ns(s,n) nesting_suitability_index[species, substrate]
-        # get species foraging activity index - fa(s,j) (normalized) foraging_activity_index[species, season]
-
     if 'farm_vector_path' in args and args['farm_vector_path'] != '':
         farm_vector_path = args['farm_vector_path']
     else:
         farm_vector_path = None
+
+    # parse out the scenario variables from a complicated set of two tables
+    # and possibly a farm polygon.  This function will also raise an exception
+    # if any of the inputs are malformed.
     scenario_variables = _parse_scenario_variables(
         args['guild_table_path'], args['landcover_biophysical_table_path'],
         farm_vector_path)
-
-    # scenario_variables:
-    # 'season_list' (list of string)
-    # 'substrate_list' (list of string)
-    # 'species_list' (list of string)
-    # 'landcover_substrate_index'[substrate][landcover] (float)
-    # 'species_abundance'[species] (string->float)
-    # 'nesting_suitability_index'[(species, substrate)] (tuple->float)
-    # 'foraging_activity_index'[(species, season)] (tuple->float)
 
     task_graph = taskgraph.TaskGraph(work_token_dir, 0)
 
     # calculate nesting_substrate_index[substrate] substrate maps N(x, n) = ln(l(x), n)
     scenario_variables['nesting_substrate_index_path'] = {}
-
     landcover_substrate_index_tasks = {}
     for substrate in scenario_variables['substrate_list']:
         nesting_substrate_index_path = os.path.join(
@@ -190,11 +176,11 @@ def execute(args):
             kwargs={'values_required': True},
             target_path_list=[nesting_substrate_index_path])
 
+    # calculate farm_nesting_substrate_index[substrate] substrate maps
+    # dependent on farm substrate rasterized over N(x, n)
     if farm_vector_path is not None:
         scenario_variables['farm_nesting_substrate_index_path'] = (
             collections.defaultdict(dict))
-        # calculate farm_nesting_substrate_index[substrate] substrate maps
-        # farm substrate rasterized over N(x, n)
         farm_substrate_rasterize_tasks = {}
         for substrate in scenario_variables['substrate_list']:
             farm_substrate_id = (
@@ -205,10 +191,16 @@ def execute(args):
                     substrate, file_suffix))
             scenario_variables['farm_nesting_substrate_index_path'] = (
                 farm_nesting_substrate_index_path)
-            _rasterize_vector_onto_base(
-                scenario_variables['nesting_substrate_index_path'][substrate],
-                farm_vector_path, farm_substrate_id,
-                farm_nesting_substrate_index_path)
+            farm_substrate_rasterize_tasks[substrate] = task_graph.add_task(
+                func=_rasterize_vector_onto_base,
+                args=(
+                    scenario_variables['nesting_substrate_index_path'][
+                        substrate],
+                    farm_vector_path, farm_substrate_id,
+                    farm_nesting_substrate_index_path),
+                target_path_list=[farm_nesting_substrate_index_path],
+                dependent_task_list=[
+                    landcover_substrate_index_tasks[substrate]])
 
         # per substrate n
             # if farms, then overlay substrate
