@@ -39,6 +39,9 @@ _NESTING_SUBSTRATE_INDEX_FILEPATTERN = 'nesting_substrate_index_%s%s.tif'
 _FARM_NESTING_SUBSTRATE_INDEX_FILEPATTERN = (
     'farm_nesting_substrate_index_%s%s.tif')
 
+# indexed by (species, file_suffix)
+_HABITAT_NESTING_INDEX_FILE_PATTERN = 'habitat_nesting_index_%s%s.tif'
+
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
 _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
@@ -189,8 +192,8 @@ def execute(args):
                 intermediate_output_dir,
                 _FARM_NESTING_SUBSTRATE_INDEX_FILEPATTERN % (
                     substrate, file_suffix))
-            scenario_variables['farm_nesting_substrate_index_path'] = (
-                farm_nesting_substrate_index_path)
+            scenario_variables['farm_nesting_substrate_index_path'][
+                substrate] = farm_nesting_substrate_index_path
             farm_substrate_rasterize_tasks[substrate] = task_graph.add_task(
                 func=_rasterize_vector_onto_base,
                 args=(
@@ -202,16 +205,36 @@ def execute(args):
                 dependent_task_list=[
                     landcover_substrate_index_tasks[substrate]])
 
-        # per substrate n
-            # if farms, then overlay substrate
+    # per species
+    habitat_nesting_tasks = {}
+    scenario_variables['habitat_nesting_index_path'] = {}
+    for species in scenario_variables['species_list']:
+        # calculate habitat_nesting_index[species] HN(x, s) = max_n(N(x, n) ns(s,n))
+        if farm_vector_path is not None:
+            dependent_task_map = farm_substrate_rasterize_tasks
+            substrate_path_map = scenario_variables[
+                'farm_nesting_substrate_index_path']
+        else:
+            dependent_task_map = farm_substrate_rasterize_tasks
+            substrate_path_map = scenario_variables[
+                'farm_nesting_substrate_index_path']
+
+        scenario_variables['habitat_nesting_index_path'][species] = (
+            os.path.join(
+                intermediate_output_dir,
+                _HABITAT_NESTING_INDEX_FILE_PATTERN % (species, file_suffix)))
+
+        op = _CalculateHabitatNestingIndex(
+            substrate_path_map,
+            scenario_variables['species_substrate_index'][species],
+            scenario_variables['habitat_nesting_index_path'][species])
+        op()
 
     task_graph.close()
     task_graph.join()
     return
 
 
-    # per species
-        # calculate habitat_nesting_index[species] HN(x, s) = max_n(N(x, n) ns(s,n))
 
     # per season j
         # calculate relative_floral_abundance_index[season] per season RA(l(x), j)
@@ -457,7 +480,7 @@ def _parse_scenario_variables(
             * species_list (list of string)
             * landcover_substrate_index[substrate][landcover] (float)
             * species_abundance[species] (string->float)
-            * nesting_suitability_index[(species, substrate)] (tuple->float)
+            * species_substrate_index[(species, substrate)] (tuple->float)
             * foraging_activity_index[(species, season)] (tuple->float)
     """
 
@@ -600,13 +623,12 @@ def _parse_scenario_variables(
                 landcover_biophysical_table[landcover_id][
                     substrate_biophysical_header])
 
-    # * nesting_suitability_index[(species, substrate)] (tuple->float)
-    result['nesting_suitability_index'] = {}
+    # * species_substrate_index[(species, substrate)] (tuple->float)
+    result['species_substrate_index'] = collections.defaultdict(dict)
     for species in result['species_list']:
         for substrate in result['substrate_list']:
             substrate_guild_header = substrate_to_header[substrate]['guild']
-            key = (species, substrate)
-            result['nesting_suitability_index'][key] = (
+            result['species_substrate_index'][species][substrate] = (
                 guild_table[species][substrate_guild_header])
 
     # * foraging_activity_index[(species, season)] (tuple->float)
@@ -619,3 +641,36 @@ def _parse_scenario_variables(
                 guild_table[species][foraging_biophyiscal_header])
 
     return result
+
+
+class _CalculateHabitatNestingIndex(object):
+    """Closure for HN(x, s) = max_n(N(x, n) ns(s,n)) calculation."""
+
+    def __init__(
+            self, substrate_path_map, species_substrate_index_path_map,
+            target_habitat_nesting_index_path):
+        """Define parameters necessary for HN(x,s) calculation.
+
+        Parameters:
+            substrate_path_map (dict): map substrate name to substrate index
+                raster path. (N(x, n))
+            species_substrate_index_path_map (dict): map substrate name to
+                scalar value of species substrate suitability. (ns(s,n))
+            target_habitat_nesting_index_path (string): path to target
+                raster
+        """
+        self.substrate_path_map = substrate_path_map
+        # TODO this needs to be in alphabetical order
+        self.species_substrate_index_path_map = (
+            species_substrate_index_path_map)
+        self.target_habitat_nesting_index_path = (
+            target_habitat_nesting_index_path)
+
+    def __call__(self):
+
+        def max_op(*substrate_index_arrays):
+            """Return the max of index_array[n] * ns[n]."""
+            valid_mask = substrate_index_arrays[0] != _INDEX_NODATA
+            result = numpy.empty_like(substrate_index_arrays[0])
+            result[:] = _INDEX_NODATA
+
