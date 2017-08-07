@@ -618,7 +618,8 @@ class ValidationWorker(QtCore.QObject):
         """Check whether the validation callable has finished executing.
 
         Returns:
-            finished (bool): Whether validation has finished."""
+            finished (bool): Whether validation has finished.
+        """
         return self._finished
 
     def start(self):
@@ -661,10 +662,16 @@ class FileDialog(object):
     """A convenience wrapper for QtWidgets.QFileDialog."""
 
     def __init__(self):
+        """Initialize the FileDialog instance.
+
+        Returns:
+            ``None``
+        """
         object.__init__(self)
         self.file_dialog = QtWidgets.QFileDialog()
 
     def __del__(self):
+        """Destructor for the FileDialog instance."""
         self.file_dialog.deleteLater()
 
     def save_file(self, title, start_dir=None, savefile=None):
@@ -779,11 +786,41 @@ class FileDialog(object):
         return dirname
 
 
-class _FileSystemButton(QtWidgets.QPushButton):
+class AbstractFileSystemButton(QtWidgets.QPushButton):
+    """Shared base class for buttons that prompt for a path when pressed.
+
+    Subclasses are expected to set the local attribute ``self.open_method``
+    with a callable that takes no parameters.  This method should prompt
+    the user with an appropriate dialog.  If the dialog needs to take some
+    parameters as input, these may be set via
+    ``self.set_dialog_options``.
+
+    Example:
+        class SomeSubclass(AbstractFileSystemButton):
+            def __init__(self):
+                AbstractFileSystemButton.__init__(self, 'title')
+                self.open_method = self.dialog.open_file
+
+        button = SomeSubclass()
+
+        # Set options for the dialog class
+        button.set_dialog_options(
+            start_dir=os.path.getcwd(),
+            filters=())
+    """
 
     path_selected = QtCore.Signal(six.text_type)
 
     def __init__(self, dialog_title):
+        """Initialize the AbstractFileSystemButton.
+
+        Parameters:
+            dialog_title (string): The title of the filesystem dialog owned
+                by this object.
+
+        Returns:
+            ``None``
+        """
         QtWidgets.QPushButton.__init__(self)
         if not hasattr(self, '_icon'):
             self._icon = ICON_FOLDER
@@ -792,7 +829,7 @@ class _FileSystemButton(QtWidgets.QPushButton):
         self.dialog = FileDialog()
         self.open_method = None  # This should be overridden
         self.clicked.connect(self._get_path)
-        self.save_dialog_kwargs = {
+        self._dialog_kwargs = {
             'title': self.dialog_title,
             'start_dir': INVEST_SETTINGS.value('last_dir',
                                                DEFAULT_LASTDIR,
@@ -800,32 +837,76 @@ class _FileSystemButton(QtWidgets.QPushButton):
         }
 
     def _get_path(self):
-        selected_path = self.open_method(**self.save_dialog_kwargs)
+        """Use ``self.open_method`` to present a dialog to the user.
+
+        ``self.open_method`` is called with any dialog kwargs that happen to
+        be set.
+
+        When a path is selected, the ``path_selected`` signal is emitted with
+        the path selected by the user.
+        """
+        selected_path = self.open_method(**self._dialog_kwargs)
         self.path_selected.emit(selected_path)
 
-    def set_save_dialog_options(self, **kwargs):
-        self.save_dialog_kwargs = kwargs
+    def set_dialog_options(self, **kwargs):
+        """Set the dialog keyword arguments from args passed to this method.
+
+        Any keyword arguments may be passed to this method.
+        """
+        self._dialog_kwargs = kwargs
 
 
-class FileButton(_FileSystemButton):
+class FileButton(AbstractFileSystemButton):
+    """A filesystem button that prompts to open a file."""
+
     def __init__(self, dialog_title):
+        """Initialize the FileButton.
+
+        Parameters:
+            dialog_title (string): The title of the file selection dialog.
+
+        Returns:
+            ``None``
+        """
         self._icon = ICON_FILE
-        _FileSystemButton.__init__(self, dialog_title)
+        AbstractFileSystemButton.__init__(self, dialog_title)
         self.open_method = self.dialog.open_file
 
 
-class SaveFileButton(_FileSystemButton):
+class SaveFileButton(AbstractFileSystemButton):
+    """A filesystem button that prompts to save a file."""
+
     def __init__(self, dialog_title, default_savefile):
+        """Initialize the SaveFileButton.
+
+        Parameters:
+            dialog_title (string): The title of the file selection dialog.
+            default_savefile (string): The file basename to use by default.
+                The user may override this filename within the dialog.
+
+        Returns:
+            ``None``
+        """
         self._icon = ICON_FILE
-        _FileSystemButton.__init__(self, dialog_title)
+        AbstractFileSystemButton.__init__(self, dialog_title)
         self.open_method = functools.partial(
             self.dialog.save_file,
             savefile=default_savefile)
 
 
-class FolderButton(_FileSystemButton):
+class FolderButton(AbstractFileSystemButton):
+    """A filesystem button that prompts to select a folder."""
+
     def __init__(self, dialog_title):
-        _FileSystemButton.__init__(self, dialog_title)
+        """Initialize the FolderButton.
+
+        Parameters:
+            dialog_title (string): The title of the folder selection dialog.
+
+        Returns:
+            ``None``
+        """
+        AbstractFileSystemButton.__init__(self, dialog_title)
         self.open_method = self.dialog.open_folder
 
 
