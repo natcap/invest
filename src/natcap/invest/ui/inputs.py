@@ -312,7 +312,21 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
 
 
 class FileSystemRunDialog(QtWidgets.QDialog):
+    """A dialog to display messages to the user while a process is running.
+
+    Messages are displayed to a message pane that scrolls continuously as new
+    messages are added, and an indeterminate progress bar is visible to
+    offer a visual queue that something is happening.
+
+    While the process is running, there is a checkbox that may be selected.
+    When ths process finishes (and the checkbox is selected), the workspace
+    folder is opened in the OS's default file explorer.  When the process
+    finishes, the checkbox is converted to a button that, when pressed, wil
+    open the workspace with the OS's default file explorer.
+    """
+
     def __init__(self):
+        """Initialize the dialog."""
         QtWidgets.QDialog.__init__(self)
 
         self.is_executing = False
@@ -377,7 +391,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
             self.backButton, QtWidgets.QDialogButtonBox.AcceptRole)
 
         # connect the buttons to their callback functions.
-        self.backButton.clicked.connect(self.closeWindow)
+        self.backButton.clicked.connect(self.close_window)
 
         # add the buttonBox to the window.
         self.layout().addWidget(self.buttonBox)
@@ -386,10 +400,12 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.setWindowFlags(QtCore.Qt.Dialog)
 
     def __del__(self):
+        """Delete/deregister required objects."""
         self.logger.removeHandler(self.loghandler)
         self.deleteLater()
 
     def start(self, window_title, out_folder):
+        """Set the state of the dialog to indicate processing has started."""
         if not window_title:
             window_title = "Running ..."
         self.setWindowTitle(window_title)
@@ -402,10 +418,19 @@ class FileSystemRunDialog(QtWidgets.QDialog):
 
         self.log_messages_pane.write('Initializing...\n')
 
+    # TODO: consolidate exception_found, thread_exception if possible.
     def finish(self, exception_found, thread_exception=None):
         """Notify the user that model processing has finished.
-            returns nothing."""
 
+        Parameters:
+            exception_found (bool): Whether an exception was found while
+                processing.
+            thread_exception=None (Exception or None): The exception object
+                If the error encountered.  None if no error found.
+
+        Returns:
+            ``None``
+        """
         self.is_executing = False
         self.progressBar.setMaximum(1)  # stops the progressbar.
         self.backButton.setDisabled(False)
@@ -436,10 +461,12 @@ class FileSystemRunDialog(QtWidgets.QDialog):
     def _request_workspace(self, event=None):
         open_workspace(self.out_folder)
 
-    def closeWindow(self):
-        """Close the window and ensure the modelProcess has completed.
-            returns nothing."""
+    def close_window(self):
+        """Close the window and reset the state of the process window.
 
+        Returns:
+            ``None``
+        """
         self.openWorkspaceCB.setVisible(True)
         self.openWorkspaceButton.setVisible(False)
         self.messageArea.clear()
@@ -458,9 +485,13 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         QtWidgets.QDialog.reject(self)
 
     def closeEvent(self, event):
-        """
-        Prevent the user from closing the modal dialog.
-        Qt event handler, overridden from QWidget.closeEvent.
+        """CloseEvent handler, overridden from QWidget.closeEvent.
+
+        Overridden to prevent the user from closing the modal dialog if the
+        thread is executing.
+
+        Returns:
+            ``None``.
         """
         if self.is_executing:
             event.ignore()
