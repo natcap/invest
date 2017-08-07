@@ -2149,7 +2149,7 @@ class Container(QtWidgets.QGroupBox, Input):
             input.input_added.connect(_update_sizehints)
 
     def _add_to(self, layout):
-        """Defines how to add this Container to a QGridLayout.
+        """Define how to add this Container to a QGridLayout.
 
         The container will occupy all columns.
 
@@ -2177,7 +2177,7 @@ class Container(QtWidgets.QGroupBox, Input):
         return self.expanded
 
     def set_value(self, value):
-        """Set the value of the Container
+        """Set the value of the Container.
 
         This is the same as setting the value of ``self.expanded``.
 
@@ -2389,12 +2389,19 @@ class Multi(Container):
             self.add_item(item)
 
 
+# TODO: Move most of the Form functionality over to Model?
 class Form(QtWidgets.QWidget):
+    """A form that contains multiple Inputs."""
 
     submitted = QtCore.Signal()
     run_finished = QtCore.Signal()
 
     def __init__(self):
+        """Initialize the Form.
+
+        Returns:
+            ``None``
+        """
         QtWidgets.QWidget.__init__(self)
 
         self.setSizePolicy(
@@ -2435,17 +2442,28 @@ class Form(QtWidgets.QWidget):
         self.buttonbox.addButton(
             self.run_button, QtWidgets.QDialogButtonBox.AcceptRole)
         self.layout().addWidget(self.buttonbox)
-        self.run_button.pressed.connect(self.emit_submitted)
+        self.run_button.pressed.connect(self._emit_submitted)
 
         self.run_dialog = FileSystemRunDialog()
 
-    def emit_submitted(self):
+    @QtCore.Slot()
+    def _emit_submitted(self):
+        """Emit the submitted signal."""
         # PyQt4 won't recognize self.submitted.emit as a bound slot, so
         # creating a bound method of Form to handle this.  Useful for MESH
         # demo.
         self.submitted.emit()
 
     def update_scroll_border(self, min, max):
+        """Show or hide the border of the scrolling area as needed.
+
+        Parameters:
+            min (int): The scroll area's range minimum.
+            max (int): The scroll area's range maximum.
+
+        Returns:
+            ``None``
+        """
         if min == 0 and max == 0:
             self.scroll_area.setStyleSheet("QScrollArea { border: None } ")
         else:
@@ -2453,7 +2471,22 @@ class Form(QtWidgets.QWidget):
 
     def run(self, target, args=(), kwargs=None, window_title='',
             out_folder='/'):
+        """Run a function within the run dialog.
 
+        This method creates and starts a new execution.Executor thread
+        instance for the execution of the target.
+
+        Parameters:
+            target (callable): A function to execute.
+            args=() (iterable): Positional arguments to pass to the target.
+            kwargs=None (dict): Keyword args to pass to the target.
+            window_title (string): The title of the run dialog window.
+            out_folder='/' (string): The folder on disk that the run dialog's
+                "Open Workspace" button should open when pressed.
+
+        Returns:
+            ``None``
+        """
         if not hasattr(target, '__call__'):
             raise ValueError('Target %s must be callable' % target)
 
@@ -2467,12 +2500,25 @@ class Form(QtWidgets.QWidget):
                               out_folder=out_folder)
         self._thread.start()
 
+    @QtCore.Slot()
     def _run_finished(self):
-        # When the thread finishes.
+        """A slot that is called when the exceutor thread finishes.
+
+        Returns:
+            ``None``
+        """
         self.run_dialog.finish(
             exception_found=(self._thread.exception is not None),
             thread_exception=self._thread.exception)
         self.run_finished.emit()
 
     def add_input(self, input):
+        """Add an input to the Form.
+
+        Parameters:
+            input (Input): The Input instance to add to the Form.
+
+        Returns:
+            ``None``
+        """
         self.inputs.add_input(input)
