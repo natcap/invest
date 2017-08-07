@@ -1760,6 +1760,7 @@ class SaveFile(_Path):
 
 
 class Checkbox(GriddedInput):
+    """An Input for boolean user input."""
 
     # Re-setting value_changed to adapt to the type requirement.
     value_changed = QtCore.Signal(bool)
@@ -1768,9 +1769,24 @@ class Checkbox(GriddedInput):
     interactivity_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
+        """Initialize the Checkbox instance.
+
+        Parameters:
+            label (string): The string label to use for the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+
+        Returns:
+            ``None``
+        """
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
-                              hideable=False, validator=None, )
+                              hideable=False, validator=None)
 
         self.checkbox = QtWidgets.QCheckBox(label)
         self.checkbox.stateChanged.connect(self.value_changed.emit)
@@ -1779,12 +1795,31 @@ class Checkbox(GriddedInput):
         self.satisfied = True
 
     def value(self):
+        """Get the value of the checkbox.
+
+        Returns:
+            A boolean, whether the checkbox is checked.
+        """
         return self.checkbox.isChecked()
 
     def valid(self):
+        """Check whether the checkbox's input is valid.
+
+        Note:
+            Unlike other inputs, the checkbox's input is always valid.
+
+        Returns:
+            Always returns ``True``.
+        """
         return True
 
     def set_value(self, value):
+        """Set the value of the checkbox.
+
+        Parameters:
+            value (bool): The new check state of the checkbox. If ``True``,
+                the checkbox will be checked.
+        """
         self.checkbox.setChecked(value)
 
 
