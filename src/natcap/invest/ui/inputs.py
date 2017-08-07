@@ -1498,15 +1498,40 @@ class Text(GriddedInput):
 
 
 class _Path(Text):
+    """Shared code for filepath-based UI inputs."""
+
     class FileField(QtWidgets.QLineEdit):
+        """A class for handling file-related text input and events.
+
+        This file field may accept ``DragEnterEvent``s and ``DropEvent``s,
+        but will only do so if the event has exactly 1 URL in its MIME data.
+        """
+
         def __init__(self, starting_value=''):
+            """Initalize the FileField instance.
+
+            Parameters:
+                starting_value='' (string): The starting value of the
+                    QLineEdit.
+
+            Returns:
+                ``None``
+            """
             QtWidgets.QLineEdit.__init__(self, starting_value)
             self.setAcceptDrops(True)
 
         def dragEnterEvent(self, event=None):
-            """Overriding the default dragEnterEvent function for when a file is
-            dragged and dropped onto this qlineedit.  This reimplementation is
-            necessary for the dropEvent function to work on Windows."""
+            """Handle a Qt QDragEnterEvent.
+
+            Overridden from QtWidget.dragEnterEvent.  Will only accept the
+            event if the event's mime data has exactly 1 URL in its MIME data.
+
+            Parameters:
+                event (QDragEnterEvent): The QDragEnterEvent to analyze.
+
+            Returns:
+                ``None``
+            """
             # If the user tries to drag multiple files into this text field,
             # reject the event!
             if event.mimeData().hasUrls() and len(event.mimeData().urls()) == 1:
@@ -1519,9 +1544,20 @@ class _Path(Text):
                 event.ignore()
 
         def dropEvent(self, event=None):
-            """Overriding the default Qt DropEvent function when a file is
-            dragged and dropped onto this qlineedit."""
+            """Handle a Qt QDropEvent.
 
+            Reimplemented from QtWidget.dropEvent.  Will always accept the
+            event.  Any text in the MIME data of the ``event`` provided will
+            be set as the text of this textfield, but the text may be modified
+            slightly to correct for filesystem-specific issues in the path
+            given.
+
+            Parameters:
+                event (QDropEvent): The QDropEvent to analyze.
+
+            Returns:
+                ``None``
+            """
             path = event.mimeData().urls()[0].path()
             if platform.system() == 'Windows':
                 path = path[1:]  # Remove the '/' ahead of disk letter
@@ -1556,10 +1592,18 @@ class _Path(Text):
             self.textChanged.emit(self.text())
 
         def contextMenuEvent(self, event):
-            """Reimplemented from QtGui.QLineEdit.contextMenuEvent.
+            """Show a custom context menu for the input.
 
-            This function allows me to make changes to the context menu when one
-            is requested before I show the menu."""
+            This context menu adds a "Refresh" option to the default context
+            menu. When clicked, this menu action will cause the
+            ``textChanged`` signal to be emitted.
+
+            Parameters:
+                event (QEvent): The context menu event.
+
+            Returns:
+                ``None``
+            """
             menu = self.createStandardContextMenu()
             refresh_action = QtWidgets.QAction('Refresh', menu)
             refresh_action.setIcon(qtawesome.icon('fa.refresh'))
@@ -1570,6 +1614,27 @@ class _Path(Text):
 
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
+        """Initialize the _Path instance.
+
+        Parameters:
+            label (string): The string label to use for the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+            hideable=False (bool): If ``True``, the input will have a
+                checkbox that, when triggered, will show/hide the other
+                component widgets in this Input.
+            validator=None (callable): The validator callable to use for
+                validation.  This callable must adhere to the InVEST
+                Validation API.
+
+        Returns:
+            ``None``
+        """
         Text.__init__(self, label, helptext, interactive, args_key,
                       hideable, validator=validator)
         self.textfield = _Path.FileField()
@@ -1585,8 +1650,31 @@ class _Path(Text):
 
 
 class Folder(_Path):
+    """An Input for selecting a folder."""
+
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
+        """Initialize the Folder instance.
+
+        Parameters:
+            label (string): The string label to use for the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+            hideable=False (bool): If ``True``, the input will have a
+                checkbox that, when triggered, will show/hide the other
+                component widgets in this Input.
+            validator=None (callable): The validator callable to use for
+                validation.  This callable must adhere to the InVEST
+                Validation API.
+
+        Returns:
+            ``None``
+        """
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FolderButton('Select folder')
@@ -1598,8 +1686,31 @@ class Folder(_Path):
 
 
 class File(_Path):
+    """An Input for selecting a single file."""
+
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
+        """Initialize the File instance.
+
+        Parameters:
+            label (string): The string label to use for the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+            hideable=False (bool): If ``True``, the input will have a
+                checkbox that, when triggered, will show/hide the other
+                component widgets in this Input.
+            validator=None (callable): The validator callable to use for
+                validation.  This callable must adhere to the InVEST
+                Validation API.
+
+        Returns:
+            ``None``
+        """
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FileButton('Select file')
@@ -1611,9 +1722,32 @@ class File(_Path):
 
 
 class SaveFile(_Path):
+    """An Input for selecting a file to save to."""
+
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None,
                  default_savefile='new_file.txt'):
+        """Initialize the SaveFile instance.
+
+        Parameters:
+            label (string): The string label to use for the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+            hideable=False (bool): If ``True``, the input will have a
+                checkbox that, when triggered, will show/hide the other
+                component widgets in this Input.
+            validator=None (callable): The validator callable to use for
+                validation.  This callable must adhere to the InVEST
+                Validation API.
+
+        Returns:
+            ``None``
+        """
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = SaveFileButton('Select file',
