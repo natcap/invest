@@ -911,6 +911,34 @@ class FolderButton(AbstractFileSystemButton):
 
 
 class Input(QtCore.QObject):
+    """Base class for InVEST inputs.
+
+    Key concepts for the input class include:
+
+        * Sufficiency: Whether an input has value and is interactive.  When
+          sufficiency changes, the ``sufficiency_changed`` signal is emitted
+          with the new sufficiency. The current sufficiency may be accessed
+          with the ``self.sufficient`` attribute.
+        * Interactivity: Whether the component widgets may be interacted with
+          by the user.  When this changes, the ``interactivity_changed``
+          signal is emitted with the new interactivity.  The current
+          interactivity may be accessed with the ``self.interactive``
+          attribute.
+        * Value: Every input has a value that can be set by interacting with
+          the Input's component widgets. How the value is changed by
+          interacting with these widgets depends on the subclass. The current
+          value can be fetched with ``self.value()``.  When the value changes,
+          the ``value_changed`` signal is emitted.
+        * Visibility: With Qt, visibility is actually controlled by
+          containers and the parent window, among other things.  Visibility
+          here indicates whether the widgets should be considered by the
+          package as being visible.
+
+    Subclasses of Input must implement these methods:
+
+        * value(self)
+        * set_value(self, value)
+    """
 
     value_changed = QtCore.Signal(six.text_type)
     interactivity_changed = QtCore.Signal(bool)
@@ -918,6 +946,21 @@ class Input(QtCore.QObject):
 
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None):
+        """Initialize the Input instance.
+
+        Parameters:
+            label (string): The string label of the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+
+        Returns:
+            ``None``
+        """
         QtCore.QObject.__init__(self)
         self.label = label
         self.widgets = []
@@ -932,7 +975,19 @@ class Input(QtCore.QObject):
         self.value_changed.connect(self._check_sufficiency)
         self.interactivity_changed.connect(self._check_sufficiency)
 
-    def _check_sufficiency(self, event=None):
+    def _check_sufficiency(self, value=None):
+        """Check the sufficiency of the input.
+
+        Emits the signal ``self.sufficiency_changed`` if sufficiency has
+        changed.
+
+        Parameters:
+            value=None: The value passed from a signal that has triggered
+                this slot.
+
+        Returns:
+            ``None``
+        """
         new_sufficiency = bool(self.value()) and self.interactive
 
         LOGGER.debug('Sufficiency for %s %s --> %s', self,
@@ -943,13 +998,31 @@ class Input(QtCore.QObject):
             self.sufficiency_changed.emit(new_sufficiency)
 
     def visible(self):
+        """Whether the input is supposed to be visible.
+
+        Note that the visibility of a Qt widget is dependent on many things,
+        such as the visibility of the widget that contains this widget (as when
+        there is a collapsed QGroupBox that contains this widget).
+
+        Returns:
+            A bool of whether the input should be visible.
+        """
         return self._visible_hint
 
     def set_visible(self, visible_hint):
-        # Qt visibility is actually controlled by containers and the parent
-        # window.
-        # We use self._visible_hint to indicate whether the widgets should
-        # be considered by natcap.ui as being visible.
+        """Set the visibility hint for the input.
+
+        Qt visibility is actually controlled by containers and the parent
+        window.  Visibility here indicates whether the widgets
+        should be considered by the package as being visible.
+
+        Parameters:
+            visible_hint (bool): Whether the Input instance should be
+                considered to be visible.
+
+        Returns:
+            ``None``
+        """
         self._visible_hint = visible_hint
         if any(widget.parent().isVisible() for widget in self.widgets
                if widget and widget.parent()):
@@ -959,15 +1032,53 @@ class Input(QtCore.QObject):
                 widget.setVisible(self._visible_hint)
 
     def value(self):
+        """Fetch the value of this Input.
+
+        Note:
+            This method must be reimplemented by subclasses.
+
+        Raises:
+            NotImplementedError
+        """
         raise NotImplementedError
 
     def set_value(self):
+        """Set the value of this input.
+
+        Note:
+            This method must be reimplemented by subclasses.
+
+        Raises:
+            NotImplementedError
+        """
         raise NotImplementedError
 
     def set_noninteractive(self, noninteractive):
+        """Set interactivity as the negative of the provided parameter.
+
+        This is a convenience method that calls ``self.set_interactive`` with
+        the negated ``noninteractive`` parameter.
+
+        Parameters:
+            noninteractive (bool): The new noninteractivity state.
+
+        Returns:
+            ``None``
+        """
         self.set_interactive(not noninteractive)
 
     def set_interactive(self, enabled):
+        """Set the interactivity of the component widgets.
+
+        Emits the ``interactivity_changed`` signal if the interactivity
+        changes.
+
+        Parameters:
+            enabled (bool): Whether inputs should be interactive.
+
+        Returns:
+            ``None``
+        """
         self.interactive = enabled
         for widget in self.widgets:
             if not widget:  # widgets to be skipped are None
@@ -975,7 +1086,17 @@ class Input(QtCore.QObject):
             widget.setEnabled(enabled)
         self.interactivity_changed.emit(self.interactive)
 
+    # TODO: Make this a public method?
     def _add_to(self, layout):
+        """Add the component widgets of this Input to a QGridLayout.
+
+        Parameters:
+            layout (QtWidgets.QGridLayout): A QGridLayout to which all
+                component widgets should be added.
+
+        Returns:
+            ``None``
+        """
         self.setParent(layout.parent().window())  # all widgets belong to Form
         current_row = layout.rowCount()
         for widget_index, widget in enumerate(self.widgets):
