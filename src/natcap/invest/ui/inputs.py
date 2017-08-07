@@ -500,7 +500,18 @@ class FileSystemRunDialog(QtWidgets.QDialog):
 
 
 class InfoButton(QtWidgets.QPushButton):
+    """An informational button that shows helpful text when clicked."""
+
     def __init__(self, default_message=None):
+        """Initialize an instance of InfoButton.
+
+        Parameters:
+            default_message=None (string or None).  If not None, the message
+                that the button should show by default when clicked.
+
+        Returns:
+            ``None``
+        """
         QtWidgets.QPushButton.__init__(self)
         self.setFlat(True)
         if default_message:
@@ -514,14 +525,30 @@ class InfoButton(QtWidgets.QPushButton):
 
 
 class ValidButton(InfoButton):
+    """An informational button, styled for validation success or errors."""
+
     def __init__(self, *args, **kwargs):
+        """Initialize the ValidButton.
+
+        Any parameters provided are passed directly through to the underlying
+        instance of InfoButton.
+        """
         InfoButton.__init__(self, *args, **kwargs)
         self.successful = True
 
     def set_errors(self, errors):
-        # Set to None or [] or anything such that bool(errors) is False to
-        # clear..
+        """Set the error message and style based on the provided errors.
 
+        Parameters:
+            errors (list): A list of strings.  If this list is empty, the
+                style of the button is set to green, indicating validation
+                success.  If this list is not empty, the strings in this list
+                will be formatted and set as the error text, and the button
+                style will be set to a red.
+
+        Returns:
+            ``None``
+        """
         if errors:
             self.setIcon(qtawesome.icon('fa.times',
                                         color='red'))
@@ -538,7 +565,18 @@ class ValidButton(InfoButton):
 
 
 class HelpButton(InfoButton):
+    """An InfoButton with an informational help icon."""
+
     def __init__(self, default_message=None):
+        """Initialize the HelpButton.
+
+        Parameters:
+            default_message=None (string): The default message of this button.
+                See InfoButton.__init__ for more information.
+
+        Returns:
+            ``None``
+        """
         InfoButton.__init__(self, default_message)
         self.setIcon(qtawesome.icon('fa.info-circle',
                                     color='blue'))
