@@ -1087,6 +1087,7 @@ class Input(QtCore.QObject):
         self.interactivity_changed.emit(self.interactive)
 
     # TODO: Make this a public method?
+    # TODO: Move this to GriddedInput?
     def _add_to(self, layout):
         """Add the component widgets of this Input to a QGridLayout.
 
@@ -1114,12 +1115,55 @@ class Input(QtCore.QObject):
 
 
 class GriddedInput(Input):
+    """A subclass of Input that assumes it's using a QGridLayout.
+
+    In addition to the core concepts of Input, GriddedInput adds a few:
+
+        * Validity: A GriddedInput has a value that is either valid or
+          invalid. The current validity may be accessed through
+          ``self.valid()``.  If the input has never been validated, validity
+          will be ``None``.  Otherwise, a bool will be returned. Validity
+          is typically checked when the input's value changes, but subclasses
+          must manage how and when validation is triggered.  When
+          the validity of the input changes, ``validity_changed`` is emitted
+          with the new validity.
+        * Hidden: A GriddedInput may be initialized with the ``hideable``
+          parameter set to ``True``.  If this is the case, most of the
+          component widgets are hidden from view until a checkbox is triggered
+          to make the widgets visible again.  This is useful in contexts where
+          a single checkbox is needed to control whether an input should be
+          interactive, and this approach reduces the code needed to implement
+          this behavior within a UI window. When the state of this checkbox
+          changes, the ``hidden_changed`` signal is emitted.
+    """
 
     hidden_changed = QtCore.Signal(bool)
     validity_changed = QtCore.Signal(bool)
 
+    # TODO: Move label parameter to GriddedInput from Input?
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
+        """Initialize this GriddedInput instance.
+
+        Parameters:
+            label (string): The string label to use for the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+            hideable=False (bool): If ``True``, the input will have a
+                checkbox that, when triggered, will show/hide the other
+                component widgets in this Input.
+            validator=None (callable): The validator callable to use for
+                validation.  This callable must adhere to the InVEST
+                Validation API.
+
+        Returns:
+            ``None``
+        """
         Input.__init__(self, label=label, helptext=helptext,
                        interactive=interactive, args_key=args_key)
 
@@ -1156,6 +1200,11 @@ class GriddedInput(Input):
         self.set_visible(self._visible_hint)
 
     def _validate(self):
+        """Validate the input using its current value.
+
+        Validation is intended to be triggered by events in the UI and not by
+        the user, hence the private function signature.
+        """
         self.lock.acquire()
 
         try:
@@ -1188,7 +1237,7 @@ class GriddedInput(Input):
 
             LOGGER.info(
                 ('Starting validation thread for %s with target:%s, args:%s, '
-                 'limit_to:%s'),
+                 el'limit_to:%s'),
                 self, validator_ref, args, self.args_key)
 
             self._validator.validate(
@@ -1202,6 +1251,18 @@ class GriddedInput(Input):
             raise
 
     def _validation_finished(self, validation_warnings):
+        """Interpret any validation errors and format them for the UI.
+
+        If the validity of the input changes, the ``validity_changed`` signal
+        is emitted with the new validity.
+
+        Parameters:
+            validation_warnings (list): A list of string validation warnings
+                returned from the validation callable.
+
+        Returns:
+            ``None``
+        """
         new_validity = not bool(validation_warnings)
         if self.args_key:
             appliccable_warnings = [w[1] for w in validation_warnings
@@ -1229,6 +1290,11 @@ class GriddedInput(Input):
             self.validity_changed.emit(new_validity)
 
     def valid(self):
+        """Check the validity of the input.
+
+        Returns:
+            The boolean validity of the input.
+        """
         # TODO: wait until the lock is released.
         while self._validator.in_progress():
             QtCore.QThread.msleep(50)
@@ -1236,6 +1302,21 @@ class GriddedInput(Input):
 
     @QtCore.Slot(int)
     def _hideability_changed(self, show_widgets):
+        """Set the hidden state of component widgets.
+
+        This is a private method that actually handles the hiding/showing of
+        component widgets.
+
+        This method causes the ``hidden_changed`` signal to be emitted with
+        the new hidden state.
+
+        Parameters:
+            show_widgets (bool): Whether the component widgets should
+                be shown or hidden.
+
+        Returns:
+            ``None``
+        """
         for widget in self.widgets[2:]:
             if not widget:
                 continue
@@ -1244,11 +1325,31 @@ class GriddedInput(Input):
 
     @QtCore.Slot(int)
     def set_hidden(self, hidden):
+        """Set the hidden state of component widgets.
+
+        Parameters:
+            hidden (bool): The new hidden state.  ``False`` indicates that
+                component widgets should be visible.  ``True`` indicates that
+                component widgets should be hidden.
+
+        Raises:
+            ValueError: When the GriddedInput has not been initialized with
+                ``hideable=True``.
+
+        Returns:
+            ``None``
+        """
         if not self.hideable:
             raise ValueError('Input is not hideable.')
         self.label_widget.setChecked(not hidden)
 
     def hidden(self):
+        """Whether the input's component widgets are hidden.
+
+        Returns:
+            A boolean.  If the input is not hideable, this will always
+            return ``False``.
+        """
         if self.hideable:
             return not self.label_widget.isChecked()
         return False
