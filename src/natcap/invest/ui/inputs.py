@@ -62,6 +62,7 @@ INVEST_SETTINGS = QtCore.QSettings(
     'InVEST')
 DEFAULT_LASTDIR = ''
 
+
 def _cleanup():
     # Adding this allows tests to run on linux via `python setup.py nosetests`
     # and `python setup.py test` without segfault.
@@ -358,7 +359,8 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         if progress_sizehint.isValid():
             self.progressBar.setMinimumSize(progress_sizehint)
 
-        self.openWorkspaceCB = QtWidgets.QCheckBox('Open workspace after success')
+        self.openWorkspaceCB = QtWidgets.QCheckBox(
+            'Open workspace after success')
         self.openWorkspaceButton = QtWidgets.QPushButton('Open workspace')
         self.openWorkspaceButton.pressed.connect(self._request_workspace)
         self.openWorkspaceButton.setSizePolicy(
@@ -780,8 +782,8 @@ class FileDialog(object):
                 INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
         dialog_title = 'Select folder: ' + title
 
-        dirname = self.file_dialog.getExistingDirectory(self.file_dialog, dialog_title,
-                                                        start_dir)
+        dirname = self.file_dialog.getExistingDirectory(
+            self.file_dialog, dialog_title, start_dir)
         dirname = six.text_type(dirname)
         INVEST_SETTINGS.setValue('last_dir', dirname)
         return dirname
@@ -1210,14 +1212,16 @@ class GriddedInput(Input):
 
         try:
             if self.validator_ref:
-                LOGGER.info('Validation: validator taken from self.validator_ref: %s',
-                            self.validator_ref)
+                LOGGER.info(
+                    'Validation: validator taken from self.validator_ref: %s',
+                    self.validator_ref)
                 validator_ref = self.validator_ref
             else:
                 if not self.args_key:
-                    LOGGER.info(('Validation: No validator and no args_id defined; '
-                                 'skipping.  Input assumed to be valid. %s'),
-                                self)
+                    LOGGER.info(
+                        ('Validation: No validator and no args_id defined; '
+                         'skipping.  Input assumed to be valid. %s'),
+                        self)
                     self._validation_finished(validation_warnings=[])
                     return
                 else:
@@ -1233,7 +1237,8 @@ class GriddedInput(Input):
                 args = self.parent().assemble_args()
             except AttributeError:
                 # When self.parent() is not set, as in testing.
-                # self.parent() is only set when the Input is added to a layout.
+                # self.parent() is only set when the Input is added to a
+                # layout.
                 args = {self.args_key: self.value()}
 
             LOGGER.info(
@@ -1535,7 +1540,8 @@ class _Path(Text):
             """
             # If the user tries to drag multiple files into this text field,
             # reject the event!
-            if event.mimeData().hasUrls() and len(event.mimeData().urls()) == 1:
+            if (event.mimeData().hasUrls() and
+                    len(event.mimeData().urls()) == 1):
                 LOGGER.info('Accepting drag enter event for "%s"',
                             event.mimeData().text())
                 event.accept()
@@ -2260,7 +2266,8 @@ class Multi(Container):
             raise ValueError("Callable passed to Multi is not callable.")
 
         self.callable_ = callable_
-        self.add_link = QtWidgets.QLabel('<a href="add_new">%s</a>' % link_text)
+        self.add_link = QtWidgets.QLabel(
+            '<a href="add_new">%s</a>' % link_text)
         self.add_link.linkActivated.connect(self._add_templated_item)
         self._append_add_link()
         self.remove_buttons = []
@@ -2433,7 +2440,8 @@ class Form(QtWidgets.QWidget):
         if self.inputs.sizeHint().isValid():
             self.inputs.setMinimumSize(self.inputs.sizeHint())
         self.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
-        self.inputs.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
+        self.inputs.layout().setSizeConstraint(
+            QtWidgets.QLayout.SetMinimumSize)
 
         self.buttonbox = QtWidgets.QDialogButtonBox()
         self.run_button = QtWidgets.QPushButton(' Run')
