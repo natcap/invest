@@ -1,5 +1,6 @@
 # coding=UTF-8
 """Input classes for the InVEST UI, a Qt-based UI abstraction layer."""
+# TODO: Mark all slots as slots.
 
 from __future__ import absolute_import
 
@@ -1824,8 +1825,32 @@ class Checkbox(GriddedInput):
 
 
 class Dropdown(GriddedInput):
+    """An Input for selecting one out of a set of defined options."""
+
     def __init__(self, label, helptext=None, interactive=True, args_key=None,
                  hideable=False, options=()):
+        """Initialize a Dropdown instance.
+
+        Like the Checkbox class, a Dropdown is always valid.
+
+        Parameters:
+            label (string): The string label to use for the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+            hideable=False (bool): If ``True``, the input will have a
+                checkbox that, when triggered, will show/hide the other
+                component widgets in this Input.
+            options=() (iterable): An iterable of options for this Dropdown.
+                Options will be added in the order they exist in the iterable.
+
+        Returns:
+            ``None``
+        """
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
                               hideable=hideable, validator=None)
@@ -1839,10 +1864,39 @@ class Dropdown(GriddedInput):
         if self.hideable:
             self._hideability_changed(False)
 
+    @QtCore.Slot(int)
     def _index_changed(self, newindex):
+        """A slot for emitting ``value_changed``.
+
+        ``value_changed`` will be emitted with the text of the new selection.
+
+        Parameters:
+            newindex (int): The index of the new selection.
+
+        Returns:
+            ``None``
+        """
         self.value_changed.emit(self.options[newindex])
 
+    def valid(self):
+        """Check the validity of the Dropdown.
+
+        A dropdown is assumed to be always valid.
+
+        Returns:
+            True.  A dropdown is always valid.
+        """
+        return True
+
     def set_options(self, options):
+        """Set the available options for this dropdown.
+
+        Parameters:
+            options (iterable): The new options for the dropdown.
+
+        Returns:
+            ``None``
+        """
         self.dropdown.clear()
         cast_options = []
         for label in options:
@@ -1859,9 +1913,32 @@ class Dropdown(GriddedInput):
         self.user_options = options
 
     def value(self):
+        """Get the text of the currently-selected option.
+
+        Returns:
+            A string with the currently selected option.  If options were
+            provided that were not strings, the string version of the option
+            is returned."""
         return self.dropdown.currentText()
 
     def set_value(self, value):
+        """Set the current index of the dropdown based on the value.
+
+        Parameters:
+            value: The option to select in the dropdown. This value should
+                match either a value in the options iterable set via
+                ``Dropdown.set_options`` or the ``options`` parameter to
+                ``Dropdown.__init__``, or else must be the string text of the
+                option.
+
+        Raises:
+            ValueError: When the value provided cannot be found in either the
+            user-defined list of options or the list of options that has been
+            cast to a string.
+
+        Returns:
+            ``None``
+        """
         # Handle case where value is of the type provided by the user,
         # and the case where it's been converted to a utf-8 string.
         for options_attr in ('options', 'user_options'):
