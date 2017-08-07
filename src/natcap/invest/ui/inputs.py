@@ -1989,6 +1989,7 @@ class Label(QtWidgets.QLabel):
 
 
 class Container(QtWidgets.QGroupBox, Input):
+    """An Input that contains other inputs within a QGridLayout."""
 
     # need to redefine signals here.
     value_changed = QtCore.Signal(bool)
@@ -1997,6 +1998,22 @@ class Container(QtWidgets.QGroupBox, Input):
 
     def __init__(self, label, interactive=True, expandable=False,
                  expanded=True, args_key=None):
+        """Initialize a Container.
+
+        Parameters:
+            label (string): The label of the Container.
+            interactive=True (bool): Whether the user can interact with this
+                container.
+            expandable=False (bool): Whether the Container may be expanded
+                and collapsed at will.
+            expanded=True (bool): Whether the Container will start out
+                expanded or collapsed.  If ``True``, the Container will be
+                initialized to be expanded.
+            args_key=None (string): The args key for the Container.
+
+        Returns:
+            ``None``
+        """
         QtWidgets.QGroupBox.__init__(self)
         Input.__init__(self, label=label, interactive=interactive,
                        args_key=args_key)
@@ -2018,6 +2035,16 @@ class Container(QtWidgets.QGroupBox, Input):
 
     @QtCore.Slot(bool)
     def _hide_widgets(self, check_state):
+        """A slot for hiding and showing all widgets in this Container.
+
+        Parameters:
+            check_state (bool): Whether the container's checkbox is checked.
+                If the Container has just been collapsed, ``check_state`` will
+                be ``False``.
+
+        Returns:
+            ``None``.
+        """
         for layout_item in (self.layout().itemAtPosition(*coords)
                             for coords in itertools.product(
                                 xrange(1, self.layout().rowCount()),
@@ -2027,21 +2054,43 @@ class Container(QtWidgets.QGroupBox, Input):
 
         # Update size based on sizehint now that widgets changed.
         self.setMinimumSize(self.sizeHint())
-        #self.resize(self.sizeHint())
 
-    def showEvent(self, event=None):
+    def showEvent(self, event):
+        """Initialize hidden state of contained widgets when shown.
+
+        Reimplemented from QWidget.showEvent.
+
+        Parameters:
+            event (QEvent): The current QEvent.  Ignored.
+        """
         if self.isCheckable():
             self._hide_widgets(self.value())
         self.resize(self.sizeHint())
 
+    # TODO: Revisit property-based approach of Containers.
     @property
     def expanded(self):
+        """Whether the Container is expanded.
+
+        Returns:
+            A boolean indicating whether the container is expanded.
+        """
         if self.expandable:
             return self.isChecked()
         return True
 
     @expanded.setter
     def expanded(self, value):
+        """Set the container's expanded state.
+
+        Parameters:
+            value (bool): The new expanded state.  ``True`` indicates that
+                the container will be expanded.
+
+        Raises:
+            ValueError: When the container was not initialized to be
+            expandable.
+        """
         if not self.expandable:
             raise ValueError('Container cannot be expanded when not '
                              'expandable')
@@ -2049,13 +2098,36 @@ class Container(QtWidgets.QGroupBox, Input):
 
     @property
     def expandable(self):
+        """Whether the container is expandable.
+
+        Returns:
+            A boolean indicating whether the container is expandable.
+        """
         return self.isCheckable()
 
     @expandable.setter
     def expandable(self, value):
-        return self.setCheckable(value)
+        """Set whether the container is expandable.
+
+        Returns:
+            ``None``
+        """
+        self.setCheckable(value)
 
     def add_input(self, input):
+        """Add an input to the Container.
+
+        The input must have an ``_add_to`` method that handles how to add the
+        Input and/or its component widgets to a QGridLayout that is owned by
+        the Container.
+
+        Parameters:
+            input (Input): An instance of Input to add to the Container's
+                layout.
+
+        Returns:
+            ``None``
+        """
         input._add_to(layout=self.layout())
         _apply_sizehint(self.layout().parent())
 
@@ -2077,6 +2149,17 @@ class Container(QtWidgets.QGroupBox, Input):
             input.input_added.connect(_update_sizehints)
 
     def _add_to(self, layout):
+        """Defines how to add this Container to a QGridLayout.
+
+        The container will occupy all columns.
+
+        Parameters:
+            layout (QGridLayout): A QGridLayout to which this Container will
+                be added.
+
+        Returns:
+            ``None``
+        """
         layout.addWidget(self,
                          layout.rowCount(),  # target row
                          0,  # target starting column
@@ -2084,31 +2167,87 @@ class Container(QtWidgets.QGroupBox, Input):
                          layout.columnCount())  # span all columns
 
     def value(self):
+        """Fetch the value of this container.
+
+        The value is the same as ``self.expanded``.
+
+        Returns:
+            A boolean, whether the Container is expanded.
+        """
         return self.expanded
 
     def set_value(self, value):
+        """Set the value of the Container
+
+        This is the same as setting the value of ``self.expanded``.
+
+        Parameters:
+            value (bool): The new expanded state of the Container.
+        """
         self.expanded = value
 
 
 class Multi(Container):
+    """Iput that can dynamically add inputs based on a template."""
 
     value_changed = QtCore.Signal(list)
     input_added = QtCore.Signal()
 
     class _RemoveButton(QtWidgets.QPushButton):
+        """A custom button for removing inputs added to a Multi."""
 
         remove_requested = QtCore.Signal(int)
 
         def __init__(self, label, index):
+            """Initialize the button.
+
+            Parameters:
+                label (string): The label to use for the button.
+                index (int): The row index of the input that this button
+                    is associated with.
+
+            Returns:
+                ``None``
+            """
             QtWidgets.QPushButton.__init__(self, label)
             self.index = index
-            self.clicked.connect(self._remove)
+            self.pressed.connect(self._remove)
 
-        def _remove(self, checked=False):
+        @QtCore.Slot(bool)
+        def _remove(self, pressed):
+            """A slot to emit the ``remove_requested`` signal.
+
+            Parameters:
+                clicked (bool): Whether the button was pressed. Ignored.
+
+            Returns:
+                ``None``
+            """
             self.remove_requested.emit(self.index)
 
     def __init__(self, label, callable_, interactive=True, args_key=None,
-                 link_text='Add Another', helptext=None):
+                 link_text='Add Another'):
+        """Initialize the Multi instance.
+
+        The Multi input is a Container with a link at the bottom that creates
+        and adds another input when the link is clicked.
+
+        Parameters:
+            label (string): The label of the Multi.
+            callable_ (callable): The callable to use for creating a new input
+                on demand.  The callable must take no parameters and must
+                return a single Input instance.  Multiple Inputs may be
+                grouped together into a Container instance returned from the
+                callable.  Each Input must have a ``value`` method.
+            interactive=True (bool): Whether the user can interact with the
+                input.
+            args_key=None (string): The args key of the input.
+            link_text='Add Another' (string): The text of the link to add
+                another input.
+
+        Returns:
+            ``None``
+        """
         self.items = []
         Container.__init__(self,
                            label=label,
@@ -2127,9 +2266,25 @@ class Multi(Container):
         self.remove_buttons = []
 
     def value(self):
+        """The value of the Multi.
+
+        Returns:
+            A list of values from the items added to the Multi.
+        """
         return [input_.value() for input_ in self.items]
 
     def set_value(self, values):
+        """Set the value of the Multi.
+
+        Parameters:
+            values (list): A list of values to add to the multi.
+                One input will be created for each value in ``values``.
+                The value of each input will be set by calling the input's
+                ``set_value`` method.
+
+        Returns:
+            ``None``
+        """
         self.clear()
         for input_value in values:
             new_input_instance = self.callable_()
@@ -2138,10 +2293,29 @@ class Multi(Container):
 
         self.value_changed.emit(list(values))
 
-    def _add_templated_item(self, label=None):
+    @QtCore.Slot(unicode)
+    def _add_templated_item(self, link_text):
+        """A slot to add a templated item to the Multi.
+
+        Parameters:
+            link_text (string): a string from the triggering signal.  Ignored.
+
+        Returns:
+            ``None``
+        """
         self.add_item()
 
     def add_item(self, new_input=None):
+        """Add an item to the Multi.
+
+        Parameters:
+            new_input=None (Input): The input instance to add to the Multi.
+                If ``None``, a new input will be created by calling
+                ``self.callable_()``
+
+        Returns:
+            ``None``
+        """
         if not new_input:
             new_input = self.callable_()
 
@@ -2171,6 +2345,11 @@ class Multi(Container):
         self.input_added.emit()
 
     def _append_add_link(self):
+        """Add the 'add another' link to the end of the input list.
+
+        Returns:
+            ``None``
+        """
         layout = self.layout()
         layout.addWidget(self.add_link,
                          layout.rowCount(),  # make new last row
@@ -2179,12 +2358,25 @@ class Multi(Container):
                          layout.columnCount())  # span all columns
 
     def clear(self):
+        """Clear all inputs that have been added to the Multi.
+
+        Returns:
+            ``None``
+        """
         layout = self.layout()
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
         self._append_add_link()
 
     def remove(self, index):
+        """Remove a specific input from the Multi.
+
+        Parameters:
+            index (int): The index of the row to remove.  1-based.
+
+        Returns:
+            ``None``
+        """
         # clear all widgets from the layout.
         self.clear()
 
