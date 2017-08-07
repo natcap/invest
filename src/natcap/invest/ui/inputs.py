@@ -658,6 +658,8 @@ class ValidationWorker(QtCore.QObject):
 
 
 class FileDialog(object):
+    """A convenience wrapper for QtWidgets.QFileDialog."""
+
     def __init__(self):
         object.__init__(self)
         self.file_dialog = QtWidgets.QFileDialog()
@@ -666,6 +668,20 @@ class FileDialog(object):
         self.file_dialog.deleteLater()
 
     def save_file(self, title, start_dir=None, savefile=None):
+        """Prompt the user to save a file.
+
+        Parameters:
+            title (string): The title of the save file dialog.
+            start_dir=None (string): The starting directory.  If ``None``,
+                the last-accessed directory will be fetched from
+                the invest settings.
+            savefile=None (string): The filename to use by default.
+                If ``None``, no default filename will be provided in the
+                dialog, and the user will need to provide a filename.
+
+        Returns:
+            The absolute path to the filename selected by the user.
+        """
         if not start_dir:
             start_dir = os.path.expanduser(
                 INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
@@ -695,6 +711,24 @@ class FileDialog(object):
         return filename
 
     def open_file(self, title, start_dir=None, filters=()):
+        """Prompt the user for a file to open.
+
+        Parameters:
+            title (string): The title of the dialog.
+            start_dir=None (string): The starting directory.  If ``None``,
+                the last-accessed directory will be fetched from the invest
+                settings.
+            filters=() (iterable): an iterable of filter strings to use in the
+                dialog.  An example iterable would have the format::
+
+                    filters = (
+                        'Images (*.png *.xpm *.jpg)',
+                        'GeoTiffs (*.tif)'
+                    )
+
+        Returns:
+            The absolute path to the selected file to open.
+        """
         if not start_dir:
             start_dir = os.path.expanduser(
                 INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
@@ -722,6 +756,17 @@ class FileDialog(object):
         return filename
 
     def open_folder(self, title, start_dir=None):
+        """Prompt the user for a directory to open.
+
+        Parameters:
+            title (string): The title of the dialog.
+            start_dir=None (string): The starting directory.  If ``None``,
+                the last-accessed directory will be fetched from the invest
+                settings.
+
+        Returns:
+            The absolute path to the directory selected.
+        """
         if not start_dir:
             start_dir = os.path.expanduser(
                 INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
