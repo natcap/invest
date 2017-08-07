@@ -583,11 +583,28 @@ class HelpButton(InfoButton):
 
 
 class ValidationWorker(QtCore.QObject):
+    """A worker object for executing validation.
+
+    This object is implemented for use with a QThread, and is not started
+    until the start() method is called.
+    """
 
     started = QtCore.Signal()
     finished = QtCore.Signal()
 
     def __init__(self, target, args, limit_to=None):
+        """Initialize the ValidationWorker.
+
+        Parameters:
+            target (callable): The validation function.  Must adhere to the
+                InVEST validation API.
+            args (dict): The arguments dictionary to validate.
+            limit_to=None (string): The string key that will limit validation.
+                ``None`` if all keys should be validated.
+
+        Returns:
+            ``None``
+        """
         QtCore.QObject.__init__(self)
         self.target = target
         self.args = args
@@ -598,12 +615,33 @@ class ValidationWorker(QtCore.QObject):
         self._finished = False
 
     def isFinished(self):
+        """Check whether the validation callable has finished executing.
+
+        Returns:
+            finished (bool): Whether validation has finished."""
         return self._finished
 
     def start(self):
+        """Begin execution of the validation callable.
+
+        This method is non-blocking.
+
+        Returns:
+            ``None``
+        """
         self.started.emit()
 
     def run(self):
+        """Execute the validation callable.
+
+        Warnings are saved to ``self.warnings``.  The signal ``self.finished``
+        is emitted when processing finishes.  If an exception is encountered,
+        the exception object is saved to ``self.error`` and the exception is
+        logged.
+
+        Returns:
+            ``None``
+        """
         # Target must adhere to InVEST validation API.
         LOGGER.info(('Starting validation thread with target=%s, args=%s, '
                      'limit_to=%s'), self.target, self.args, self.limit_to)
