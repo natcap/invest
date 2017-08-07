@@ -1918,7 +1918,8 @@ class Dropdown(GriddedInput):
         Returns:
             A string with the currently selected option.  If options were
             provided that were not strings, the string version of the option
-            is returned."""
+            is returned.
+        """
         return self.dropdown.currentText()
 
     def set_value(self, value):
@@ -1954,12 +1955,33 @@ class Dropdown(GriddedInput):
 
 
 class Label(QtWidgets.QLabel):
+    """A widget for displaying information in a UI."""
+
     def __init__(self, text):
+        """Initialize the Label.
+
+        Labels may contain links, which will be opened externally if possible.
+
+        Parameters:
+            text (string): The text of the label.
+
+        Returns:
+            ``None``
+        """
         QtWidgets.QLabel.__init__(self, text)
         self.setWordWrap(True)
         self.setOpenExternalLinks(True)
 
     def _add_to(self, layout):
+        """Add this widget to a QGridLayout.
+
+        Parameters:
+            layout (QGridLayout): The layout to which this Label will be
+                added.  The Label will span all columns.
+
+        Returns:
+            ``None``
+        """
         layout.addWidget(self, layout.rowCount(),  # target row
                          0,  # target starting column
                          1,  # row span
