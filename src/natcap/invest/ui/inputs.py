@@ -1356,12 +1356,39 @@ class GriddedInput(Input):
 
 
 class Text(GriddedInput):
+    """A GriddedInput for handling single-line, text-based input."""
+
     class TextField(QtWidgets.QLineEdit):
+        """A custom QLineEdit widget with tweaks for use by Text instances."""
+
         def __init__(self, starting_value=''):
+            """Initalize the TextField instance.
+
+            This textfield may accept ``DragEnterEvent``s and ``DropEvent``s,
+            but will only do so if the event has text MIME data.
+
+            Parameters:
+                starting_value='' (string): The starting value of the
+                    QLineEdit.
+
+            Returns:
+                ``None``
+            """
             QtWidgets.QLineEdit.__init__(self, starting_value)
             self.setAcceptDrops(True)
 
-        def dragEnterEvent(self, event=None):
+        def dragEnterEvent(self, event):
+            """Handle a Qt QDragEnterEvent.
+
+            Overridden from QtWidget.dragEnterEvent.  Will only accept the
+            event if the event's mime data has text, but does not have URLs.
+
+            Parameters:
+                event (QDragEnterEvent): The QDragEnterEvent to analyze.
+
+            Returns:
+                ``None``
+            """
             if event.mimeData().hasText() and not event.mimeData().hasUrls():
                 LOGGER.info('Accepting drag enter event for "%s"',
                             event.mimeData().text())
@@ -1371,9 +1398,19 @@ class Text(GriddedInput):
                             event.mimeData().text())
                 event.ignore()
 
-        def dropEvent(self, event=None):
-            """Overriding the default Qt DropEvent function when a file is
-            dragged and dropped onto this qlineedit."""
+        def dropEvent(self, event):
+            """Handle a Qt QDropEvent.
+
+            Reimplemented from QtWidget.dropEvent.  Will always accept the
+            event.  Any text in the MIME data of the ``event`` provided will
+            be set as the text of this textfield.
+
+            Parameters:
+                event (QDropEvent): The QDropEvent to analyze.
+
+            Returns:
+                ``None``
+            """
             text = event.mimeData().text()
             LOGGER.info('Accepting and inserting dropped text: "%s"', text)
             event.accept()
@@ -1381,6 +1418,27 @@ class Text(GriddedInput):
 
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
+        """Initialize a Text input.
+
+        Parameters:
+            label (string): The string label to use for the input.
+            helptext=None (string): The helptext string used to display more
+                information about the input.  If ``None``, no extra information
+                will be displayed.
+            interactive=True (bool): Whether the user can interact with the
+                component widgets of this input.
+            args_key=None (string):  The args key of this input.  If ``None``,
+                the input will not have an args key.
+            hideable=False (bool): If ``True``, the input will have a
+                checkbox that, when triggered, will show/hide the other
+                component widgets in this Input.
+            validator=None (callable): The validator callable to use for
+                validation.  This callable must adhere to the InVEST
+                Validation API.
+
+        Returns:
+            ``None``
+        """
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive,
                               args_key=args_key, hideable=hideable,
@@ -1391,23 +1449,51 @@ class Text(GriddedInput):
 
     @QtCore.Slot(unicode)
     def _text_changed(self, new_text):
+        """A slot to emit the ``value_changed`` signal and trigger validation.
+
+        Parameters:
+            new_text (string): The new string value of the textfield.
+
+        Returns:
+            ``None``
+        """
         self.dirty = True
         self.value_changed.emit(new_text)
         self._validate()
 
     def value(self):
+        """Fetch the value of the textfield.
+
+        Returns:
+            The string value of the textfield.
+        """
         return self.textfield.text()
 
     def set_value(self, value):
-        if value and self.hideable:
-            self.set_hidden(False)
+        """Set the value of the textfield.
 
+        If this Text instance is hideable and ``value`` is not an empty
+        string, the input will be shown.  A hideable input shown in this way
+        may be hidden again by calling ``self.set_hidden(True)``.  Note that
+        the value of the input will be preserved.
+
+        Parameters:
+            value (string, int, or float): The value to use for the new value
+                of the textfield.
+
+        Returns:
+            ``None``
+        """
         if isinstance(value, int) or isinstance(value, float):
             value = str(value)
 
         if isinstance(value, str):
             # convert a bytestring into a UTF-8 string.
             value = value.decode('utf-8')
+
+        if len(value) > 0 and self.hideable:
+            self.set_hidden(False)
+
         self.textfield.setText(value)
 
 
