@@ -1243,7 +1243,7 @@ class GriddedInput(Input):
 
             LOGGER.info(
                 ('Starting validation thread for %s with target:%s, args:%s, '
-                 el'limit_to:%s'),
+                 'limit_to:%s'),
                 self, validator_ref, args, self.args_key)
 
             self._validator.validate(
