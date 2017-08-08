@@ -444,7 +444,7 @@ class ScenarioOptionsDialog(OptionsDialog):
             self.use_relative_paths.set_interactive(
                 value == _SCENARIO_PARAMETER_SET)
 
-            self.save_parameters.path_select_button.set_save_dialog_options(
+            self.save_parameters.path_select_button.set_dialog_options(
                 title=_SCENARIO_SAVE_OPTS[value]['title'],
                 savefile='{model}_{file_base}'.format(
                     model=self.paramset_basename,

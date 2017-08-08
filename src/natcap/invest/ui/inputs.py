@@ -1830,6 +1830,7 @@ class Checkbox(GriddedInput):
         self.checkbox.setChecked(value)
 
 
+# TODO: Shouldn't Dropdowns always be valid?
 class Dropdown(GriddedInput):
     """An Input for selecting one out of a set of defined options."""
 
@@ -1883,16 +1884,6 @@ class Dropdown(GriddedInput):
             ``None``
         """
         self.value_changed.emit(self.options[newindex])
-
-    def valid(self):
-        """Check the validity of the Dropdown.
-
-        A dropdown is assumed to be always valid.
-
-        Returns:
-            True.  A dropdown is always valid.
-        """
-        return True
 
     def set_options(self, options):
         """Set the available options for this dropdown.
@@ -2219,8 +2210,8 @@ class Multi(Container):
             self.index = index
             self.pressed.connect(self._remove)
 
-        @QtCore.Slot(bool)
-        def _remove(self, pressed):
+        @QtCore.Slot()
+        def _remove(self):
             """A slot to emit the ``remove_requested`` signal.
 
             Parameters:
