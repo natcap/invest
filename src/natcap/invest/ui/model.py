@@ -1,4 +1,6 @@
 # coding=UTF-8
+"""Classes related to the InVEST Model class."""
+
 from __future__ import absolute_import
 
 import logging
@@ -54,6 +56,12 @@ _SCENARIO_SAVE_OPTS = {
 
 
 def try_cast(value, target_type):
+    """Attempt to cast a value to a type.
+
+    Returns:
+        If the cast is successful, the new value is returned.  If not, the
+        original value is returned.
+    """
     try:
         return target_type(value)
     except ValueError:
@@ -79,8 +87,38 @@ def wait_on_signal(signal, timeout=250):
 
 
 class OptionsDialog(QtWidgets.QDialog):
+    """A common dialog class for Options-style functionality.
+
+    Subclasses are required to implement a ``postprocess`` method that handles
+    how to save the options in the dialog.  ``postprocess`` must take a single
+    int argument with the name ``exitcode``.  The exit code of the dialog will
+    be passed to the method when it is called.
+
+    The buttons installed in this dialog are:
+
+        * ``self.ok_button``: A button with the 'accept' role. The text of the
+          button can be set via the ``accept_text`` parameter.
+        * ``self.cancel_button``: A button with the 'reject' role. The text of
+          the button can be set via the ``reject_text`` parameter.
+    """
+
     def __init__(self, title=None, modal=False, accept_text='save',
                  reject_text='cancel'):
+        """Initialize the OptionsDialog.
+
+        Parameters:
+            title=None (string): The title of the dialog.  If ``None``, the
+                dialog title will not be set.
+            modal=False (bool): The dialog's modality. If ``True``, the dialog
+                will be modal.
+            accept_text='save' (string): The text of the dialog-acceptance
+                button.
+            reject_text='cancel' (string): The text of the dialog-rejection
+                button.
+
+        Returns:
+            ``None``
+        """
         QtWidgets.QDialog.__init__(self)
         self._accept_text = ' ' + accept_text.strip()
         self._reject_text = ' ' + reject_text.strip()
@@ -103,6 +141,7 @@ class OptionsDialog(QtWidgets.QDialog):
 
     @QtCore.Slot(int)
     def _call_postprocess(self, exitcode):
+        """A slot to call ``self.postprocess`` when the dialog is closed."""
         # need to have this bound method registered with the signal,
         # but then we'll call the subclass's postprocess method.
         try:
@@ -112,9 +151,32 @@ class OptionsDialog(QtWidgets.QDialog):
                         '%s' % repr(self))
 
     def postprocess(self, exitcode=0):
+        """Save the options in the dialog.
+
+        Subclasses of ``OptionsDialog`` must reimplement this method.
+
+        Parameters:
+            exitcode=0 (int): The exit code of the dialog.
+
+        Raises:
+            NotImplementedError: This method must be reimplemented.
+
+        Returns:
+            ``None``
+        """
         raise NotImplementedError
 
     def showEvent(self, showEvent):
+        """Create the buttonbox at the end of the dialog when it's shown.
+
+        Reimplemented to QDialog.showEvent.
+
+        Parameters:
+            showEvent (QEvent): The current showEvent.
+
+        Returns:
+            ``None``
+        """
         # last thing: add the buttonbox if it hasn't been created yet.
         if not self._buttonbox:
             self._buttonbox = QtWidgets.QDialogButtonBox()
@@ -128,7 +190,18 @@ class OptionsDialog(QtWidgets.QDialog):
 
 
 class QuitConfirmDialog(QtWidgets.QMessageBox):
+    """A dialog for confirming that the user would like to quit.
+
+    In addition to having accept and reject buttons, an icon, and some
+    informative text, there is also a checkbox to indicate whether the
+    form's current values should be remembered for the next run.
+
+    The state of the checkbox can be accessed via the ``checkbox``
+    attribute.
+    """
+
     def __init__(self):
+        """Initialize the QuitConfirmDialog."""
         QtWidgets.QMessageBox.__init__(self)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText('<h2>Are you sure you want to quit?</h2>')
@@ -146,6 +219,15 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
                                 0, 1, 1)
 
     def exec_(self, starting_checkstate):
+        """Execute the dialog.
+
+        Parameters:
+            starting_checkstate (bool): Whether the "Remember inputs" checkbox
+                should be checked when the dialog is shown.
+
+        Returns:
+            The int return code from the QMessageBox's ``exec_()`` method.
+        """
         self.checkbox.setChecked(starting_checkstate)
         return QtWidgets.QMessageBox.exec_(self)
 
