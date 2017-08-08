@@ -1897,8 +1897,8 @@ class ModelTests(_QtTest):
         _QtTest.setUp(self)
 
     def tearDown(self):
-        shutil.rmtree(self.workspace)
         _QtTest.tearDown(self)
+        shutil.rmtree(self.workspace)
 
     @staticmethod
     def build_model(validate_func=None, target_func=None):
