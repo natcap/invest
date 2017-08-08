@@ -165,7 +165,7 @@ class InputTest(_QtTest):
         base_widget.setLayout(QtWidgets.QGridLayout())
 
         input_instance = self.__class__.create_input(label='foo')
-        input_instance._add_to(base_widget.layout())
+        input_instance.add_to(base_widget.layout())
 
     def test_value(self):
         input_instance = self.__class__.create_input(label='foo')
@@ -398,7 +398,7 @@ class GriddedInputTest(InputTest):
         sample_widget.setLayout(QtWidgets.QGridLayout())
         input_instance = self.__class__.create_input(
             label='some_label', hideable=False)
-        input_instance._add_to(sample_widget.layout())
+        input_instance.add_to(sample_widget.layout())
         sample_widget.show()
 
         self.assertEqual(input_instance.hideable, False)
@@ -423,7 +423,7 @@ class GriddedInputTest(InputTest):
         sample_widget.setLayout(QtWidgets.QGridLayout())
         input_instance = self.__class__.create_input(
             label='some_label', hideable=True)
-        input_instance._add_to(sample_widget.layout())
+        input_instance.add_to(sample_widget.layout())
         sample_widget.show()
 
         self.assertEqual(input_instance.hidden(), True)  # default is hidden
@@ -998,7 +998,7 @@ class LabelTest(_QtTest):
         super_widget = QtWidgets.QWidget()
         super_widget.setLayout(QtWidgets.QGridLayout())
         label = Label('Hello, World!')
-        label._add_to(super_widget.layout())
+        label.add_to(super_widget.layout())
 
 
 class ContainerTest(InputTest):

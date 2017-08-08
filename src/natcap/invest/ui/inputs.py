@@ -1138,7 +1138,6 @@ class GriddedInput(Input):
     hidden_changed = QtCore.Signal(bool)
     validity_changed = QtCore.Signal(bool)
 
-    # TODO: Move label parameter to GriddedInput from Input?
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
         """Initialize this GriddedInput instance.
@@ -1296,7 +1295,8 @@ class GriddedInput(Input):
         Returns:
             The boolean validity of the input.
         """
-        # TODO: wait until the lock is released.
+        # I'd rather use self.lock, but waiting until self.lock is released
+        # seems to cause a segfault.  This approach is good enough for now.
         while self._validator.in_progress():
             QtCore.QThread.msleep(50)
         return self._valid
