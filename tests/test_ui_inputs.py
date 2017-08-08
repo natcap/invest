@@ -990,6 +990,12 @@ class DropdownTest(GriddedInputTest):
     def test_validate_error(self):
         pass
 
+    def test_validate_missing_args_key(self):
+        pass
+
+    def test_validate_required_validator(self):
+        pass
+
 
 class LabelTest(_QtTest):
     def test_add_to_layout(self):

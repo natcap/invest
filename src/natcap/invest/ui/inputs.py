@@ -1826,7 +1826,6 @@ class Checkbox(GriddedInput):
         self.checkbox.setChecked(value)
 
 
-# TODO: Shouldn't Dropdowns always be valid?
 class Dropdown(GriddedInput):
     """An Input for selecting one out of a set of defined options."""
 
@@ -1866,6 +1865,13 @@ class Dropdown(GriddedInput):
         # Init hideability if needed
         if self.hideable:
             self._hideability_changed(False)
+
+    def valid(self):
+        """Get the validity of the Dropdown.
+
+        Returns:
+            ``True``.  Dropdowns are always valid."""
+        return True
 
     @QtCore.Slot(int)
     def _index_changed(self, newindex):
@@ -2181,7 +2187,7 @@ class Container(QtWidgets.QGroupBox, Input):
 
 
 class Multi(Container):
-    """Iput that can dynamically add inputs based on a template."""
+    """Input that can dynamically add inputs based on a template."""
 
     value_changed = QtCore.Signal(list)
     input_added = QtCore.Signal()
