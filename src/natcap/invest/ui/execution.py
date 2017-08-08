@@ -1,3 +1,4 @@
+"""A class for a Qt-enabled python Thread."""
 import threading
 import logging
 import traceback
@@ -61,7 +62,8 @@ class Executor(QtCore.QObject, threading.Thread):
             * ``self.traceback`` refers to the formatted traceback.
 
         Finally, the signal ``self.finished`` is emitted, regardless of whether
-        an exception was raised."""
+        an exception was raised.
+        """
         try:
             self.target(*self.args, **self.kwargs)
         except Exception as error:
