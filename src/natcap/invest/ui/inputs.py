@@ -2066,7 +2066,6 @@ class Container(QtWidgets.QGroupBox, Input):
             self._hide_widgets(self.value())
         self.resize(self.sizeHint())
 
-    # TODO: Revisit property-based approach of Containers.
     @property
     def expanded(self):
         """Whether the Container is expanded.
@@ -2389,7 +2388,6 @@ class Multi(Container):
             self.add_item(item)
 
 
-# TODO: Move most of the Form functionality over to Model?
 class Form(QtWidgets.QWidget):
     """A form that contains multiple Inputs."""
 
