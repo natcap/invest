@@ -55,8 +55,8 @@ def _collect_spatial_files(filepath, data_dir):
 
     Returns:
         ``None`` If the file is not a spatial file, or the ``path`` to the new
-        resting place of the spatial files."""
-
+        resting place of the spatial files.
+    """
     # If the user provides a mutli-part file, wrap it into a folder and grab
     # that instead of the individual file.
 
@@ -158,11 +158,32 @@ def _collect_filepath(path, data_dir):
 
 
 class _ArgsKeyFilter(logging.Filter):
+    """A python logging filter for adding an args_key attribute to records."""
+
     def __init__(self, args_key):
+        """Initialize the filter.
+
+        Parameters:
+            args_key (string): The args key to be added to all records.
+
+        Returns:
+            ``None``
+        """
         logging.Filter.__init__(self)
         self.args_key = args_key
 
     def filter(self, record):
+        """Filter a logging record.
+
+        Adds the ``args_key`` attribute to the record from the ``args_key``
+        that this filter was initialized with.
+
+        Parameters:
+            record (logging.Record): The log record.
+
+        Returns:
+            ``True``.  All log records will be passed through once modified.
+        """
         record.args_key = self.args_key
         return True
 
@@ -177,7 +198,8 @@ def build_scenario_archive(args, name, scenario_path):
             be written.
 
     Returns:
-        ``None``"""
+        ``None``
+    """
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='scenario_')
     logfile = os.path.join(temp_workspace, 'log')
@@ -274,7 +296,8 @@ def extract_scenario_archive(scenario_path, dest_dir_path):
 
     Returns:
         ``args`` (dict): A dictionary of arguments from the extracted
-            archive"""
+            archive
+    """
     LOGGER.info('Extracting archive %s to %s', scenario_path, dest_dir_path)
     # extract the archive to the workspace
     with tarfile.open(scenario_path) as tar:
