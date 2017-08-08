@@ -233,7 +233,14 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
 
 
 class WorkspaceOverwriteConfirmDialog(QtWidgets.QMessageBox):
+    """A message box to confirm that the workspace should be overwritten."""
+
     def __init__(self):
+        """Initialize the dialog.
+
+        Returns:
+            ``None``
+        """
         QtWidgets.QMessageBox.__init__(self)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText('<h2>Workspace exists!<h2>')
@@ -247,7 +254,14 @@ class WorkspaceOverwriteConfirmDialog(QtWidgets.QMessageBox):
 
 
 class SettingsDialog(OptionsDialog):
+    """A dialog for global InVEST settings."""
+
     def __init__(self):
+        """Initialize the SettingsDialog.
+
+        Returns:
+            ``None``
+        """
         OptionsDialog.__init__(self, title='InVEST Settings',
                                modal=True)
 
@@ -271,6 +285,11 @@ class SettingsDialog(OptionsDialog):
         self._container.add_input(self.cache_directory)
 
     def postprocess(self, exitcode):
+        """Save the settings from the dialog.
+
+        Returns:
+            ``None``
+        """
         if exitcode == QtWidgets.QDialog.Accepted:
             inputs.INVEST_SETTINGS.setValue('cache_dir', self.cache_directory.value())
 
@@ -285,8 +304,11 @@ class AboutDialog(QtWidgets.QDialog):
     these other projects.
 
     Returns:
-        None."""
+        None.
+    """
+
     def __init__(self):
+        """Initialize the AboutDialog."""
         QtWidgets.QDialog.__init__(self)
         self.setWindowTitle('About InVEST')
         self.setLayout(QtWidgets.QVBoxLayout())
@@ -355,7 +377,18 @@ class AboutDialog(QtWidgets.QDialog):
 
 
 class LocalDocsMissingDialog(QtWidgets.QMessageBox):
+    """A dialog to explain that local documentation can't be found."""
+
     def __init__(self, local_docs_link):
+        """Initialize the LocalDocsMissingDialog.
+
+        Parameters:
+            local_docs_link (string): The local path to the local HTML
+                documentation.
+
+        Returns:
+            ``None``
+        """
         QtWidgets.QMessageBox.__init__(self)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText("<h2>Local docs not found<h2>")
@@ -445,7 +478,8 @@ class WindowTitle(QtCore.QObject):
         """Produce a string representation of the window title.
 
         Returns:
-            The string wundow title."""
+            The string wundow title.
+        """
         try:
             return self.format_string.format(
                 modelname=self.modelname if self.modelname else 'InVEST',
@@ -474,7 +508,16 @@ class ScenarioOptionsDialog(OptionsDialog):
     Returns:
         An instance of :ref:ScenarioSaveOpts namedtuple.
     """
+
     def __init__(self, paramset_basename):
+        """Initialize the ScenarioOptionsDialog.
+
+        Parameters:
+            paramset_basename (string): The basename of the new parameter set file.
+
+        Returns:
+            ``None``
+        """
         OptionsDialog.__init__(self,
                                title='Scenario options',
                                modal=True,
@@ -523,6 +566,15 @@ class ScenarioOptionsDialog(OptionsDialog):
 
         @QtCore.Slot(unicode)
         def _optionally_disable(value):
+            """A slot to optionally disable inputs based on scenario type.
+
+            Parameters:
+                value (string): The scenario type, one of the strings in the
+                    scenario type dropdown menu.
+
+            Returns:
+                ``None``
+            """
             self.use_relative_paths.set_interactive(
                 value == _SCENARIO_PARAMETER_SET)
 
@@ -534,12 +586,26 @@ class ScenarioOptionsDialog(OptionsDialog):
 
         @QtCore.Slot(bool)
         def _enable_continue_button(new_validity):
+            """A slot to enable the continue button when inputs are valid.
+
+            Parameters:
+                new_validity (bool): The validity of the form.
+
+            Returns:
+                ``None``
+            """
             self.ok_button.setEnabled(new_validity)
 
         self.scenario_type.value_changed.connect(_optionally_disable)
         self.save_parameters.validity_changed.connect(_enable_continue_button)
 
     def exec_(self):
+        """Execute the dialog.
+
+        Returns:
+            If the dialog is rejected, ``None`` is returned.
+            If the dialog is accepted, a ``ScenarioSaveOpts`` instance is returned.
+        """
         result = OptionsDialog.exec_(self)
         if result == QtWidgets.QDialog.Accepted:
             return ScenarioSaveOpts(
@@ -552,7 +618,10 @@ class ScenarioOptionsDialog(OptionsDialog):
 
 
 class ScenarioArchiveExtractionDialog(OptionsDialog):
+    """A dialog for extracting a scenario archive."""
+
     def __init__(self):
+        """Initialize the ScenarioArchiveExtractionDialog."""
         OptionsDialog.__init__(self,
                                title='Extract scenario',
                                modal=True,
@@ -567,7 +636,22 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
         )
         self._container.add_input(self.extraction_point)
 
+    # TODO: Can't I just return the path to parameters.json?
     def exec_(self, archive_path):
+        """Execute the dialog.
+
+        Parameters:
+            archive_path (string): The path to the archive that needs to be
+                extracted.
+
+        Returns:
+            A 2-tuple.
+
+            If the dialog was accepted, the return value is a 2-tuple of the
+            extracted scenario args and the extracion directory.
+
+            If the value was rejected, ``(None, None)`` is returned.
+        """
         result = OptionsDialog.exec_(self)
 
         if result == QtWidgets.QDialog.Accepted:
@@ -579,7 +663,10 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
 
 
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
+    """A dialog for presenting errors from whole-model validation."""
+
     def __init__(self):
+        """Initialize the WholeModelValidationErrorDialog."""
         QtWidgets.QDialog.__init__(self)
         self.warnings = []
         self.setLayout(QtWidgets.QVBoxLayout())
@@ -617,7 +704,17 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
                                  QtWidgets.QDialogButtonBox.RejectRole)
         self.layout().addWidget(self.buttonbox)
 
+    # TODO: Change the name of this method to post_warnings?
     def validation_finished(self, validation_warnings):
+        """Post validation warnings to the dialog.
+
+        Parameters:
+            validation_warnings (list): A list of validation warnings from
+                whole-model validation.
+
+        Returns:
+            ``None``
+        """
         LOGGER.info('Posting validation warnings to WMV dialog: %s',
                     validation_warnings)
         self.warnings = validation_warnings
@@ -638,7 +735,6 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
 
 
 class Model(QtWidgets.QMainWindow):
-
     """An InVEST model window.
 
     This class represents an abstraction of a variety of Qt widgets that
@@ -665,6 +761,7 @@ class Model(QtWidgets.QMainWindow):
     localdoc = None
 
     def __init__(self):
+        """Initialize the Model."""
         QtWidgets.QMainWindow.__init__(self)
         self.setAcceptDrops(True)
         self._quickrun = False
@@ -810,7 +907,8 @@ class Model(QtWidgets.QMainWindow):
         satus bar when the operation is complete.
 
         Returns:
-           ``None``."""
+           ``None``.
+        """
         scenario_opts = self.scenario_options_dialog.exec_()
         if not scenario_opts:  # user pressed cancel
             return
@@ -852,10 +950,18 @@ class Model(QtWidgets.QMainWindow):
                 the model.
 
         Returns:
-            ``None``"""
+            ``None``
+        """
         self.form.add_input(input)
 
     def is_valid(self):
+        """Check whether the form is valid.
+
+        The form is considered valid when there are no validation warnings.
+
+        Returns:
+            A boolean of whether there are known validation warnings.
+        """
         if self.validation_report_dialog.warnings:
             return False
         return True
@@ -915,6 +1021,27 @@ class Model(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def load_scenario(self, scenario_path=None):
+        """Load a scenario.
+
+        This method is also a slot that accepts no arguments.
+
+        A scenario could be any one of:
+
+            * A logfile from a previous model run.
+            * A parameter set (*.invs.json)
+            * A parameter archive (*.invs.tar.gz)
+
+        Scenarios may be saved and loaded through the Model UI. For API access
+        to scenarios, look at :ref:natcap.invest.scenarios.
+
+        Parameters:
+            scenario_path=None (string): The path to the scenario file to
+                load.  If ``None``, the user will be prompted for a file
+                with a file dialog.
+
+        Returns:
+            ``None``
+        """
         if not scenario_path:
             scenario_path = self.file_dialog.open_file(
                 title='Select scenario', filters=(
@@ -950,6 +1077,15 @@ class Model(QtWidgets.QMainWindow):
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
 
     def load_args(self, scenario_args):
+        """Load arguments from an args dict.
+
+        Parameters:
+            scenario_args (dict): The arguments dictionary from which model
+                parameters will be loaded.
+
+        Returns:
+            ``None``
+        """
         _inputs = dict((input.args_key, input) for input in
                        self.inputs())
         LOGGER.debug(pprint.pformat(_inputs))
@@ -965,10 +1101,25 @@ class Model(QtWidgets.QMainWindow):
                                  args_value)
 
     def assemble_args(self):
+        """Collect arguments from the UI and assemble them into a dictionary.
+
+        This method must be reimplemented by subclasses.
+
+        Raises:
+            NotImplementedError
+        """
         raise NotImplementedError
 
     @QtCore.Slot(list)
     def _validation_finished(self, validation_warnings):
+        """A slot to handle whole-model validation errors.
+
+        Parameters:
+            validation_warnings (list): A list of string validation warnings.
+
+        Returns:
+            ``None``
+        """
         inputs.QT_APP.processEvents()
         LOGGER.info('Whole-model validation returned: %s',
                     validation_warnings)
@@ -988,10 +1139,24 @@ class Model(QtWidgets.QMainWindow):
         self.validation_report_dialog.validation_finished(warnings_)
 
     def inputs(self):
+        """Fetch a list of all model inputs.
+
+        Returns:
+            A list of all objects known to this ``Model`` instance that are subclasses of
+            ``Input``.
+        """
         return [ref for ref in self.__dict__.values()
                 if isinstance(ref, inputs.Input)]
 
     def validate(self, block=False):
+        """Trigger validation for the whole model.
+
+        Parameters:
+            block=False (bool): Whether to block on validation.
+
+        Returns:
+            ``None``
+        """
         validate_callable = functools.partial(
             self._validator.validate,
             target=self.validator,
@@ -1004,6 +1169,15 @@ class Model(QtWidgets.QMainWindow):
             validate_callable()
 
     def run(self, quickrun=False):
+        """Run the model.
+
+        Parameters:
+            quickrun=False (bool): If True, the model will close when the
+                model finishes.
+
+        Returns:
+            ``None``
+        """
         # iterate through attributes of self.form.  If the attribute is an
         # instance of inputs.Input, then link its value_changed signal to the
         # model-wide validation slot.
@@ -1052,10 +1226,36 @@ class Model(QtWidgets.QMainWindow):
         self.raise_()  # raise window to top of stack.
 
     def close(self, prompt=True):
+        """Close the window.
+
+        Overridden from QMainWindow.close to allow for an optional ``prompt``
+        argument.
+
+        Parameters:
+            prompt=True (bool): Whether to prompt for the user to confirm the
+                window's closure.  If ``False``, the model window will be
+                closed without confirmation.
+
+        Returns:
+            ``None``
+        """
         self.prompt_on_close = prompt
         QtWidgets.QMainWindow.close(self)
 
     def closeEvent(self, event):
+        """Handle close events for the QMainWindow.
+
+        The user will be prompted to confirm that the window should be closed
+        unless ``self.prompt_on_close`` is ``True``.
+
+        Reimplemented from QMainWindow.closeEvent.
+
+        Parameters:
+            event (QEvent): The current event.
+
+        Returns:
+            ``None``
+        """
         if self.prompt_on_close:
             starting_checkstate = self.settings.value('remember_lastrun',
                                                     True, bool)
@@ -1069,11 +1269,21 @@ class Model(QtWidgets.QMainWindow):
         self.prompt_on_close = True
 
     def save_lastrun(self):
+        """Save lastrun args to the model's settings.
+
+        Returns:
+            ``None``
+        """
         lastrun_args = self.assemble_args()
         LOGGER.debug('Saving lastrun args %s', lastrun_args)
         self.settings.setValue("lastrun", json.dumps(lastrun_args))
 
     def load_lastrun(self):
+        """Load lastrun settings from the model's settings.
+
+        Returns:
+            ``None``
+        """
         # If no lastrun args saved, "{}" (empty json object) is returned
         lastrun_args = self.settings.value("lastrun", "{}")
         self.load_args(json.loads(lastrun_args))
