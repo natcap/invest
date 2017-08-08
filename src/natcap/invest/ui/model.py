@@ -636,7 +636,6 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
         )
         self._container.add_input(self.extraction_point)
 
-    # TODO: Can't I just return the path to parameters.json?
     def exec_(self, archive_path):
         """Execute the dialog.
 
@@ -704,8 +703,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
                                  QtWidgets.QDialogButtonBox.RejectRole)
         self.layout().addWidget(self.buttonbox)
 
-    # TODO: Change the name of this method to post_warnings?
-    def validation_finished(self, validation_warnings):
+    def post_warnings(self, validation_warnings):
         """Post validation warnings to the dialog.
 
         Parameters:
@@ -1136,7 +1134,7 @@ class Model(QtWidgets.QMainWindow):
         for keys, warning in validation_warnings:
             warnings_.append(
                 ((args_to_inputs[key].label for key in keys), warning))
-        self.validation_report_dialog.validation_finished(warnings_)
+        self.validation_report_dialog.post_warnings(warnings_)
 
     def inputs(self):
         """Fetch a list of all model inputs.
