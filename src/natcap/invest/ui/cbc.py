@@ -131,7 +131,8 @@ class CoastalBlueCarbon(model.Model):
         self.lulc_transition_years_list = inputs.Multi(
             args_key=u'lulc_transition_years_list',
             callable_=functools.partial(inputs.Text, label="Input"),
-            helptext=u'Transition years must be entered in chronological order.',
+            helptext=(
+                u'Transition years must be entered in chronological order.'),
             label=u'Transition Years',
             link_text=u'Add Another')
         self.add_input(self.lulc_transition_years_list)
@@ -202,15 +203,23 @@ class CoastalBlueCarbon(model.Model):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.lulc_lookup_uri.args_key: self.lulc_lookup_uri.value(),
-            self.lulc_transition_matrix_uri.args_key: self.lulc_transition_matrix_uri.value(),
-            self.carbon_pool_initial_uri.args_key: self.carbon_pool_initial_uri.value(),
-            self.carbon_pool_transient_uri.args_key: self.carbon_pool_transient_uri.value(),
-            self.lulc_baseline_map_uri.args_key: self.lulc_baseline_map_uri.value(),
-            self.lulc_baseline_year.args_key: self.lulc_baseline_year.value(),
-            self.lulc_transition_maps_list.args_key: self.lulc_transition_maps_list.value(),
-            self.lulc_transition_years_list.args_key: self.lulc_transition_years_list.value(),
+            self.lulc_transition_matrix_uri.args_key:
+                self.lulc_transition_matrix_uri.value(),
+            self.carbon_pool_initial_uri.args_key:
+                self.carbon_pool_initial_uri.value(),
+            self.carbon_pool_transient_uri.args_key:
+                self.carbon_pool_transient_uri.value(),
+            self.lulc_baseline_map_uri.args_key:
+                self.lulc_baseline_map_uri.value(),
+            self.lulc_baseline_year.args_key:
+                self.lulc_baseline_year.value(),
+            self.lulc_transition_maps_list.args_key:
+                self.lulc_transition_maps_list.value(),
+            self.lulc_transition_years_list.args_key:
+                self.lulc_transition_years_list.value(),
             self.analysis_year.args_key: self.analysis_year.value(),
-            self.do_economic_analysis.args_key: self.do_economic_analysis.value(),
+            self.do_economic_analysis.args_key:
+                self.do_economic_analysis.value(),
         }
 
         if self.do_economic_analysis.value():

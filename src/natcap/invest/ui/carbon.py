@@ -134,13 +134,16 @@ class Carbon(model.Model):
             self.suffix.args_key: self.suffix.value(),
             self.cur_lulc_raster.args_key: self.cur_lulc_raster.value(),
             self.carbon_pools_path.args_key: self.carbon_pools_path.value(),
-            self.valuation_container.args_key: self.valuation_container.value(),
-            self.calc_sequestration.args_key: self.calc_sequestration.value(),
+            self.valuation_container.args_key:
+                self.valuation_container.value(),
+            self.calc_sequestration.args_key:
+                self.calc_sequestration.value(),
             self.redd.args_key: self.redd.value(),
         }
 
         if self.calc_sequestration.value():
-            args[self.redd_lulc_raster.args_key] = self.redd_lulc_raster.value()
+            args[self.redd_lulc_raster.args_key] = (
+                self.redd_lulc_raster.value())
             args[self.fut_lulc_raster.args_key] = self.fut_lulc_raster.value()
 
             for arg in (self.cur_lulc_year, self.fut_lulc_year):
