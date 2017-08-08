@@ -514,7 +514,8 @@ def main():
 
         if model_exitcode != 0:
             parser.exit(model_exitcode,
-                        'Model terminated with exit code %s' % model_exitcode)
+                        'Model %s terminated with exit code %s' % (
+                            args.model, model_exitcode))
 
         if app_exitcode != 0:
             parser.exit(app_exitcode,

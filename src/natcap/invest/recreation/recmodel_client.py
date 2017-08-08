@@ -182,7 +182,8 @@ def execute(args):
             " User input: (%s)" % (min_year, max_year, args['end_year']))
 
     # append jan 1 to start and dec 31 to end
-    date_range = (args['start_year']+'-01-01', args['end_year']+'-12-31')
+    date_range = (str(args['start_year'])+'-01-01',
+                  str(args['end_year'])+'-12-31')
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']

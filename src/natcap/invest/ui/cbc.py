@@ -27,10 +27,6 @@ class CoastalBlueCarbonPreprocessor(model.Model):
         self.lulc_snapshot_list = inputs.Multi(
             args_key=u'lulc_snapshot_list',
             callable_=functools.partial(inputs.File, label="Input"),
-            helptext=(
-                u"A set of GDAL-supported rasters representing the "
-                u"land/seascape at particular points in time.  Provided "
-                u"in chronological order."),
             label=u'Land Use/Land Cover Rasters (GDAL-supported)',
             link_text=u'Add Another')
         self.add_input(self.lulc_snapshot_list)
