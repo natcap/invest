@@ -6,8 +6,8 @@ import collections
 import re
 import os
 import logging
-
-logging.basicConfig(level=logging.INFO)
+import hashlib
+import inspect
 
 from osgeo import gdal
 from osgeo import ogr
@@ -16,6 +16,7 @@ import numpy
 import taskgraph
 
 from . import utils
+logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
 _INDEX_NODATA = -1.0
@@ -56,6 +57,7 @@ _EXPECTED_FARM_HEADERS = [
     'season', 'crop_type', _HALF_SATURATION_FARM_HEADER,
     _MANAGED_POLLINATORS_FIELD, _FARM_FLORAL_RESOURCES_PATTERN,
     _FARM_NESTING_SUBSTRATE_RE_PATTERN, _CROP_POLLINATOR_DEPENDENCE_FIELD]
+
 
 def execute(args):
     """InVEST Pollination Model.
@@ -184,7 +186,7 @@ def execute(args):
     if farm_vector_path is not None:
         scenario_variables['farm_nesting_substrate_index_path'] = (
             collections.defaultdict(dict))
-        farm_substrate_rasterize_tasks = {}
+        farm_substrate_rasterize_task_list = []
         for substrate in scenario_variables['substrate_list']:
             farm_substrate_id = (
                 _FARM_NESTING_SUBSTRATE_HEADER_PATTERN % substrate)
@@ -194,16 +196,17 @@ def execute(args):
                     substrate, file_suffix))
             scenario_variables['farm_nesting_substrate_index_path'][
                 substrate] = farm_nesting_substrate_index_path
-            farm_substrate_rasterize_tasks[substrate] = task_graph.add_task(
-                func=_rasterize_vector_onto_base,
-                args=(
-                    scenario_variables['nesting_substrate_index_path'][
-                        substrate],
-                    farm_vector_path, farm_substrate_id,
-                    farm_nesting_substrate_index_path),
-                target_path_list=[farm_nesting_substrate_index_path],
-                dependent_task_list=[
-                    landcover_substrate_index_tasks[substrate]])
+            farm_substrate_rasterize_task_list.append(
+                task_graph.add_task(
+                    func=_rasterize_vector_onto_base,
+                    args=(
+                        scenario_variables['nesting_substrate_index_path'][
+                            substrate],
+                        farm_vector_path, farm_substrate_id,
+                        farm_nesting_substrate_index_path),
+                    target_path_list=[farm_nesting_substrate_index_path],
+                    dependent_task_list=[
+                        landcover_substrate_index_tasks[substrate]]))
 
     # per species
     habitat_nesting_tasks = {}
@@ -211,24 +214,29 @@ def execute(args):
     for species in scenario_variables['species_list']:
         # calculate habitat_nesting_index[species] HN(x, s) = max_n(N(x, n) ns(s,n))
         if farm_vector_path is not None:
-            dependent_task_map = farm_substrate_rasterize_tasks
+            dependent_task_list = farm_substrate_rasterize_task_list
             substrate_path_map = scenario_variables[
                 'farm_nesting_substrate_index_path']
         else:
-            dependent_task_map = farm_substrate_rasterize_tasks
+            dependent_task_list = landcover_substrate_index_tasks.values()
             substrate_path_map = scenario_variables[
-                'farm_nesting_substrate_index_path']
+                'nesting_substrate_index_path']
 
         scenario_variables['habitat_nesting_index_path'][species] = (
             os.path.join(
                 intermediate_output_dir,
                 _HABITAT_NESTING_INDEX_FILE_PATTERN % (species, file_suffix)))
 
-        op = _CalculateHabitatNestingIndex(
+        calculate_habitat_nesting_index_op = _CalculateHabitatNestingIndex(
             substrate_path_map,
             scenario_variables['species_substrate_index'][species],
             scenario_variables['habitat_nesting_index_path'][species])
-        op()
+
+        habitat_nesting_tasks['species'] = task_graph.add_task(
+            func=calculate_habitat_nesting_index_op,
+            dependent_task_list=dependent_task_list,
+            target_path_list=[
+                scenario_variables['habitat_nesting_index_path'][species]])
 
     task_graph.close()
     task_graph.join()
@@ -647,22 +655,36 @@ class _CalculateHabitatNestingIndex(object):
     """Closure for HN(x, s) = max_n(N(x, n) ns(s,n)) calculation."""
 
     def __init__(
-            self, substrate_path_map, species_substrate_index_path_map,
+            self, substrate_path_map, species_substrate_index_map,
             target_habitat_nesting_index_path):
         """Define parameters necessary for HN(x,s) calculation.
 
         Parameters:
             substrate_path_map (dict): map substrate name to substrate index
                 raster path. (N(x, n))
-            species_substrate_index_path_map (dict): map substrate name to
+            species_substrate_index_map (dict): map substrate name to
                 scalar value of species substrate suitability. (ns(s,n))
             target_habitat_nesting_index_path (string): path to target
                 raster
         """
-        self.substrate_path_map = substrate_path_map
-        # TODO this needs to be in alphabetical order
-        self.species_substrate_index_path_map = (
-            species_substrate_index_path_map)
+        # try to get the source code of __call__ so task graph will recompute
+        # if the function has changed
+        try:
+            self.__name__ = hashlib.sha1(inspect.getsource(
+                _CalculateHabitatNestingIndex.__call__)).hexdigest()
+        except IOError:
+            # default to the classname if it doesn't work
+            self.__name__ = _CalculateHabitatNestingIndex.__name__
+        self.substrate_path_list = [
+            substrate_path_map[substrate_id]
+            for substrate_id in sorted(substrate_path_map)]
+
+        self.species_substrate_suitability_index_array = numpy.array([
+            species_substrate_index_map[substrate_id]
+            for substrate_id in sorted(substrate_path_map)]).reshape(
+                (len(species_substrate_index_map), 1))
+        LOGGER.debug(self.species_substrate_suitability_index_array)
+
         self.target_habitat_nesting_index_path = (
             target_habitat_nesting_index_path)
 
@@ -670,7 +692,14 @@ class _CalculateHabitatNestingIndex(object):
 
         def max_op(*substrate_index_arrays):
             """Return the max of index_array[n] * ns[n]."""
-            valid_mask = substrate_index_arrays[0] != _INDEX_NODATA
-            result = numpy.empty_like(substrate_index_arrays[0])
-            result[:] = _INDEX_NODATA
+            result = numpy.max(
+                numpy.stack([x.flatten() for x in substrate_index_arrays]) *
+                self.species_substrate_suitability_index_array, axis=0)
+            result = result.reshape(substrate_index_arrays[0].shape)
+            result[substrate_index_arrays[0] == _INDEX_NODATA] = _INDEX_NODATA
+            return result
 
+        pygeoprocessing.raster_calculator(
+            [(x, 1) for x in self.substrate_path_list], max_op,
+            self.target_habitat_nesting_index_path,
+            gdal.GDT_Float32, _INDEX_NODATA)
