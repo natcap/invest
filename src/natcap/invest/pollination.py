@@ -238,16 +238,15 @@ def execute(args):
             target_path_list=[
                 scenario_variables['habitat_nesting_index_path'][species]])
 
-    task_graph.close()
-    task_graph.join()
-    return
-
-
-
     # per season j
         # calculate relative_floral_abundance_index[season] per season RA(l(x), j)
         # per species s
             # local foraging effectiveness foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
+
+
+    task_graph.close()
+    task_graph.join()
+    return
 
     # per species
         # accessable_floral_resources_index[species] FR(x,s) = convolve(FE(x, s), \alpha_s)
