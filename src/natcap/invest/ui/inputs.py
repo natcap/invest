@@ -1,6 +1,5 @@
 # coding=UTF-8
 """Input classes for the InVEST UI, a Qt-based UI abstraction layer."""
-# TODO: Mark all slots as slots.
 
 from __future__ import absolute_import
 
@@ -180,6 +179,7 @@ class Validator(QtCore.QObject):
             limit_to=limit_to)
         self._validation_worker.moveToThread(self._validation_thread)
 
+        @QtCore.Slot()
         def _finished():
             """Slot to process warnings and emit ``self.finished``."""
             LOGGER.info('Finished validation for args_key %s', limit_to)
@@ -421,14 +421,11 @@ class FileSystemRunDialog(QtWidgets.QDialog):
 
         self.log_messages_pane.write('Initializing...\n')
 
-    # TODO: consolidate exception_found, thread_exception if possible.
-    def finish(self, exception_found, thread_exception=None):
+    def finish(self, exception):
         """Notify the user that model processing has finished.
 
         Parameters:
-            exception_found (bool): Whether an exception was found while
-                processing.
-            thread_exception=None (Exception or None): The exception object
+            exception (Exception or None): The exception object
                 If the error encountered.  None if no error found.
 
         Returns:
@@ -438,13 +435,13 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.progressBar.setMaximum(1)  # stops the progressbar.
         self.backButton.setDisabled(False)
 
-        if exception_found:
+        if exception:
             self.messageArea.set_error(True)
             self.messageArea.setText(
                 (u'<b>%s</b> encountered: <em>%s</em> <br/>'
                  'See the log for details.') % (
-                    thread_exception.__class__.__name__,
-                    thread_exception))
+                    exception.__class__.__name__,
+                    exception))
             self.messageArea.setStyleSheet(
                 'QLabel { padding: 15px;'
                 'background-color: #ebabb6; border: 2px solid #a23332;}')
@@ -1089,9 +1086,7 @@ class Input(QtCore.QObject):
             widget.setEnabled(enabled)
         self.interactivity_changed.emit(self.interactive)
 
-    # TODO: Make this a public method?
-    # TODO: Move this to GriddedInput?
-    def _add_to(self, layout):
+    def add_to(self, layout):
         """Add the component widgets of this Input to a QGridLayout.
 
         Parameters:
@@ -1969,7 +1964,7 @@ class Label(QtWidgets.QLabel):
         self.setWordWrap(True)
         self.setOpenExternalLinks(True)
 
-    def _add_to(self, layout):
+    def add_to(self, layout):
         """Add this widget to a QGridLayout.
 
         Parameters:
@@ -2114,7 +2109,7 @@ class Container(QtWidgets.QGroupBox, Input):
     def add_input(self, input):
         """Add an input to the Container.
 
-        The input must have an ``_add_to`` method that handles how to add the
+        The input must have an ``add_to`` method that handles how to add the
         Input and/or its component widgets to a QGridLayout that is owned by
         the Container.
 
@@ -2125,7 +2120,7 @@ class Container(QtWidgets.QGroupBox, Input):
         Returns:
             ``None``
         """
-        input._add_to(layout=self.layout())
+        input.add_to(layout=self.layout())
         _apply_sizehint(self.layout().parent())
 
         if self.expandable:
@@ -2145,7 +2140,7 @@ class Container(QtWidgets.QGroupBox, Input):
                 self.setMinimumSize(self.sizeHint())
             input.input_added.connect(_update_sizehints)
 
-    def _add_to(self, layout):
+    def add_to(self, layout):
         """Define how to add this Container to a QGridLayout.
 
         The container will occupy all columns.
@@ -2317,7 +2312,7 @@ class Multi(Container):
         if not new_input:
             new_input = self.callable_()
 
-        new_input._add_to(self.layout())
+        new_input.add_to(self.layout())
         self.items.append(new_input)
 
         layout = self.layout()
@@ -2507,8 +2502,7 @@ class Form(QtWidgets.QWidget):
             ``None``
         """
         self.run_dialog.finish(
-            exception_found=(self._thread.exception is not None),
-            thread_exception=self._thread.exception)
+            exception=self._thread.exception)
         self.run_finished.emit()
 
     def add_input(self, input):
