@@ -47,6 +47,7 @@ ICON_FOLDER = qtawesome.icon('fa.folder-o')
 ICON_FILE = qtawesome.icon('fa.file-o')
 ICON_ENTER = qtawesome.icon('fa.arrow-circle-o-right',
                             color='green')
+ICON_MINUS = qtawesome.icon('fa.minus')
 _QLABEL_STYLE_TEMPLATE = ('QLabel {{padding={padding};'
                           'background-color={bg_color};'
                           'border={border};}}')
@@ -2190,18 +2191,18 @@ class Multi(Container):
 
         remove_requested = QtCore.Signal(int)
 
-        def __init__(self, label, index):
+        def __init__(self, index):
             """Initialize the button.
 
             Parameters:
-                label (string): The label to use for the button.
                 index (int): The row index of the input that this button
                     is associated with.
 
             Returns:
                 ``None``
             """
-            QtWidgets.QPushButton.__init__(self, label)
+            QtWidgets.QPushButton.__init__(self)
+            self.setIcon(ICON_MINUS)
             self.index = index
             self.pressed.connect(self._remove)
 
@@ -2324,7 +2325,7 @@ class Multi(Container):
             col_index = layout.columnCount()
 
         new_remove_button = Multi._RemoveButton(
-            '-R-', index=max(0, len(self.items)-1))
+            index=max(0, len(self.items)-1))
         new_remove_button.remove_requested.connect(self.remove)
         self.remove_buttons.append(new_remove_button)
 
