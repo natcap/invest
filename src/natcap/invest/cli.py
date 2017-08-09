@@ -432,7 +432,8 @@ def main():
         # prefer CLI option for workspace dir, but use paramset workspace if
         # the CLI options do not define a workspace.
         if args.workspace:
-            workspace = args.workspace
+            workspace = os.path.abspath(args.workspace)
+            paramset.args['workspace_dir'] = workspace
         else:
             if 'workspace_dir' in paramset.args:
                 workspace = paramset.args['workspace_dir']
