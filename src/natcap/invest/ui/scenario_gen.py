@@ -4,6 +4,8 @@ from natcap.invest.ui import model, inputs
 import natcap.invest.scenario_gen_proximity
 import natcap.invest.scenario_generator.scenario_generator
 
+from osgeo import ogr
+
 
 class ScenarioGenProximity(model.Model):
     label = u'Scenario Generator: Proximity Based'
@@ -224,12 +226,15 @@ class ScenarioGenerator(model.Model):
             label=u'Constraints Layer (Vector)',
             validator=self.validator)
         self.calculate_constraints.add_input(self.constraints)
-        self.constraints_field = inputs.Ogrfielddropdown(
+        self.constraints.sufficiency_changed.connect(
+            self._load_colnames_constraints)
+        self.constraints_field = inputs.Dropdown(
             args_key=u'constraints_field',
             helptext=(
                 u"The field from the override table that contains the "
                 u"value for the override."),
             interactive=False,
+            options=('UNKNOWN',),
             label=u'Constraints Field')
         self.calculate_constraints.add_input(self.constraints_field)
         self.override_layer = inputs.Container(
@@ -249,12 +254,15 @@ class ScenarioGenerator(model.Model):
             label=u'Override Layer (Vector)',
             validator=self.validator)
         self.override_layer.add_input(self.override)
-        self.override_field = inputs.Ogrfielddropdown(
+        self.override.sufficiency_changed.connect(
+            self._load_colnames_override)
+        self.override_field = inputs.Dropdown(
             args_key=u'override_field',
             helptext=(
                 u"The field from the override table that contains the "
                 u"value for the override."),
             interactive=False,
+            options=('UNKNOWN',),
             label=u'Override Field')
         self.override_layer.add_input(self.override_field)
         self.override_inclusion = inputs.Dropdown(
@@ -290,6 +298,27 @@ class ScenarioGenerator(model.Model):
             self.override_field.set_interactive)
         self.override_field.sufficiency_changed.connect(
             self.override_inclusion.set_interactive)
+
+    def _load_colnames_constraints(self, new_interactivity):
+        self._load_colnames(new_interactivity,
+                            self.constraints,
+                            self.constraints_field)
+
+    def _load_colnames_override(self, new_interactivity):
+        self._load_colnames(new_interactivity,
+                            self.override,
+                            self.override_field)
+
+    def _load_colnames(self, new_interactivity, vector_input, dropdown_input):
+        if new_interactivity:
+            vector_path = vector_input.value()
+            vector = ogr.Open(vector_path)
+            layer = vector.GetLayer()
+            colnames = [defn.GetName() for defn in layer.schema]
+            dropdown_input.set_options(colnames)
+            dropdown_input.set_interactive(True)
+        else:
+            dropdown_input.set_options([])
 
     def assemble_args(self):
         args = {
