@@ -1884,7 +1884,13 @@ class Dropdown(GriddedInput):
         Returns:
             ``None``
         """
-        self.value_changed.emit(self.options[newindex])
+        # QComboBoxes are 1-indexed.  An index of 0 means there are no options
+        # in the dropdown.
+        if newindex > 0:
+            value = self.options[newindex]
+        else:
+            value = None
+        self.value_changed.emit(value)
 
     def set_options(self, options):
         """Set the available options for this dropdown.
