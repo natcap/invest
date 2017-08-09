@@ -1196,9 +1196,7 @@ class Model(QtWidgets.QMainWindow):
             @QtCore.Slot()
             def _quickrun_close_model():
                 # exit with an error code that matches exception status of run.
-                exit_error = self.form.run_dialog.messageArea.error
                 self.form.run_dialog.close_window()
-                self.exit_code = 0 if not exit_error else 1
                 self.close(prompt=False)
 
             self.form.run_finished.connect(_quickrun_close_model)
