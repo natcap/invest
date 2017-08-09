@@ -55,10 +55,11 @@ _FARM_RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN = (
 # replace (species, file_suffix)
 _LOCAL_FORAGING_EFFECTIVENESS_FILE_PATTERN = (
     'local_foraging_effectiveness_%s%s.tif')
-
 # for intermediate output of floral resources replace (species, file_suffix)
 _FLORAL_RESOURCES_INDEX_FILE_PATTERN = (
     'floral_resources_%s%s.tif')
+# pollinator supply raster replace (species, file_suffix)
+_POLLINATOR_SUPPLY_FILE_PATTERN = 'pollinator_supply_%s%s.tif'
 
 # used to store the 2D decay kernel for a given distance replace
 # (alpha, file suffix)
@@ -259,7 +260,7 @@ def execute(args):
             scenario_variables['species_substrate_index'][species],
             scenario_variables['habitat_nesting_index_path'][species])
 
-        habitat_nesting_tasks['species'] = task_graph.add_task(
+        habitat_nesting_tasks[species] = task_graph.add_task(
             func=calculate_habitat_nesting_index_op,
             dependent_task_list=dependent_task_list,
             target_path_list=[
@@ -345,7 +346,6 @@ def execute(args):
             target_path_list=[
                 local_foraging_effectiveness_path],
             dependent_task_list=[relative_floral_abudance_task])
-        # convolve FE with alpha_s
 
         # create a kernel for the species
         alpha = (
@@ -360,28 +360,47 @@ def execute(args):
             args=(alpha, kernel_path),
             target_path_list=[kernel_path])
 
+        # convolve FE with alpha_s
         floral_resources_index_path = os.path.join(
             intermediate_output_dir, _FLORAL_RESOURCES_INDEX_FILE_PATTERN % (
                 species, file_suffix))
 
-        task_graph.add_task(
+        floral_resources_task = task_graph.add_task(
             func=_normalized_convolve_2d,
             args=(
                 (local_foraging_effectiveness_path, 1), (kernel_path, 1),
                 floral_resources_index_path, gdal.GDT_Float32, _INDEX_NODATA,
                 intermediate_output_dir),
-            ignore_path_list=[intermediate_output_dir],
             dependent_task_list=[
                 alpha_kernel_raster_task, local_foraging_effectiveness_task],
             target_path_list=[floral_resources_index_path])
 
+        # pollinator_supply_index[species] PS(x,s) = FR(x,s) * HN(x,s) * sa(s)
+        #   floral_resources_index_path *
+        #   scenario_variables['habitat_nesting_index_path'][species] *
+        #   scenario_variables['species_abundance'][species]
+        pollinator_supply_index_path = os.path.join(
+            output_dir, _POLLINATOR_SUPPLY_FILE_PATTERN % (
+                species, file_suffix))
+        raster_op = _PollinatorSupplyIndexOp(
+            scenario_variables['species_abundance'][species])
+        task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                [(scenario_variables['habitat_nesting_index_path'][species], 1),
+                 (floral_resources_index_path, 1)], raster_op,
+                pollinator_supply_index_path, gdal.GDT_Float32,
+                _INDEX_NODATA),
+            dependent_task_list=[
+                floral_resources_task, habitat_nesting_tasks[species]],
+            target_path_list=[pollinator_supply_index_path])
+
+        # floral_resources_task
+        # habitat_nesting_tasks[species]
+
     task_graph.close()
     task_graph.join()
     return
-
-    # per species
-        # accessable_floral_resources_index[species] FR(x,s) = convolve(FE(x, s), \alpha_s)
-        # pollinator_supply_index[species] PS(x,s) = FR(x,s) * HN(x,s) * sa(s)
 
     # per species s
         # per season j
@@ -904,4 +923,31 @@ class _CalculateSumOfPollinatorAccessToLocalFloralOp(object):
             RA[valid_mask] * fa for RA, fa in zip(
                 relative_floral_resource_array,
                 self.species_seasonal_activity_list)], axis=0)
+        return result
+
+
+class _PollinatorSupplyIndexOp(object):
+    """PS(x,s) = FR(x,s) * HN(x,s) * sa(s)."""
+
+    def __init__(self, species_abundance):
+        self.species_abundance = species_abundance
+        try:
+            self.__name__ = hashlib.sha1(
+                inspect.getsource(
+                    _PollinatorSupplyIndexOp.__call__
+                )).hexdigest()
+        except IOError:
+            # default to the classname if it doesn't work
+            self.__name__ = (
+                _PollinatorSupplyIndexOp.__name__)
+        self.__name__ += str(species_abundance)
+
+    def __call__(
+            self, floral_resources_array, habitat_nesting_suitability_array):
+        result = numpy.empty_like(floral_resources_array)
+        result[:] = _INDEX_NODATA
+        valid_mask = floral_resources_array != _INDEX_NODATA
+        result[valid_mask] = (
+            self.species_abundance * floral_resources_array[valid_mask] *
+            habitat_nesting_suitability_array[valid_mask])
         return result
