@@ -250,7 +250,7 @@ class SelectModelAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string):
         if values in ['', None]:
             parser.print_help()
-            print format_models()
+            print '\n'.join(format_models())
             parser.exit()
         else:
             known_models = list_models()
