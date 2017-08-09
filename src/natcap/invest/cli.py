@@ -502,8 +502,11 @@ def main():
         model_classname = _import_ui_class(_MODEL_UIS[args.model].gui)
         model_form = model_classname()
 
-        if args.scenario:
-            model_form.load_scenario(args.scenario)
+        try:
+            if args.scenario:
+                model_form.load_scenario(args.scenario)
+        except Exception as error:
+            parser.exit('Could not load scenario: %s\n', error)
 
         if args.workspace:
             model_form.workspace.set_value(args.workspace)
