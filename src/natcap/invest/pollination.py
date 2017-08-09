@@ -740,7 +740,6 @@ class _CalculateHabitatNestingIndex(object):
             species_substrate_index_map[substrate_id]
             for substrate_id in sorted(substrate_path_map)]).reshape(
                 (len(species_substrate_index_map), 1))
-        LOGGER.debug(self.species_substrate_suitability_index_array)
 
         self.target_habitat_nesting_index_path = (
             target_habitat_nesting_index_path)
