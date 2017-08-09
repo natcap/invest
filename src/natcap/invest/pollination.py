@@ -789,6 +789,9 @@ class _CalculateHabitatNestingIndex(object):
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = _CalculateHabitatNestingIndex.__name__
+        self.__name__ += str([
+            substrate_path_map, species_substrate_index_map,
+            target_habitat_nesting_index_path])
         self.substrate_path_list = [
             substrate_path_map[substrate_id]
             for substrate_id in sorted(substrate_path_map)]
@@ -831,12 +834,16 @@ class _CalculateSumOfPollinatorAccessToLocalFloralOp(object):
         """
         self.species_seasonal_activity_list = (
             species_seasonal_activity_list)
+
         try:
-            self.__name__ = hashlib.sha1(inspect.getsource(
-                _CalculateHabitatNestingIndex.__call__)).hexdigest()
+            self.__name__ = hashlib.sha1(
+                inspect.getsource(
+                    _CalculateSumOfPollinatorAccessToLocalFloralOp.__call__
+                )).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
-            self.__name__ = _CalculateHabitatNestingIndex.__name__
+            self.__name__ = (
+                _CalculateSumOfPollinatorAccessToLocalFloralOp.__name__)
         self.__name__ += str(species_seasonal_activity_list)
 
     def __call__(self, *relative_floral_resource_array):
@@ -849,4 +856,3 @@ class _CalculateSumOfPollinatorAccessToLocalFloralOp(object):
                 relative_floral_resource_array,
                 self.species_seasonal_activity_list)], axis=0)
         return result
-
