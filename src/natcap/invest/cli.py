@@ -114,6 +114,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.routing.routedem',
         gui='routing.RouteDEM',
         aliases=()),
+    'scenario_generator': _UIMETA(
+        pyname='natcap.invest.scenario_generator.scenario_generator',
+        gui='scenario_gen.ScenarioGenerator',
+        aliases=('sg',)),
     'scenario_generator_proximity': _UIMETA(
         pyname='natcap.invest.scenario_gen_proximity',
         gui='scenario_gen.ScenarioGenProximity',
@@ -438,13 +442,6 @@ def main():
                     'Use --workspace to specify or add a '
                     '"workspace_dir" parameter to your scenario.'))
 
-        try:
-            name = model_module.LABEL
-        except AttributeError:
-            name = paramset.name
-            warnings.warn('Model %s does not have a LABEL attribute' % (
-                paramset.name))
-
         with utils.prepare_workspace(workspace,
                                      name=paramset.name):
             LOGGER.info(_format_args(paramset.args))
@@ -458,7 +455,7 @@ def main():
                 except AttributeError:
                     LOGGER.warn(
                         '%s does not have a defined validation function.',
-                        name)
+                        paramset.name)
                 finally:
                     if model_warnings:
                         LOGGER.warn('Warnings found: \n%s',
