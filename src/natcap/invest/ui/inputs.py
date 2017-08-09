@@ -744,8 +744,7 @@ class FileDialog(object):
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
 
-        if filters:
-            filters = ';;'.join(filters)
+        filters = ';;'.join(filters)
         LOGGER.info('Using filters "%s"', filters)
 
         result = self.file_dialog.getOpenFileName(self.file_dialog, title,
