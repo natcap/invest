@@ -33,9 +33,10 @@ _NESTING_SUITABILITY_PATTERN = 'nesting_suitability_([^_]+)_index'
 _FORAGING_ACTIVITY_PATTERN = 'foraging_activity_%s_index'
 _FORAGING_ACTIVITY_RE_PATTERN = _FORAGING_ACTIVITY_PATTERN % '([^_]+)'
 _RELATIVE_SPECIES_ABUNDANCE_FIELD = 'relative_abundance'
+_ALPHA_HEADER = 'alpha'
 _EXPECTED_GUILD_HEADERS = [
     'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_RE_PATTERN,
-    'alpha', _RELATIVE_SPECIES_ABUNDANCE_FIELD]
+    _ALPHA_HEADER, _RELATIVE_SPECIES_ABUNDANCE_FIELD]
 
 _NESTING_SUBSTRATE_INDEX_FILEPATTERN = 'nesting_substrate_index_%s%s.tif'
 # this is used if there is a farm polygon present
@@ -54,6 +55,15 @@ _FARM_RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN = (
 # replace (species, file_suffix)
 _LOCAL_FORAGING_EFFECTIVENESS_FILE_PATTERN = (
     'local_foraging_effectiveness_%s%s.tif')
+
+# for intermediate output of floral resources replace (species, file_suffix)
+_FLORAL_RESOURCES_INDEX_FILE_PATTERN = (
+    'floral_resources_%s%s.tif')
+
+# used to store the 2D decay kernel for a given distance replace
+# (alpha, file suffix)
+_KERNEL_FILE_PATTERN = 'kernel_%f%s.tif'
+
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
@@ -98,7 +108,7 @@ def execute(args):
                     with values in the range [0.0, 1.0] indicating the
                     relative level of foraging activity for that species
                     during a particular season.
-                * 'alpha': the sigma average flight distance of that bee
+                * _ALPHA_HEADER the sigma average flight distance of that bee
                     species in meters.
                 * 'relative_abundance': a weight indicating the relative
                     abundance of the particular species with respect to the
@@ -173,6 +183,8 @@ def execute(args):
     scenario_variables = _parse_scenario_variables(
         args['guild_table_path'], args['landcover_biophysical_table_path'],
         farm_vector_path)
+    landcover_raster_info = pygeoprocessing.get_raster_info(
+        args['landcover_raster_path'])
 
     task_graph = taskgraph.TaskGraph(work_token_dir, 0)
 
@@ -324,7 +336,7 @@ def execute(args):
             _LOCAL_FORAGING_EFFECTIVENESS_FILE_PATTERN % (
                 species, file_suffix))
 
-        task_graph.add_task(
+        local_foraging_effectiveness_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 relative_floral_resource_path_band_list,
@@ -334,6 +346,34 @@ def execute(args):
                 local_foraging_effectiveness_path],
             dependent_task_list=[relative_floral_abudance_task])
         # convolve FE with alpha_s
+
+        # create a kernel for the species
+        alpha = (
+            scenario_variables['alpha_value'][species] /
+            float(landcover_raster_info['mean_pixel_size']))
+        kernel_path = os.path.join(
+            intermediate_output_dir, _KERNEL_FILE_PATTERN % (
+                alpha, file_suffix))
+
+        alpha_kernel_raster_task = task_graph.add_task(
+            func=utils.exponential_decay_kernel_raster,
+            args=(alpha, kernel_path),
+            target_path_list=[kernel_path])
+
+        floral_resources_index_path = os.path.join(
+            intermediate_output_dir, _FLORAL_RESOURCES_INDEX_FILE_PATTERN % (
+                species, file_suffix))
+
+        task_graph.add_task(
+            func=_normalized_convolve_2d,
+            args=(
+                (local_foraging_effectiveness_path, 1), (kernel_path, 1),
+                floral_resources_index_path, gdal.GDT_Float32, _INDEX_NODATA,
+                intermediate_output_dir),
+            ignore_path_list=[intermediate_output_dir],
+            dependent_task_list=[
+                alpha_kernel_raster_task, local_foraging_effectiveness_task],
+            target_path_list=[floral_resources_index_path])
 
     task_graph.close()
     task_graph.join()
@@ -453,7 +493,10 @@ def _normalized_convolve_2d(
         calc_raster_stats=False)
 
     for path in [mask_path, base_convolve_path, mask_convolve_path]:
-        os.remove(path)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
 def _add_fid_field(base_vector_path, target_vector_path, fid_id):
@@ -576,6 +619,7 @@ def _parse_scenario_variables(
             * season_list (list of string)
             * substrate_list (list of string)
             * species_list (list of string)
+            * alpha_value[species] (float)
             * landcover_substrate_index[substrate][landcover] (float)
             * landcover_floral_resources[season][landcover] (float)
             * species_abundance[species] (string->float)
@@ -701,6 +745,11 @@ def _parse_scenario_variables(
     result['substrate_list'] = sorted(substrate_to_header)
     # * species_list (list of string)
     result['species_list'] = sorted(guild_table)
+
+    result['alpha_value'] = dict()
+    for species in result['species_list']:
+        result['alpha_value'][species] = float(
+            guild_table[species][_ALPHA_HEADER])
 
     # * species_abundance[species] (string->float)
     total_relative_abundance = numpy.sum([
