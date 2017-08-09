@@ -174,6 +174,8 @@ def main(user_args=None):
             headless_string = ''
             if headless:
                 headless_string = 'headless'
+            else:
+                headless_string = 'gui'
             workspace = os.path.join(args.workspace,
                                      'autorun_%s_%s_%s' % (modelname,
                                                            headless_string,
@@ -183,7 +185,7 @@ def main(user_args=None):
                                                    workspace,
                                                    scenario,
                                                    headless))
-        processes.append((process, scenario, headless))
+            processes.append((process, scenario, headless))
 
     # get() blocks until the result is ready.
     model_results = {}
