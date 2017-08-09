@@ -43,12 +43,18 @@ _FARM_NESTING_SUBSTRATE_INDEX_FILEPATTERN = (
 # replaced by (species, file_suffix)
 _HABITAT_NESTING_INDEX_FILE_PATTERN = 'habitat_nesting_index_%s%s.tif'
 # replaced by (season, file_suffix)
-_RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN = 'relative_floral_abundance_index_%s%s.tif'
+_RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN = (
+    'relative_floral_abundance_index_%s%s.tif')
+# this is used if there's a farm polygon present
+_FARM_RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN = (
+    'farm_relative_floral_abundance_index_%s%s.tif')
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
-_FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
+_FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
+_FARM_FLORAL_RESOURCES_PATTERN = (
+    _FARM_FLORAL_RESOURCES_HEADER_PATTERN % '([^_]+)')
 _FARM_NESTING_SUBSTRATE_HEADER_PATTERN = 'n_%s'
 _FARM_NESTING_SUBSTRATE_RE_PATTERN = (
     _FARM_NESTING_SUBSTRATE_HEADER_PATTERN % '([^_]+)')
@@ -260,6 +266,26 @@ def execute(args):
             target_path_list=[relative_floral_abundance_index_path])
 
         # if there's a farm, rasterize floral resources over the top
+        if farm_vector_path is not None:
+            farm_relative_floral_abundance_index_path = os.path.join(
+                intermediate_output_dir,
+                _FARM_RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN % (
+                    season, file_suffix))
+
+            # this is the shapefile header for the farm seasonal floral
+            # resources
+            farm_floral_resources_id = (
+                _FARM_FLORAL_RESOURCES_HEADER_PATTERN % season)
+
+            task_graph.add_task(
+                func=_rasterize_vector_onto_base,
+                args=(
+                    relative_floral_abundance_index_path,
+                    farm_vector_path, farm_substrate_id,
+                    farm_relative_floral_abundance_index_path),
+                target_path_list=[
+                    farm_relative_floral_abundance_index_path],
+                dependent_task_list=[relative_floral_abudance_task])
 
         # per species s
             # local foraging effectiveness foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
