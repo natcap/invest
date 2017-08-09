@@ -29,10 +29,12 @@ _EXPECTED_BIOPHYSICAL_HEADERS = [
 
 # These are patterns expected in the guilds table
 _NESTING_SUITABILITY_PATTERN = 'nesting_suitability_([^_]+)_index'
-_FORAGING_ACTIVITY_PATTERN = 'foraging_activity_([^_]+)_index'
+# replace with season
+_FORAGING_ACTIVITY_PATTERN = 'foraging_activity_%s_index'
+_FORAGING_ACTIVITY_RE_PATTERN = _FORAGING_ACTIVITY_PATTERN % '([^_]+)'
 _RELATIVE_SPECIES_ABUNDANCE_FIELD = 'relative_abundance'
 _EXPECTED_GUILD_HEADERS = [
-    'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_PATTERN,
+    'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_RE_PATTERN,
     'alpha', _RELATIVE_SPECIES_ABUNDANCE_FIELD]
 
 _NESTING_SUBSTRATE_INDEX_FILEPATTERN = 'nesting_substrate_index_%s%s.tif'
@@ -48,6 +50,10 @@ _RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN = (
 # this is used if there's a farm polygon present
 _FARM_RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN = (
     'farm_relative_floral_abundance_index_%s%s.tif')
+# used as an intermediate step for floral resources calculation
+# replace (species, file_suffix)
+_LOCAL_FORAGING_EFFECTIVENESS_FILE_PATTERN = (
+    'local_foraging_effectiveness_%s%s.tif')
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
@@ -88,7 +94,7 @@ def execute(args):
                     with values in the range [0.0, 1.0] indicating the
                     suitability of the given species to nest in a particular
                     substrate.
-                * one or more columns matching _FORAGING_ACTIVITY_PATTERN
+                * one or more columns matching _FORAGING_ACTIVITY_RE_PATTERN
                     with values in the range [0.0, 1.0] indicating the
                     relative level of foraging activity for that species
                     during a particular season.
@@ -113,7 +119,7 @@ def execute(args):
                 * For every nesting matching _NESTING_SUITABILITY_PATTERN
                   in the guild stable, a column matching the pattern in
                   `_LANDCOVER_NESTING_INDEX_HEADER`.
-                * For every season matching _FORAGING_ACTIVITY_PATTERN
+                * For every season matching _FORAGING_ACTIVITY_RE_PATTERN
                   in the guilds table, a column matching
                   the pattern in `_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`.
         args['farm_vector_path'] (string): (optional) path to a single layer
@@ -248,6 +254,8 @@ def execute(args):
                 scenario_variables['habitat_nesting_index_path'][species]])
 
     # per season j
+    scenario_variables['relative_floral_abundance_index_path'] = {}
+    relative_floral_abudance_task_list = []
     for season in scenario_variables['season_list']:
         relative_floral_abundance_index_path = os.path.join(
             intermediate_output_dir,
@@ -277,7 +285,8 @@ def execute(args):
             farm_floral_resources_id = (
                 _FARM_FLORAL_RESOURCES_HEADER_PATTERN % season)
 
-            task_graph.add_task(
+            # override the relative floral task because we'll need this one
+            relative_floral_abudance_task = task_graph.add_task(
                 func=_rasterize_vector_onto_base,
                 args=(
                     relative_floral_abundance_index_path,
@@ -287,9 +296,44 @@ def execute(args):
                     farm_relative_floral_abundance_index_path],
                 dependent_task_list=[relative_floral_abudance_task])
 
-        # per species s
-            # local foraging effectiveness foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
+            # override the relative floral abundance index path since we'll
+            # need the farm one
+            relative_floral_abundance_index_path = (
+                farm_relative_floral_abundance_index_path)
 
+        scenario_variables['relative_floral_abundance_index_path'][season] = (
+            relative_floral_abundance_index_path)
+        relative_floral_abudance_task_list.append(
+            relative_floral_abudance_task)
+
+    # per species s
+    for species in scenario_variables['species_list']:
+        # local foraging effectiveness foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
+
+        foraging_effectiveness_list = [
+            scenario_variables['species_foraging_activity'][(species, season)]
+            for season in scenario_variables['season_list']]
+        raster_op = _CalculateSumOfPollinatorAccessToLocalFloralOp(
+            foraging_effectiveness_list)
+        relative_floral_resource_path_band_list = [
+            (scenario_variables[
+                'relative_floral_abundance_index_path'][season], 1)
+            for season in scenario_variables['season_list']]
+        local_foraging_effectiveness_path = os.path.join(
+            intermediate_output_dir,
+            _LOCAL_FORAGING_EFFECTIVENESS_FILE_PATTERN % (
+                species, file_suffix))
+
+        task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                relative_floral_resource_path_band_list,
+                raster_op, local_foraging_effectiveness_path,
+                gdal.GDT_Float32, _INDEX_NODATA),
+            target_path_list=[
+                local_foraging_effectiveness_path],
+            dependent_task_list=[relative_floral_abudance_task])
+        # convolve FE with alpha_s
 
     task_graph.close()
     task_graph.join()
@@ -535,6 +579,7 @@ def _parse_scenario_variables(
             * landcover_substrate_index[substrate][landcover] (float)
             * landcover_floral_resources[season][landcover] (float)
             * species_abundance[species] (string->float)
+            * species_foraging_activity[(species, season)] (string->float)
             * species_substrate_index[(species, substrate)] (tuple->float)
             * foraging_activity_index[(species, season)] (tuple->float)
     """
@@ -577,7 +622,7 @@ def _parse_scenario_variables(
     # ex substrate_to_header['cavity']['biophysical']
     substrate_to_header = collections.defaultdict(dict)
     for header in guild_headers:
-        match = re.match(_FORAGING_ACTIVITY_PATTERN, header)
+        match = re.match(_FORAGING_ACTIVITY_RE_PATTERN, header)
         if match:
             season = match.group(1)
             season_to_header[season]['guild'] = match.group()
@@ -666,6 +711,18 @@ def _parse_scenario_variables(
         result['species_abundance'][species] = (
             guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD] /
             total_relative_abundance)
+
+    # map the relative foraging activity of a species during a certain season
+    # (species, season)
+    result['species_foraging_activity'] = dict()
+    for species in result['species_list']:
+        total_activity = numpy.sum([
+            guild_table[species][_FORAGING_ACTIVITY_PATTERN % season]
+            for season in result['season_list']])
+        for season in result['season_list']:
+            result['species_foraging_activity'][(species, season)] = (
+                guild_table[species][_FORAGING_ACTIVITY_PATTERN % season] /
+                total_activity)
 
     # * landcover_substrate_index[substrate][landcover] (float)
     result['landcover_substrate_index'] = collections.defaultdict(dict)
@@ -759,3 +816,30 @@ class _CalculateHabitatNestingIndex(object):
             [(x, 1) for x in self.substrate_path_list], max_op,
             self.target_habitat_nesting_index_path,
             gdal.GDT_Float32, _INDEX_NODATA)
+
+
+class _CalculateSumOfPollinatorAccessToLocalFloralOp(object):
+    # calculates the sum of RA(l(x), j)*fa(s,j) over all the seasons
+
+    def __init__(self, species_seasonal_activity_list):
+        """Initialize.
+
+        species_seasonal_activity_list (list): list of float indicating
+            the seasonal foraging activity for a species.  Order is
+            parallel with the order of the arguments that will be passed
+            to __call__.
+        """
+        self.species_seasonal_activity_list = (
+            species_seasonal_activity_list)
+
+    def __call__(self, *relative_floral_resource_array):
+        """Calculating sum_j RA(l(x), j)*fa(s,j)."""
+        valid_mask = relative_floral_resource_array[0] != _INDEX_NODATA
+        result = numpy.empty_like(relative_floral_resource_array[0])
+        result[:] = _INDEX_NODATA
+        result[valid_mask] = numpy.sum([
+            RA[valid_mask] * fa for RA, fa in zip(
+                relative_floral_resource_array,
+                self.species_seasonal_activity_list)], axis=0)
+        return result
+
