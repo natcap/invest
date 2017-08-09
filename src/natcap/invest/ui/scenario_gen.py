@@ -113,14 +113,12 @@ class ScenarioGenerator(model.Model):
             args_key=u'suffix',
             helptext=u'A suffix to append to results.',
             label=u'Results Suffix',
-            required=False,
             validator=self.validator)
         self.add_input(self.suffix)
         self.landcover = inputs.File(
             args_key=u'landcover',
             helptext=u'A GDAL-supported raster file representing land-use/land-cover.',
             label=u'Land Cover (Raster)',
-            required=True,
             validator=self.validator)
         self.add_input(self.landcover)
         self.transition = inputs.File(
@@ -131,7 +129,6 @@ class ScenarioGenerator(model.Model):
                 u"proximity suitiblity, proximity effect distance, seed "
                 u"size, short name, and patch size."),
             label=u'Transition Table (CSV)',
-            required=False,
             validator=self.validator)
         self.add_input(self.transition)
         self.calculate_priorities = inputs.Checkbox(
@@ -153,7 +150,6 @@ class ScenarioGenerator(model.Model):
                 u"priorities."),
             interactive=False,
             label=u'Priorities Table (CSV)',
-            required=True,
             validator=self.validator)
         self.add_input(self.priorities_csv_uri)
         self.calculate_proximity = inputs.Container(
@@ -177,7 +173,6 @@ class ScenarioGenerator(model.Model):
         self.suitability_folder = inputs.Folder(
             args_key=u'suitability_folder',
             label=u'Factors Folder',
-            required=True,
             validator=self.validator)
         self.calculate_factors.add_input(self.suitability_folder)
         self.suitability = inputs.File(
@@ -189,7 +184,6 @@ class ScenarioGenerator(model.Model):
                 u"influence, suitability value, weight of the factor, "
                 u"distance breaks, and applicable land-cover."),
             label=u'Factors Table',
-            required=False,
             validator=self.validator)
         self.calculate_factors.add_input(self.suitability)
         self.weight = inputs.Text(
@@ -203,7 +197,6 @@ class ScenarioGenerator(model.Model):
                 u"likelihood matrix contributes 70%.  This value is "
                 u"entered on the tool interface."),
             label=u'Factor Weight',
-            required=True,
             validator=self.validator)
         self.calculate_factors.add_input(self.weight)
         self.factor_inclusion = inputs.Dropdown(
@@ -229,7 +222,6 @@ class ScenarioGenerator(model.Model):
                 u"its fully protected and 1 means its fully open to "
                 u"change."),
             label=u'Constraints Layer (Vector)',
-            required=False,
             validator=self.validator)
         self.calculate_constraints.add_input(self.constraints)
         self.constraints_field = inputs.Ogrfielddropdown(
@@ -255,7 +247,6 @@ class ScenarioGenerator(model.Model):
                 u"layer is used to override all the changes and is "
                 u"applied after the rule conversion is complete."),
             label=u'Override Layer (Vector)',
-            required=False,
             validator=self.validator)
         self.override_layer.add_input(self.override)
         self.override_field = inputs.Ogrfielddropdown(
@@ -283,7 +274,6 @@ class ScenarioGenerator(model.Model):
                 u"in which parcels are picked, but two runs with the "
                 u"same seed will pick parcels in the same order."),
             label=u'Seed for random parcel selection (optional)',
-            required=False,
             validator=self.validator)
         self.add_input(self.seed)
 
