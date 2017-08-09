@@ -68,7 +68,7 @@ class Executor(QtCore.QObject, threading.Thread):
             self.target(*self.args, **self.kwargs)
         except Exception as error:
             # We deliberately want to catch all possible exceptions.
-            LOGGER.exception(error)
+            LOGGER.exception('Target %s failed with exception', self.target)
             self.failed = True
             self.exception = error
             self.traceback = traceback.format_exc()
