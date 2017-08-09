@@ -1468,7 +1468,7 @@ def execute(args):
 
                     # select the number of pixels that need to be converted
                     tmp_index = np.argsort(tmp_array)
-                    tmp_index = tmp_index[:count - pixels_changed]
+                    tmp_index = tmp_index[:count - int(pixels_changed)]
 
                     # convert the selected pixels into coordinates
                     # pixels_to_change = np.array(zip(patch[0], patch[1]))
