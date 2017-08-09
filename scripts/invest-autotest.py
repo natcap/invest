@@ -176,7 +176,7 @@ def main(user_args=None):
                 headless_string = 'headless'
             else:
                 headless_string = 'gui'
-            workspace = os.path.join(args.workspace,
+            workspace = os.path.join(os.path.abspath(args.workspace),
                                      'autorun_%s_%s_%s' % (modelname,
                                                            headless_string,
                                                            scenario_index))
