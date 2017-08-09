@@ -831,6 +831,13 @@ class _CalculateSumOfPollinatorAccessToLocalFloralOp(object):
         """
         self.species_seasonal_activity_list = (
             species_seasonal_activity_list)
+        try:
+            self.__name__ = hashlib.sha1(inspect.getsource(
+                _CalculateHabitatNestingIndex.__call__)).hexdigest()
+        except IOError:
+            # default to the classname if it doesn't work
+            self.__name__ = _CalculateHabitatNestingIndex.__name__
+        self.__name__ += str(species_seasonal_activity_list)
 
     def __call__(self, *relative_floral_resource_array):
         """Calculating sum_j RA(l(x), j)*fa(s,j)."""
