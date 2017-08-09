@@ -40,9 +40,12 @@ _NESTING_SUBSTRATE_INDEX_FILEPATTERN = 'nesting_substrate_index_%s%s.tif'
 _FARM_NESTING_SUBSTRATE_INDEX_FILEPATTERN = (
     'farm_nesting_substrate_index_%s%s.tif')
 
-# indexed by (species, file_suffix)
+# replaced by (species, file_suffix)
 _HABITAT_NESTING_INDEX_FILE_PATTERN = 'habitat_nesting_index_%s%s.tif'
+# replaced by (season, file_suffix)
+_RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN = 'relative_floral_abundance_index_%s%s.tif'
 
+### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
 _FARM_FLORAL_RESOURCES_PATTERN = 'fr_([^_]+)'
@@ -239,7 +242,25 @@ def execute(args):
                 scenario_variables['habitat_nesting_index_path'][species]])
 
     # per season j
+    for season in scenario_variables['season_list']:
+        relative_floral_abundance_index_path = os.path.join(
+            intermediate_output_dir,
+            _RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN % (
+                season, file_suffix))
+
         # calculate relative_floral_abundance_index[season] per season RA(l(x), j)
+        relative_floral_abudance_task = task_graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=(
+                (args['landcover_raster_path'], 1),
+                scenario_variables['landcover_floral_resources'][season],
+                relative_floral_abundance_index_path, gdal.GDT_Float32,
+                _INDEX_NODATA),
+            kwargs={'values_required': True},
+            target_path_list=[relative_floral_abundance_index_path])
+
+        # if there's a farm, rasterize floral resources over the top
+
         # per species s
             # local foraging effectiveness foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
 
@@ -486,6 +507,7 @@ def _parse_scenario_variables(
             * substrate_list (list of string)
             * species_list (list of string)
             * landcover_substrate_index[substrate][landcover] (float)
+            * landcover_floral_resources[season][landcover] (float)
             * species_abundance[species] (string->float)
             * species_substrate_index[(species, substrate)] (tuple->float)
             * foraging_activity_index[(species, season)] (tuple->float)
@@ -629,6 +651,16 @@ def _parse_scenario_variables(
             result['landcover_substrate_index'][substrate][landcover_id] = (
                 landcover_biophysical_table[landcover_id][
                     substrate_biophysical_header])
+
+    # * landcover_floral_resources[season][landcover] (float)
+    result['landcover_floral_resources'] = collections.defaultdict(dict)
+    for raw_landcover_id in landcover_biophysical_table:
+        landcover_id = int(raw_landcover_id)
+        for season in result['season_list']:
+            floral_rources_header = season_to_header[season]['biophysical']
+            result['landcover_floral_resources'][season][landcover_id] = (
+                landcover_biophysical_table[landcover_id][
+                    floral_rources_header])
 
     # * species_substrate_index[(species, substrate)] (tuple->float)
     result['species_substrate_index'] = collections.defaultdict(dict)
