@@ -5,7 +5,7 @@ from natcap.invest.hydropower import hydropower_water_yield
 
 
 class HydropowerWaterYield(model.Model):
-    label = u'Hydropower / Water Yield'
+    label = u'Hydropower Water Yield'
     target = staticmethod(hydropower_water_yield.execute)
     validator = staticmethod(hydropower_water_yield.validate)
     localdoc = u'../documentation/reservoirhydropowerproduction.html'
