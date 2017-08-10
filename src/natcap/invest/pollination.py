@@ -77,6 +77,10 @@ _FORAGED_FLOWERS_INDEX_FILE_PATTERN = (
     'foraged_flowers_index_%s_%s%s.tif')
 # used for convolving PS over alpha s replace (species, file_suffix)
 _CONVOLVE_PS_FILE_PATH = 'convolve_ps_%s%s.tif'
+# half saturation raster replace (file_suffix)
+_HALF_SATURATION_FILE_PATTERN = 'half_saturation%s.tif'
+# blank raster as a basis to rasterize on replace (file_suffix)
+_BLANK_RASTER_FILE_PATTERN = 'blank_raster%s.tif'
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
@@ -519,6 +523,29 @@ def execute(args):
                 pollinator_abundance_task_map[(species, season)]
                 for species in scenario_variables['species_list']],
             target_path_list=[total_pollinator_abundance_index_path])
+
+    # rasterize half saturation coefficient
+    blank_raster_path = os.path.join(
+        intermediate_output_dir, _BLANK_RASTER_FILE_PATTERN % file_suffix)
+    blank_raster_task = task_graph.add_task(
+        func=pygeoprocessing.new_raster_from_base,
+        args=(
+            args['landcover_raster_path'], blank_raster_path,
+            gdal.GDT_Float32, [_INDEX_NODATA]),
+        kwargs={'fill_value_list': [_INDEX_NODATA]},
+        target_path_list=[blank_raster_path])
+
+    half_saturation_raster_path = os.path.join(
+        intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % file_suffix)
+
+    half_saturation_task = task_graph.add_task(
+        func=_rasterize_vector_onto_base,
+        args=(
+            blank_raster_path, farm_vector_path, _HALF_SATURATION_FARM_HEADER,
+            half_saturation_raster_path),
+        dependent_task_list=[blank_raster_task],
+        target_path_list=[half_saturation_raster_path])
+
     task_graph.close()
     task_graph.join()
 
