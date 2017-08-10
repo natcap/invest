@@ -61,6 +61,9 @@ _FLORAL_RESOURCES_INDEX_FILE_PATTERN = (
 # pollinator supply raster replace (species, file_suffix)
 _POLLINATOR_SUPPLY_FILE_PATTERN = 'pollinator_supply_%s%s.tif'
 
+# name of reprojected farm vector replace (file_suffix)
+_PROJECTED_FARM_VECTOR_FILE_PATTERN = 'reprojected_farm_vector%s.shp'
+
 # used to store the 2D decay kernel for a given distance replace
 # (alpha, file suffix)
 _KERNEL_FILE_PATTERN = 'kernel_%f%s.tif'
@@ -80,7 +83,7 @@ _CROP_POLLINATOR_DEPENDENCE_FIELD = 'p_dep'
 _MANAGED_POLLINATORS_FIELD = 'p_managed'
 _FARM_SEASON_FIELD = 'season'
 _EXPECTED_FARM_HEADERS = [
-    'season', 'crop_type', _HALF_SATURATION_FARM_HEADER,
+    _FARM_SEASON_FIELD, 'crop_type', _HALF_SATURATION_FARM_HEADER,
     _MANAGED_POLLINATORS_FIELD, _FARM_FLORAL_RESOURCES_PATTERN,
     _FARM_NESTING_SUBSTRATE_RE_PATTERN, _CROP_POLLINATOR_DEPENDENCE_FIELD]
 
@@ -174,20 +177,31 @@ def execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     if 'farm_vector_path' in args and args['farm_vector_path'] != '':
-        farm_vector_path = args['farm_vector_path']
+        # we set the vector path to be the projected vector that we'll create
+        # later
+        farm_vector_path = os.path.join(
+            intermediate_output_dir,
+            _PROJECTED_FARM_VECTOR_FILE_PATTERN % file_suffix)
     else:
         farm_vector_path = None
 
     # parse out the scenario variables from a complicated set of two tables
     # and possibly a farm polygon.  This function will also raise an exception
     # if any of the inputs are malformed.
-    scenario_variables = _parse_scenario_variables(
-        args['guild_table_path'], args['landcover_biophysical_table_path'],
-        farm_vector_path)
+    scenario_variables = _parse_scenario_variables(args)
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
 
     task_graph = taskgraph.TaskGraph(work_token_dir, 0)
+
+    if farm_vector_path is not None:
+        # ensure the farm vector is in the same projection as the landcover map
+        reproject_farm_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(
+                args['farm_vector_path'], landcover_raster_info['projection'],
+                farm_vector_path),
+            target_path_list=[farm_vector_path])
 
     # calculate nesting_substrate_index[substrate] substrate maps N(x, n) = ln(l(x), n)
     scenario_variables['nesting_substrate_index_path'] = {}
@@ -234,7 +248,8 @@ def execute(args):
                         farm_nesting_substrate_index_path),
                     target_path_list=[farm_nesting_substrate_index_path],
                     dependent_task_list=[
-                        landcover_substrate_index_tasks[substrate]]))
+                        landcover_substrate_index_tasks[substrate],
+                        reproject_farm_task]))
 
     # per species
     habitat_nesting_tasks = {}
@@ -307,7 +322,8 @@ def execute(args):
                     farm_relative_floral_abundance_index_path),
                 target_path_list=[
                     farm_relative_floral_abundance_index_path],
-                dependent_task_list=[relative_floral_abudance_task])
+                dependent_task_list=[
+                    relative_floral_abudance_task, reproject_farm_task])
 
             # override the relative floral abundance index path since we'll
             # need the farm one
@@ -375,10 +391,8 @@ def execute(args):
                 alpha_kernel_raster_task, local_foraging_effectiveness_task],
             target_path_list=[floral_resources_index_path])
 
+        # calculate
         # pollinator_supply_index[species] PS(x,s) = FR(x,s) * HN(x,s) * sa(s)
-        #   floral_resources_index_path *
-        #   scenario_variables['habitat_nesting_index_path'][species] *
-        #   scenario_variables['species_abundance'][species]
         pollinator_supply_index_path = os.path.join(
             output_dir, _POLLINATOR_SUPPLY_FILE_PATTERN % (
                 species, file_suffix))
@@ -395,46 +409,16 @@ def execute(args):
                 floral_resources_task, habitat_nesting_tasks[species]],
             target_path_list=[pollinator_supply_index_path])
 
-        # floral_resources_task
-        # habitat_nesting_tasks[species]
-
-    task_graph.close()
-    task_graph.join()
-    return
-
-    # per species s
-        # per season j
-            # pollinator_abundance_index[species, season] PA(x,s,j) = RA(l(x),j)fa(s,j) convolve(PS(x',s), \alpha_s)
+    # next step is farm vector calculation, if no farms then okay to quit
+    if farm_vector_path is None:
+        task_graph.close()
+        task_graph.join()
+        return
 
     # per season j
         # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
 
-
-
     # farms can be optional
-    reproject_farm_task = None
-    if farm_vector is not None:
-        farm_season_set = set()
-        for farm_feature in farm_layer:
-            farm_season_set.add(farm_feature.GetField('season'))
-
-        if len(farm_season_set.difference(season_to_header)) > 0:
-            raise ValueError(
-                "Found seasons in farm polygon that were not specified in the"
-                "biophysical table: %s.  Expected only these: %s" % (
-                    farm_season_set.difference(season_to_header),
-                    season_to_header))
-
-        # ensure the farm vector is in the same projection as the landcover map
-        projected_farm_vector_path = os.path.join(
-            intermediate_output_dir,
-            _PROJECTED_FARM_VECTOR_FILE_PATTERN % file_suffix)
-        reproject_farm_task = task_graph.add_task(
-            target=pygeoprocessing.reproject_vector,
-            args=(
-                args['farm_vector_path'], lulc_raster_info['projection'],
-                projected_farm_vector_path),
-            target_path_list=[projected_farm_vector_path])
 
 
 def _normalized_convolve_2d(
@@ -626,12 +610,17 @@ def _create_fid_vector_copy(
     target_vector = None
 
 
-def _parse_scenario_variables(
-        guild_table_path, landcover_biophysical_table_path, farm_vector_path):
+def _parse_scenario_variables(args):
     """Parse out scenario variables from input parameters.
 
     This function parses through the guild table, biophysical table, and
     farm polygons (if available) to generate
+
+    Parameter:
+        args (dict): this is the args dictionary passed in to the `execute`
+            function, requires a 'guild_table_path', and
+            'landcover_biophysical_table_path' key and optional
+            'farm_vector_path' key.
 
     Returns:
         A dictionary with the keys:
@@ -646,6 +635,12 @@ def _parse_scenario_variables(
             * species_substrate_index[(species, substrate)] (tuple->float)
             * foraging_activity_index[(species, season)] (tuple->float)
     """
+    guild_table_path = args['guild_table_path']
+    landcover_biophysical_table_path = args['landcover_biophysical_table_path']
+    if 'farm_vector_path' in args and args['farm_vector_path'] != '':
+        farm_vector_path = args['farm_vector_path']
+    else:
+        farm_vector_path = None
 
     guild_table = utils.build_lookup_from_csv(
         guild_table_path, 'species', to_lower=True,
@@ -756,6 +751,18 @@ def _parse_scenario_variables(
                 "entries of '%s' in both the guilds and biophysical "
                 "table." % (
                     table_type, lookup_table, table_type))
+
+    if farm_vector_path is not None:
+        farm_season_set = set()
+        for farm_feature in farm_layer:
+            farm_season_set.add(farm_feature.GetField(_FARM_SEASON_FIELD))
+
+        if len(farm_season_set.difference(season_to_header)) > 0:
+            raise ValueError(
+                "Found seasons in farm polygon that were not specified in the"
+                "biophysical table: %s.  Expected only these: %s" % (
+                    farm_season_set.difference(season_to_header),
+                    season_to_header))
 
     result = {}
     # * season_list (list of string)
