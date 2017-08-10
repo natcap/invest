@@ -373,13 +373,14 @@ def execute(args):
                 (species, season)] = foraged_flowers_index_path
             scenario_variables['relative_floral_abundance_index_path'][season]
 
+    pollinator_abundance_path_map = {}
+    pollinator_abundance_task_map = {}
     for species in scenario_variables['species_list']:
         # foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
 
         foraging_activity_list = [
             scenario_variables['species_foraging_activity'][(species, season)]
             for season in scenario_variables['season_list']]
-        sum_op = _SumRasters()
         foraged_flowers_path_band_list = [
             (scenario_variables['foraged_flowers_index_path'][
                 (species, season)], 1)
@@ -393,7 +394,7 @@ def execute(args):
             func=pygeoprocessing.raster_calculator,
             args=(
                 foraged_flowers_path_band_list,
-                sum_op, local_foraging_effectiveness_path,
+                _SumRasters(), local_foraging_effectiveness_path,
                 gdal.GDT_Float32, _INDEX_NODATA),
             target_path_list=[
                 local_foraging_effectiveness_path],
@@ -472,17 +473,20 @@ def execute(args):
             pollinator_abundance_path = os.path.join(
                 output_dir, _POLLINATOR_ABUNDANCE_FILE_PATTERN % (
                     species, season, file_suffix))
-            task_graph.add_task(
-                func=pygeoprocessing.raster_calculator,
-                args=(
-                    [(foraged_flowers_index_path, 1),
-                     (convolve_ps_path, 1)],
-                    _MultRasters(), pollinator_abundance_path,
-                    gdal.GDT_Float32, _INDEX_NODATA),
-                dependent_task_list=[
-                    foraged_flowers_index_task_map[(species, season)],
-                    convolve_ps_task],
-                target_path_list=[pollinator_abundance_path])
+            pollinator_abundance_task_map[(species, season)] = (
+                task_graph.add_task(
+                    func=pygeoprocessing.raster_calculator,
+                    args=(
+                        [(foraged_flowers_index_path, 1),
+                         (convolve_ps_path, 1)],
+                        _MultRasters(), pollinator_abundance_path,
+                        gdal.GDT_Float32, _INDEX_NODATA),
+                    dependent_task_list=[
+                        foraged_flowers_index_task_map[(species, season)],
+                        convolve_ps_task],
+                    target_path_list=[pollinator_abundance_path]))
+            pollinator_abundance_path_map[(species, season)] = (
+                pollinator_abundance_path)
 
     # next step is farm vector calculation, if no farms then okay to quit
     if farm_vector_path is None:
@@ -493,15 +497,28 @@ def execute(args):
     # per season j
     for season in scenario_variables['season_list']:
         # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
+
+        pollinator_abundance_task_map[(species, season)]
+        pollinator_abundance_path_map[(species, season)]
+
         total_pollinator_abundance_index_path = os.path.join(
             output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
                 season, file_suffix))
 
+        pollinator_abudnance_season_path_band_list = [
+            (pollinator_abundance_path_map[(species, season)], 1)
+            for species in scenario_variables['species_list']]
+
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
-                []))
-
+                pollinator_abudnance_season_path_band_list, _SumRasters(),
+                total_pollinator_abundance_index_path, gdal.GDT_Float32,
+                _INDEX_NODATA),
+            dependent_task_list=[
+                pollinator_abundance_task_map[(species, season)]
+                for species in scenario_variables['species_list']],
+            target_path_list=[total_pollinator_abundance_index_path])
     task_graph.close()
     task_graph.join()
 
