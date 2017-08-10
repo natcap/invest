@@ -19,6 +19,8 @@ from . import utils
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
+_N_CPUS = 0
+
 _INDEX_NODATA = -1.0
 
 # These patterns are expected in the biophysical table
@@ -65,12 +67,16 @@ _PROJECTED_FARM_VECTOR_FILE_PATTERN = 'reprojected_farm_vector%s.shp'
 # used to store the 2D decay kernel for a given distance replace
 # (alpha, file suffix)
 _KERNEL_FILE_PATTERN = 'kernel_%f%s.tif'
+# PA(x,s,j) replace (species, season, file_suffix)
+_POLLINATOR_ABUNDANCE_FILE_PATTERN = 'pollinator_abundance_%s_%s%s.tif'
 # PAT(x,j) total pollinator abundance per season replace (season, file_suffix)
 _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
     'total_pollinator_abundance_%s%s.tif')
 # used for RA(l(x),j)*fa(s,j) replace (species, season, file_suffix)
 _FORAGED_FLOWERS_INDEX_FILE_PATTERN = (
     'foraged_flowers_index_%s_%s%s.tif')
+# used for convolving PS over alpha s replace (species, file_suffix)
+_CONVOLVE_PS_FILE_PATH = 'convolve_ps_%s%s.tif'
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
@@ -195,7 +201,7 @@ def execute(args):
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
 
-    task_graph = taskgraph.TaskGraph(work_token_dir, 0)
+    task_graph = taskgraph.TaskGraph(work_token_dir, _N_CPUS)
 
     if farm_vector_path is not None:
         # ensure the farm vector is in the same projection as the landcover map
@@ -430,7 +436,7 @@ def execute(args):
                 species, file_suffix))
         ps_index_op = _PollinatorSupplyIndexOp(
             scenario_variables['species_abundance'][species])
-        task_graph.add_task(
+        pollinator_supply_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(scenario_variables['habitat_nesting_index_path'][species], 1),
@@ -441,19 +447,42 @@ def execute(args):
                 floral_resources_task, habitat_nesting_tasks[species]],
             target_path_list=[pollinator_supply_index_path])
 
-    for species in scenario_variables['species_list']:
+        # calc convolved_PS PS over alpha_s
+        convolve_ps_path = os.path.join(
+            intermediate_output_dir, _CONVOLVE_PS_FILE_PATH % (
+                species, file_suffix))
+        convolve_ps_task = task_graph.add_task(
+            func=_normalized_convolve_2d,
+            args=(
+                (pollinator_supply_index_path, 1), (kernel_path, 1),
+                convolve_ps_path, gdal.GDT_Float32, _INDEX_NODATA,
+                intermediate_output_dir),
+            dependent_task_list=[
+                alpha_kernel_raster_task, pollinator_supply_task],
+            target_path_list=[convolve_ps_path])
+
         for season in scenario_variables['season_list']:
-            pass
             # calculate pollinator activity as
-            # PA(x,s,j)=RA(l(x),j)fa(s,j)∑x′∈XPS(x′,s)exp(−D(x,x′)/αs)exp(−D(x,x′)/αs)
-            # calc foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
-            # calc convolved_PS PS over alpha_s
+            # PA(x,s,j)=RA(l(x),j)fa(s,j) convolve(ps, alpha_s)
+
+            # mult foraged_flowers_species_season(s,j) * convolved_PS(s)
             foraged_flowers_index_path = (
                 scenario_variables['foraged_flowers_index_path'][
                     (species, season)])
-            foraged_flowers_index_task_map[(species, season)]
-
-            # mult foraged_flowers_species_season(s,j) * convolved_PS(s)
+            pollinator_abundance_path = os.path.join(
+                output_dir, _POLLINATOR_ABUNDANCE_FILE_PATTERN % (
+                    species, season, file_suffix))
+            task_graph.add_task(
+                func=pygeoprocessing.raster_calculator,
+                args=(
+                    [(foraged_flowers_index_path, 1),
+                     (convolve_ps_path, 1)],
+                    _MultRasters(), pollinator_abundance_path,
+                    gdal.GDT_Float32, _INDEX_NODATA),
+                dependent_task_list=[
+                    foraged_flowers_index_task_map[(species, season)],
+                    convolve_ps_task],
+                target_path_list=[pollinator_abundance_path])
 
     # next step is farm vector calculation, if no farms then okay to quit
     if farm_vector_path is None:
@@ -472,6 +501,9 @@ def execute(args):
             func=pygeoprocessing.raster_calculator,
             args=(
                 []))
+
+    task_graph.close()
+    task_graph.join()
 
 
 def _normalized_convolve_2d(
@@ -969,6 +1001,30 @@ class _SumRasters(object):
         result = numpy.empty_like(array_list[0])
         result[:] = _INDEX_NODATA
         result[valid_mask] = numpy.sum(
+            [a[valid_mask] for a in array_list], axis=0)
+        return result
+
+
+class _MultRasters(object):
+    """Mult all the rasters."""
+
+    def __init__(self):
+        try:
+            self.__name__ = hashlib.sha1(
+                inspect.getsource(
+                    _MultRasters.__call__
+                )).hexdigest()
+        except IOError:
+            # default to the classname if it doesn't work
+            self.__name__ = (
+                _MultRasters.__name__)
+
+    def __call__(self, *array_list):
+        """Calculating sum of array."""
+        valid_mask = array_list[0] != _INDEX_NODATA
+        result = numpy.empty_like(array_list[0])
+        result[:] = _INDEX_NODATA
+        result[valid_mask] = numpy.prod(
             [a[valid_mask] for a in array_list], axis=0)
         return result
 
