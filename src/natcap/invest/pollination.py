@@ -68,6 +68,9 @@ _KERNEL_FILE_PATTERN = 'kernel_%f%s.tif'
 # PAT(x,j) total pollinator abundance per season replace (season, file_suffix)
 _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
     'total_pollinator_abundance_%s%s.tif')
+# used for RA(l(x),j)*fa(s,j) replace (species, season, file_suffix)
+_FORAGED_FLOWERS_INDEX_FILE_PATTERN = (
+    'foraged_flowers_index_%s_%s%s.tif')
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
@@ -283,7 +286,7 @@ def execute(args):
 
     # per season j
     scenario_variables['relative_floral_abundance_index_path'] = {}
-    relative_floral_abudance_task_list = []
+    relative_floral_abudance_task_map = {}
     for season in scenario_variables['season_list']:
         relative_floral_abundance_index_path = os.path.join(
             intermediate_output_dir,
@@ -332,21 +335,47 @@ def execute(args):
 
         scenario_variables['relative_floral_abundance_index_path'][season] = (
             relative_floral_abundance_index_path)
-        relative_floral_abudance_task_list.append(
+        relative_floral_abudance_task_map[season] = (
             relative_floral_abudance_task)
 
     # per species s
+    scenario_variables['foraged_flowers_index_path'] = {}
     for species in scenario_variables['species_list']:
-        # local foraging effectiveness foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
+        for season in scenario_variables['season_list']:
+            # foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
+            foraged_flowers_index_path = os.path.join(
+                intermediate_output_dir,
+                _FORAGED_FLOWERS_INDEX_FILE_PATTERN % (
+                    species, season, file_suffix))
+            relative_abundance_path = (
+                scenario_variables['relative_floral_abundance_index_path'][season])
+            mult_by_scalar_op = _MultByScalar(
+                scenario_variables['species_foraging_activity'][
+                    (species, season)])
+            task_graph.add_task(
+                func=pygeoprocessing.raster_calculator,
+                args=(
+                    [(relative_abundance_path, 1)],
+                    mult_by_scalar_op, foraged_flowers_index_path,
+                    gdal.GDT_Float32, _INDEX_NODATA),
+                dependent_task_list=[
+                    relative_floral_abudance_task_map[season]],
+                target_path_list=[foraged_flowers_index_path]
+            )
+            scenario_variables['foraged_flowers_index_path'][
+                (species, season)] = foraged_flowers_index_path
+            scenario_variables['relative_floral_abundance_index_path'][season]
+
+    for species in scenario_variables['species_list']:
+        # foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
 
         foraging_activity_list = [
             scenario_variables['species_foraging_activity'][(species, season)]
             for season in scenario_variables['season_list']]
-        fe_op = _CalculateSumOfPollinatorAccessToLocalFloralOp(
-            foraging_activity_list)
-        relative_floral_resource_path_band_list = [
-            (scenario_variables[
-                'relative_floral_abundance_index_path'][season], 1)
+        sum_op = _SumRasters()
+        foraged_flowers_path_band_list = [
+            (scenario_variables['foraged_flowers_index_path'][
+                (species, season)], 1)
             for season in scenario_variables['season_list']]
         local_foraging_effectiveness_path = os.path.join(
             intermediate_output_dir,
@@ -356,8 +385,8 @@ def execute(args):
         local_foraging_effectiveness_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
-                relative_floral_resource_path_band_list,
-                fe_op, local_foraging_effectiveness_path,
+                foraged_flowers_path_band_list,
+                sum_op, local_foraging_effectiveness_path,
                 gdal.GDT_Float32, _INDEX_NODATA),
             target_path_list=[
                 local_foraging_effectiveness_path],
@@ -396,9 +425,6 @@ def execute(args):
         pollinator_supply_index_path = os.path.join(
             output_dir, _POLLINATOR_SUPPLY_FILE_PATTERN % (
                 species, file_suffix))
-        LOGGER.debug(
-            "scenario_variables['species_abundance'] %s",
-            scenario_variables['species_abundance'])
         ps_index_op = _PollinatorSupplyIndexOp(
             scenario_variables['species_abundance'][species])
         task_graph.add_task(
@@ -412,8 +438,15 @@ def execute(args):
                 floral_resources_task, habitat_nesting_tasks[species]],
             target_path_list=[pollinator_supply_index_path])
 
-        # calculate pollinator activity as
-        # PA(x,s,j)=RA(l(x),j)fa(s,j)∑x′∈XPS(x′,s)exp(−D(x,x′)/αs)exp(−D(x,x′)/αs)
+    for species in scenario_variables['species_list']:
+        for season in scenario_variables['season_list']:
+            pass
+            # calculate pollinator activity as
+            # PA(x,s,j)=RA(l(x),j)fa(s,j)∑x′∈XPS(x′,s)exp(−D(x,x′)/αs)exp(−D(x,x′)/αs)
+            # calc foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
+            # calc convolved_PS PS over alpha_s
+
+            # mult foraged_flowers_species_season(s,j) * convolved_PS(s)
 
     # next step is farm vector calculation, if no farms then okay to quit
     if farm_vector_path is None:
@@ -909,40 +942,27 @@ class _CalculateHabitatNestingIndex(object):
             gdal.GDT_Float32, _INDEX_NODATA)
 
 
-class _CalculateSumOfPollinatorAccessToLocalFloralOp(object):
-    # calculates the sum of RA(l(x), j)*fa(s,j) over all the seasons
+class _SumRasters(object):
+    """Sum all the rasters."""
 
-    def __init__(self, species_seasonal_activity_list):
-        """Initialize.
-
-        species_seasonal_activity_list (list): list of float indicating
-            the seasonal foraging activity for a species.  Order is
-            parallel with the order of the arguments that will be passed
-            to __call__.
-        """
-        self.species_seasonal_activity_list = (
-            species_seasonal_activity_list)
-
+    def __init__(self):
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
-                    _CalculateSumOfPollinatorAccessToLocalFloralOp.__call__
+                    _SumRasters.__call__
                 )).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
-                _CalculateSumOfPollinatorAccessToLocalFloralOp.__name__)
-        self.__name__ += str(species_seasonal_activity_list)
+                _SumRasters.__name__)
 
-    def __call__(self, *relative_floral_resource_array):
-        """Calculating sum_j RA(l(x), j)*fa(s,j)."""
-        valid_mask = relative_floral_resource_array[0] != _INDEX_NODATA
-        result = numpy.empty_like(relative_floral_resource_array[0])
+    def __call__(self, *array_list):
+        """Calculating sum of array."""
+        valid_mask = array_list[0] != _INDEX_NODATA
+        result = numpy.empty_like(array_list[0])
         result[:] = _INDEX_NODATA
-        result[valid_mask] = numpy.sum([
-            RA[valid_mask] * fa for RA, fa in zip(
-                relative_floral_resource_array,
-                self.species_seasonal_activity_list)], axis=0)
+        result[valid_mask] = numpy.sum(
+            [a[valid_mask] for a in array_list], axis=0)
         return result
 
 
@@ -970,4 +990,28 @@ class _PollinatorSupplyIndexOp(object):
         result[valid_mask] = (
             self.species_abundance * floral_resources_array[valid_mask] *
             habitat_nesting_suitability_array[valid_mask])
+        return result
+
+
+class _MultByScalar(object):
+    """raster*scalar."""
+
+    def __init__(self, scalar):
+        self.scalar = scalar
+        try:
+            self.__name__ = hashlib.sha1(
+                inspect.getsource(
+                    _MultByScalar.__call__
+                )).hexdigest()
+        except IOError:
+            # default to the classname if it doesn't work
+            self.__name__ = (
+                _MultByScalar.__name__)
+        self.__name__ += str(scalar)
+
+    def __call__(self, array):
+        result = numpy.empty_like(array)
+        result[:] = _INDEX_NODATA
+        valid_mask = array != _INDEX_NODATA
+        result[valid_mask] = array[valid_mask] * self.scalar
         return result
