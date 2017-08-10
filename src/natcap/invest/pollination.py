@@ -60,14 +60,14 @@ _FLORAL_RESOURCES_INDEX_FILE_PATTERN = (
     'floral_resources_%s%s.tif')
 # pollinator supply raster replace (species, file_suffix)
 _POLLINATOR_SUPPLY_FILE_PATTERN = 'pollinator_supply_%s%s.tif'
-
 # name of reprojected farm vector replace (file_suffix)
 _PROJECTED_FARM_VECTOR_FILE_PATTERN = 'reprojected_farm_vector%s.shp'
-
 # used to store the 2D decay kernel for a given distance replace
 # (alpha, file suffix)
 _KERNEL_FILE_PATTERN = 'kernel_%f%s.tif'
-
+# PAT(x,j) total pollinator abundance per season replace (season, file_suffix)
+_TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN = (
+    'total_pollinator_abundance_%s%s.tif')
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
@@ -339,11 +339,11 @@ def execute(args):
     for species in scenario_variables['species_list']:
         # local foraging effectiveness foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
 
-        foraging_effectiveness_list = [
+        foraging_activity_list = [
             scenario_variables['species_foraging_activity'][(species, season)]
             for season in scenario_variables['season_list']]
-        raster_op = _CalculateSumOfPollinatorAccessToLocalFloralOp(
-            foraging_effectiveness_list)
+        fe_op = _CalculateSumOfPollinatorAccessToLocalFloralOp(
+            foraging_activity_list)
         relative_floral_resource_path_band_list = [
             (scenario_variables[
                 'relative_floral_abundance_index_path'][season], 1)
@@ -357,7 +357,7 @@ def execute(args):
             func=pygeoprocessing.raster_calculator,
             args=(
                 relative_floral_resource_path_band_list,
-                raster_op, local_foraging_effectiveness_path,
+                fe_op, local_foraging_effectiveness_path,
                 gdal.GDT_Float32, _INDEX_NODATA),
             target_path_list=[
                 local_foraging_effectiveness_path],
@@ -396,18 +396,24 @@ def execute(args):
         pollinator_supply_index_path = os.path.join(
             output_dir, _POLLINATOR_SUPPLY_FILE_PATTERN % (
                 species, file_suffix))
-        raster_op = _PollinatorSupplyIndexOp(
+        LOGGER.debug(
+            "scenario_variables['species_abundance'] %s",
+            scenario_variables['species_abundance'])
+        ps_index_op = _PollinatorSupplyIndexOp(
             scenario_variables['species_abundance'][species])
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(scenario_variables['habitat_nesting_index_path'][species], 1),
-                 (floral_resources_index_path, 1)], raster_op,
+                 (floral_resources_index_path, 1)], ps_index_op,
                 pollinator_supply_index_path, gdal.GDT_Float32,
                 _INDEX_NODATA),
             dependent_task_list=[
                 floral_resources_task, habitat_nesting_tasks[species]],
             target_path_list=[pollinator_supply_index_path])
+
+        # calculate pollinator activity as
+        # PA(x,s,j)=RA(l(x),j)fa(s,j)∑x′∈XPS(x′,s)exp(−D(x,x′)/αs)exp(−D(x,x′)/αs)
 
     # next step is farm vector calculation, if no farms then okay to quit
     if farm_vector_path is None:
@@ -416,9 +422,16 @@ def execute(args):
         return
 
     # per season j
+    for season in scenario_variables['season_list']:
         # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
+        total_pollinator_abundance_index_path = os.path.join(
+            output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
+                season, file_suffix))
 
-    # farms can be optional
+        task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                []))
 
 
 def _normalized_convolve_2d(
