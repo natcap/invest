@@ -340,6 +340,7 @@ def execute(args):
 
     # per species s
     scenario_variables['foraged_flowers_index_path'] = {}
+    foraged_flowers_index_task_map = {}
     for species in scenario_variables['species_list']:
         for season in scenario_variables['season_list']:
             # foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
@@ -352,16 +353,16 @@ def execute(args):
             mult_by_scalar_op = _MultByScalar(
                 scenario_variables['species_foraging_activity'][
                     (species, season)])
-            task_graph.add_task(
-                func=pygeoprocessing.raster_calculator,
-                args=(
-                    [(relative_abundance_path, 1)],
-                    mult_by_scalar_op, foraged_flowers_index_path,
-                    gdal.GDT_Float32, _INDEX_NODATA),
-                dependent_task_list=[
-                    relative_floral_abudance_task_map[season]],
-                target_path_list=[foraged_flowers_index_path]
-            )
+            foraged_flowers_index_task_map[(species, season)] = (
+                task_graph.add_task(
+                    func=pygeoprocessing.raster_calculator,
+                    args=(
+                        [(relative_abundance_path, 1)],
+                        mult_by_scalar_op, foraged_flowers_index_path,
+                        gdal.GDT_Float32, _INDEX_NODATA),
+                    dependent_task_list=[
+                        relative_floral_abudance_task_map[season]],
+                    target_path_list=[foraged_flowers_index_path]))
             scenario_variables['foraged_flowers_index_path'][
                 (species, season)] = foraged_flowers_index_path
             scenario_variables['relative_floral_abundance_index_path'][season]
@@ -390,7 +391,9 @@ def execute(args):
                 gdal.GDT_Float32, _INDEX_NODATA),
             target_path_list=[
                 local_foraging_effectiveness_path],
-            dependent_task_list=[relative_floral_abudance_task])
+            dependent_task_list=[
+                foraged_flowers_index_task_map[(species, season)]
+                for season in scenario_variables['season_list']])
 
         # create a kernel for the species
         alpha = (
@@ -445,6 +448,10 @@ def execute(args):
             # PA(x,s,j)=RA(l(x),j)fa(s,j)∑x′∈XPS(x′,s)exp(−D(x,x′)/αs)exp(−D(x,x′)/αs)
             # calc foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
             # calc convolved_PS PS over alpha_s
+            foraged_flowers_index_path = (
+                scenario_variables['foraged_flowers_index_path'][
+                    (species, season)])
+            foraged_flowers_index_task_map[(species, season)]
 
             # mult foraged_flowers_species_season(s,j) * convolved_PS(s)
 
