@@ -77,8 +77,8 @@ _FORAGED_FLOWERS_INDEX_FILE_PATTERN = (
     'foraged_flowers_index_%s_%s%s.tif')
 # used for convolving PS over alpha s replace (species, file_suffix)
 _CONVOLVE_PS_FILE_PATH = 'convolve_ps_%s%s.tif'
-# half saturation raster replace (file_suffix)
-_HALF_SATURATION_FILE_PATTERN = 'half_saturation%s.tif'
+# half saturation raster replace (season, file_suffix)
+_HALF_SATURATION_FILE_PATTERN = 'half_saturation_%s%s.tif'
 # blank raster as a basis to rasterize on replace (file_suffix)
 _BLANK_RASTER_FILE_PATTERN = 'blank_raster%s.tif'
 
@@ -535,16 +535,18 @@ def execute(args):
         kwargs={'fill_value_list': [_INDEX_NODATA]},
         target_path_list=[blank_raster_path])
 
-    half_saturation_raster_path = os.path.join(
-        intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % file_suffix)
-
-    half_saturation_task = task_graph.add_task(
-        func=_rasterize_vector_onto_base,
-        args=(
-            blank_raster_path, farm_vector_path, _HALF_SATURATION_FARM_HEADER,
-            half_saturation_raster_path),
-        dependent_task_list=[blank_raster_task],
-        target_path_list=[half_saturation_raster_path])
+    for season in scenario_variables['season_list']:
+        half_saturation_raster_path = os.path.join(
+            intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % (
+                season, file_suffix))
+        half_saturation_task = task_graph.add_task(
+            func=_rasterize_vector_onto_base,
+            args=(
+                blank_raster_path, farm_vector_path,
+                _HALF_SATURATION_FARM_HEADER, half_saturation_raster_path),
+            kwargs={'filter_string': "%s='%s'" % (_FARM_SEASON_FIELD, season)},
+            dependent_task_list=[blank_raster_task],
+            target_path_list=[half_saturation_raster_path])
 
     task_graph.close()
     task_graph.join()
