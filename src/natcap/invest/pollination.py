@@ -1,5 +1,4 @@
 """Pollinator service model for InVEST."""
-import multiprocessing
 import tempfile
 import itertools
 import collections
@@ -83,10 +82,10 @@ _HALF_SATURATION_FILE_PATTERN = 'half_saturation_%s%s.tif'
 _BLANK_RASTER_FILE_PATTERN = 'blank_raster%s.tif'
 # raster to hold seasonal farm pollinator replace (season, file_suffix)
 _FARM_POLLINATOR_SEASON_FILE_PATTERN = 'farm_pollinator_%s%s.tif'
-
+# total farm pollinators replace (file_suffix)
+_FARM_POLLINATOR_FILE_PATTERN = 'farm_pollinators%s.tif'
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
-_FARM_POLLINATORS_FILE_PATTERN = 'farm_pollinators_%s'
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
 _FARM_FLORAL_RESOURCES_PATTERN = (
     _FARM_FLORAL_RESOURCES_HEADER_PATTERN % '([^_]+)')
@@ -333,7 +332,7 @@ def execute(args):
                 func=_rasterize_vector_onto_base,
                 args=(
                     relative_floral_abundance_index_path,
-                    farm_vector_path, farm_substrate_id,
+                    farm_vector_path, farm_floral_resources_id,
                     farm_relative_floral_abundance_index_path),
                 target_path_list=[
                     farm_relative_floral_abundance_index_path],
@@ -377,16 +376,11 @@ def execute(args):
                     target_path_list=[foraged_flowers_index_path]))
             scenario_variables['foraged_flowers_index_path'][
                 (species, season)] = foraged_flowers_index_path
-            scenario_variables['relative_floral_abundance_index_path'][season]
 
     pollinator_abundance_path_map = {}
     pollinator_abundance_task_map = {}
     for species in scenario_variables['species_list']:
         # foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
-
-        foraging_activity_list = [
-            scenario_variables['species_foraging_activity'][(species, season)]
-            for season in scenario_variables['season_list']]
         foraged_flowers_path_band_list = [
             (scenario_variables['foraged_flowers_index_path'][
                 (species, season)], 1)
@@ -511,15 +505,10 @@ def execute(args):
         kwargs={'fill_value_list': [_INDEX_NODATA]},
         target_path_list=[blank_raster_path])
 
-    # per season j
-    total_pollinator_abundance_task_map = {}
-    total_pollinator_abundance_index_map = {}
+    farm_pollinator_path_list = []
+    farm_pollinator_task_list = []
     for season in scenario_variables['season_list']:
         # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
-
-        pollinator_abundance_task_map[(species, season)]
-        pollinator_abundance_path_map[(species, season)]
-
         total_pollinator_abundance_index_path = os.path.join(
             output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
                 season, file_suffix))
@@ -528,7 +517,7 @@ def execute(args):
             (pollinator_abundance_path_map[(species, season)], 1)
             for species in scenario_variables['species_list']]
 
-        total_pollinator_abundance_task_map[season] = task_graph.add_task(
+        total_pollinator_abundance_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 pollinator_abudnance_season_path_band_list, _SumRasters(),
@@ -538,8 +527,6 @@ def execute(args):
                 pollinator_abundance_task_map[(species, season)]
                 for species in scenario_variables['species_list']],
             target_path_list=[total_pollinator_abundance_index_path])
-        total_pollinator_abundance_index_map[season] = (
-            total_pollinator_abundance_index_path)
 
         half_saturation_raster_path = os.path.join(
             intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % (
@@ -557,7 +544,7 @@ def execute(args):
         farm_pollinator_season_path = os.path.join(
             intermediate_output_dir, _FARM_POLLINATOR_SEASON_FILE_PATTERN % (
                 season, file_suffix))
-        task_graph.add_task(
+        farm_pollinator_task_list.append(task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(half_saturation_raster_path, 1),
@@ -565,9 +552,21 @@ def execute(args):
                 _OnFarmPollinatorAbundance(), farm_pollinator_season_path,
                 gdal.GDT_Float32, _INDEX_NODATA),
             dependent_task_list=[
-                half_saturation_task,
-                total_pollinator_abundance_task_map[season]],
-            target_path_list=[farm_pollinator_season_path])
+                half_saturation_task, total_pollinator_abundance_task],
+            target_path_list=[farm_pollinator_season_path]))
+        farm_pollinator_path_list.append(farm_pollinator_season_path)
+
+    # sum farm pollinators
+    farm_pollinator_path = os.path.join(
+        output_dir, _FARM_POLLINATOR_FILE_PATTERN % file_suffix)
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(path, 1) for path in farm_pollinator_path_list],
+            _SumRasters(), farm_pollinator_path, gdal.GDT_Float32,
+            _INDEX_NODATA),
+        dependent_task_list=farm_pollinator_task_list,
+        target_path_list=[farm_pollinator_path])
 
     task_graph.close()
     task_graph.join()
@@ -1064,11 +1063,14 @@ class _SumRasters(object):
 
     def __call__(self, *array_list):
         """Calculating sum of array."""
-        valid_mask = array_list[0] != _INDEX_NODATA
+        valid_mask = numpy.zeros(array_list[0].shape, dtype=numpy.bool)
         result = numpy.empty_like(array_list[0])
-        result[:] = _INDEX_NODATA
-        result[valid_mask] = numpy.sum(
-            [a[valid_mask] for a in array_list], axis=0)
+        result[:] = 0
+        for array in array_list:
+            local_valid_mask = array != _INDEX_NODATA
+            result[local_valid_mask] += array[local_valid_mask]
+            valid_mask |= local_valid_mask
+        result[~valid_mask] = _INDEX_NODATA
         return result
 
 
@@ -1169,6 +1171,6 @@ class _OnFarmPollinatorAbundance(object):
 
         result[valid_mask] = (
             (pat_array[valid_mask]*(1-h_array[valid_mask])) /
-            (h_array[valid_mask]*(1-2*pat_array[valid_mask])+
+            (h_array[valid_mask]*(1-2*pat_array[valid_mask]) +
              pat_array[valid_mask]))
         return result
