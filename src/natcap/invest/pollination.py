@@ -84,8 +84,11 @@ _BLANK_RASTER_FILE_PATTERN = 'blank_raster%s.tif'
 _FARM_POLLINATOR_SEASON_FILE_PATTERN = 'farm_pollinator_%s%s.tif'
 # total farm pollinators replace (file_suffix)
 _FARM_POLLINATOR_FILE_PATTERN = 'farm_pollinators%s.tif'
-# managed pollinator indexes (file_suffix)
+# managed pollinator indexes replace (file_suffix)
 _MANAGED_POLLINATOR_FILE_PATTERN = 'managed_pollinators%s.tif'
+# total pollinator raster replace (file_suffix)
+_TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield%s.tif'
+
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
@@ -507,8 +510,8 @@ def execute(args):
         kwargs={'fill_value_list': [_INDEX_NODATA]},
         target_path_list=[blank_raster_path])
 
-    farm_pollinator_path_list = []
-    farm_pollinator_task_list = []
+    farm_pollinator_season_path_list = []
+    farm_pollinator_season_task_list = []
     for season in scenario_variables['season_list']:
         # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
         total_pollinator_abundance_index_path = os.path.join(
@@ -546,7 +549,7 @@ def execute(args):
         farm_pollinator_season_path = os.path.join(
             intermediate_output_dir, _FARM_POLLINATOR_SEASON_FILE_PATTERN % (
                 season, file_suffix))
-        farm_pollinator_task_list.append(task_graph.add_task(
+        farm_pollinator_season_task_list.append(task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(half_saturation_raster_path, 1),
@@ -556,31 +559,43 @@ def execute(args):
             dependent_task_list=[
                 half_saturation_task, total_pollinator_abundance_task],
             target_path_list=[farm_pollinator_season_path]))
-        farm_pollinator_path_list.append(farm_pollinator_season_path)
+        farm_pollinator_season_path_list.append(farm_pollinator_season_path)
 
     # sum farm pollinators
     farm_pollinator_path = os.path.join(
         output_dir, _FARM_POLLINATOR_FILE_PATTERN % file_suffix)
-    task_graph.add_task(
+    farm_pollinator_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
-            [(path, 1) for path in farm_pollinator_path_list],
+            [(path, 1) for path in farm_pollinator_season_path_list],
             _SumRasters(), farm_pollinator_path, gdal.GDT_Float32,
             _INDEX_NODATA),
-        dependent_task_list=farm_pollinator_task_list,
+        dependent_task_list=farm_pollinator_season_task_list,
         target_path_list=[farm_pollinator_path])
 
     # rasterize managed pollinators
-    manged_pollinator_path = os.path.join(
+    managed_pollinator_path = os.path.join(
         intermediate_output_dir,
         _MANAGED_POLLINATOR_FILE_PATTERN % file_suffix)
-    task_graph.add_task(
+    managed_pollinator_task = task_graph.add_task(
         func=_rasterize_vector_onto_base,
         args=(
             blank_raster_path, farm_vector_path, _MANAGED_POLLINATORS_FIELD,
-            manged_pollinator_path),
+            managed_pollinator_path),
         dependent_task_list=[reproject_farm_task],
-        target_path_list=[manged_pollinator_path])
+        target_path_list=[managed_pollinator_path])
+
+    # calculate PYT
+    total_pollinator_yield_path = os.path.join(
+        output_dir, _TOTAL_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(managed_pollinator_path, 1), (farm_pollinator_path, 1)],
+            _PYTOp(), total_pollinator_yield_path, gdal.GDT_Float32,
+            _INDEX_NODATA),
+        dependent_task_list=[farm_pollinator_task, managed_pollinator_task],
+        target_path_list=[total_pollinator_yield_path])
 
     task_graph.close()
     task_graph.join()
@@ -1187,4 +1202,28 @@ class _OnFarmPollinatorAbundance(object):
             (pat_array[valid_mask]*(1-h_array[valid_mask])) /
             (h_array[valid_mask]*(1-2*pat_array[valid_mask]) +
              pat_array[valid_mask]))
+        return result
+
+
+class _PYTOp(object):
+    """Calculate PYT=min((mp+FP), 1)."""
+
+    def __init__(self):
+        try:
+            self.__name__ = hashlib.sha1(
+                inspect.getsource(
+                    _PYTOp.__call__
+                )).hexdigest()
+        except IOError:
+            # default to the classname if it doesn't work
+            self.__name__ = (
+                _PYTOp.__name__)
+
+    def __call__(self, mp_array, FP_array):
+        valid_mask = mp_array != _INDEX_NODATA
+        result = numpy.empty_like(mp_array)
+        result[:] = _INDEX_NODATA
+        result[valid_mask] = mp_array[valid_mask]+FP_array[valid_mask]
+        min_mask = valid_mask & (result > 1.0)
+        result[min_mask] = 1.0
         return result
