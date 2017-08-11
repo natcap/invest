@@ -81,6 +81,8 @@ _CONVOLVE_PS_FILE_PATH = 'convolve_ps_%s%s.tif'
 _HALF_SATURATION_FILE_PATTERN = 'half_saturation_%s%s.tif'
 # blank raster as a basis to rasterize on replace (file_suffix)
 _BLANK_RASTER_FILE_PATTERN = 'blank_raster%s.tif'
+# raster to hold seasonal farm pollinator replace (season, file_suffix)
+_FARM_POLLINATOR_SEASON_FILE_PATTERN = 'farm_pollinator_%s%s.tif'
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
@@ -498,7 +500,20 @@ def execute(args):
         task_graph.join()
         return
 
+    # blank raster used for rasterization later
+    blank_raster_path = os.path.join(
+        intermediate_output_dir, _BLANK_RASTER_FILE_PATTERN % file_suffix)
+    blank_raster_task = task_graph.add_task(
+        func=pygeoprocessing.new_raster_from_base,
+        args=(
+            args['landcover_raster_path'], blank_raster_path,
+            gdal.GDT_Float32, [_INDEX_NODATA]),
+        kwargs={'fill_value_list': [_INDEX_NODATA]},
+        target_path_list=[blank_raster_path])
+
     # per season j
+    total_pollinator_abundance_task_map = {}
+    total_pollinator_abundance_index_map = {}
     for season in scenario_variables['season_list']:
         # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
 
@@ -513,7 +528,7 @@ def execute(args):
             (pollinator_abundance_path_map[(species, season)], 1)
             for species in scenario_variables['species_list']]
 
-        task_graph.add_task(
+        total_pollinator_abundance_task_map[season] = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 pollinator_abudnance_season_path_band_list, _SumRasters(),
@@ -523,19 +538,9 @@ def execute(args):
                 pollinator_abundance_task_map[(species, season)]
                 for species in scenario_variables['species_list']],
             target_path_list=[total_pollinator_abundance_index_path])
+        total_pollinator_abundance_index_map[season] = (
+            total_pollinator_abundance_index_path)
 
-    # rasterize half saturation coefficient
-    blank_raster_path = os.path.join(
-        intermediate_output_dir, _BLANK_RASTER_FILE_PATTERN % file_suffix)
-    blank_raster_task = task_graph.add_task(
-        func=pygeoprocessing.new_raster_from_base,
-        args=(
-            args['landcover_raster_path'], blank_raster_path,
-            gdal.GDT_Float32, [_INDEX_NODATA]),
-        kwargs={'fill_value_list': [_INDEX_NODATA]},
-        target_path_list=[blank_raster_path])
-
-    for season in scenario_variables['season_list']:
         half_saturation_raster_path = os.path.join(
             intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % (
                 season, file_suffix))
@@ -547,6 +552,22 @@ def execute(args):
             kwargs={'filter_string': "%s='%s'" % (_FARM_SEASON_FIELD, season)},
             dependent_task_list=[blank_raster_task],
             target_path_list=[half_saturation_raster_path])
+
+        # calc FP_season
+        farm_pollinator_season_path = os.path.join(
+            intermediate_output_dir, _FARM_POLLINATOR_SEASON_FILE_PATTERN % (
+                season, file_suffix))
+        task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                [(half_saturation_raster_path, 1),
+                 (total_pollinator_abundance_index_path, 1)],
+                _OnFarmPollinatorAbundance(), farm_pollinator_season_path,
+                gdal.GDT_Float32, _INDEX_NODATA),
+            dependent_task_list=[
+                half_saturation_task,
+                total_pollinator_abundance_task_map[season]],
+            target_path_list=[farm_pollinator_season_path])
 
     task_graph.close()
     task_graph.join()
@@ -1123,4 +1144,31 @@ class _MultByScalar(object):
         result[:] = _INDEX_NODATA
         valid_mask = array != _INDEX_NODATA
         result[valid_mask] = array[valid_mask] * self.scalar
+        return result
+
+
+class _OnFarmPollinatorAbundance(object):
+    """Calculate FP(x) = (PAT * (1 - h)) / (h * (1 - 2*pat)+pat))."""
+
+    def __init__(self):
+        try:
+            self.__name__ = hashlib.sha1(
+                inspect.getsource(
+                    _OnFarmPollinatorAbundance.__call__
+                )).hexdigest()
+        except IOError:
+            # default to the classname if it doesn't work
+            self.__name__ = (
+                _OnFarmPollinatorAbundance.__name__)
+
+    def __call__(self, h_array, pat_array):
+        result = numpy.empty_like(h_array)
+        result[:] = _INDEX_NODATA
+
+        valid_mask = (h_array != _INDEX_NODATA) & (pat_array != _INDEX_NODATA)
+
+        result[valid_mask] = (
+            (pat_array[valid_mask]*(1-h_array[valid_mask])) /
+            (h_array[valid_mask]*(1-2*pat_array[valid_mask])+
+             pat_array[valid_mask]))
         return result
