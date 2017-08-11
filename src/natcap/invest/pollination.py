@@ -1,4 +1,5 @@
 """Pollinator service model for InVEST."""
+import multiprocessing
 import tempfile
 import itertools
 import collections
@@ -19,7 +20,7 @@ from . import utils
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
-_N_CPUS = 0
+_N_CPUS = multiprocessing.cpu_count() * 2
 
 _INDEX_NODATA = -1.0
 
