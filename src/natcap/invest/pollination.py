@@ -7,6 +7,7 @@ import os
 import logging
 import hashlib
 import inspect
+import uuid
 
 from osgeo import gdal
 from osgeo import ogr
@@ -90,8 +91,13 @@ _MANAGED_POLLINATOR_FILE_PATTERN = 'managed_pollinators%s.tif'
 _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield%s.tif'
 # wild pollinator raster replace (file_suffix)
 _WILD_POLLINATOR_YIELD_FILE_PATTERN = 'wild_pollinator_yield%s.tif'
+# final aggregate farm shapefile file pattern replace (file_suffix)
+_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_result_%s.shp'
 
-### old
+_POLLINATOR_FARM_YIELD_FIELD_ID = 'py_tot'
+_TOTAL_FARM_YIELD_FIELD_ID = 'tot_y'
+_WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'py_wild'
+
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
 _FARM_FLORAL_RESOURCES_PATTERN = (
@@ -602,7 +608,7 @@ def execute(args):
     # calculate PYW
     wild_pollinator_yield_path = os.path.join(
         output_dir, _WILD_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
-    task_graph.add_task(
+    wild_pollinator_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
             [(managed_pollinator_path, 1), (total_pollinator_yield_path, 1)],
@@ -610,6 +616,53 @@ def execute(args):
             _INDEX_NODATA),
         dependent_task_list=[pyt_task, managed_pollinator_task],
         target_path_list=[wild_pollinator_yield_path])
+
+    # aggregate yields across farms
+    fid_field_id = str(uuid.uuid4())[-10::]
+    target_farm_result_path = os.path.join(
+        output_dir, _FARM_VECTOR_RESULT_FILE_PATTERN % file_suffix)
+    if os.path.exists(target_farm_result_path):
+        os.remove(target_farm_result_path)
+    _create_fid_vector_copy(
+        farm_vector_path, fid_field_id, target_farm_result_path)
+    wild_pollinator_task.join()
+    wild_pollinator_results = pygeoprocessing.zonal_statistics(
+        (wild_pollinator_yield_path, 1), target_farm_result_path, fid_field_id)
+
+    pyt_task.join()
+    total_farm_results = pygeoprocessing.zonal_statistics(
+        (total_pollinator_yield_path, 1), target_farm_result_path,
+        fid_field_id)
+
+    target_farm_vector = ogr.Open(target_farm_result_path, 1)
+    target_farm_layer = target_farm_vector.GetLayer()
+
+    for farm_feature in target_farm_layer:
+        nu = float(farm_feature.GetField(_CROP_POLLINATOR_DEPENDENCE_FIELD))
+        fid = int(farm_feature.GetField(fid_field_id))
+        if total_farm_results[fid]['count'] > 0:
+            farm_feature.SetField(
+                _TOTAL_FARM_YIELD_FIELD_ID,
+                total_farm_results[fid]['sum'] /
+                total_farm_results[fid]['count'])
+
+            farm_feature.SetField(
+                _POLLINATOR_FARM_YIELD_FIELD_ID,
+                1 - nu * (
+                    1 - total_farm_results[fid]['sum'] /
+                    total_farm_results[fid]['count']))
+
+            farm_feature.SetField(
+                _WILD_POLLINATOR_FARM_YIELD_FIELD_ID,
+                nu * (wild_pollinator_results[fid]['sum'] /
+                      wild_pollinator_results[fid]['count']))
+        target_farm_layer.SetFeature(farm_feature)
+    target_farm_layer.SyncToDisk()
+    target_farm_layer = None
+    target_farm_vector = None
+
+    LOGGER.debug(wild_pollinator_results)
+    LOGGER.debug(total_farm_results)
 
     task_graph.close()
     task_graph.join()
@@ -768,7 +821,7 @@ def _rasterize_vector_onto_base(
 
 
 def _create_fid_vector_copy(
-        base_vector_path, fid_field, target_vector_path):
+        base_vector_path, fid_field_id, target_vector_path):
     """Create a copy of `base_vector_path` and add FID field to it."""
     # make a random string to use as an FID field.  The chances of this
     # colliding with an existing field name are so astronomical we aren't
@@ -778,18 +831,18 @@ def _create_fid_vector_copy(
     base_layer = base_vector.GetLayer()
     base_defn = base_layer.GetLayerDefn()
 
-    if base_defn.GetFieldIndex(fid_field) != -1:
+    if base_defn.GetFieldIndex(fid_field_id) != -1:
         raise ValueError(
             "Tried to add a new field %s, but is already defined in %s." % (
-                fid_field, base_vector_path))
+                fid_field_id, base_vector_path))
     if os.path.exists(target_vector_path):
         os.remove(target_vector_path)
     target_vector = esri_driver.CopyDataSource(
         base_vector, target_vector_path)
     target_layer = target_vector.GetLayer()
-    target_layer.CreateField(ogr.FieldDefn(fid_field, ogr.OFTInteger))
+    target_layer.CreateField(ogr.FieldDefn(fid_field_id, ogr.OFTInteger))
     for feature in target_layer:
-        feature.SetField(fid_field, feature.GetFID())
+        feature.SetField(fid_field_id, feature.GetFID())
         target_layer.SetFeature(feature)
 
     target_layer.CreateField(ogr.FieldDefn(
