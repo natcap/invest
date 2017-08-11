@@ -92,9 +92,8 @@ _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield%s.tif'
 # wild pollinator raster replace (file_suffix)
 _WILD_POLLINATOR_YIELD_FILE_PATTERN = 'wild_pollinator_yield%s.tif'
 # final aggregate farm shapefile file pattern replace (file_suffix)
-_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_result_%s.shp'
+_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_result%s.shp'
 
-_POLLINATOR_FARM_YIELD_FIELD_ID = 'py_tot'
 _TOTAL_FARM_YIELD_FIELD_ID = 'tot_y'
 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'py_wild'
 
@@ -643,11 +642,6 @@ def execute(args):
         if total_farm_results[fid]['count'] > 0:
             farm_feature.SetField(
                 _TOTAL_FARM_YIELD_FIELD_ID,
-                total_farm_results[fid]['sum'] /
-                total_farm_results[fid]['count'])
-
-            farm_feature.SetField(
-                _POLLINATOR_FARM_YIELD_FIELD_ID,
                 1 - nu * (
                     1 - total_farm_results[fid]['sum'] /
                     total_farm_results[fid]['count']))
@@ -657,6 +651,8 @@ def execute(args):
                 nu * (wild_pollinator_results[fid]['sum'] /
                       wild_pollinator_results[fid]['count']))
         target_farm_layer.SetFeature(farm_feature)
+    target_farm_layer.DeleteField(
+        target_farm_layer.FindFieldIndex(fid_field_id, 1))
     target_farm_layer.SyncToDisk()
     target_farm_layer = None
     target_farm_vector = None
@@ -845,8 +841,6 @@ def _create_fid_vector_copy(
         feature.SetField(fid_field_id, feature.GetFID())
         target_layer.SetFeature(feature)
 
-    target_layer.CreateField(ogr.FieldDefn(
-        _POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal))
     target_layer.CreateField(ogr.FieldDefn(
         _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal))
     target_layer.CreateField(ogr.FieldDefn(
