@@ -84,6 +84,8 @@ _BLANK_RASTER_FILE_PATTERN = 'blank_raster%s.tif'
 _FARM_POLLINATOR_SEASON_FILE_PATTERN = 'farm_pollinator_%s%s.tif'
 # total farm pollinators replace (file_suffix)
 _FARM_POLLINATOR_FILE_PATTERN = 'farm_pollinators%s.tif'
+# managed pollinator indexes (file_suffix)
+_MANAGED_POLLINATOR_FILE_PATTERN = 'managed_pollinators%s.tif'
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
@@ -567,6 +569,18 @@ def execute(args):
             _INDEX_NODATA),
         dependent_task_list=farm_pollinator_task_list,
         target_path_list=[farm_pollinator_path])
+
+    # rasterize managed pollinators
+    manged_pollinator_path = os.path.join(
+        intermediate_output_dir,
+        _MANAGED_POLLINATOR_FILE_PATTERN % file_suffix)
+    task_graph.add_task(
+        func=_rasterize_vector_onto_base,
+        args=(
+            blank_raster_path, farm_vector_path, _MANAGED_POLLINATORS_FIELD,
+            manged_pollinator_path),
+        dependent_task_list=[reproject_farm_task],
+        target_path_list=[manged_pollinator_path])
 
     task_graph.close()
     task_graph.join()
