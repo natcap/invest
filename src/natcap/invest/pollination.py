@@ -88,6 +88,8 @@ _FARM_POLLINATOR_FILE_PATTERN = 'farm_pollinators%s.tif'
 _MANAGED_POLLINATOR_FILE_PATTERN = 'managed_pollinators%s.tif'
 # total pollinator raster replace (file_suffix)
 _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield%s.tif'
+# wild pollinator raster replace (file_suffix)
+_WILD_POLLINATOR_YIELD_FILE_PATTERN = 'wild_pollinator_yield%s.tif'
 
 ### old
 _HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
@@ -588,7 +590,7 @@ def execute(args):
     # calculate PYT
     total_pollinator_yield_path = os.path.join(
         output_dir, _TOTAL_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
-    task_graph.add_task(
+    pyt_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
             [(managed_pollinator_path, 1), (farm_pollinator_path, 1)],
@@ -596,6 +598,18 @@ def execute(args):
             _INDEX_NODATA),
         dependent_task_list=[farm_pollinator_task, managed_pollinator_task],
         target_path_list=[total_pollinator_yield_path])
+
+    # calculate PYW
+    wild_pollinator_yield_path = os.path.join(
+        output_dir, _WILD_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(managed_pollinator_path, 1), (total_pollinator_yield_path, 1)],
+            _PYWOp(), wild_pollinator_yield_path, gdal.GDT_Float32,
+            _INDEX_NODATA),
+        dependent_task_list=[pyt_task, managed_pollinator_task],
+        target_path_list=[wild_pollinator_yield_path])
 
     task_graph.close()
     task_graph.join()
@@ -1226,4 +1240,28 @@ class _PYTOp(object):
         result[valid_mask] = mp_array[valid_mask]+FP_array[valid_mask]
         min_mask = valid_mask & (result > 1.0)
         result[min_mask] = 1.0
+        return result
+
+
+class _PYWOp(object):
+    """Calculate PYW=max(0,PYT-mp)."""
+
+    def __init__(self):
+        try:
+            self.__name__ = hashlib.sha1(
+                inspect.getsource(
+                    _PYWOp.__call__
+                )).hexdigest()
+        except IOError:
+            # default to the classname if it doesn't work
+            self.__name__ = (
+                _PYWOp.__name__)
+
+    def __call__(self, mp_array, PYT_array):
+        valid_mask = mp_array != _INDEX_NODATA
+        result = numpy.empty_like(mp_array)
+        result[:] = _INDEX_NODATA
+        result[valid_mask] = PYT_array[valid_mask]-mp_array[valid_mask]
+        max_mask = valid_mask & (result < 0.0)
+        result[max_mask] = 0.0
         return result
