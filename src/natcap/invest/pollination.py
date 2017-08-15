@@ -94,15 +94,18 @@ _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield%s.tif'
 _WILD_POLLINATOR_YIELD_FILE_PATTERN = 'wild_pollinator_yield%s.tif'
 # final aggregate farm shapefile file pattern replace (file_suffix)
 _FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_result%s.shp'
-
+# output field on target shapefile if farms are enabled
 _TOTAL_FARM_YIELD_FIELD_ID = 'tot_y'
+# output field for wild pollinators on farms if farms are enabled
 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'py_wild'
-
-_HALF_SATURATION_SEASON_FILE_PATTERN = 'half_saturation_%s'
+# expected pattern for seasonal floral resources in input shapefile (season)
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
+# regular expression version of _FARM_FLORAL_RESOURCES_PATTERN
 _FARM_FLORAL_RESOURCES_PATTERN = (
     _FARM_FLORAL_RESOURCES_HEADER_PATTERN % '([^_]+)')
+# expected pattern for nesting substrate in input shapfile (substrate)
 _FARM_NESTING_SUBSTRATE_HEADER_PATTERN = 'n_%s'
+# regular expression version of _FARM_NESTING_SUBSTRATE_HEADER_PATTERN
 _FARM_NESTING_SUBSTRATE_RE_PATTERN = (
     _FARM_NESTING_SUBSTRATE_HEADER_PATTERN % '([^_]+)')
 _HALF_SATURATION_FARM_HEADER = 'half_sat'
@@ -222,7 +225,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(work_token_dir, _N_WORKERS)
 
     if farm_vector_path is not None:
-        # ensure the farm vector is in the same projection as the landcover map
+        # ensure farm vector is in the same projection as the landcover map
         reproject_farm_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
@@ -230,7 +233,8 @@ def execute(args):
                 farm_vector_path),
             target_path_list=[farm_vector_path])
 
-    # calculate nesting_substrate_index[substrate] substrate maps N(x, n) = ln(l(x), n)
+    # calculate nesting_substrate_index[substrate] substrate maps
+    # N(x, n) = ln(l(x), n)
     scenario_variables['nesting_substrate_index_path'] = {}
     landcover_substrate_index_tasks = {}
     for substrate in scenario_variables['substrate_list']:
@@ -278,7 +282,6 @@ def execute(args):
                         landcover_substrate_index_tasks[substrate],
                         reproject_farm_task]))
 
-    # per species
     habitat_nesting_tasks = {}
     scenario_variables['habitat_nesting_index_path'] = {}
     for species in scenario_variables['species_list']:
@@ -308,16 +311,16 @@ def execute(args):
             target_path_list=[
                 scenario_variables['habitat_nesting_index_path'][species]])
 
-    # per season j
     scenario_variables['relative_floral_abundance_index_path'] = {}
     relative_floral_abudance_task_map = {}
     for season in scenario_variables['season_list']:
+        # calculate relative_floral_abundance_index[season] per season
+        # RA(l(x), j)
         relative_floral_abundance_index_path = os.path.join(
             intermediate_output_dir,
             _RELATIVE_FLORAL_ABUNDANCE_INDEX_FILE_PATTERN % (
                 season, file_suffix))
 
-        # calculate relative_floral_abundance_index[season] per season RA(l(x), j)
         relative_floral_abudance_task = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
@@ -362,18 +365,18 @@ def execute(args):
         relative_floral_abudance_task_map[season] = (
             relative_floral_abudance_task)
 
-    # per species s
     scenario_variables['foraged_flowers_index_path'] = {}
     foraged_flowers_index_task_map = {}
     for species in scenario_variables['species_list']:
         for season in scenario_variables['season_list']:
-            # foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
+            # calculate foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
             foraged_flowers_index_path = os.path.join(
                 intermediate_output_dir,
                 _FORAGED_FLOWERS_INDEX_FILE_PATTERN % (
                     species, season, file_suffix))
             relative_abundance_path = (
-                scenario_variables['relative_floral_abundance_index_path'][season])
+                scenario_variables['relative_floral_abundance_index_path'][
+                    season])
             mult_by_scalar_op = _MultByScalar(
                 scenario_variables['species_foraging_activity'][
                     (species, season)])
@@ -393,7 +396,8 @@ def execute(args):
     pollinator_abundance_path_map = {}
     pollinator_abundance_task_map = {}
     for species in scenario_variables['species_list']:
-        # foraging_effectiveness[species] FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
+        # calculate foraging_effectiveness[species]
+        # FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
         foraged_flowers_path_band_list = [
             (scenario_variables['foraged_flowers_index_path'][
                 (species, season)], 1)
@@ -415,7 +419,7 @@ def execute(args):
                 foraged_flowers_index_task_map[(species, season)]
                 for season in scenario_variables['season_list']])
 
-        # create a kernel for the species
+        # create a convolution kernel for the species flight range
         alpha = (
             scenario_variables['alpha_value'][species] /
             float(landcover_raster_info['mean_pixel_size']))
@@ -453,7 +457,8 @@ def execute(args):
         pollinator_supply_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
-                [(scenario_variables['habitat_nesting_index_path'][species], 1),
+                [(scenario_variables['habitat_nesting_index_path'][species],
+                  1),
                  (floral_resources_index_path, 1)], ps_index_op,
                 pollinator_supply_index_path, gdal.GDT_Float32,
                 _INDEX_NODATA),
@@ -478,8 +483,6 @@ def execute(args):
         for season in scenario_variables['season_list']:
             # calculate pollinator activity as
             # PA(x,s,j)=RA(l(x),j)fa(s,j) convolve(ps, alpha_s)
-
-            # mult foraged_flowers_species_season(s,j) * convolved_PS(s)
             foraged_flowers_index_path = (
                 scenario_variables['foraged_flowers_index_path'][
                     (species, season)])
@@ -507,7 +510,7 @@ def execute(args):
         task_graph.join()
         return
 
-    # blank raster used for rasterization later
+    # blank raster used for rasterizing all the farm parameters/fields later
     blank_raster_path = os.path.join(
         intermediate_output_dir, _BLANK_RASTER_FILE_PATTERN % file_suffix)
     blank_raster_task = task_graph.add_task(
@@ -553,7 +556,7 @@ def execute(args):
             dependent_task_list=[blank_raster_task],
             target_path_list=[half_saturation_raster_path])
 
-        # calc FP_season
+        # calc on farm pollinator abundance i.e. FP_season
         farm_pollinator_season_path = os.path.join(
             intermediate_output_dir, _FARM_POLLINATOR_SEASON_FILE_PATTERN % (
                 season, file_suffix))
@@ -638,10 +641,12 @@ def execute(args):
     target_farm_vector = ogr.Open(target_farm_result_path, 1)
     target_farm_layer = target_farm_vector.GetLayer()
 
+    # aggregate results per farm
     for farm_feature in target_farm_layer:
         nu = float(farm_feature.GetField(_CROP_POLLINATOR_DEPENDENCE_FIELD))
         fid = int(farm_feature.GetField(fid_field_id))
         if total_farm_results[fid]['count'] > 0:
+            # total pollinator farm yield is 1-*nu(1-tot_pollination_coverage)
             farm_feature.SetField(
                 _TOTAL_FARM_YIELD_FIELD_ID,
                 1 - nu * (
@@ -1085,7 +1090,6 @@ def _parse_scenario_variables(args):
 
 class _CalculateHabitatNestingIndex(object):
     """Closure for HN(x, s) = max_n(N(x, n) ns(s,n)) calculation."""
-
     def __init__(
             self, substrate_path_map, species_substrate_index_map,
             target_habitat_nesting_index_path):
@@ -1123,7 +1127,7 @@ class _CalculateHabitatNestingIndex(object):
             target_habitat_nesting_index_path)
 
     def __call__(self):
-
+        """Calculate HN(x, s) = max_n(N(x, n) ns(s,n))."""
         def max_op(*substrate_index_arrays):
             """Return the max of index_array[n] * ns[n]."""
             result = numpy.max(
@@ -1140,9 +1144,10 @@ class _CalculateHabitatNestingIndex(object):
 
 
 class _SumRasters(object):
-    """Sum all the rasters."""
-
+    """Sum all rasters where nodata is 0 unless the entire stack is nodata."""
     def __init__(self):
+        # try to get the source code of __call__ so task graph will recompute
+        # if the function has changed
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
@@ -1167,9 +1172,10 @@ class _SumRasters(object):
 
 
 class _MultRasters(object):
-    """Mult all the rasters."""
-
+    """Mult all rasters. Assume all rasters are nodata aligned."""
     def __init__(self):
+        # try to get the source code of __call__ so task graph will recompute
+        # if the function has changed
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
@@ -1191,10 +1197,11 @@ class _MultRasters(object):
 
 
 class _PollinatorSupplyIndexOp(object):
-    """PS(x,s) = FR(x,s) * HN(x,s) * sa(s)."""
-
+    """Calculate PS(x,s) = FR(x,s) * HN(x,s) * sa(s)."""
     def __init__(self, species_abundance):
         self.species_abundance = species_abundance
+        # try to get the source code of __call__ so task graph will recompute
+        # if the function has changed
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
@@ -1218,10 +1225,11 @@ class _PollinatorSupplyIndexOp(object):
 
 
 class _MultByScalar(object):
-    """raster*scalar."""
-
+    """Calculate a raster * scalar.  Mask through nodata."""
     def __init__(self, scalar):
         self.scalar = scalar
+        # try to get the source code of __call__ so task graph will recompute
+        # if the function has changed
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
@@ -1243,8 +1251,9 @@ class _MultByScalar(object):
 
 class _OnFarmPollinatorAbundance(object):
     """Calculate FP(x) = (PAT * (1 - h)) / (h * (1 - 2*pat)+pat))."""
-
     def __init__(self):
+        # try to get the source code of __call__ so task graph will recompute
+        # if the function has changed
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
@@ -1270,8 +1279,9 @@ class _OnFarmPollinatorAbundance(object):
 
 class _PYTOp(object):
     """Calculate PYT=min((mp+FP), 1)."""
-
     def __init__(self):
+        # try to get the source code of __call__ so task graph will recompute
+        # if the function has changed
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
@@ -1294,8 +1304,9 @@ class _PYTOp(object):
 
 class _PYWOp(object):
     """Calculate PYW=max(0,PYT-mp)."""
-
     def __init__(self):
+        # try to get the source code of __call__ so task graph will recompute
+        # if the function has changed
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
