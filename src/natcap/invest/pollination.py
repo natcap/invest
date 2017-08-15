@@ -20,7 +20,7 @@ from . import utils
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
-_N_CPUS = multiprocessing.cpu_count() * 2
+_N_WORKERS = multiprocessing.cpu_count()
 
 _INDEX_NODATA = -1.0
 
@@ -219,7 +219,7 @@ def execute(args):
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
 
-    task_graph = taskgraph.TaskGraph(work_token_dir, _N_CPUS)
+    task_graph = taskgraph.TaskGraph(work_token_dir, _N_WORKERS)
 
     if farm_vector_path is not None:
         # ensure the farm vector is in the same projection as the landcover map
