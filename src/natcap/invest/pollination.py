@@ -623,6 +623,7 @@ def execute(args):
         output_dir, _FARM_VECTOR_RESULT_FILE_PATTERN % file_suffix)
     if os.path.exists(target_farm_result_path):
         os.remove(target_farm_result_path)
+    reproject_farm_task.join()
     _create_fid_vector_copy(
         farm_vector_path, fid_field_id, target_farm_result_path)
     wild_pollinator_task.join()
