@@ -727,7 +727,8 @@ def _normalized_convolve_2d(
         target_nodata=target_nodata)
     pygeoprocessing.convolve_2d(
         (mask_path, 1), kernel_path_band, mask_convolve_path,
-        target_datatype=target_datatype)
+        target_datatype=target_datatype,
+        target_nodata=target_nodata)
 
     def _divide_op(base_convolve, normalization):
         """Divide base_convolve by normalization + handle nodata/div by 0."""
