@@ -18,6 +18,8 @@ Unreleased Changes
 * Adding sample data to Blue Carbon model that were missing.
 * Deprecating the InVEST Marine Water Quality model.  This also removes InVEST's dependancy on the pyamg package which has been removed from REQUIREMENTS.TXT.
 * Deprecating the ArcGIS-based Coastal Protection model and ArcGIS-based data-preprocessing scripts.  The toolbox and scripts may still be found at https://bitbucket.org/natcap/invest.arcgis.
+* Fixing an issue in the carbon edge effect model that caused output values in the shapefile to be rounded to the nearest integer.
+* Fixing issue in SDR model that would occasionally cause users to see errors about field widths in the output shapefile generation.
 
 3.3.3 (2017-02-06)
 ------------------
