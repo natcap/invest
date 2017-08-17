@@ -849,10 +849,17 @@ def _create_fid_vector_copy(
         feature.SetField(fid_field_id, feature.GetFID())
         target_layer.SetFeature(feature)
 
-    target_layer.CreateField(ogr.FieldDefn(
-        _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal))
-    target_layer.CreateField(ogr.FieldDefn(
-        _WILD_POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal))
+    total_farm_yield_field_defn = ogr.FieldDefn(
+        _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal)
+    total_farm_yield_field_defn.SetWidth(25)
+    total_farm_yield_field_defn.SetPrecision(11)
+    target_layer.CreateField(total_farm_yield_field_defn)
+
+    wild_pol_farm_yield_field_defn = ogr.FieldDefn(
+        _WILD_POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal)
+    wild_pol_farm_yield_field_defn.SetWidth(25)
+    wild_pol_farm_yield_field_defn.SetPrecision(11)
+    target_layer.CreateField(wild_pol_farm_yield_field_defn)
 
     target_layer = None
     target_vector.SyncToDisk()
