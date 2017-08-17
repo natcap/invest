@@ -95,9 +95,9 @@ _WILD_POLLINATOR_YIELD_FILE_PATTERN = 'wild_pollinator_yield%s.tif'
 # final aggregate farm shapefile file pattern replace (file_suffix)
 _FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_result%s.shp'
 # output field on target shapefile if farms are enabled
-_TOTAL_FARM_YIELD_FIELD_ID = 'tot_y'
+_TOTAL_FARM_YIELD_FIELD_ID = 'y_tot'
 # output field for wild pollinators on farms if farms are enabled
-_WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'py_wild'
+_WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'y_wild'
 # expected pattern for seasonal floral resources in input shapefile (season)
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
 # regular expression version of _FARM_FLORAL_RESOURCES_PATTERN
