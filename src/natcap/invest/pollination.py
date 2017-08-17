@@ -395,6 +395,8 @@ def execute(args):
 
     pollinator_abundance_path_map = {}
     pollinator_abundance_task_map = {}
+    floral_resources_index_path_map = {}
+    floral_resources_index_task_map = {}
     for species in scenario_variables['species_list']:
         # calculate foraging_effectiveness[species]
         # FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
@@ -436,6 +438,7 @@ def execute(args):
         floral_resources_index_path = os.path.join(
             intermediate_output_dir, _FLORAL_RESOURCES_INDEX_FILE_PATTERN % (
                 species, file_suffix))
+        floral_resources_index_path_map[species] = floral_resources_index_path
 
         floral_resources_task = task_graph.add_task(
             func=_normalized_convolve_2d,
@@ -446,7 +449,7 @@ def execute(args):
             dependent_task_list=[
                 alpha_kernel_raster_task, local_foraging_effectiveness_task],
             target_path_list=[floral_resources_index_path])
-
+        floral_resources_index_task_map[species] = floral_resources_task
         # calculate
         # pollinator_supply_index[species] PS(x,s) = FR(x,s) * HN(x,s) * sa(s)
         pollinator_supply_index_path = os.path.join(
@@ -494,11 +497,13 @@ def execute(args):
                     func=pygeoprocessing.raster_calculator,
                     args=(
                         [(foraged_flowers_index_path, 1),
+                         (floral_resources_index_path_map[species], 1),
                          (convolve_ps_path, 1)],
-                        _MultRasters(), pollinator_abundance_path,
+                        _PollinatorSupplyOp(), pollinator_abundance_path,
                         gdal.GDT_Float32, _INDEX_NODATA),
                     dependent_task_list=[
                         foraged_flowers_index_task_map[(species, season)],
+                        floral_resources_index_task_map[species],
                         convolve_ps_task],
                     target_path_list=[pollinator_abundance_path]))
             pollinator_abundance_path_map[(species, season)] = (
@@ -1179,28 +1184,36 @@ class _SumRasters(object):
         return result
 
 
-class _MultRasters(object):
-    """Mult all rasters. Assume all rasters are nodata aligned."""
+class _PollinatorSupplyOp(object):
+    """Calc PA=RA*fa/FR * convolve(PS)."""
+
     def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
-                    _MultRasters.__call__
+                    _PollinatorSupplyOp.__call__
                 )).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
-                _MultRasters.__name__)
+                _PollinatorSupplyOp.__name__)
 
-    def __call__(self, *array_list):
-        """Calculating sum of array."""
-        valid_mask = array_list[0] != _INDEX_NODATA
-        result = numpy.empty_like(array_list[0])
+    def __call__(
+            self, foraged_flowers_array, floral_resources_array,
+            convolve_ps_array):
+        """Calculating (RA*fa)/FR * convolve(PS)."""
+        valid_mask = foraged_flowers_array != _INDEX_NODATA
+        result = numpy.empty_like(foraged_flowers_array)
         result[:] = _INDEX_NODATA
-        result[valid_mask] = numpy.prod(
-            [a[valid_mask] for a in array_list], axis=0)
+        zero_mask = floral_resources_array == 0
+        result[zero_mask & valid_mask] = 0.0
+        result_mask = valid_mask & ~zero_mask
+        result[result_mask] = (
+            foraged_flowers_array[result_mask] /
+            floral_resources_array[result_mask] *
+            convolve_ps_array[result_mask])
         return result
 
 
