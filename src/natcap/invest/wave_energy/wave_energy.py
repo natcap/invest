@@ -354,6 +354,8 @@ def execute(args):
 
         # Create a new field for the depth attribute
         field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
 
         clipped_wave_layer = clipped_wave_shape.GetLayer()
         clipped_wave_layer.CreateField(field_defn)
@@ -592,6 +594,8 @@ def execute(args):
         # the distances
         for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
             field_defn = ogr.FieldDefn(field, ogr.OFTReal)
+            field_defn.SetWidth(24)
+            field_defn.SetPrecision(11)
             wave_data_layer.CreateField(field_defn)
         # For each feature in the shapefile add the corresponding
         # distances from wave_to_land_dist and land_to_grid_dist
@@ -654,6 +658,8 @@ def execute(args):
         # and Units field to shapefile
         for field_name in ['NPV_25Y', 'CAPWE_ALL', 'UNITS']:
             field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+            field_defn.SetWidth(24)
+            field_defn.SetPrecision(11)
             wave_data_layer.CreateField(field_defn)
         wave_data_layer.ResetReading()
         feat_npv = wave_data_layer.GetNextFeature()
@@ -1136,6 +1142,8 @@ def wave_power(shape_uri):
     # Add a waver power field to the shapefile.
     layer = shape.GetLayer()
     field_defn = ogr.FieldDefn('WE_kWM', ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
     layer.ResetReading()
     feat = layer.GetNextFeature()
@@ -1369,8 +1377,10 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
     wave_shape = ogr.Open(wave_shape_uri, 1)
     wave_layer = wave_shape.GetLayer()
     # Create a new field for the shapefile
-    field_def = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
-    wave_layer.CreateField(field_def)
+    field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
+    wave_layer.CreateField(field_defn)
     # For all of the features (points) in the shapefile, get the
     # corresponding point/value from the dictionary and set the 'capWE_Sum'
     # field as the value from the dictionary

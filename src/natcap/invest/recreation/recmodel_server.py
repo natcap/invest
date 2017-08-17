@@ -366,7 +366,10 @@ class RecModel(object):
             field_index = pud_aoi_layer.FindFieldIndex(str(field_id), 1)
             if field_index >= 0:
                 pud_aoi_layer.DeleteField(field_index)
-            pud_aoi_layer.CreateField(ogr.FieldDefn(field_id, ogr.OFTReal))
+            field_defn = ogr.FieldDefn(field_id, ogr.OFTReal)
+            field_defn.SetWidth(24)
+            field_defn.SetPrecision(11)
+            pud_aoi_layer.CreateField(field_defn)
 
         last_time = time.time()
         LOGGER.info('testing polygons against quadtree')
