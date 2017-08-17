@@ -801,6 +801,8 @@ def _aggregate_recharge(
             all_touched=False)
 
         aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
+        aggregate_field.SetWidth(24)
+        aggregate_field.SetPrecision(11)
         aggregate_layer.CreateField(aggregate_field)
 
         aggregate_layer.ResetReading()
