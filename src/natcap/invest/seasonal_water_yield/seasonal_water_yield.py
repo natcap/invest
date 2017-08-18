@@ -586,10 +586,11 @@ def _calculate_monthly_quick_flow(
         """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (s_i != 0.0) & (stream_array != 1) &
+            (stream_array != 1) &
             (n_events != n_events_nodata) & (n_events > 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
+
 
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
@@ -604,6 +605,7 @@ def _calculate_monthly_quick_flow(
         # exponent will also be zero because of a divide by zero. rather than
         # raise that numerical warning, just handle it manually
         E1 = scipy.special.expn(1, valid_si / a_im)  #pylint: disable=invalid-name,no-member
+        E1[valid_si == 0] = 0
         nonzero_e1_mask = E1 != 0
         exp_result = numpy.zeros(valid_si.shape)
         exp_result[nonzero_e1_mask] = numpy.exp(
