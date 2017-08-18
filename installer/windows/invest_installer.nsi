@@ -298,7 +298,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}"
 
   CreateDirectory "${SMPATH}"
-  CreateShortCut "${SMPATH}\Crop Production (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Crop Production (Percentile) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production_percentile.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Crop Production (Regression) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production_regression.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Scenic Quality (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenic_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"

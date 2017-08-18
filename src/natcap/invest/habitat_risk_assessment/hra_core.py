@@ -1283,6 +1283,8 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
 
     band = raster.GetRasterBand(1)
