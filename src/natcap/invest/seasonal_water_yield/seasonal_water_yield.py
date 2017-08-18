@@ -495,12 +495,12 @@ def _execute(args):
         result[:] = b_sum_nodata
         result[valid_mask] = (
             b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
-        result[result < 0 & valid_mask] = 0
+        result[(result < 0) & valid_mask] = 0
         return result
 
     natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [file_registry['b_sum_path'],
-         file_registry['l_avail_path'],
+         file_registry['l_path'],
          file_registry['l_sum_path']], op_b,
         file_registry['b_path'],
         gdal.GDT_Float32, b_sum_nodata, pixel_size, 'intersection',
