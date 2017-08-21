@@ -1202,6 +1202,7 @@ class Model(QtWidgets.QMainWindow):
                 self.close(prompt=False)
 
             self.form.run_finished.connect(_quickrun_close_model)
+            # TODO: Can you comment on the 50?
             QtCore.QTimer.singleShot(50, self.execute_model)
 
         # The scrollArea defaults to a size that is too small to actually view
@@ -1211,6 +1212,7 @@ class Model(QtWidgets.QMainWindow):
         # all parts of the application window will still be visible, even if
         # the minimumSize().height() would have it extend over the edge of the
         # screen.
+        # TODO: can you comment where the 100 and 150 numbers come from? Or paramaterize them globally or in settings or something?
         self.resize(
             self.form.scroll_area.widget().minimumSize().width()+100,
             self.form.scroll_area.widget().minimumSize().height()+150)
@@ -1256,15 +1258,17 @@ class Model(QtWidgets.QMainWindow):
             ``None``
         """
         if self.prompt_on_close:
-            starting_checkstate = self.settings.value('remember_lastrun',
-                                                    True, bool)
-            button_pressed = self.quit_confirm_dialog.exec_(starting_checkstate)
+            starting_checkstate = self.settings.value(
+                'remember_lastrun', True, bool)
+            button_pressed = self.quit_confirm_dialog.exec_(
+                starting_checkstate)
             if button_pressed != QtWidgets.QMessageBox.Yes:
                 event.ignore()
             elif self.quit_confirm_dialog.checkbox.isChecked():
                 self.save_lastrun()
-            self.settings.setValue('remember_lastrun',
-                                self.quit_confirm_dialog.checkbox.isChecked())
+            self.settings.setValue(
+                'remember_lastrun',
+                self.quit_confirm_dialog.checkbox.isChecked())
         self.prompt_on_close = True
 
     def save_lastrun(self):
