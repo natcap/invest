@@ -575,6 +575,10 @@ class ScenarioOptionsDialog(OptionsDialog):
             Returns:
                 ``None``
             """
+            # If the options have not yet been populated.
+            if not value:
+                return
+
             self.use_relative_paths.set_interactive(
                 value == _SCENARIO_PARAMETER_SET)
 
