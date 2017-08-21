@@ -328,11 +328,11 @@ class AboutDialog(QtWidgets.QDialog):
                 ('GDAL', 'MIT and others', 'http://gdal.org'),
                 ('matplotlib', 'BSD', 'http://matplotlib.org'),
                 ('natcap.versioner', 'BSD',
-                'http://bitbucket.org/jdouglass/versioner'),
+                 'http://bitbucket.org/jdouglass/versioner'),
                 ('numpy', 'BSD', 'http://numpy.org'),
                 ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
                 ('pygeoprocessing', 'BSD',
-                'http://bitbucket.org/richpsharp/pygeoprocessing'),
+                 'http://bitbucket.org/richpsharp/pygeoprocessing'),
                 ('PyQt', 'GPL',
                 'http://riverbankcomputing.com/software/pyqt/intro'),
                 ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
@@ -428,7 +428,7 @@ class WindowTitle(QtCore.QObject):
         modified (bool): Whether the scenario file has been modified.  If so,
             a ``'*'`` is displayed next to the scenario filename.
     """
-
+    # TODO: just want to check that it makes sense to have these be Class attributes other than object attributes?  Looks like it's referred to later as an object attribute, and I could see an issue if there were multiple WindowTitles in one process?
     title_changed = QtCore.Signal(unicode)
     format_string = "{modelname}: {filename}{modified}"
 
