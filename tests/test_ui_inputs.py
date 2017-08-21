@@ -2404,21 +2404,18 @@ class ModelTests(_QtTest):
 
         with wait_on_signal(model_ui.form.run_finished):
             model_ui.execute_model()
-        # TODO: on Rich's machine this raises an exception when tearDown is called because the log is still open
-        # ======================================================================
-        # ERROR: UI Model: Verify coverage when exception raised in target.
-        # ----------------------------------------------------------------------
-        # Traceback (most recent call last):
-        #   File "C:\Users\rpsharp\Documents\bitbucket_repos\invest\tests\test_ui_inputs.py", line 1901, in tearDown
-        #    shutil.rmtree(self.workspace)
-        #  File "c:\python27\Lib\shutil.py", line 247, in rmtree
-        #    rmtree(fullname, ignore_errors, onerror)
-        #  File "c:\python27\Lib\shutil.py", line 252, in rmtree
-        #    onerror(os.remove, fullname, sys.exc_info())
-        #  File "c:\python27\Lib\shutil.py", line 250, in rmtree
-        #    os.remove(fullname)
-        # WindowsError: [Error 32] The process cannot access the file because it is being used by another process: 'c:\\users\\rpsharp\\appdata\\local\\temp\\tmpm0pxd7\\dir_not_there\\InVEST-Test-model-log-2017-08-21--14_54_37.txt'
-        #        self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+
+        self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+
+        try:
+            with wait_on_signal(model_ui.form.run_finished):
+                model_ui.execute_model()
+
+            self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+        finally:
+            if model_ui.form.run_dialog.isVisible():
+                model_ui.form.run_dialog.close_window()
+            model_ui.close(prompt=False)
 
     def test_overwrite_reject(self):
         """UI Model: Verify coverage when overwrite dialog is rejected."""
