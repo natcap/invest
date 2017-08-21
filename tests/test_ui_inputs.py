@@ -2402,10 +2402,15 @@ class ModelTests(_QtTest):
                                                   'dir_not_there'))
         QT_APP.processEvents()
 
-        with wait_on_signal(model_ui.form.run_finished):
-            model_ui.execute_model()
+        try:
+            with wait_on_signal(model_ui.form.run_finished):
+                model_ui.execute_model()
 
-        self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+            self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+        finally:
+            if model_ui.form.run_dialog.isVisible():
+                model_ui.form.run_dialog.close_window()
+            model_ui.close(prompt=False)
 
     def test_overwrite_reject(self):
         """UI Model: Verify coverage when overwrite dialog is rejected."""
