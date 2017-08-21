@@ -776,10 +776,12 @@ class Model(QtWidgets.QMainWindow):
         self.scenario_options_dialog = ScenarioOptionsDialog(
             paramset_basename=paramset_basename)
 
-        self.scenario_archive_extract_dialog = ScenarioArchiveExtractionDialog()
+        self.scenario_archive_extract_dialog = (
+            ScenarioArchiveExtractionDialog())
         self.quit_confirm_dialog = QuitConfirmDialog()
         self.validation_report_dialog = WholeModelValidationErrorDialog()
-        self.workspace_overwrite_confirm_dialog = WorkspaceOverwriteConfirmDialog()
+        self.workspace_overwrite_confirm_dialog = (
+            WorkspaceOverwriteConfirmDialog())
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
 
         def _settings_saved_message():
@@ -882,6 +884,7 @@ class Model(QtWidgets.QMainWindow):
             self.label)
 
     def _check_local_docs(self, link=None):
+        # TODO: are you using `not link` here to test for None?  If so, can you change to link is not None.  Otherwise, this is some fun functionality for the doc link.
         if not link or link == 'localdocs':
             link = 'file://' + os.path.abspath(self.localdoc)
 
