@@ -1,3 +1,4 @@
+"""Module to that provides functions for usage logging."""
 import contextlib
 import hashlib
 import json
@@ -55,8 +56,7 @@ def log_run(module, args):
 
 
 def _calculate_args_bounding_box(args_dict):
-    """Parse through an args dict and calculate the bounding boxes of any GIS
-    types found there.
+    """Calculate the bounding boxes of any GIS types found in `args_dict`.
 
     Args:
         args_dict (dict): a string key and any value pair dictionary.
@@ -65,25 +65,24 @@ def _calculate_args_bounding_box(args_dict):
         bb_intersection, bb_union tuple that's either the lat/lng bounding
             intersection and union bounding boxes of the gis types referred to
             in args_dict.  If no GIS types are present, this is a (None, None)
-            tuple."""
-
+            tuple.
+    """
     def _merge_bounding_boxes(bb1, bb2, mode):
-        """Helper function to merge two bounding boxes through union or
-            intersection
+        """Merge two bounding boxes through union or intersection.
 
-            Parameters:
-                bb1 (list of float): bounding box of the form
-                    [minx, maxy, maxx, miny] or None
-                bb2 (list of float): bounding box of the form
-                    [minx, maxy, maxx, miny] or None
-                mode (string): either "union" or "intersection" indicating the
-                    how to combine the two bounding boxes.
+        Parameters:
+            bb1 (list of float): bounding box of the form
+                [minx, maxy, maxx, miny] or None
+            bb2 (list of float): bounding box of the form
+                [minx, maxy, maxx, miny] or None
+            mode (string): either "union" or "intersection" indicating the
+                how to combine the two bounding boxes.
 
-            Returns:
-                either the intersection or union of bb1 and bb2 depending
-                on mode.  If either bb1 or bb2 is None, the other is returned.
-                If both are None, None is returned.
-            """
+        Returns:
+            either the intersection or union of bb1 and bb2 depending
+            on mode.  If either bb1 or bb2 is None, the other is returned.
+            If both are None, None is returned.
+        """
         if bb1 is None:
             return bb2
         if bb2 is None:
@@ -98,9 +97,7 @@ def _calculate_args_bounding_box(args_dict):
         return bb_out
 
     def _merge_local_bounding_boxes(arg, bb_intersection=None, bb_union=None):
-        """Allows us to recursively walk a potentially nested dictionary
-        and merge the bounding boxes that might be found in the GIS
-        types
+        """Traverse nested dictionary to merge bounding boxes of GIS types.
 
         Args:
             arg (dict): contains string keys and pairs that might be files to
@@ -114,10 +111,10 @@ def _calculate_args_bounding_box(args_dict):
             (intersection, union) bounding box tuples of all filepaths to GIS
             data types found in the dictionary and bb_intersection and bb_union
             inputs.  None, None if no arguments were GIS data types and input
-            bounding boxes are None."""
-
+            bounding boxes are None.
+        """
         def _is_gdal(arg):
-            """tests if input argument is a path to a gdal raster"""
+            """Test if input argument is a path to a gdal raster."""
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
@@ -127,7 +124,7 @@ def _calculate_args_bounding_box(args_dict):
             return False
 
         def _is_ogr(arg):
-            """tests if input argument is a path to an ogr vector"""
+            """Tests if input argument is a path to an ogr vector."""
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
@@ -230,11 +227,10 @@ def _log_model(model_name, model_args, session_id=None):
     Returns:
         None
     """
-
     logger = logging.getLogger('natcap.invest.iui._log_model')
 
     def _node_hash():
-        """Returns a hash for the current computational node."""
+        """Return a hash for the current computational node."""
         data = {
             'os': platform.platform(),
             'hostname': platform.node(),
@@ -270,14 +266,15 @@ def _log_model(model_name, model_args, session_id=None):
 
 
 def _get_logging_server(path=None):
-    """Returns a remote procedure call logging server from the
-    https://bitbucket.org/natcap/natcap_model_logger project.
+    """Return a remote procedure call logging server.
+
+    Searches  https://bitbucket.org/natcap/natcap_model_logger for appropriate
+    object.
 
     Parameters:
         path (string): A Pyro4 compatible url for getting a Proxy object.
 
     """
-
     if path is None:
         path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
     logging_server = Pyro4.Proxy(path)
