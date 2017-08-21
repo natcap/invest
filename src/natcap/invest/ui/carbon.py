@@ -147,12 +147,12 @@ class Carbon(model.Model):
             args[self.fut_lulc_raster.args_key] = self.fut_lulc_raster.value()
 
             for arg in (self.cur_lulc_year, self.fut_lulc_year):
-                args[arg.args_key] = model.try_cast(arg.value(), int)
+                args[arg.args_key] = arg.value()
 
             # Attempt to cast valuation parameters to float
             if self.valuation_container.value():
                 for arg in (self.price_per_metric_ton_of_c,
                             self.discount_rate, self.rate_change):
-                    args[arg.args_key] = model.try_cast(arg.value(), float)
+                    args[arg.args_key] = arg.value()
 
         return args

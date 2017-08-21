@@ -55,19 +55,6 @@ _SCENARIO_SAVE_OPTS = {
 }
 
 
-def try_cast(value, target_type):
-    """Attempt to cast a value to a type.
-
-    Returns:
-        If the cast is successful, the new value is returned.  If not, the
-        original value is returned.
-    """
-    try:
-        return target_type(value)
-    except ValueError:
-        return value
-
-
 @contextlib.contextmanager
 def wait_on_signal(signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
@@ -1147,6 +1134,7 @@ class Model(QtWidgets.QMainWindow):
             A list of all objects known to this ``Model`` instance that are subclasses of
             ``Input``.
         """
+        # TODO: we'd talked about an alternative to __dict__ such as a dictionary that maps arg key to the Input object in the `add_input` function.  When I tried to do this myself, it looked promising but I broke a bunch of test cases that assume "input()" and others are stlil legit functions.
         return [ref for ref in self.__dict__.values()
                 if isinstance(ref, inputs.Input)]
 

@@ -296,14 +296,12 @@ class Fisheries(model.Model):
         for numeric_input in (self.alpha, self.beta, self.total_recur_recruits,
                               self.total_init_recruits, self.total_timesteps):
             if numeric_input.value():
-                args[numeric_input.args_key] = model.try_cast(
-                    numeric_input.value(), float)
+                args[numeric_input.args_key] = numeric_input.value()
 
         if self.val_cont.value():
-            args[self.frac_post_process.args_key] = model.try_cast(
-                self.frac_post_process.value(), float)
-            args[self.unit_price.args_key] = model.try_cast(
-                self.unit_price.value(), float)
+            args[self.frac_post_process.args_key] = (
+                self.frac_post_process.value())
+            args[self.unit_price.args_key] = self.unit_price.value()
 
         if self.migr_cont.value():
             args[self.migration_dir.args_key] = self.migration_dir.value()
