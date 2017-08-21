@@ -63,6 +63,8 @@ def execute(args):
 
     #Creating a definition for our new activity count field.
     field_defn = ogr.FieldDefn('ACTIV_CNT', ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     mz_freq_layer.CreateField(field_defn)
 
     #This will loop through all management zone polygons, as defined by the MZ

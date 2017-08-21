@@ -276,8 +276,10 @@ def _aggregate_carbon_map(
 
     carbon_sum_field = ogr.FieldDefn('c_sum', ogr.OFTReal)
     carbon_sum_field.SetWidth(24)
+    carbon_sum_field.SetPrecision(11)
     carbon_mean_field = ogr.FieldDefn('c_ha_mean', ogr.OFTReal)
     carbon_mean_field.SetWidth(24)
+    carbon_mean_field.SetPrecision(11)
 
     serviceshed_layer.CreateField(carbon_sum_field)
     serviceshed_layer.CreateField(carbon_mean_field)
