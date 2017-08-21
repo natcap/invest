@@ -528,6 +528,7 @@ class ScenarioOptionsDialog(OptionsDialog):
         self.include_workspace.set_value(False)
 
         @validation.validator
+        # TODO: `limit_to` is unused in the body of this function.  Remove?
         def _validate_parameter_file(args, limit_to=None):
             warnings = []
             archive_dir = os.path.dirname(args['archive_path'])
@@ -598,7 +599,8 @@ class ScenarioOptionsDialog(OptionsDialog):
 
         Returns:
             If the dialog is rejected, ``None`` is returned.
-            If the dialog is accepted, a ``ScenarioSaveOpts`` instance is returned.
+            If the dialog is accepted, a ``ScenarioSaveOpts`` instance is
+                returned.
         """
         result = OptionsDialog.exec_(self)
         if result == QtWidgets.QDialog.Accepted:
@@ -787,6 +789,7 @@ class Model(QtWidgets.QMainWindow):
         # These attributes should be defined in subclass
         for attr in ('label', 'target', 'validator', 'localdoc'):
             if not getattr(self, attr):  # None unless overridden in subclass
+                #TODO: this seems to be the only use of the `warnings` package.  Can it be replaced with a logger call?
                 warnings.warn('Class attribute %s.%s is not defined' % (
                     self.__class__.__name__, attr))
 
