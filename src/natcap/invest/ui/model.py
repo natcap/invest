@@ -737,9 +737,9 @@ class Model(QtWidgets.QMainWindow):
     override these four attributes at the class level:
 
         * ``label`` (string): The model label.
-        * ``target`` (function reference): The reference to the target function.
-            For InVEST, this will always be the ``execute`` function of the
-            target model.
+        * ``target`` (function reference): The reference to the target
+            function. For InVEST, this will always be the ``execute`` function
+            of the target model.
         * ``validator`` (function reference): The reference to the target
             validator function.  For InVEST, this will always be the
             ``validate`` function of the target model.
@@ -748,7 +748,7 @@ class Model(QtWidgets.QMainWindow):
 
     If any of these attributes are not overridden, a warning will be raised.
     """
-
+    # TODO: does it make sense to have these be class attributes instead of object parameters?
     label = None
     target = None
     validator = None
