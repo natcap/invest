@@ -58,6 +58,7 @@ _SCENARIO_SAVE_OPTS = {
 @contextlib.contextmanager
 def wait_on_signal(signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
+    # TODO: need a global here?  You aren't setting the value...
     global QT_APP
     loop = QtCore.QEventLoop()
     signal.connect(loop.quit)
@@ -271,6 +272,7 @@ class SettingsDialog(OptionsDialog):
             'cache_dir', cache_dir, unicode))
         self._container.add_input(self.cache_directory)
 
+    #TODO: the base postprocess has a default of 0 for `exitcode` should this also?  Or remove parent's default?
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
 
@@ -278,7 +280,8 @@ class SettingsDialog(OptionsDialog):
             ``None``
         """
         if exitcode == QtWidgets.QDialog.Accepted:
-            inputs.INVEST_SETTINGS.setValue('cache_dir', self.cache_directory.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'cache_dir', self.cache_directory.value())
 
 
 class AboutDialog(QtWidgets.QDialog):
