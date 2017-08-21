@@ -1343,7 +1343,7 @@ class FileDialogTest(_SettingsSandbox):
 
         self.assertEqual(
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
-            (dialog.file_dialog, 'foo', '/tmp/foo/bar', ()))
+            (dialog.file_dialog, 'foo', '/tmp/foo/bar', ''))
         self.assertEqual(out_file, '/new/file')
         self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode), '/new')
 
@@ -1368,7 +1368,7 @@ class FileDialogTest(_SettingsSandbox):
 
         self.assertEqual(
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
-            (dialog.file_dialog, 'foo', '/tmp/foo/bar', ()))
+            (dialog.file_dialog, 'foo', '/tmp/foo/bar', ''))
         self.assertEqual(out_file, '/new/file')
         self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode), '/new')
 
