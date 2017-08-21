@@ -2297,8 +2297,6 @@ class ModelTests(_QtTest):
         while model_ui.isVisible():
             QTest.qWait(25)
 
-        self.assertEqual(model_ui.exit_code, 0)
-
     def test_save_scenario_cancel_coverage(self):
         """UI Model: Test coverage for cancelling save scenario dialog."""
         model_ui = ModelTests.build_model()
