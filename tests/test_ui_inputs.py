@@ -2407,15 +2407,10 @@ class ModelTests(_QtTest):
 
         self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
 
-        try:
-            with wait_on_signal(model_ui.form.run_finished):
-                model_ui.execute_model()
-
-            self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
-        finally:
-            if model_ui.form.run_dialog.isVisible():
-                model_ui.form.run_dialog.close_window()
-            model_ui.close(prompt=False)
+        #TODO: this raises an error on Rich's machine: WindowsError: [Error 32] The process cannot access the file because it is being used by another process: 'c:\\users\\rpsharp\\appdata\\local\\temp\\tmpz0jq0q\\dir_not_there\\InVEST-Test-model-log-2017-08-21--15_14_28.txt'
+        with wait_on_signal(model_ui.form.run_finished):
+            model_ui.execute_model()
+        self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
 
     def test_overwrite_reject(self):
         """UI Model: Verify coverage when overwrite dialog is rejected."""
