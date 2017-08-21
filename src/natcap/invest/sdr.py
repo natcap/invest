@@ -950,6 +950,8 @@ def _generate_report(
 
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_def.SetWidth(24)
+        field_def.SetPrecision(11)
         layer.CreateField(field_def)
 
     # initialize each feature field to 0.0

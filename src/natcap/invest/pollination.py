@@ -124,9 +124,11 @@ def execute(args):
                 * For every season matching _FORAGING_ACTIVITY_PATTERN
                   in the guilds table, a column matching
                   the pattern in `_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`.
-        args['farm_vector_path'] (string): path to a single layer polygon
-            shapefile representing farms. The layer will have at least the
-            following fields:
+        args['farm_vector_path'] (string): (optional) path to a single layer
+            polygon shapefile representing farms. If present will trigger the
+            farm yield component of the model.
+
+            The layer must have at least the following fields:
 
             * season (string): season in which the farm needs pollination
             * crop_type (string): a text field to identify the crop type for
@@ -224,29 +226,41 @@ def execute(args):
                     header, args['landcover_biophysical_table_path'],
                     biophysical_table_headers))
 
-    LOGGER.info('Checking that farm polygon has expected headers')
-    farm_vector = ogr.Open(args['farm_vector_path'])
-    if farm_vector.GetLayerCount() != 1:
-        raise ValueError(
-            "Farm polygon at %s has %d layers when expecting only 1." % (
-                args['farm_vector_path'], farm_vector.GetLayerCount()))
-    farm_layer = farm_vector.GetLayer()
-    if farm_layer.GetGeomType() not in [
-            ogr.wkbPolygon, ogr.wkbMultiPolygon]:
-        farm_layer = None
-        farm_vector = None
-        raise ValueError("Farm layer not a polygon type")
-    farm_layer_defn = farm_layer.GetLayerDefn()
-    farm_headers = [
-        farm_layer_defn.GetFieldDefn(i).GetName()
-        for i in xrange(farm_layer_defn.GetFieldCount())]
-    for header in _EXPECTED_FARM_HEADERS:
-        matches = re.findall(header, " ".join(farm_headers))
-        if len(matches) == 0:
+    farm_vector = None
+    if 'farm_vector_path' in args and args['farm_vector_path'] != '':
+        LOGGER.info('Checking that farm polygon has expected headers')
+        farm_vector = ogr.Open(args['farm_vector_path'])
+        if farm_vector.GetLayerCount() != 1:
             raise ValueError(
-                "Missing an expected headers '%s'from %s.\n"
-                "Got these headers instead %s" % (
-                    header, args['farm_vector_path'], farm_headers))
+                "Farm polygon at %s has %d layers when expecting only 1." % (
+                    args['farm_vector_path'], farm_vector.GetLayerCount()))
+        farm_layer = farm_vector.GetLayer()
+        if farm_layer.GetGeomType() not in [
+                ogr.wkbPolygon, ogr.wkbMultiPolygon]:
+            farm_layer = None
+            farm_vector = None
+            raise ValueError("Farm layer not a polygon type")
+        farm_layer_defn = farm_layer.GetLayerDefn()
+        farm_headers = [
+            farm_layer_defn.GetFieldDefn(i).GetName()
+            for i in xrange(farm_layer_defn.GetFieldCount())]
+        for header in _EXPECTED_FARM_HEADERS:
+            matches = re.findall(header, " ".join(farm_headers))
+            if len(matches) == 0:
+                raise ValueError(
+                    "Missing an expected headers '%s'from %s.\n"
+                    "Got these headers instead %s" % (
+                        header, args['farm_vector_path'], farm_headers))
+
+        for header in farm_headers:
+            match = re.match(_FARM_FLORAL_RESOURCES_PATTERN, header)
+            if match:
+                season = match.group(1)
+                season_to_header[season]['farm'] = match.group()
+            match = re.match(_FARM_NESTING_SUBSTRATE_PATTERN, header)
+            if match:
+                substrate = match.group(1)
+                substrate_to_header[substrate]['farm'] = match.group()
 
     for header in biophysical_table_headers:
         match = re.match(_FLORAL_RESOURCES_AVAILABLE_PATTERN, header)
@@ -258,49 +272,47 @@ def execute(args):
             substrate = match.group(1)
             substrate_to_header[substrate]['biophysical'] = match.group()
 
-    for header in farm_headers:
-        match = re.match(_FARM_FLORAL_RESOURCES_PATTERN, header)
-        if match:
-            season = match.group(1)
-            season_to_header[season]['farm'] = match.group()
-        match = re.match(_FARM_NESTING_SUBSTRATE_PATTERN, header)
-        if match:
-            substrate = match.group(1)
-            substrate_to_header[substrate]['farm'] = match.group()
-
-    LOGGER.debug(substrate_to_header)
     for table_type, lookup_table in itertools.chain(
             season_to_header.iteritems(), substrate_to_header.iteritems()):
-        if len(lookup_table) != 3:
+        if len(lookup_table) != 3 and farm_vector is not None:
             raise ValueError(
                 "Expected a biophysical, guild, and farm entry for '%s' but "
                 "instead found only %s. Ensure there are corresponding "
                 "entries of '%s' in both the guilds, biophysical "
                 "table, and farm fields." % (
                     table_type, lookup_table, table_type))
+        elif len(lookup_table) != 2 and farm_vector is None:
+            raise ValueError(
+                "Expected a biophysical, and guild entry for '%s' but "
+                "instead found only %s. Ensure there are corresponding "
+                "entries of '%s' in both the guilds and biophysical "
+                "table." % (
+                    table_type, lookup_table, table_type))
 
-    farm_season_set = set()
-    for farm_feature in farm_layer:
-        farm_season_set.add(farm_feature.GetField('season'))
+    # farms can be optional
+    if farm_vector is not None:
+        farm_season_set = set()
+        for farm_feature in farm_layer:
+            farm_season_set.add(farm_feature.GetField('season'))
 
-    if len(farm_season_set.difference(season_to_header)) > 0:
-        raise ValueError(
-            "Found seasons in farm polygon that were not specified in the"
-            "biophysical table: %s.  Expected only these: %s" % (
-                farm_season_set.difference(season_to_header),
-                season_to_header))
+        if len(farm_season_set.difference(season_to_header)) > 0:
+            raise ValueError(
+                "Found seasons in farm polygon that were not specified in the"
+                "biophysical table: %s.  Expected only these: %s" % (
+                    farm_season_set.difference(season_to_header),
+                    season_to_header))
 
-    # ensure the farm vector is in the same projection as the landcover map
-    projected_farm_vector_path = os.path.join(
-        intermediate_output_dir,
-        _PROJECTED_FARM_VECTOR_FILE_PATTERN % file_suffix)
-    pygeoprocessing.reproject_vector(
-        args['farm_vector_path'], lulc_raster_info['projection'],
-        projected_farm_vector_path)
+        # ensure the farm vector is in the same projection as the landcover map
+        projected_farm_vector_path = os.path.join(
+            intermediate_output_dir,
+            _PROJECTED_FARM_VECTOR_FILE_PATTERN % file_suffix)
+        pygeoprocessing.reproject_vector(
+            args['farm_vector_path'], lulc_raster_info['projection'],
+            projected_farm_vector_path)
 
-    season_to_rasterize_id = [
-        (season, season_id) for season_id, season in enumerate(
-            sorted(farm_season_set))]
+        season_to_rasterize_id = [
+            (season, season_id) for season_id, season in enumerate(
+                sorted(farm_season_set))]
 
     for nesting_substrate in substrate_to_header:
         LOGGER.info(
@@ -318,14 +330,17 @@ def execute(args):
             landcover_to_nesting_suitability_table, f_reg[nesting_id],
             gdal.GDT_Float32, _INDEX_NODATA)
 
-        LOGGER.info(
-            "Overriding landcover nesting substrates where a farm polygon is "
-            "available.")
-        pygeoprocessing.rasterize(
-            projected_farm_vector_path, f_reg[nesting_id],
-            None, ['ATTRIBUTE=%s' % (
-                _FARM_NESTING_SUBSTRATE_PATTERN.replace(
-                    '([^_]+)', nesting_substrate))])
+        temp_file_set.add(f_reg[nesting_id])
+
+        if farm_vector is not None:
+            LOGGER.info(
+                "Overriding landcover nesting substrates where a farm polygon is "
+                "available.")
+            pygeoprocessing.rasterize(
+                projected_farm_vector_path, f_reg[nesting_id],
+                None, ['ATTRIBUTE=%s' % (
+                    _FARM_NESTING_SUBSTRATE_PATTERN.replace(
+                        '([^_]+)', nesting_substrate))])
 
     nesting_substrate_path_list = [
         f_reg[substrate_to_header[nesting_substrate]['biophysical']]
@@ -386,13 +401,18 @@ def execute(args):
             f_reg[relative_floral_resources_id], gdal.GDT_Float32,
             _INDEX_NODATA)
 
-        LOGGER.info(
-            "Overriding landcover floral resources with a farm's floral "
-            "resources.")
-        pygeoprocessing.rasterize(
-            projected_farm_vector_path, f_reg[relative_floral_resources_id],
-            None, ['ATTRIBUTE=%s' % (_FARM_FLORAL_RESOURCES_PATTERN.replace(
-                '([^_]+)', season_id))])
+        temp_file_set.add(f_reg[relative_floral_resources_id])
+
+        # farm vector is optional
+        if farm_vector is not None:
+            LOGGER.info(
+                "Overriding landcover floral resources with a farm's floral "
+                "resources.")
+            pygeoprocessing.rasterize(
+                projected_farm_vector_path,
+                f_reg[relative_floral_resources_id], None,
+                ['ATTRIBUTE=%s' % (_FARM_FLORAL_RESOURCES_PATTERN.replace(
+                    '([^_]+)', season_id))])
 
     floral_resources_path_list = [
         f_reg[season_to_header[season_id]['biophysical']]
@@ -463,8 +483,7 @@ def execute(args):
         pollinator_supply_id = (
             _LOCAL_POLLINATOR_SUPPLY_FILE_PATTERN % species_id)
         f_reg[pollinator_supply_id] = os.path.join(
-            intermediate_output_dir,
-            pollinator_supply_id + "%s.tif" % file_suffix)
+            output_dir, pollinator_supply_id + "%s.tif" % file_suffix)
 
         species_abundance = guild_table[species_id][
             _RELATIVE_POLLINATOR_ABUNDANCE_FIELD]
@@ -530,6 +549,11 @@ def execute(args):
             _pollinator_abudance_op, f_reg[pollinator_abudanance_id],
             gdal.GDT_Float32, _INDEX_NODATA, calc_raster_stats=False)
 
+    if farm_vector is None:
+        LOGGER.info("All done, no farm polygon to process!")
+        for path in temp_file_set:
+            os.remove(path)
+        return
     LOGGER.info("Calculating farm yields")
     target_farm_path = os.path.join(
         output_dir, '%s%s.shp' % (
@@ -651,7 +675,6 @@ def execute(args):
                  (f_reg[_POLLINATOR_ABUNDANCE_FILE_PATTERN % species_id], 1)],
                 _equal_op, max_pollinated_species_path, gdal.GDT_Byte,
                 _INDEX_NODATA, calc_raster_stats=False)
-
 
         LOGGER.info("Calculating farm yield.")
 

@@ -192,8 +192,6 @@ setup(
         'natcap.invest.habitat_risk_assessment',
         'natcap.invest.hydropower',
         'natcap.invest.ui',
-        'natcap.invest.iui',
-        'natcap.invest.iui.dbfpy',
         'natcap.invest.ndr',
         'natcap.invest.overlap_analysis',
         'natcap.invest.recreation',
@@ -242,12 +240,6 @@ setup(
     },
     cmdclass=CMDCLASS,
     package_data={
-        'natcap.invest.iui': [
-            '*.png',
-            '*.json',
-            'iui_resources/resources.json',
-            'iui_resources/images/*.png',
-        ],
         'natcap.invest.reporting': [
             'reporting_data/*.js',
             'reporting_data/*.css',

@@ -1003,6 +1003,8 @@ def _create_results_aoi(vars_dict):
 
     # Set Harvest
     harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
+    harvest_field.SetWidth(24)
+    harvest_field.SetPrecision(11)
     layer.CreateField(harvest_field)
 
     harv_reg_dict = {}
@@ -1012,6 +1014,8 @@ def _create_results_aoi(vars_dict):
     # Set Valuation
     if vars_dict['val_cont']:
         val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+        val_field.SetWidth(24)
+        val_field.SetPrecision(11)
         layer.CreateField(val_field)
 
     val_reg_dict = {}
