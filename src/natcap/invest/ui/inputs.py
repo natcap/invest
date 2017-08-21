@@ -168,6 +168,7 @@ class Validator(QtCore.QObject):
         Returns:
             ``None``
         """
+        # TODO: is there a non-busy loop way to do this?  Like a callback or a self._validation_thread.join()? (I don't know if the last thing works but most concurrent APIs have a blocking join function or equivalent.)
         for i in xrange(10):
             if self._validation_thread.isRunning():
                 break
@@ -460,6 +461,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.openWorkspaceCB.setVisible(False)
         self.openWorkspaceButton.setVisible(True)
 
+    # TODO: unused `event` parameter?
     def _request_workspace(self, event=None):
         open_workspace(self.out_folder)
 
@@ -520,6 +522,7 @@ class InfoButton(QtWidgets.QPushButton):
             self.setWhatsThis(default_message)
         self.clicked.connect(self._show_popup)
 
+    # TODO: unused `clicked`?  I'm guessing some of these are to match a function prototype?
     def _show_popup(self, clicked=None):
         QtWidgets.QWhatsThis.enterWhatsThisMode()
         QtWidgets.QWhatsThis.showText(self.mapToGlobal(self.pos()),
