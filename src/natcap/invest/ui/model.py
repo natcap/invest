@@ -940,6 +940,7 @@ class Model(QtWidgets.QMainWindow):
         self.statusBar().showMessage(alert_message, 10000)
         self.window_title.filename = os.path.basename(save_filepath)
 
+    # TODO: we talked about this, but wondering if there's a better name than `input` and `Input`.  For one, `input` is a built in Python function already.  And maybe UIInput and ui_input might be a better alternative?  Just to consider...
     def add_input(self, input):
         """Add an input to the model.
 
