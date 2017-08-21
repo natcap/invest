@@ -1141,8 +1141,8 @@ class Model(QtWidgets.QMainWindow):
         """Fetch a list of all model inputs.
 
         Returns:
-            A list of all objects known to this ``Model`` instance that are subclasses of
-            ``Input``.
+            A list of all objects known to this ``Model`` instance that are
+            subclasses of ``Input``.
         """
         # TODO: we'd talked about an alternative to __dict__ such as a dictionary that maps arg key to the Input object in the `add_input` function.  When I tried to do this myself, it looked promising but I broke a bunch of test cases that assume "input()" and others are stlil legit functions.
         return [ref for ref in self.__dict__.values()
