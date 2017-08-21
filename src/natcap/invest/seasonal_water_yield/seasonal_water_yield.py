@@ -14,7 +14,8 @@ from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
-from  ..  import utils
+from .. import utils
+import pygeoprocessing
 
 import seasonal_water_yield_core  #pylint: disable=import-error
 
@@ -71,6 +72,7 @@ _TMP_BASE_FILES = {
     'kc_path_list': ['kc_%d.tif' % x for x in xrange(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
+    'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
     }
 
 
@@ -469,8 +471,25 @@ def _execute(args):
         file_registry['l_path'],
         file_registry['zero_absorption_source_path'],
         file_registry['loss_path'],
-        file_registry['l_sum_path'], 'flux_only',
+        file_registry['l_sum_pre_clamp'], 'flux_only',
         stream_uri=file_registry['stream_path'])
+
+    # The result of route_flux can be slightly negative due to roundoff error
+    # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
+    l_sum_pre_clamp_nodata = pygeoprocessing.get_raster_info(
+        file_registry['l_sum_pre_clamp'])['nodata'][0]
+
+    def clamp_l_sum(l_sum_pre_clamp):
+        """Clamp any negative values to 0.0."""
+        result = l_sum_pre_clamp.copy()
+        result[
+            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
+            (l_sum_pre_clamp < 0.0)] = 0.0
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(file_registry['l_sum_pre_clamp'], 1)], clamp_l_sum,
+        file_registry['l_sum_path'], gdal.GDT_Float32, l_sum_pre_clamp_nodata)
 
     LOGGER.info('calculate B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
