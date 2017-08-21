@@ -785,6 +785,7 @@ class Model(QtWidgets.QMainWindow):
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
 
         def _settings_saved_message():
+            # TODO: what's the 10000 mean?
             self.statusBar().showMessage('Settings saved', 10000)
         self.settings_dialog.accepted.connect(_settings_saved_message)
 
@@ -936,7 +937,7 @@ class Model(QtWidgets.QMainWindow):
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
-
+        # TODO: what's the 10000 mean?
         self.statusBar().showMessage(alert_message, 10000)
         self.window_title.filename = os.path.basename(save_filepath)
 
@@ -1072,6 +1073,7 @@ class Model(QtWidgets.QMainWindow):
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
+        # TODO: what's the 10000 mean?
         self.statusBar().showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
 
@@ -1290,6 +1292,7 @@ class Model(QtWidgets.QMainWindow):
         # If no lastrun args saved, "{}" (empty json object) is returned
         lastrun_args = self.settings.value("lastrun", "{}")
         self.load_args(json.loads(lastrun_args))
+        # TODO: what's the 10000 mean?
         self.statusBar().showMessage('Loaded parameters from previous run.',
                                      10000)
         self.window_title.filename = 'loaded from autosave'
