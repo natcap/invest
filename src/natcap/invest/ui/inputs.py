@@ -66,6 +66,7 @@ DEFAULT_LASTDIR = ''
 def _cleanup():
     # Adding this allows tests to run on linux via `python setup.py nosetests`
     # and `python setup.py test` without segfault.
+    # TODO: I don't think you need the global here since you aren't setting QT_APP
     global QT_APP
     QT_APP.deleteLater()  # pragma: no cover
 atexit.register(_cleanup)
@@ -113,7 +114,7 @@ def open_workspace(dirname):
         LOGGER.error(error)
         LOGGER.error(
             ('Cannot find default file browser. Platform: %s |'
-                ' folder: %s'), platform.system(), dirname)
+             ' folder: %s'), platform.system(), dirname)
 
 
 def center_window(window_ptr):
