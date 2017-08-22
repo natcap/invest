@@ -1054,6 +1054,7 @@ class Input(QtCore.QObject):
         """
         raise NotImplementedError
 
+    # TODO: any chance we could remove this function?  I think it's confusing to say something like set_noninteractive(False) to mean an object interactive.  Plus we can use set_interactive directly?
     def set_noninteractive(self, noninteractive):
         """Set interactivity as the negative of the provided parameter.
 
@@ -1082,6 +1083,7 @@ class Input(QtCore.QObject):
         """
         self.interactive = enabled
         for widget in self.widgets:
+            # TODO: Can you explicitly test for None here, per PEP8 "Also, beware of writing if x when you really mean if x is not None -- e.g. when testing whether a variable or argument that defaults to None was set to some other value. The other value might have a type (such as a container) that could be false in a boolean context!"
             if not widget:  # widgets to be skipped are None
                 continue
             widget.setEnabled(enabled)
@@ -1100,6 +1102,7 @@ class Input(QtCore.QObject):
         self.setParent(layout.parent().window())  # all widgets belong to Form
         current_row = layout.rowCount()
         for widget_index, widget in enumerate(self.widgets):
+            # TODO: is this also testing for widget == None?
             if not widget:
                 continue
 
@@ -1178,6 +1181,7 @@ class GriddedInput(Input):
         else:
             self.help_button = QtWidgets.QWidget()  # empty widget!
 
+        # TODO: can you comment on what the Nones are for?  I assume empty space?
         self.widgets = [
             self.valid_button,
             self.label_widget,
@@ -1192,6 +1196,7 @@ class GriddedInput(Input):
             self.label_widget.stateChanged.connect(self._hideability_changed)
             self._hideability_changed(True)
 
+        # TODO: I see this is a Python lock, but also Qt provides a QMutex class that's its own version.  I don't know that it matters too much, but know in the past you'd had difficulty mixing Python concurrency with Qt concurrency.  http://doc.qt.io/qt-4.8/qmutex.html
         self.lock = threading.Lock()
 
         # initialize visibility, as we've changed the input's widgets
@@ -1281,11 +1286,13 @@ class GriddedInput(Input):
             tooltip_errors = ''
 
         for widget in self.widgets[0:2]:  # skip file selection, help buttons
+            # TODO: is this testing against a "None"?  If so: "widget is not None"?
             if widget:
                 widget.setToolTip(tooltip_errors)
 
         current_validity = self._valid
         self._valid = new_validity
+        # TODO: I see releasing the lock here, but it presupposes that it's been acquired somewhere earlier in the call chain.  Would you consider modifying _validate to have a "finally" block that releases the lock instead of this?  That way the acquire and release is in the same code block.
         self.lock.release()
         if current_validity != new_validity:
             self.validity_changed.emit(new_validity)
@@ -1298,8 +1305,11 @@ class GriddedInput(Input):
         """
         # I'd rather use self.lock, but waiting until self.lock is released
         # seems to cause a segfault.  This approach is good enough for now.
-        while self._validator.in_progress():
-            QtCore.QThread.msleep(50)
+        # TODO: I tried this format, that if the API says what it's doing is what it's doing, it should be fine.
+        self.lock.acquire()
+        self.lock.release()
+        #while self._validator.in_progress():
+        #    QtCore.QThread.msleep(50)
         return self._valid
 
     @QtCore.Slot(int)
