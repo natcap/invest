@@ -645,6 +645,7 @@ class ValidationWorker(QtCore.QObject):
             ``None``
         """
         # Target must adhere to InVEST validation API.
+        # TODO: where does this go?  I didn't see it in the InVEST log when I ran crop percentile.
         LOGGER.info(('Starting validation thread with target=%s, args=%s, '
                      'limit_to=%s'), self.target, self.args, self.limit_to)
         try:
