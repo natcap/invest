@@ -168,13 +168,8 @@ class Validator(QtCore.QObject):
         Returns:
             ``None``
         """
-        # TODO: is there a non-busy loop way to do this?  Like a callback or a self._validation_thread.join()? (I don't know if the last thing works but most concurrent APIs have a blocking join function or equivalent.)
-        for i in xrange(10):
-            if self._validation_thread.isRunning():
-                break
-            self._validation_thread.start()
-            QtCore.QThread.currentThread().msleep(5)
-
+        if self._validation_thread.isRunning():
+            self._validation_thread.wait()
         self.started.emit()
         self._validation_worker = ValidationWorker(
             target=target,
@@ -196,7 +191,6 @@ class Validator(QtCore.QObject):
         self._validation_worker.finished.connect(_finished)
         self._validation_worker.finished.connect(
             self._validation_worker.deleteLater)
-        QtCore.QThread.currentThread().msleep(25)  # avoids segfault
         self._validation_worker.start()
 
 
