@@ -186,6 +186,7 @@ class Validator(QtCore.QObject):
             LOGGER.debug(warnings_)
             self.finished.emit(warnings_)
 
+        # TODO: does it anymore?  I think we're guaranteed the thread is not running by this point so you can add signals in any order?
         # Order matters with these callbacks.
         self._validation_worker.finished.connect(self._validation_thread.quit)
         self._validation_worker.finished.connect(_finished)
