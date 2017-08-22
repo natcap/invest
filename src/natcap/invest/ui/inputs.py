@@ -1043,6 +1043,7 @@ class Input(QtCore.QObject):
         """
         raise NotImplementedError
 
+    # TODO: other classes override this function but have a different function signature.  make senese to change this to `def set_value(self, value)`
     def set_value(self):
         """Set the value of this input.
 
@@ -1271,6 +1272,7 @@ class GriddedInput(Input):
         """
         new_validity = not bool(validation_warnings)
         if self.args_key:
+            # TODO: several appliccable vs applicable typos
             appliccable_warnings = [w[1] for w in validation_warnings
                                     if self.args_key in w[0]]
         else:
@@ -1305,7 +1307,7 @@ class GriddedInput(Input):
         """
         # I'd rather use self.lock, but waiting until self.lock is released
         # seems to cause a segfault.  This approach is good enough for now.
-        # TODO: I tried this format, that if the API says what it's doing is what it's doing, it should be fine.
+        # TODO: I tried this format and this seems to be working fine w/r/t passing tests and working UI.
         self.lock.acquire()
         self.lock.release()
         #while self._validator.in_progress():
@@ -1330,6 +1332,7 @@ class GriddedInput(Input):
             ``None``
         """
         for widget in self.widgets[2:]:
+            # TODO: is this testing against None?  "widget is None"
             if not widget:
                 continue
             widget.setHidden(not bool(show_widgets))
@@ -1374,7 +1377,7 @@ class Text(GriddedInput):
         """A custom QLineEdit widget with tweaks for use by Text instances."""
 
         def __init__(self, starting_value=''):
-            """Initalize the TextField instance.
+            """Initialize the TextField instance.
 
             This textfield may accept ``DragEnterEvent``s and ``DropEvent``s,
             but will only do so if the event has text MIME data.
@@ -1496,6 +1499,7 @@ class Text(GriddedInput):
         Returns:
             ``None``
         """
+        # TODO: could these two if statements be replaced with the line `value = str(value).decode('utf-8')`?
         if isinstance(value, int) or isinstance(value, float):
             value = str(value)
 
@@ -1520,7 +1524,7 @@ class _Path(Text):
         """
 
         def __init__(self, starting_value=''):
-            """Initalize the FileField instance.
+            """Initialize the FileField instance.
 
             Parameters:
                 starting_value='' (string): The starting value of the
@@ -1653,6 +1657,7 @@ class _Path(Text):
         self.textfield = _Path.FileField()
         self.textfield.textChanged.connect(self._text_changed)
 
+        # TODO: The None is spacing?
         self.widgets = [
             self.valid_button,
             self.label_widget,
@@ -1692,6 +1697,7 @@ class Folder(_Path):
                        hideable, validator=validator)
         self.path_select_button = FolderButton('Select folder')
         self.path_select_button.path_selected.connect(self.textfield.setText)
+        # TODO: comment on [3]?
         self.widgets[3] = self.path_select_button
 
         if self.hideable:
@@ -1728,6 +1734,7 @@ class File(_Path):
                        hideable, validator=validator)
         self.path_select_button = FileButton('Select file')
         self.path_select_button.path_selected.connect(self.textfield.setText)
+        # TODO: Can you comment on what the [3] index is here?
         self.widgets[3] = self.path_select_button
 
         if self.hideable:
@@ -1880,7 +1887,8 @@ class Dropdown(GriddedInput):
         """Get the validity of the Dropdown.
 
         Returns:
-            ``True``.  Dropdowns are always valid."""
+            ``True``.  Dropdowns are always valid.
+        """
         return True
 
     @QtCore.Slot(int)
