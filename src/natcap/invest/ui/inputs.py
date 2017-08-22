@@ -1923,6 +1923,8 @@ class Dropdown(GriddedInput):
         self.dropdown.clear()
         cast_options = []
         for label in options:
+            # TODO: I think there's a PEP8 that prefers `instanceof` rather than `type`
+            # TODO: But this also looks like some code above, which I thought we could directly cast to strng no matter what...  Would that work here?
             if type(label) in (int, float):
                 label = str(label)
             try:
@@ -2014,6 +2016,7 @@ class Label(QtWidgets.QLabel):
 class Container(QtWidgets.QGroupBox, Input):
     """An Input that contains other inputs within a QGridLayout."""
 
+    # TODO: you have a comment below that looks like you might need to do something?
     # need to redefine signals here.
     value_changed = QtCore.Signal(bool)
     interactivity_changed = QtCore.Signal(bool)
@@ -2136,6 +2139,7 @@ class Container(QtWidgets.QGroupBox, Input):
         """
         self.setCheckable(value)
 
+    # TODO: I'd commented to you in person that `input` overrides Python's `input` function, but I don't know that I care so much one way or the other.  I'd be happy to see it called ui_input or something if it's easy.
     def add_input(self, input):
         """Add an input to the Container.
 
@@ -2348,6 +2352,7 @@ class Multi(Container):
         layout = self.layout()
         rightmost_item = layout.itemAtPosition(
             layout.rowCount()-1, layout.columnCount()-1)
+        # TODO: could you comment on what this is doing?  Are you checking for None?
         if not rightmost_item:
             col_index = layout.columnCount()-1
         else:
@@ -2477,6 +2482,7 @@ class Form(QtWidgets.QWidget):
         # demo.
         self.submitted.emit()
 
+    # TODO: This redefines Python's min and max.  Could you choose another name like min_val and max_val?
     def update_scroll_border(self, min, max):
         """Show or hide the border of the scrolling area as needed.
 
