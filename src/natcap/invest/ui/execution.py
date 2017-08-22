@@ -35,6 +35,7 @@ class Executor(QtCore.QObject, threading.Thread):
         threading.Thread.__init__(self)
         self.target = target
 
+        # TODO: I see you're allowing None or False, but is that something that's useful in practice?  Same w/ kwargs below
         if not args:
             args = ()
         self.args = args
@@ -64,8 +65,10 @@ class Executor(QtCore.QObject, threading.Thread):
         Finally, the signal ``self.finished`` is emitted, regardless of whether
         an exception was raised.
         """
+        # TODO: I moved the self.finished.emit() from the outer block into the try block.  It's a style I picked up from "Java the Good Parts" where you treat the "try" part of your code as how the code should actually work instead of an if statement.
         try:
             self.target(*self.args, **self.kwargs)
+            self.finished.emit()
         except Exception as error:
             # We deliberately want to catch all possible exceptions.
             LOGGER.exception('Target %s failed with exception', self.target)
@@ -74,5 +77,3 @@ class Executor(QtCore.QObject, threading.Thread):
             self.traceback = traceback.format_exc()
         finally:
             LOGGER.info('Execution finished')
-
-        self.finished.emit()
