@@ -65,15 +65,15 @@ class Executor(QtCore.QObject, threading.Thread):
         Finally, the signal ``self.finished`` is emitted, regardless of whether
         an exception was raised.
         """
-        # TODO: I moved the self.finished.emit() from the outer block into the try block.  It's a style I picked up from "Java the Good Parts" where you treat the "try" part of your code as how the code should actually work instead of an if statement.
         try:
             self.target(*self.args, **self.kwargs)
-            self.finished.emit()
         except Exception as error:
             # We deliberately want to catch all possible exceptions.
             LOGGER.exception('Target %s failed with exception', self.target)
             self.failed = True
             self.exception = error
             self.traceback = traceback.format_exc()
+        # TODO: unless there's a reason for it, for style, I might either remove the 'finally' clause or move self.finished.emit() under the clause since the except clause is catching almost everything and passing through.
         finally:
             LOGGER.info('Execution finished')
+        self.finished.emit()
