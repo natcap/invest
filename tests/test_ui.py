@@ -1,3 +1,4 @@
+# TODO: this test module is so short, can you roll it into `test_ui_inputs.py`?
 import unittest
 
 import six

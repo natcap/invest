@@ -969,7 +969,6 @@ class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to 
         self.interactive = interactive
         self.args_key = args_key
         self.helptext = helptext
-        self.lock = threading.Lock()
         self.sufficient = False
         self._visible_hint = True
 
@@ -1173,6 +1172,9 @@ class GriddedInput(Input):
         self.validator_ref = validator
         self._validator = Validator(self)
         self._validator.finished.connect(self._validation_finished)
+        self.validator_lock = threading.Lock()
+
+
         self.label_widget = QtWidgets.QLabel(self.label)
         self.hideable = hideable
         self.sufficient = False  # False until value set and interactive
@@ -1242,6 +1244,8 @@ class GriddedInput(Input):
                  'limit_to:%s'),
                 self, validator_ref, args, self.args_key)
 
+            # Prevent multiple self._validator.validate runs
+            self.validator_lock.acquire()
             self._validator.validate(
                 target=validator_ref,
                 args=args,
@@ -1254,8 +1258,10 @@ class GriddedInput(Input):
     def _validation_finished(self, validation_warnings):
         """Interpret any validation errors and format them for the UI.
 
-        If the validity of the input changes, the ``validity_changed`` signal
-        is emitted with the new validity.
+        This is signaled whenever the validataion for this object is complete.
+        Either through an error or through a callback from the threadded call
+        with self._validator.  If the validity of the input changes, the
+        ``validity_changed`` signal is emitted with the new validity.
 
         Parameters:
             validation_warnings (list): A list of string validation warnings
@@ -1290,6 +1296,15 @@ class GriddedInput(Input):
         self._valid = new_validity
         if current_validity != new_validity:
             self.validity_changed.emit(new_validity)
+        try:
+            # this releases the lock because the _validate thread must be
+            # complete
+            self.validator_lock.release()
+        except threading.ThreadError:
+            # It's possible this function was called just to wrap up an error
+            # and the lock wasn't acquired at all.  That's okay and pass
+            # through
+            pass
 
     def valid(self):
         """Check the validity of the input.
@@ -1300,10 +1315,8 @@ class GriddedInput(Input):
         # I'd rather use self.lock, but waiting until self.lock is released
         # seems to cause a segfault.  This approach is good enough for now.
         # TODO: I tried this format and this seems to be working fine w/r/t passing tests and working UI.
-        self.lock.acquire()
-        self.lock.release()
-        #while self._validator.in_progress():
-        #    QtCore.QThread.msleep(50)
+        self.validator_lock.acquire()
+        self.validator_lock.release()
         return self._valid
 
     @QtCore.Slot(int)
