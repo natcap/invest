@@ -192,7 +192,7 @@ def _import_ui_class(gui_class): # TODO: worth a docstring?
 #       PS: Optionally, don't validate inputs, but do validate by default.
 
 
-def list_models():
+def list_models():  # TODO: worth a docstring, or consider whether you want this to be a function at all?  returning sorted(_MODEL_UIS.keys()) would be fine w/ me if it were inline
     return sorted(_MODEL_UIS.keys())
 
 
@@ -215,9 +215,9 @@ def format_models(): # TODO: maybe literally call it pretty_print_models?
             alias_string = '(%s)' % alias_string
 
         strings.append(template_string.format(
-                modelname=model_name.ljust(max_model_name_length),
-                aliases=alias_string.ljust(max_alias_name_length),
-                usage=usage_string))
+            modelname=model_name.ljust(max_model_name_length),
+            aliases=alias_string.ljust(max_alias_name_length),
+            usage=usage_string))
     return strings
 
 
