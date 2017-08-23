@@ -9,7 +9,7 @@ import logging
 import sys
 import collections
 import pprint
-import warnings
+import warnings  # TODO: unused import
 import multiprocessing
 
 try:
@@ -147,7 +147,7 @@ _MODEL_UIS = {
 }
 
 
-def _format_args(args_dict):
+def _format_args(args_dict):  # TODO: worth a docstring?
     sorted_args = sorted(six.iteritems(args_dict), key=lambda x: x[0])
 
     max_key_width = 0
@@ -161,7 +161,7 @@ def _format_args(args_dict):
     return args_string
 
 
-def _import_ui_class(gui_class):
+def _import_ui_class(gui_class): # TODO: worth a docstring?
     mod_name, classname = gui_class.split('.')
     module = importlib.import_module(
         name='.ui.%s' % mod_name,
@@ -196,10 +196,8 @@ def list_models():
     return sorted(_MODEL_UIS.keys())
 
 
-def format_models():
-    """
-    Pretty-print available models.
-    """
+def format_models(): # TODO: maybe literally call it pretty_print_models?
+    """Pretty-print available models."""
     print 'Available models:'
     model_names = list_models()
     max_model_name_length = max(len(name) for name in model_names)
