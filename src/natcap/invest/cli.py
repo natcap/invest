@@ -311,7 +311,7 @@ def main():
     This function provides a CLI for calling InVEST models, though it it very
     primitive.  Apart from displaying a help message and the version, this
     function will also (optionally) list the known models (based on the found
-    json filenames) and will fire up an IUI interface based on the model name
+    json filenames) and will fire up an IUI interface based on the model name  # TODO: no longer based on json filenames, right?
     provided.
     """
 
@@ -369,7 +369,6 @@ def main():
                                    help=('Do not validate inputs before '
                                          'running the model.'))
 
-
     list_group.add_argument('model', action=SelectModelAction, nargs='?',
                             help=('The model/tool to run. Use --list to show '
                                   'available models/tools. Identifiable model '
@@ -408,13 +407,13 @@ def main():
         # set the sip API in natcap.invest.ui.inputs.
         # Set it here, before we can do the actual importing.
         import sip
-        sip.setapi('QString', 2)
+        sip.setapi('QString', 2)  # TODO: comment on what 2 is?
 
         from natcap.invest.ui import inputs
     except ImportError:
         print ('Error: ui not installed:\n'
                '    pip install natcap.invest[ui]')
-        return 3
+        return 3  # TODO: comment on what 3 is?
 
     if args.headless:
         from natcap.invest import scenarios
@@ -434,7 +433,7 @@ def main():
             if 'workspace_dir' in paramset.args:
                 workspace = paramset.args['workspace_dir']
             else:
-                parser.exit(3, (
+                parser.exit(3, (  # TODO: comment on 3, or if it's a special exit code then maybe a _GLOBAL?
                     'Workspace not defined. \n'
                     'Use --workspace to specify or add a '
                     '"workspace_dir" parameter to your scenario.'))
@@ -481,7 +480,7 @@ def main():
 
                 if overwrite_denied:
                     # Exit the parser with an error message.
-                    parser.exit(2, ('Use --workspace to define an '
+                    parser.exit(2, ('Use --workspace to define an '  # TODO: comment on exit code
                                     'alternate workspace.  Aborting.'))
                 else:
                     LOGGER.warning(
@@ -500,7 +499,7 @@ def main():
             if args.scenario:
                 model_form.load_scenario(args.scenario)
         except Exception as error:
-            parser.exit('Could not load scenario: %s\n', error)
+            parser.exit('Could not load scenario: %s\n', error)  # TODO: should you raise the exception here too rather than try to run w/o a scenario?
 
         if args.workspace:
             model_form.workspace.set_value(args.workspace)

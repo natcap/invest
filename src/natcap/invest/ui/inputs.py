@@ -911,7 +911,7 @@ class FolderButton(AbstractFileSystemButton):
         self.open_method = self.dialog.open_folder
 
 
-class Input(QtCore.QObject):
+class Input(QtCore.QObject):  # TODO: We'd talked about this, and started to change it myself, but if there's a better name than `Input` and later on the object instances called `input`.  Like UIInput?  Or more verbose InVESTUIInput?  I don't feel that strongly about it, but might appreciate a less general name when we revisit this code in 5 years.
     """Base class for InVEST inputs.
 
     Key concepts for the input class include:
@@ -941,6 +941,7 @@ class Input(QtCore.QObject):
         * set_value(self, value)
     """
 
+    # TODO: worth a docstring about where/why these signals are used for the API user?
     value_changed = QtCore.Signal(six.text_type)
     interactivity_changed = QtCore.Signal(bool)
     sufficiency_changed = QtCore.Signal(bool)
@@ -989,7 +990,7 @@ class Input(QtCore.QObject):
         Returns:
             ``None``
         """
-        new_sufficiency = bool(self.value()) and self.interactive
+        new_sufficiency = bool(self.value()) and self.interactive  # TODO: do you need to check `value` rather than `self.value`. and are you doing the `bool` to check for None or for False?  I have a comment later on relating to a PEP8 standard that we should explicitly check for None if that's what we're doing rather than fall back on the boolean value of it.
 
         LOGGER.debug('Sufficiency for %s %s --> %s', self,
                      self.sufficient, new_sufficiency)
@@ -1055,7 +1056,7 @@ class Input(QtCore.QObject):
         """
         raise NotImplementedError
 
-    # TODO: any chance we could remove this function?  I think it's confusing to say something like set_noninteractive(False) to mean an object interactive.  Plus we can use set_interactive directly?
+    # TODO: any chance we could remove this function?  I think it's confusing to say something like set_noninteractive(False) to mean an object is interactive.  Plus it's not much work to use set_interactive directly?
     def set_noninteractive(self, noninteractive):
         """Set interactivity as the negative of the provided parameter.
 
@@ -2139,7 +2140,7 @@ class Container(QtWidgets.QGroupBox, Input):
         """
         self.setCheckable(value)
 
-    # TODO: I'd commented to you in person that `input` overrides Python's `input` function, but I don't know that I care so much one way or the other.  I'd be happy to see it called ui_input or something if it's easy.
+    # TODO: I'd commented to you in person that `input` overrides Python's `input` function, but I don't know that I care so much one way or the other.  I'd be happy to see it called ui_input or something if it's easy.  ...a day later... I also wrote a comment about the naming convention of `class Input`.
     def add_input(self, input):
         """Add an input to the Container.
 
@@ -2519,6 +2520,7 @@ class Form(QtWidgets.QWidget):
         if not hasattr(target, '__call__'):
             raise ValueError('Target %s must be callable' % target)
 
+        # TODO: for PEP8, can you define a "self._thread = None" in `__init__` so this isn't the first instance of it being defined?
         self._thread = execution.Executor(target,
                                           args,
                                           kwargs)
