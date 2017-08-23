@@ -221,7 +221,7 @@ def format_models(): # TODO: maybe literally call it pretty_print_models?
     return strings
 
 
-class ListModelsAction(argparse.Action):
+class ListModelsAction(argparse.Action):  # TODO: docstring for this class
     def __init__(self,
                  option_strings,
                  dest,
@@ -237,13 +237,13 @@ class ListModelsAction(argparse.Action):
             required=required,
             help=help, *args, **kwargs)
 
-    def __call__(self, parser, namespace, values, option_string):
+    def __call__(self, parser, namespace, values, option_string): # TODO: FYI, this marks as different function signature than overridden call, because `option_string` is optional i.e. `option_string=None`.  And maybe worth a short docstring?
         setattr(namespace, self.dest, self.const)
         parser.exit(message='\n'.join(format_models()) + '\n')
 
 
-class SelectModelAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string):
+class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
+    def __call__(self, parser, namespace, values, option_string):  # TODO: same as above w/ option_string=None + docstring
         if values in ['', None]:
             parser.print_help()
             print '\n'.join(format_models())
