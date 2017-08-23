@@ -1,7 +1,5 @@
 # coding=UTF-8
-"""
-Single entry point for all InVEST applications.
-"""
+"""Single entry point for all InVEST applications."""
 from __future__ import absolute_import
 
 import argparse
