@@ -500,8 +500,20 @@ def execute(args):
                 aggregate_table.write('\n')
 
 
+# This decorator ensures the input arguments are formatted for InVEST
 @validation.validator
-def validate(args, limit_to=None):  # TODO: can you put a docstring here?  It's hard for me to understand what `limit_to` is useful for.
+def validate(args, limit_to=None):
+    """Validate Crop Production Percentile Model.
+
+    Parameters:
+        args (dict): InVEST-wide args input argument for .execute function.
+        limit_to (string): if not None, only validate that key in args to
+            avoid unnecessary computation.
+
+    Returns:
+        list of warning strings if a warning occurred, or an empty list if
+            not.
+    """
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('model_data_path', require=True):
         if not os.path.isdir(args['model_data_path']):
