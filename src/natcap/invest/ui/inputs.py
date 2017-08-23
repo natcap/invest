@@ -2533,7 +2533,7 @@ class Form(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def _run_finished(self):
-        """A slot that is called when the exceutor thread finishes.
+        """A slot that is called when the executor thread finishes.
 
         Returns:
             ``None``
