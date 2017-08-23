@@ -266,7 +266,7 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
             exact_matches = [model for model in known_models if
                              model == values]
 
-            if len(matching_models) == 1:  # match an indentifying substring
+            if len(matching_models) == 1:  # match an identifying substring
                 modelname = matching_models[0]
             elif len(exact_matches) == 1:  # match an exact modelname
                 modelname = exact_matches[0]
