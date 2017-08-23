@@ -501,14 +501,14 @@ def execute(args):
 
 
 @validation.validator
-def validate(args, limit_to=None):
+def validate(args, limit_to=None):  # TODO: can you put a docstring here?  It's hard for me to understand what `limit_to` is useful for.
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('model_data_path', require=True):
         if not os.path.isdir(args['model_data_path']):
             context.warn('%s must be a directory' % args['model_data_path'],
                          keys=('model_data_path'))
 
-    if context.is_arg_complete('landcover_raster_path', require=True):
+    if context.is_arg_complete('landcover_raster_path', require=True):  # TODO: I'm trying to understand what happens if 'landocver_raster_path' is not defined in args.  It seems that the predicate returns false and the if statement falls through?
         gdal_warnings = []
         with validation.append_gdal_warnings(gdal_warnings):
             dataset = gdal.Open(args['landcover_raster_path'])

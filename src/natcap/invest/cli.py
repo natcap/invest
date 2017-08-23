@@ -20,7 +20,7 @@ except ValueError:
     # When we're in a pyinstaller build, this isn't a module.
     from natcap.invest import utils
 
-import six
+import six # TODO: should this go above the utils import for PEP8 standards, or does it have to go last?
 
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'pyname gui aliases')

@@ -1,9 +1,10 @@
+# TODO: add a module docstring?
 import contextlib
 import collections
 import inspect
 import logging
 import pprint
-import functools
+import functools  # TODO: unused import
 
 from osgeo import gdal
 
@@ -14,6 +15,7 @@ CHECK_ALL_KEYS = None
 LOGGER = logging.getLogger(__name__)
 
 
+# TODO: can we talk about whether this is the way we want to do this?  I don't know much about pythonic use of context managers, but I feel like it's a good paradigm for locking and releasing resources w/r/t exceptions and other regular program flow.  But this use feels like it's using a side effect of context managers to have a side effect on a parameter list.  I'd prefer to publish the "_append_gdal_warnings" function to this module, then manually handle the gdal error handling in the validate function.  I don't mind explicitly pushing and popping the error handler, especially if it's a validate function.  OR if there's a common check like "is this a path to a raster" making an explicit function for that.  But let's talk if we haven't already...
 @contextlib.contextmanager
 def append_gdal_warnings(warnings_list):
     """Append GDAL warnings within this context manager to a list.
@@ -23,9 +25,8 @@ def append_gdal_warnings(warnings_list):
             be appended.
 
     Example:
-        # Show an example here.
+        # Show an example here.  # TODO: show the example?
     """
-
     def _append_gdal_warnings(err_level, err_no, err_msg):
         warnings_list.append('[errno {err}] {msg}'.format(
             err=err_no, msg=err_msg.replace('\n', ' ')))
@@ -35,19 +36,19 @@ def append_gdal_warnings(warnings_list):
     gdal.PopErrorHandler()
 
 
-class ValidationContext:
+class ValidationContext:  # TODO: add a docstring and maybe even an (Object) if it doesn't inherit from anything?
     def __init__(self, args, limit_to):
         self.args = args
         self.limit_to = limit_to
         self.warnings = []
 
-    def warn(self, message, keys):
+    def warn(self, message, keys):  # TODO: add a docstring here
         if isinstance(keys, basestring):
             keys = (keys,)
         keys = tuple(sorted(keys))
         self.warnings.append((keys, message))
 
-    def is_arg_complete(self, key, require=False):
+    def is_arg_complete(self, key, require=False): # TODO: add a docstring here
         try:
             value = self.args[key]
             if isinstance(value, basestring):
@@ -69,7 +70,7 @@ class ValidationContext:
                            'or has no value'), keys=(key,))
 
 
-def validator(validate_func):
+def validator(validate_func):  # TODO: I wonder if a better name of this may be execute_validator?  to indicate it's specifically for the InVEST execute API?  I otherwise like that this is enforcing the input and return values of these things so the UI doesn't have a problem later.
     """Decorator to enforce characteristics of validation inputs and outputs.
 
     Attributes of inputs and outputs that are enforced are:
@@ -95,7 +96,7 @@ def validator(validate_func):
             # do your validation here
     """
     def _wrapped_validate_func(args, limit_to=None):
-
+        # TODO: since you're doing all this checking, should it also enforce that the `validate_func` is called `validate`?  Or maybe not because the UI is the one that has to find it in the first place?
         validate_func_args = inspect.getargspec(validate_func)
         assert validate_func_args.args == ['args', 'limit_to'], (
             'validate has invalid parameters: parameters are: %s.' % (
