@@ -645,7 +645,6 @@ class ValidationWorker(QtCore.QObject):
             ``None``
         """
         # Target must adhere to InVEST validation API.
-        # TODO: where does this go?  I didn't see it in the InVEST log when I ran crop percentile.
         LOGGER.info(('Starting validation thread with target=%s, args=%s, '
                      'limit_to=%s'), self.target, self.args, self.limit_to)
         try:
@@ -911,7 +910,7 @@ class FolderButton(AbstractFileSystemButton):
         self.open_method = self.dialog.open_folder
 
 
-class Input(QtCore.QObject):  # TODO: We'd talked about this, and started to change it myself, but if there's a better name than `Input` and later on the object instances called `input`.  Like UIInput?  Or more verbose InVESTUIInput?  I don't feel that strongly about it, but might appreciate a less general name when we revisit this code in 5 years.
+class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to change it myself, but if there's a better name than `Input` and later on the object instances called `input`.  Like UIInput?  Or more verbose InVESTUIInput?  I don't feel that strongly about it, but might appreciate a less general name when we revisit this code in 5 years.
     """Base class for InVEST inputs.
 
     Key concepts for the input class include:
@@ -1198,7 +1197,6 @@ class GriddedInput(Input):
             self.label_widget.stateChanged.connect(self._hideability_changed)
             self._hideability_changed(True)
 
-        # TODO: I see this is a Python lock, but also Qt provides a QMutex class that's its own version.  I don't know that it matters too much, but know in the past you'd had difficulty mixing Python concurrency with Qt concurrency.  http://doc.qt.io/qt-4.8/qmutex.html
         self.lock = threading.Lock()
 
         # initialize visibility, as we've changed the input's widgets
@@ -1213,13 +1211,13 @@ class GriddedInput(Input):
         self.lock.acquire()
 
         try:
-            if self.validator_ref:
+            if self.validator_ref:  # TODO: if this is checking against None, explicitly do so
                 LOGGER.info(
                     'Validation: validator taken from self.validator_ref: %s',
                     self.validator_ref)
                 validator_ref = self.validator_ref
             else:
-                if not self.args_key:
+                if not self.args_key: # TODO: if this is checking against None, explicitly do so
                     LOGGER.info(
                         ('Validation: No validator and no args_id defined; '
                          'skipping.  Input assumed to be valid. %s'),

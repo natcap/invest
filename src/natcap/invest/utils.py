@@ -15,13 +15,6 @@ from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
 
-LOGGER = logging.getLogger('natcap.invest.utils')
-
-LOGGER = logging.getLogger('natcap.invest.utils')
-
-LOGGER = logging.getLogger('natcap.invest.utils')
-
-
 LOGGER = logging.getLogger(__name__)
 LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
 DATE_FMT = "%m/%d/%Y %H:%M:%S "
