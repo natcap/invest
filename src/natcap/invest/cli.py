@@ -309,7 +309,7 @@ def main():
     Single entry point for all InVEST model user interfaces.
 
     This function provides a CLI for calling InVEST models, though it it very
-    primitive.  Apart from displaying a help messsage and the version, this
+    primitive.  Apart from displaying a help message and the version, this
     function will also (optionally) list the known models (based on the found
     json filenames) and will fire up an IUI interface based on the model name
     provided.
