@@ -255,7 +255,7 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
             known_aliases = {}
             for modelname, meta in _MODEL_UIS.iteritems():
                 for alias in meta.aliases:
-                    assert alias not in known_aliases, (
+                    assert alias not in known_aliases, (  # TODO: could there be a better place to check for this?  If an alias is repeated, it means we won't discover until a user tries to run a model on the command line.  If it's important and you expect it to be a common issue, maybe put it globally right after the dictionary is defined?
                         'Alias %s already defined for model %s') % (
                             alias, known_aliases[alias])
                     known_aliases[alias] = modelname
@@ -283,7 +283,7 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
         setattr(namespace, self.dest, modelname)
 
 
-def write_console_files(out_dir, extension):
+def write_console_files(out_dir, extension):  # TODO: where is this used?  I couldn't find anything with a grep.
     """
     Write out console files for each of the target models to the output dir.
 
