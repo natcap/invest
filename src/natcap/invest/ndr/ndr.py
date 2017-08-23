@@ -722,6 +722,8 @@ def _add_fields_to_shapefile(
     """
     for field_name in field_header_order:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_def.SetWidth(24)
+        field_def.SetPrecision(11)
         output_layer.CreateField(field_def)
 
     # Initialize each feature field to 0.0

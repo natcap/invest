@@ -586,9 +586,9 @@ class TestModel(unittest.TestCase):
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
         #       Total: 10.5 + 20.5 = 31.
-        netseq_test = numpy.array([[numpy.nan, 31.], [31., 31.]])
+        netseq_test = numpy.array([[cbc.NODATA_FLOAT, 31.], [31., 31.]])
         npv_test = numpy.array(
-            [[numpy.nan, 60.27801514], [60.27801514, 60.27801514]])
+            [[cbc.NODATA_FLOAT, 60.27801514], [60.27801514, 60.27801514]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
@@ -624,7 +624,7 @@ class TestModel(unittest.TestCase):
         # Initial Stock from Baseline: 5+5=10
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5
-        netseq_test = numpy.array([[numpy.nan, 10.5], [10.5, 10.5]])
+        netseq_test = numpy.array([[cbc.NODATA_FLOAT, 10.5], [10.5, 10.5]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
@@ -655,7 +655,7 @@ class TestModel(unittest.TestCase):
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
         #       Total: 10.5 + 20.5 = 31.
-        netseq_test = numpy.array([[numpy.nan, 31.], [31., 31.]])
+        netseq_test = numpy.array([[cbc.NODATA_FLOAT, 31.], [31., 31.]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen

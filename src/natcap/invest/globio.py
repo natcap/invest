@@ -292,6 +292,8 @@ def execute(args):
             original_datasource, summary_aoi_uri)
         layer = datasource_copy.GetLayer()
         msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
+        msa_summary_field_def.SetWidth(24)
+        msa_summary_field_def.SetPrecision(11)
         layer.CreateField(msa_summary_field_def)
 
         # make an identifying id per polygon that can be used for aggregation
