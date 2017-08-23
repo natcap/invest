@@ -1197,8 +1197,6 @@ class GriddedInput(Input):
             self.label_widget.stateChanged.connect(self._hideability_changed)
             self._hideability_changed(True)
 
-        self.lock = threading.Lock()
-
         # initialize visibility, as we've changed the input's widgets
         self.set_visible(self._visible_hint)
 
@@ -1208,8 +1206,6 @@ class GriddedInput(Input):
         Validation is intended to be triggered by events in the UI and not by
         the user, hence the private function signature.
         """
-        self.lock.acquire()
-
         try:
             if self.validator_ref:  # TODO: if this is checking against None, explicitly do so
                 LOGGER.info(
@@ -1253,7 +1249,6 @@ class GriddedInput(Input):
         except Exception:
             LOGGER.exception('Error found when validating %s, releasing lock.',
                              self)
-            self.lock.release()
             raise
 
     def _validation_finished(self, validation_warnings):
@@ -1293,8 +1288,6 @@ class GriddedInput(Input):
 
         current_validity = self._valid
         self._valid = new_validity
-        # TODO: I see releasing the lock here, but it presupposes that it's been acquired somewhere earlier in the call chain.  Would you consider modifying _validate to have a "finally" block that releases the lock instead of this?  That way the acquire and release is in the same code block.
-        self.lock.release()
         if current_validity != new_validity:
             self.validity_changed.emit(new_validity)
 
