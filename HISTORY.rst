@@ -20,6 +20,7 @@ Unreleased Changes
 * Deprecating the ArcGIS-based Coastal Protection model and ArcGIS-based data-preprocessing scripts.  The toolbox and scripts may still be found at https://bitbucket.org/natcap/invest.arcgis.
 * Fixing an issue in the carbon edge effect model that caused output values in the shapefile to be rounded to the nearest integer.
 * Fixing issue in SDR model that would occasionally cause users to see errors about field widths in the output shapefile generation.
+* Updated the erodibility sample raster that ships with InVEST for the SDR model.  The old version was in US units, in this version we convert to SI units as the model requires, and clipped the raster to the extents of the other stack to save disk space.
 
 3.3.3 (2017-02-06)
 ------------------
