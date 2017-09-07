@@ -333,7 +333,7 @@ def _execute(args):
             result[:] = l_nodata
             valid_mask = (l_array != l_nodata)
             result[valid_mask] = numpy.min(numpy.stack(
-                (gamma*l_array, l_array)), axis=0)
+                (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
             return result
         natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [file_registry['l_path']], l_avail_op,
