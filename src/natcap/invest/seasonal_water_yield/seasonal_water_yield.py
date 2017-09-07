@@ -514,6 +514,8 @@ def _execute(args):
         result[:] = b_sum_nodata
         result[valid_mask] = (
             b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
+        # if l_sum is zero, it's okay to make B zero says Perrine in an email
+        result[l_sum == 0] = 0.0
         result[(result < 0) & valid_mask] = 0
         return result
 
