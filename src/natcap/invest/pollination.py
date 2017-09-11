@@ -441,14 +441,19 @@ def execute(args):
         floral_resources_index_path_map[species] = floral_resources_index_path
 
         floral_resources_task = task_graph.add_task(
-            func=_normalized_convolve_2d,
+            func=pygeoprocessing.convolve_2d,
             args=(
                 (local_foraging_effectiveness_path, 1), (kernel_path, 1),
-                floral_resources_index_path, gdal.GDT_Float32, _INDEX_NODATA,
-                intermediate_output_dir),
+                floral_resources_index_path),
+            kwargs={
+                'ignore_nodata': True,
+                'mask_nodata': True,
+                'normalize_kernel': False,
+                },
             dependent_task_list=[
                 alpha_kernel_raster_task, local_foraging_effectiveness_task],
             target_path_list=[floral_resources_index_path])
+
         floral_resources_index_task_map[species] = floral_resources_task
         # calculate
         # pollinator_supply_index[species] PS(x,s) = FR(x,s) * HN(x,s) * sa(s)
@@ -473,12 +478,17 @@ def execute(args):
         convolve_ps_path = os.path.join(
             intermediate_output_dir, _CONVOLVE_PS_FILE_PATH % (
                 species, file_suffix))
+
         convolve_ps_task = task_graph.add_task(
-            func=_normalized_convolve_2d,
+            func=pygeoprocessing.convolve_2d,
             args=(
                 (pollinator_supply_index_path, 1), (kernel_path, 1),
-                convolve_ps_path, gdal.GDT_Float32, _INDEX_NODATA,
-                intermediate_output_dir),
+                convolve_ps_path),
+            kwargs={
+                'ignore_nodata': True,
+                'mask_nodata': True,
+                'normalize_kernel': False,
+                },
             dependent_task_list=[
                 alpha_kernel_raster_task, pollinator_supply_task],
             target_path_list=[convolve_ps_path])
@@ -669,93 +679,8 @@ def execute(args):
     target_farm_layer = None
     target_farm_vector = None
 
-    LOGGER.debug(wild_pollinator_results)
-    LOGGER.debug(total_farm_results)
-
     task_graph.close()
     task_graph.join()
-
-
-def _normalized_convolve_2d(
-        signal_path_band, kernel_path_band, target_raster_path,
-        target_datatype, target_nodata, workspace_dir):
-    """Perform a normalized 2D convolution.
-
-    Convolves the raster in `kernel_path_band` over `signal_path_band` and
-    divides the result by a convolution of the kernel over a non-nodata mask
-    of the signal.
-
-    Parameters:
-        signal_path_band (tuple): a 2 tuple of the form
-            (filepath to signal raster, band index).
-        kernel_path_band (tuple): a 2 tuple of the form
-            (filepath to kernel raster, band index).
-        target_path (string): filepath to target raster that's the convolution
-            of signal with kernel.  Output will be a single band raster of
-            same size and projection as `signal_path_band`. Any nodata pixels
-            that align with `signal_path_band` will be set to nodata.
-        target_datatype (GDAL type): a GDAL raster type to set the output
-            raster type to, as well as the type to calculate the convolution
-            in.
-        target_nodata (int/float): target_path's nodata value.
-        workspace_dir (string): path to a directory that exists where
-            threadsafe non-colliding temporary files can be written.
-
-    Returns:
-        None
-    """
-    with tempfile.NamedTemporaryFile(
-            prefix='mask_path_', dir=workspace_dir,
-            delete=False, suffix='.tif') as mask_file:
-        mask_path = mask_file.name
-
-    with tempfile.NamedTemporaryFile(
-            prefix='base_convolve_path_', dir=workspace_dir,
-            delete=False, suffix='.tif') as base_convolve_file:
-        base_convolve_path = base_convolve_file.name
-
-    with tempfile.NamedTemporaryFile(
-            prefix='mask_convolve_path_', dir=workspace_dir,
-            delete=False, suffix='.tif') as mask_convolve_file:
-        mask_convolve_path = mask_convolve_file.name
-
-    signal_info = pygeoprocessing.get_raster_info(signal_path_band[0])
-    signal_nodata = signal_info['nodata'][signal_path_band[1]-1]
-    pygeoprocessing.raster_calculator(
-        [signal_path_band], lambda x: x != signal_nodata,
-        mask_path, gdal.GDT_Byte, None,
-        calc_raster_stats=False)
-
-    pygeoprocessing.convolve_2d(
-        signal_path_band, kernel_path_band, base_convolve_path,
-        target_datatype=target_datatype,
-        target_nodata=target_nodata)
-    pygeoprocessing.convolve_2d(
-        (mask_path, 1), kernel_path_band, mask_convolve_path,
-        target_datatype=target_datatype,
-        target_nodata=target_nodata)
-
-    def _divide_op(base_convolve, normalization):
-        """Divide base_convolve by normalization + handle nodata/div by 0."""
-        result = numpy.empty(base_convolve.shape, dtype=numpy.float32)
-        valid_mask = (base_convolve != target_nodata)
-        nonzero_mask = normalization != 0.0
-        result[:] = target_nodata
-        result[valid_mask] = base_convolve[valid_mask]
-        result[valid_mask & nonzero_mask] /= normalization[
-            valid_mask & nonzero_mask]
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(base_convolve_path, 1), (mask_convolve_path, 1)], _divide_op,
-        target_raster_path, target_datatype, target_nodata,
-        calc_raster_stats=False)
-
-    for path in [mask_path, base_convolve_path, mask_convolve_path]:
-        try:
-            os.remove(path)
-        except OSError:
-            pass
 
 
 def _add_fid_field(base_vector_path, target_vector_path, fid_id):
