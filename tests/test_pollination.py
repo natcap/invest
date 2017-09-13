@@ -48,6 +48,9 @@ class PollinationTests(unittest.TestCase):
             'farm_vector_path': os.path.join(
                 TEST_DATA, 'blueberry_ridge_farm.shp'),
         }
+        # make an empty farm result to get coverage for removing if necessary
+        f = open(os.path.join(self.workspace_dir, 'farm_result.shp'), 'w')
+        f.close()
         pollination.execute(args)
         expected_farm_yields = {
             'blueberry': {

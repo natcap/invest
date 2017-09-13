@@ -718,21 +718,25 @@ def _rasterize_vector_onto_base(
 
 def _create_fid_vector_copy(
         base_vector_path, fid_field_id, target_vector_path):
-    """Create a copy of `base_vector_path` and add FID field to it."""
-    # make a random string to use as an FID field.  The chances of this
-    # colliding with an existing field name are so astronomical we aren't
-    # going to test if that happens.
+    """Create a copy of `base_vector_path` and add FID field to it.
+
+    Parameters:
+        base_vector_path (string): path to vector to copy
+        fid_field_id (string): FID field name to add to target that shouldn't
+            already exist in `base_vector_path`.
+        target_vector_path (string): path to target vector that is a copy
+            of the base, except for the new `fid_field_id` field that has
+            unique integer IDs for each feature.  This path must not already
+            exist.
+
+    Returns:
+        None.
+    """
     esri_driver = ogr.GetDriverByName("ESRI Shapefile")
     base_vector = ogr.Open(base_vector_path)
     base_layer = base_vector.GetLayer()
     base_defn = base_layer.GetLayerDefn()
 
-    if base_defn.GetFieldIndex(fid_field_id) != -1:
-        raise ValueError(
-            "Tried to add a new field %s, but is already defined in %s." % (
-                fid_field_id, base_vector_path))
-    if os.path.exists(target_vector_path):
-        os.remove(target_vector_path)
     target_vector = esri_driver.CopyDataSource(
         base_vector, target_vector_path)
     target_layer = target_vector.GetLayer()
