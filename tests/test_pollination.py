@@ -31,7 +31,7 @@ class PollinationTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(TEST_DATA)
     def test_pollination_regression(self):
         """Pollination: regression testing sample data."""
         from natcap.invest import pollination
@@ -39,25 +39,22 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
-            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
+                TEST_DATA, 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                SAMPLE_DATA, r'landcover_biophysical_table.csv'),
-            'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
+                TEST_DATA, r'landcover_biophysical_table.csv'),
+            'farm_vector_path': os.path.join(
+                TEST_DATA, 'blueberry_ridge_farm.shp'),
         }
         pollination.execute(args)
         expected_farm_yields = {
-            'almonds': {
-                'p_av_yield': 0.644620083626529,
-                't_av_yield': 0.994620083626529
-            },
-            'blueberries': {
-                'p_av_yield': 0.013510853634741,
-                't_av_yield': 0.363510853634741
+            'blueberry': {
+                'y_tot': 0.41237348829,
+                'y_wild': 0.06237348829
             },
         }
         result_vector = ogr.Open(
-            os.path.join(self.workspace_dir, 'farm_yield.shp'))
+            os.path.join(self.workspace_dir, 'farm_result.shp'))
         result_layer = result_vector.GetLayer()
         try:
             self.assertEqual(
@@ -90,13 +87,13 @@ class PollinationTests(unittest.TestCase):
         }
         pollination.execute(args)
         result_raster_path = os.path.join(
-            self.workspace_dir, 'pollinator_abundance_apis_index.tif')
+            self.workspace_dir, 'pollinator_abundance_apis_spring.tif')
         result_sum = 0.0
         for _, data_block in pygeoprocessing.iterblocks(result_raster_path):
             result_sum += numpy.sum(data_block)
         # the number below is just what the sum is when I inspected a run
         # that appeared to work.
-        self.assertAlmostEqual(result_sum, 5699.7158203125)
+        self.assertAlmostEqual(result_sum, 4429.97900390625)
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)

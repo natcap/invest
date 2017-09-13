@@ -1,6 +1,5 @@
 """Pollinator service model for InVEST."""
 import multiprocessing
-import tempfile
 import itertools
 import collections
 import re
@@ -1028,6 +1027,7 @@ def _parse_scenario_variables(args):
 
 class _CalculateHabitatNestingIndex(object):
     """Closure for HN(x, s) = max_n(N(x, n) ns(s,n)) calculation."""
+
     def __init__(
             self, substrate_path_map, species_substrate_index_map,
             target_habitat_nesting_index_path):
@@ -1083,6 +1083,7 @@ class _CalculateHabitatNestingIndex(object):
 
 class _SumRasters(object):
     """Sum all rasters where nodata is 0 unless the entire stack is nodata."""
+
     def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
@@ -1144,6 +1145,7 @@ class _PollinatorSupplyOp(object):
 
 class _PollinatorSupplyIndexOp(object):
     """Calculate PS(x,s) = FR(x,s) * HN(x,s) * sa(s)."""
+
     def __init__(self, species_abundance):
         self.species_abundance = species_abundance
         # try to get the source code of __call__ so task graph will recompute
@@ -1172,6 +1174,7 @@ class _PollinatorSupplyIndexOp(object):
 
 class _MultByScalar(object):
     """Calculate a raster * scalar.  Mask through nodata."""
+
     def __init__(self, scalar):
         self.scalar = scalar
         # try to get the source code of __call__ so task graph will recompute
@@ -1197,6 +1200,7 @@ class _MultByScalar(object):
 
 class _OnFarmPollinatorAbundance(object):
     """Calculate FP(x) = (PAT * (1 - h)) / (h * (1 - 2*pat)+pat))."""
+
     def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
@@ -1225,6 +1229,7 @@ class _OnFarmPollinatorAbundance(object):
 
 class _PYTOp(object):
     """Calculate PYT=min((mp+FP), 1)."""
+
     def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
@@ -1250,6 +1255,7 @@ class _PYTOp(object):
 
 class _PYWOp(object):
     """Calculate PYW=max(0,PYT-mp)."""
+
     def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
