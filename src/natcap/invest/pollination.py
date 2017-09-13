@@ -1,5 +1,4 @@
 """Pollinator service model for InVEST."""
-import multiprocessing
 import itertools
 import collections
 import re
