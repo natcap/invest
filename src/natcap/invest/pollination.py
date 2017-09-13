@@ -19,7 +19,8 @@ from . import utils
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
-_N_WORKERS = multiprocessing.cpu_count()
+# This can be set to a different value to use multiprocess taskgraph
+_N_WORKERS = 0
 
 _INDEX_NODATA = -1.0
 
@@ -680,43 +681,6 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
-
-
-def _add_fid_field(base_vector_path, target_vector_path, fid_id):
-    """Make a copy of base vector and an FID field to identify features.
-
-    Parameters:
-        base_vector_path (string): path to a single layer vector
-        target_vector_path (string): path to desired output vector, the
-            directory to the file must exist.
-        fid_id (string): field ID to add to base vector.  Must not already
-            be defined in base_vector_path.  Raises a ValueError if so.
-
-    Returns:
-        None
-    """
-    esri_driver = ogr.GetDriverByName("ESRI Shapefile")
-
-    base_vector = ogr.Open(base_vector_path)
-    base_layer = base_vector.GetLayer()
-    base_defn = base_layer.GetLayerDefn()
-
-    if base_defn.GetFieldIndex(fid_id) != -1:
-        raise ValueError(
-            "Tried to add a new field %s, but is already defined in %s." % (
-                fid_id, base_vector_path))
-    if os.path.exists(target_vector_path):
-        os.remove(target_vector_path)
-    target_vector = esri_driver.CopyDataSource(
-        base_vector, target_vector_path)
-    target_layer = target_vector.GetLayer()
-    target_layer.CreateField(ogr.FieldDefn(fid_id, ogr.OFTInteger))
-    for feature in target_layer:
-        feature.SetField(fid_id, feature.GetFID())
-        target_layer.SetFeature(feature)
-    target_layer = None
-    target_vector.SyncToDisk()
-    target_vector = None
 
 
 def _rasterize_vector_onto_base(
