@@ -76,6 +76,68 @@ class PollinationTests(unittest.TestCase):
             result_layer = None
             result_vector = None
 
+    @scm.skip_if_data_missing(TEST_DATA)
+    def test_pollination_missing_farm_header(self):
+        """Pollination: regression testing missing farm headers."""
+        from natcap.invest import pollination
+        pollination._N_WORKERS = 0
+
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                TEST_DATA, 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                TEST_DATA, r'landcover_biophysical_table.csv'),
+            'farm_vector_path': os.path.join(
+                TEST_DATA, 'missing_headers_farm.shp'),
+        }
+        # should error when not finding an expected farm header
+        with self.assertRaises(ValueError):
+            pollination.execute(args)
+
+    @scm.skip_if_data_missing(TEST_DATA)
+    def test_pollination_too_many_farm_seasons(self):
+        """Pollination: regression testing too many seasons in farm."""
+        from natcap.invest import pollination
+        pollination._N_WORKERS = 0
+
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                TEST_DATA, 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                TEST_DATA, r'landcover_biophysical_table.csv'),
+            'farm_vector_path': os.path.join(
+                TEST_DATA, 'too_many_seasons_farm.shp'),
+        }
+        # should error when not finding an expected farm header
+        with self.assertRaises(ValueError):
+            pollination.execute(args)
+
+    @scm.skip_if_data_missing(TEST_DATA)
+    def test_pollination_missing_guild_header(self):
+        """Pollination: regression testing extra guild headers."""
+        from natcap.invest import pollination
+        pollination._N_WORKERS = 0
+
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                TEST_DATA, 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(
+                TEST_DATA, 'missing_guild_table_header.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                TEST_DATA, r'landcover_biophysical_table.csv'),
+        }
+        # should error when not finding an expected farm header
+        with self.assertRaises(ValueError):
+            pollination.execute(args)
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_no_farm_regression(self):
