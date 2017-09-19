@@ -988,20 +988,25 @@ class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to 
         self.value_changed.connect(self._check_sufficiency)
         self.interactivity_changed.connect(self._check_sufficiency)
 
-    def _check_sufficiency(self, value=None):
+    def _check_sufficiency(self, value_or_interactivity):
         """Check the sufficiency of the input.
 
         Emits the signal ``self.sufficiency_changed`` if sufficiency has
         changed.
 
         Parameters:
-            value=None: The value passed from a signal that has triggered
-                this slot.
+            value_or_interactivity: The value passed from a signal that
+                has triggered this slot.
 
         Returns:
             ``None``
         """
-        new_sufficiency = bool(self.value()) and self.interactive  # TODO: do you need to check `value` rather than `self.value`. and are you doing the `bool` to check for None or for False?  I have a comment later on relating to a PEP8 standard that we should explicitly check for None if that's what we're doing rather than fall back on the boolean value of it.
+        # We're using self.value() instead of ``value_or_interactivity``
+        # parameter because the parameter could be either a string or a
+        # boolean representing either the value or the interactivity.
+        # Therefore, we need to check the local methods and variables to
+        # determine sufficiency.
+        new_sufficiency = len(self.value()) > 0 and self.interactive
 
         LOGGER.debug('Sufficiency for %s %s --> %s', self,
                      self.sufficient, new_sufficiency)
