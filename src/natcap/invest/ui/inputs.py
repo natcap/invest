@@ -1103,8 +1103,7 @@ class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to 
         """
         self.interactive = enabled
         for widget in self.widgets:
-            # TODO: Can you explicitly test for None here, per PEP8 "Also, beware of writing if x when you really mean if x is not None -- e.g. when testing whether a variable or argument that defaults to None was set to some other value. The other value might have a type (such as a container) that could be false in a boolean context!"
-            if not widget:  # widgets to be skipped are None
+            if widget is None:  # widgets to be skipped are None
                 continue
             widget.setEnabled(enabled)
         self.interactivity_changed.emit(self.interactive)
@@ -1122,8 +1121,7 @@ class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to 
         self.setParent(layout.parent().window())  # all widgets belong to Form
         current_row = layout.rowCount()
         for widget_index, widget in enumerate(self.widgets):
-            # TODO: is this also testing for widget == None?
-            if not widget:
+            if widget is None:
                 continue
 
             # set the default interactivity based on self.interactive
