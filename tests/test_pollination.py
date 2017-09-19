@@ -49,7 +49,7 @@ class PollinationTests(unittest.TestCase):
                 TEST_DATA, 'blueberry_ridge_farm.shp'),
         }
         # make an empty farm result to get coverage for removing if necessary
-        f = open(os.path.join(self.workspace_dir, 'farm_result.shp'), 'w')
+        f = open(os.path.join(self.workspace_dir, 'farm_indices.shp'), 'w')
         f.close()
         pollination.execute(args)
         expected_farm_yields = {
@@ -59,7 +59,7 @@ class PollinationTests(unittest.TestCase):
             },
         }
         result_vector = ogr.Open(
-            os.path.join(self.workspace_dir, 'farm_result.shp'))
+            os.path.join(self.workspace_dir, 'farm_indices.shp'))
         result_layer = result_vector.GetLayer()
         try:
             self.assertEqual(
