@@ -15,18 +15,18 @@ class Executor(QtCore.QObject, threading.Thread):
 
     finished = QtCore.Signal()
 
-    def __init__(self, target, args, kwargs):
+    def __init__(self, target, args=None, kwargs=None):
         """Initialize the Executor object.
 
         Parameters:
             target (callable): A function or unbound method that should be
                 called within the separate thread of control.
             args (iterable): An iterable of positional arguments that will
-                be passed to ``target``.  If ``None`` or ``False``, positional
+                be passed to ``target``.  If ``None``, positional
                 arguments will be ignored.
             kwargs (dict): A dict mapping string parameter names to parameter
-                values that should be passed to ``target``.  If ``None`` or
-                ``False``, keyword arguments will be ignored.
+                values that should be passed to ``target``.  If ``None``,
+                keyword arguments will be ignored.
 
         Returns:
             ``None``.
@@ -35,12 +35,11 @@ class Executor(QtCore.QObject, threading.Thread):
         threading.Thread.__init__(self)
         self.target = target
 
-        # TODO: I see you're allowing None or False, but is that something that's useful in practice?  Same w/ kwargs below
-        if not args:
+        if args is None:
             args = ()
         self.args = args
 
-        if not kwargs:
+        if kwargs is None:
             kwargs = {}
         self.kwargs = kwargs
 
