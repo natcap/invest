@@ -72,7 +72,6 @@ class Executor(QtCore.QObject, threading.Thread):
             self.failed = True
             self.exception = error
             self.traceback = traceback.format_exc()
-        # TODO: unless there's a reason for it, for style, I might either remove the 'finally' clause or move self.finished.emit() under the clause since the except clause is catching almost everything and passing through.
         finally:
             LOGGER.info('Execution finished')
-        self.finished.emit()
+            self.finished.emit()
