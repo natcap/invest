@@ -1337,9 +1337,6 @@ class GriddedInput(Input):
         Returns:
             The boolean validity of the input.
         """
-        # I'd rather use self.lock, but waiting until self.lock is released
-        # seems to cause a segfault.  This approach is good enough for now.
-        # TODO: I tried this format and this seems to be working fine w/r/t passing tests and working UI.
         self.validator_lock.acquire()
         self.validator_lock.release()
         return self._valid
