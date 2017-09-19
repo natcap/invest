@@ -512,8 +512,14 @@ class InfoButton(QtWidgets.QPushButton):
             self.setWhatsThis(default_message)
         self.clicked.connect(self._show_popup)
 
-    # TODO: unused `clicked`?  I'm guessing some of these are to match a function prototype?
-    def _show_popup(self, clicked=None):
+    def _show_popup(self, clicked=False):
+        """Slot for QPushButton.clicked() signal.
+
+        Parameters:
+            clicked=False: This parameter will always be false, so long as the
+                InfoButton instance isn't checkable.  The parameter still has
+                to be here to match the signature the clicked signal expects.
+        """
         QtWidgets.QWhatsThis.enterWhatsThisMode()
         QtWidgets.QWhatsThis.showText(self.mapToGlobal(self.pos()),
                                       self.whatsThis(), self)
