@@ -1525,13 +1525,14 @@ class Text(GriddedInput):
         Returns:
             ``None``
         """
-        # TODO: could these two if statements be replaced with the line `value = str(value).decode('utf-8')`?
-        if isinstance(value, int) or isinstance(value, float):
-            value = str(value)
 
-        if isinstance(value, str):
-            # convert a bytestring into a UTF-8 string.
-            value = value.decode('utf-8')
+        try:
+            if isinstance(value, (int, float)):
+                value = str(value)
+            value = unicode(value, 'utf-8')
+        except TypeError:
+            # value is already unicode, can't decode it further.
+            pass
 
         if len(value) > 0 and self.hideable:
             self.set_hidden(False)
