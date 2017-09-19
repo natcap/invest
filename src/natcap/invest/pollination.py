@@ -97,6 +97,9 @@ _FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_indices%s.shp'
 _TOTAL_FARM_YIELD_FIELD_ID = 'y_tot'
 # output field for wild pollinators on farms if farms are enabled
 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'y_wild'
+# output field for porportion of wild pollinators over the pollinator
+# dependent part of the yield
+_POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID = 'pdep_y_w'
 # output field for pollinator abundance on farm for the season of pollination
 _POLLINATOR_ABUDNANCE_FARM_FIELD_ID = 'p_abund'
 # expected pattern for seasonal floral resources in input shapefile (season)
@@ -687,9 +690,15 @@ def execute(args):
                     total_farm_results[fid]['count']))
 
             farm_feature.SetField(
+                _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID,
+                (wild_pollinator_results[fid]['sum'] /
+                 wild_pollinator_results[fid]['count']))
+
+            farm_feature.SetField(
                 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID,
                 nu * (wild_pollinator_results[fid]['sum'] /
                       wild_pollinator_results[fid]['count']))
+
             farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
             farm_feature.SetField(
                 _POLLINATOR_ABUDNANCE_FARM_FIELD_ID,
@@ -778,6 +787,12 @@ def _create_farm_result_vector(
     total_farm_yield_field_defn.SetWidth(25)
     total_farm_yield_field_defn.SetPrecision(11)
     target_layer.CreateField(total_farm_yield_field_defn)
+
+    pol_proportion_farm_yield_field_defn = ogr.FieldDefn(
+        _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID, ogr.OFTReal)
+    pol_proportion_farm_yield_field_defn.SetWidth(25)
+    pol_proportion_farm_yield_field_defn.SetPrecision(11)
+    target_layer.CreateField(pol_proportion_farm_yield_field_defn)
 
     wild_pol_farm_yield_field_defn = ogr.FieldDefn(
         _WILD_POLLINATOR_FARM_YIELD_FIELD_ID, ogr.OFTReal)
