@@ -1684,7 +1684,8 @@ class _Path(Text):
         self.textfield = _Path.FileField()
         self.textfield.textChanged.connect(self._text_changed)
 
-        # TODO: The None is spacing?
+        # None values are filler.  They represent an empty column in this row
+        # of inputs in the gridded layout.
         self.widgets = [
             self.valid_button,
             self.label_widget,
