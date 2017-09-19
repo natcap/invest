@@ -448,8 +448,11 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.openWorkspaceCB.setVisible(False)
         self.openWorkspaceButton.setVisible(True)
 
-    # TODO: unused `event` parameter?
-    def _request_workspace(self, event=None):
+    def _request_workspace(self):
+        """Slot for attempting to open a workspace.
+
+        This slot may be called by signals that do not pass a parameter value.
+        """
         open_workspace(self.out_folder)
 
     def close_window(self):
