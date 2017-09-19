@@ -58,8 +58,6 @@ _SCENARIO_SAVE_OPTS = {
 @contextlib.contextmanager
 def wait_on_signal(signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
-    # TODO: need a global here?  You aren't setting the value...
-    global QT_APP
     loop = QtCore.QEventLoop()
     signal.connect(loop.quit)
 

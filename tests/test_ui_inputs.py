@@ -43,7 +43,6 @@ LOGGER = logging.getLogger(__name__)
 @contextlib.contextmanager
 def wait_on_signal(signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
-    global QT_APP
     loop = QtCore.QEventLoop()
     signal.connect(loop.quit)
 
@@ -71,7 +70,6 @@ class _QtTest(unittest.TestCase):
         # this because these segfaults only happen when I'm running the suite of
         # unittests.  If something segfaults in the normal operation of
         # the model, I will absolutely fix that.
-        global QT_APP
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
         #QTest.qWait(50)
@@ -1243,7 +1241,6 @@ class ValidationWorkerTest(_QtTest):
 
 class FileButtonTest(_QtTest):
     def test_button_clicked(self):
-        global QT_APP
         from natcap.invest.ui.inputs import FileButton
         button = FileButton('Some title')
 
@@ -1267,7 +1264,6 @@ class FileButtonTest(_QtTest):
 
 class FolderButtonTest(_QtTest):
     def test_button_clicked(self):
-        global QT_APP
         from natcap.invest.ui.inputs import FolderButton
         button = FolderButton('Some title')
 
@@ -1428,7 +1424,6 @@ class FormTest(_QtTest):
         with wait_on_signal(form.run_finished, timeout=250):
             form.run(target=_target)
 
-        global QT_APP
         QT_APP.processEvents()
         # At the end of the run, the button should be visible.
         self.assertTrue(form.run_dialog.openWorkspaceButton.isVisible())
@@ -1468,7 +1463,6 @@ class FormTest(_QtTest):
                 form.run_dialog.openWorkspaceCB.setChecked(True)
                 self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-        global QT_APP
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
 
@@ -1504,7 +1498,6 @@ class FormTest(_QtTest):
         self.assertEqual(form.run_dialog.result(), QtWidgets.QDialog.Rejected)
 
     def test_run_prevent_dialog_close_event(self):
-        global QT_APP
         thread_event = threading.Event()
 
         class _SampleTarget(object):
@@ -1547,7 +1540,6 @@ class FormTest(_QtTest):
             self.fail(error)
 
     def test_run_error(self):
-        global QT_APP
         class _SampleTarget(object):
             @staticmethod
             def validate(args, limit_to=None):
@@ -1647,7 +1639,6 @@ class ExecutionTest(_QtTest):
         executor.start()
         thread_event.set()
         executor.join()
-        global QT_APP
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
         callback.assert_called_once()
@@ -1683,7 +1674,6 @@ class ExecutionTest(_QtTest):
         executor.start()
         thread_event.set()
         executor.join()
-        global QT_APP
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
         callback.assert_called_once()
@@ -1720,7 +1710,6 @@ class IntegrationTests(_QtTest):
         # When the checkbox is enabled, the container should become enabled,
         # but the container's contained widgets should still be noninteractive
         checkbox.set_value(True)
-        global QT_APP
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
 
@@ -2143,7 +2132,6 @@ class ModelTests(_QtTest):
             # trigger whole-model validation for coverage of callback.
             model_ui.workspace.set_value('foo')
 
-            global QT_APP
             QT_APP.processEvents()
 
             model_ui.close(prompt=False)
@@ -2321,7 +2309,6 @@ class ModelTests(_QtTest):
                 model._SCENARIO_DATA_ARCHIVE)
             model_ui.scenario_options_dialog.save_parameters.set_value(
                 archive_path)
-            global QT_APP
             QT_APP.processEvents()
             model_ui.scenario_options_dialog.accept()
 
@@ -2347,7 +2334,6 @@ class ModelTests(_QtTest):
                 True)
             model_ui.scenario_options_dialog.save_parameters.set_value(
                 archive_path)
-            global QT_APP
             QT_APP.processEvents()
             model_ui.scenario_options_dialog.accept()
 
