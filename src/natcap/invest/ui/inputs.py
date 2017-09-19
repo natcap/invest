@@ -164,7 +164,6 @@ class Validator(QtCore.QObject):
         Returns:
             ``None``
         """
-        # TODO: I changed this code base here to wait on the validation thread if it was already running.  This'll prevent a race condition from two separate validations running and reporting something.
         if self._validation_thread.isRunning():
             self._validation_thread.wait()
         self.started.emit()
@@ -183,12 +182,8 @@ class Validator(QtCore.QObject):
             LOGGER.debug(warnings_)
             self.finished.emit(warnings_)
 
-        # TODO: does it anymore?  We're guaranteed the thread is not running by this point so you can add signals in any order?
-        # Order matters with these callbacks.
         self._validation_worker.finished.connect(self._validation_thread.quit)
         self._validation_worker.finished.connect(_finished)
-        self._validation_worker.finished.connect(
-            self._validation_worker.deleteLater)
         self._validation_worker.start()
 
 
