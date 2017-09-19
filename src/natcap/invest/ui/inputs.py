@@ -1060,12 +1060,14 @@ class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to 
         """
         raise NotImplementedError
 
-    # TODO: other classes override this function but have a different function signature.  make senese to change this to `def set_value(self, value)`
-    def set_value(self):
+    def set_value(self, value):
         """Set the value of this input.
 
         Note:
             This method must be reimplemented by subclasses.
+
+        Parameters:
+            value: The new value of the Input.
 
         Raises:
             NotImplementedError
