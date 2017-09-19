@@ -1006,7 +1006,13 @@ class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to 
         # boolean representing either the value or the interactivity.
         # Therefore, we need to check the local methods and variables to
         # determine sufficiency.
-        new_sufficiency = len(self.value()) > 0 and self.interactive
+        try:
+            value_valid = len(self.value()) > 0
+        except TypeError:
+            # Some Inputs (containers, and checkboxes, most notably) return
+            # True or False based on whether they are checked.
+            value_valid = self.value()
+        new_sufficiency = value_valid and self.interactive
 
         LOGGER.debug('Sufficiency for %s %s --> %s', self,
                      self.sufficient, new_sufficiency)
@@ -1236,7 +1242,7 @@ class GriddedInput(Input):
                     self.validator_ref)
                 validator_ref = self.validator_ref
             else:
-                if self.args_key is not None:
+                if self.args_key is None:
                     LOGGER.info(
                         ('Validation: No validator and no args_id defined; '
                          'skipping.  Input assumed to be valid. %s'),

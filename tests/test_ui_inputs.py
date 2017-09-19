@@ -177,7 +177,7 @@ class InputTest(_QtTest):
         input_instance = self.__class__.create_input(label='foo')
         if input_instance.__class__.__name__ in ('Input', 'GriddedInput'):
             with self.assertRaises(NotImplementedError):
-                input_instance.set_value()
+                input_instance.set_value('foo')
         else:
             self.fail('Test class must reimplement this test method')
 
