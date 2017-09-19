@@ -1230,13 +1230,13 @@ class GriddedInput(Input):
         the user, hence the private function signature.
         """
         try:
-            if self.validator_ref:  # TODO: if this is checking against None, explicitly do so
+            if self.validator_ref is not None:
                 LOGGER.info(
                     'Validation: validator taken from self.validator_ref: %s',
                     self.validator_ref)
                 validator_ref = self.validator_ref
             else:
-                if not self.args_key: # TODO: if this is checking against None, explicitly do so
+                if self.args_key is not None:
                     LOGGER.info(
                         ('Validation: No validator and no args_id defined; '
                          'skipping.  Input assumed to be valid. %s'),
@@ -1309,8 +1309,7 @@ class GriddedInput(Input):
             tooltip_errors = ''
 
         for widget in self.widgets[0:2]:  # skip file selection, help buttons
-            # TODO: is this testing against a "None"?  If so: "widget is not None"?
-            if widget:
+            if widget is not None:
                 widget.setToolTip(tooltip_errors)
 
         current_validity = self._valid
@@ -1358,8 +1357,7 @@ class GriddedInput(Input):
             ``None``
         """
         for widget in self.widgets[2:]:
-            # TODO: is this testing against None?  "widget is None"
-            if not widget:
+            if widget is None:
                 continue
             widget.setHidden(not bool(show_widgets))
         self.hidden_changed.emit(bool(show_widgets))
