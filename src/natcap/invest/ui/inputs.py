@@ -1725,7 +1725,9 @@ class Folder(_Path):
                        hideable, validator=validator)
         self.path_select_button = FolderButton('Select folder')
         self.path_select_button.path_selected.connect(self.textfield.setText)
-        # TODO: comment on [3]?
+
+        # index 3 is the column place right before the help button, after the
+        # textfield.
         self.widgets[3] = self.path_select_button
 
         if self.hideable:
@@ -1762,7 +1764,9 @@ class File(_Path):
                        hideable, validator=validator)
         self.path_select_button = FileButton('Select file')
         self.path_select_button.path_selected.connect(self.textfield.setText)
-        # TODO: Can you comment on what the [3] index is here?
+
+        # Index 3 is the column to the right of the textfield, to the left of
+        # the help button.
         self.widgets[3] = self.path_select_button
 
         if self.hideable:
