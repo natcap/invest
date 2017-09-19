@@ -938,9 +938,22 @@ class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to 
 
         * value(self)
         * set_value(self, value)
+
+    Signals used by this class:
+
+        * ``value_changed`` (string): Emitted when the value of the Input
+            instance changes.  Slots are called with the string value of the
+            input as the one and only parameter.
+        * ``interactivity_changed`` (bool): Emitted when an element's
+            interactivity changes, as when set by ``set_interactive``.  The
+            parameter passed to slots is the new interactivity of the input.
+            So, if the input is becoming interactive, the parameter passed from
+            interactivity_changed will be ``True``.
+        * ``sufficiency_changed`` (bool).  Emitted when the input's sufficiency
+            changes.  See note above on sufficiency.  The parameter passed to
+            slots indicates the new sufficiency.
     """
 
-    # TODO: worth a docstring about where/why these signals are used for the API user?
     value_changed = QtCore.Signal(six.text_type)
     interactivity_changed = QtCore.Signal(bool)
     sufficiency_changed = QtCore.Signal(bool)
