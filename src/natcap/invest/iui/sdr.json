@@ -50,7 +50,7 @@
           "args_id": "erosivity_path",
           "type": "file",
           "label": "Rainfall Erosivity Index (R) (Raster)",
-          "defaultValue": "../Base_Data/Freshwater/erosivity",
+          "defaultValue": "../Base_Data/Freshwater/erodibility_SI_clip.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
