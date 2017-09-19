@@ -1293,17 +1293,16 @@ class GriddedInput(Input):
         """
         new_validity = not bool(validation_warnings)
         if self.args_key:
-            # TODO: several appliccable vs applicable typos
-            appliccable_warnings = [w[1] for w in validation_warnings
-                                    if self.args_key in w[0]]
+            applicable_warnings = [w[1] for w in validation_warnings
+                                   if self.args_key in w[0]]
         else:
-            appliccable_warnings = [w[1] for w in validation_warnings]
+            applicable_warnings = [w[1] for w in validation_warnings]
 
         LOGGER.info('Cleaning up validation for %s.  Warnings: %s.  Valid: %s',
-                    self, appliccable_warnings, new_validity)
-        if appliccable_warnings:
-            self.valid_button.set_errors(appliccable_warnings)
-            tooltip_errors = '<br/>'.join(appliccable_warnings)
+                    self, applicable_warnings, new_validity)
+        if applicable_warnings:
+            self.valid_button.set_errors(applicable_warnings)
+            tooltip_errors = '<br/>'.join(applicable_warnings)
         else:
             self.valid_button.set_errors([])
             tooltip_errors = ''
