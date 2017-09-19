@@ -1202,7 +1202,10 @@ class GriddedInput(Input):
         else:
             self.help_button = QtWidgets.QWidget()  # empty widget!
 
-        # TODO: can you comment on what the Nones are for?  I assume empty space?
+        # Within a GriddedInput, a single Input instance occupies a whole row
+        # of the grid layout.  If the input should occupy only some of the
+        # columns in the grid, represent a grid cell being blank here with a
+        # None value.
         self.widgets = [
             self.valid_button,
             self.label_widget,
