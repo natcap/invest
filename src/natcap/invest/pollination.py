@@ -92,11 +92,13 @@ _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield%s.tif'
 # wild pollinator raster replace (file_suffix)
 _WILD_POLLINATOR_YIELD_FILE_PATTERN = 'wild_pollinator_yield%s.tif'
 # final aggregate farm shapefile file pattern replace (file_suffix)
-_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_result%s.shp'
+_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_indices%s.shp'
 # output field on target shapefile if farms are enabled
 _TOTAL_FARM_YIELD_FIELD_ID = 'y_tot'
 # output field for wild pollinators on farms if farms are enabled
 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'y_wild'
+# output field for pollinator abundance on farm for the season of pollination
+_POLLINATOR_ABUDNANCE_FARM_FIELD_ID = 'p_abund'
 # expected pattern for seasonal floral resources in input shapefile (season)
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
 # regular expression version of _FARM_FLORAL_RESOURCES_PATTERN
@@ -537,6 +539,7 @@ def execute(args):
 
     farm_pollinator_season_path_list = []
     farm_pollinator_season_task_list = []
+    total_pollinator_abundance_task = {}
     for season in scenario_variables['season_list']:
         # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
         total_pollinator_abundance_index_path = os.path.join(
@@ -547,7 +550,7 @@ def execute(args):
             (pollinator_abundance_path_map[(species, season)], 1)
             for species in scenario_variables['species_list']]
 
-        total_pollinator_abundance_task = task_graph.add_task(
+        total_pollinator_abundance_task[season] = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 pollinator_abudnance_season_path_band_list, _SumRasters(),
@@ -582,7 +585,7 @@ def execute(args):
                 _OnFarmPollinatorAbundance(), farm_pollinator_season_path,
                 gdal.GDT_Float32, _INDEX_NODATA),
             dependent_task_list=[
-                half_saturation_task, total_pollinator_abundance_task],
+                half_saturation_task, total_pollinator_abundance_task[season]],
             target_path_list=[farm_pollinator_season_path]))
         farm_pollinator_season_path_list.append(farm_pollinator_season_path)
 
@@ -641,16 +644,32 @@ def execute(args):
     if os.path.exists(target_farm_result_path):
         os.remove(target_farm_result_path)
     reproject_farm_task.join()
-    _create_fid_vector_copy(
+    _create_farm_result_vector(
         farm_vector_path, fid_field_id, target_farm_result_path)
+
+    # aggregate wild pollinator yield over farm
     wild_pollinator_task.join()
     wild_pollinator_results = pygeoprocessing.zonal_statistics(
-        (wild_pollinator_yield_path, 1), target_farm_result_path, fid_field_id)
+        (wild_pollinator_yield_path, 1), target_farm_result_path,
+        fid_field_id)
 
+    # aggregate yield over a farm
     pyt_task.join()
     total_farm_results = pygeoprocessing.zonal_statistics(
         (total_pollinator_yield_path, 1), target_farm_result_path,
         fid_field_id)
+
+    # aggregate the pollinator abundance results over the farms
+    pollinator_abundance_results = {}
+    for season in scenario_variables['season_list']:
+        total_pollinator_abundance_index_path = os.path.join(
+            output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
+                season, file_suffix))
+        total_pollinator_abundance_task[season].join()
+        pollinator_abundance_results[season] = (
+            pygeoprocessing.zonal_statistics(
+                (total_pollinator_abundance_index_path, 1),
+                target_farm_result_path, fid_field_id))
 
     target_farm_vector = ogr.Open(target_farm_result_path, 1)
     target_farm_layer = target_farm_vector.GetLayer()
@@ -671,6 +690,12 @@ def execute(args):
                 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID,
                 nu * (wild_pollinator_results[fid]['sum'] /
                       wild_pollinator_results[fid]['count']))
+            farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
+            farm_feature.SetField(
+                _POLLINATOR_ABUDNANCE_FARM_FIELD_ID,
+                pollinator_abundance_results[farm_season][fid]['sum'] /
+                pollinator_abundance_results[farm_season][fid]['count'])
+
         target_farm_layer.SetFeature(farm_feature)
     target_farm_layer.DeleteField(
         target_farm_layer.FindFieldIndex(fid_field_id, 1))
@@ -716,7 +741,7 @@ def _rasterize_vector_onto_base(
     vector = None
 
 
-def _create_fid_vector_copy(
+def _create_farm_result_vector(
         base_vector_path, fid_field_id, target_vector_path):
     """Create a copy of `base_vector_path` and add FID field to it.
 
@@ -727,7 +752,10 @@ def _create_fid_vector_copy(
         target_vector_path (string): path to target vector that is a copy
             of the base, except for the new `fid_field_id` field that has
             unique integer IDs for each feature.  This path must not already
-            exist.
+            exist.  It also has new entries for all the result fields:
+                _TOTAL_FARM_YIELD_FIELD_ID
+                _WILD_POLLINATOR_FARM_YIELD_FIELD_ID
+
 
     Returns:
         None.
@@ -756,6 +784,12 @@ def _create_fid_vector_copy(
     wild_pol_farm_yield_field_defn.SetWidth(25)
     wild_pol_farm_yield_field_defn.SetPrecision(11)
     target_layer.CreateField(wild_pol_farm_yield_field_defn)
+
+    farm_pollinator_abundance_defn = ogr.FieldDefn(
+        _POLLINATOR_ABUDNANCE_FARM_FIELD_ID, ogr.OFTReal)
+    farm_pollinator_abundance_defn.SetWidth(25)
+    farm_pollinator_abundance_defn.SetPrecision(11)
+    target_layer.CreateField(farm_pollinator_abundance_defn)
 
     target_layer = None
     target_vector.SyncToDisk()
