@@ -97,7 +97,7 @@ _FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_indices%s.shp'
 _TOTAL_FARM_YIELD_FIELD_ID = 'y_tot'
 # output field for wild pollinators on farms if farms are enabled
 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'y_wild'
-# output field for porportion of wild pollinators over the pollinator
+# output field for proportion of wild pollinators over the pollinator
 # dependent part of the yield
 _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID = 'pdep_y_w'
 # output field for pollinator abundance on farm for the season of pollination
@@ -652,7 +652,7 @@ def execute(args):
 
     # aggregate wild pollinator yield over farm
     wild_pollinator_task.join()
-    wild_pollinator_results = pygeoprocessing.zonal_statistics(
+    wild_pollinator_yield_aggregate = pygeoprocessing.zonal_statistics(
         (wild_pollinator_yield_path, 1), target_farm_result_path,
         fid_field_id)
 
@@ -683,22 +683,26 @@ def execute(args):
         fid = int(farm_feature.GetField(fid_field_id))
         if total_farm_results[fid]['count'] > 0:
             # total pollinator farm yield is 1-*nu(1-tot_pollination_coverage)
+            # this is YT from the user's guide (y_tot)
             farm_feature.SetField(
                 _TOTAL_FARM_YIELD_FIELD_ID,
                 1 - nu * (
                     1 - total_farm_results[fid]['sum'] /
                     total_farm_results[fid]['count']))
 
+            # this is PYW ('pdep_y_w')
             farm_feature.SetField(
                 _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID,
-                (wild_pollinator_results[fid]['sum'] /
-                 wild_pollinator_results[fid]['count']))
+                (wild_pollinator_yield_aggregate[fid]['sum'] /
+                 wild_pollinator_yield_aggregate[fid]['count']))
 
+            # this is YW ('y_wild')
             farm_feature.SetField(
                 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID,
-                nu * (wild_pollinator_results[fid]['sum'] /
-                      wild_pollinator_results[fid]['count']))
+                nu * (wild_pollinator_yield_aggregate[fid]['sum'] /
+                      wild_pollinator_yield_aggregate[fid]['count']))
 
+            # this is PAT ('p_abund')
             farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
             farm_feature.SetField(
                 _POLLINATOR_ABUDNANCE_FARM_FIELD_ID,
