@@ -2464,6 +2464,10 @@ class Form(QtWidgets.QWidget):
         """
         QtWidgets.QWidget.__init__(self)
 
+        # self._thread is redefined as an Executor when we run the target
+        # callable.
+        self._thread = None
+
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
@@ -2551,7 +2555,6 @@ class Form(QtWidgets.QWidget):
         if not hasattr(target, '__call__'):
             raise ValueError('Target %s must be callable' % target)
 
-        # TODO: for PEP8, can you define a "self._thread = None" in `__init__` so this isn't the first instance of it being defined?
         self._thread = execution.Executor(target,
                                           args,
                                           kwargs)
