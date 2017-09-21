@@ -1747,7 +1747,7 @@ class OptionsDialogTest(_QtTest):
 
         options_dialog = model.OptionsDialog()
         with self.assertRaises(NotImplementedError):
-            options_dialog.postprocess()
+            options_dialog.postprocess(0)
 
 
 class SettingsDialogTest(_SettingsSandbox):
