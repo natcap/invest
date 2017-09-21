@@ -910,7 +910,7 @@ class FolderButton(AbstractFileSystemButton):
         self.open_method = self.dialog.open_folder
 
 
-class Input(QtCore.QObject):  # UIInput: We'd talked about this, and started to change it myself, but if there's a better name than `Input` and later on the object instances called `input`.  Like UIInput?  Or more verbose InVESTUIInput?  I don't feel that strongly about it, but might appreciate a less general name when we revisit this code in 5 years.
+class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and started to change it myself, but if there's a better name than `Input` and later on the object instances called `input`.  Like UIInput?  Or more verbose InVESTUIInput?  I don't feel that strongly about it, but might appreciate a less general name when we revisit this code in 5 years.
     """Base class for InVEST inputs.
 
     Key concepts for the input class include:
