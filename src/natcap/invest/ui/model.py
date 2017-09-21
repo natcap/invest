@@ -1316,7 +1316,8 @@ class Model(QtWidgets.QMainWindow):
         # If no lastrun args saved, "{}" (empty json object) is returned
         lastrun_args = self.settings.value("lastrun", "{}")
         self.load_args(json.loads(lastrun_args))
-        # TODO: what's the 10000 mean?
+
+        # Show the message in the status bar for 10s.
         self.statusBar().showMessage('Loaded parameters from previous run.',
                                      10000)
         self.window_title.filename = 'loaded from autosave'
