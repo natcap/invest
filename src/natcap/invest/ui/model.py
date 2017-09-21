@@ -136,13 +136,13 @@ class OptionsDialog(QtWidgets.QDialog):
             LOGGER.info('postprocess method not implemented for object '
                         '%s' % repr(self))
 
-    def postprocess(self, exitcode=0):
+    def postprocess(self, exitcode):
         """Save the options in the dialog.
 
         Subclasses of ``OptionsDialog`` must reimplement this method.
 
         Parameters:
-            exitcode=0 (int): The exit code of the dialog.
+            exitcode (int): The exit code of the dialog.
 
         Raises:
             NotImplementedError: This method must be reimplemented.
@@ -270,9 +270,11 @@ class SettingsDialog(OptionsDialog):
             'cache_dir', cache_dir, unicode))
         self._container.add_input(self.cache_directory)
 
-    #TODO: the base postprocess has a default of 0 for `exitcode` should this also?  Or remove parent's default?
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
+
+        Parameters:
+            exitcode (int): The exit code of the dialog.
 
         Returns:
             ``None``
