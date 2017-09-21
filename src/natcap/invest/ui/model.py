@@ -1088,7 +1088,8 @@ class Model(QtWidgets.QMainWindow):
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
-        # TODO: what's the 10000 mean?
+
+        # Show the message in the status bar for 10s.
         self.statusBar().showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
 
