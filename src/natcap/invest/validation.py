@@ -1,10 +1,9 @@
-# TODO: add a module docstring?
+"""Common validation utilities for InVEST models."""
 import contextlib
 import collections
 import inspect
 import logging
 import pprint
-import functools  # TODO: unused import
 
 from osgeo import gdal
 
