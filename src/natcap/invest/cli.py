@@ -148,6 +148,17 @@ _MODEL_UIS = {
         aliases=('hs',)),
 }
 
+# Build up an index mapping aliase to modelname.
+# ``modelname`` is the key to the _MODEL_UIS dict, above.
+_MODEL_ALIASES = {}
+for _modelname, _meta in _MODEL_UIS.iteritems():
+    for _alias in _meta.aliases:
+        assert _alias not in _MODEL_ALIASES, (
+            'Alias %s already defined for model %s') % (
+                _alias, _MODEL_ALIASES[_alias])
+        _MODEL_ALIASES[_alias] = _modelname
+
+
 
 def _format_args(args_dict):
     """Nicely format an arguments dictionary for writing to a stream.
@@ -260,15 +271,6 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
         else:
             known_models = sorted(_MODEL_UIS.keys())
 
-            # map {alias: model}
-            known_aliases = {}
-            for modelname, meta in _MODEL_UIS.iteritems():
-                for alias in meta.aliases:
-                    assert alias not in known_aliases, (  # TODO: could there be a better place to check for this?  If an alias is repeated, it means we won't discover until a user tries to run a model on the command line.  If it's important and you expect it to be a common issue, maybe put it globally right after the dictionary is defined?
-                        'Alias %s already defined for model %s') % (
-                            alias, known_aliases[alias])
-                    known_aliases[alias] = modelname
-
             matching_models = [model for model in known_models if
                                model.startswith(values)]
 
@@ -279,8 +281,8 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
                 modelname = matching_models[0]
             elif len(exact_matches) == 1:  # match an exact modelname
                 modelname = exact_matches[0]
-            elif values in known_aliases:  # match an alias
-                modelname = known_aliases[values]
+            elif values in _MODEL_ALIASES:  # match an alias
+                modelname = _MODEL_ALIASES[values]
             elif len(matching_models) == 0:
                 parser.exit("Error: '%s' not a known model" % values)
             else:
