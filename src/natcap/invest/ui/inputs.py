@@ -2374,7 +2374,7 @@ class Multi(Container):
         Returns:
             ``None``
         """
-        if not new_input:
+        if new_input is None:
             new_input = self.callable_()
 
         new_input.add_to(self.layout())
@@ -2383,8 +2383,10 @@ class Multi(Container):
         layout = self.layout()
         rightmost_item = layout.itemAtPosition(
             layout.rowCount()-1, layout.columnCount()-1)
-        # TODO: could you comment on what this is doing?  Are you checking for None?
-        if not rightmost_item:
+
+        # When there isn't a widget in the last column, we can put the minus
+        # button there instead of using another widget space.
+        if rightmost_item is None:
             col_index = layout.columnCount()-1
         else:
             col_index = layout.columnCount()
