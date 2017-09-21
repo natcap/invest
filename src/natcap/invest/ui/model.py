@@ -428,8 +428,12 @@ class WindowTitle(QtCore.QObject):
         modified (bool): Whether the scenario file has been modified.  If so,
             a ``'*'`` is displayed next to the scenario filename.
     """
-    # TODO: just want to check that it makes sense to have these be Class attributes other than object attributes?  Looks like it's referred to later as an object attribute, and I could see an issue if there were multiple WindowTitles in one process?
+    # Signals must be defined as class attributes, and are transformed into
+    # instance attributes on object initialization.
     title_changed = QtCore.Signal(unicode)
+
+    # Python strings are immutable; this can be accessed like an instance
+    # variable.
     format_string = "{modelname}: {filename}{modified}"
 
     def __init__(self, modelname=None, filename=None, modified=False):
@@ -471,7 +475,7 @@ class WindowTitle(QtCore.QObject):
             The string wundow title.
         """
         try:
-            return self.format_string.format(
+            return WindowTitle.format_string.format(
                 modelname=self.modelname if self.modelname else 'InVEST',
                 filename=self.filename if self.filename else 'new scenario',
                 modified='*' if self.modified else '')
