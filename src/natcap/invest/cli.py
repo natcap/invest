@@ -199,20 +199,16 @@ def _format_args(args_dict):
 #       PS: Optionally, don't validate inputs, but do validate by default.
 
 
-def list_models():  # TODO: worth a docstring, or consider whether you want this to be a function at all?  returning sorted(_MODEL_UIS.keys()) would be fine w/ me if it were inline
-    return sorted(_MODEL_UIS.keys())
-
-
 def format_models(): # TODO: maybe literally call it pretty_print_models?
     """Pretty-print available models."""
     print 'Available models:'
-    model_names = list_models()
+    model_names = sorted(_MODEL_UIS.keys())
     max_model_name_length = max(len(name) for name in model_names)
     max_alias_name_length = max(len(', '.join(meta.aliases))
                                 for meta in _MODEL_UIS.values())
     template_string = '    {modelname} {aliases}   {usage}'
     strings = []
-    for model_name in list_models():
+    for model_name in sorted(_MODEL_UIS.keys()):
         usage_string = '(No GUI available)'
         if _MODEL_UIS[model_name].gui is not None:
             usage_string = ''
@@ -256,7 +252,7 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
             print '\n'.join(format_models())
             parser.exit()
         else:
-            known_models = list_models()
+            known_models = sorted(_MODEL_UIS.keys())
 
             # map {alias: model}
             known_aliases = {}
@@ -303,7 +299,7 @@ def write_console_files(out_dir, extension):  # TODO: where is this used?  I cou
     """
     content_template = "invest %(model)s\n"
     filename_template = os.path.join(out_dir, "invest_%(modelname)s_.%(ext)s")
-    for model_name in list_models():
+    for model_name in sorted(_MODEL_UIS.keys()):
         console_filepath = filename_template % {
             'modelname': model_name, 'ext': extension}
         console_file = open(console_filepath)
