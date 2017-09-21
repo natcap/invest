@@ -952,7 +952,7 @@ class Model(QtWidgets.QMainWindow):
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
-        # TODO: what's the 10000 mean?
+        # Show the alert message for 10s (10,000 milliseconds)
         self.statusBar().showMessage(alert_message, 10000)
         self.window_title.filename = os.path.basename(save_filepath)
 
