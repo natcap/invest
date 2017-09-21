@@ -501,7 +501,12 @@ def main():
             if args.scenario:
                 model_form.load_scenario(args.scenario)
         except Exception as error:
-            parser.exit('Could not load scenario: %s\n', error)  # TODO: should you raise the exception here too rather than try to run w/o a scenario?
+            # If we encounter an exception while loading the scenario, log the
+            # exception (so it can be seen if we're running with appropriate
+            # verbosity) and exit the argparse application with exit code 1 and
+            # a helpful error message.
+            LOGGER.exception('Could not load scenario')
+            parser.exit(1, 'Could not load scenario: %s\n' % str(error))
 
         if args.workspace:
             model_form.workspace.set_value(args.workspace)
