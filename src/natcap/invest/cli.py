@@ -175,13 +175,6 @@ def _format_args(args_dict):
     return args_string
 
 
-def _import_ui_class(gui_class): # TODO: worth a docstring?
-    mod_name, classname = gui_class.split('.')
-    module = importlib.import_module(
-        name='.ui.%s' % mod_name,
-        package='natcap.invest')
-    return getattr(module, classname)
-
 # metadata for models: full modelname, first released, full citation,
 # local documentation name.
 
@@ -504,11 +497,20 @@ def main():
             if 'workspace_dir' not in paramset.args:
                 paramset.args['workspace_dir'] = args.workspace
 
+            # execute the model's execute function with the loaded args
             getattr(model_module, 'execute')(paramset.args)
     else:
-        model_classname = _import_ui_class(_MODEL_UIS[args.model].gui)
-        model_form = model_classname()
+        # import the GUI from the known class
+        gui_class = _MODEL_UIS[args.model].gui
+        module_name, classname = gui_class.split('.')
+        module = importlib.import_module(
+            name='.ui.%s' % module_name,
+            package='natcap.invest')
 
+        # Instantiate the form
+        model_form = getattr(module, classname)()
+
+        # load the scenario if one was provided
         try:
             if args.scenario:
                 model_form.load_scenario(args.scenario)
@@ -523,9 +525,11 @@ def main():
         if args.workspace:
             model_form.workspace.set_value(args.workspace)
 
+        # Run the UI's event loop
         model_form.run(quickrun=args.quickrun)
         app_exitcode = inputs.QT_APP.exec_()
 
+        # Handle a graceful exit
         if model_form.form.run_dialog.messageArea.error:
             parser.exit(1, 'Model %s: run failed\n' % args.model)
 
