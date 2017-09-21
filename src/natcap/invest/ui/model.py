@@ -6,7 +6,6 @@ from __future__ import absolute_import
 import logging
 import os
 import pprint
-import warnings
 import collections
 import json
 import textwrap
@@ -809,9 +808,9 @@ class Model(QtWidgets.QMainWindow):
         # These attributes should be defined in subclass
         for attr in ('label', 'target', 'validator', 'localdoc'):
             if not getattr(self, attr):  # None unless overridden in subclass
-                #TODO: this seems to be the only use of the `warnings` package.  Can it be replaced with a logger call?
-                warnings.warn('Class attribute %s.%s is not defined' % (
-                    self.__class__.__name__, attr))
+                LOGGER.warn('Class attribute %s.%s is not defined',
+                            self.__class__.__name__,
+                            attr)
 
         # Main operational widgets for the form
         self._central_widget = QtWidgets.QWidget()
