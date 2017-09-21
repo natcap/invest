@@ -31,6 +31,8 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 QT_APP = inputs.QT_APP
 
+# How long satus bar messages should be visible, in milliseconds.
+STATUSBAR_MSG_DURATION = 10000
 ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
                            color='grey')
 ICON_ALERT = qtawesome.icon('fa.exclamation-triangle',
@@ -801,8 +803,7 @@ class Model(QtWidgets.QMainWindow):
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
 
         def _settings_saved_message():
-            # Shows the given message in the status bar for 10s.
-            self.statusBar().showMessage('Settings saved', 10000)
+            self.statusBar().showMessage('Settings saved', STATUSBAR_MSG_DURATION)
         self.settings_dialog.accepted.connect(_settings_saved_message)
 
         # These attributes should be defined in subclass
@@ -952,8 +953,7 @@ class Model(QtWidgets.QMainWindow):
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
-        # Show the alert message for 10s (10,000 milliseconds)
-        self.statusBar().showMessage(alert_message, 10000)
+        self.statusBar().showMessage(alert_message, STATUSBAR_MSG_DURATION)
         self.window_title.filename = os.path.basename(save_filepath)
 
     # TODO: we talked about this, but wondering if there's a better name than `input` and `Input`.  For one, `input` is a built in Python function already.  And maybe UIInput and ui_input might be a better alternative?  Just to consider...
@@ -1089,9 +1089,9 @@ class Model(QtWidgets.QMainWindow):
         self.load_args(args)
         self.window_title.filename = window_title_filename
 
-        # Show the message in the status bar for 10s.
         self.statusBar().showMessage(
-            'Loaded scenario from %s' % os.path.abspath(scenario_path), 10000)
+            'Loaded scenario from %s' % os.path.abspath(scenario_path),
+            STATUSBAR_MSG_DURATION)
 
     def load_args(self, scenario_args):
         """Load arguments from an args dict.
@@ -1317,7 +1317,6 @@ class Model(QtWidgets.QMainWindow):
         lastrun_args = self.settings.value("lastrun", "{}")
         self.load_args(json.loads(lastrun_args))
 
-        # Show the message in the status bar for 10s.
         self.statusBar().showMessage('Loaded parameters from previous run.',
-                                     10000)
+                                     STATUSBAR_MSG_DURATION)
         self.window_title.filename = 'loaded from autosave'
