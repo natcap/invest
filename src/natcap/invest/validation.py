@@ -35,19 +35,59 @@ def append_gdal_warnings(warnings_list):
     gdal.PopErrorHandler()
 
 
-class ValidationContext:  # TODO: add a docstring and maybe even an (Object) if it doesn't inherit from anything?
+class ValidationContext(object):
+    """An object to represent a validation context.
+
+    A validation context reduces the amount of boilerplate code needed within
+    an InVEST validation function to produce validation warnings that are
+    consistent with the InVEST Validation API.
+    """
     def __init__(self, args, limit_to):
+        """Create a ValidationContext object.
+
+        Parameters:
+            args (dict): The args dict to validate.
+            limit_to (string or None): If a string, the args key that should be
+                validated.  If ``None``, all args key-value pairs will be
+                validated.
+        """
         self.args = args
         self.limit_to = limit_to
         self.warnings = []
 
-    def warn(self, message, keys):  # TODO: add a docstring here
+    def warn(self, message, keys):
+        """Record a warning in the internal warnings list.
+
+        Parameters:
+            message (string): The message of the warning to log.
+            keys (iterable): An iterable of string keys that the message
+                refers to.
+        """
         if isinstance(keys, basestring):
             keys = (keys,)
         keys = tuple(sorted(keys))
         self.warnings.append((keys, message))
 
-    def is_arg_complete(self, key, require=False): # TODO: add a docstring here
+    def is_arg_complete(self, key, require=False):
+        """Test if a given argument is complete and should be validated.
+
+        An argument is complete if:
+
+            * The value associated with ``key`` is neither ``''`` or ``None``
+            * The key-value pair is in ``self.args``
+            * The key should be validated (the key matches the value of
+              ``self.limit_to`` or ``self.limit_to == None``)
+
+        If the argument is incomplete and ``require == True``, a warning is
+        recorded in the ValidationContext's warnings list.
+
+        Parameters:
+            key (string): The key to test.
+            require=False (bool): Whether the parameter is required.
+
+        Returns:
+            A ``bool``, indicating whether the argument is complete.
+        """
         try:
             value = self.args[key]
             if isinstance(value, basestring):
@@ -58,15 +98,11 @@ class ValidationContext:  # TODO: add a docstring and maybe even an (Object) if 
         if (value in ('', None) or
                 self.limit_to not in (key, None)):
             if require:
-                self.require(key)
+                self.warn(
+                    'Parameter is required but is missing or has no value',
+                    keys=(key,))
             return False
         return True
-
-    def require(self, *keys):
-        for key in keys:
-            if key not in self.args or self.args[key] in ('', None):
-                self.warn(('Parameter is required but is missing '
-                           'or has no value'), keys=(key,))
 
 
 def validator(validate_func):  # TODO: I wonder if a better name of this may be execute_validator?  to indicate it's specifically for the InVEST execute API?  I otherwise like that this is enforcing the input and return values of these things so the UI doesn't have a problem later.
