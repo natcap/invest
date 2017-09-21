@@ -2515,18 +2515,17 @@ class Form(QtWidgets.QWidget):
         # demo.
         self.submitted.emit()
 
-    # TODO: This redefines Python's min and max.  Could you choose another name like min_val and max_val?
-    def update_scroll_border(self, min, max):
+    def update_scroll_border(self, range_min, range_max):
         """Show or hide the border of the scrolling area as needed.
 
         Parameters:
-            min (int): The scroll area's range minimum.
-            max (int): The scroll area's range maximum.
+            range_min (int): The scroll area's range minimum.
+            range_max (int): The scroll area's range maximum.
 
         Returns:
             ``None``
         """
-        if min == 0 and max == 0:
+        if range_min == 0 and range_max == 0:
             self.scroll_area.setStyleSheet("QScrollArea { border: None } ")
         else:
             self.scroll_area.setStyleSheet("")
