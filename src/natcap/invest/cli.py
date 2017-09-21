@@ -11,8 +11,9 @@ import logging
 import sys
 import collections
 import pprint
-import warnings  # TODO: unused import
 import multiprocessing
+
+import six
 
 try:
     from . import utils
@@ -20,7 +21,6 @@ except ValueError:
     # When we're in a pyinstaller build, this isn't a module.
     from natcap.invest import utils
 
-import six # TODO: should this go above the utils import for PEP8 standards, or does it have to go last?
 
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'pyname gui aliases')
@@ -149,7 +149,19 @@ _MODEL_UIS = {
 }
 
 
-def _format_args(args_dict):  # TODO: worth a docstring?
+def _format_args(args_dict):
+    """Nicely format an arguments dictionary for writing to a stream.
+
+    If printed to a console, the returned string will be aligned in two columns
+    representing each key and value in the arg dict.  Keys are in ascending,
+    sorted order.  Both columns are left-aligned.
+
+    Parameters:
+        args_dict (dict): The args dictionary to format.
+
+    Returns:
+        A formatted, unicode string.
+    """
     sorted_args = sorted(six.iteritems(args_dict), key=lambda x: x[0])
 
     max_key_width = 0
