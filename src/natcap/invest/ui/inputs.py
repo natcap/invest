@@ -2046,8 +2046,9 @@ class Label(QtWidgets.QLabel):
 class Container(QtWidgets.QGroupBox, Input):
     """An Input that contains other inputs within a QGridLayout."""
 
-    # TODO: you have a comment below that looks like you might need to do something?
-    # need to redefine signals here.
+    # Unlike other subclasses of Input, we need to redefine all of the signals
+    # here because we're changing the type of the parameter emitted by
+    # value_changed to a bool.
     value_changed = QtCore.Signal(bool)
     interactivity_changed = QtCore.Signal(bool)
     sufficiency_changed = QtCore.Signal(bool)
