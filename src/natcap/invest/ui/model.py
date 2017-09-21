@@ -532,8 +532,21 @@ class ScenarioOptionsDialog(OptionsDialog):
         self.include_workspace.set_value(False)
 
         @validation.validator
-        # TODO: `limit_to` is unused in the body of this function.  Remove?
         def _validate_parameter_file(args, limit_to=None):
+            """Validate a possible parameter file defined by the user.
+
+            This is a validation function that adheres to the InVEST validation
+            API.
+
+            Parameters:
+                args (dict): The args dictionary.
+                limit_to=None (string or None): The args key for which we
+                    should limit processing.
+
+            Returns:
+                ``warnings`` (list): A list of 2-element tuples with any
+                validation warnings for this input.  This list may be empty.
+            """
             warnings = []
             archive_dir = os.path.dirname(args['archive_path'])
 
