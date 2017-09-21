@@ -901,8 +901,7 @@ class Model(QtWidgets.QMainWindow):
             self.label)
 
     def _check_local_docs(self, link=None):
-        # TODO: are you using `not link` here to test for None?  If so, can you change to link is not None.  Otherwise, this is some fun functionality for the doc link.
-        if not link or link == 'localdocs':
+        if link in (None, 'localdocs'):
             link = 'file://' + os.path.abspath(self.localdoc)
 
         if link.startswith(('http', 'ftp', 'file')):
