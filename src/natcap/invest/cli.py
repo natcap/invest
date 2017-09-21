@@ -294,27 +294,6 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
         setattr(namespace, self.dest, modelname)
 
 
-def write_console_files(out_dir, extension):  # TODO: where is this used?  I couldn't find anything with a grep.
-    """
-    Write out console files for each of the target models to the output dir.
-
-    Parameters:
-        out_dir: The directory in which to save the console files.
-        extension: The extension of the output files (e.g. 'bat', 'sh')
-
-    Returns:
-        Nothing.  Writes files to out_dir, though.
-    """
-    content_template = "invest %(model)s\n"
-    filename_template = os.path.join(out_dir, "invest_%(modelname)s_.%(ext)s")
-    for model_name in sorted(_MODEL_UIS.keys()):
-        console_filepath = filename_template % {
-            'modelname': model_name, 'ext': extension}
-        console_file = open(console_filepath)
-        console_file.write(content_template % {'model': model_name})
-        console_file.close()
-
-
 def main():
     """
     Single entry point for all InVEST model user interfaces.
