@@ -612,7 +612,6 @@ def _calculate_monthly_quick_flow(
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
-
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
         a_im = numpy.empty(valid_n_events.shape)
