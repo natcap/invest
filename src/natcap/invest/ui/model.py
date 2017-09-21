@@ -802,7 +802,7 @@ class Model(QtWidgets.QMainWindow):
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
 
         def _settings_saved_message():
-            # TODO: what's the 10000 mean?
+            # Shows the given message in the status bar for 10s.
             self.statusBar().showMessage('Settings saved', 10000)
         self.settings_dialog.accepted.connect(_settings_saved_message)
 
