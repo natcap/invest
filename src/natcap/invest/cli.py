@@ -199,15 +199,22 @@ def _format_args(args_dict):
 #       PS: Optionally, don't validate inputs, but do validate by default.
 
 
-def format_models(): # TODO: maybe literally call it pretty_print_models?
-    """Pretty-print available models."""
-    print 'Available models:'
+def build_model_list_table():
+    """Build a table of model names, aliases and other details.
+
+    This table is a table only in the sense that its contents are aligned
+    into columns, but are not separated by a delimited.  This table
+    is intended to be printed to stdout.
+
+    Returns:
+        A string representation of the formatted table.
+    """
     model_names = sorted(_MODEL_UIS.keys())
     max_model_name_length = max(len(name) for name in model_names)
     max_alias_name_length = max(len(', '.join(meta.aliases))
                                 for meta in _MODEL_UIS.values())
     template_string = '    {modelname} {aliases}   {usage}'
-    strings = []
+    strings = ['Available models:']
     for model_name in sorted(_MODEL_UIS.keys()):
         usage_string = '(No GUI available)'
         if _MODEL_UIS[model_name].gui is not None:
@@ -221,7 +228,7 @@ def format_models(): # TODO: maybe literally call it pretty_print_models?
             modelname=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
             usage=usage_string))
-    return strings
+    return '\n'.join(strings) + '\n'
 
 
 class ListModelsAction(argparse.Action):  # TODO: docstring for this class
@@ -242,15 +249,14 @@ class ListModelsAction(argparse.Action):  # TODO: docstring for this class
 
     def __call__(self, parser, namespace, values, option_string): # TODO: FYI, this marks as different function signature than overridden call, because `option_string` is optional i.e. `option_string=None`.  And maybe worth a short docstring?
         setattr(namespace, self.dest, self.const)
-        parser.exit(message='\n'.join(format_models()) + '\n')
+        parser.exit(message=build_model_list_table())
 
 
 class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
     def __call__(self, parser, namespace, values, option_string):  # TODO: same as above w/ option_string=None + docstring
         if values in ['', None]:
             parser.print_help()
-            print '\n'.join(format_models())
-            parser.exit()
+            parser.exit(message=build_model_list_table())
         else:
             known_models = sorted(_MODEL_UIS.keys())
 
