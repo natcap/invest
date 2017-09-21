@@ -1220,8 +1220,8 @@ class Model(QtWidgets.QMainWindow):
                 self.close(prompt=False)
 
             self.form.run_finished.connect(_quickrun_close_model)
-            # TODO: Can you comment on the 50?
-            QtCore.QTimer.singleShot(50, self.execute_model)
+            # Start the model immediately (after 0 ms).
+            QtCore.QTimer.singleShot(0, self.execute_model)
 
         # The scrollArea defaults to a size that is too small to actually view
         # the contents of the enclosed widget appropriately.  By adjusting the
