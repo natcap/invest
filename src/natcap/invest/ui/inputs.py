@@ -1955,9 +1955,7 @@ class Dropdown(GriddedInput):
         self.dropdown.clear()
         cast_options = []
         for label in options:
-            # TODO: I think there's a PEP8 that prefers `instanceof` rather than `type`
-            # TODO: But this also looks like some code above, which I thought we could directly cast to strng no matter what...  Would that work here?
-            if type(label) in (int, float):
+            if isinstance(label, (int, float)):
                 label = str(label)
             try:
                 cast_value = six.text_type(label, 'utf-8')
