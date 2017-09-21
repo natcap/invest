@@ -1230,7 +1230,15 @@ class Model(QtWidgets.QMainWindow):
         # all parts of the application window will still be visible, even if
         # the minimumSize().height() would have it extend over the edge of the
         # screen.
-        # TODO: can you comment where the 100 and 150 numbers come from? Or paramaterize them globally or in settings or something?
+        #
+        # The 100, 150 additions to the width and height hints come from trial
+        # and error, trying to find a decent starting height and width for the
+        # window.  I'd prefer to have the window resized according to some
+        # internal properties, but the scroll area (self.form.scroll_area)
+        # makes that difficult.
+        # Adding 100, 150 to the dimensions allows for the window to be wide
+        # enough to not hide any widgets in the form, and tall enough to
+        # usually show most of the rows in the layout.
         self.resize(
             self.form.scroll_area.widget().minimumSize().width()+100,
             self.form.scroll_area.widget().minimumSize().height()+150)
