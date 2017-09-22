@@ -22,7 +22,6 @@ import qtawesome
 
 from . import inputs
 from . import usage
-from .. import cli
 from .. import utils
 from .. import scenarios
 from .. import validation
@@ -1019,8 +1018,9 @@ class Model(QtWidgets.QMainWindow):
             name = getattr(self, 'label', self.target.__module__)
             with utils.prepare_workspace(args['workspace_dir'], name):
                 with usage.log_run(self.target.__module__, args):
-                    LOGGER.info('Starting model with parameters: \n%s',
-                                cli._format_args(args))
+                    LOGGER.log(scenarios.ARGS_LOG_LEVEL,
+                               'Starting model with parameters: \n%s',
+                               scenarios.format_args_dict(args))
                     try:
                         return self.target(args=args)
                     except:

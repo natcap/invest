@@ -160,36 +160,8 @@ for _modelname, _meta in _MODEL_UIS.iteritems():
         _MODEL_ALIASES[_alias] = _modelname
 
 
-
-def _format_args(args_dict):
-    """Nicely format an arguments dictionary for writing to a stream.
-
-    If printed to a console, the returned string will be aligned in two columns
-    representing each key and value in the arg dict.  Keys are in ascending,
-    sorted order.  Both columns are left-aligned.
-
-    Parameters:
-        args_dict (dict): The args dictionary to format.
-
-    Returns:
-        A formatted, unicode string.
-    """
-    sorted_args = sorted(six.iteritems(args_dict), key=lambda x: x[0])
-
-    max_key_width = 0
-    if len(sorted_args) > 0:
-        max_key_width = max(len(x[0]) for x in sorted_args)
-
-    format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
-
-    args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = u"Arguments:\n%s\n" % args_string
-    return args_string
-
-
 # metadata for models: full modelname, first released, full citation,
 # local documentation name.
-
 
 # Goal: allow InVEST models to be run at the command-line, without a UI.
 #   problem: how to identify which models have Qt UIs available?
@@ -454,7 +426,8 @@ def main():
 
         with utils.prepare_workspace(workspace,
                                      name=paramset.name):
-            LOGGER.info(_format_args(paramset.args))
+            LOGGER.log(scenarios.ARGS_LOG_LEVEL,
+                       scenarios.format_args_dict(paramset.args))
             if not args.validate:
                 LOGGER.info('Skipping validation by user request')
             else:

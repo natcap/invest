@@ -21,12 +21,14 @@ import re
 
 from osgeo import gdal
 from osgeo import ogr
+import six
 
 from . import utils
 from . import __version__
 
 
 LOGGER = logging.getLogger(__name__)
+ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 
 ParameterSet = collections.namedtuple('ParameterSet',
                                       'args invest_version name')
@@ -186,6 +188,34 @@ class _ArgsKeyFilter(logging.Filter):
         """
         record.args_key = self.args_key
         return True
+
+
+def format_args_dict(args_dict):
+    """Nicely format an arguments dictionary for writing to a stream.
+
+    If printed to a console, the returned string will be aligned in two columns
+    representing each key and value in the arg dict.  Keys are in ascending,
+    sorted order.  Both columns are left-aligned.
+
+    Parameters:
+        args_dict (dict): The args dictionary to format.
+
+    Returns:
+        A formatted, unicode string.
+    """
+    sorted_args = sorted(six.iteritems(args_dict), key=lambda x: x[0])
+
+    max_key_width = 0
+    if len(sorted_args) > 0:
+        max_key_width = max(len(x[0]) for x in sorted_args)
+
+    format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
+
+    args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
+    args_string = u"Arguments:\n%s\n" % args_string
+    return args_string
+
+
 
 
 def build_scenario_archive(args, name, scenario_path):
