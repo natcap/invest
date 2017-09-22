@@ -264,7 +264,33 @@ class ListModelsAction(argparse.Action):  # TODO: docstring for this class
 
 
 class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
-    def __call__(self, parser, namespace, values, option_string):  # TODO: same as above w/ option_string=None + docstring
+    """Given a possily-ambiguous model string, identify the model to run.
+
+    This is a subclass of ``argparse.Action`` and is executed when the argparse
+    interface detects that the user has attempted to select a model by name.
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        """Given the user's input, determine which model they're referring to.
+
+        When the user didn't provide a model name, we print the help and exit
+        with a nonzero exit code.
+
+        Identifiable model names are:
+
+            * the model name (verbatim) as identified in the keys of _MODEL_UIS
+            * a uniquely identifiable prefix for the model name (e.g. "d"
+              matches "delineateit", but "fi" matches both "fisheries" and
+              "finfish"
+            * a known model alias, as registered in _MODEL_UIS
+
+        If no single model can be identified based on these rules, an error
+        message is printed and the parser exits with a nonzero exit code.
+
+        See https://docs.python.org/2.7/library/argparse.html#action-classes
+        for the full documentation for argparse classes and this __call__
+        method.
+
+        Overridden from argparse.Action.__call__"""
         if values in ['', None]:
             parser.print_help()
             parser.exit(message=build_model_list_table())
