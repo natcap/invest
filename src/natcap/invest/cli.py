@@ -243,22 +243,14 @@ def build_model_list_table():
 
 
 class ListModelsAction(argparse.Action):  # TODO: docstring for this class
-    def __init__(self,
-                 option_strings,
-                 dest,
-                 default=False,
-                 required=False,
-                 help=None, *args, **kwargs):
-        super(ListModelsAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            const=True,
-            nargs=0,
-            default=default,
-            required=required,
-            help=help, *args, **kwargs)
+    """An argparse action to list the available models."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        """Print the available models and quit the argparse parser.
 
-    def __call__(self, parser, namespace, values, option_string): # TODO: FYI, this marks as different function signature than overridden call, because `option_string` is optional i.e. `option_string=None`.  And maybe worth a short docstring?
+        See https://docs.python.org/2.7/library/argparse.html#action-classes
+        for the full documentation for argparse classes.
+
+        Overridden from argparse.Action.__call__"""
         setattr(namespace, self.dest, self.const)
         parser.exit(message=build_model_list_table())
 
@@ -293,7 +285,7 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
         Overridden from argparse.Action.__call__"""
         if values in ['', None]:
             parser.print_help()
-            parser.exit(message=build_model_list_table())
+            parser.exit(1, message=build_model_list_table())
         else:
             known_models = sorted(_MODEL_UIS.keys())
 
@@ -359,6 +351,7 @@ def main():
                                  action='store_const', const=logging.DEBUG,
                                  help='Enable debug logging. Alias for -vvvvv')
     list_group.add_argument('--list', action=ListModelsAction,
+                            nargs=0, const=True,
                             help='List available models')
     parser.add_argument('-l', '--headless', action='store_true', dest='headless',
                         help=('Attempt to run InVEST without its GUI.'))
