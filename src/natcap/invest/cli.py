@@ -397,7 +397,8 @@ def main():
         # set the sip API in natcap.invest.ui.inputs.
         # Set it here, before we can do the actual importing.
         import sip
-        sip.setapi('QString', 2)  # TODO: comment on what 2 is?
+        # 2 indicates SIP/Qt API version 2
+        sip.setapi('QString', 2)
 
         from natcap.invest.ui import inputs
     except ImportError:
