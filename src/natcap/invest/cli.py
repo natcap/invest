@@ -22,6 +22,7 @@ except ValueError:
     from natcap.invest import utils
 
 
+DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'pyname gui aliases')
 
@@ -443,7 +444,7 @@ def main():
             if 'workspace_dir' in paramset.args:
                 workspace = paramset.args['workspace_dir']
             else:
-                parser.exit(3, (  # TODO: comment on 3, or if it's a special exit code then maybe a _GLOBAL?
+                parser.exit(DEFAULT_EXIT_CODE, (
                     'Workspace not defined. \n'
                     'Use --workspace to specify or add a '
                     '"workspace_dir" parameter to your scenario.'))
@@ -490,8 +491,9 @@ def main():
 
                 if overwrite_denied:
                     # Exit the parser with an error message.
-                    parser.exit(2, ('Use --workspace to define an '  # TODO: comment on exit code
-                                    'alternate workspace.  Aborting.'))
+                    parser.exit(DEFAULT_EXIT_CODE,
+                                ('Use --workspace to define an '
+                                 'alternate workspace.  Aborting.'))
                 else:
                     LOGGER.warning(
                         'Overwriting the workspace per user input %s',
@@ -523,7 +525,8 @@ def main():
             # verbosity) and exit the argparse application with exit code 1 and
             # a helpful error message.
             LOGGER.exception('Could not load scenario')
-            parser.exit(1, 'Could not load scenario: %s\n' % str(error))
+            parser.exit(DEFAULT_EXIT_CODE,
+                        'Could not load scenario: %s\n' % str(error))
 
         if args.workspace:
             model_form.workspace.set_value(args.workspace)
@@ -534,7 +537,8 @@ def main():
 
         # Handle a graceful exit
         if model_form.form.run_dialog.messageArea.error:
-            parser.exit(1, 'Model %s: run failed\n' % args.model)
+            parser.exit(DEFAULT_EXIT_CODE,
+                        'Model %s: run failed\n' % args.model)
 
         if app_exitcode != 0:
             parser.exit(app_exitcode,
