@@ -243,7 +243,7 @@ def build_model_list_table():
     return '\n'.join(strings) + '\n'
 
 
-class ListModelsAction(argparse.Action):  # TODO: docstring for this class
+class ListModelsAction(argparse.Action):
     """An argparse action to list the available models."""
     def __call__(self, parser, namespace, values, option_string=None):
         """Print the available models and quit the argparse parser.
@@ -256,7 +256,7 @@ class ListModelsAction(argparse.Action):  # TODO: docstring for this class
         parser.exit(message=build_model_list_table())
 
 
-class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
+class SelectModelAction(argparse.Action):
     """Given a possily-ambiguous model string, identify the model to run.
 
     This is a subclass of ``argparse.Action`` and is executed when the argparse
@@ -314,14 +314,17 @@ class SelectModelAction(argparse.Action):  # TODO: worth a docstring?
 
 
 def main():
-    """
-    Single entry point for all InVEST model user interfaces.
+    """CLI entry point for launching InVEST runs.
 
-    This function provides a CLI for calling InVEST models, though it it very
-    primitive.  Apart from displaying a help message and the version, this
-    function will also (optionally) list the known models (based on the found
-    json filenames) and will fire up an IUI interface based on the model name  # TODO: no longer based on json filenames, right?
-    provided.
+    This command-line interface supports two methods of launching InVEST models
+    from the command-line:
+
+        * through its GUI
+        * in headless mode, without its GUI.
+
+    Running in headless mode allows us to bypass all GUI functionality,
+    so models may be run in this way wthout having GUI packages
+    installed.
     """
 
     parser = argparse.ArgumentParser(description=(
