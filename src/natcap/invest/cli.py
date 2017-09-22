@@ -402,9 +402,9 @@ def main():
 
         from natcap.invest.ui import inputs
     except ImportError:
-        print ('Error: ui not installed:\n'
-               '    pip install natcap.invest[ui]')
-        return 3  # TODO: comment on what 3 is?
+        # Can't import UI, exit with nonzero exit code
+        parser.error('UI not installed:\n'
+                     '    pip install natcap.invest[ui]')
 
     if args.headless:
         from natcap.invest import scenarios
