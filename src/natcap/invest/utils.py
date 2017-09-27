@@ -88,7 +88,7 @@ def _format_time(seconds):
 
 # TODO: come up with a better name for this contextmanager.
 @contextlib.contextmanager
-def prepare_workspace(workspace, name):
+def prepare_workspace(workspace, name, logging_level=logging.NOTSET):
     if not os.path.exists(workspace):
         os.makedirs(workspace)
 
@@ -98,7 +98,8 @@ def prepare_workspace(workspace, name):
             modelname='-'.join(name.replace(':', '').split(' ')),
             timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
 
-    with capture_gdal_logging(), log_to_file(logfile):
+    with capture_gdal_logging(), log_to_file(logfile,
+                                             logging_level=logging_level):
         with sandbox_tempdir(dir=workspace):
             logging.captureWarnings(True)
             LOGGER.info('Writing log messages to %s', logfile)
@@ -128,7 +129,8 @@ class ThreadFilter(logging.Filter):
 
 
 @contextlib.contextmanager
-def log_to_file(logfile, threadname=None, log_fmt=LOG_FMT, date_fmt=DATE_FMT):
+def log_to_file(logfile, threadname=None, logging_level=logging.NOTSET,
+                log_fmt=LOG_FMT, date_fmt=DATE_FMT):
     """Log all messages within this context to a file.
 
     Parameters:
@@ -138,6 +140,10 @@ def log_to_file(logfile, threadname=None, log_fmt=LOG_FMT, date_fmt=DATE_FMT):
         threadname=None (string): If None, logging from all threads will be
             included in the log.  If a string, only logging from the thread
             with the same name will be included in the logfile.
+        logging_level=logging.NOTSET (int): The logging threshold.  Log
+            messages with a level less than this will be automatically
+            excluded from the logfile.  The default value (``logging.NOTSET``)
+            will cause all logging to be captured.
         log_fmt=LOG_FMT (string): The logging format string to use.  If not
             provided, ``utils.LOG_FMT`` will be used.
         date_fmt=DATE_FMT (string): The logging date format string to use.
@@ -160,7 +166,7 @@ def log_to_file(logfile, threadname=None, log_fmt=LOG_FMT, date_fmt=DATE_FMT):
     formatter = logging.Formatter(log_fmt, date_fmt)
     thread_filter = ThreadFilter(threadname)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.NOTSET)  # capture everything
+    root_logger.setLevel(logging_level)
     root_logger.addHandler(handler)
     handler.addFilter(thread_filter)
     handler.setFormatter(formatter)

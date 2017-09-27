@@ -321,7 +321,11 @@ def main():
     parser.add_argument('--version', action='version',
                         version=natcap.invest.__version__)
     verbosity_group.add_argument('-v', '--verbose', dest='verbosity', default=0,
-                                 action='count', help=('Increase verbosity'))
+                                 action='count', help=(
+                                     'Increase verbosity. Affects how much is '
+                                     'printed to the console and (if running '
+                                     'in headless mode) how much is written '
+                                     'to the logfile.'))
     verbosity_group.add_argument('--debug', dest='log_level',
                                  default=logging.CRITICAL,
                                  action='store_const', const=logging.DEBUG,
@@ -329,7 +333,8 @@ def main():
     list_group.add_argument('--list', action=ListModelsAction,
                             nargs=0, const=True,
                             help='List available models')
-    parser.add_argument('-l', '--headless', action='store_true', dest='headless',
+    parser.add_argument('-l', '--headless', action='store_true',
+                        dest='headless',
                         help=('Attempt to run InVEST without its GUI.'))
     parser.add_argument('-s', '--scenario', default=None, nargs='?',
                         help='Run the specified model with this scenario')
@@ -425,7 +430,8 @@ def main():
                     '"workspace_dir" parameter to your scenario.'))
 
         with utils.prepare_workspace(workspace,
-                                     name=paramset.name):
+                                     name=paramset.name,
+                                     logging_level=log_level):
             LOGGER.log(scenarios.ARGS_LOG_LEVEL,
                        scenarios.format_args_dict(paramset.args))
             if not args.validate:
