@@ -212,7 +212,7 @@ def execute(args, create_outputs=True):
     return vars_all_models
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('aoi_uri', require=False):

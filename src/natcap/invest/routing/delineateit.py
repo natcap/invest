@@ -77,7 +77,7 @@ def execute(args):
         snapped_outlet_points_uri, stream_out_uri)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('dem_uri', require=True):

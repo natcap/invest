@@ -531,7 +531,7 @@ class ScenarioOptionsDialog(OptionsDialog):
             label='Include workspace path in scenario')
         self.include_workspace.set_value(False)
 
-        @validation.validator
+        @validation.invest_validator
         def _validate_parameter_file(args, limit_to=None):
             """Validate a possible parameter file defined by the user.
 

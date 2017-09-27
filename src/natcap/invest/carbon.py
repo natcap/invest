@@ -406,7 +406,7 @@ def _generate_report(summary_stats, model_args, html_report_path):
         report_doc.write('</body></html>')
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('lulc_cur_path', require=True):

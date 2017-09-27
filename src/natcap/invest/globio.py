@@ -684,7 +684,7 @@ def _collapse_infrastructure_layers(
         os.remove(filename)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('lulc_to_globio_table_uri', require=True):

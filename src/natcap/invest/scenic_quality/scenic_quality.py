@@ -762,7 +762,7 @@ def execute(args):
         set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('aoi_uri', require=True):

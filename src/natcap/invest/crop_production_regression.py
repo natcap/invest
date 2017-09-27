@@ -635,7 +635,7 @@ def execute(args):
                 aggregate_table.write('\n')
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('model_data_path', require=True):

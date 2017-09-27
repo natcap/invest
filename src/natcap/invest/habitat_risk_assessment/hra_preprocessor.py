@@ -1065,7 +1065,7 @@ def parse_stress_buffer(uri):
     return buff_dict
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('habitats_dir', require=False):

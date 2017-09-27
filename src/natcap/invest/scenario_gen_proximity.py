@@ -664,7 +664,7 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
             kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('base_lulc_path', require=True):

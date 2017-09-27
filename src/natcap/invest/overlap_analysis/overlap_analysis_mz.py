@@ -56,7 +56,7 @@ def execute(args):
     overlap_analysis_mz_core.execute(mz_args)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('zone_layer_loc', require=True):

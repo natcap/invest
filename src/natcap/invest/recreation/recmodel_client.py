@@ -1130,7 +1130,7 @@ def _sanitize_path(base_path, raw_path):
         return os.path.join(os.path.dirname(base_path), raw_path)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('aoi_path', require=True):

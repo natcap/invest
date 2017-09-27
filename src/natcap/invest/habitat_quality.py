@@ -620,7 +620,7 @@ def make_linear_decay_kernel_uri(max_distance, kernel_uri):
         kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('landuse_cur_uri', require=True):

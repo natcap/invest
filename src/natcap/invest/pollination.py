@@ -875,7 +875,7 @@ def _add_fid_field(base_vector_path, target_vector_path, fid_id):
     target_vector = None
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('landcover_raster_path', require=True):

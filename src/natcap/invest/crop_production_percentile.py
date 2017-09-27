@@ -501,7 +501,7 @@ def execute(args):
 
 
 # This decorator ensures the input arguments are formatted for InVEST
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     """Validate Crop Production Percentile Model.
 

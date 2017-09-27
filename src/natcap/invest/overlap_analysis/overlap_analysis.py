@@ -657,7 +657,7 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
     return raster_uris, raster_names
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('zone_layer_uri', require=True):

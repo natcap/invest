@@ -899,7 +899,7 @@ def _get_price_table(price_table_uri, start_year, end_year):
                        '%s' % missing_year)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('lulc_lookup_uri', require=True):

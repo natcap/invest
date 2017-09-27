@@ -358,7 +358,7 @@ def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
             writer.writerow(row)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('lulc_lookup_uri', require=True):

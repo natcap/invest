@@ -105,7 +105,7 @@ class ValidationContext(object):
         return True
 
 
-def validator(validate_func):  # TODO: I wonder if a better name of this may be execute_validator?  to indicate it's specifically for the InVEST execute API?  I otherwise like that this is enforcing the input and return values of these things so the UI doesn't have a problem later.
+def invest_validator(validate_func):
     """Decorator to enforce characteristics of validation inputs and outputs.
 
     Attributes of inputs and outputs that are enforced are:
@@ -126,12 +126,11 @@ def validator(validate_func):  # TODO: I wonder if a better name of this may be 
 
     Example:
         from natcap.invest import validation
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             # do your validation here
     """
     def _wrapped_validate_func(args, limit_to=None):
-        # TODO: since you're doing all this checking, should it also enforce that the `validate_func` is called `validate`?  Or maybe not because the UI is the one that has to find it in the first place?
         validate_func_args = inspect.getargspec(validate_func)
         assert validate_func_args.args == ['args', 'limit_to'], (
             'validate has invalid parameters: parameters are: %s.' % (

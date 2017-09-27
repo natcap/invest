@@ -113,7 +113,7 @@ def execute(args):
                     flow_direction_path, stream_mask_path, distance_path)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('dem_path', require=True):

@@ -890,7 +890,7 @@ def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
             vectorize_op=False, datasets_are_pre_aligned=True)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('threshold_flow_accumulation', require=True):

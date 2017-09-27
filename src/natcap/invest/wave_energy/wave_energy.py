@@ -1632,7 +1632,7 @@ def _create_rat(dataset_path, attr_dict, column_name):
     dataset = None
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('wave_base_data_uri', require=True):

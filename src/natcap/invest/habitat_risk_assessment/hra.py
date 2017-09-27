@@ -1274,7 +1274,7 @@ def unpack_over_dict(csv_uri, args):
         args[dict_name] = dicts[dict_name]
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('csv_uri', require=True):

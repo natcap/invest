@@ -8,7 +8,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: check for error when args is the wrong type."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             pass
 
@@ -19,7 +19,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: check for error when limit_to is the wrong type."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             pass
 
@@ -30,7 +30,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: check for error when limit_to is not a key in args."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             pass
 
@@ -41,7 +41,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: check for error when args keys are not all strings."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             pass
 
@@ -53,7 +53,7 @@ class ValidatorTest(unittest.TestCase):
         from natcap.invest import validation
 
         for invalid_value in (1, True, None):
-            @validation.validator
+            @validation.invest_validator
             def validate(args, limit_to=None):
                 return invalid_value
 
@@ -64,7 +64,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: check for error when return keys not an iterable."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             return [('a', 'error 1')]
 
@@ -75,7 +75,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: check for error when return keys not all in args."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             return [(('a',), 'error 1')]
 
@@ -86,7 +86,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: check for error when error message not a string."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             return [(('a',), 1234)]
 
@@ -97,7 +97,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: check for error when wrong function signature used."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def validate(foo):
             pass
 
@@ -110,7 +110,7 @@ class ValidatorTest(unittest.TestCase):
 
         errors = [(('a', 'b'), 'Error!')]
 
-        @validation.validator
+        @validation.invest_validator
         def validate(args, limit_to=None):
             return errors
 

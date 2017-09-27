@@ -962,7 +962,7 @@ def _extract_vector_table_by_key(vector_path, key_field):
     return attribute_dictionary
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('precipitation_uri', require=True):

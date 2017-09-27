@@ -1900,7 +1900,7 @@ class ModelTests(_QtTest):
             target_func = _target
 
         if validate_func is None:
-            @validation.validator
+            @validation.invest_validator
             def _validate(args, limit_to=None):
                 return []
             validate_func = _validate
@@ -2025,7 +2025,7 @@ class ModelTests(_QtTest):
         from natcap.invest import validation
         from natcap.invest.ui import inputs
 
-        @validation.validator
+        @validation.invest_validator
         def _sample_validate(args, limit_to=None):
             # no validation errors!
             return []
@@ -2043,7 +2043,7 @@ class ModelTests(_QtTest):
         from natcap.invest import validation
         from natcap.invest.ui import inputs
 
-        @validation.validator
+        @validation.invest_validator
         def _sample_validate(args, limit_to=None):
             return [(('workspace_dir',), 'some error')]
 
@@ -2060,7 +2060,7 @@ class ModelTests(_QtTest):
         from natcap.invest import validation
         from natcap.invest.ui import inputs
 
-        @validation.validator
+        @validation.invest_validator
         def _sample_validate(args, limit_to=None):
             return [(('workspace_dir',), 'some error')]
 
@@ -2358,7 +2358,7 @@ class ModelTests(_QtTest):
         """UI Model: Verify coverage when validation errors before a run."""
         from natcap.invest import validation
 
-        @validation.validator
+        @validation.invest_validator
         def _validate(args, limit_to=None):
             context = validation.ValidationContext(args, limit_to)
             # require workspace dir input.

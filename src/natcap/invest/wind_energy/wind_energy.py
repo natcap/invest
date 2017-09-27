@@ -1940,7 +1940,7 @@ def pixel_size_based_on_coordinate_transform_uri(
     return (pixel_diff_x, pixel_diff_y)
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('wind_data_uri', require=True):

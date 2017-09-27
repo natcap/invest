@@ -167,7 +167,7 @@ def convert_survival_matrix(vars_dict):
     return vars_dict
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('population_csv_uri', require=True):

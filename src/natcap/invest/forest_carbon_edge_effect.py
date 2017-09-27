@@ -650,7 +650,7 @@ def _calculate_tropical_forest_edge_carbon_map(
     LOGGER.info('carbon edge calculation 100.0% complete')
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('lulc_uri', require=True):

@@ -282,7 +282,7 @@ def format_temp_table(temp_path, ff_aqua_args):
     ff_aqua_args['water_temp_dict'] = new_dict_temp
 
 
-@validation.validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     context = validation.ValidationContext(args, limit_to)
     if context.is_arg_complete('ff_farm_loc', require=True):
