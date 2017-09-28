@@ -251,8 +251,8 @@ class SettingsDialog(OptionsDialog):
         OptionsDialog.__init__(self, title='InVEST Settings',
                                modal=True)
 
-        self._container = inputs.Container(label='Global options')
-        self.layout().addWidget(self._container)
+        self._global_opts_container = inputs.Container(label='Global options')
+        self.layout().addWidget(self._global_opts_container)
 
         try:
             # Qt4
@@ -268,7 +268,23 @@ class SettingsDialog(OptionsDialog):
                       'Default value: %s') % cache_dir)
         self.cache_directory.set_value(inputs.INVEST_SETTINGS.value(
             'cache_dir', cache_dir, unicode))
-        self._container.add_input(self.cache_directory)
+        self._global_opts_container.add_input(self.cache_directory)
+
+        self.dialog_logging_level = inputs.Dropdown(
+            label='Dialog logging threshold',
+            helptext=('The minimum logging level for messages to be '
+                      'displayed in the run dialog.  Log messages with '
+                      'a level lower than this will not be displayed in the '
+                      'run dialog. Default: INFO'),
+            options=('CRITICAL',
+                     'ERROR',
+                     'WARNING',
+                     'INFO',
+                     'DEBUG',
+                     'NOTSET'))
+        self.dialog_logging_level.set_value(inputs.INVEST_SETTINGS.value(
+            'logging/run_dialog', 'INFO', unicode))
+        self._global_opts_container.add_input(self.dialog_logging_level)
 
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
@@ -282,6 +298,11 @@ class SettingsDialog(OptionsDialog):
         if exitcode == QtWidgets.QDialog.Accepted:
             inputs.INVEST_SETTINGS.setValue(
                 'cache_dir', self.cache_directory.value())
+
+            logging_level_name = self.dialog_logging_level.value().split(' ')[0]
+            inputs.INVEST_SETTINGS.setValue(
+                'logging/run_dialog',
+                logging_level_name)
 
 
 class AboutDialog(QtWidgets.QDialog):

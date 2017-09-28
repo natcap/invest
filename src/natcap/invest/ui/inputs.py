@@ -331,7 +331,10 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.setModal(True)
 
         # create statusArea-related widgets for the window.
-        self.statusAreaLabel = QtWidgets.QLabel('Messages:')
+        self.statusAreaLabel = QtWidgets.QLabel(
+            'Messages (%s and higher):' % (
+                INVEST_SETTINGS.value('logging/run_dialog', 'INFO', unicode)))
+
         self.log_messages_pane = LogMessagePane()
         self.loghandler = QLogHandler(self.log_messages_pane)
         self.logger = logging.getLogger()
@@ -399,6 +402,10 @@ class FileSystemRunDialog(QtWidgets.QDialog):
 
     def start(self, window_title, out_folder):
         """Set the state of the dialog to indicate processing has started."""
+        logging_level = INVEST_SETTINGS.value(
+            'logging/run_dialog', 'INFO', unicode)
+        self.loghandler.setLevel(getattr(logging, logging_level))
+
         if not window_title:
             window_title = "Running ..."
         self.setWindowTitle(window_title)
@@ -410,6 +417,8 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.backButton.setDisabled(True)
 
         self.log_messages_pane.write('Initializing...\n')
+        self.log_messages_pane.write(
+            'Showing messages with level %s and higher\n' % logging_level)
 
     def finish(self, exception):
         """Notify the user that model processing has finished.
