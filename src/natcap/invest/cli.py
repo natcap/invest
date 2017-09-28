@@ -11,8 +11,6 @@ import collections
 import pprint
 import multiprocessing
 
-import six
-
 try:
     from . import utils
 except ValueError:
