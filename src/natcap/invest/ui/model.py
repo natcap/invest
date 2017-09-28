@@ -809,6 +809,7 @@ class Model(QtWidgets.QMainWindow):
     def __init__(self):
         """Initialize the Model."""
         QtWidgets.QMainWindow.__init__(self)
+        self.inputs = set([])
         self.setAcceptDrops(True)
         self._quickrun = False
         self._validator = inputs.Validator(parent=self)
@@ -934,6 +935,23 @@ class Model(QtWidgets.QMainWindow):
             QtCore.QSettings.UserScope,
             'Natural Capital Project',
             self.label)
+
+    def __setattr__(self, name, value):
+        """Track Input instances in self.inputs.
+
+        All local attributes will be set, but instances of ``inputs.Input``
+        will have their reference added to ``self.inputs``.
+
+        Parameters:
+            name (string): The string name of the local attribute being set.
+            value (object): The value of the local attribute being set.
+
+        Returns:
+            None.
+        """
+        if isinstance(value, inputs.Input):
+            self.inputs.add(value)
+        QtWidgets.QMainWindow.__setattr__(self, name, value)
 
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
@@ -1142,8 +1160,8 @@ class Model(QtWidgets.QMainWindow):
         Returns:
             ``None``
         """
-        _inputs = dict((input.args_key, input) for input in
-                       self.inputs())
+        _inputs = dict((ui_input.args_key, ui_input) for ui_input in
+                       self.inputs)
         LOGGER.debug(pprint.pformat(_inputs))
 
         for args_key, args_value in scenario_args.iteritems():
@@ -1187,23 +1205,12 @@ class Model(QtWidgets.QMainWindow):
 
         # post warnings to the WMV dialog
         args_to_inputs = dict((input_.args_key, input_) for input_ in
-                              self.inputs())
+                              self.inputs)
         warnings_ = []
         for keys, warning in validation_warnings:
             warnings_.append(
                 ((args_to_inputs[key].label for key in keys), warning))
         self.validation_report_dialog.post_warnings(warnings_)
-
-    def inputs(self):
-        """Fetch a list of all model inputs.
-
-        Returns:
-            A list of all objects known to this ``Model`` instance that are
-            subclasses of ``Input``.
-        """
-        # TODO: we'd talked about an alternative to __dict__ such as a dictionary that maps arg key to the Input object in the `add_input` function.  When I tried to do this myself, it looked promising but I broke a bunch of test cases that assume "input()" and others are stlil legit functions.
-        return [ref for ref in self.__dict__.values()
-                if isinstance(ref, inputs.Input)]
 
     def validate(self, block=False):
         """Trigger validation for the whole model.
@@ -1242,7 +1249,7 @@ class Model(QtWidgets.QMainWindow):
             # We want to validate the whole form; discard the individual value
             self.validate(block=False)
 
-        for input_obj in self.inputs():
+        for input_obj in self.inputs:
             input_obj.value_changed.connect(_validate)
             try:
                 input_obj.validity_changed.connect(_validate)
