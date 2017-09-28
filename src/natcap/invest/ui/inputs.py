@@ -332,8 +332,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
 
         # create statusArea-related widgets for the window.
         self.statusAreaLabel = QtWidgets.QLabel(
-            'Messages (%s and higher):' % (
-                INVEST_SETTINGS.value('logging/run_dialog', 'INFO', unicode)))
+            FileSystemRunDialog._build_status_area_label())
 
         self.log_messages_pane = LogMessagePane()
         self.loghandler = QLogHandler(self.log_messages_pane)
@@ -395,6 +394,12 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         # Indicate that this window should be styled like a dialog.
         self.setWindowFlags(QtCore.Qt.Dialog)
 
+    # TODO: PEP257 docstring for this method.
+    @staticmethod
+    def _build_status_area_label():
+        return 'Messages (%s and higher):' % (
+            INVEST_SETTINGS.value('logging/run_dialog', 'INFO', unicode))
+
     def __del__(self):
         """Delete/deregister required objects."""
         self.logger.removeHandler(self.loghandler)
@@ -405,6 +410,11 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         logging_level = INVEST_SETTINGS.value(
             'logging/run_dialog', 'INFO', unicode)
         self.loghandler.setLevel(getattr(logging, logging_level))
+
+        # set the label atop the messages pane to include the currently-set
+        # logging level for the run dialog.
+        self.statusAreaLabel.setText(
+            FileSystemRunDialog._build_status_area_label())
 
         if not window_title:
             window_title = "Running ..."
