@@ -166,10 +166,11 @@ def log_to_file(logfile, threadname=None, logging_level=logging.NOTSET,
     formatter = logging.Formatter(log_fmt, date_fmt)
     thread_filter = ThreadFilter(threadname)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging_level)
+    root_logger.setLevel(logging.NOTSET)
     root_logger.addHandler(handler)
     handler.addFilter(thread_filter)
     handler.setFormatter(formatter)
+    handler.setLevel(logging_level)
     yield handler
     handler.close()
     root_logger.removeHandler(handler)

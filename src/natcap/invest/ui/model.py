@@ -270,21 +270,34 @@ class SettingsDialog(OptionsDialog):
             'cache_dir', cache_dir, unicode))
         self._global_opts_container.add_input(self.cache_directory)
 
+        logging_options = (
+            'CRITICAL',
+            'ERROR',
+            'WARNING',
+            'INFO',
+            'DEBUG',
+            'NOTSET')
         self.dialog_logging_level = inputs.Dropdown(
             label='Dialog logging threshold',
             helptext=('The minimum logging level for messages to be '
                       'displayed in the run dialog.  Log messages with '
                       'a level lower than this will not be displayed in the '
                       'run dialog. Default: INFO'),
-            options=('CRITICAL',
-                     'ERROR',
-                     'WARNING',
-                     'INFO',
-                     'DEBUG',
-                     'NOTSET'))
+            options=logging_options)
         self.dialog_logging_level.set_value(inputs.INVEST_SETTINGS.value(
             'logging/run_dialog', 'INFO', unicode))
         self._global_opts_container.add_input(self.dialog_logging_level)
+
+        self.logfile_logging_level = inputs.Dropdown(
+            label='Logfile logging threshold',
+            helptext=('The minimum logging level for messages to be '
+                      'displayed in the logfile for a run.  Log messages with '
+                      'a level lower than this will not be written to the '
+                      'logfile. Default: NOTSET'),
+            options=logging_options)
+        self.logfile_logging_level.set_value(inputs.INVEST_SETTINGS.value(
+            'logging/logfile', 'NOTSET', unicode))
+        self._global_opts_container.add_input(self.logfile_logging_level)
 
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
@@ -298,11 +311,12 @@ class SettingsDialog(OptionsDialog):
         if exitcode == QtWidgets.QDialog.Accepted:
             inputs.INVEST_SETTINGS.setValue(
                 'cache_dir', self.cache_directory.value())
-
-            logging_level_name = self.dialog_logging_level.value().split(' ')[0]
             inputs.INVEST_SETTINGS.setValue(
                 'logging/run_dialog',
-                logging_level_name)
+                self.dialog_logging_level.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'logging/logfile',
+                self.logfile_logging_level.value())
 
 
 class AboutDialog(QtWidgets.QDialog):
@@ -1037,7 +1051,11 @@ class Model(QtWidgets.QMainWindow):
 
         def _logged_target():
             name = getattr(self, 'label', self.target.__module__)
-            with utils.prepare_workspace(args['workspace_dir'], name):
+            logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
+                'logging/logfile', 'NOTSET'))
+            with utils.prepare_workspace(args['workspace_dir'],
+                                         name,
+                                         logging_level=logfile_log_level):
                 with usage.log_run(self.target.__module__, args):
                     LOGGER.log(scenarios.ARGS_LOG_LEVEL,
                                'Starting model with parameters: \n%s',
