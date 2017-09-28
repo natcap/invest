@@ -521,16 +521,17 @@ def validate(args, limit_to=None):
                          keys=('model_data_path'))
 
     if context.is_arg_complete('landcover_raster_path', require=True):  # TODO: I'm trying to understand what happens if 'landocver_raster_path' is not defined in args.  It seems that the predicate returns false and the if statement falls through?
-        gdal_warnings = []
-        with validation.append_gdal_warnings(gdal_warnings):
-            dataset = gdal.Open(args['landcover_raster_path'])
-        if not dataset:
-            context.warn(
-                ('Could not open landcover raster {path}. '
-                 'Errors: {errors}').format(
-                      path=args['landcover_raster_path'],
-                      errors=''.join(gdal_warnings)),
-                keys=('landcover_raster_path',))
+        def _append_gdal_warnings(err_level, err_no, err_msg):
+            warning_message = ('Could not open landcover raster {path}: '
+                               '[errno {err}] {msg}').format(
+                                    err=err_no,
+                                    path=args['landcover_raster_path'],
+                                    msg=err_msg.replace('\n', ' '))
+            context.warn(warning_message, keys=('landcover_raster_path',))
+
+        gdal.PushErrorHandler(_append_gdal_warnings)
+        _ = gdal.Open(args['landcover_raster_path'])
+        gdal.PopErrorHandler()
 
     if context.is_arg_complete('landcover_to_crop_table_path'):
         try:

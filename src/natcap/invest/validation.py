@@ -1,38 +1,14 @@
 """Common validation utilities for InVEST models."""
-import contextlib
 import collections
 import inspect
 import logging
 import pprint
-
-from osgeo import gdal
 
 
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None
 LOGGER = logging.getLogger(__name__)
-
-
-# TODO: can we talk about whether this is the way we want to do this?  I don't know much about pythonic use of context managers, but I feel like it's a good paradigm for locking and releasing resources w/r/t exceptions and other regular program flow.  But this use feels like it's using a side effect of context managers to have a side effect on a parameter list.  I'd prefer to publish the "_append_gdal_warnings" function to this module, then manually handle the gdal error handling in the validate function.  I don't mind explicitly pushing and popping the error handler, especially if it's a validate function.  OR if there's a common check like "is this a path to a raster" making an explicit function for that.  But let's talk if we haven't already...
-@contextlib.contextmanager
-def append_gdal_warnings(warnings_list):
-    """Append GDAL warnings within this context manager to a list.
-
-    Parameters:
-        warnings_list (list): A list to which formatted GDAL warnings will
-            be appended.
-
-    Example:
-        # Show an example here.  # TODO: show the example?
-    """
-    def _append_gdal_warnings(err_level, err_no, err_msg):
-        warnings_list.append('[errno {err}] {msg}'.format(
-            err=err_no, msg=err_msg.replace('\n', ' ')))
-
-    gdal.PushErrorHandler(_append_gdal_warnings)
-    yield
-    gdal.PopErrorHandler()
 
 
 class ValidationContext(object):
