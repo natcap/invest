@@ -394,9 +394,17 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         # Indicate that this window should be styled like a dialog.
         self.setWindowFlags(QtCore.Qt.Dialog)
 
-    # TODO: PEP257 docstring for this method.
     @staticmethod
     def _build_status_area_label():
+        """Build the status area label.
+
+        This is a static method that checks the value of the
+        ``logging/run_dialog`` QSetting and returns a formatted string for
+        use as the log message area label.
+
+        Returns:
+            A string.
+        """
         return 'Messages (%s and higher):' % (
             INVEST_SETTINGS.value('logging/run_dialog', 'INFO', unicode))
 
