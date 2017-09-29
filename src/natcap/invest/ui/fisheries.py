@@ -5,13 +5,13 @@ from natcap.invest.fisheries import fisheries, fisheries_hst
 
 
 class Fisheries(model.Model):
-    label = u'Fisheries'
-    target = staticmethod(fisheries.execute)
-    validator = staticmethod(fisheries.validate)
-    localdoc = u'../documentation/fisheries.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Fisheries',
+            target=fisheries.execute,
+            validator=fisheries.validate,
+            localdoc=u'../documentation/fisheries.html')
 
         self.alpha_only = inputs.Label(
             text=(

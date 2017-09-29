@@ -8,13 +8,13 @@ from osgeo import ogr
 
 
 class ScenarioGenProximity(model.Model):
-    label = u'Scenario Generator: Proximity Based'
-    target = staticmethod(natcap.invest.scenario_gen_proximity.execute)
-    validator = staticmethod(natcap.invest.scenario_gen_proximity.validate)
-    localdoc = u'../documentation/scenario_gen_proximity.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Scenario Generator: Proximity Based',
+            target=natcap.invest.scenario_gen_proximity.execute,
+            validator=natcap.invest.scenario_gen_proximity.validate,
+            localdoc=u'../documentation/scenario_gen_proximity.html')
 
         self.base_lulc_path = inputs.File(
             args_key=u'base_lulc_path',

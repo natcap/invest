@@ -5,13 +5,13 @@ import natcap.invest.ndr.ndr
 
 
 class Nutrient(model.Model):
-    label = u'Nutrient Delivery Ratio Model (NDR)'
-    target = staticmethod(natcap.invest.ndr.ndr.execute)
-    validator = staticmethod(natcap.invest.ndr.ndr.validate)
-    localdoc = u'../documentation/waterpurification.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Nutrient Delivery Ratio Model (NDR)',
+            target=natcap.invest.ndr.ndr.execute,
+            validator=natcap.invest.ndr.ndr.validate,
+            localdoc=u'../documentation/waterpurification.html')
 
         self.dem_path = inputs.File(
             args_key=u'dem_path',

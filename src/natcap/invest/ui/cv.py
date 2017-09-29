@@ -5,13 +5,13 @@ from natcap.invest.coastal_vulnerability import coastal_vulnerability
 
 
 class CoastalVulnerability(model.Model):
-    label = u'Coastal Vulnerability Assessment Tool'
-    target = staticmethod(coastal_vulnerability.execute)
-    validator = staticmethod(coastal_vulnerability.validate)
-    localdoc = u'../documentation/coastal_vulnerability.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Coastal Vulnerability Assessment Tool',
+            target=coastal_vulnerability.execute,
+            validator=coastal_vulnerability.validate,
+            localdoc=u'../documentation/coastal_vulnerability.html')
 
         self.general_tab = inputs.Container(
             interactive=True,

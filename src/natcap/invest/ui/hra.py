@@ -6,13 +6,13 @@ from natcap.invest.habitat_risk_assessment import hra, hra_preprocessor
 
 
 class HabitatRiskAssessment(model.Model):
-    label = u'Habitat Risk Assessment'
-    target = staticmethod(hra.execute)
-    validator = staticmethod(hra.validate)
-    localdoc = u'../documentation/habitat_risk_assessment.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Habitat Risk Assessment',
+            target=hra.execute,
+            validator=hra.validate,
+            localdoc=u'../documentation/habitat_risk_assessment.html')
 
         self.csv_uri = inputs.Folder(
             args_key=u'csv_uri',

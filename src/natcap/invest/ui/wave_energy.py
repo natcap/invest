@@ -5,13 +5,13 @@ import natcap.invest.wave_energy.wave_energy
 
 
 class WaveEnergy(model.Model):
-    label = u'Wave Energy'
-    target = staticmethod(natcap.invest.wave_energy.wave_energy.execute)
-    validator = staticmethod(natcap.invest.wave_energy.wave_energy.validate)
-    localdoc = u'../documentation/wave_energy.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Wave Energy',
+            target=natcap.invest.wave_energy.wave_energy.execute,
+            validator=natcap.invest.wave_energy.wave_energy.validate,
+            localdoc=u'../documentation/wave_energy.html')
 
         self.results_suffix = inputs.Text(
             args_key=u'suffix',

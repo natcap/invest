@@ -800,16 +800,26 @@ class Model(QtWidgets.QMainWindow):
 
     If any of these attributes are not overridden, a warning will be raised.
     """
-    # TODO: does it make sense to have these be class attributes instead of object parameters?
-    label = None
-    target = None
-    validator = None
-    localdoc = None
+    def __init__(self, label, target, validator, localdoc):
+        """Initialize the Model.
 
-    def __init__(self):
-        """Initialize the Model."""
+        Parameters:
+            label (string): The model label.
+            target (callable): The reference to the target ``execute``
+                function.
+            validator (callable): The reference to the target ``validate``
+                function.
+            localdoc (string): The filename of the user's guide chapter for
+                this model.
+        """
         QtWidgets.QMainWindow.__init__(self)
+        self.label = label
+        self.target = target
+        self.validator = validator
+        self.localdoc = localdoc
+
         self.inputs = set([])
+
         self.setAcceptDrops(True)
         self._quickrun = False
         self._validator = inputs.Validator(parent=self)
@@ -840,13 +850,6 @@ class Model(QtWidgets.QMainWindow):
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved', STATUSBAR_MSG_DURATION)
         self.settings_dialog.accepted.connect(_settings_saved_message)
-
-        # These attributes should be defined in subclass
-        for attr in ('label', 'target', 'validator', 'localdoc'):
-            if not getattr(self, attr):  # None unless overridden in subclass
-                LOGGER.warn('Class attribute %s.%s is not defined',
-                            self.__class__.__name__,
-                            attr)
 
         # Main operational widgets for the form
         self._central_widget = QtWidgets.QWidget()

@@ -5,13 +5,13 @@ import natcap.invest.globio
 
 
 class GLOBIO(model.Model):
-    label = u'GLOBIO'
-    target = staticmethod(natcap.invest.globio.execute)
-    validator = staticmethod(natcap.invest.globio.validate)
-    localdoc = u'../documentation/globio.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'GLOBIO',
+            target=natcap.invest.globio.execute,
+            validator=natcap.invest.globio.validate,
+            localdoc=u'../documentation/globio.html')
 
         self.lulc_to_globio_table_uri = inputs.File(
             args_key=u'lulc_to_globio_table_uri',

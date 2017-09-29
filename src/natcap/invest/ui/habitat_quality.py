@@ -5,13 +5,13 @@ import natcap.invest.habitat_quality
 
 
 class HabitatQuality(model.Model):
-    label = u'Habitat Quality'
-    target = staticmethod(natcap.invest.habitat_quality.execute)
-    validator = staticmethod(natcap.invest.habitat_quality.validate)
-    localdoc = u'../documentation/habitat_quality.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Habitat Quality',
+            target=natcap.invest.habitat_quality.execute,
+            validator=natcap.invest.habitat_quality.validate,
+            localdoc=u'../documentation/habitat_quality.html')
 
         self.results_suffix = inputs.Text(
             args_key=u'suffix',

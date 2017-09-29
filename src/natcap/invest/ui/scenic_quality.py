@@ -5,13 +5,13 @@ from natcap.invest.scenic_quality import scenic_quality
 
 
 class ScenicQuality(model.Model):
-    label = u'Scenic Quality'
-    target = staticmethod(scenic_quality.execute)
-    validator = staticmethod(scenic_quality.validate)
-    localdoc = u'../documentation/scenic_quality.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Scenic Quality',
+            target=scenic_quality.execute,
+            validator=scenic_quality.validate,
+            localdoc=u'../documentation/scenic_quality.html')
 
         self.beta_only = inputs.Label(
             text=(

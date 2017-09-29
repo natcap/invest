@@ -5,13 +5,13 @@ from natcap.invest.hydropower import hydropower_water_yield
 
 
 class HydropowerWaterYield(model.Model):
-    label = u'Hydropower Water Yield'
-    target = staticmethod(hydropower_water_yield.execute)
-    validator = staticmethod(hydropower_water_yield.validate)
-    localdoc = u'../documentation/reservoirhydropowerproduction.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Hydropower Water Yield',
+            target=hydropower_water_yield.execute,
+            validator=hydropower_water_yield.validate,
+            localdoc=u'../documentation/reservoirhydropowerproduction.html')
 
         self.precipitation = inputs.File(
             args_key=u'precipitation_uri',

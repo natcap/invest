@@ -5,13 +5,13 @@ from natcap.invest.wind_energy import wind_energy
 
 
 class WindEnergy(model.Model):
-    label = u'Wind Energy'
-    target = staticmethod(wind_energy.execute)
-    validator = staticmethod(wind_energy.validate)
-    localdoc = u'../documentation/wind_energy.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Wind Energy',
+            target=wind_energy.execute,
+            validator=wind_energy.validate,
+            localdoc=u'../documentation/wind_energy.html')
 
         self.results_suffix = inputs.Text(
             args_key=u'suffix',

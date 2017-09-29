@@ -6,13 +6,13 @@ import natcap.invest.crop_production_regression
 
 
 class CropProductionPercentile(model.Model):
-    label = u'Crop Production Percentile Model'
-    target = staticmethod(natcap.invest.crop_production_percentile.execute)
-    validator = staticmethod(natcap.invest.crop_production_percentile.validate)
-    localdoc = u'../documentation/crop_production.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Crop Production Percentile Model',
+            target=natcap.invest.crop_production_percentile.execute,
+            validator=natcap.invest.crop_production_percentile.validate,
+            localdoc=u'../documentation/crop_production.html')
 
         self.model_data_path = inputs.Folder(
             args_key=u'model_data_path',
@@ -120,13 +120,13 @@ class CropProductionPercentile(model.Model):
 
 
 class CropProductionRegression(model.Model):
-    label = u'Crop Production Regression Model'
-    target = staticmethod(natcap.invest.crop_production_regression.execute)
-    validator = staticmethod(natcap.invest.crop_production_regression.validate)
-    localdoc = u'../documentation/crop_production.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Crop Production Regression Model',
+            target=natcap.invest.crop_production_regression.execute,
+            validator=natcap.invest.crop_production_regression.validate,
+            localdoc=u'../documentation/crop_production.html')
 
         self.model_data_path = inputs.Folder(
             args_key=u'model_data_path',

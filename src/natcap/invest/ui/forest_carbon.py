@@ -5,13 +5,13 @@ import natcap.invest.forest_carbon_edge_effect
 
 
 class ForestCarbonEdgeEffect(model.Model):
-    label = u'Forest Carbon Edge Effect Model'
-    target = staticmethod(natcap.invest.forest_carbon_edge_effect.execute)
-    validator = staticmethod(natcap.invest.forest_carbon_edge_effect.validate)
-    localdoc = u'../documentation/forest_carbon_edge_effect.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Forest Carbon Edge Effect Model',
+            target=natcap.invest.forest_carbon_edge_effect.execute,
+            validator=natcap.invest.forest_carbon_edge_effect.validate,
+            localdoc=u'../documentation/forest_carbon_edge_effect.html')
 
         self.lulc_uri = inputs.File(
             args_key=u'lulc_uri',

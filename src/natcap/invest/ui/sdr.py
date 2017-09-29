@@ -5,13 +5,13 @@ import natcap.invest.sdr
 
 
 class SDR(model.Model):
-    label = u'Sediment Delivery Ratio Model (SDR)'
-    target = staticmethod(natcap.invest.sdr.execute)
-    validator = staticmethod(natcap.invest.sdr.validate)
-    localdoc = u'../documentation/sdr.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Sediment Delivery Ratio Model (SDR)',
+            target=natcap.invest.sdr.execute,
+            validator=natcap.invest.sdr.validate,
+            localdoc=u'../documentation/sdr.html')
 
         self.dem_path = inputs.File(
             args_key=u'dem_path',

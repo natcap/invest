@@ -1906,13 +1906,12 @@ class ModelTests(_QtTest):
             validate_func = _validate
 
         class _TestModel(model.Model):
-            label = 'Test model'
-            target = staticmethod(target_func)
-            validator = staticmethod(validate_func)
-            localdoc = 'testmodel.html'
-
             def __init__(self):
-                model.Model.__init__(self)
+                model.Model.__init__(self,
+                                     label='Test model',
+                                     target=target_func,
+                                     validator=validate_func,
+                                     localdoc='testmodel.html')
                 # Default model class already has workspace and suffix input.
 
             def assemble_args(self):
@@ -2077,7 +2076,12 @@ class ModelTests(_QtTest):
         from natcap.invest.ui import model
 
         with self.assertRaises(NotImplementedError):
-            model_ui = model.Model()
+            model_ui = model.Model(
+                label='foo',
+                target=lambda args: None,
+                validator=lambda args, limit_to=None: [],
+                localdoc='sometextfile.html'
+            )
             model_ui.assemble_args()
 
     def test_load_args(self):

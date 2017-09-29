@@ -5,13 +5,13 @@ from natcap.invest.recreation import recmodel_client
 
 
 class Recreation(model.Model):
-    label = u'Recreation Model'
-    target = staticmethod(recmodel_client.execute)
-    validator = staticmethod(recmodel_client.validate)
-    localdoc = u'../documentation/recreation.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Recreation Model',
+            target=recmodel_client.execute,
+            validator=recmodel_client.validate,
+            localdoc=u'../documentation/recreation.html')
 
         self.internet_warning = inputs.Label(
             text=(

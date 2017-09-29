@@ -7,13 +7,13 @@ from natcap.invest.coastal_blue_carbon import preprocessor
 
 
 class CoastalBlueCarbonPreprocessor(model.Model):
-    label = u'Coastal Blue Carbon Preprocessor'
-    target = staticmethod(preprocessor.execute)
-    validator = staticmethod(preprocessor.validate)
-    localdoc = u'../documentation/coastal_blue_carbon.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Coastal Blue Carbon Preprocessor',
+            target=preprocessor.execute,
+            validator=preprocessor.validate,
+            localdoc=u'../documentation/coastal_blue_carbon.html')
 
         self.lulc_lookup_uri = inputs.File(
             args_key=u'lulc_lookup_uri',
@@ -42,13 +42,13 @@ class CoastalBlueCarbonPreprocessor(model.Model):
 
 
 class CoastalBlueCarbon(model.Model):
-    label = u'Coastal Blue Carbon'
-    target = staticmethod(coastal_blue_carbon.execute)
-    validator = staticmethod(coastal_blue_carbon.validate)
-    localdoc = u'../documentation/coastal_blue_carbon.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Coastal Blue Carbon',
+            target=coastal_blue_carbon.execute,
+            validator=coastal_blue_carbon.validate,
+            localdoc=u'../documentation/coastal_blue_carbon.html')
 
         self.lulc_lookup_uri = inputs.File(
             args_key=u'lulc_lookup_uri',

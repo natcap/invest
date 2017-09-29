@@ -7,13 +7,13 @@ from osgeo import ogr
 
 
 class FinfishAquaculture(model.Model):
-    label = u'Marine Aquaculture: Finfish'
-    target = staticmethod(finfish_aquaculture.execute)
-    validator = staticmethod(finfish_aquaculture.validate)
-    localdoc = u'../documentation/marine_fish.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Marine Aquaculture: Finfish',
+            target=finfish_aquaculture.execute,
+            validator=finfish_aquaculture.validate,
+            localdoc=u'../documentation/marine_fish.html')
 
         self.farm_location = inputs.File(
             args_key=u'ff_farm_loc',

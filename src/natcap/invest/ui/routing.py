@@ -5,13 +5,13 @@ from natcap.invest.routing import delineateit, routedem
 
 
 class Delineateit(model.Model):
-    label = u'DelineateIT: Watershed Delineation'
-    target = staticmethod(delineateit.execute)
-    validator = staticmethod(delineateit.validate)
-    localdoc = u'../documentation/delineateit.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'DelineateIT: Watershed Delineation',
+            target=delineateit.execute,
+            validator=delineateit.validate,
+            localdoc=u'../documentation/delineateit.html')
 
         self.dem_uri = inputs.File(
             args_key=u'dem_uri',
@@ -68,13 +68,13 @@ class Delineateit(model.Model):
 
 
 class RouteDEM(model.Model):
-    label = u'RouteDEM'
-    target = staticmethod(routedem.execute)
-    validator = staticmethod(routedem.validate)
-    localdoc = u'../documentation/routedem.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'RouteDEM',
+            target=routedem.execute,
+            validator=routedem.validate,
+            localdoc=u'../documentation/routedem.html')
 
         self.dem_path = inputs.File(
             args_key=u'dem_path',

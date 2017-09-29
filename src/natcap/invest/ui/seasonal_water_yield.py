@@ -5,13 +5,13 @@ from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
 
 class SeasonalWaterYield(model.Model):
-    label = u'Seasonal Water Yield'
-    target = staticmethod(seasonal_water_yield.execute)
-    validator = staticmethod(seasonal_water_yield.validate)
-    localdoc = u'../documentation/seasonalwateryield.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Seasonal Water Yield',
+            target=seasonal_water_yield.execute,
+            validator=seasonal_water_yield.validate,
+            localdoc=u'../documentation/seasonalwateryield.html')
 
         self.threshold_flow_accumulation = inputs.Text(
             args_key=u'threshold_flow_accumulation',

@@ -6,13 +6,13 @@ from natcap.invest.overlap_analysis import (overlap_analysis,
 
 
 class OverlapAnalysis(model.Model):
-    label = u'Overlap Analysis Model: Fisheries and Recreation'
-    target = staticmethod(overlap_analysis.execute)
-    validator = staticmethod(overlap_analysis.validate)
-    localdoc = u'../documentation/overlap_analysis.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Overlap Analysis Model: Fisheries and Recreation',
+            target=overlap_analysis.execute,
+            validator=overlap_analysis.validate,
+            localdoc=u'../documentation/overlap_analysis.html')
 
         self.aoi = inputs.File(
             args_key=u'zone_layer_uri',

@@ -10,13 +10,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Pollination(model.Model):
-    label = u'Crop Pollination'
-    target = staticmethod(pollination.execute)
-    validator = staticmethod(pollination.validate)
-    localdoc = u'../documentation/croppollination.html'
-
     def __init__(self):
-        model.Model.__init__(self)
+        model.Model.__init__(
+            self,
+            label=u'Crop Pollination',
+            target=pollination.execute,
+            validator=pollination.validate,
+            localdoc=u'../documentation/croppollination.html')
 
         self.landcover_raster_path = inputs.File(
             args_key=u'landcover_raster_path',
