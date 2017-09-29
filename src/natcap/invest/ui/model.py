@@ -367,9 +367,9 @@ class AboutDialog(QtWidgets.QDialog):
                 ('numpy', 'BSD', 'http://numpy.org'),
                 ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
                 ('pygeoprocessing', 'BSD',
-                 'http://bitbucket.org/richpsharp/pygeoprocessing'),
+                 'http://bitbucket.org/richsharp/pygeoprocessing'),
                 ('PyQt', 'GPL',
-                'http://riverbankcomputing.com/software/pyqt/intro'),
+                 'http://riverbankcomputing.com/software/pyqt/intro'),
                 ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
                 ('scipy', 'BSD', 'http://www.scipy.org/'),
                 ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
@@ -386,6 +386,14 @@ class AboutDialog(QtWidgets.QDialog):
                     homepage='<a href="{0}">{0}</a>'.format(lib_homepage))
 
         label_text += "</table>"
+        label_text += textwrap.dedent(
+            """
+            <br/>
+            <p>
+            The source code for GPL'd components are included as an extra
+            component on your <br/> installation medium.
+            </p>
+            """)
 
         self.label = QtWidgets.QLabel(label_text)
         self.label.setTextFormat(QtCore.Qt.RichText)
