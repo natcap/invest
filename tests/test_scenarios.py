@@ -9,6 +9,7 @@ import textwrap
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 from osgeo import ogr
+import six
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         '..', 'data', 'invest-data')
 FW_DATA = os.path.join(DATA_DIR, 'Base_Data', 'Freshwater')
@@ -486,3 +487,21 @@ class ScenariosTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             scenarios.read_parameters_from_logfile(logfile_path)
+
+
+class UtilitiesTest(unittest.TestCase):
+    def test_print_args(self):
+        """Scenarios: verify that we format args correctly."""
+        from natcap.invest.scenarios import format_args_dict
+
+        args_dict = {
+            'some_arg': [1, 2, 3, 4],
+            'foo': 'bar',
+        }
+
+        args_string = format_args_dict(args_dict=args_dict)
+        expected_string = six.text_type(
+            'Arguments:\n'
+            'foo      bar\n'
+            'some_arg [1, 2, 3, 4]\n')
+        self.assertEqual(args_string, expected_string)
