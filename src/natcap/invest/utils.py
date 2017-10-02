@@ -86,7 +86,6 @@ def _format_time(seconds):
     return "%ss" % seconds
 
 
-# TODO: come up with a better name for this contextmanager.
 @contextlib.contextmanager
 def prepare_workspace(workspace, name, logging_level=logging.NOTSET):
     if not os.path.exists(workspace):
