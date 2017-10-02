@@ -5,9 +5,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.habitat_risk_assessment import hra, hra_preprocessor
 
 
-class HabitatRiskAssessment(model.Model):
+class HabitatRiskAssessment(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Habitat Risk Assessment',
             target=hra.execute,
@@ -100,14 +100,14 @@ class HabitatRiskAssessment(model.Model):
         return args
 
 
-class HRAPreprocessor(model.Model):
+class HRAPreprocessor(model.InVESTModel):
     label = u'Habitat Risk Assessment Preprocessor'
     target = staticmethod(hra_preprocessor.execute)
     validator = staticmethod(hra_preprocessor.validate)
     localdoc = u'../documentation/habitat_risk_assessment.html'
 
     def __init__(self):
-        model.Model.__init__(self)
+        model.InVESTModel.__init__(self)
 
         self.habs_dir = inputs.File(
             args_key=u'habitats_dir',

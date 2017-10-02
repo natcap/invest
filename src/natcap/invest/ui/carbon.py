@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 import natcap.invest.carbon
 
 
-class Carbon(model.Model):
+class Carbon(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(self,
+        model.InVESTModel.__init__(self,
                              label=u'InVEST Carbon Model',
                              target=natcap.invest.carbon.execute,
                              validator=natcap.invest.carbon.validate,

@@ -5,9 +5,9 @@ from natcap.invest.overlap_analysis import (overlap_analysis,
                                             overlap_analysis_mz)
 
 
-class OverlapAnalysis(model.Model):
+class OverlapAnalysis(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Overlap Analysis Model: Fisheries and Recreation',
             target=overlap_analysis.execute,
@@ -147,14 +147,14 @@ class OverlapAnalysis(model.Model):
         return args
 
 
-class OverlapAnalysisMZ(model.Model):
+class OverlapAnalysisMZ(model.InVESTModel):
     label = u'Overlap Analysis Management Zone Model: Fisheries and Recreation'
     target = staticmethod(overlap_analysis_mz.execute)
     validator = staticmethod(overlap_analysis_mz.validate)
     localdoc = u'../documentation/overlap_analysis.html'
 
     def __init__(self):
-        model.Model.__init__(self)
+        model.InVESTModel.__init__(self)
 
         self.aoi = inputs.File(
             args_key=u'zone_layer_loc',

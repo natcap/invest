@@ -5,9 +5,9 @@ import natcap.invest.crop_production_percentile
 import natcap.invest.crop_production_regression
 
 
-class CropProductionPercentile(model.Model):
+class CropProductionPercentile(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Crop Production Percentile Model',
             target=natcap.invest.crop_production_percentile.execute,
@@ -119,9 +119,9 @@ class CropProductionPercentile(model.Model):
         return args
 
 
-class CropProductionRegression(model.Model):
+class CropProductionRegression(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Crop Production Regression Model',
             target=natcap.invest.crop_production_regression.execute,

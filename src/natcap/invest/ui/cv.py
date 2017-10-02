@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.coastal_vulnerability import coastal_vulnerability
 
 
-class CoastalVulnerability(model.Model):
+class CoastalVulnerability(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Coastal Vulnerability Assessment Tool',
             target=coastal_vulnerability.execute,

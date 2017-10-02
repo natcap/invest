@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.scenic_quality import scenic_quality
 
 
-class ScenicQuality(model.Model):
+class ScenicQuality(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Scenic Quality',
             target=scenic_quality.execute,

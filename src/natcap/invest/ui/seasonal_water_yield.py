@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
 
-class SeasonalWaterYield(model.Model):
+class SeasonalWaterYield(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Seasonal Water Yield',
             target=seasonal_water_yield.execute,

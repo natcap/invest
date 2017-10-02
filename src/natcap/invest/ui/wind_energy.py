@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.wind_energy import wind_energy
 
 
-class WindEnergy(model.Model):
+class WindEnergy(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Wind Energy',
             target=wind_energy.execute,

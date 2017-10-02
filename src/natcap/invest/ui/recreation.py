@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.recreation import recmodel_client
 
 
-class Recreation(model.Model):
+class Recreation(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Recreation Model',
             target=recmodel_client.execute,

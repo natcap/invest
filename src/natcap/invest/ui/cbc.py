@@ -6,9 +6,9 @@ from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 from natcap.invest.coastal_blue_carbon import preprocessor
 
 
-class CoastalBlueCarbonPreprocessor(model.Model):
+class CoastalBlueCarbonPreprocessor(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Coastal Blue Carbon Preprocessor',
             target=preprocessor.execute,
@@ -41,9 +41,9 @@ class CoastalBlueCarbonPreprocessor(model.Model):
         return args
 
 
-class CoastalBlueCarbon(model.Model):
+class CoastalBlueCarbon(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Coastal Blue Carbon',
             target=coastal_blue_carbon.execute,

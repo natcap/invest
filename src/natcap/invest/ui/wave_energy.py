@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 import natcap.invest.wave_energy.wave_energy
 
 
-class WaveEnergy(model.Model):
+class WaveEnergy(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Wave Energy',
             target=natcap.invest.wave_energy.wave_energy.execute,

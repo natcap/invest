@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.fisheries import fisheries, fisheries_hst
 
 
-class Fisheries(model.Model):
+class Fisheries(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Fisheries',
             target=fisheries.execute,
@@ -309,14 +309,14 @@ class Fisheries(model.Model):
         return args
 
 
-class FisheriesHST(model.Model):
+class FisheriesHST(model.InVESTModel):
     label = u'Fisheries Habitat Scenario Tool'
     target = staticmethod(fisheries_hst.execute)
     validator = staticmethod(fisheries_hst.validate)
     localdoc = u'../documentation/fisheries.html'
 
     def __init__(self):
-        model.Model.__init__(self)
+        model.InVESTModel.__init__(self)
 
         self.alpha_only = inputs.Label(
             text=(

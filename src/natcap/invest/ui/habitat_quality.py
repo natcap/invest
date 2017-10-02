@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 import natcap.invest.habitat_quality
 
 
-class HabitatQuality(model.Model):
+class HabitatQuality(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Habitat Quality',
             target=natcap.invest.habitat_quality.execute,

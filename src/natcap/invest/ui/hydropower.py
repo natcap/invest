@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.hydropower import hydropower_water_yield
 
 
-class HydropowerWaterYield(model.Model):
+class HydropowerWaterYield(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Hydropower Water Yield',
             target=hydropower_water_yield.execute,

@@ -7,9 +7,9 @@ import natcap.invest.scenario_generator.scenario_generator
 from osgeo import ogr
 
 
-class ScenarioGenProximity(model.Model):
+class ScenarioGenProximity(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Scenario Generator: Proximity Based',
             target=natcap.invest.scenario_gen_proximity.execute,
@@ -102,14 +102,14 @@ class ScenarioGenProximity(model.Model):
         return args
 
 
-class ScenarioGenerator(model.Model):
+class ScenarioGenerator(model.InVESTModel):
     label = u'Scenario Generator'
     target = staticmethod(natcap.invest.scenario_generator.scenario_generator.execute)
     validator = staticmethod(natcap.invest.scenario_generator.scenario_generator.validate)
     localdoc = u'../documentation/scenario_generator.html'
 
     def __init__(self):
-        model.Model.__init__(self)
+        model.InVESTModel.__init__(self)
 
         self.suffix = inputs.Text(
             args_key=u'suffix',

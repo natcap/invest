@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 import natcap.invest.forest_carbon_edge_effect
 
 
-class ForestCarbonEdgeEffect(model.Model):
+class ForestCarbonEdgeEffect(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Forest Carbon Edge Effect Model',
             target=natcap.invest.forest_carbon_edge_effect.execute,

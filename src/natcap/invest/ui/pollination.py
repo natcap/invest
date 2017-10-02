@@ -9,9 +9,9 @@ from .. import pollination
 LOGGER = logging.getLogger(__name__)
 
 
-class Pollination(model.Model):
+class Pollination(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Crop Pollination',
             target=pollination.execute,

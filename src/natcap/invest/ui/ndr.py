@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 import natcap.invest.ndr.ndr
 
 
-class Nutrient(model.Model):
+class Nutrient(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Nutrient Delivery Ratio Model (NDR)',
             target=natcap.invest.ndr.ndr.execute,

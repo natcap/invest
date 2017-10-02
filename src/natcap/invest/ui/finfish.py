@@ -6,9 +6,9 @@ from natcap.invest.finfish_aquaculture import finfish_aquaculture
 from osgeo import ogr
 
 
-class FinfishAquaculture(model.Model):
+class FinfishAquaculture(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'Marine Aquaculture: Finfish',
             target=finfish_aquaculture.execute,

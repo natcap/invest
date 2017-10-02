@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 from natcap.invest.routing import delineateit, routedem
 
 
-class Delineateit(model.Model):
+class Delineateit(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'DelineateIT: Watershed Delineation',
             target=delineateit.execute,
@@ -67,9 +67,9 @@ class Delineateit(model.Model):
         return args
 
 
-class RouteDEM(model.Model):
+class RouteDEM(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'RouteDEM',
             target=routedem.execute,

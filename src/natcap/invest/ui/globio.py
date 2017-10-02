@@ -4,9 +4,9 @@ from natcap.invest.ui import model, inputs
 import natcap.invest.globio
 
 
-class GLOBIO(model.Model):
+class GLOBIO(model.InVESTModel):
     def __init__(self):
-        model.Model.__init__(
+        model.InVESTModel.__init__(
             self,
             label=u'GLOBIO',
             target=natcap.invest.globio.execute,
