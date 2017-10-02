@@ -95,11 +95,11 @@ class _SettingsSandbox(_QtTest):
             inputs.INVEST_SETTINGS.setValue(key, value)
 
 
-class InputTest(_QtTest):
+class InVESTModelInputTest(_QtTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Input
-        return Input(*args, **kwargs)
+        from natcap.invest.ui.inputs import InVESTModelInput
+        return InVESTModelInput(*args, **kwargs)
 
     def test_label(self):
         input_instance = self.__class__.create_input(label='foo')
@@ -167,7 +167,7 @@ class InputTest(_QtTest):
 
     def test_value(self):
         input_instance = self.__class__.create_input(label='foo')
-        if input_instance.__class__.__name__ in ('Input', 'GriddedInput'):
+        if input_instance.__class__.__name__ in ('InVESTModelInput', 'GriddedInput'):
             with self.assertRaises(NotImplementedError):
                 input_instance.value()
         else:
@@ -175,7 +175,7 @@ class InputTest(_QtTest):
 
     def test_set_value(self):
         input_instance = self.__class__.create_input(label='foo')
-        if input_instance.__class__.__name__ in ('Input', 'GriddedInput'):
+        if input_instance.__class__.__name__ in ('InVESTModelInput', 'GriddedInput'):
             with self.assertRaises(NotImplementedError):
                 input_instance.set_value('foo')
         else:
@@ -186,7 +186,7 @@ class InputTest(_QtTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
 
-        if input_instance.__class__.__name__ in ('Input', 'GriddedInput'):
+        if input_instance.__class__.__name__ in ('InVESTModelInput', 'GriddedInput'):
             try:
                 with self.assertRaises(NotImplementedError):
                     self.assertEqual(input_instance.value(), '')
@@ -277,7 +277,7 @@ class InputTest(_QtTest):
             self.assertEqual(input_instance.visible(), True)
 
 
-class GriddedInputTest(InputTest):
+class GriddedInputTest(InVESTModelInputTest):
     @staticmethod
     def create_input(*args, **kwargs):
         from natcap.invest.ui.inputs import GriddedInput
@@ -1005,7 +1005,7 @@ class LabelTest(_QtTest):
         label.add_to(super_widget.layout())
 
 
-class ContainerTest(InputTest):
+class ContainerTest(InVESTModelInputTest):
     @staticmethod
     def create_input(*args, **kwargs):
         from natcap.invest.ui.inputs import Container
@@ -2395,11 +2395,6 @@ class ModelTests(_QtTest):
         with wait_on_signal(model_ui.form.run_finished):
             model_ui.execute_model()
 
-        self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
-
-        #TODO: this raises an error on Rich's machine: WindowsError: [Error 32] The process cannot access the file because it is being used by another process: 'c:\\users\\rpsharp\\appdata\\local\\temp\\tmpz0jq0q\\dir_not_there\\InVEST-Test-model-log-2017-08-21--15_14_28.txt'
-        with wait_on_signal(model_ui.form.run_finished):
-            model_ui.execute_model()
         self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
 
     def test_overwrite_reject(self):

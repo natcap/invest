@@ -937,7 +937,7 @@ class FolderButton(AbstractFileSystemButton):
         self.open_method = self.dialog.open_folder
 
 
-class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and started to change it myself, but if there's a better name than `Input` and later on the object instances called `input`.  Like UIInput?  Or more verbose InVESTUIInput?  I don't feel that strongly about it, but might appreciate a less general name when we revisit this code in 5 years.
+class InVESTModelInput(QtCore.QObject):
     """Base class for InVEST inputs.
 
     Key concepts for the input class include:
@@ -952,7 +952,7 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
           interactivity may be accessed with the ``self.interactive``
           attribute.
         * Value: Every input has a value that can be set by interacting with
-          the Input's component widgets. How the value is changed by
+          the InVESTModelInput's component widgets. How the value is changed by
           interacting with these widgets depends on the subclass. The current
           value can be fetched with ``self.value()``.  When the value changes,
           the ``value_changed`` signal is emitted.
@@ -961,14 +961,14 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
           here indicates whether the widgets should be considered by the
           package as being visible.
 
-    Subclasses of Input must implement these methods:
+    Subclasses of InVESTModelInput must implement these methods:
 
         * value(self)
         * set_value(self, value)
 
     Signals used by this class:
 
-        * ``value_changed`` (string): Emitted when the value of the Input
+        * ``value_changed`` (string): Emitted when the value of the InVESTModelInput
             instance changes.  Slots are called with the string value of the
             input as the one and only parameter.
         * ``interactivity_changed`` (bool): Emitted when an element's
@@ -987,7 +987,7 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
 
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None):
-        """Initialize the Input instance.
+        """Initialize the InVESTModelInput instance.
 
         Parameters:
             label (string): The string label of the input.
@@ -1036,7 +1036,7 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
         try:
             value_valid = len(self.value()) > 0
         except TypeError:
-            # Some Inputs (containers, and checkboxes, most notably) return
+            # Some InVESTModelInputs (containers, and checkboxes, most notably) return
             # True or False based on whether they are checked.
             value_valid = self.value()
         new_sufficiency = value_valid and self.interactive
@@ -1068,7 +1068,7 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
         should be considered by the package as being visible.
 
         Parameters:
-            visible_hint (bool): Whether the Input instance should be
+            visible_hint (bool): Whether the InVESTModelInput instance should be
                 considered to be visible.
 
         Returns:
@@ -1083,7 +1083,7 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
                 widget.setVisible(self._visible_hint)
 
     def value(self):
-        """Fetch the value of this Input.
+        """Fetch the value of this InVESTModelInput.
 
         Note:
             This method must be reimplemented by subclasses.
@@ -1100,7 +1100,7 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
             This method must be reimplemented by subclasses.
 
         Parameters:
-            value: The new value of the Input.
+            value: The new value of the InVESTModelInput.
 
         Raises:
             NotImplementedError
@@ -1142,7 +1142,7 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
         self.interactivity_changed.emit(self.interactive)
 
     def add_to(self, layout):
-        """Add the component widgets of this Input to a QGridLayout.
+        """Add the component widgets of this InVESTModelInput to a QGridLayout.
 
         Parameters:
             layout (QtWidgets.QGridLayout): A QGridLayout to which all
@@ -1167,10 +1167,10 @@ class Input(QtCore.QObject):  # TODO: UIInput: We'd talked about this, and start
                 widget_index)  # column
 
 
-class GriddedInput(Input):
-    """A subclass of Input that assumes it's using a QGridLayout.
+class GriddedInput(InVESTModelInput):
+    """A subclass of InVESTModelInput that assumes it's using a QGridLayout.
 
-    In addition to the core concepts of Input, GriddedInput adds a few:
+    In addition to the core concepts of InVESTModelInput, GriddedInput adds a few:
 
         * Validity: A GriddedInput has a value that is either valid or
           invalid. The current validity may be accessed through
@@ -1208,7 +1208,7 @@ class GriddedInput(Input):
                 the input will not have an args key.
             hideable=False (bool): If ``True``, the input will have a
                 checkbox that, when triggered, will show/hide the other
-                component widgets in this Input.
+                component widgets in this InVESTModelInput.
             validator=None (callable): The validator callable to use for
                 validation.  This callable must adhere to the InVEST
                 Validation API.
@@ -1216,7 +1216,7 @@ class GriddedInput(Input):
         Returns:
             ``None``
         """
-        Input.__init__(self, label=label, helptext=helptext,
+        InVESTModelInput.__init__(self, label=label, helptext=helptext,
                        interactive=interactive, args_key=args_key)
 
         self._valid = None
@@ -1289,7 +1289,7 @@ class GriddedInput(Input):
                 args = self.parent().assemble_args()
             except AttributeError:
                 # When self.parent() is not set, as in testing.
-                # self.parent() is only set when the Input is added to a
+                # self.parent() is only set when the InVESTModelInput is added to a
                 # layout.
                 args = {self.args_key: self.value()}
 
@@ -1723,7 +1723,7 @@ class _Path(Text):
 
 
 class Folder(_Path):
-    """An Input for selecting a folder."""
+    """An InVESTModelInput for selecting a folder."""
 
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
@@ -1740,7 +1740,7 @@ class Folder(_Path):
                 the input will not have an args key.
             hideable=False (bool): If ``True``, the input will have a
                 checkbox that, when triggered, will show/hide the other
-                component widgets in this Input.
+                component widgets in this InVESTModelInput.
             validator=None (callable): The validator callable to use for
                 validation.  This callable must adhere to the InVEST
                 Validation API.
@@ -1762,7 +1762,7 @@ class Folder(_Path):
 
 
 class File(_Path):
-    """An Input for selecting a single file."""
+    """An InVESTModelInput for selecting a single file."""
 
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
@@ -1779,7 +1779,7 @@ class File(_Path):
                 the input will not have an args key.
             hideable=False (bool): If ``True``, the input will have a
                 checkbox that, when triggered, will show/hide the other
-                component widgets in this Input.
+                component widgets in this InVESTModelInput.
             validator=None (callable): The validator callable to use for
                 validation.  This callable must adhere to the InVEST
                 Validation API.
@@ -1801,7 +1801,7 @@ class File(_Path):
 
 
 class SaveFile(_Path):
-    """An Input for selecting a file to save to."""
+    """An InVESTModelInput for selecting a file to save to."""
 
     def __init__(self, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None,
@@ -1819,7 +1819,7 @@ class SaveFile(_Path):
                 the input will not have an args key.
             hideable=False (bool): If ``True``, the input will have a
                 checkbox that, when triggered, will show/hide the other
-                component widgets in this Input.
+                component widgets in this InVESTModelInput.
             validator=None (callable): The validator callable to use for
                 validation.  This callable must adhere to the InVEST
                 Validation API.
@@ -1839,7 +1839,7 @@ class SaveFile(_Path):
 
 
 class Checkbox(GriddedInput):
-    """An Input for boolean user input."""
+    """An InVESTModelInput for boolean user input."""
 
     # Re-setting value_changed to adapt to the type requirement.
     value_changed = QtCore.Signal(bool)
@@ -1903,7 +1903,7 @@ class Checkbox(GriddedInput):
 
 
 class Dropdown(GriddedInput):
-    """An Input for selecting one out of a set of defined options."""
+    """An InVESTModelInput for selecting one out of a set of defined options."""
 
     def __init__(self, label, helptext=None, interactive=True, args_key=None,
                  hideable=False, options=()):
@@ -1922,7 +1922,7 @@ class Dropdown(GriddedInput):
                 the input will not have an args key.
             hideable=False (bool): If ``True``, the input will have a
                 checkbox that, when triggered, will show/hide the other
-                component widgets in this Input.
+                component widgets in this InVESTModelInput.
             options=() (iterable): An iterable of options for this Dropdown.
                 Options will be added in the order they exist in the iterable.
 
@@ -2070,10 +2070,10 @@ class Label(QtWidgets.QLabel):
                          layout.columnCount())  # span all columns
 
 
-class Container(QtWidgets.QGroupBox, Input):
-    """An Input that contains other inputs within a QGridLayout."""
+class Container(QtWidgets.QGroupBox, InVESTModelInput):
+    """An InVESTModelInput that contains other inputs within a QGridLayout."""
 
-    # Unlike other subclasses of Input, we need to redefine all of the signals
+    # Unlike other subclasses of InVESTModelInput, we need to redefine all of the signals
     # here because we're changing the type of the parameter emitted by
     # value_changed to a bool.
     value_changed = QtCore.Signal(bool)
@@ -2099,7 +2099,7 @@ class Container(QtWidgets.QGroupBox, Input):
             ``None``
         """
         QtWidgets.QGroupBox.__init__(self)
-        Input.__init__(self, label=label, interactive=interactive,
+        InVESTModelInput.__init__(self, label=label, interactive=interactive,
                        args_key=args_key)
         self.widgets = [self]
         self.setCheckable(expandable)
@@ -2197,40 +2197,39 @@ class Container(QtWidgets.QGroupBox, Input):
         """
         self.setCheckable(value)
 
-    # TODO: I'd commented to you in person that `input` overrides Python's `input` function, but I don't know that I care so much one way or the other.  I'd be happy to see it called ui_input or something if it's easy.  ...a day later... I also wrote a comment about the naming convention of `class Input`.
-    def add_input(self, input):
+    def add_input(self, input_obj):
         """Add an input to the Container.
 
         The input must have an ``add_to`` method that handles how to add the
-        Input and/or its component widgets to a QGridLayout that is owned by
-        the Container.
+        InVESTModelInput and/or its component widgets to a QGridLayout that is
+        owned by the Container.
 
         Parameters:
-            input (Input): An instance of Input to add to the Container's
-                layout.
+            input_obj (InVESTModelInput): An instance of Input to add to the
+                Container's layout.
 
         Returns:
             ``None``
         """
-        input.add_to(layout=self.layout())
+        input_obj.add_to(layout=self.layout())
         _apply_sizehint(self.layout().parent())
 
         if self.expandable:
-            input.set_visible(self.expanded)
-            input.set_interactive(self.expanded)
+            input_obj.set_visible(self.expanded)
+            input_obj.set_interactive(self.expanded)
 
             if self.isVisible():
-                for widget in input.widgets:
+                for widget in input_obj.widgets:
                     if not widget:
                         continue
                     widget.setVisible(self.expanded)
-        self.sufficiency_changed.connect(input.set_interactive)
-        self.sufficiency_changed.connect(input.set_visible)
+        self.sufficiency_changed.connect(input_obj.set_interactive)
+        self.sufficiency_changed.connect(input_obj.set_visible)
 
-        if isinstance(input, Multi):
+        if isinstance(input_obj, Multi):
             def _update_sizehints():
                 self.setMinimumSize(self.sizeHint())
-            input.input_added.connect(_update_sizehints)
+            input_obj.input_added.connect(_update_sizehints)
 
     def add_to(self, layout):
         """Define how to add this Container to a QGridLayout.
@@ -2272,7 +2271,7 @@ class Container(QtWidgets.QGroupBox, Input):
 
 
 class Multi(Container):
-    """Input that can dynamically add inputs based on a template."""
+    """InVESTModelInput that can dynamically add inputs based on a template."""
 
     value_changed = QtCore.Signal(list)
     input_added = QtCore.Signal()
@@ -2320,9 +2319,9 @@ class Multi(Container):
             label (string): The label of the Multi.
             callable_ (callable): The callable to use for creating a new input
                 on demand.  The callable must take no parameters and must
-                return a single Input instance.  Multiple Inputs may be
+                return a single InVESTModelInput instance.  Multiple Inputs may be
                 grouped together into a Container instance returned from the
-                callable.  Each Input must have a ``value`` method.
+                callable.  Each InVESTModelInput must have a ``value`` method.
             interactive=True (bool): Whether the user can interact with the
                 input.
             args_key=None (string): The args key of the input.
@@ -2394,7 +2393,7 @@ class Multi(Container):
         """Add an item to the Multi.
 
         Parameters:
-            new_input=None (Input): The input instance to add to the Multi.
+            new_input=None (InVESTModelInput): The input instance to add to the Multi.
                 If ``None``, a new input will be created by calling
                 ``self.callable_()``
 
@@ -2478,7 +2477,7 @@ class Multi(Container):
 
 
 class Form(QtWidgets.QWidget):
-    """A form that contains multiple Inputs."""
+    """A form that contains multiple InVESTModelInputs."""
 
     submitted = QtCore.Signal()
     run_finished = QtCore.Signal()
@@ -2607,7 +2606,7 @@ class Form(QtWidgets.QWidget):
         """Add an input to the Form.
 
         Parameters:
-            input (Input): The Input instance to add to the Form.
+            input (InVESTModelInput): The Input instance to add to the Form.
 
         Returns:
             ``None``

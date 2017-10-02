@@ -960,7 +960,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         Returns:
             None.
         """
-        if isinstance(value, inputs.Input):
+        if isinstance(value, inputs.InVESTModelInput):
             self.inputs.add(value)
         QtWidgets.QMainWindow.__setattr__(self, name, value)
 
@@ -1019,18 +1019,17 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.statusBar().showMessage(alert_message, STATUSBAR_MSG_DURATION)
         self.window_title.filename = os.path.basename(save_filepath)
 
-    # TODO: we talked about this, but wondering if there's a better name than `input` and `Input`.  For one, `input` is a built in Python function already.  And maybe UIInput and ui_input might be a better alternative?  Just to consider...
-    def add_input(self, input):
+    def add_input(self, input_obj):
         """Add an input to the model.
 
         Parameters:
-            input (natcap.invest.ui.inputs.Input): An Input instance to add to
-                the model.
+            input_obj (natcap.invest.ui.inputs.InVESTModelInput): An
+                InVESTModelInput instance to add to the model.
 
         Returns:
             ``None``
         """
-        self.form.add_input(input)
+        self.form.add_input(input_obj)
 
     def is_valid(self):
         """Check whether the form is valid.
