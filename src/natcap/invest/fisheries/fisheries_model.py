@@ -138,7 +138,7 @@ def set_recru_func(vars_dict):
 
         N_next[0], spawners = rec_func(N_prev)
     '''
-    sexsp = vars_dict['sexsp']
+    sexsp = float(vars_dict['sexsp'])
     LarvDisp = vars_dict['Larvaldispersal']
 
     # Initialize Weight vector according to spawn_units
@@ -152,15 +152,15 @@ def set_recru_func(vars_dict):
         return (N_prev * Matu * Weight).sum()
 
     def rec_func_BH(N_prev):
-        alpha = vars_dict['alpha']
-        beta = vars_dict['beta']
+        alpha = float(vars_dict['alpha'])
+        beta = float(vars_dict['beta'])
         N_0 = (LarvDisp * ((alpha * spawners(
             N_prev) / (beta + spawners(N_prev)))) / sexsp)
         return (N_0, spawners(N_prev))
 
     def rec_func_Ricker(N_prev):
-        alpha = vars_dict['alpha']
-        beta = vars_dict['beta']
+        alpha = float(vars_dict['alpha'])
+        beta = float(vars_dict['beta'])
         N_0 = (LarvDisp * (alpha * spawners(N_prev) * (
             np.e ** (-beta * spawners(N_prev)))) / sexsp)
         return (N_0, spawners(N_prev))
@@ -172,7 +172,7 @@ def set_recru_func(vars_dict):
         return (N_0, spawners(N_prev))
 
     def rec_func_Fixed(N_prev):
-        fixed = vars_dict['total_recur_recruits']
+        fixed = float(vars_dict['total_recur_recruits'])
         N_0 = LarvDisp * fixed / sexsp
         return (N_0, None)
 
@@ -228,8 +228,8 @@ def set_init_cond_func(vars_dict):
     '''
     S = vars_dict['Survtotalfrac']  # S_asx
     LarvDisp = vars_dict['Larvaldispersal']
-    sexsp = vars_dict['sexsp']
-    total_init_recruits = vars_dict['total_init_recruits']
+    sexsp = int(vars_dict['sexsp'])
+    total_init_recruits = float(vars_dict['total_init_recruits'])
     num_regions = len(vars_dict['Regions'])
     num_classes = len(vars_dict['Classes'])
 
@@ -395,8 +395,8 @@ def set_harvest_func(vars_dict):
     unit_price = 0
 
     if vars_dict['val_cont']:
-        frac_post_process = vars_dict['frac_post_process']
-        unit_price = vars_dict['unit_price']
+        frac_post_process = float(vars_dict['frac_post_process'])
+        unit_price = float(vars_dict['unit_price'])
 
     # Initialize Weight vector according to harvest_units
     if vars_dict['harvest_units'] == "Weight":
