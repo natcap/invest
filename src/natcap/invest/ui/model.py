@@ -788,7 +788,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
             self.label.setVisible(True)
 
 
-class Model(QtWidgets.QMainWindow):
+class InVESTModel(QtWidgets.QMainWindow):
     """An InVEST model window.
 
     This class represents an abstraction of a variety of Qt widgets that

@@ -1905,9 +1905,9 @@ class ModelTests(_QtTest):
                 return []
             validate_func = _validate
 
-        class _TestModel(model.Model):
+        class _TestInVESTModel(model.InVESTModel):
             def __init__(self):
-                model.Model.__init__(self,
+                model.InVESTModel.__init__(self,
                                      label='Test model',
                                      target=target_func,
                                      validator=validate_func,
@@ -1923,9 +1923,9 @@ class ModelTests(_QtTest):
             def __del__(self):
                 # clear the settings for future runs.
                 self.settings.clear()
-                model.Model.__del__(self)
+                model.InVESTModel.__del__(self)
 
-        model = _TestModel()
+        model = _TestInVESTModel()
 
         # clear the model's settings before we run our test.
         model.settings.clear()
@@ -2076,7 +2076,7 @@ class ModelTests(_QtTest):
         from natcap.invest.ui import model
 
         with self.assertRaises(NotImplementedError):
-            model_ui = model.Model(
+            model_ui = model.InVESTModel(
                 label='foo',
                 target=lambda args: None,
                 validator=lambda args, limit_to=None: [],
