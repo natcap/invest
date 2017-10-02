@@ -310,13 +310,13 @@ class Fisheries(model.InVESTModel):
 
 
 class FisheriesHST(model.InVESTModel):
-    label = u'Fisheries Habitat Scenario Tool'
-    target = staticmethod(fisheries_hst.execute)
-    validator = staticmethod(fisheries_hst.validate)
-    localdoc = u'../documentation/fisheries.html'
-
     def __init__(self):
-        model.InVESTModel.__init__(self)
+        model.InVESTModel.__init__(
+            self,
+            label=u'Fisheries Habitat Scenario Tool',
+            target=fisheries_hst.execute,
+            validator=fisheries_hst.validate,
+            localdoc=u'../documentation/fisheries.html')
 
         self.alpha_only = inputs.Label(
             text=(
