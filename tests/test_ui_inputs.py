@@ -2392,7 +2392,8 @@ class ModelTests(_QtTest):
                                                   'dir_not_there'))
         QT_APP.processEvents()
 
-        with wait_on_signal(model_ui.form.run_finished):
+        # Wait until the InVESTModel object is about to be deleted.
+        with wait_on_signal(model_ui.destroyed):
             model_ui.execute_model()
 
         self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
