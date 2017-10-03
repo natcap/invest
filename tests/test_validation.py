@@ -157,21 +157,3 @@ class ValidationContextTests(unittest.TestCase):
             args={'some_key': 'foo'}, limit_to=None)
         context.warn('some error', keys=['some_key'])
         self.assertEqual(context.warnings, [(('some_key',), 'some error')])
-
-
-class GdalWarningsCaptureTests(unittest.TestCase):
-    def test_capture_warnings(self):
-        """Validation: verify that we can capture GDAL warnings."""
-        from natcap.invest import validation
-
-        warnings_list = []
-        with validation.append_gdal_warnings(warnings_list):
-            gdal.Open('this_raster_should_not_exist.tif')
-
-        # the warning should have been caught.
-        self.assertEqual(len(warnings_list), 1)
-
-        # verify that errors are only captured within the context manager.
-        gdal.Open('this_raster_should_also_not_exist.tif')
-        self.assertEqual(len(warnings_list), 1)
-
