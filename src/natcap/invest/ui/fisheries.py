@@ -256,13 +256,15 @@ class Fisheries(model.InVESTModel):
 
         # Set interactivity, requirement as input sufficiency changes
         self.do_batch.sufficiency_changed.connect(
-            self.population_csv_uri.set_noninteractive)
-        self.do_batch.sufficiency_changed.connect(
-            self.population_csv_dir.set_interactive)
+            self._toggle_batch_runs)
 
         # Enable/disable parameters when the recruitment function changes.
         self.recruitment_type.value_changed.connect(
             self._control_recruitment_parameters)
+
+    def _toggle_batch_runs(self, do_batch_runs):
+        self.population_csv_uri.set_interactive(not do_batch_runs)
+        self.population_csv_dir.set_interactive(do_batch_runs)
 
     def _control_recruitment_parameters(self, recruit_func):
         for parameter in (self.spawn_units, self.alpha, self.beta,

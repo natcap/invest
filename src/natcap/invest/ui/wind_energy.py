@@ -290,11 +290,12 @@ class WindEnergy(model.InVESTModel):
         self.land_polygon.sufficiency_changed.connect(
             self.max_distance.set_interactive)
         self.price_table.sufficiency_changed.connect(
-            self.wind_schedule.set_interactive)
-        self.price_table.sufficiency_changed.connect(
-            self.wind_price.set_noninteractive)
-        self.price_table.sufficiency_changed.connect(
-            self.rate_change.set_noninteractive)
+            self._toggle_price_options)
+
+    def _toggle_price_options(self, use_price_table):
+        self.wind_schedule.set_interactive(use_price_table)
+        self.wind_price.set_interactive(not use_price_table)
+        self.rate_change.set_interactive(not use_price_table)
 
     def assemble_args(self):
         args = {

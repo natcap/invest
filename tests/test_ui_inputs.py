@@ -133,17 +133,6 @@ class InVESTModelInputTest(_QtTest):
         input_instance.set_interactive(True)
         self.assertEqual(input_instance.interactive, True)
 
-    def test_set_noninteractive(self):
-        input_instance = self.__class__.create_input(label='foo', interactive=False)
-        self.assertEqual(input_instance.interactive, False)
-        # Silence notimplementederror exceptions on input.value in some cases.
-        try:
-            input_instance.value()
-        except NotImplementedError:
-            input_instance.value = lambda: 'Value!'
-        input_instance.set_noninteractive(False)
-        self.assertEqual(input_instance.interactive, True)
-
     def test_interactivity_changed(self):
         input_instance = self.__class__.create_input(label='foo', interactive=False)
         callback = mock.MagicMock()

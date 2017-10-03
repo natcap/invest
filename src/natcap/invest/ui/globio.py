@@ -95,17 +95,15 @@ class GLOBIO(model.InVESTModel):
 
         # Set interactivity, requirement as input sufficiency changes
         self.predefined_globio.sufficiency_changed.connect(
-            self.lulc_to_globio_table_uri.set_noninteractive)
-        self.predefined_globio.sufficiency_changed.connect(
-            self.land_use.set_noninteractive)
-        self.predefined_globio.sufficiency_changed.connect(
-            self.pasture_uri.set_noninteractive)
-        self.predefined_globio.sufficiency_changed.connect(
-            self.potential_vegetation_uri.set_noninteractive)
-        self.predefined_globio.sufficiency_changed.connect(
-            self.primary_threshold.set_noninteractive)
-        self.predefined_globio.sufficiency_changed.connect(
-            self.pasture_threshold.set_noninteractive)
+            self._predefined_globio_toggled)
+
+    def _predefined_globio_toggled(self, use_predefined):
+        self.lulc_to_globio_table_uri.set_interactive(not use_predefined)
+        self.land_use.set_interactive(not use_predefined)
+        self.pasture_uri.set_interactive(not use_predefined)
+        self.potential_vegetation_uri.set_interactive(not use_predefined)
+        self.primary_threshold.set_interactive(not use_predefined)
+        self.pasture_threshold.set_interactive(not use_predefined)
 
     def assemble_args(self):
         args = {

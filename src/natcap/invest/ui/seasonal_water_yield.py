@@ -146,15 +146,18 @@ class SeasonalWaterYield(model.InVESTModel):
 
         # Set interactivity, requirement as input sufficiency changes
         self.user_defined_local_recharge_container.sufficiency_changed.connect(
-            self.et0_dir.set_noninteractive)
-        self.user_defined_local_recharge_container.sufficiency_changed.connect(
-            self.precip_dir.set_noninteractive)
-        self.user_defined_local_recharge_container.sufficiency_changed.connect(
-            self.soil_group_path.set_noninteractive)
-        self.user_defined_local_recharge_container.sufficiency_changed.connect(
-            self.rain_events_table_path.set_noninteractive)
+            self._toggle_user_defined_local_recharge)
         self.monthly_alpha_container.sufficiency_changed.connect(
-            self.alpha_m.set_noninteractive)
+            self._toggle_monthly_alpha)
+
+    def _toggle_user_defined_local_recharge(self, use_local_recharge):
+        self.et0_dir.set_interactive(not use_local_recharge)
+        self.precip_dir.set_interactive(not use_local_recharge)
+        self.soil_group_path.set_interactive(not use_local_recharge)
+        self.rain_events_table_path.set_interactive(not use_local_recharge)
+
+    def _toggle_monthly_alpha(self, use_monthly_alpha):
+        self.alpha_m.set_interactive(not use_monthly_alpha)
 
     def assemble_args(self):
         args = {

@@ -182,11 +182,12 @@ class CoastalBlueCarbon(model.InVESTModel):
 
         # Set interactivity, requirement as input sufficiency changes
         self.do_price_table.sufficiency_changed.connect(
-            self.price.set_noninteractive)
-        self.do_price_table.sufficiency_changed.connect(
-            self.interest_rate.set_noninteractive)
-        self.do_price_table.sufficiency_changed.connect(
-            self.price_table_uri.set_interactive)
+            self._price_table_sufficiency_changed)
+
+    def _price_table_sufficiency_changed(self, new_sufficiency):
+        self.price.set_interactive(not new_sufficiency)
+        self.interest_rate.set_interactive(not new_sufficiency)
+        self.price_table_uri.set_interactive(not new_sufficiency)
 
     def assemble_args(self):
         args = {

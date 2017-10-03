@@ -1107,21 +1107,6 @@ class InVESTModelInput(QtCore.QObject):
         """
         raise NotImplementedError
 
-    # TODO: any chance we could remove this function?  I think it's confusing to say something like set_noninteractive(False) to mean an object is interactive.  Plus it's not much work to use set_interactive directly?
-    def set_noninteractive(self, noninteractive):
-        """Set interactivity as the negative of the provided parameter.
-
-        This is a convenience method that calls ``self.set_interactive`` with
-        the negated ``noninteractive`` parameter.
-
-        Parameters:
-            noninteractive (bool): The new noninteractivity state.
-
-        Returns:
-            ``None``
-        """
-        self.set_interactive(not noninteractive)
-
     def set_interactive(self, enabled):
         """Set the interactivity of the component widgets.
 
