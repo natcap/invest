@@ -262,7 +262,7 @@ def _log_model(model_name, model_args, session_id=None):
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
-            'an exception encountered when logging %s', str(exception))
+            'an exception encountered when logging %s', repr(exception))
 
 
 def _get_logging_server(path=None):
