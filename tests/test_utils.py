@@ -419,6 +419,12 @@ class MakeDirectoryTests(unittest.TestCase):
         with self.assertRaises(OSError):
             utils.make_directories([file_path])
 
+    def test_make_directories_wrong_type(self):
+        """utils: test that ValueError raised if value not a list."""
+        from natcap.invest import utils
+        with self.assertRaises(ValueError):
+            utils.make_directories(self.workspace_dir)
+
 
 class GDALWarningsLoggingTests(unittest.TestCase):
     def setUp(self):
@@ -466,7 +472,7 @@ class PrepareWorkspaceTests(unittest.TestCase):
 
         try:
             with utils.prepare_workspace(workspace,
-                                        'some_model'):
+                                         'some_model'):
                 warnings.warn('deprecated', UserWarning)
                 gdal.Open('file should not exist')
         except Warning as warning_raised:
