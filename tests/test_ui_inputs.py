@@ -1674,6 +1674,16 @@ class ExecutionTest(_QtTest):
                          'Some demo exception')
         self.assertTrue(isinstance(executor.traceback, basestring))
 
+    def test_default_args(self):
+        from natcap.invest.ui.execution import Executor
+
+        executor = Executor(target=mock.MagicMock())
+
+        # We didn't define args or kwargs (which default to None), so verify
+        # that the parameters are set correctly.
+        self.assertEqual(executor.args, ())
+        self.assertEqual(executor.kwargs, {})
+
 
 class IntegrationTests(_QtTest):
     def test_checkbox_enables_collapsible_container(self):
