@@ -65,8 +65,10 @@ def capture_gdal_logging():
                 err=err_no, msg=err_msg.replace('\n', ' ')))
 
     gdal.PushErrorHandler(_log_gdal_errors)
-    yield
-    gdal.PopErrorHandler()
+    try:
+        yield
+    finally:
+        gdal.PopErrorHandler()
 
 
 def _format_time(seconds):
@@ -103,10 +105,12 @@ def prepare_workspace(workspace, name, logging_level=logging.NOTSET):
             logging.captureWarnings(True)
             LOGGER.info('Writing log messages to %s', logfile)
             start_time = time.time()
-            yield
-            LOGGER.info('Elapsed time: %s',
-                        _format_time(round(time.time() - start_time, 2)))
-            logging.captureWarnings(False)
+            try:
+                yield
+            finally:
+                LOGGER.info('Elapsed time: %s',
+                            _format_time(round(time.time() - start_time, 2)))
+                logging.captureWarnings(False)
 
 
 class ThreadFilter(logging.Filter):
@@ -170,9 +174,11 @@ def log_to_file(logfile, threadname=None, logging_level=logging.NOTSET,
     handler.addFilter(thread_filter)
     handler.setFormatter(formatter)
     handler.setLevel(logging_level)
-    yield handler
-    handler.close()
-    root_logger.removeHandler(handler)
+    try:
+        yield handler
+    finally:
+        handler.close()
+        root_logger.removeHandler(handler)
 
 
 @contextlib.contextmanager
