@@ -256,7 +256,7 @@ class SelectModelAction(argparse.Action):
             parser.print_help()
             parser.exit(1, message=build_model_list_table())
         else:
-            known_models = sorted(_MODEL_UIS.keys())
+            known_models = sorted(_MODEL_UIS.keys() + ['launcher'])
 
             matching_models = [model for model in known_models if
                                model.startswith(values)]
@@ -358,7 +358,9 @@ def main():
     list_group.add_argument('model', action=SelectModelAction, nargs='?',
                             help=('The model/tool to run. Use --list to show '
                                   'available models/tools. Identifiable model '
-                                  'prefixes may also be used.'))
+                                  'prefixes may also be used. Alternatively,'
+                                  'specify "launcher" to reveal a model '
+                                  'launcher window.'))
 
     args = parser.parse_args()
 
@@ -402,7 +404,11 @@ def main():
         parser.error('UI not installed:\n'
                      '    pip install natcap.invest[ui]')
 
-    if args.headless:
+    if args.model == 'launcher':
+        from natcap.invest.ui import launcher
+        launcher.main()
+
+    elif args.headless:
         from natcap.invest import scenarios
         target_mod = _MODEL_UIS[args.model].pyname
         model_module = importlib.import_module(name=target_mod)

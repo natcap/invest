@@ -4,26 +4,32 @@ import sys
 import subprocess
 import os
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from qtpy import QtWidgets
+from qtpy import QtCore
+from qtpy import QtGui
 
 try:
-    from . import cli
+    from .. import cli
 except ImportError:
-    import cli
+    import natcap.invest.cli as cli
 
 import natcap.invest
 
 LOGGER = logging.getLogger(__name__)
 
-APP = QtGui.QApplication.instance()
+try:
+    QApplication = QtGui.QApplication
+except AttributeError:
+    QApplication = QtWidgets.QApplication
+
+APP = QApplication.instance()
 if APP is None:
-    APP = QtGui.QApplication(sys.argv)
+    APP = QApplication(sys.argv)  # pragma: no cover
 
 
-class ModelLaunchButton(QtGui.QPushButton):
+class ModelLaunchButton(QtWidgets.QPushButton):
     def __init__(self, text, model):
-        QtGui.QPushButton.__init__(self, text)
+        QtWidgets.QPushButton.__init__(self, text)
         self._model = model
         self.clicked.connect(self.launch)
 
@@ -42,29 +48,29 @@ class ModelLaunchButton(QtGui.QPushButton):
 
 
 def main():
-    launcher_window = QtGui.QMainWindow()
+    launcher_window = QtWidgets.QMainWindow()
     launcher_window.setWindowTitle('InVEST Launcher')
-    scroll_area = QtGui.QScrollArea()
+    scroll_area = QtWidgets.QScrollArea()
 
-    layout = QtGui.QGridLayout()
-    layout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
-    main_widget = QtGui.QWidget()
+    layout = QtWidgets.QGridLayout()
+    layout.setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
+    main_widget = QtWidgets.QWidget()
     main_widget.setLayout(layout)
 
     launcher_window.setCentralWidget(scroll_area)
     scroll_area.setWidget(main_widget)
 
     labels_and_buttons = []
-    for model in cli.list_models():
+    for model in sorted(cli._MODEL_UIS.keys()):
         row = layout.rowCount()
-        label = QtGui.QLabel()
+        label = QtWidgets.QLabel()
         button = ModelLaunchButton('Launch', model)
         labels_and_buttons.append((label, button))
 
-        layout.addWidget(QtGui.QLabel(model), row, 0, QtCore.Qt.AlignRight)
+        layout.addWidget(QtWidgets.QLabel(model), row, 0, QtCore.Qt.AlignRight)
         layout.addWidget(button, row, 1)
 
-    version_label = QtGui.QLabel(
+    version_label = QtWidgets.QLabel(
         '<em>InVEST %s</em>' % natcap.invest.__version__)
     version_label.setStyleSheet('QLabel {color: gray;}')
     layout.addWidget(version_label, layout.rowCount(), 0)
@@ -73,6 +79,7 @@ def main():
     scroll_area.setMinimumHeight(400)
     launcher_window.show()
     APP.exec_()
+
 
 if __name__ == '__main__':
     main()
