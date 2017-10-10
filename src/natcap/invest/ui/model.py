@@ -425,10 +425,7 @@ class LocalDocsMissingDialog(QtWidgets.QMessageBox):
         QtWidgets.QMessageBox.__init__(self)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText("<h2>Local docs not found<h2>")
-        if not local_docs_link:
-            local_docs_link = 'None'
-        else:
-            local_docs_link = os.path.basename(local_docs_link)
+        local_docs_link = os.path.basename(local_docs_link)
 
         remote_link = _ONLINE_DOCS_LINK + local_docs_link
         self.setInformativeText(
