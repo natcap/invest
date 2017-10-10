@@ -18,7 +18,8 @@ from . import utils
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
-# This can be set to a different value to use multiprocess taskgraph
+# We're hardcoding this to 0 now which makes taskgraph run in threading mode
+# we'll do that until we're comfortable with taskgraph in the wild.
 _N_WORKERS = 0
 
 _INDEX_NODATA = -1.0
