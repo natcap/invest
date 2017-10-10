@@ -1922,18 +1922,11 @@ class Dropdown(GriddedInput):
         self.set_options(options)
         self.dropdown.currentIndexChanged.connect(self._index_changed)
         self.satisfied = True
+        self._valid = True  # Dropdown is always valid!
 
         # Init hideability if needed
         if self.hideable:
             self._hideability_changed(False)
-
-    def valid(self):
-        """Get the validity of the Dropdown.
-
-        Returns:
-            ``True``.  Dropdowns are always valid.
-        """
-        return True
 
     @QtCore.Slot(int)
     def _index_changed(self, newindex):
