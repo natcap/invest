@@ -898,10 +898,6 @@ def _parse_scenario_variables(args):
     if farm_vector_path is not None:
         LOGGER.info('Checking that farm polygon has expected headers')
         farm_vector = ogr.Open(farm_vector_path)
-        if farm_vector.GetLayerCount() != 1:
-            raise ValueError(
-                "Farm polygon at %s has %d layers when expecting only 1." % (
-                    farm_vector_path, farm_vector.GetLayerCount()))
         farm_layer = farm_vector.GetLayer()
         if farm_layer.GetGeomType() not in [
                 ogr.wkbPolygon, ogr.wkbMultiPolygon]:
