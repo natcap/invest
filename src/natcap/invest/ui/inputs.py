@@ -48,9 +48,9 @@ ICON_FILE = qtawesome.icon('fa.file-o')
 ICON_ENTER = qtawesome.icon('fa.arrow-circle-o-right',
                             color='green')
 ICON_MINUS = qtawesome.icon('fa.minus')
-_QLABEL_STYLE_TEMPLATE = ('QLabel {{padding={padding};'
-                          'background-color={bg_color};'
-                          'border={border};}}')
+_QLABEL_STYLE_TEMPLATE = ('QLabel {{padding:{padding};'
+                          'background-color:{bg_color};'
+                          'border:{border};}}')
 QLABEL_STYLE_INFO = _QLABEL_STYLE_TEMPLATE.format(
     padding='15px', bg_color='#d4efcc', border='2px solid #3e895b')
 QLABEL_STYLE_ERROR = _QLABEL_STYLE_TEMPLATE.format(
@@ -2031,6 +2031,7 @@ class Label(QtWidgets.QLabel):
         QtWidgets.QLabel.__init__(self, text)
         self.setWordWrap(True)
         self.setOpenExternalLinks(True)
+        self.setTextFormat(QtCore.Qt.RichText)
 
     def add_to(self, layout):
         """Add this widget to a QGridLayout.

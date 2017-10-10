@@ -251,6 +251,11 @@ class SettingsDialog(OptionsDialog):
         OptionsDialog.__init__(self, title='InVEST Settings',
                                modal=True)
 
+        self.global_label = QtWidgets.QLabel(
+            'Note: these settings affect all InVEST models.')
+        self.global_label.setStyleSheet(inputs.QLABEL_STYLE_INFO)
+        self.layout().addWidget(self.global_label)
+
         self._global_opts_container = inputs.Container(label='Global options')
         self.layout().addWidget(self._global_opts_container)
 
