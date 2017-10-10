@@ -15,6 +15,8 @@ from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
+import pygeoprocessing
+
 from .. import utils
 from .. import validation
 
@@ -70,6 +72,7 @@ _TMP_BASE_FILES = {
     'kc_path_list': ['kc_%d.tif' % x for x in xrange(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
+    'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
     }
 
 
@@ -325,13 +328,12 @@ def _execute(args):
         l_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(file_registry['l_path'])
 
         def l_avail_op(l_array):
-            """Calculate equation [8] L_avail = max(gamma*L, 0)."""
+            """Calculate equation [8] L_avail = min(gamma*L, L)"""
             result = numpy.empty(l_array.shape)
             result[:] = l_nodata
             valid_mask = (l_array != l_nodata)
-            valid_l_array = l_array[valid_mask]
-            valid_l_array[valid_l_array < 0.0] = 0.0
-            result[valid_mask] = valid_l_array * gamma
+            result[valid_mask] = numpy.min(numpy.stack(
+                (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
             return result
         natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [file_registry['l_path']], l_avail_op,
@@ -469,8 +471,25 @@ def _execute(args):
         file_registry['l_path'],
         file_registry['zero_absorption_source_path'],
         file_registry['loss_path'],
-        file_registry['l_sum_path'], 'flux_only',
+        file_registry['l_sum_pre_clamp'], 'flux_only',
         stream_uri=file_registry['stream_path'])
+
+    # The result of route_flux can be slightly negative due to roundoff error
+    # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
+    l_sum_pre_clamp_nodata = pygeoprocessing.get_raster_info(
+        file_registry['l_sum_pre_clamp'])['nodata'][0]
+
+    def clamp_l_sum(l_sum_pre_clamp):
+        """Clamp any negative values to 0.0."""
+        result = l_sum_pre_clamp.copy()
+        result[
+            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
+            (l_sum_pre_clamp < 0.0)] = 0.0
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(file_registry['l_sum_pre_clamp'], 1)], clamp_l_sum,
+        file_registry['l_sum_path'], gdal.GDT_Float32, l_sum_pre_clamp_nodata)
 
     LOGGER.info('calculate B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
@@ -489,18 +508,20 @@ def _execute(args):
         file_registry['b_sum_path'])
 
     def op_b(b_sum, l_avail, l_sum):
-        """Calculate B=B_sum*Lavail/L_sum."""
+        """Calculate B=max(B_sum*Lavail/L_sum, 0)."""
         valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
         result = numpy.empty(b_sum.shape)
         result[:] = b_sum_nodata
         result[valid_mask] = (
             b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
-
+        # if l_sum is zero, it's okay to make B zero says Perrine in an email
+        result[l_sum == 0] = 0.0
+        result[(result < 0) & valid_mask] = 0
         return result
 
     natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [file_registry['b_sum_path'],
-         file_registry['l_avail_path'],
+         file_registry['l_path'],
          file_registry['l_sum_path']], op_b,
         file_registry['b_path'],
         gdal.GDT_Float32, b_sum_nodata, pixel_size, 'intersection',
@@ -586,7 +607,7 @@ def _calculate_monthly_quick_flow(
         """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (s_i != 0.0) & (stream_array != 1) &
+            (stream_array != 1) &
             (n_events != n_events_nodata) & (n_events > 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
@@ -604,6 +625,7 @@ def _calculate_monthly_quick_flow(
         # exponent will also be zero because of a divide by zero. rather than
         # raise that numerical warning, just handle it manually
         E1 = scipy.special.expn(1, valid_si / a_im)  #pylint: disable=invalid-name,no-member
+        E1[valid_si == 0] = 0
         nonzero_e1_mask = E1 != 0
         exp_result = numpy.zeros(valid_si.shape)
         exp_result[nonzero_e1_mask] = numpy.exp(

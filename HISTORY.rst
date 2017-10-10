@@ -4,6 +4,7 @@
 
 Unreleased Changes
 ------------------
+* Updated core model of seasonal water yield to allow for negative `L_avail`.
 * Updated RouteDEM to allow for file suffixes, finer control over what DEM routing algorithms to run, and removal of the multiple stepped stream threshold classification.
 * Redesign/refactor of pollination model. Long term bugs in the model are resolved, managed pollinators added, and many simplifications to the end user's experience.  The updated user's guide chapter is available here: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/croppollination.html
 * Scenario Generator - Rule Based now has an optional input to define a seed.
@@ -20,6 +21,7 @@ Unreleased Changes
 * Deprecating the ArcGIS-based Coastal Protection model and ArcGIS-based data-preprocessing scripts.  The toolbox and scripts may still be found at https://bitbucket.org/natcap/invest.arcgis.
 * Fixing an issue in the carbon edge effect model that caused output values in the shapefile to be rounded to the nearest integer.
 * Fixing issue in SDR model that would occasionally cause users to see errors about field widths in the output shapefile generation.
+* Updated the erodibility sample raster that ships with InVEST for the SDR model.  The old version was in US units, in this version we convert to SI units as the model requires, and clipped the raster to the extents of the other stack to save disk space.
 
 3.3.3 (2017-02-06)
 ------------------

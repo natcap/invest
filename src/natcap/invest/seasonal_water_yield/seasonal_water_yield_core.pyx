@@ -361,7 +361,7 @@ cdef route_local_recharge(
             aet_sum = aet_nodata
 
         # Eq [8]
-        li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma * l_i, 0)
+        li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma * l_i, l_i)
 
         l_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_l_sum_avail
         li_block[row_index, col_index, row_block_offset, col_block_offset] = l_i
