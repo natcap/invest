@@ -4,6 +4,7 @@
 
 Unreleased Changes
 ------------------
+* Removed ``natcap.invest.iui`` UI subpackage in favor of a new UI framework found at ``natcap.invest.ui``. This new UI features a greatly improved API, good test coverage, support for Qt4 and Qt5, and includes updates to all InVEST models to support validation of model arguments from a python script, independent of the UI.
 * Updated core model of seasonal water yield to allow for negative `L_avail`.
 * Updated RouteDEM to allow for file suffixes, finer control over what DEM routing algorithms to run, and removal of the multiple stepped stream threshold classification.
 * Redesign/refactor of pollination model. Long term bugs in the model are resolved, managed pollinators added, and many simplifications to the end user's experience.  The updated user's guide chapter is available here: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/croppollination.html
