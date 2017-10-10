@@ -2407,3 +2407,20 @@ class ModelTests(_QtTest):
 
         QtCore.QTimer.singleShot(50, _cancel_workspace_overwrite)
         model_ui.execute_model()
+
+
+class ValidatorTest(_QtTest):
+    def test_in_progress(self):
+        from natcap.invest.ui import inputs
+
+        parent_widget = QtWidgets.QWidget()
+        validator = inputs.Validator(parent_widget)
+
+        self.assertFalse(validator.in_progress())
+
+        # validator should be in progress while _validate() is executing.
+        def _validate(args, limit_to=None):
+            self.assertTrue(validator.in_progress())
+            return []
+
+        validator.validate(target=_validate, args={})
