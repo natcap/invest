@@ -8,6 +8,7 @@ import threading
 import warnings
 import re
 import glob
+import textwrap
 
 from pygeoprocessing.testing import scm
 import pygeoprocessing.testing
@@ -489,3 +490,69 @@ class PrepareWorkspaceTests(unittest.TestCase):
             self.assertTrue('osgeo' in logfile_text)  # gdal error captured
             self.assertEqual(len(re.findall('WARNING', logfile_text)), 1)
             self.assertTrue('Elapsed time:' in logfile_text)
+
+
+class BuildLookupFromCSVTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
+    def test_key_not_in_header(self):
+        """utils: test that ValueError is raised when key not in header."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,header2,header3
+                1,2,3
+                4,FOO,bar
+                """
+            ))
+
+        with self.assertRaises(ValueError):
+            utils.build_lookup_from_csv(csv_file, 'some_key')
+
+    def test_results_lowercase_non_numeric(self):
+        """utils: text handling of converting to lowercase."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,HEADER2,header3
+                1,2,3
+                4,FOO,bar
+                """
+            ).strip())
+
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header1', to_lower=True, numerical_cast=False)
+
+        self.assertEqual(lookup_dict['4']['header2'], 'foo')
+        self.assertEqual(lookup_dict['1']['header2'], '2')
+
+    def test_results_uppercase_numeric_cast(self):
+        """utils: test handling of uppercase, num. casting, blank values."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,HEADER2,header3,missing_column,
+                1,2,3,
+                4,FOO,bar,
+                """
+            ).strip())
+
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header1', to_lower=False)
+
+        self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
+        self.assertEqual(lookup_dict[4]['header3'], 'bar')
+        self.assertEqual(lookup_dict[1]['header1'], 1)
