@@ -1406,6 +1406,17 @@ class FormTest(_QtTest):
 
         return Form()
 
+    def test_run_button_pressed(self):
+        form = FormTest.make_ui()
+        mock_object = mock.MagicMock()
+        form.submitted.connect(mock_object)
+
+        QTest.mouseClick(form.run_button,
+                         QtCore.Qt.LeftButton)
+
+        QT_APP.processEvents()
+        mock_object.assert_called_once()
+
     def test_run_noerror(self):
         form = FormTest.make_ui()
         def _target():
