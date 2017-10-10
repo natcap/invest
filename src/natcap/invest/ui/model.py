@@ -837,10 +837,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.settings_dialog = SettingsDialog()
         self.file_dialog = inputs.FileDialog()
 
-        try:
-            paramset_basename = self.target.__module__.split('.')[-1]
-        except AttributeError:
-            paramset_basename = 'scenario'
+        paramset_basename = self.target.__module__.split('.')[-1]
         self.scenario_options_dialog = ScenarioOptionsDialog(
             paramset_basename=paramset_basename)
 
@@ -853,7 +850,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
 
         def _settings_saved_message():
-            self.statusBar().showMessage('Settings saved', STATUSBAR_MSG_DURATION)
+            self.statusBar().showMessage('Settings saved',
+                                         STATUSBAR_MSG_DURATION)
         self.settings_dialog.accepted.connect(_settings_saved_message)
 
         # Main operational widgets for the form
@@ -892,10 +890,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                                        validator=self.validator)
 
         # natcap.invest.pollination.pollination --> pollination
-        try:
-            modelname = self.target.__module__.split('.')[-1]
-        except AttributeError:
-            modelname = 'model'
+        modelname = self.target.__module__.split('.')[-1]
         self.workspace.set_value(os.path.normpath(
             os.path.expanduser('~/Documents/{model}_workspace').format(
                 model=modelname)))
