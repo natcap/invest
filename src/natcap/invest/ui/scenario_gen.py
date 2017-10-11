@@ -103,13 +103,14 @@ class ScenarioGenProximity(model.InVESTModel):
 
 
 class ScenarioGenerator(model.InVESTModel):
-    label = u'Scenario Generator'
-    target = staticmethod(natcap.invest.scenario_generator.scenario_generator.execute)
-    validator = staticmethod(natcap.invest.scenario_generator.scenario_generator.validate)
-    localdoc = u'../documentation/scenario_generator.html'
-
     def __init__(self):
-        model.InVESTModel.__init__(self)
+        model.InVESTModel.__init__(
+            self,
+            label=u'Scenario Generator',
+            target=natcap.invest.scenario_generator.scenario_generator.execute,
+            validator=natcap.invest.scenario_generator.scenario_generator.validate,
+            localdoc=u'../documentation/scenario_generator.html')
+
 
         self.suffix = inputs.Text(
             args_key=u'suffix',

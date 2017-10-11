@@ -101,13 +101,13 @@ class HabitatRiskAssessment(model.InVESTModel):
 
 
 class HRAPreprocessor(model.InVESTModel):
-    label = u'Habitat Risk Assessment Preprocessor'
-    target = staticmethod(hra_preprocessor.execute)
-    validator = staticmethod(hra_preprocessor.validate)
-    localdoc = u'../documentation/habitat_risk_assessment.html'
-
     def __init__(self):
-        model.InVESTModel.__init__(self)
+        model.InVESTModel.__init__(
+            self,
+            label=u'Habitat Risk Assessment Preprocessor',
+            target=hra_preprocessor.execute,
+            validator=hra_preprocessor.validate,
+            localdoc=u'../documentation/habitat_risk_assessment.html')
 
         self.habs_dir = inputs.File(
             args_key=u'habitats_dir',
