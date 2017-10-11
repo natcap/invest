@@ -20,7 +20,7 @@ __all__ = ['local_dir', 'PYGEOPROCESSING_REQUIRED']
 # distutils.LooseVersion, since pkg_resources.parse_version is
 # PEP440-compliant and it's very likely that a dev version of PyGeoprocessing
 # will be found.
-PYGEOPROCESSING_REQUIRED = '0.4.2'
+PYGEOPROCESSING_REQUIRED = '0.5.0'
 if (pkg_resources.parse_version(pygeoprocessing.__version__) <
         pkg_resources.parse_version(PYGEOPROCESSING_REQUIRED)):
     raise ValueError(('Pygeoprocessing >= {req_version} required, '

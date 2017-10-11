@@ -48,6 +48,7 @@ kwargs = {
         'distutils',
         'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
+        'taskgraph.version',
     ],
 }
 
@@ -71,7 +72,7 @@ if is_darwin:
     # add gdal dynamic libraries from homebrew
     a.binaries += [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
     a.binaries += [
-        (os.path.basename(name), name, 'BINARY') for name in 
+        (os.path.basename(name), name, 'BINARY') for name in
          itertools.chain(
             glob.glob('/usr/local/lib/libgeos*.dylib'),
             glob.glob('/usr/local/lib/libgeotiff*.dylib'),
