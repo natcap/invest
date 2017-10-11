@@ -1115,7 +1115,7 @@ class _SumRasters(object):
                 _SumRasters.__name__)
 
     def __call__(self, *array_list):
-        """Calculating sum of array."""
+        """Calculate sum of array_list and account for nodata."""
         valid_mask = numpy.zeros(array_list[0].shape, dtype=numpy.bool)
         result = numpy.empty_like(array_list[0])
         result[:] = 0
@@ -1164,6 +1164,15 @@ class _PollinatorSupplyIndexOp(object):
     """Calculate PS(x,s) = FR(x,s) * HN(x,s) * sa(s)."""
 
     def __init__(self, species_abundance):
+        """Create a closure for species abundance to multiply later.
+
+        Parameters:
+            species_abundance (float): value to use in `__call__` when
+                calculating pollinator abundance.
+
+        Returns:
+            None.
+        """
         self.species_abundance = species_abundance
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
@@ -1180,6 +1189,7 @@ class _PollinatorSupplyIndexOp(object):
 
     def __call__(
             self, floral_resources_array, habitat_nesting_suitability_array):
+        """Calculate f_r * h_n * self.species_abundance."""
         result = numpy.empty_like(floral_resources_array)
         result[:] = _INDEX_NODATA
         valid_mask = floral_resources_array != _INDEX_NODATA
@@ -1193,6 +1203,15 @@ class _MultByScalar(object):
     """Calculate a raster * scalar.  Mask through nodata."""
 
     def __init__(self, scalar):
+        """Create a closure for multiplying an array by a scalar.
+
+        Parameters:
+            scalar (float): value to use in `__call__` when multiplying by
+                its parameter.
+
+        Returns:
+            None.
+        """
         self.scalar = scalar
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
@@ -1208,6 +1227,7 @@ class _MultByScalar(object):
         self.__name__ += str(scalar)
 
     def __call__(self, array):
+        """Return array * self.scalar accounting for nodata."""
         result = numpy.empty_like(array)
         result[:] = _INDEX_NODATA
         valid_mask = array != _INDEX_NODATA
@@ -1232,6 +1252,7 @@ class _OnFarmPollinatorAbundance(object):
                 _OnFarmPollinatorAbundance.__name__)
 
     def __call__(self, h_array, pat_array):
+        """Return (pad * (1 - h)) / (h * (1 - 2*pat)+pat)) tolerate nodata."""
         result = numpy.empty_like(h_array)
         result[:] = _INDEX_NODATA
 
@@ -1261,6 +1282,7 @@ class _PYTOp(object):
                 _PYTOp.__name__)
 
     def __call__(self, mp_array, FP_array):
+        """Return min(mp_array+FP_array, 1) accounting for nodata."""
         valid_mask = mp_array != _INDEX_NODATA
         result = numpy.empty_like(mp_array)
         result[:] = _INDEX_NODATA
@@ -1287,6 +1309,7 @@ class _PYWOp(object):
                 _PYWOp.__name__)
 
     def __call__(self, mp_array, PYT_array):
+        """Return max(0,PYT_array-mp_array) accounting for nodata."""
         valid_mask = mp_array != _INDEX_NODATA
         result = numpy.empty_like(mp_array)
         result[:] = _INDEX_NODATA
