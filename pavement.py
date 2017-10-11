@@ -2531,14 +2531,6 @@ def build_bin(options):
         commit_sha1 = sh('hg log -r . --template="{node}\n"', capture=True)
         buildinfo_textfile.write(commit_sha1)
 
-    # If we're on windows, set the CLI to have slightly different default
-    # behavior when the binary is clicked.  In this case, the CLI should prompt
-    # for the user to define which model they would like to run.
-    if platform.system() == 'Windows':
-        iui_dir = os.path.join(bindir, 'natcap', 'invest', 'iui')
-        with open(os.path.join(iui_dir, 'cli_config.json'), 'w') as json_file:
-            json.dump({'prompt_on_empty_input': True}, json_file)
-
     if not os.path.exists('dist'):
         dry('mkdir dist',
             os.makedirs, 'dist')
