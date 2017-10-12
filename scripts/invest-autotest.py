@@ -100,15 +100,12 @@ def sh(command, capture=True):
 
 def run_model(modelname, binary, workspace, scenario, headless=False):
     """Run an InVEST model, checking the error code of the process."""
-    command = ('{binary} {model} --quickrun '
-               '--workspace="{workspace}" '
-               '-y '  # confirm workspace overwrite
-               '--scenario="{scenario}" '
-               '{headless}').format(binary=binary,
-                                    model=modelname,
-                                    workspace=workspace,
-                                    scenario=scenario,
-                                    headless='--headless' if headless else ''),
+    # Using a list here allows subprocess to handle escaping of paths.
+    command = [binary, modelname, '--quickrun', '--workspace=%s' % workspace,
+               '-y', '--scenario=%s' % scenario]
+    if headless:
+        command.append('--headless')
+
     try:
         subprocess.check_call(command, shell=True)
     except subprocess.CalledProcessError as error_obj:
