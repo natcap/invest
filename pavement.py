@@ -2602,34 +2602,17 @@ def build_bin(options):
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
     if platform.system() == 'Windows':
-        # If we're on Windows, write out a batfile to testall.bat that will run
-        # each model UI in sequence and record model success or failure.
         binary = os.path.join(invest_dist, 'invest.exe')
         _write_console_files(binary, 'bat')
-
-        # Using codecs to open the file, to ensure that the script is in
-        # latin-1 (codepage-1252)
-        testall_script = codecs.open(os.path.join(invest_dist, 'testall.bat'),
-                                     'w', encoding='cp1252')
-        for filename in os.listdir(os.path.join(os.path.dirname(__file__),
-                                                'src', 'natcap', 'invest',
-                                                'iui')):
-            if not filename.endswith('.json'):
-                continue
-
-            json_basename = os.path.splitext(filename)[0]
-            testall_script.write('call runmodel {modelname}\n'.format(
-                modelname=json_basename))
-
-        # the script writes run statuses to `invest_bintest_results.txt`,
-        # so print the run statuses at the end of the script.
-        # runmodel script is at installer/windows/runmodel.bat
-        testall_script.write('type invest_bintest_results.txt\n')
-        testall_script.close()
 
     else:
         binary = os.path.join(invest_dist, 'invest')
         _write_console_files(binary, 'sh')
+
+    # Copy the invest_autotest.py script to the dist folder.
+    shutil.copyfile(os.path.join(os.path.dirname(__file__), 'scripts',
+                                 'invest-autotest.py'),
+                    os.path.join(invest_dist, 'invest-autotest.py'))
 
 
 @task
