@@ -2848,7 +2848,7 @@ def _get_local_version():
 
 def _write_console_files(binary, mode):
     """
-    Write simple console files, one for each model presented by IUI.
+    Write simple console files, one for each model presented by the CLI.
 
     Parameters:
         binary (string): The path to the invest binary.
