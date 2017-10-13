@@ -931,6 +931,8 @@ def after_install(options, home_dir):
         distutils_dir = os.path.join(home_dir, 'lib', 'python27', 'distutils')
     distutils_cfg = os.path.join(distutils_dir, 'distutils.cfg')
 
+    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '-I', 'git+https://github.com/phargogh/qtawesome.git@natcap-version'])
+
 """
 
     # If the user has a distutils.cfg file defined in their global distutils
@@ -945,7 +947,7 @@ def after_install(options, home_dir):
     ).format(src_distutils_cfg=source_file)
 
     # Track preinstalled packages so we don't install them twice.
-    preinstalled_pkgs = set([])
+    preinstalled_pkgs = set(['qtawesome'])
 
     if options.env.compiler:
         _valid_compilers = distutils.ccompiler.compiler_class.keys()
