@@ -10,7 +10,7 @@ Pyro4>=4.41
 gdal>=1.11.2,<2.0
 matplotlib
 natcap.versioner>=0.4.2
-pygeoprocessing>=0.4.2
+pygeoprocessing>=0.5.0,<0.6.0
 numpy>=1.11.0
 rtree>=0.8.2
 scipy>=0.16.1
@@ -19,3 +19,6 @@ setuptools>=8.0
 qtpy<1.3
 qtawesome
 six
+taskgraph>=0.2.3,<0.3.0
+# psutil is used, but not required, by taskgraph to lower process priority
+psutil>=5.2.2
