@@ -1,7 +1,13 @@
 """InVEST specific code utils."""
 import math
 import os
+import contextlib
 import logging
+import threading
+import tempfile
+import shutil
+from datetime import datetime
+import time
 import csv
 
 import numpy
@@ -9,9 +15,203 @@ from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
 
-LOGGER = logging.getLogger('natcap.invest.utils')
+LOGGER = logging.getLogger(__name__)
+LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
+DATE_FMT = "%m/%d/%Y %H:%M:%S "
 
-LOGGER = logging.getLogger('natcap.invest.utils')
+# GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
+# A dict clarifies the mapping between levels.
+GDAL_ERROR_LEVELS = {
+    gdal.CE_None: logging.NOTSET,
+    gdal.CE_Debug: logging.DEBUG,
+    gdal.CE_Warning: logging.WARNING,
+    gdal.CE_Failure: logging.ERROR,
+    gdal.CE_Fatal: logging.CRITICAL,
+}
+
+
+@contextlib.contextmanager
+def capture_gdal_logging():
+    """Context manager for logging GDAL errors with python logging.
+
+    GDAL error messages are logged via python's logging system, at a severity
+    that corresponds to a log level in ``logging``.  Error messages are logged
+    with the ``osgeo.gdal`` logger.
+
+    Parameters:
+        ``None``
+
+    Returns:
+        ``None``"""
+    osgeo_logger = logging.getLogger('osgeo')
+
+    def _log_gdal_errors(err_level, err_no, err_msg):
+        """Log error messages to osgeo.
+
+        All error messages are logged with reasonable ``logging`` levels based
+        on the GDAL error level.
+
+        Parameters:
+            err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
+            err_no (int): The GDAL error number.  For a full listing of error
+                codes, see: http://www.gdal.org/cpl__error_8h.html
+            err_msg (string): The error string.
+
+        Returns:
+            ``None``"""
+        osgeo_logger.log(
+            level=GDAL_ERROR_LEVELS[err_level],
+            msg='[errno {err}] {msg}'.format(
+                err=err_no, msg=err_msg.replace('\n', ' ')))
+
+    gdal.PushErrorHandler(_log_gdal_errors)
+    try:
+        yield
+    finally:
+        gdal.PopErrorHandler()
+
+
+def _format_time(seconds):
+    """Render the integer number of seconds as a string.  Returns a string.
+    """
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    hours = int(hours)
+    minutes = int(minutes)
+
+    if hours > 0:
+        return "%sh %sm %ss" % (hours, minutes, seconds)
+
+    if minutes > 0:
+        return "%sm %ss" % (minutes, seconds)
+    return "%ss" % seconds
+
+
+@contextlib.contextmanager
+def prepare_workspace(workspace, name, logging_level=logging.NOTSET):
+    if not os.path.exists(workspace):
+        os.makedirs(workspace)
+
+    logfile = os.path.join(
+        workspace,
+        'InVEST-{modelname}-log-{timestamp}.txt'.format(
+            modelname='-'.join(name.replace(':', '').split(' ')),
+            timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
+
+    with capture_gdal_logging(), log_to_file(logfile,
+                                             logging_level=logging_level):
+        with sandbox_tempdir(dir=workspace):
+            logging.captureWarnings(True)
+            LOGGER.info('Writing log messages to %s', logfile)
+            start_time = time.time()
+            try:
+                yield
+            finally:
+                LOGGER.info('Elapsed time: %s',
+                            _format_time(round(time.time() - start_time, 2)))
+                logging.captureWarnings(False)
+
+
+class ThreadFilter(logging.Filter):
+    """When used, this filters out log messages that were recorded from other
+    threads.  This is especially useful if we have logging coming from several
+    concurrent threads.
+    Arguments passed to the constructor:
+        thread_name - the name of the thread to identify.  If the record was
+            reported from this thread name, it will be passed on.
+    """
+    def __init__(self, thread_name):
+        logging.Filter.__init__(self)
+        self.thread_name = thread_name
+
+    def filter(self, record):
+        if record.threadName == self.thread_name:
+            return True
+        return False
+
+
+@contextlib.contextmanager
+def log_to_file(logfile, threadname=None, logging_level=logging.NOTSET,
+                log_fmt=LOG_FMT, date_fmt=DATE_FMT):
+    """Log all messages within this context to a file.
+
+    Parameters:
+        logfile (string): The path to where the logfile will be written.
+            If there is already a file at this location, it will be
+            overwritten.
+        threadname=None (string): If None, logging from all threads will be
+            included in the log.  If a string, only logging from the thread
+            with the same name will be included in the logfile.
+        logging_level=logging.NOTSET (int): The logging threshold.  Log
+            messages with a level less than this will be automatically
+            excluded from the logfile.  The default value (``logging.NOTSET``)
+            will cause all logging to be captured.
+        log_fmt=LOG_FMT (string): The logging format string to use.  If not
+            provided, ``utils.LOG_FMT`` will be used.
+        date_fmt=DATE_FMT (string): The logging date format string to use.
+            If not provided, ``utils.DATE_FMT`` will be used.
+
+
+    Yields:
+        ``handler``: An instance of ``logging.FileHandler`` that
+            represents the file that is being written to.
+
+    Returns:
+        ``None``"""
+    if os.path.exists(logfile):
+        LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+
+    if not threadname:
+        threadname = threading.current_thread().name
+
+    handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
+    formatter = logging.Formatter(log_fmt, date_fmt)
+    thread_filter = ThreadFilter(threadname)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.NOTSET)
+    root_logger.addHandler(handler)
+    handler.addFilter(thread_filter)
+    handler.setFormatter(formatter)
+    handler.setLevel(logging_level)
+    try:
+        yield handler
+    finally:
+        handler.close()
+        root_logger.removeHandler(handler)
+
+
+@contextlib.contextmanager
+def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
+    """Create a temporary directory for this context and clean it up on exit.
+
+    Parameters are identical to those for :py:func:`tempfile.mkdtemp`.
+
+    When the context manager exits, the created temporary directory is
+    recursively removed.
+
+    Parameters:
+        suffix='' (string): a suffix for the name of the directory.
+        prefix='tmp' (string): the prefix to use for the directory name.
+        dir=None (string or None): If a string, a directory that should be
+            the parent directory of the new temporary directory.  If None,
+            tempfile will determine the appropriate tempdir to use as the
+            parent folder.
+
+    Yields:
+        ``sandbox`` (string): The path to the new folder on disk.
+
+    Returns:
+        ``None``"""
+    sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
+
+    try:
+        yield sandbox
+    finally:
+        try:
+            shutil.rmtree(sandbox)
+        except OSError:
+            LOGGER.exception('Could not remove sandbox %s', sandbox)
 
 
 def make_suffix_string(args, suffix_key):

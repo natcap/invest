@@ -1,11 +1,13 @@
 """DelineateIt wrapper for natcap.invest.pygeoprocessing_0_3_3's watershed delineation routine."""
-
+from __future__ import absolute_import
 import os
 import logging
 
 import natcap.invest.pygeoprocessing_0_3_3.routing
 
 from .. import utils
+from .. import validation
+
 
 LOGGER = logging.getLogger('natcap.invest.routing.delineateit')
 
@@ -33,7 +35,7 @@ def execute(args):
             selected folder does not exist, it will be created. If
             datasets already exist in the selected folder, they will be
             overwritten. (required)
-        results_suffix (string):  This text will be appended to the end of
+        suffix (string):  This text will be appended to the end of
             output files to help separate multiple runs. (optional)
         dem_uri (string):  A GDAL-supported raster file with an elevation
             for each cell. Make sure the DEM is corrected by filling in sinks,
@@ -55,7 +57,7 @@ def execute(args):
     output_directory = args['workspace_dir']
     LOGGER.info('creating directory %s', output_directory)
     natcap.invest.pygeoprocessing_0_3_3.create_directories([output_directory])
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    file_suffix = utils.make_suffix_string(args, 'suffix')
 
     dem_uri = args['dem_uri']
     outlet_shapefile_uri = args['outlet_shapefile_uri']
@@ -73,3 +75,31 @@ def execute(args):
         dem_uri, outlet_shapefile_uri, snap_distance,
         flow_threshold, watershed_out_uri,
         snapped_outlet_points_uri, stream_out_uri)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('dem_uri', require=True):
+        # Implement validation for dem_uri here
+        pass
+
+    if context.is_arg_complete('outlet_shapefile_uri', require=True):
+        # Implement validation for outlet_shapefile_uri here
+        pass
+
+    if context.is_arg_complete('flow_threshold', require=True):
+        # Implement validation for flow_threshold here
+        pass
+
+    if context.is_arg_complete('snap_distance', require=True):
+        # Implement validation for snap_distance here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

@@ -43,7 +43,7 @@ kwargs = {
         'natcap.versioner',
         'natcap.versioner.version',
         'natcap.invest.version',
-        'natcap.invest.iui.launcher',
+        'natcap.invest.ui.launcher',
         'yaml',
         'distutils',
         'distutils.dist',
@@ -52,7 +52,7 @@ kwargs = {
     ],
 }
 
-cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'iui', 'cli.py')
+cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'cli.py')
 a = Analysis([cli_file], **kwargs)
 
 # Compress pyc and pyo Files into ZlibArchive Objects

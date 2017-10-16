@@ -31,8 +31,6 @@ import natcap.invest.pygeoprocessing_0_3_3
 cimport natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 from natcap.invest.pygeoprocessing_0_3_3.routing.routing_core cimport BlockCache
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.pygeoprocessing_0_3_3.routing.routing_core')
 

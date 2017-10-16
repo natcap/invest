@@ -1,4 +1,5 @@
 """InVEST Crop Production Percentile Model."""
+from __future__ import absolute_import
 import collections
 import re
 import os
@@ -11,9 +12,8 @@ from osgeo import ogr
 import pygeoprocessing
 
 from . import utils
+from . import validation
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.crop_production_regression')
 
@@ -633,3 +633,39 @@ def execute(args):
                             ',%s' % total_nutrient_table[
                                 nutrient_id][model_type][id_index])
                 aggregate_table.write('\n')
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('model_data_path', require=True):
+        # Implement validation for model_data_path here
+        pass
+
+    if context.is_arg_complete('landcover_raster_path', require=True):
+        # Implement validation for landcover_raster_path here
+        pass
+
+    if context.is_arg_complete('landcover_to_crop_table_path', require=True):
+        # Implement validation for landcover_to_crop_table_path here
+        pass
+
+    if context.is_arg_complete('fertilization_rate_table_path', require=True):
+        # Implement validation for fertilization_rate_table_path here
+        pass
+
+    if context.is_arg_complete('aggregate_polygon_path', require=False):
+        # Implement validation for aggregate_polygon_path here
+        pass
+
+    if context.is_arg_complete('aggregate_polygon_id', require=True):
+        # Implement validation for aggregate_polygon_id here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

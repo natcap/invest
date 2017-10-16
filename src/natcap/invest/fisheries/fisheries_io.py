@@ -526,7 +526,7 @@ def _verify_single_params(args, create_outputs=True):
                                             intermediate_dir])
 
     # Check that timesteps is positive integer
-    params_dict['total_timesteps'] = int(args['total_timesteps']) + 1
+    params_dict['total_timesteps'] = float(args['total_timesteps']) + 1
 
     return params_dict
 
@@ -690,7 +690,7 @@ def _create_intermediate_csv(vars_dict):
     Classes = vars_dict['Classes']
     N_tasx = vars_dict['N_tasx']
     N_txsa = N_tasx.swapaxes(1, 3)
-    sexsp = vars_dict['sexsp']
+    sexsp = int(vars_dict['sexsp'])
     Sexes = ['Female', 'Male']
 
     with open(uri, 'wb') as c_file:
@@ -742,7 +742,7 @@ def _create_results_csv(vars_dict):
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
-    equilibrate_timestep = int(vars_dict['equilibrate_timestep'])
+    equilibrate_timestep = float(vars_dict['equilibrate_timestep'])
     Regions = vars_dict['Regions']
 
     with open(uri, 'wb') as csv_file:

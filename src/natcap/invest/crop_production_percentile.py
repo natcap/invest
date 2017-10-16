@@ -1,19 +1,18 @@
 """InVEST Crop Production Percentile Model."""
 import collections
-import re
-import os
+import functools
 import logging
+import os
+import re
 
 import numpy
 from osgeo import gdal
 from osgeo import osr
-from osgeo import ogr
 import pygeoprocessing
 
 from . import utils
+from . import validation
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.crop_production_percentile')
 
@@ -118,46 +117,15 @@ def execute(args):
     Returns:
         None.
     """
-    LOGGER.info(
-        "Calculating total land area and warning if the landcover raster "
-        "is missing lucodes")
     crop_to_landcover_table = utils.build_lookup_from_csv(
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
         numerical_cast=True)
-
-    crop_lucodes = [
-        x[_EXPECTED_LUCODE_TABLE_HEADER]
-        for x in crop_to_landcover_table.itervalues()]
-
-    unique_lucodes = numpy.array([])
-    total_area = 0.0
-    for _, lu_band_data in pygeoprocessing.iterblocks(
-            args['landcover_raster_path']):
-        unique_block = numpy.unique(lu_band_data)
-        unique_lucodes = numpy.unique(numpy.concatenate(
-            (unique_lucodes, unique_block)))
-        total_area += numpy.count_nonzero((lu_band_data != _NODATA_YIELD))
-
-    missing_lucodes = set(crop_lucodes).difference(
-        set(unique_lucodes))
-    if len(missing_lucodes) > 0:
-        LOGGER.warn(
-            "The following lucodes are in the landcover to crop table but "
-            "aren't in the landcover raster: %s", missing_lucodes)
-
-    LOGGER.info("Checking that crops correspond to known types.")
     for crop_name in crop_to_landcover_table:
         crop_lucode = crop_to_landcover_table[crop_name][
             _EXPECTED_LUCODE_TABLE_HEADER]
         crop_climate_bin_raster_path = os.path.join(
             args['model_data_path'],
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
-        if not os.path.exists(crop_climate_bin_raster_path):
-            raise ValueError(
-                "Expected climate bin raster called %s for crop %s "
-                "because it specified in %s, but instead that file was not "
-                "found", crop_climate_bin_raster_path, crop_name,
-                args['landcover_to_crop_table_path'])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'])
@@ -211,10 +179,6 @@ def execute(args):
         yield_percentile_headers = [
             x for x in crop_climate_percentile_table.itervalues().next()
             if x != 'climate_bin']
-
-        clipped_climate_bin_raster_path_info = (
-            pygeoprocessing.get_raster_info(
-                clipped_climate_bin_raster_path))
 
         for yield_percentile_id in yield_percentile_headers:
             LOGGER.info("Map %s to climate bins.", yield_percentile_id)
@@ -534,3 +498,83 @@ def execute(args):
                             ',%s' % total_nutrient_table[
                                 nutrient_id][model_type][id_index])
                 aggregate_table.write('\n')
+
+
+# This decorator ensures the input arguments are formatted for InVEST
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate Crop Production Percentile Model.
+
+    Parameters:
+        args (dict): InVEST-wide args input argument for .execute function.
+        limit_to (string): if not None, only validate that key in args to
+            avoid unnecessary computation.
+
+    Returns:
+        list of warning strings if a warning occurred, or an empty list if
+            not.
+    """
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('model_data_path', require=True):
+        if not os.path.isdir(args['model_data_path']):
+            context.warn('%s must be a directory' % args['model_data_path'],
+                         keys=('model_data_path'))
+
+    if context.is_arg_complete('landcover_raster_path', require=True):  # TODO: I'm trying to understand what happens if 'landocver_raster_path' is not defined in args.  It seems that the predicate returns false and the if statement falls through?
+        def _append_gdal_warnings(err_level, err_no, err_msg):
+            warning_message = ('Could not open landcover raster {path}: '
+                               '[errno {err}] {msg}').format(
+                                    err=err_no,
+                                    path=args['landcover_raster_path'],
+                                    msg=err_msg.replace('\n', ' '))
+            context.warn(warning_message, keys=('landcover_raster_path',))
+
+        gdal.PushErrorHandler(_append_gdal_warnings)
+        _ = gdal.Open(args['landcover_raster_path'])
+        gdal.PopErrorHandler()
+
+    if context.is_arg_complete('landcover_to_crop_table_path'):
+        try:
+            crop_to_landcover_table = utils.build_lookup_from_csv(
+                args['landcover_to_crop_table_path'], 'crop_name',
+                to_lower=True, numerical_cast=True)
+        except Exception as error:
+            context.warn(str(error), ('landcover_to_crop_table_path',))
+
+    if limit_to is None:
+        LOGGER.info(
+            "Calculating total land area and warning if the landcover raster "
+            "is missing lucodes")
+        crop_lucodes = [
+            x[_EXPECTED_LUCODE_TABLE_HEADER]
+            for x in crop_to_landcover_table.itervalues()]
+
+        unique_lucodes = numpy.array([])
+        total_area = 0.0
+        for _, lu_band_data in pygeoprocessing.iterblocks(
+                args['landcover_raster_path']):
+            unique_block = numpy.unique(lu_band_data)
+            unique_lucodes = numpy.unique(numpy.concatenate(
+                (unique_lucodes, unique_block)))
+            total_area += numpy.count_nonzero((lu_band_data != _NODATA_YIELD))
+
+        missing_lucodes = set(crop_lucodes).difference(
+            set(unique_lucodes))
+        if len(missing_lucodes) > 0:
+            LOGGER.warn(
+                "The following lucodes are in the landcover to crop table but "
+                "aren't in the landcover raster: %s", missing_lucodes)
+
+        LOGGER.info("Checking that crops correspond to known types.")
+        for crop_name in crop_to_landcover_table:
+            crop_climate_bin_raster_path = os.path.join(
+                args['model_data_path'],
+                _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
+            if not os.path.exists(crop_climate_bin_raster_path):
+                context.warn(
+                    ("Expected climate bin raster called %s for crop %s "
+                     "because it specified in %s, but instead that file was not "
+                     "found") % (crop_climate_bin_raster_path, crop_name,
+                                 args['landcover_to_crop_table_path']),
+                     keys=('landcover_to_crop_table_path', 'model_data_path'))
+    return context.warnings

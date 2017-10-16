@@ -1,4 +1,5 @@
 """InVEST Recreation Client."""
+from __future__ import absolute_import
 
 import uuid
 import os
@@ -30,9 +31,7 @@ if shapely.speedups.available:
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
 from .. import utils
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
@@ -183,7 +182,8 @@ def execute(args):
             " User input: (%s)" % (min_year, max_year, args['end_year']))
 
     # append jan 1 to start and dec 31 to end
-    date_range = (args['start_year']+'-01-01', args['end_year']+'-12-31')
+    date_range = (str(args['start_year'])+'-01-01',
+                  str(args['end_year'])+'-12-31')
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
@@ -196,7 +196,7 @@ def execute(args):
     if args['grid_aoi']:
         LOGGER.info("gridding aoi")
         _grid_vector(
-            args['aoi_path'], args['grid_type'], args['cell_size'],
+            args['aoi_path'], args['grid_type'], float(args['cell_size']),
             file_registry['local_aoi_path'])
     else:
         aoi_vector = ogr.Open(args['aoi_path'])
@@ -1128,3 +1128,43 @@ def _sanitize_path(base_path, raw_path):
         return raw_path
     else:  # assume relative path w.r.t. the response table
         return os.path.join(os.path.dirname(base_path), raw_path)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('aoi_path', require=True):
+        # Implement validation for aoi_path here
+        pass
+
+    if context.is_arg_complete('start_year', require=True):
+        # Implement validation for start_year here
+        pass
+
+    if context.is_arg_complete('end_year', require=True):
+        # Implement validation for end_year here
+        pass
+
+    if context.is_arg_complete('predictor_table_path', require=True):
+        # Implement validation for predictor_table_path here
+        pass
+
+    if context.is_arg_complete('scenario_predictor_table_path', require=False):
+        # Implement validation for scenario_predictor_table_path here
+        pass
+
+    if context.is_arg_complete('grid_type', require=True):
+        # Implement validation for grid_type here
+        pass
+
+    if context.is_arg_complete('cell_size', require=True):
+        # Implement validation for cell_size here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

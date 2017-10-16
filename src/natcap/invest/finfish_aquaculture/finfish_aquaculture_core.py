@@ -19,8 +19,6 @@ from scipy.stats import norm
 from natcap.invest.reporting import html
 
 LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.core')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 NUM_HISTOGRAM_BINS = 30
 

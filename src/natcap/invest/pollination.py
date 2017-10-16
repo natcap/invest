@@ -1,4 +1,6 @@
 """Pollinator service model for InVEST."""
+from __future__ import absolute_import
+import tempfile
 import itertools
 import collections
 import re
@@ -14,8 +16,10 @@ import pygeoprocessing
 import numpy
 import taskgraph
 
+
 from . import utils
-logging.basicConfig(level=logging.INFO)
+from . import validation
+
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
 # We're hardcoding this to 0 now which makes taskgraph run in threading mode
@@ -1317,3 +1321,32 @@ class _PYWOp(object):
         max_mask = valid_mask & (result < 0.0)
         result[max_mask] = 0.0
         return result
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('landcover_raster_path', require=True):
+        # Implement validation for landcover_raster_path here
+        pass
+
+    if context.is_arg_complete('landcover_biophysical_table_path',
+                               require=True):
+        # Implement validation for landcover_biophysical_table_path here
+        pass
+
+    if context.is_arg_complete('guild_table_path', require=True):
+        # Implement validation for guild_table_path here
+        pass
+
+    if context.is_arg_complete('farm_vector_path', require=True):
+        # Implement validation for farm_vector_path here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

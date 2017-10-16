@@ -1,5 +1,5 @@
 """GLOBIO InVEST Model."""
-
+from __future__ import absolute_import
 import os
 import logging
 import collections
@@ -13,6 +13,8 @@ import numpy
 import natcap.invest.pygeoprocessing_0_3_3
 
 from . import utils
+from . import validation
+
 
 LOGGER = logging.getLogger('natcap.invest.globio')
 
@@ -680,3 +682,59 @@ def _collapse_infrastructure_layers(
     # clean up the temporary filenames
     for filename in infrastructure_tmp_filenames:
         os.remove(filename)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('lulc_to_globio_table_uri', require=True):
+        # Implement validation for lulc_to_globio_table_uri here
+        pass
+
+    if context.is_arg_complete('aoi_uri', require=False):
+        # Implement validation for aoi_uri here
+        pass
+
+    if context.is_arg_complete('lulc_uri', require=True):
+        # Implement validation for lulc_uri here
+        pass
+
+    if context.is_arg_complete('infrastructure_dir', require=True):
+        # Implement validation for infrastructure_dir here
+        pass
+
+    if context.is_arg_complete('pasture_uri', require=True):
+        # Implement validation for pasture_uri here
+        pass
+
+    if context.is_arg_complete('potential_vegetation_uri', require=True):
+        # Implement validation for potential_vegetation_uri here
+        pass
+
+    if context.is_arg_complete('primary_threshold', require=True):
+        # Implement validation for primary_threshold here
+        pass
+
+    if context.is_arg_complete('pasture_threshold', require=True):
+        # Implement validation for pasture_threshold here
+        pass
+
+    if context.is_arg_complete('intensification_fraction', require=True):
+        # Implement validation for intensification_fraction here
+        pass
+
+    if context.is_arg_complete('msa_parameters_uri', require=True):
+        # Implement validation for msa_parameters_uri here
+        pass
+
+    if context.is_arg_complete('globio_lulc_uri', require=True):
+        # Implement validation for globio_lulc_uri here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

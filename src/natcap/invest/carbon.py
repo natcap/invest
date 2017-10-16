@@ -1,4 +1,5 @@
 """Carbon Storage and Sequestration."""
+from __future__ import absolute_import
 import collections
 import logging
 import os
@@ -8,11 +9,8 @@ from osgeo import gdal
 import numpy
 import natcap.invest.pygeoprocessing_0_3_3
 
+from . import validation
 from . import utils
-
-logging.basicConfig(
-    format='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
-    level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.carbon')
 
@@ -406,3 +404,51 @@ def _generate_report(summary_stats, model_args, html_report_path):
                 '<td>%s</td></tr>' % (
                     result_description, units, value, raw_file_path))
         report_doc.write('</body></html>')
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('lulc_cur_path', require=True):
+        # Implement validation for lulc_cur_path here
+        pass
+
+    if context.is_arg_complete('carbon_pools_path', require=True):
+        # Implement validation for carbon_pools_path here
+        pass
+
+    if context.is_arg_complete('lulc_cur_year', require=False):
+        # Implement validation for lulc_cur_year here
+        pass
+
+    if context.is_arg_complete('lulc_fut_path', require=False):
+        # Implement validation for lulc_fut_path here
+        pass
+
+    if context.is_arg_complete('lulc_fut_year', require=False):
+        # Implement validation for lulc_fut_year here
+        pass
+
+    if context.is_arg_complete('lulc_redd_path', require=False):
+        # Implement validation for lulc_redd_path here
+        pass
+
+    if context.is_arg_complete('price_per_metric_ton_of_c', require=True):
+        # Implement validation for price_per_metric_ton_of_c here
+        pass
+
+    if context.is_arg_complete('discount_rate', require=True):
+        # Implement validation for discount_rate here
+        pass
+
+    if context.is_arg_complete('rate_change', require=True):
+        # Implement validation for rate_change here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

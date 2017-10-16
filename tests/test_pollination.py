@@ -5,11 +5,11 @@ import tempfile
 import shutil
 import os
 
-import shapely.geometry
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 from pygeoprocessing.testing import sampledata
 from osgeo import ogr
+import shapely.geometry
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'pollination')

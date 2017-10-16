@@ -1,5 +1,5 @@
 """Invest overlap analysis filehandler for data passed in through UI"""
-
+from __future__ import absolute_import
 import os
 import csv
 import logging
@@ -12,10 +12,10 @@ import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from osgeo import gdal
 from scipy import ndimage
 
+from .. import validation
+
 
 LOGGER = logging.getLogger('natcap.invest.overlap_analysis.overlap_analysis')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 def execute(args):
@@ -655,3 +655,55 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
 
     LOGGER.debug("Just made the following URIs %s" % str(raster_uris))
     return raster_uris, raster_names
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('zone_layer_uri', require=True):
+        # Implement validation for zone_layer_uri here
+        pass
+
+    if context.is_arg_complete('grid_size', require=True):
+        # Implement validation for grid_size here
+        pass
+
+    if context.is_arg_complete('overlap_data_dir_uri', require=True):
+        # Implement validation for overlap_data_dir_uri here
+        pass
+
+    if context.is_arg_complete('do_intra', require=True):
+        # Implement validation for do_intra here
+        pass
+
+    if context.is_arg_complete('intra_name', require=False):
+        # Implement validation for intra_name here
+        pass
+
+    if context.is_arg_complete('do_inter', require=True):
+        # Implement validation for do_inter here
+        pass
+
+    if context.is_arg_complete('overlap_layer_tbl', require=False):
+        # Implement validation for overlap_layer_tbl here
+        pass
+
+    if context.is_arg_complete('do_hubs', require=False):
+        # Implement validation for do_hubs here
+        pass
+
+    if context.is_arg_complete('hubs_uri', require=False):
+        # Implement validation for hubs_uri here
+        pass
+
+    if context.is_arg_complete('decay_amt', require=False):
+        # Implement validation for decay_amt here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

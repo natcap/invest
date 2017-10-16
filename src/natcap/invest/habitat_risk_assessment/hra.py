@@ -1,6 +1,6 @@
 '''This will be the preperatory module for HRA. It will take all unprocessed
 and pre-processed data from the UI and pass it to the hra_core module.'''
-
+from __future__ import absolute_import
 import os
 import shutil
 import logging
@@ -13,10 +13,9 @@ from osgeo import gdal, ogr, osr
 from natcap.invest.habitat_risk_assessment import hra_core
 from natcap.invest.habitat_risk_assessment import hra_preprocessor
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 class ImproperCriteriaAttributeName(Exception):
@@ -202,6 +201,13 @@ def execute(args):
 #            dependent on this.
 #        hra_args['max_risk']- The highest possible risk value for any given
 #            pairing of habitat and stressor.
+    args = args.copy()
+    for key in ('grid_size', 'max_rating', 'max_stress'):
+        try:
+            args[key] = float(args[key])
+        except (KeyError, ValueError):
+            LOGGER.info('Key %s not in args or could not be cast to float',
+                        key)
 
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -1266,3 +1272,43 @@ def unpack_over_dict(csv_uri, args):
 
     for dict_name in dicts:
         args[dict_name] = dicts[dict_name]
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('csv_uri', require=True):
+        # Implement validation for csv_uri here
+        pass
+
+    if context.is_arg_complete('grid_size', require=True):
+        # Implement validation for grid_size here
+        pass
+
+    if context.is_arg_complete('risk_eq', require=True):
+        # Implement validation for risk_eq here
+        pass
+
+    if context.is_arg_complete('decay_eq', require=True):
+        # Implement validation for decay_eq here
+        pass
+
+    if context.is_arg_complete('max_rating', require=True):
+        # Implement validation for max_rating here
+        pass
+
+    if context.is_arg_complete('max_stress', require=True):
+        # Implement validation for max_stress here
+        pass
+
+    if context.is_arg_complete('aoi_tables', require=True):
+        # Implement validation for aoi_tables here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

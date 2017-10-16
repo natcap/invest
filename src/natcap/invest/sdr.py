@@ -7,6 +7,8 @@ The SDR method in this model is based on:
     large watersheds." Journal of Soil and Water Conservation 63.3 (2008):
     105-111.
 """
+from __future__ import absolute_import
+
 import os
 import logging
 
@@ -18,9 +20,7 @@ import natcap.invest.pygeoprocessing_0_3_3
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 from . import utils
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.sdr')
 
@@ -964,3 +964,59 @@ def _generate_report(
         layer.SetFeature(feature)
     original_datasource.Destroy()
     datasource_copy.Destroy()
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('dem_path', require=True):
+        # Implement validation for dem_path here
+        pass
+
+    if context.is_arg_complete('erosivity_path', require=True):
+        # Implement validation for erosivity_path here
+        pass
+
+    if context.is_arg_complete('erodibility_path', require=True):
+        # Implement validation for erodibility_path here
+        pass
+
+    if context.is_arg_complete('lulc_path', require=True):
+        # Implement validation for lulc_path here
+        pass
+
+    if context.is_arg_complete('watersheds_path', require=True):
+        # Implement validation for watersheds_path here
+        pass
+
+    if context.is_arg_complete('biophysical_table_path', require=True):
+        # Implement validation for biophysical_table_path here
+        pass
+
+    if context.is_arg_complete('threshold_flow_accumulation', require=True):
+        # Implement validation for threshold_flow_accumulation here
+        pass
+
+    if context.is_arg_complete('drainage_path', require=False):
+        # Implement validation for drainage_path here
+        pass
+
+    if context.is_arg_complete('k_param', require=True):
+        # Implement validation for k_param here
+        pass
+
+    if context.is_arg_complete('ic_0_param', require=True):
+        # Implement validation for ic_0_param here
+        pass
+
+    if context.is_arg_complete('sdr_max', require=True):
+        # Implement validation for sdr_max here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

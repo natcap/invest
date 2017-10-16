@@ -1,4 +1,6 @@
 """InVEST Wave Energy Model Core Code"""
+from __future__ import absolute_import
+
 import heapq
 import math
 import os
@@ -15,9 +17,8 @@ from bisect import bisect
 import scipy
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
 class IntersectionError(Exception):
@@ -1629,3 +1630,51 @@ def _create_rat(dataset_path, attr_dict, column_name):
     # Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('wave_base_data_uri', require=True):
+        # Implement validation for wave_base_data_uri here
+        pass
+
+    if context.is_arg_complete('analysis_area_uri', require=True):
+        # Implement validation for analysis_area_uri here
+        pass
+
+    if context.is_arg_complete('aoi_uri', require=False):
+        # Implement validation for aoi_uri here
+        pass
+
+    if context.is_arg_complete('machine_perf_uri', require=True):
+        # Implement validation for machine_perf_uri here
+        pass
+
+    if context.is_arg_complete('machine_param_uri', require=True):
+        # Implement validation for machine_param_uri here
+        pass
+
+    if context.is_arg_complete('dem_uri', require=True):
+        # Implement validation for dem_uri here
+        pass
+
+    if context.is_arg_complete('land_gridPts_uri', require=True):
+        # Implement validation for land_gridPts_uri here
+        pass
+
+    if context.is_arg_complete('machine_econ_uri', require=True):
+        # Implement validation for machine_econ_uri here
+        pass
+
+    if context.is_arg_complete('number_of_machines', require=True):
+        # Implement validation for number_of_machines here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

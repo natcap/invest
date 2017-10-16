@@ -83,12 +83,12 @@ class CropProductionTests(unittest.TestCase):
             landcover_crop_table.write(
                 'crop_name,lucode\nfakecrop,20\n')
 
-        with self.assertRaises(ValueError):
-            crop_production_percentile.execute(args)
+        errors = crop_production_percentile.validate(args)
+        self.assertEqual(len(errors), 1)
 
     @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
     @scm.skip_if_data_missing(MODEL_DATA_PATH)
-    def test_crop_production_percentile_bad_crop(self):
+    def test_crop_production_regression_bad_crop(self):
         """Crop Production: test crop regression with a bad crop name."""
         from natcap.invest import crop_production_regression
 

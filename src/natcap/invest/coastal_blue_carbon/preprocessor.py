@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
+from __future__ import absolute_import
 import os
 import csv
 from itertools import product
@@ -13,11 +14,11 @@ from natcap.invest.pygeoprocessing_0_3_3.geoprocessing import get_lookup_from_ta
 from natcap.invest.pygeoprocessing_0_3_3 import create_directories
 
 from .. import utils as invest_utils
+from .. import validation
+
 
 NODATA_INT = -9999  # typical integer nodata value used in rasters
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
 
@@ -355,3 +356,23 @@ def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
         for code in code_to_lulc_dict.keys():
             row = [code, code_to_lulc_dict[code]] + [''] * 10
             writer.writerow(row)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('lulc_lookup_uri', require=True):
+        # Implement validation for lulc_lookup_uri here
+        pass
+
+    if context.is_arg_complete('lulc_snapshot_list', require=False):
+        # Implement validation for lulc_snapshot_list here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings
