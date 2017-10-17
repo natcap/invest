@@ -16,7 +16,6 @@ import pygeoprocessing
 import numpy
 import taskgraph
 
-
 from . import utils
 from . import validation
 
@@ -1325,28 +1324,71 @@ class _PYWOp(object):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('landcover_raster_path', require=True):
-        # Implement validation for landcover_raster_path here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('landcover_biophysical_table_path',
-                               require=True):
-        # Implement validation for landcover_biophysical_table_path here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('guild_table_path', require=True):
-        # Implement validation for guild_table_path here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
 
-    if context.is_arg_complete('farm_vector_path', require=True):
-        # Implement validation for farm_vector_path here
-        pass
+    for key in [
+            'workspace_dir',
+            'landcover_raster_path',
+            'guild_table_path',
+            'landcover_biophysical_table_path',
+            'farm_vector_path']:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    if len(missing_key_list) > 0:
+        raise KeyError(
+            "The following keys were expected in `args` but were missing" +
+            ', '.join(missing_key_list))
 
-    return context.warnings
+    validation_error_list = []
+
+    if len(no_value_list) > 0:
+        # missing values, no need to continue validation
+        validation_error_list.append(
+            (no_value_list, 'Parameter has no value'))
+
+    with utils.capture_gdal_logging():
+        # check that these values are rasters on disk
+        raster_path = args['landcover_raster_path']
+        if not os.path.exists(raster_path):
+            validation_error_list.append(
+                (['landcover_raster_path'], '%s not found' % raster_path))
+        else:
+            raster = gdal.Open(raster_path)
+            if raster is None:
+                validation_error_list.append(
+                    (['landcover_raster_path'],
+                     '%s is not a raster' % raster_path))
+
+        farm_vector_path = args['farm_vector_path']
+        if not os.path.exists(farm_vector_path):
+            validation_error_list.append(
+                (['farm_vector_path'], '%s not found' % farm_vector_path))
+        else:
+            farm_vector = ogr.Open(farm_vector_path)
+            if farm_vector is None:
+                validation_error_list.append(
+                    (['farm_vector_path'],
+                     '%s is not a vector' % farm_vector_path))
+
+    return validation_error_list

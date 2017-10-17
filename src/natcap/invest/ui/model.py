@@ -1256,6 +1256,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             # We want to validate the whole form; discard the individual value
             self.validate(block=False)
 
+        self.validate(block=False)
         for input_obj in self.inputs:
             input_obj.value_changed.connect(_validate)
             try:
