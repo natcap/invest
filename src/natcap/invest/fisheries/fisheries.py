@@ -220,24 +220,31 @@ def validate(args, limit_to=None):
         pass
 
     if context.is_arg_complete('total_timesteps', require=True):
-        # Implement validation for total_timesteps here
-        pass
+        try:
+            int(args['total_timesteps'])
+        except (TypeError, ValueError):
+            context.warn('Timestep parameter is invalid.  It must be an int.',
+                         ['total_timesteps'])
 
     if context.is_arg_complete('population_type', require=True):
-        # Implement validation for population_type here
-        pass
+        if args['population_type'] not in ('Age Specific', 'Stage Specific'):
+            context.warn(('Population type must be either "Age Specific" or '
+                          '"Stage Specific"'), ['population_type'])
 
     if context.is_arg_complete('sexsp', require=True):
-        # Implement validation for sexsp here
-        pass
+        if args['sexsp'].lower() not in ('yes', 'no'):
+            context.warn("sexsp parameter must be either 'yes' or 'no'",
+                         ['sexsp'])
 
     if context.is_arg_complete('harvest_units', require=True):
-        # Implement validation for harvest_units here
-        pass
+        if args['harvest_units'] not in ('Individuals', 'Weight'):
+            context.warn(('Harvest units must be either "Individuals" or '
+                          '"Weight"'), ['harvest_units'])
 
     if context.is_arg_complete('do_batch', require=True):
-        # Implement validation for do_batch here
-        pass
+        if args['do_batch'] not in (True, False):
+            context.warn('"do_batch" parameter must be either True or False"',
+                         ['do_batch'])
 
     if context.is_arg_complete('population_csv_uri', require=True):
         # Implement validation for population_csv_uri here
