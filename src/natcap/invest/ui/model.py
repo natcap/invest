@@ -1304,6 +1304,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.show()
         self.raise_()  # raise window to top of stack.
+        self.validate(block=False)  # initial validation for the model
 
     def close(self, prompt=True):
         """Close the window.
