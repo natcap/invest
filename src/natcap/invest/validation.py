@@ -8,6 +8,7 @@ import pprint
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None
+MESSAGE_REQUIRED = 'Parameter is required but is missing or has no value'
 LOGGER = logging.getLogger(__name__)
 
 
