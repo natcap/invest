@@ -16,6 +16,7 @@ from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing
 from natcap.invest.scenic_quality import scenic_quality_core
 #from natcap.invest.overlap_analysis import overlap_analysis
 from .. import validation
+from .. import utils
 
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
@@ -764,63 +765,100 @@ def execute(args):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('aoi_uri', require=True):
-        # Implement validation for aoi_uri here
-        pass
+    """Validate an input dictionary for Scenic Quality.
 
-    if context.is_arg_complete('cell_size', require=False):
-        # Implement validation for cell_size here
-        pass
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
 
-    if context.is_arg_complete('structure_uri', require=True):
-        # Implement validation for structure_uri here
-        pass
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = set([])
+    keys_without_value = set([])
+    for key in ('workspace_dir',
+                'aoi_uri',
+                'structure_uri',
+                'dem_uri',
+                'refraction',
+                'valuation_function',
+                'a_coefficient',
+                'b_coefficient',
+                'c_coefficient',
+                'd_coefficient',
+                'max_valuation_radius'):
+        try:
+            if args[key] in ('', None):
+                keys_without_value.add(key)
+        except KeyError:
+            missing_keys.add(key)
 
-    if context.is_arg_complete('dem_uri', require=True):
-        # Implement validation for dem_uri here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError('These keys are missing from args: %s' % (
+            ', '.join(sorted(missing_keys))))
 
-    if context.is_arg_complete('refraction', require=True):
-        # Implement validation for refraction here
-        pass
+    if len(keys_without_value) > 0:
+        warnings.append((keys_without_value, 'Parameter must have a value.'))
 
-    if context.is_arg_complete('pop_uri', require=False):
-        # Implement validation for pop_uri here
-        pass
+    for vector_key in ('aoi_uri', 'structure_uri', 'overlap_uri'):
+        if limit_to not in (vector_key, None):
+            continue
 
-    if context.is_arg_complete('overlap_uri', require=False):
-        # Implement validation for overlap_uri here
-        pass
+        try:
+            with utils.capture_gdal_logging():
+                vector = ogr.Open(args[vector_key])
+                if vector is None:
+                    warnings.append(
+                        ([vector_key],
+                         ('Parameter must be a path to an OGR-compatible '
+                          'vector file.')))
+        except KeyError:
+            # overlap_uri is optional.
+            pass
 
-    if context.is_arg_complete('valuation_function', require=False):
-        # Implement validation for valuation_function here
-        pass
+    for raster_key in ('dem_uri', 'pop_uri'):
+        if limit_to not in (raster_key, None):
+            continue
 
-    if context.is_arg_complete('a_coefficient', require=True):
-        # Implement validation for a_coefficient here
-        pass
+        try:
+            with utils.capture_gdal_logging():
+                raster = gdal.Open(args[raster_key])
+                if raster is None:
+                    warnings.append(
+                        ([raster_key],
+                         ('Parameter must be a path to a GDAL-compatible '
+                          'raster file.')))
+        except KeyError:
+            # pop_uri is optional.
+            pass
 
-    if context.is_arg_complete('b_coefficient', require=True):
-        # Implement validation for b_coefficient here
-        pass
+    for float_key in ('cell_size',
+                      'refraction',
+                      'max_valuation_radius') + tuple(
+                          '%s_coefficient' % letter for letter in 'abcd'):
+        if limit_to not in (float_key, None):
+            continue
 
-    if context.is_arg_complete('c_coefficient', require=True):
-        # Implement validation for c_coefficient here
-        pass
+        try:
+            if args[float_key] not in ('', None):
+                float(args[float_key])
+        except ValueError:
+            warnings.append(([float_key], 'Parameter must be a number.'))
+        except KeyError:
+            # Not all arguments are required
+            pass
 
-    if context.is_arg_complete('d_coefficient', require=True):
-        # Implement validation for d_coefficient here
-        pass
+    if limit_to in ('valuation_function', None):
+        valid_funcs = (
+            'polynomial: a + bx + cx^2 + dx^3',
+            'logarithmic: a + b ln(x)')
+        if args['valuation_function'] not in valid_funcs:
+            warnings.append(
+                (['valuation_function'],
+                 'Function must be either "%s" or "%s"' % valid_funcs))
 
-    if context.is_arg_complete('max_valuation_radius', require=True):
-        # Implement validation for max_valuation_radius here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return warnings
