@@ -16,6 +16,7 @@ import csv
 import numpy
 from osgeo import osr
 from osgeo import gdal
+from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3
 import scipy
 
@@ -666,47 +667,86 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('base_lulc_path', require=True):
-        # Implement validation for base_lulc_path here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('aoi_path', require=False):
-        # Implement validation for aoi_path here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('area_to_convert', require=True):
-        # Implement validation for area_to_convert here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('focal_landcover_codes', require=True):
-        # Implement validation for focal_landcover_codes here
-        pass
+    required_keys = [
+        'workspace_dir',
+        'base_lulc_path',
+        'aoi_path',
+        'area_to_convert',
+        'focal_landcover_codes',
+        'convertible_landcover_codes',
+        'replacment_lucode',
+        'convert_farthest_from_edge',
+        'convert_nearest_to_edge',
+        'n_fragmentation_steps']
 
-    if context.is_arg_complete('convertible_landcover_codes', require=True):
-        # Implement validation for convertible_landcover_codes here
-        pass
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if context.is_arg_complete('replacment_lucode', require=True):
-        # Implement validation for replacment_lucode here
-        pass
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
 
-    if context.is_arg_complete('convert_farthest_from_edge', require=False):
-        # Implement validation for convert_farthest_from_edge here
-        pass
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
 
-    if context.is_arg_complete('convert_nearest_to_edge', require=False):
-        # Implement validation for convert_nearest_to_edge here
-        pass
+    if limit_to is None and not (
+            args['convert_farthest_from_edge'] or
+            args['convert_nearest_to_edge']):
+        validation_error_list.append(
+            (['convert_farthest_from_edge', 'convert_nearest_to_edge'],
+             'At least "Farthest from edge" or "Nearest to edge" must be '
+             'selected.'))
 
-    if context.is_arg_complete('n_fragmentation_steps', require=True):
-        # Implement validation for n_fragmentation_steps here
-        pass
+    file_type_list = [
+        ('base_lulc_path', 'raster'),
+        ('aoi_path', 'vector')]
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
 
-    return context.warnings
+    return validation_error_list
