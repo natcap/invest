@@ -914,75 +914,107 @@ def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('threshold_flow_accumulation', require=True):
-        # Implement validation for threshold_flow_accumulation here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('et0_dir', require=True):
-        # Implement validation for et0_dir here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('precip_dir', require=True):
-        # Implement validation for precip_dir here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('dem_raster_path', require=True):
-        # Implement validation for dem_raster_path here
-        pass
+    required_keys = [
+        'workspace_dir',
+        'threshold_flow_accumulation',
+        'dem_raster_path',
+        'lulc_raster_path',
+        'aoi_path',
+        'biophysical_table_path',
+        'beta_i',
+        'gamma']
 
-    if context.is_arg_complete('lulc_raster_path', require=True):
-        # Implement validation for lulc_raster_path here
-        pass
+    if ('user_defined_climate_zones' in args and
+            args['user_defined_climate_zones']):
+        required_keys.extend([
+            'climate_zone_table_path',
+            'climate_zone_raster_path'])
 
-    if context.is_arg_complete('soil_group_path', require=True):
-        # Implement validation for soil_group_path here
-        pass
+    if 'user_defined_local_recharge' in args:
+        if args['user_defined_local_recharge']:
+            required_keys.append('l_path')
+        else:
+            required_keys.extend([
+                'et0_dir',
+                'precip_dir',
+                'soil_group_path',
+                'rain_events_table_path'])
 
-    if context.is_arg_complete('aoi_path', require=True):
-        # Implement validation for aoi_path here
-        pass
+    if 'monthly_alpha_path' in args:
+        if args['monthly_alpha_path']:
+            required_keys.append('monthly_alpha_path')
+        else:
+            required_keys.append('alpha_m')
 
-    if context.is_arg_complete('biophysical_table_path', require=True):
-        # Implement validation for biophysical_table_path here
-        pass
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if context.is_arg_complete('rain_events_table_path', require=False):
-        # Implement validation for rain_events_table_path here
-        pass
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
 
-    if context.is_arg_complete('alpha_m', require=True):
-        # Implement validation for alpha_m here
-        pass
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
 
-    if context.is_arg_complete('beta_i', require=True):
-        # Implement validation for beta_i here
-        pass
+    file_type_list = [
+        ('dem_raster_path', 'raster'),
+        ('lulc_raster_path', 'raster'),
+        ('aoi_path', 'vector'),
+        ('biophysical_table_path', 'table'),
+        ('climate_zone_table_path', 'table'),
+        ('climate_zone_raster_path', 'raster'),
+        ('monthly_alpha_path', 'table'),
+        ('precip_dir', 'directory'),
+        ('soil_group_path', 'raster'),
+        ('rain_events_table_path', 'table'),
+        ('l_path', 'raster')]
 
-    if context.is_arg_complete('gamma', require=True):
-        # Implement validation for gamma here
-        pass
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
 
-    if context.is_arg_complete('climate_zone_table_path', require=True):
-        # Implement validation for climate_zone_table_path here
-        pass
-
-    if context.is_arg_complete('climate_zone_raster_path', require=True):
-        # Implement validation for climate_zone_raster_path here
-        pass
-
-    if context.is_arg_complete('l_path', require=False):
-        # Implement validation for l_path here
-        pass
-
-    if context.is_arg_complete('monthly_alpha_path', require=False):
-        # Implement validation for monthly_alpha_path here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return validation_error_list
