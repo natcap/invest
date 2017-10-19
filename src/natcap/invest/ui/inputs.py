@@ -2453,6 +2453,7 @@ class Multi(Container):
         self.remove_buttons = []
         for item in old_items:
             self.add_item(item)
+        self.value_changed.emit(self.value())
 
 
 class Form(QtWidgets.QWidget):
