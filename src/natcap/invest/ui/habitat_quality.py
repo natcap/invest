@@ -12,15 +12,6 @@ class HabitatQuality(model.InVESTModel):
             target=natcap.invest.habitat_quality.execute,
             validator=natcap.invest.habitat_quality.validate,
             localdoc=u'../documentation/habitat_quality.html')
-
-        self.results_suffix = inputs.Text(
-            args_key=u'suffix',
-            helptext=(
-                u'A string that will be added to the end of the output file '
-                u'paths.'),
-            label=u'Results Suffix (Optional)',
-            validator=self.validator)
-        self.add_input(self.results_suffix)
         self.current_landcover = inputs.File(
             args_key=u'landuse_cur_uri',
             helptext=(
@@ -178,8 +169,6 @@ class HabitatQuality(model.InVESTModel):
             self.half_saturation_constant.args_key:
                 self.half_saturation_constant.value(),
         }
-        if self.results_suffix.value():
-            args[self.results_suffix.args_key] = self.results_suffix.value()
         if self.future_landcover.value():
             args[self.future_landcover.args_key] = self.future_landcover.value()
         if self.baseline_landcover.value():

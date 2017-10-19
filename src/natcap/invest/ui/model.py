@@ -900,9 +900,13 @@ class InVESTModel(QtWidgets.QMainWindow):
             os.path.expanduser('~/Documents/{model}_workspace').format(
                 model=modelname)))
 
-        self.suffix = inputs.Text(args_key='suffix',
-                                  label='Results suffix',
-                                  validator=self.validator)
+        self.suffix = inputs.Text(
+            args_key='suffix',
+            helptext=(
+                u'A string that will be added to the end of the output file '
+                u'paths.'),
+            label='Results suffix (optional)',
+            validator=self.validator)
         self.suffix.textfield.setMaximumWidth(150)
         self.add_input(self.workspace)
         self.add_input(self.suffix)
