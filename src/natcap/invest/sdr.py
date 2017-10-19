@@ -1024,8 +1024,12 @@ def validate(args, limit_to=None):
         ('erodibility_path', 'raster'),
         ('lulc_path', 'raster'),
         ('watersheds_path', 'vector'),
-        ('biophysical_table_path', 'table'),
-        ('drainage_path', 'raster')]
+        ('biophysical_table_path', 'table')]
+
+    if limit_to in ['drainage_path', None] and (
+            'drainage_path' in args and
+            args['drainage_path'] not in ['', None]):
+        file_type_list.append(('drainage_path', 'raster'))
 
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
