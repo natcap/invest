@@ -18,6 +18,7 @@ import scipy
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from .. import validation
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
@@ -1634,47 +1635,110 @@ def _create_rat(dataset_path, attr_dict, column_name):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('wave_base_data_uri', require=True):
-        # Implement validation for wave_base_data_uri here
-        pass
+    warnings = []
+    keys_missing_value = []
+    missing_keys = []
+    for required_key in ('workspace_dir',
+                         'wave_base_data_uri',
+                         'analysis_area_uri',
+                         'machine_perf_uri',
+                         'machine_param_uri',
+                         'dem_uri',
+                         'land_gridPts_uri',
+                         'machine_econ_uri',
+                         'number_of_machines'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
 
-    if context.is_arg_complete('analysis_area_uri', require=True):
-        # Implement validation for analysis_area_uri here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError('Keys are missing from args: %s' % str(missing_keys))
 
-    if context.is_arg_complete('aoi_uri', require=False):
-        # Implement validation for aoi_uri here
-        pass
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter is required but has no value'))
 
-    if context.is_arg_complete('machine_perf_uri', require=True):
-        # Implement validation for machine_perf_uri here
-        pass
+    if limit_to in ('wave_base_data_uri', None):
+        if not os.path.isdir(args['wave_base_data_uri']):
+            warnings.append((
+                ['wave_base_data_uri'],
+                'Parameter not found or is not a folder.'))
 
-    if context.is_arg_complete('machine_param_uri', require=True):
-        # Implement validation for machine_param_uri here
-        pass
+    if limit_to in ('analysis_area_uri', None):
+        if args['analysis_area_uri'] not in (
+                "West Coast of North America and Hawaii",
+                "East Coast of North America and Puerto Rico",
+                "North Sea 4 meter resolution",
+                "North Sea 10 meter resolution",
+                "Australia",
+                "Global"):
+            warnings.append((['analysis_area_uri'],
+                             'Parameter must be a known analysis area.'))
 
-    if context.is_arg_complete('dem_uri', require=True):
-        # Implement validation for dem_uri here
-        pass
+    if limit_to in ('aoi_uri', None):
+        try:
+            if args['aoi_uri'] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args['aoi_uri'])
+                    layer = vector.GetLayer()
+                    geometry_type = layer.GetGeomType()
+                    if geometry_type != ogr.wkbPolygon:
+                        warnings.append((
+                            ['aoi_uri'],
+                            'Vector must contain only polygons.'))
+                    srs = layer.GetSpatialRef()
+                    units = srs.GetLinearUnitsName().lower()
+                    if units not in ('meter', 'metre'):
+                        warnings.append((['aoi_uri'],
+                                         'Vector must be projected in meters'))
 
-    if context.is_arg_complete('land_gridPts_uri', require=True):
-        # Implement validation for land_gridPts_uri here
-        pass
+                    datum = srs.GetAttrValue('DATUM')
+                    if datum != 'WGS_1984':
+                        warnings.append((
+                            ['aoi_uri'],
+                            'Vector must use the WGS_1984 datum.'))
+        except KeyError:
+            # Parameter is not required.
+            pass
 
-    if context.is_arg_complete('machine_econ_uri', require=True):
-        # Implement validation for machine_econ_uri here
-        pass
+    for csv_key, required_fields in (
+            ('machine_perf_uri', set([])),
+            ('machine_param_uri', set(['name', 'value', 'note'])),
+            ('land_gridPts_uri',
+             set(['id', 'type', 'lat', 'long', 'location'])),
+            ('machine_econ_uri', set(['name', 'value', 'note']))):
+        try:
+            reader = csv.reader(open(csv_key))
+            headers = set([field.lower() for field in reader.fieldnames])
+            missing_fields = required_fields - headers
+            if len(missing_fields) > 0:
+                warnings.append('CSV is missing columns :%s' %
+                                ', '.join(sorted(missing_fields)))
+        except IOError:
+            warnings.append(([csv_key], 'File not found.'))
+        except csv.Error:
+            warnings.append(([csv_key], 'CSV could not be read.'))
 
-    if context.is_arg_complete('number_of_machines', require=True):
-        # Implement validation for number_of_machines here
-        pass
+    if limit_to in ('dem_uri', None):
+        with utils.capture_gdal_logging():
+            raster = gdal.Open(args['dem_uri'])
+        if raster is None:
+            warnings.append((
+                ['dem_uri'],
+                ('Parameter must be a filepath to a GDAL-compatible '
+                 'raster file.')))
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    if limit_to in ('number_of_machines', None):
+        try:
+            num_machines = args['number_of_machines']
+            if (int(float(num_machines)) != float(num_machines)
+                    or float(num_machines) < 0):
+                warnings.append((['number_of_machines'],
+                                 'Parameter must be a positive integer.'))
+        except ValueError:
+            warnings.append((['number_of_machines'],
+                             'Parameter must be a number.'))
 
-    return context.warnings
+    return warnings
