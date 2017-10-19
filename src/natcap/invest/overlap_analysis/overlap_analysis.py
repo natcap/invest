@@ -13,7 +13,7 @@ from osgeo import gdal
 from scipy import ndimage
 
 from .. import validation
-
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.overlap_analysis.overlap_analysis')
 
@@ -659,51 +659,82 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('zone_layer_uri', require=True):
-        # Implement validation for zone_layer_uri here
-        pass
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
+    for required_key in ('workspace_dir',
+                         'zone_layer_uri',
+                         'grid_size',
+                         'overlap_data_dir_uri',
+                         'do_intra',
+                         'do_inter',
+                         'do_hubs'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
 
-    if context.is_arg_complete('grid_size', require=True):
-        # Implement validation for grid_size here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
 
-    if context.is_arg_complete('overlap_data_dir_uri', require=True):
-        # Implement validation for overlap_data_dir_uri here
-        pass
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have a defined value.'))
 
-    if context.is_arg_complete('do_intra', require=True):
-        # Implement validation for do_intra here
-        pass
+    for vector_key in ('zone_layer_uri', 'hubs_uri'):
+        try:
+            if args[vector_key] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args[vector_key])
+                    if vector is None:
+                        warnings.append(([vector_key],
+                                         ('Parameter must be a path to an '
+                                          'OGR-compatible file on disk.')))
+        except KeyError:
+            # not all inputs here are required.
+            pass
 
-    if context.is_arg_complete('intra_name', require=False):
-        # Implement validation for intra_name here
-        pass
+    for bool_key in ('do_intra', 'do_inter', 'do_hubs'):
+        if args[bool_key] not in (True, False):
+            warnings.append(([bool_key],
+                             'Parameter must be either True or False'))
 
-    if context.is_arg_complete('do_inter', require=True):
-        # Implement validation for do_inter here
-        pass
+    if limit_to in ('grid_size', None):
+        try:
+            assert int(args['grid_size']) > 0
+        except AssertionError:
+            warnings.append((['grid_size'],
+                             'Parameter must be a positive integer'))
+        except ValueError:
+            warnings.append((['grid_size'],
+                             'Parameter must be an integer.'))
 
-    if context.is_arg_complete('overlap_layer_tbl', require=False):
-        # Implement validation for overlap_layer_tbl here
-        pass
+    if limit_to in ('overlap_data_dir_uri', None):
+        if not os.path.isdir(args['overlap_data_dir_uri']):
+            warnings.append((['overlap_data_dir_uri'],
+                             'Parameter must be a path to a folder on disk.'))
 
-    if context.is_arg_complete('do_hubs', require=False):
-        # Implement validation for do_hubs here
-        pass
+    if limit_to in ('overlap_layer_tbl', None):
+        try:
+            if args['overlap_layer_tbl'] not in ('', None):
+                csv.reader(open(args['overlap_layer_tbl']))
+        except IOError:
+            warnings.append((['overlap_layer_tbl'],
+                             'File not found'))
+        except csv.Error:
+            warnings.append((['overlap_layer_tbl'],
+                             'Could not read CSV file.'))
 
-    if context.is_arg_complete('hubs_uri', require=False):
-        # Implement validation for hubs_uri here
-        pass
+    if limit_to in ('decay_amt', None):
+        try:
+            if args['decay_amt'] not in ('', None):
+                float(args['decay_amt'])
+        except TypeError:
+            warnings.append((['decay_amt'],
+                             'Parameter must be a number.'))
+        except KeyError:
+            pass
 
-    if context.is_arg_complete('decay_amt', require=False):
-        # Implement validation for decay_amt here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return warnings
