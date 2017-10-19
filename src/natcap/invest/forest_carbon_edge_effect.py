@@ -652,43 +652,92 @@ def _calculate_tropical_forest_edge_carbon_map(
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('lulc_uri', require=True):
-        # Implement validation for lulc_uri here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('biophysical_table_uri', require=True):
-        # Implement validation for biophysical_table_uri here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('pools_to_calculate', require=True):
-        # Implement validation for pools_to_calculate here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    try:
+        missing_key_list = []
+        no_value_list = []
+        validation_error_list = []
 
-    if context.is_arg_complete('compute_forest_edge_effects', require=False):
-        # Implement validation for compute_forest_edge_effects here
-        pass
+        for key in [
+                'workspace_dir',
+                'lulc_uri',
+                'biophysical_table_uri',
+                'pools_to_calculate',
+                'compute_forest_edge_effects',
+                'tropical_forest_edge_carbon_model_shape_uri',
+                'n_nearest_model_points',
+                'biomass_to_carbon_conversion_factor',
+                'aoi_uri']:
+            if limit_to is None or limit_to == key:
+                if key not in args:
+                    missing_key_list.append(key)
+                elif args[key] in ['', None]:
+                    no_value_list.append(key)
 
-    if context.is_arg_complete('tropical_forest_edge_carbon_model_shape_uri', require=True):
-        # Implement validation for tropical_forest_edge_carbon_model_shape_uri here
-        pass
+        if len(missing_key_list) > 0:
+            # if there are missing keys, we have raise KeyError to stop hard
+            raise KeyError(
+                "The following keys were expected in `args` but were missing" +
+                ', '.join(missing_key_list))
 
-    if context.is_arg_complete('n_nearest_model_points', require=True):
-        # Implement validation for n_nearest_model_points here
-        pass
+        if len(no_value_list) > 0:
+            validation_error_list.append(
+                (no_value_list, 'parameter has no value'))
 
-    if context.is_arg_complete('biomass_to_carbon_conversion_factor', require=True):
-        # Implement validation for biomass_to_carbon_conversion_factor here
-        pass
+        # check required files exist
+        for key in [
+                'lulc_uri',
+                'biophysical_table_uri']:
+            if (limit_to is None or limit_to == key) and (
+                    not os.path.exists(args[key])):
+                validation_error_list.append(
+                    ([key], 'not found on disk'))
 
-    if context.is_arg_complete('aoi_uri', require=False):
-        # Implement validation for aoi_uri here
-        pass
+        optional_file_type_list = [('lulc_uri', 'raster')]
+        if args['compute_forest_edge_effects']:
+            optional_file_type_list.extend(
+                [('tropical_forest_edge_carbon_model_shape_uri', 'vector'),
+                 ('aoi_uri', 'vector')])
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+        # check that existing/optional files are the correct types
+        with utils.capture_gdal_logging():
+            for key, key_type in optional_file_type_list:
+                if (limit_to is None or limit_to == key) and key in args:
+                    if not os.path.exists(args[key]):
+                        validation_error_list.append(
+                            ([key], 'not found on disk'))
+                        continue
+                    if key_type == 'raster':
+                        raster = gdal.Open(args[key])
+                        if raster is None:
+                            validation_error_list.append(
+                                ([key], 'not a raster'))
+                        del raster
+                    elif key_type == 'vector':
+                        vector = ogr.Open(args[key])
+                        if vector is None:
+                            validation_error_list.append(
+                                ([key], 'not a vector'))
+                        del vector
 
-    return context.warnings
+        return validation_error_list
+    except Exception as ex:
+        import sys
+        print "Exception: ", sys.exc_info()
+        print ex
+        raise
