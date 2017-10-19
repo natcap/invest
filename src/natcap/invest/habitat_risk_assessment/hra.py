@@ -14,6 +14,7 @@ from natcap.invest.habitat_risk_assessment import hra_core
 from natcap.invest.habitat_risk_assessment import hra_preprocessor
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from .. import validation
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra')
 
@@ -1276,39 +1277,65 @@ def unpack_over_dict(csv_uri, args):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('csv_uri', require=True):
-        # Implement validation for csv_uri here
-        pass
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
+    for required_key in ('workspace_dir',
+                         'csv_uri',
+                         'grid_size',
+                         'risk_eq',
+                         'decay_eq',
+                         'max_rating',
+                         'max_stress',
+                         'aoi_tables'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
 
-    if context.is_arg_complete('grid_size', require=True):
-        # Implement validation for grid_size here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
 
-    if context.is_arg_complete('risk_eq', require=True):
-        # Implement validation for risk_eq here
-        pass
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have a value'))
 
-    if context.is_arg_complete('decay_eq', require=True):
-        # Implement validation for decay_eq here
-        pass
+    if limit_to in ('csv_uri', None):
+        if not os.path.isdir(args['csv_uri']):
+            warnings.append((['csv_uri'],
+                             'Parameter must be a path to a folder.'))
 
-    if context.is_arg_complete('max_rating', require=True):
-        # Implement validation for max_rating here
-        pass
+    for int_key in ('grid_size', 'max_rating', 'max_stress'):
+        if limit_to in (int_key, None):
+            try:
+                int(args[int_key])
+            except ValueError:
+                warnings.append(([int_key],
+                                 'Parameter must be an integer.'))
 
-    if context.is_arg_complete('max_stress', require=True):
-        # Implement validation for max_stress here
-        pass
+    for options_key, options in (
+            ('risk_eq', ('Multiplicative', 'Euclidean')),
+            ('decay_eq', ('None', 'Linear', 'Exponential'))):
+        if limit_to in (options_key, None):
+            if args[options_key] not in options:
+                warnings.append(
+                    ([options_key],
+                     'Parameter must be one of %s' % ', '.join(options)))
 
-    if context.is_arg_complete('aoi_tables', require=True):
-        # Implement validation for aoi_tables here
-        pass
+    if limit_to in ('aoi_tables', None):
+        try:
+            if args['aoi_tables'] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args['aoi_tables'])
+                    if vector is None:
+                        warnings.append(
+                            (['aoi_tables'],
+                             ('Parameter must be a filepath to an '
+                              'OGR-compatible vector on disk.')))
+        except KeyError:
+            # file is not required.
+            pass
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return warnings
