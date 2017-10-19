@@ -96,7 +96,7 @@ _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield%s.tif'
 # wild pollinator raster replace (file_suffix)
 _WILD_POLLINATOR_YIELD_FILE_PATTERN = 'wild_pollinator_yield%s.tif'
 # final aggregate farm shapefile file pattern replace (file_suffix)
-_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_indices%s.shp'
+_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_results%s.shp'
 # output field on target shapefile if farms are enabled
 _TOTAL_FARM_YIELD_FIELD_ID = 'y_tot'
 # output field for wild pollinators on farms if farms are enabled
@@ -790,6 +790,12 @@ def _create_farm_result_vector(
         feature.SetField(fid_field_id, feature.GetFID())
         target_layer.SetFeature(feature)
 
+    farm_pollinator_abundance_defn = ogr.FieldDefn(
+        _POLLINATOR_ABUDNANCE_FARM_FIELD_ID, ogr.OFTReal)
+    farm_pollinator_abundance_defn.SetWidth(25)
+    farm_pollinator_abundance_defn.SetPrecision(11)
+    target_layer.CreateField(farm_pollinator_abundance_defn)
+
     total_farm_yield_field_defn = ogr.FieldDefn(
         _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal)
     total_farm_yield_field_defn.SetWidth(25)
@@ -807,12 +813,6 @@ def _create_farm_result_vector(
     wild_pol_farm_yield_field_defn.SetWidth(25)
     wild_pol_farm_yield_field_defn.SetPrecision(11)
     target_layer.CreateField(wild_pol_farm_yield_field_defn)
-
-    farm_pollinator_abundance_defn = ogr.FieldDefn(
-        _POLLINATOR_ABUDNANCE_FARM_FIELD_ID, ogr.OFTReal)
-    farm_pollinator_abundance_defn.SetWidth(25)
-    farm_pollinator_abundance_defn.SetPrecision(11)
-    target_layer.CreateField(farm_pollinator_abundance_defn)
 
     target_layer = None
     target_vector.SyncToDisk()
@@ -1356,39 +1356,44 @@ def validate(args, limit_to=None):
                 no_value_list.append(key)
 
     if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
         raise KeyError(
             "The following keys were expected in `args` but were missing" +
             ', '.join(missing_key_list))
 
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
     validation_error_list = []
 
-    if len(no_value_list) > 0:
-        # missing values, no need to continue validation
-        validation_error_list.append(
-            (no_value_list, 'Parameter has no value'))
+    for key in [
+            'landcover_raster_path',
+            'guild_table_path',
+            'landcover_biophysical_table_path',
+            'farm_vector_path']:
+        if (limit_to is None or limit_to == key) and (
+                not os.path.exists(args[key])):
+            validation_error_list.append(
+                ([key], 'not found on disk'))
 
     with utils.capture_gdal_logging():
-        # check that these values are rasters on disk
-        raster_path = args['landcover_raster_path']
-        if not os.path.exists(raster_path):
-            validation_error_list.append(
-                (['landcover_raster_path'], '%s not found' % raster_path))
-        else:
-            raster = gdal.Open(raster_path)
+        # Only one raster, so check explicitly
+        if (limit_to is None or limit_to == 'landcover_raster_path') and (
+                os.path.exists(args['landcover_raster_path'])):
+            raster = gdal.Open(args['landcover_raster_path'])
             if raster is None:
                 validation_error_list.append(
-                    (['landcover_raster_path'],
-                     '%s is not a raster' % raster_path))
+                    (['landcover_raster_path'], 'not a raster'))
+            del raster
 
-        farm_vector_path = args['farm_vector_path']
-        if not os.path.exists(farm_vector_path):
-            validation_error_list.append(
-                (['farm_vector_path'], '%s not found' % farm_vector_path))
-        else:
-            farm_vector = ogr.Open(farm_vector_path)
-            if farm_vector is None:
+        # Only one vector, so check explicitly
+        if (limit_to is None or limit_to == 'farm_vector_path') and (
+                os.path.exists(args['farm_vector_path'])):
+            vector = ogr.Open(args['farm_vector_path'])
+            if vector is None:
                 validation_error_list.append(
-                    (['farm_vector_path'],
-                     '%s is not a vector' % farm_vector_path))
+                    (['farm_vector_path'], 'not a vector'))
+            del vector
 
     return validation_error_list
