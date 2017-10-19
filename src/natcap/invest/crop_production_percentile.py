@@ -577,5 +577,4 @@ def validate(args, limit_to=None):
                         validation_error_list.append(
                             ([key], 'not a vector'))
                     del vector
-    print validation_error_list
     return validation_error_list
