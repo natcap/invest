@@ -1067,39 +1067,40 @@ def parse_stress_buffer(uri):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('habitats_dir', require=False):
-        # Implement validation for habitats_dir here
-        pass
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
 
-    if context.is_arg_complete('species_dir', require=False):
-        # Implement validation for species_dir here
-        pass
+    for required_key in ('workspace_dir',
+                         'stressors_dir'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
 
-    if context.is_arg_complete('stressors_dir', require=True):
-        # Implement validation for stressors_dir here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
 
-    if context.is_arg_complete('exposure_crits', require=False):
-        # Implement validation for exposure_crits here
-        pass
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have value.'))
 
-    if context.is_arg_complete('sensitivity_crits', require=False):
-        # Implement validation for sensitivity_crits here
-        pass
+    for folder_key in ('habitats_dir',
+                       'species_dir',
+                       'stressors_dir',
+                       'criteria_dir'):
+        try:
+            if args[folder_key] in ('', None):
+                continue
 
-    if context.is_arg_complete('resilience_crits', require=False):
-        # Implement validation for resilience_crits here
-        pass
+            if not os.path.isdir(args[folder_key]):
+                warnings.append(([folder_key],
+                                 ('Parameter must be a path to a folder '
+                                  'that exists.')))
+        except KeyError:
+            # Not all of these inputs are required.
+            pass
 
-    if context.is_arg_complete('criteria_dir', require=False):
-        # Implement validation for criteria_dir here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return warnings
