@@ -668,76 +668,70 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    try:
-        missing_key_list = []
-        no_value_list = []
-        validation_error_list = []
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-        for key in [
-                'workspace_dir',
-                'lulc_uri',
-                'biophysical_table_uri',
-                'pools_to_calculate',
-                'compute_forest_edge_effects',
-                'tropical_forest_edge_carbon_model_shape_uri',
-                'n_nearest_model_points',
-                'biomass_to_carbon_conversion_factor',
-                'aoi_uri']:
-            if limit_to is None or limit_to == key:
-                if key not in args:
-                    missing_key_list.append(key)
-                elif args[key] in ['', None]:
-                    no_value_list.append(key)
+    for key in [
+            'workspace_dir',
+            'lulc_uri',
+            'biophysical_table_uri',
+            'pools_to_calculate',
+            'compute_forest_edge_effects',
+            'tropical_forest_edge_carbon_model_shape_uri',
+            'n_nearest_model_points',
+            'biomass_to_carbon_conversion_factor',
+            'aoi_uri']:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-        if len(missing_key_list) > 0:
-            # if there are missing keys, we have raise KeyError to stop hard
-            raise KeyError(
-                "The following keys were expected in `args` but were missing" +
-                ', '.join(missing_key_list))
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing" +
+            ', '.join(missing_key_list))
 
-        if len(no_value_list) > 0:
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    # check required files exist
+    for key in [
+            'lulc_uri',
+            'biophysical_table_uri']:
+        if (limit_to is None or limit_to == key) and (
+                not os.path.exists(args[key])):
             validation_error_list.append(
-                (no_value_list, 'parameter has no value'))
+                ([key], 'not found on disk'))
 
-        # check required files exist
-        for key in [
-                'lulc_uri',
-                'biophysical_table_uri']:
-            if (limit_to is None or limit_to == key) and (
-                    not os.path.exists(args[key])):
-                validation_error_list.append(
-                    ([key], 'not found on disk'))
+    optional_file_type_list = [('lulc_uri', 'raster')]
+    if args['compute_forest_edge_effects']:
+        optional_file_type_list.extend(
+            [('tropical_forest_edge_carbon_model_shape_uri', 'vector'),
+             ('aoi_uri', 'vector')])
 
-        optional_file_type_list = [('lulc_uri', 'raster')]
-        if args['compute_forest_edge_effects']:
-            optional_file_type_list.extend(
-                [('tropical_forest_edge_carbon_model_shape_uri', 'vector'),
-                 ('aoi_uri', 'vector')])
-
-        # check that existing/optional files are the correct types
-        with utils.capture_gdal_logging():
-            for key, key_type in optional_file_type_list:
-                if (limit_to is None or limit_to == key) and key in args:
-                    if not os.path.exists(args[key]):
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in optional_file_type_list:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
                         validation_error_list.append(
-                            ([key], 'not found on disk'))
-                        continue
-                    if key_type == 'raster':
-                        raster = gdal.Open(args[key])
-                        if raster is None:
-                            validation_error_list.append(
-                                ([key], 'not a raster'))
-                        del raster
-                    elif key_type == 'vector':
-                        vector = ogr.Open(args[key])
-                        if vector is None:
-                            validation_error_list.append(
-                                ([key], 'not a vector'))
-                        del vector
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
 
-        return validation_error_list
-    except Exception as ex:
-        import sys
-        print "Exception: ", sys.exc_info()
-        print ex
-        raise
+    return validation_error_list

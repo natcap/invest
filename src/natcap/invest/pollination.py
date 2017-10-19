@@ -1342,6 +1342,7 @@ def validate(args, limit_to=None):
     """
     missing_key_list = []
     no_value_list = []
+    validation_error_list = []
 
     for key in [
             'workspace_dir',
@@ -1365,8 +1366,6 @@ def validate(args, limit_to=None):
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
 
-    validation_error_list = []
-
     for key in [
             'landcover_raster_path',
             'guild_table_path',
@@ -1377,23 +1376,27 @@ def validate(args, limit_to=None):
             validation_error_list.append(
                 ([key], 'not found on disk'))
 
+    # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
-        # Only one raster, so check explicitly
-        if (limit_to is None or limit_to == 'landcover_raster_path') and (
-                os.path.exists(args['landcover_raster_path'])):
-            raster = gdal.Open(args['landcover_raster_path'])
-            if raster is None:
-                validation_error_list.append(
-                    (['landcover_raster_path'], 'not a raster'))
-            del raster
-
-        # Only one vector, so check explicitly
-        if (limit_to is None or limit_to == 'farm_vector_path') and (
-                os.path.exists(args['farm_vector_path'])):
-            vector = ogr.Open(args['farm_vector_path'])
-            if vector is None:
-                validation_error_list.append(
-                    (['farm_vector_path'], 'not a vector'))
-            del vector
+        for key, key_type in [
+                ('landcover_raster_path', 'raster'),
+                ('farm_vector_path', 'vector')]:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
 
     return validation_error_list
