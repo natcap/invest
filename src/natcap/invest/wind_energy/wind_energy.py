@@ -1998,39 +1998,38 @@ def validate(args, limit_to=None):
 
     if limit_to in ('wind_data_uri', None):
         try:
-            csv_file = csv.DictReader(open(args['wind_data_uri'], 'r'))
-            missing_fields = []
-            for required_fieldname in ('LONG', 'LATI', 'LAM', 'K', 'REF'):
-                if required_fieldname not in csv_file.fieldnames:
-                    missing_fields.append(required_fieldname)
+            table_dict = utils.build_lookup_from_csv(
+                args['wind_data_uri'], 'REF')
+
+            missing_fields = (set(['long', 'lati', 'lam', 'k', 'ref']) -
+                              set(table_dict.itervalues().next().keys()))
             if len(missing_fields) > 0:
                 warnings.append((
                     ['wind_data_uri'],
                     ('CSV missing required fields: %s' % (
                         ', '.join(missing_fields)))))
+
             try:
-                for row_index, row in enumerate(csv_file):
-                    for float_field in ('LONG', 'LATI', 'LAM', 'K'):
+                for ref_key, record in table_dict.iteritems():
+                    for float_field in ('long', 'lati', 'lam', 'k'):
                         try:
-                            float(row[float_field])
+                            float(record[float_field])
                         except ValueError:
                             warnings.append(
                                 (['wind_data_uri'],
-                                 ('Row %s column %s must be a number.'
-                                  % (row_index, float_field))))
+                                ('Ref %s column %s must be a number.'
+                                % (ref_key, float_field))))
 
-                    try:
-                        if not float(row['REF']) == int(float(row['REF'])):
-                            raise ValueError()
-                    except ValueError:
-                        warnings.append(
-                            (['wind_data_uri'],
-                             ('Row %s column %s must be an integer.'
-                              % (row_index, 'REF'))))
+                        try:
+                            if not float(ref_key) == int(float(ref_key)):
+                                raise ValueError()
+                        except ValueError:
+                            warnings.append(
+                                (['wind_data_uri'],
+                                ('Ref %s ust be an integer.' % ref_key)))
             except KeyError:
-                # keys are missing and are reported earlier.
+                # missing keys are reported earlier.
                 pass
-
         except IOError:
             warnings.append((['wind_data_uri'], 'Could not locate file.'))
         except csv.Error:
@@ -2088,45 +2087,44 @@ def validate(args, limit_to=None):
 
     if limit_to in ('grid_points_uri', None):
         try:
-            csv_file = csv.DictReader(open(args['grid_points_uri'], 'r'))
-            missing_fields = []
-            for required_fieldname in ('ID', 'TYPE', 'LATI', 'LONG'):
-                if required_fieldname not in csv_file.fieldnames:
-                    missing_fields.append(required_fieldname)
+            table_dict = utils.build_lookup_from_csv(
+                args['grid_points_uri'], 'id')
+
+            missing_fields = (set(['long', 'lati', 'id', 'type']) -
+                              set(table_dict.itervalues().next().keys()))
             if len(missing_fields) > 0:
                 warnings.append((
                     ['grid_points_uri'],
                     ('CSV missing required fields: %s' % (
                         ', '.join(missing_fields)))))
+
             try:
-                for row_index, row in enumerate(csv_file):
-                    for float_field in ('LONG', 'LATI'):
+                for id_key, record in table_dict.iteritems():
+                    for float_field in ('long', 'lati'):
                         try:
-                            float(row[float_field])
+                            float(record[float_field])
                         except ValueError:
                             warnings.append(
                                 (['grid_points_uri'],
-                                 ('Row %s column %s must be a number.'
-                                  % (row_index, float_field))))
+                                 ('ID %s column %s must be a number.'
+                                  % (id_key, float_field))))
 
-                    try:
-                        if not float(row['ID']) == int(float(row['ID'])):
-                            raise ValueError()
-                    except ValueError:
-                        warnings.append(
-                            (['grid_points_uri'],
-                             ('Row %s column %s must be an integer.'
-                              % (row_index, 'ID'))))
+                        try:
+                            if not float(id_key) == int(float(id_key)):
+                                raise ValueError()
+                        except ValueError:
+                            warnings.append(
+                                (['grid_points_uri'],
+                                 ('ID %s must be an integer.' % id_key)))
 
-                    if row['TYPE'].lower() not in ('land', 'grid'):
-                        warnings.append((
-                            ['grid_points_uri'],
-                            ('Row %s column %s must be either "land" or '
-                             '"grid" (case-insensitive)') % (row_index, 'TYPE')))
+                        if record['type'] not in ('land', 'grid'):
+                            warnings.append((
+                                ['grid_points_uri'],
+                                ('ID %s column TYPE must be either "land" or '
+                                 '"grid" (case-insensitive)') % id_key))
             except KeyError:
-                # keys are missing and are reported earlier.
+                # missing keys are reported earlier.
                 pass
-
         except KeyError:
             # This is not a required input.
             pass
@@ -2138,38 +2136,37 @@ def validate(args, limit_to=None):
 
     if limit_to in ('wind_schedule', None):
         try:
-            csv_file = csv.DictReader(open(args['wind_schedule'], 'r'))
-            missing_fields = []
-            for required_fieldname in ('YEAR', 'PRICE'):
-                if required_fieldname not in csv_file.fieldnames:
-                    missing_fields.append(required_fieldname)
+            table_dict = utils.build_lookup_from_csv(
+                args['wind_schedule'], 'year')
+
+            missing_fields = (set(['year', 'price']) -
+                              set(table_dict.itervalues().next().keys()))
             if len(missing_fields) > 0:
                 warnings.append((
                     ['wind_schedule'],
                     ('CSV missing required fields: %s' % (
                         ', '.join(missing_fields)))))
+
             try:
-                for row_index, row in enumerate(csv_file):
+                for year_key, record in table_dict.iteritems():
                     try:
-                        if not float(row['YEAR']) == int(float(row['YEAR'])):
+                        if not float(year_key) == int(float(year_key)):
                             raise ValueError()
                     except ValueError:
                         warnings.append(
                             (['wind_schedule'],
-                             ('Row %s column %s must be an integer.'
-                              % (row_index, 'YEAR'))))
+                             ('Year %s must be an integer.' % year_key)))
 
                     try:
-                        float(row['PRICE'])
+                        float(record['price'])
                     except ValueError:
                         warnings.append((
                             ['wind_schedule'],
-                            ('Row %s column %s must be a number'
-                             % (row_index, 'PRICE'))))
-            except KeyError:
-                # keys are missing and are reported earlier.
-                pass
+                            ('Price %s must be a number' % record['price'])))
 
+            except KeyError:
+                # missing keys are reported earlier.
+                pass
         except IOError:
             warnings.append((['wind_schedule'], 'Could not locate file.'))
         except csv.Error:
