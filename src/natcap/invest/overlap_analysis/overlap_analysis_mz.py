@@ -10,6 +10,7 @@ from osgeo import ogr
 from natcap.invest.overlap_analysis import overlap_analysis_mz_core
 from natcap.invest.overlap_analysis import overlap_core
 from .. import validation
+from .. import utils
 
 
 
@@ -58,19 +59,36 @@ def execute(args):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('zone_layer_loc', require=True):
-        # Implement validation for zone_layer_loc here
-        pass
+    warnings = []
+    keys_missing = []
+    keys_without_value = []
+    for required_key in ('workspace_dir', 'zone_layer_loc',
+                         'overlap_data_dir_loc'):
+        try:
+            if args[required_key] in ('', None):
+                keys_without_value.append(required_key)
+        except KeyError:
+            keys_missing.append(required_key)
 
-    if context.is_arg_complete('overlap_data_dir_loc', require=True):
-        # Implement validation for overlap_data_dir_loc here
-        pass
+    if len(keys_missing) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(keys_missing))
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    if len(keys_without_value) > 0:
+        warnings.append((keys_without_value,
+                         'Parameter must have a value.'))
 
-    return context.warnings
+    if limit_to in ('zone_layer_loc', None):
+        with utils.capture_gdal_logging():
+            vector = ogr.Open(args['zone_layer_loc'])
+            if vector is None:
+                warnings.append((['zone_layer_loc'],
+                                 ('Parameter must be a path to an '
+                                  'OGR-compatible file on disk.')))
+
+    if limit_to in ('overlap_data_dir_loc', None):
+        if not os.path.isdir(args['overlap_data_dir_loc']):
+            warnings.append((['overlap_data_dir_loc'],
+                             'Parameter must be a path to a folder on disk.'))
+
+    return warnings
