@@ -8,6 +8,7 @@ import math
 import itertools
 import time
 import re
+import csv
 
 import numpy
 from osgeo import gdal
@@ -901,67 +902,112 @@ def _get_price_table(price_table_uri, start_year, end_year):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('lulc_lookup_uri', require=True):
-        # Implement validation for lulc_lookup_uri here
-        pass
+    warnings = []
+    missing_keys = []
+    keys_without_value = []
+    for required_key in ('workspace_dir',
+                         'lulc_transition_matrix_uri',
+                         'carbon_pool_initial_uri',
+                         'carbon_pool_transient_uri',
+                         'lulc_baseline_map_uri',
+                         'do_price_table',
+                         'price',
+                         'interest_rate',
+                         'price_table_uri',
+                         'discount_rate'):
+        try:
+            if args[required_key] in ('', None):
+                keys_without_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
 
-    if context.is_arg_complete('lulc_transition_matrix_uri', require=True):
-        # Implement validation for lulc_transition_matrix_uri here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError('Keys are missing, but required: %s'
+                       % ', '.join(missing_keys))
 
-    if context.is_arg_complete('carbon_pool_initial_uri', require=True):
-        # Implement validation for carbon_pool_initial_uri here
-        pass
+    if len(keys_without_value) > 0:
+        warnings.append((keys_without_value,
+                         'Parameter must have a value'))
 
-    if context.is_arg_complete('carbon_pool_transient_uri', require=True):
-        # Implement validation for carbon_pool_transient_uri here
-        pass
+    for csv_key, required_fields in (
+            ('lulc_lookup_uri', ('lulc-class', 'code',
+                                 'is_coastal_blue_carbon_habitat')),
+            ('lulc_transition_matrix_uri', ('lulc-class',)),
+            ('carbon_pool_initial_uri', ('biomass', 'soil')),
+            ('carbon_pool_transient_uri', ('code', 'lulc-class',
+                                           'biomass-yearly-accumulation',
+                                           'soil-yearly-accumulation',
+                                           'biomass-half-life',
+                                           'soil-half-life')),
+            ('price_table_uri', ('year', 'price'))):
+        try:
+            table = csv.reader(open(args[csv_key]))
+            headers = set([field.lower() for field in table.next()])
+            missing_headers = set(required_fields) - headers
+            if len(missing_headers) > 0:
+                warnings.append((
+                    [csv_key],
+                    ('Table is missing required columns: %s'
+                     % ', '.join(sorted(missing_headers)))))
+        except IOError:
+            warnings.append(([csv_key], 'File not found.'))
+        except csv.Error:
+            warnings.append(([csv_key], 'Could not open CSV'))
 
-    if context.is_arg_complete('lulc_baseline_map_uri', require=True):
-        # Implement validation for lulc_baseline_map_uri here
-        pass
+    if limit_to in ('lulc_baseline_map_uri', None):
+        with invest_utils.capture_gdal_logging():
+            raster = gdal.Open(args['lulc_baseline_map_uri'])
+        if raster is None:
+            warnings.append((['lulc_baseline_map_uri'],
+                             ('Parameter must be a filepath to a '
+                              'GDAL-compatible raster file.')))
 
-    if context.is_arg_complete('lulc_baseline_year', require=True):
-        # Implement validation for lulc_baseline_year here
-        pass
+    for int_key in ('lulc_baseline_year', 'analysis_year'):
+        if limit_to not in (int_key, None):
+            continue
 
-    if context.is_arg_complete('lulc_transition_maps_list', require=False):
-        # Implement validation for lulc_transition_maps_list here
-        pass
+        try:
+            if args[int_key] not in ('', None):
+                int(args[int_key])
+        except KeyError:
+            # not all of these are required.
+            pass
+        except ValueError:
+            warnings.append(([int_key],
+                             'Parameter must be an integer.'))
 
-    if context.is_arg_complete('lulc_transition_years_list', require=False):
-        # Implement validation for lulc_transition_years_list here
-        pass
+    for float_key in ('price',
+                      'interest_rate',
+                      'discount_rate'):
+        if limit_to in (float_key, None):
+            try:
+                float(args[float_key])
+            except ValueError:
+                warnings.append(([float_key],
+                                'Parameter must be a number'))
 
-    if context.is_arg_complete('analysis_year', require=False):
-        # Implement validation for analysis_year here
-        pass
+    if limit_to in ('lulc_transition_maps_list', None):
+        with invest_utils.capture_gdal_logging():
+            for index, raster_path in enumerate(
+                    args['lulc_transition_maps_list']):
+                raster = gdal.Open(raster_path)
+                if raster is None:
+                    warnings.append((['lulc_transition_maps_list'],
+                                    ('Raster %s must be a path to a '
+                                     'GDAL-compatible raster on disk.')
+                                     % index))
 
-    if context.is_arg_complete('do_price_table', require=True):
-        # Implement validation for do_price_table here
-        pass
+    if limit_to in ('lulc_transition_years_list', None):
+        for year in args['lulc_transition_years_list']:
+            try:
+                int(year)
+            except ValueError:
+                warnings.append((['lulc_transition_years_list'],
+                                 'Transition year %s must be an int.' % year))
 
-    if context.is_arg_complete('price', require=True):
-        # Implement validation for price here
-        pass
+    if limit_to in ('do_price_table', None):
+        if args['do_price_table'] not in (True, False):
+            warnings.append((['do_price_table'],
+                             'Parameter must be eithe True or False.'))
 
-    if context.is_arg_complete('interest_rate', require=True):
-        # Implement validation for interest_rate here
-        pass
-
-    if context.is_arg_complete('price_table_uri', require=True):
-        # Implement validation for price_table_uri here
-        pass
-
-    if context.is_arg_complete('discount_rate', require=True):
-        # Implement validation for discount_rate here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return warnings
