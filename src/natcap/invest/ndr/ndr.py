@@ -792,9 +792,9 @@ def validate(args, limit_to=None):
             "The following keys were expected in `args` but were missing " +
             ', '.join(missing_key_list))
 
-    if not args['calc_p'] and not args['calc_n']:
+    if limit_to is None and (not args['calc_p'] and not args['calc_n']):
         validation_error_list.append(
-            (['calc_p', 'calc_n'],
+            (['calc_p', 'calc_n', 'dem_path', 'lulc_path'],
              "At least nitrogen or phosphorous must be selected"))
 
     if len(no_value_list) > 0:

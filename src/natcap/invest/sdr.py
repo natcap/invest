@@ -968,55 +968,84 @@ def _generate_report(
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('dem_path', require=True):
-        # Implement validation for dem_path here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('erosivity_path', require=True):
-        # Implement validation for erosivity_path here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('erodibility_path', require=True):
-        # Implement validation for erodibility_path here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('lulc_path', require=True):
-        # Implement validation for lulc_path here
-        pass
+    required_keys = [
+        'workspace_dir',
+        'dem_path',
+        'erosivity_path',
+        'erodibility_path',
+        'lulc_path',
+        'watersheds_path',
+        'biophysical_table_path',
+        'threshold_flow_accumulation',
+        'k_param',
+        'ic_0_param',
+        'sdr_max']
 
-    if context.is_arg_complete('watersheds_path', require=True):
-        # Implement validation for watersheds_path here
-        pass
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if context.is_arg_complete('biophysical_table_path', require=True):
-        # Implement validation for biophysical_table_path here
-        pass
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
 
-    if context.is_arg_complete('threshold_flow_accumulation', require=True):
-        # Implement validation for threshold_flow_accumulation here
-        pass
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
 
-    if context.is_arg_complete('drainage_path', require=False):
-        # Implement validation for drainage_path here
-        pass
+    file_type_list = [
+        ('dem_path', 'raster'),
+        ('erosivity_path', 'raster'),
+        ('erodibility_path', 'raster'),
+        ('lulc_path', 'raster'),
+        ('watersheds_path', 'vector'),
+        ('biophysical_table_path', 'table'),
+        ('drainage_path', 'raster')]
 
-    if context.is_arg_complete('k_param', require=True):
-        # Implement validation for k_param here
-        pass
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
 
-    if context.is_arg_complete('ic_0_param', require=True):
-        # Implement validation for ic_0_param here
-        pass
-
-    if context.is_arg_complete('sdr_max', require=True):
-        # Implement validation for sdr_max here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return validation_error_list
