@@ -1643,10 +1643,7 @@ def validate(args, limit_to=None):
                          'analysis_area_uri',
                          'machine_perf_uri',
                          'machine_param_uri',
-                         'dem_uri',
-                         'land_gridPts_uri',
-                         'machine_econ_uri',
-                         'number_of_machines'):
+                         'dem_uri'):
         try:
             if args[required_key] in ('', None):
                 keys_missing_value.append(required_key)
@@ -1710,12 +1707,15 @@ def validate(args, limit_to=None):
              set(['id', 'type', 'lat', 'long', 'location'])),
             ('machine_econ_uri', set(['name', 'value', 'note']))):
         try:
-            reader = csv.reader(open(csv_key))
-            headers = set([field.lower() for field in reader.fieldnames])
+            reader = csv.reader(open(args[csv_key]))
+            headers = set([field.lower() for field in reader.next()])
             missing_fields = required_fields - headers
             if len(missing_fields) > 0:
                 warnings.append('CSV is missing columns :%s' %
                                 ', '.join(sorted(missing_fields)))
+        except KeyError:
+            # Not all these are required inputs.
+            pass
         except IOError:
             warnings.append(([csv_key], 'File not found.'))
         except csv.Error:
@@ -1737,8 +1737,30 @@ def validate(args, limit_to=None):
                     or float(num_machines) < 0):
                 warnings.append((['number_of_machines'],
                                  'Parameter must be a positive integer.'))
+        except KeyError:
+            pass
         except ValueError:
             warnings.append((['number_of_machines'],
                              'Parameter must be a number.'))
+
+    if limit_to is None:
+        if 'valuation_container' in args:
+            missing_keys = []
+            keys_with_no_value = []
+            for required_key in ('land_gridPts_uri',
+                                 'machine_econ_uri',
+                                 'number_of_machines'):
+                try:
+                    if args[required_key] in ('', None):
+                        keys_with_no_value.append(required_key)
+                except KeyError:
+                    missing_keys.append(required_key)
+
+            if len(missing_keys) > 0:
+                raise KeyError('Keys are missing: %s' % missing_keys)
+
+            if len(keys_with_no_value) > 0:
+                warnings.append((keys_with_no_value,
+                                 'Parameter must have a value'))
 
     return warnings
