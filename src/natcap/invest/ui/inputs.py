@@ -2356,6 +2356,17 @@ class Multi(Container):
 
         self.value_changed.emit(list(values))
 
+    def _value_changed(self, new_value):
+        """A slot to re-emit that the value has changed.
+
+        Parameters:
+            new_value: The value of the contained input that changed.
+
+        Returns:
+            ``None``.
+        """
+        self.value_changed.emit(self.value())
+
     @QtCore.Slot(unicode)
     def _add_templated_item(self, link_text):
         """A slot to add a templated item to the Multi.
@@ -2383,6 +2394,7 @@ class Multi(Container):
             new_input = self.callable_()
 
         new_input.add_to(self.layout())
+        new_input.value_changed.connect(self._value_changed)
         self.items.append(new_input)
 
         layout = self.layout()
