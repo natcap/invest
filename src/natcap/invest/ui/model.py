@@ -39,7 +39,7 @@ ICON_ALERT = qtawesome.icon('fa.exclamation-triangle',
 _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
-_SCENARIO_BASE_FILENAME = 'scenario.invs.%s'
+_SCENARIO_BASE_FILENAME = 'scenario.invest.%s'
 _SCENARIO_DIALOG_TITLE = 'Select where to save the scenario'
 _SCENARIO_PARAMETER_SET = 'Parameter set (archive parameters)'
 _SCENARIO_DATA_ARCHIVE = 'Data archive (archive parameters and files)'
