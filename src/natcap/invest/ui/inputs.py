@@ -1940,9 +1940,9 @@ class Dropdown(GriddedInput):
         Returns:
             ``None``
         """
-        # QComboBoxes are 1-indexed.  An index of 0 means there are no options
+        # QComboBoxes are 1-indexed.  An index of -1 means there are no options
         # in the dropdown.
-        if newindex > 0:
+        if newindex >= 0:
             value = self.options[newindex]
         else:
             value = None
