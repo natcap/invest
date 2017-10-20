@@ -16,7 +16,6 @@ import pygeoprocessing
 import numpy
 import taskgraph
 
-
 from . import utils
 from . import validation
 
@@ -97,7 +96,7 @@ _TOTAL_POLLINATOR_YIELD_FILE_PATTERN = 'total_pollinator_yield%s.tif'
 # wild pollinator raster replace (file_suffix)
 _WILD_POLLINATOR_YIELD_FILE_PATTERN = 'wild_pollinator_yield%s.tif'
 # final aggregate farm shapefile file pattern replace (file_suffix)
-_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_indices%s.shp'
+_FARM_VECTOR_RESULT_FILE_PATTERN = 'farm_results%s.shp'
 # output field on target shapefile if farms are enabled
 _TOTAL_FARM_YIELD_FIELD_ID = 'y_tot'
 # output field for wild pollinators on farms if farms are enabled
@@ -791,6 +790,12 @@ def _create_farm_result_vector(
         feature.SetField(fid_field_id, feature.GetFID())
         target_layer.SetFeature(feature)
 
+    farm_pollinator_abundance_defn = ogr.FieldDefn(
+        _POLLINATOR_ABUDNANCE_FARM_FIELD_ID, ogr.OFTReal)
+    farm_pollinator_abundance_defn.SetWidth(25)
+    farm_pollinator_abundance_defn.SetPrecision(11)
+    target_layer.CreateField(farm_pollinator_abundance_defn)
+
     total_farm_yield_field_defn = ogr.FieldDefn(
         _TOTAL_FARM_YIELD_FIELD_ID, ogr.OFTReal)
     total_farm_yield_field_defn.SetWidth(25)
@@ -808,12 +813,6 @@ def _create_farm_result_vector(
     wild_pol_farm_yield_field_defn.SetWidth(25)
     wild_pol_farm_yield_field_defn.SetPrecision(11)
     target_layer.CreateField(wild_pol_farm_yield_field_defn)
-
-    farm_pollinator_abundance_defn = ogr.FieldDefn(
-        _POLLINATOR_ABUDNANCE_FARM_FIELD_ID, ogr.OFTReal)
-    farm_pollinator_abundance_defn.SetWidth(25)
-    farm_pollinator_abundance_defn.SetPrecision(11)
-    target_layer.CreateField(farm_pollinator_abundance_defn)
 
     target_layer = None
     target_vector.SyncToDisk()
@@ -1325,28 +1324,79 @@ class _PYWOp(object):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('landcover_raster_path', require=True):
-        # Implement validation for landcover_raster_path here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('landcover_biophysical_table_path',
-                               require=True):
-        # Implement validation for landcover_biophysical_table_path here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('guild_table_path', require=True):
-        # Implement validation for guild_table_path here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('farm_vector_path', require=True):
-        # Implement validation for farm_vector_path here
-        pass
+    for key in [
+            'workspace_dir',
+            'landcover_raster_path',
+            'guild_table_path',
+            'landcover_biophysical_table_path',
+            'farm_vector_path']:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing" +
+            ', '.join(missing_key_list))
 
-    return context.warnings
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    for key in [
+            'landcover_raster_path',
+            'guild_table_path',
+            'landcover_biophysical_table_path',
+            'farm_vector_path']:
+        if (limit_to is None or limit_to == key) and (
+                not os.path.exists(args[key])):
+            validation_error_list.append(
+                ([key], 'not found on disk'))
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in [
+                ('landcover_raster_path', 'raster'),
+                ('farm_vector_path', 'vector')]:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

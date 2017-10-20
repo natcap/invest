@@ -6,6 +6,7 @@ import os
 import time
 
 from osgeo import gdal
+from osgeo import ogr
 import numpy
 import natcap.invest.pygeoprocessing_0_3_3
 
@@ -68,9 +69,13 @@ def execute(args):
         args['results_suffix'] (string): appended to any output file name.
         args['lulc_cur_path'] (string): a path to a raster representing the
             current carbon stocks.
+        args['calc_sequestration'] (bool): if true, sequestration should
+            be calculated and 'lulc_fut_path' and 'do_redd' should be defined.
         args['lulc_fut_path'] (string): a path to a raster representing future
             landcover scenario.  Optional, but if present and well defined
             will trigger a sequestration calculation.
+        args['do_redd'] ( bool): if true, REDD analysis should be calculated
+            and 'lulc_redd_path' should be defined
         args['lulc_redd_path'] (string): a path to a raster representing the
             alternative REDD scenario which is only possible if the
             args['lulc_fut_path'] is present and well defined.
@@ -78,8 +83,8 @@ def execute(args):
             storage density to lulc codes. (required if 'do_uncertainty' is
             false)
         args['lulc_cur_year'] (int/string): an integer representing the year
-            of `args['lulc_cur_path']` used in valuation required if
-            `args['do_valuation']` is True.
+            of `args['lulc_cur_path']` used if `args['calc_sequestration']`
+            is True.
         args['lulc_fut_year'](int/string): an integer representing the year
             of `args['lulc_fut_path']` used in valuation if it exists.
             Required if  `args['do_valuation']` is True and
@@ -408,47 +413,86 @@ def _generate_report(summary_stats, model_args, html_report_path):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('lulc_cur_path', require=True):
-        # Implement validation for lulc_cur_path here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('carbon_pools_path', require=True):
-        # Implement validation for carbon_pools_path here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('lulc_cur_year', require=False):
-        # Implement validation for lulc_cur_year here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('lulc_fut_path', require=False):
-        # Implement validation for lulc_fut_path here
-        pass
+    required_keys = [
+        'workspace_dir',
+        'lulc_cur_path',
+        'carbon_pools_path',
+        'calc_sequestration',
+        'do_valuation']
 
-    if context.is_arg_complete('lulc_fut_year', require=False):
-        # Implement validation for lulc_fut_year here
-        pass
+    if 'calc_sequestration' in args and args['calc_sequestration']:
+        required_keys.extend(
+            ['lulc_cur_year', 'lulc_fut_path', 'lulc_fut_year', 'do_redd'])
 
-    if context.is_arg_complete('lulc_redd_path', require=False):
-        # Implement validation for lulc_redd_path here
-        pass
+        if 'do_redd' in args and args['do_redd']:
+            required_keys.append('lulc_redd_path')
 
-    if context.is_arg_complete('price_per_metric_ton_of_c', require=True):
-        # Implement validation for price_per_metric_ton_of_c here
-        pass
+    if 'do_valuation' in args and args['do_valuation']:
+        required_keys.extend(
+            ['price_per_metric_ton_of_c', 'discount_rate', 'rate_change'])
 
-    if context.is_arg_complete('discount_rate', require=True):
-        # Implement validation for discount_rate here
-        pass
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if context.is_arg_complete('rate_change', require=True):
-        # Implement validation for rate_change here
-        pass
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
 
-    return context.warnings
+    file_type_list = [
+        ('lulc_cur_path', 'raster'),
+        ('lulc_fut_path', 'raster'),
+        ('lulc_redd_path', 'raster'),
+        ('carbon_pools_path', 'table')]
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

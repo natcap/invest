@@ -7,6 +7,7 @@ import csv
 
 import numpy
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 import natcap.invest.pygeoprocessing_0_3_3
 
@@ -622,43 +623,80 @@ def make_linear_decay_kernel_uri(max_distance, kernel_uri):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('landuse_cur_uri', require=True):
-        # Implement validation for landuse_cur_uri here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('landuse_fut_uri', require=False):
-        # Implement validation for landuse_fut_uri here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('landuse_bas_uri', require=False):
-        # Implement validation for landuse_bas_uri here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('threat_raster_folder', require=True):
-        # Implement validation for threat_raster_folder here
-        pass
+    # required args
+    for key in [
+            'workspace_dir',
+            'landuse_cur_uri',
+            'threat_raster_folder',
+            'threats_uri',
+            'sensitivity_uri',
+            'half_saturation_constant']:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if context.is_arg_complete('threats_uri', require=True):
-        # Implement validation for threats_uri here
-        pass
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing" +
+            ', '.join(missing_key_list))
 
-    if context.is_arg_complete('access_uri', require=False):
-        # Implement validation for access_uri here
-        pass
+    # check for required file existence:
+    for key in [
+            'landuse_cur_uri',
+            'threat_raster_folder',
+            'threats_uri',
+            'sensitivity_uri']:
+        if (limit_to is None or limit_to == key) and (
+                not os.path.exists(args[key])):
+            validation_error_list.append(
+                ([key], 'not found on disk'))
 
-    if context.is_arg_complete('sensitivity_uri', require=True):
-        # Implement validation for sensitivity_uri here
-        pass
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in [
+                ('landuse_cur_uri', 'raster'),
+                ('landuse_fut_uri', 'raster'),
+                ('landuse_bas_uri', 'raster'),
+                ('access_uri', 'vector')]:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
 
-    if context.is_arg_complete('half_saturation_constant', require=True):
-        # Implement validation for half_saturation_constant here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return validation_error_list

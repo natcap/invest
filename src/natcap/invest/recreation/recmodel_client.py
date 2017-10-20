@@ -1132,39 +1132,104 @@ def _sanitize_path(base_path, raw_path):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('aoi_path', require=True):
-        # Implement validation for aoi_path here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('start_year', require=True):
-        # Implement validation for start_year here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('end_year', require=True):
-        # Implement validation for end_year here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('predictor_table_path', require=True):
-        # Implement validation for predictor_table_path here
-        pass
+    required_keys = [
+        'workspace_dir',
+        'aoi_path',
+        'start_year',
+        'end_year',
+        'compute_regression',
+        'grid_aoi']
 
-    if context.is_arg_complete('scenario_predictor_table_path', require=False):
-        # Implement validation for scenario_predictor_table_path here
-        pass
+    if limit_to in [None, 'predictor_table_path']:
+        if 'compute_regression' in args and args['compute_regression']:
+            required_keys.append('predictor_table_path')
 
-    if context.is_arg_complete('grid_type', require=True):
-        # Implement validation for grid_type here
-        pass
+    if limit_to in [None, 'grid_type', 'cell_size']:
+        if 'grid_aoi' in args and args['grid_aoi']:
+            required_keys.append('grid_type')
+            required_keys.append('cell_size')
 
-    if context.is_arg_complete('cell_size', require=True):
-        # Implement validation for cell_size here
-        pass
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        print missing_key_list
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
 
-    return context.warnings
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    if limit_to in [None, 'scenario_predictor_table_path']:
+        if 'compute_regression' in args and args['compute_regression']:
+            if (limit_to in [None, 'scenario_predictor_table_path'] and
+                    'scenario_predictor_table_path' in args):
+                scenario_predictor_table_path = args[
+                    'scenario_predictor_table_path']
+                if (scenario_predictor_table_path not in [None, ''] and
+                        not os.path.exists(scenario_predictor_table_path)):
+                    validation_error_list.append(
+                        (['scenario_predictor_table_path'],
+                         'not found on disk'))
+
+    file_type_list = [
+        ('aoi_path', 'vector'),
+        ('predictor_table_path', 'table'),
+        ('lulc_path', 'raster'),
+        ('watersheds_path', 'vector'),
+        ('biophysical_table_path', 'table')]
+
+    if limit_to in ['drainage_path', None] and (
+            'drainage_path' in args and
+            args['drainage_path'] not in ['', None]):
+        file_type_list.append(('drainage_path', 'raster'))
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list
