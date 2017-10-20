@@ -307,7 +307,6 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\GLOBIO (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_globio.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Finfish Aquaculture (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_finfish_aquaculture.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Marine Water Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_marine_water_quality_biophysical.bat" "" "${INVEST_ICON}"
   CreateDirectory "${OVERLAP}"
   CreateShortCut "${OVERLAP}\Overlap Analysis (Management Zones) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis_mz.bat" "" "${INVEST_ICON}"
   CreateShortCut "${OVERLAP}\Overlap Analysis (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis.bat" "" "${INVEST_ICON}"
@@ -472,7 +471,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 117760
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 784
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 8116
-    !insertmacro downloadData "Marine Water Quality (optional)" "MarineWaterQuality.zip" 13312
     !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3692
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831620
