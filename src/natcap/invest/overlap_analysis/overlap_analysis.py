@@ -659,6 +659,18 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
+    """Validate an input dictionary for OA.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
     warnings = []
     missing_keys = []
     keys_missing_value = []
