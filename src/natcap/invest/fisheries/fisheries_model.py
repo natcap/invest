@@ -138,7 +138,7 @@ def set_recru_func(vars_dict):
 
         N_next[0], spawners = rec_func(N_prev)
     '''
-    sexsp = float(vars_dict['sexsp'])
+    sexsp = int(vars_dict['sexsp'])
     LarvDisp = vars_dict['Larvaldispersal']
 
     # Initialize Weight vector according to spawn_units

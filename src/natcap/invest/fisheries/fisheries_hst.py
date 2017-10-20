@@ -7,6 +7,7 @@ have on particular habitats.
 from __future__ import absolute_import
 import logging
 import pprint
+import csv
 
 import numpy as np
 
@@ -169,31 +170,64 @@ def convert_survival_matrix(vars_dict):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('population_csv_uri', require=True):
-        # Implement validation for population_csv_uri here
-        pass
+    """Validate an input dictionary for Fisheries HST.
 
-    if context.is_arg_complete('sexsp', require=True):
-        # Implement validation for sexsp here
-        pass
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
 
-    if context.is_arg_complete('habitat_dep_csv_uri', require=True):
-        # Implement validation for habitat_dep_csv_uri here
-        pass
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    keys_with_empty_values = set([])
+    missing_keys = set([])
+    for key in ('workspace_dir',
+                'results_suffix',
+                'population_csv_uri',
+                'sexsp',
+                'habitat_dep_csv_uri',
+                'habitat_chg_csv_uri',
+                'gamma'):
+        if key in (None, limit_to):
+            try:
+                if args[key] in ('', None):
+                    keys_with_empty_values.add(key)
+            except KeyError:
+                missing_keys.add(key)
 
-    if context.is_arg_complete('habitat_chg_csv_uri', require=True):
-        # Implement validation for habitat_chg_csv_uri here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError(
+            'Args is missing required keys: %s' % ', '.join(
+                sorted(missing_keys)))
 
-    if context.is_arg_complete('gamma', require=True):
-        # Implement validation for gamma here
-        pass
+    if len(keys_with_empty_values) > 0:
+        warnings.append((keys_with_empty_values,
+                         'Argument must have a value'))
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    for csv_key in ('population_csv_uri',
+                    'habitat_dep_csv_uri',
+                    'habitat_chg_csv_uri'):
+        if limit_to in (csv_key, None):
+            try:
+                csv.reader(open(args[csv_key], 'r'))
+            except (csv.Error, IOError):
+                warnings.append(([csv_key],
+                                 'Parameter must be a valid CSV file'))
 
-    return context.warnings
+    if limit_to in ('sexsp', None):
+        if args['sexsp'] not in ('Yes', 'No'):
+            warnings.append((['sexsp'],
+                             'Parameter must be either "Yes" or "No"'))
+
+    if limit_to in ('gamma', None):
+        try:
+            float(args['gamma'])
+        except ValueError:
+            warnings.append((['gamma'],
+                             'Parameter must be a number'))
+
+    return warnings

@@ -360,19 +360,56 @@ def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('lulc_lookup_uri', require=True):
-        # Implement validation for lulc_lookup_uri here
-        pass
+    """Validate an input dictionary for Coastal Blue Carbon: Preprocessor.
 
-    if context.is_arg_complete('lulc_snapshot_list', require=False):
-        # Implement validation for lulc_snapshot_list here
-        pass
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
 
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
+    for required_key in ('workspace_dir', 'lulc_lookup_uri'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
 
-    return context.warnings
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
+
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have a value.'))
+
+    if limit_to in ('lulc_lookup_uri', None):
+        try:
+            csv.reader(open(args['lulc_lookup_uri']))
+        except IOError:
+            warnings.append((['lulc_lookup_uri'], 'File not found.'))
+        except csv.Error:
+            warnings.append((['lulc_lookup_uri'], 'Could not open CSV'))
+
+    if limit_to in ('lulc_snapshot_list', None):
+        try:
+            with invest_utils.capture_gdal_logging():
+                for index, raster_path in enumerate(
+                        args['lulc_snapshot_list']):
+                    raster = gdal.Open(raster_path)
+                    if raster is None:
+                        warnings.append(
+                            (['lulc_snapshot_list'],
+                             ('Raster index %s must be a path to a '
+                              'GDAL-compatible file on disk.') % index))
+        except KeyError:
+            pass
+
+    return warnings

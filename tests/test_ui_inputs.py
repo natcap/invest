@@ -247,7 +247,7 @@ class InVESTModelInputTest(_QtTest):
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), True)
 
-    def test_visiblity_when_shown(self):
+    def test_visibility_when_shown(self):
         from natcap.invest.ui import inputs
         container = inputs.Container(label='sample container')
         input_instance = self.__class__.create_input(label='foo',

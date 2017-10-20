@@ -8,6 +8,7 @@ import pprint
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None
+MESSAGE_REQUIRED = 'Parameter is required but is missing or has no value'
 LOGGER = logging.getLogger(__name__)
 
 
@@ -117,7 +118,8 @@ def invest_validator(validate_func):
                 isinstance(limit_to, basestring)), (
                     'limit_to parameter must be either a string key or None.')
         if limit_to is not None:
-            assert limit_to in args, 'limit_to key must exist in args.'
+            assert limit_to in args, ('limit_to key "%s" must exist in args.'
+                                      % limit_to)
 
         for key, value in args.iteritems():
             assert isinstance(key, basestring), (

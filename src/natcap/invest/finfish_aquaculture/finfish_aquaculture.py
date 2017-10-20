@@ -5,8 +5,11 @@ import os
 import csv
 import logging
 
+from osgeo import ogr
+
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
 from .. import validation
+from .. import utils
 
 
 LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.finfish_aquaculture')
@@ -284,71 +287,79 @@ def format_temp_table(temp_path, ff_aqua_args):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('ff_farm_loc', require=True):
-        # Implement validation for ff_farm_loc here
-        pass
+    """Validate an input dictionary for Finfish Aquaculture.
 
-    if context.is_arg_complete('farm_ID', require=True):
-        # Implement validation for farm_ID here
-        pass
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
 
-    if context.is_arg_complete('g_param_a', require=True):
-        # Implement validation for g_param_a here
-        pass
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    keys_missing_values = set([])
+    missing_keys = set([])
+    for required_key in ('workspace_dir',
+                         'ff_farm_loc',
+                         'farm_ID',
+                         'g_param_a',
+                         'g_param_b',
+                         'g_param_tau',
+                         'use_uncertainty',
+                         'water_temp_tbl',
+                         'farm_op_tbl',
+                         'outplant_buffer',
+                         'do_valuation'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_values.add(required_key)
+        except KeyError:
+            missing_keys.add(required_key)
 
-    if context.is_arg_complete('g_param_b', require=True):
-        # Implement validation for g_param_b here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing keys: %s' % ', '.join(
+            sorted(missing_keys)))
 
-    if context.is_arg_complete('g_param_tau', require=True):
-        # Implement validation for g_param_tau here
-        pass
+    if len(keys_missing_values) > 0:
+        warnings.append((keys_missing_values, 'Parameter must have a value'))
 
-    if context.is_arg_complete('g_param_a_sd', require=False):
-        # Implement validation for g_param_a_sd here
-        pass
+    if limit_to in ('ff_farm_loc', None):
+        with utils.capture_gdal_logging():
+            vector = ogr.Open(args['ff_farm_loc'])
+            if vector is None:
+                warnings.append((['ff_farm_loc'],
+                                 ('Parameter must be a filepath to an '
+                                  'OGR-compatible vector')))
 
-    if context.is_arg_complete('g_param_b_sd', require=False):
-        # Implement validation for g_param_b_sd here
-        pass
+    for float_key in ('g_param_a', 'g_param_b', 'g_param_tau', 'g_param_a_sd',
+                      'g_param_b_sd', 'num_monte_carlo_runs',
+                      'outplant_buffer', 'p_per_kg', 'frac_p', 'discount'):
+        if limit_to in (float_key, None):
+            try:
+                if args[float_key] not in ('', None):
+                    try:
+                        float(args[float_key])
+                    except ValueError:
+                        warnings.append(([float_key],
+                                        'Parameter must be a number.'))
+            except KeyError:
+                # Not all of these parameters are required.
+                pass
 
-    if context.is_arg_complete('num_monte_carlo_runs', require=False):
-        # Implement validation for num_monte_carlo_runs here
-        pass
+    for csv_key in ('water_temp_tbl', 'farm_op_tbl'):
+        if limit_to in (csv_key, None):
+            try:
+                csv.reader(open(args[csv_key], 'r'))
+            except (csv.Error, IOError):
+                warnings.append(([csv_key],
+                                 'Parameter must be a valid CSV file.'))
 
-    if context.is_arg_complete('water_temp_tbl', require=True):
-        # Implement validation for water_temp_tbl here
-        pass
+    if limit_to in ('do_valuation', None):
+        if args['do_valuation'] not in (True, False):
+            warnings.append((['do_valuation'],
+                             'Parameter must be either True or False.'))
 
-    if context.is_arg_complete('farm_op_tbl', require=True):
-        # Implement validation for farm_op_tbl here
-        pass
-
-    if context.is_arg_complete('outplant_buffer', require=True):
-        # Implement validation for outplant_buffer here
-        pass
-
-    if context.is_arg_complete('do_valuation', require=True):
-        # Implement validation for do_valuation here
-        pass
-
-    if context.is_arg_complete('p_per_kg', require=False):
-        # Implement validation for p_per_kg here
-        pass
-
-    if context.is_arg_complete('frac_p', require=False):
-        # Implement validation for frac_p here
-        pass
-
-    if context.is_arg_complete('discount', require=False):
-        # Implement validation for discount here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return warnings
