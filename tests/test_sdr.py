@@ -7,7 +7,7 @@ import os
 
 import numpy
 from osgeo import ogr
-from pygeoprocessing.testing import scm
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
@@ -35,7 +35,8 @@ class SDRTests(unittest.TestCase):
             'biophysical_table_path': os.path.join(
                 SAMPLE_DATA, 'biophysical_table.csv'),
             'dem_path': os.path.join(SAMPLE_DATA, 'dem'),
-            'erodibility_path': os.path.join(SAMPLE_DATA, 'erodibility'),
+            'erodibility_path': os.path.join(
+                SAMPLE_DATA, 'erodibility_SI_clip.tif'),
             'erosivity_path': os.path.join(SAMPLE_DATA, 'erosivity'),
             'ic_0_param': '0.5',
             'k_param': '2',

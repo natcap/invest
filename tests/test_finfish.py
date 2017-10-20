@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 
 SAMPLE_DATA = os.path.join(
@@ -63,7 +63,7 @@ class FinfishTests(unittest.TestCase):
         FinfishTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'),
             1e-6)
@@ -93,7 +93,7 @@ class FinfishTests(unittest.TestCase):
         FinfishTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list_simple.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'),
             1e-6)
@@ -127,7 +127,7 @@ class FinfishTests(unittest.TestCase):
             os.path.join(
                 REGRESSION_DATA, 'expected_file_list_no_valuation.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'),
             1e-6)
@@ -167,7 +167,7 @@ class FinfishTests(unittest.TestCase):
         FinfishTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'),
             1e-6)
@@ -192,7 +192,9 @@ class FinfishTests(unittest.TestCase):
         missing_files = []
         with open(base_list_path, 'r') as file_list:
             for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
+                full_path = os.path.join(
+                    directory_path,
+                    file_path.rstrip().replace('\\', os.path.sep))
                 if full_path == '':
                     continue
                 if not os.path.isfile(full_path):

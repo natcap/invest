@@ -27,14 +27,12 @@ cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
-import pygeoprocessing
-cimport pygeoprocessing.routing.routing_core
-from pygeoprocessing.routing.routing_core cimport BlockCache
+import natcap.invest.pygeoprocessing_0_3_3
+cimport natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
+from natcap.invest.pygeoprocessing_0_3_3.routing.routing_core cimport BlockCache
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('pygeoprocessing.routing.routing_core')
+LOGGER = logging.getLogger('natcap.invest.pygeoprocessing_0_3_3.routing.routing_core')
 
 cdef int N_MONTHS = 12
 
@@ -106,7 +104,7 @@ cdef route_local_recharge(
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.int8)
 
-    cdef int outflow_direction_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef int outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_direction_path)
 
     #load the et0 and precip bands
@@ -122,39 +120,39 @@ cdef route_local_recharge(
             raster_list.append(gdal.Open(path))
             band_list.append(raster_list[index].GetRasterBand(1))
 
-    cdef float precip_nodata = pygeoprocessing.get_nodata_from_uri(precip_path_list[0])
-    cdef float et0_nodata = pygeoprocessing.get_nodata_from_uri(et0_path_list[0])
+    cdef float precip_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(precip_path_list[0])
+    cdef float et0_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(et0_path_list[0])
 
     qfi_datset_list = []
     qfi_band_list = []
 
     outflow_weights_raster = gdal.Open(outflow_weights_path)
     outflow_weights_band = outflow_weights_raster.GetRasterBand(1)
-    cdef float outflow_weights_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_weights_path)
     stream_raster = gdal.Open(stream_path)
     stream_band = stream_raster.GetRasterBand(1)
 
     #Create output arrays qfi and local_recharge and local_recharge_avail
     cdef float local_recharge_nodata = -99999
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         outflow_direction_path, li_path, 'GTiff', local_recharge_nodata,
         gdal.GDT_Float32)
     li_raster = gdal.Open(li_path, gdal.GA_Update)
     li_band = li_raster.GetRasterBand(1)
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         outflow_direction_path, li_avail_path, 'GTiff', local_recharge_nodata,
         gdal.GDT_Float32)
     li_avail_raster = gdal.Open(li_avail_path, gdal.GA_Update)
     li_avail_band = li_avail_raster.GetRasterBand(1)
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
        outflow_direction_path, l_sum_avail_path, 'GTiff', local_recharge_nodata,
        gdal.GDT_Float32)
     l_sum_avail_raster = gdal.Open(l_sum_avail_path, gdal.GA_Update)
     l_sum_avail_band = l_sum_avail_raster.GetRasterBand(1)
 
     cdef float aet_nodata = -99999
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         outflow_direction_path, aet_path, 'GTiff', aet_nodata,
         gdal.GDT_Float32)
     aet_raster = gdal.Open(aet_path, gdal.GA_Update)
@@ -164,7 +162,7 @@ cdef route_local_recharge(
     qfi_band_list = []
     kc_raster_list = []
     kc_band_list = []
-    cdef float qfi_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    cdef float qfi_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
         qfi_path_list[0])
     for index, (qfi_path, kc_path) in enumerate(
             zip(qfi_path_list, kc_path_list)):
@@ -226,7 +224,7 @@ cdef route_local_recharge(
     cdef int current_neighbor_index
     cdef int current_index
     cdef float current_l_sum_avail
-    cdef float qf_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    cdef float qf_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
         qfi_path_list[0])
     cdef int month_index
     cdef float aet_sum
@@ -363,7 +361,7 @@ cdef route_local_recharge(
             aet_sum = aet_nodata
 
         # Eq [8]
-        li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma * l_i, 0)
+        li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma * l_i, l_i)
 
         l_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_l_sum_avail
         li_block[row_index, col_index, row_block_offset, col_block_offset] = l_i
@@ -380,7 +378,7 @@ def calculate_local_recharge(
         li_avail_path, l_sum_avail_path, aet_path, kc_path_list):
     """wrapper for local recharge so we can statically type outlet lists"""
     cdef deque[int] outlet_cell_deque
-    pygeoprocessing.routing.routing_core.find_outlets(dem_path, flow_dir_path, outlet_cell_deque)
+    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.find_outlets(dem_path, flow_dir_path, outlet_cell_deque)
     # convert a dictionary of month -> alpha to an array of alphas in sorted
     # order by month
     cdef numpy.ndarray alpha_month_array = numpy.array(
@@ -401,11 +399,11 @@ def calculate_r_sum_avail_pour(
     l_sum_avail_raster = gdal.Open(l_sum_avail_path)
     l_sum_avail_band = l_sum_avail_raster.GetRasterBand(1)
     block_col_size, block_row_size = l_sum_avail_band.GetBlockSize()
-    r_sum_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    r_sum_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
         l_sum_avail_path)
 
     cdef float r_sum_avail_pour_nodata = -1.0
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         l_sum_avail_path, l_sum_avail_pour_path, 'GTiff', r_sum_avail_pour_nodata,
         gdal.GDT_Float32)
     l_sum_avail_pour_raster = gdal.Open(l_sum_avail_pour_path, gdal.GA_Update)
@@ -431,11 +429,11 @@ def calculate_r_sum_avail_pour(
 
     outflow_direction_raster = gdal.Open(outflow_direction_path)
     outflow_direction_band = outflow_direction_raster.GetRasterBand(1)
-    cdef float outflow_direction_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef float outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_direction_path)
     outflow_weights_raster = gdal.Open(outflow_weights_path)
     outflow_weights_band = outflow_weights_raster.GetRasterBand(1)
-    cdef float outflow_weights_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_weights_path)
     #make the memory block
     band_list = [
@@ -537,14 +535,14 @@ def route_baseflow_sum(
     time(&start)
 
     cdef deque[int] cells_to_process
-    pygeoprocessing.routing.routing_core.find_outlets(dem_path, outflow_direction_path, cells_to_process)
+    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.find_outlets(dem_path, outflow_direction_path, cells_to_process)
 
     cdef c_set[int] cells_in_queue
     for cell in cells_to_process:
         cells_in_queue.insert(cell)
 
     cdef float pixel_area = (
-        pygeoprocessing.geoprocessing.get_cell_size_from_uri(dem_path) ** 2)
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(dem_path) ** 2)
 
     #load a base raster so we can determine the n_rows/cols
     outflow_direction_raster = gdal.Open(outflow_direction_path, gdal.GA_ReadOnly)
@@ -585,12 +583,12 @@ def route_baseflow_sum(
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.int8)
 
-    cdef int outflow_direction_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef int outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_direction_path)
 
     outflow_weights_raster = gdal.Open(outflow_weights_path)
     outflow_weights_band = outflow_weights_raster.GetRasterBand(1)
-    cdef float outflow_weights_nodata = pygeoprocessing.get_nodata_from_uri(
+    cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_weights_path)
 
     #Create output arrays qfi and local_recharge and local_recharge_avail
@@ -606,7 +604,7 @@ def route_baseflow_sum(
     stream_band = stream_raster.GetRasterBand(1)
 
     cdef float b_sum_nodata = -9999.0
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         outflow_direction_path, b_sum_path, 'GTiff', b_sum_nodata,
         gdal.GDT_Float32, fill_value=b_sum_nodata)
     b_sum_raster = gdal.Open(b_sum_path, gdal.GA_Update)

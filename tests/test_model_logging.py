@@ -10,9 +10,6 @@ import sqlite3
 import socket
 
 import Pyro4
-import numpy
-from osgeo import ogr
-from pygeoprocessing.testing import scm
 
 
 class ModelLoggingTests(unittest.TestCase):
@@ -28,7 +25,7 @@ class ModelLoggingTests(unittest.TestCase):
 
     def test_create_server(self):
         """Usage logger test server will launch and create a database."""
-        from natcap.invest.iui import usage_logger
+        from natcap.invest.ui import usage_logger
 
         database_path = os.path.join(
             self.workspace_dir, 'subdir', 'test_log.db')
@@ -50,7 +47,7 @@ class ModelLoggingTests(unittest.TestCase):
 
     def test_pyro_server(self):
         """Usage logger test server as an RPC."""
-        from natcap.invest.iui import usage_logger
+        from natcap.invest.ui import usage_logger
         # attempt to get an open port; could result in race condition but
         # will be okay for a test. if this test ever fails because of port
         # in use, that's probably why
@@ -88,7 +85,7 @@ class ModelLoggingTests(unittest.TestCase):
 
     def test_add_extra_records(self):
         """Usage logger record runs with an extra field."""
-        from natcap.invest.iui import usage_logger
+        from natcap.invest.ui import usage_logger
 
         database_path = os.path.join(self.workspace_dir, 'test_log.db')
         logging_server = usage_logger.LoggingServer(database_path)
@@ -117,7 +114,7 @@ class ModelLoggingTests(unittest.TestCase):
 
     def test_add_records(self):
         """Usage logger record runs and verify they are added."""
-        from natcap.invest.iui import usage_logger
+        from natcap.invest.ui import usage_logger
 
         database_path = os.path.join(self.workspace_dir, 'test_log.db')
         logging_server = usage_logger.LoggingServer(database_path)
@@ -142,7 +139,7 @@ class ModelLoggingTests(unittest.TestCase):
 
     def test_add_exit_status(self):
         """Usage logger record run and then exit and verify they are added."""
-        from natcap.invest.iui import usage_logger
+        from natcap.invest.ui import usage_logger
 
         database_path = os.path.join(self.workspace_dir, 'test_log.db')
         logging_server = usage_logger.LoggingServer(database_path)
@@ -172,7 +169,7 @@ class ModelLoggingTests(unittest.TestCase):
 
     def test_unknown_mode(self):
         """Usage logger test that an unknown mode raises an exception."""
-        from natcap.invest.iui import usage_logger
+        from natcap.invest.ui import usage_logger
 
         database_path = os.path.join(self.workspace_dir, 'test_log.db')
         logging_server = usage_logger.LoggingServer(database_path)
@@ -186,7 +183,7 @@ class ModelLoggingTests(unittest.TestCase):
 
     def test_download_database(self):
         """Usage logger run summary db is the same as the base db."""
-        from natcap.invest.iui import usage_logger
+        from natcap.invest.ui import usage_logger
 
         database_path = os.path.join(self.workspace_dir, 'test_log.db')
         logging_server = usage_logger.LoggingServer(database_path)

@@ -9,8 +9,8 @@ import csv
 from osgeo import ogr
 import numpy as np
 
-import pygeoprocessing.geoprocessing
-import pygeoprocessing.testing
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest import reporting
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
@@ -263,7 +263,7 @@ def read_population_csv(args, uri):
                 "Region vector shapes do not match. %s" % uri)
 
     # Check that information is correct
-    assert pygeoprocessing.testing.isclose(
+    assert natcap.invest.pygeoprocessing_0_3_3.testing.isclose(
         pop_dict['Larvaldispersal'].sum(), 1), (
             "The Larvaldisperal vector does not sum exactly to one.. %s" % uri)
 
@@ -521,12 +521,12 @@ def _verify_single_params(args, create_outputs=True):
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
         params_dict['output_dir'] = output_dir
         params_dict['intermediate_dir'] = intermediate_dir
-        pygeoprocessing.create_directories([args['workspace_dir'],
+        natcap.invest.pygeoprocessing_0_3_3.create_directories([args['workspace_dir'],
                                             output_dir,
                                             intermediate_dir])
 
     # Check that timesteps is positive integer
-    params_dict['total_timesteps'] = int(args['total_timesteps']) + 1
+    params_dict['total_timesteps'] = float(args['total_timesteps']) + 1
 
     return params_dict
 
@@ -690,7 +690,7 @@ def _create_intermediate_csv(vars_dict):
     Classes = vars_dict['Classes']
     N_tasx = vars_dict['N_tasx']
     N_txsa = N_tasx.swapaxes(1, 3)
-    sexsp = vars_dict['sexsp']
+    sexsp = int(vars_dict['sexsp'])
     Sexes = ['Female', 'Male']
 
     with open(uri, 'wb') as c_file:
@@ -742,7 +742,7 @@ def _create_results_csv(vars_dict):
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
-    equilibrate_timestep = int(vars_dict['equilibrate_timestep'])
+    equilibrate_timestep = float(vars_dict['equilibrate_timestep'])
     Regions = vars_dict['Regions']
 
     with open(uri, 'wb') as csv_file:
@@ -995,7 +995,7 @@ def _create_results_aoi(vars_dict):
     LOGGER.info('Copying AOI %s to %s', aoi_uri, output_aoi_uri)
 
     # Copy AOI file to outputs directory
-    pygeoprocessing.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
 
     # Append attributes to Shapefile
     ds = ogr.Open(output_aoi_uri, update=1)
@@ -1003,6 +1003,8 @@ def _create_results_aoi(vars_dict):
 
     # Set Harvest
     harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
+    harvest_field.SetWidth(24)
+    harvest_field.SetPrecision(11)
     layer.CreateField(harvest_field)
 
     harv_reg_dict = {}
@@ -1012,6 +1014,8 @@ def _create_results_aoi(vars_dict):
     # Set Valuation
     if vars_dict['val_cont']:
         val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+        val_field.SetWidth(24)
+        val_field.SetPrecision(11)
         layer.CreateField(val_field)
 
     val_reg_dict = {}

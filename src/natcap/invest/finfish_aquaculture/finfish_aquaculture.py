@@ -1,13 +1,14 @@
 """inVEST finfish aquaculture filehandler for biophysical and valuation data"""
+from __future__ import absolute_import
 
 import os
 import csv
 import logging
 
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
+from .. import validation
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.finfish_aquaculture')
 
 
@@ -92,15 +93,16 @@ def execute(args):
     ff_aqua_args['workspace_dir'] = args['workspace_dir']
     ff_aqua_args['ff_farm_file'] = args['ff_farm_loc']
     ff_aqua_args['farm_ID'] = args['farm_ID']
-    ff_aqua_args['outplant_buffer'] = args['outplant_buffer']
-    ff_aqua_args['g_param_a'] = args['g_param_a']
-    ff_aqua_args['g_param_b'] = args['g_param_b']
-    ff_aqua_args['g_param_tau'] = args['g_param_tau']
+    ff_aqua_args['outplant_buffer'] = int(args['outplant_buffer'])
+    ff_aqua_args['g_param_a'] = float(args['g_param_a'])
+    ff_aqua_args['g_param_b'] = float(args['g_param_b'])
+    ff_aqua_args['g_param_tau'] = float(args['g_param_tau'])
 
     if args['use_uncertainty']:
         LOGGER.debug('Adding uncertainty parameters')
-        for key in ['g_param_a_sd', 'g_param_b_sd', 'num_monte_carlo_runs']:
-            ff_aqua_args[key] = args[key]
+        ff_aqua_args['num_monte_carlo_runs'] = int(args['num_monte_carlo_runs'])
+        for key in ['g_param_a_sd', 'g_param_b_sd']:
+            ff_aqua_args[key] = float(args[key])
 
     #Both CSVs are being pulled in, but need to do some maintenance to remove
     #undesirable information before they can be passed into core
@@ -116,9 +118,9 @@ def execute(args):
     if ff_aqua_args['do_valuation'] is True:
         LOGGER.debug('Yes, we want to do valuation')
 
-        ff_aqua_args['p_per_kg'] = args['p_per_kg']
-        ff_aqua_args['frac_p'] = args['frac_p']
-        ff_aqua_args['discount'] = args['discount']
+        ff_aqua_args['p_per_kg'] = float(args['p_per_kg'])
+        ff_aqua_args['frac_p'] = float(args['frac_p'])
+        ff_aqua_args['discount'] = float(args['discount'])
 
     #Fire up the biophysical function in finfish_aquaculture_core with the
     #gathered arguments
@@ -278,3 +280,75 @@ def format_temp_table(temp_path, ff_aqua_args):
         new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
 
     ff_aqua_args['water_temp_dict'] = new_dict_temp
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('ff_farm_loc', require=True):
+        # Implement validation for ff_farm_loc here
+        pass
+
+    if context.is_arg_complete('farm_ID', require=True):
+        # Implement validation for farm_ID here
+        pass
+
+    if context.is_arg_complete('g_param_a', require=True):
+        # Implement validation for g_param_a here
+        pass
+
+    if context.is_arg_complete('g_param_b', require=True):
+        # Implement validation for g_param_b here
+        pass
+
+    if context.is_arg_complete('g_param_tau', require=True):
+        # Implement validation for g_param_tau here
+        pass
+
+    if context.is_arg_complete('g_param_a_sd', require=False):
+        # Implement validation for g_param_a_sd here
+        pass
+
+    if context.is_arg_complete('g_param_b_sd', require=False):
+        # Implement validation for g_param_b_sd here
+        pass
+
+    if context.is_arg_complete('num_monte_carlo_runs', require=False):
+        # Implement validation for num_monte_carlo_runs here
+        pass
+
+    if context.is_arg_complete('water_temp_tbl', require=True):
+        # Implement validation for water_temp_tbl here
+        pass
+
+    if context.is_arg_complete('farm_op_tbl', require=True):
+        # Implement validation for farm_op_tbl here
+        pass
+
+    if context.is_arg_complete('outplant_buffer', require=True):
+        # Implement validation for outplant_buffer here
+        pass
+
+    if context.is_arg_complete('do_valuation', require=True):
+        # Implement validation for do_valuation here
+        pass
+
+    if context.is_arg_complete('p_per_kg', require=False):
+        # Implement validation for p_per_kg here
+        pass
+
+    if context.is_arg_complete('frac_p', require=False):
+        # Implement validation for frac_p here
+        pass
+
+    if context.is_arg_complete('discount', require=False):
+        # Implement validation for discount here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

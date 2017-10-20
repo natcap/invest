@@ -6,12 +6,10 @@ import logging
 
 from osgeo import gdal
 
-from pygeoprocessing import geoprocessing
+from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing
 import scenic_quality_cython_core
 
 
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.core')
 
 def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):

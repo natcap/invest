@@ -1,20 +1,20 @@
 """Scenario Generator Module."""
+from __future__ import absolute_import
 
 import os
 import math
 import struct
 import logging
+import contextlib
 from decimal import Decimal
 
 import numpy as np
 import scipy as sp
 from osgeo import gdal, ogr
 
-import pygeoprocessing.geoprocessing as geoprocess
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 from .. import utils as invest_utils
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from .. import validation
 
 LOGGER = logging.getLogger(
     'natcap.invest.scenario_generator.scenario_generator')
@@ -530,6 +530,26 @@ def filter_fragments(input_uri, size, output_uri):
     dst_band.WriteArray(dst_array)
 
 
+@contextlib.contextmanager
+def manage_numpy_randomstate(seed):
+    """Set a seed for ``numpy.random`` and reset it on exit.
+
+    Parameters:
+        seed (int or None): The seed to set via ``numpy.random.seed``.  If
+            ``none``, the numpy random number generator will be un-set.
+
+    Returns:
+        ``None``
+
+    Yields:
+        ``None``
+    """
+    seed_state = np.random.get_state()
+    np.random.seed(seed)
+    yield
+    np.random.set_state(seed_state)
+
+
 def execute(args):
     """Scenario Generator: Rule-Based.
 
@@ -565,6 +585,8 @@ def execute(args):
         override (str): path to override shapefile
         override_field (str): shapefile field containing override value
         override_inclusion (int): the rasterization method
+        seed (int or None): a number to use as the randomization seed.
+            If not provided, ``None`` is assumed.
 
     Example Args::
 
@@ -609,6 +631,14 @@ def execute(args):
 
     """
     LOGGER.info("Starting Scenario Generator model run...")
+
+    try:
+        args['seed'] = int(args['seed'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when seed not in args.
+        # ValueError when args['seed'] == '' (when UI input is empty).
+        # TypeError when args['seed'] == None
+        args['seed'] = None
 
     # SHOULD BE INPUT AND VALIDATION FUNCTIONS
     LOGGER.info("Fetching and validating inputs...")
@@ -1408,7 +1438,8 @@ def execute(args):
             patch_locations = sp.ndimage.find_objects(label_im, nb_labels)
 
             # randomize patch order
-            np.random.shuffle(patch_labels)
+            with manage_numpy_randomstate(args['seed']):
+                np.random.shuffle(patch_labels)
 
             # check patches for conversion
             patch_label_count = patch_labels.size
@@ -1437,7 +1468,7 @@ def execute(args):
 
                     # select the number of pixels that need to be converted
                     tmp_index = np.argsort(tmp_array)
-                    tmp_index = tmp_index[:count - pixels_changed]
+                    tmp_index = tmp_index[:count - int(pixels_changed)]
 
                     # convert the selected pixels into coordinates
                     # pixels_to_change = np.array(zip(patch[0], patch[1]))
@@ -1671,3 +1702,111 @@ def execute(args):
     htm.close()
 
     LOGGER.info("...model run complete.")
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('landcover', require=True):
+        # Implement validation for landcover here
+        pass
+
+    if context.is_arg_complete('transition', require=False):
+        # Implement validation for transition here
+        pass
+
+    if context.is_arg_complete('calculate_priorities', require=False):
+        # Implement validation for calculate_priorities here
+        pass
+
+    if context.is_arg_complete('priorities_csv_uri', require=True):
+        # Implement validation for priorities_csv_uri here
+        pass
+
+    if context.is_arg_complete('proximity_weight', require=True):
+        # Implement validation for proximity_weight here
+        pass
+
+    if context.is_arg_complete('transition_id', require=True):
+        # Implement validation for transition_id here
+        pass
+
+    if context.is_arg_complete('change_field', require=True):
+        # Implement validation for change_field here
+        pass
+
+    if context.is_arg_complete('area_field', require=True):
+        # Implement validation for area_field here
+        pass
+
+    if context.is_arg_complete('priority_field', require=False):
+        # Implement validation for priority_field here
+        pass
+
+    if context.is_arg_complete('proximity_field', require=False):
+        # Implement validation for proximity_field here
+        pass
+
+    if context.is_arg_complete('suitability_folder', require=True):
+        # Implement validation for suitability_folder here
+        pass
+
+    if context.is_arg_complete('suitability', require=False):
+        # Implement validation for suitability here
+        pass
+
+    if context.is_arg_complete('weight', require=True):
+        # Implement validation for weight here
+        pass
+
+    if context.is_arg_complete('factor_inclusion', require=True):
+        # Implement validation for factor_inclusion here
+        pass
+
+    if context.is_arg_complete('suitability_id', require=True):
+        # Implement validation for suitability_id here
+        pass
+
+    if context.is_arg_complete('suitability_layer', require=True):
+        # Implement validation for suitability_layer here
+        pass
+
+    if context.is_arg_complete('suitability_field', require=True):
+        # Implement validation for suitability_field here
+        pass
+
+    if context.is_arg_complete('distance_field', require=True):
+        # Implement validation for distance_field here
+        pass
+
+    if context.is_arg_complete('constraints', require=False):
+        # Implement validation for constraints here
+        pass
+
+    if context.is_arg_complete('constraints_field', require=False):
+        # Implement validation for constraints_field here
+        pass
+
+    if context.is_arg_complete('override', require=False):
+        # Implement validation for override here
+        pass
+
+    if context.is_arg_complete('override_field', require=False):
+        # Implement validation for override_field here
+        pass
+
+    if context.is_arg_complete('override_inclusion', require=True):
+        # Implement validation for override_inclusion here
+        pass
+
+    if context.is_arg_complete('seed', require=False):
+        # Implement validation for seed here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

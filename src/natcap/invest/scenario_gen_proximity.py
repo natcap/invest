@@ -1,5 +1,7 @@
 """Scenario Generation: Proximity Based."""
 
+from __future__ import absolute_import
+
 import math
 import shutil
 import os
@@ -14,9 +16,10 @@ import csv
 import numpy
 from osgeo import osr
 from osgeo import gdal
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 import scipy
 
+from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.scenario_generator_proximity_based')
@@ -92,7 +95,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
 
-    pygeoprocessing.geoprocessing.create_directories(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
         [output_dir, intermediate_output_dir, tmp_dir])
 
     f_reg = utils.build_file_registry(
@@ -112,7 +115,7 @@ def execute(args):
     shutil.copy(args['base_lulc_path'], f_reg['base_lulc_path'])
     if 'aoi_path' in args and args['aoi_path'] != '':
         # clip base lulc to a new raster
-        pygeoprocessing.clip_dataset_uri(
+        natcap.invest.pygeoprocessing_0_3_3.clip_dataset_uri(
             args['base_lulc_path'], args['aoi_path'], f_reg['base_lulc_path'],
             assert_projections=True, all_touched=False)
 
@@ -179,15 +182,15 @@ def _convert_landscape(
         None.
     """
     tmp_file_registry = {
-        'non_base_mask': pygeoprocessing.temporary_filename(),
-        'base_mask': pygeoprocessing.temporary_filename(),
-        'gaussian_kernel': pygeoprocessing.temporary_filename(),
-        'distance_from_base_mask_edge': pygeoprocessing.temporary_filename(),
+        'non_base_mask': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
+        'base_mask': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
+        'gaussian_kernel': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
+        'distance_from_base_mask_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
         'distance_from_non_base_mask_edge':
-            pygeoprocessing.temporary_filename(),
-        'convertible_distances': pygeoprocessing.temporary_filename(),
-        'smooth_distance_from_edge': pygeoprocessing.temporary_filename(),
-        'distance_from_edge': pygeoprocessing.temporary_filename(),
+            natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
+        'convertible_distances': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
+        'smooth_distance_from_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
+        'distance_from_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
     }
     # a sigma of 1.0 gives nice visual results to smooth pixel level artifacts
     # since a pixel is the 1.0 unit
@@ -195,17 +198,17 @@ def _convert_landscape(
 
     # create the output raster first as a copy of the base landcover so it can
     # be looped on for each step
-    lulc_nodata = pygeoprocessing.get_nodata_from_uri(base_lulc_uri)
-    pixel_size_out = pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)
+    lulc_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(base_lulc_uri)
+    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(base_lulc_uri)
     mask_nodata = 2
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [base_lulc_uri], lambda x: x, output_landscape_raster_uri,
         gdal.GDT_Int32, lulc_nodata, pixel_size_out, "intersection",
         vectorize_op=False, datasets_are_pre_aligned=True)
 
     # convert everything furthest from edge for each of n_steps
     pixel_area_ha = (
-        pygeoprocessing.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
+        natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
     max_pixels_to_convert = int(math.ceil(area_to_convert / pixel_area_ha))
     convertible_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
@@ -240,18 +243,18 @@ def _convert_landscape(
                     base_mask = ~base_mask
                 return numpy.where(
                     lulc_array == lulc_nodata, mask_nodata, base_mask)
-            pygeoprocessing.vectorize_datasets(
+            natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
                 [output_landscape_raster_uri], _mask_base_op,
                 tmp_file_registry[mask_id], gdal.GDT_Byte,
                 mask_nodata, pixel_size_out, "intersection",
                 vectorize_op=False, datasets_are_pre_aligned=True)
 
             # create distance transform for the current mask
-            pygeoprocessing.distance_transform_edt(
+            natcap.invest.pygeoprocessing_0_3_3.distance_transform_edt(
                 tmp_file_registry[mask_id], tmp_file_registry[distance_id])
 
         # combine inner and outer distance transforms into one
-        distance_nodata = pygeoprocessing.get_nodata_from_uri(
+        distance_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
             tmp_file_registry['distance_from_base_mask_edge'])
 
         def _combine_masks(base_distance_array, non_base_distance_array):
@@ -260,7 +263,7 @@ def _convert_landscape(
             valid_base_mask = base_distance_array > 0.0
             result[valid_base_mask] = base_distance_array[valid_base_mask]
             return result
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [tmp_file_registry['distance_from_base_mask_edge'],
              tmp_file_registry['distance_from_non_base_mask_edge']],
             _combine_masks, tmp_file_registry['distance_from_edge'],
@@ -268,7 +271,7 @@ def _convert_landscape(
             vectorize_op=False, datasets_are_pre_aligned=True)
 
         # smooth the distance transform to avoid scanline artifacts
-        pygeoprocessing.convolve_2d_uri(
+        natcap.invest.pygeoprocessing_0_3_3.convolve_2d_uri(
             tmp_file_registry['distance_from_edge'],
             tmp_file_registry['gaussian_kernel'],
             smooth_distance_from_edge_uri)
@@ -281,7 +284,7 @@ def _convert_landscape(
             return numpy.where(
                 convertible_mask, distance_from_base_edge,
                 convertible_type_nodata)
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [smooth_distance_from_edge_uri, output_landscape_raster_uri],
             _mask_to_convertible_codes,
             tmp_file_registry['convertible_distances'], gdal.GDT_Float32,
@@ -423,15 +426,15 @@ def _sort_to_disk(dataset_uri, score_weight=1.0):
 
         return _read_score_index_from_disk(score_file_path, index_file_path)
 
-    nodata = pygeoprocessing.get_nodata_from_uri(dataset_uri)
+    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(dataset_uri)
     nodata *= score_weight  # scale the nodata so they can be filtered out
 
     # This will be a list of file iterators we'll pass to heap.merge
     iters = []
 
-    _, n_cols = pygeoprocessing.get_row_col_from_uri(dataset_uri)
+    _, n_cols = natcap.invest.pygeoprocessing_0_3_3.get_row_col_from_uri(dataset_uri)
 
-    for scores_data, scores_block in pygeoprocessing.iterblocks(
+    for scores_data, scores_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(
             dataset_uri, largest_block=_BLOCK_SIZE):
         # flatten and scale the results
         scores_block = scores_block.flatten() * score_weight
@@ -655,7 +658,55 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
     kernel_dataset.FlushCache()
-    for kernel_data, kernel_block in pygeoprocessing.iterblocks(kernel_uri):
+    for kernel_data, kernel_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(kernel_uri):
         kernel_block /= integration
         kernel_band.WriteArray(
             kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('base_lulc_path', require=True):
+        # Implement validation for base_lulc_path here
+        pass
+
+    if context.is_arg_complete('aoi_path', require=False):
+        # Implement validation for aoi_path here
+        pass
+
+    if context.is_arg_complete('area_to_convert', require=True):
+        # Implement validation for area_to_convert here
+        pass
+
+    if context.is_arg_complete('focal_landcover_codes', require=True):
+        # Implement validation for focal_landcover_codes here
+        pass
+
+    if context.is_arg_complete('convertible_landcover_codes', require=True):
+        # Implement validation for convertible_landcover_codes here
+        pass
+
+    if context.is_arg_complete('replacment_lucode', require=True):
+        # Implement validation for replacment_lucode here
+        pass
+
+    if context.is_arg_complete('convert_farthest_from_edge', require=False):
+        # Implement validation for convert_farthest_from_edge here
+        pass
+
+    if context.is_arg_complete('convert_nearest_to_edge', require=False):
+        # Implement validation for convert_nearest_to_edge here
+        pass
+
+    if context.is_arg_complete('n_fragmentation_steps', require=True):
+        # Implement validation for n_fragmentation_steps here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

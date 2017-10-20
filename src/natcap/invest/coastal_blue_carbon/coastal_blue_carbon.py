@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Model."""
+from __future__ import absolute_import
 
 import os
 import logging
@@ -10,8 +11,9 @@ import re
 
 import numpy
 from osgeo import gdal
-import pygeoprocessing.geoprocessing as geoprocess
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 
+from .. import validation
 from .. import utils as invest_utils
 
 # using largest negative 32-bit floating point number
@@ -19,8 +21,6 @@ from .. import utils as invest_utils
 #          be positive
 NODATA_FLOAT = -16777216
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger(
     'natcap.invest.coastal_blue_carbon.coastal_blue_carbon')
 
@@ -125,60 +125,71 @@ def execute(args):
     blocks_processed = 0.
     last_time = time.time()
 
-    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster']))
+    # Limit block size here to try to improve memory usage of the application.
+    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster'],
+                                                     largest_block=2**10))
     C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
 
     for block_idx, (offset_dict, C_prior) in block_iterator:
         current_time = time.time()
         blocks_processed += 1.
-        if current_time - last_time >= 5 or blocks_processed in [0, num_blocks-1]:
+        if (current_time - last_time >= 5 or
+                blocks_processed in [0, num_blocks-1]):
             LOGGER.info('Processing model, about %.2f%% complete',
                         (blocks_processed/num_blocks) * 100)
             last_time = current_time
 
         # Initialization
+        valid_mask = C_prior != C_nodata
+        valid_C_prior = C_prior[valid_mask]
+
         timesteps = d['timesteps']
 
-        x_size, y_size = C_prior.shape
+        valid_shape = valid_C_prior.shape
 
         # timesteps+1 to include initial conditions
-        stock_shape = (timesteps+1, x_size, y_size)
+        stock_shape = (timesteps+1,) + valid_shape
         S_biomass = numpy.zeros(stock_shape, dtype=numpy.float32)  # Stock
         S_soil = numpy.zeros(stock_shape, dtype=numpy.float32)
         T = numpy.zeros(stock_shape, dtype=numpy.float32)  # Total Carbon Stock
 
-        timestep_shape = (timesteps, x_size, y_size)
-        A_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Accumulation
+        timestep_shape = (timesteps,) + valid_shape
+        A_biomass = numpy.zeros(timestep_shape,
+                                dtype=numpy.float32)  # Accumulation
         A_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
-        E_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Emissions
+        E_biomass = numpy.zeros(timestep_shape,
+                                dtype=numpy.float32)  # Emissions
         E_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
         # Net Sequestration
         N_biomass = numpy.zeros(timestep_shape, dtype=numpy.float32)
         N_soil = numpy.zeros(timestep_shape, dtype=numpy.float32)
         V = numpy.zeros(timestep_shape, dtype=numpy.float32)  # Valuation
 
-        snapshot_shape = (d['transitions']+1, x_size, y_size)
+        snapshot_shape = (d['transitions']+1,) + valid_shape
         L = numpy.zeros(snapshot_shape, dtype=numpy.float32)  # Litter
 
-        transition_shape = (d['transitions'], x_size, y_size)
+        transition_shape = (d['transitions'],) + valid_shape
         # Yearly Accumulation
         Y_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
         Y_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
         # Disturbance Percentage
         D_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
         D_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
-        H_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)  # Half-life
+        H_biomass = numpy.zeros(transition_shape,
+                                dtype=numpy.float32)  # Half-life
         H_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
         # Total Disturbed Carbon
         R_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
         R_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
 
         # Set Accumulation and Disturbance Values
-        C_r = [read_from_raster(i, offset_dict) for i in d['C_r_rasters']]
+        C_r = [read_from_raster(i, offset_dict)[valid_mask]
+               for i in d['C_r_rasters']]
         if C_r:
-            C_list = [C_prior] + C_r + [C_r[-1]]  # final transition out to analysis year
+            # final transition out to analysis year
+            C_list = [valid_C_prior] + C_r + [C_r[-1]]
         else:
-            C_list = [C_prior]*2  # allow for a final analysis
+            C_list = [valid_C_prior]*2  # allow for a final analysis
         for i in xrange(0, d['transitions']):
             D_biomass[i] = reclass_transition(
                 C_list[i],
@@ -212,12 +223,12 @@ def execute(args):
                 nodata_mask=C_nodata)
 
         S_biomass[0] = reclass(
-            C_prior,
+            valid_C_prior,
             d['lulc_to_Sb'],
             out_dtype=numpy.float32,
             nodata_mask=C_nodata)
         S_soil[0] = reclass(
-            C_prior,
+            valid_C_prior,
             d['lulc_to_Ss'],
             out_dtype=numpy.float32,
             nodata_mask=C_nodata)
@@ -254,7 +265,8 @@ def execute(args):
                     d['snapshot_years'], d['transitions'], i)+1):
 
                 try:
-                    j = d['transition_years'][transition_idx] - d['transition_years'][0]
+                    j = (d['transition_years'][transition_idx] -
+                         d['transition_years'][0])
                 except IndexError:
                     # When we're at the analysis year, we're out of transition
                     # years to calculate for.  Transition years represent years
@@ -313,23 +325,32 @@ def execute(args):
 
         for key, array in raster_tuples:
             for i in xrange(0, len(d['File_Registry'][key])):
+                out_array = numpy.empty_like(C_prior, dtype=numpy.float32)
+                out_array[:] = NODATA_FLOAT
+                out_array[valid_mask] = array[i]
                 write_to_raster(
                     d['File_Registry'][key][i],
-                    array[i],
+                    out_array,
                     offset_dict['xoff'],
                     offset_dict['yoff'])
 
+        N_total_out_array = numpy.empty_like(C_prior, dtype=numpy.float32)
+        N_total_out_array[:] = NODATA_FLOAT
+        N_total_out_array[valid_mask] = N_total
         write_to_raster(
             d['File_Registry']['N_total_raster'],
-            N_total,
+            N_total_out_array,
             offset_dict['xoff'],
             offset_dict['yoff'])
 
         if d['do_economic_analysis']:
             NPV = numpy.sum(V, axis=0)
+            NPV_out_array = numpy.empty_like(C_prior, dtype=numpy.float32)
+            NPV_out_array[:] = NODATA_FLOAT
+            NPV_out_array[valid_mask] = NPV
             write_to_raster(
                 d['File_Registry']['NPV_raster'],
-                NPV,
+                NPV_out_array,
                 offset_dict['xoff'],
                 offset_dict['yoff'])
 
@@ -499,8 +520,11 @@ def write_to_raster(output_raster, array, xoff, yoff):
     ds = gdal.Open(output_raster, gdal.GA_Update)
     band = ds.GetRasterBand(1)
     if numpy.issubdtype(array.dtype, float):
-        array[array == numpy.nan] = NODATA_FLOAT
+        array[numpy.isnan(array)] = NODATA_FLOAT
     band.WriteArray(array, xoff, yoff)
+    band.FlushCache()
+    band = None
+    gdal.Dataset.__swig_destroy__(ds)
     ds = None
 
 
@@ -632,12 +656,12 @@ def get_inputs(args):
     lulc_lookup_dict = geoprocess.get_lookup_from_table(
         args['lulc_lookup_uri'], 'lulc-class')
     lulc_to_code_dict = \
-        dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items())
+        dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items() if k)
     initial_dict = geoprocess.get_lookup_from_table(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
     code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
-                     in initial_dict.iteritems())
+                     in initial_dict.iteritems() if k)
     for args_key, col_name in [('lulc_to_Sb', 'biomass'),
                                ('lulc_to_Ss', 'soil'),
                                ('lulc_to_L', 'litter')]:
@@ -677,9 +701,9 @@ def get_inputs(args):
                 d['snapshot_years'][-1])
         else:
             interest_rate = float(args['interest_rate']) * 0.01
-            price = args['price']
+            price = float(args['price'])
             d['price_t'] = (1 + interest_rate) ** numpy.arange(
-                0, d['timesteps']+1) * price
+                0, float(d['timesteps'])+1) * price
 
         d['price_t'] /= (1 + discount_rate) ** numpy.arange(0, d['timesteps']+1)
 
@@ -873,3 +897,71 @@ def _get_price_table(price_table_uri, start_year, end_year):
     except KeyError as missing_year:
         raise KeyError('Carbon price table does not contain a price value for '
                        '%s' % missing_year)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('lulc_lookup_uri', require=True):
+        # Implement validation for lulc_lookup_uri here
+        pass
+
+    if context.is_arg_complete('lulc_transition_matrix_uri', require=True):
+        # Implement validation for lulc_transition_matrix_uri here
+        pass
+
+    if context.is_arg_complete('carbon_pool_initial_uri', require=True):
+        # Implement validation for carbon_pool_initial_uri here
+        pass
+
+    if context.is_arg_complete('carbon_pool_transient_uri', require=True):
+        # Implement validation for carbon_pool_transient_uri here
+        pass
+
+    if context.is_arg_complete('lulc_baseline_map_uri', require=True):
+        # Implement validation for lulc_baseline_map_uri here
+        pass
+
+    if context.is_arg_complete('lulc_baseline_year', require=True):
+        # Implement validation for lulc_baseline_year here
+        pass
+
+    if context.is_arg_complete('lulc_transition_maps_list', require=False):
+        # Implement validation for lulc_transition_maps_list here
+        pass
+
+    if context.is_arg_complete('lulc_transition_years_list', require=False):
+        # Implement validation for lulc_transition_years_list here
+        pass
+
+    if context.is_arg_complete('analysis_year', require=False):
+        # Implement validation for analysis_year here
+        pass
+
+    if context.is_arg_complete('do_price_table', require=True):
+        # Implement validation for do_price_table here
+        pass
+
+    if context.is_arg_complete('price', require=True):
+        # Implement validation for price here
+        pass
+
+    if context.is_arg_complete('interest_rate', require=True):
+        # Implement validation for interest_rate here
+        pass
+
+    if context.is_arg_complete('price_table_uri', require=True):
+        # Implement validation for price_table_uri here
+        pass
+
+    if context.is_arg_complete('discount_rate', require=True):
+        # Implement validation for discount_rate here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

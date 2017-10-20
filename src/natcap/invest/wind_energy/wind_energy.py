@@ -1,4 +1,6 @@
 """InVEST Wind Energy model."""
+from __future__ import absolute_import
+
 import tempfile
 import logging
 import os
@@ -19,10 +21,8 @@ import shapely.wkt
 import shapely.ops
 from shapely import speedups
 
-import pygeoprocessing.geoprocessing
-
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy.wind_energy')
 
@@ -138,7 +138,7 @@ def execute(args):
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    pygeoprocessing.geoprocessing.create_directories(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
         [workspace, inter_dir, out_dir])
 
     bathymetry_uri = args['bathymetry_uri']
@@ -259,7 +259,7 @@ def execute(args):
                 land_polygon_uri, aoi_uri, land_poly_proj_uri)
 
             # Get the cell size to use in new raster outputs from the DEM
-            cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+            cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
                 final_bathymetry_uri)
 
             # If the distance inputs are present create a mask for the output
@@ -270,20 +270,20 @@ def execute(args):
 
             LOGGER.debug('Create Raster From AOI')
             # Make a raster from AOI using the bathymetry rasters pixel size
-            pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
                 aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
                 aoi_raster_uri)
 
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
                 aoi_raster_uri, aoi_uri, [0],
                 option_list=["ALL_TOUCHED=TRUE"])
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
                 aoi_raster_uri, land_poly_proj_uri, [1],
                 option_list=["ALL_TOUCHED=TRUE"])
 
@@ -298,7 +298,7 @@ def execute(args):
 
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
-            pygeoprocessing.geoprocessing.distance_transform_edt(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
                 aoi_raster_uri, dist_trans_uri)
             mask_by_distance(
                 dist_trans_uri, min_distance, max_distance,
@@ -356,12 +356,12 @@ def execute(args):
 
     # Get the cell size here to use from the DEM. The cell size could either
     # come in a project unprojected format
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
         final_bathymetry_uri)
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
         out_nodata, cell_size, 'intersection',
         assert_datasets_projected=projected, vectorize_op=False)
@@ -531,28 +531,28 @@ def execute(args):
     compute_density_harvested_uri(final_wind_points_uri)
 
     # Temp URIs for creating density and harvested rasters
-    density_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    harvested_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    density_temp_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
+    harvested_temp_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
 
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
-    pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
         final_wind_points_uri, cell_size, gdal.GDT_Float32, out_nodata,
         density_temp_uri)
 
     LOGGER.info('Create Harvested Raster')
-    pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
         final_wind_points_uri, cell_size, gdal.GDT_Float32, out_nodata,
         harvested_temp_uri)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Vectorize Density Points')
-    pygeoprocessing.geoprocessing.vectorize_points_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
         final_wind_points_uri, density_field_name, density_temp_uri,
         interpolation = 'linear')
 
     LOGGER.info('Vectorize Harvested Points')
-    pygeoprocessing.geoprocessing.vectorize_points_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
         final_wind_points_uri, harvest_field_name, harvested_temp_uri,
         interpolation = 'linear')
 
@@ -596,13 +596,13 @@ def execute(args):
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         density_mask_list, mask_out_depth_dist, density_masked_uri,
         gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
         assert_datasets_projected = projected, vectorize_op = False)
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         harvest_mask_list, mask_out_depth_dist, harvested_masked_uri,
         gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
         assert_datasets_projected = projected, vectorize_op = False)
@@ -638,7 +638,7 @@ def execute(args):
     center_x = pt_geometry.GetX()
     center_y = pt_geometry.GetY()
     start_point = (center_x, center_y)
-    spat_ref = pygeoprocessing.geoprocessing.get_spatial_ref_uri(
+    spat_ref = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
         final_wind_points_uri)
 
     farm_poly_uri = os.path.join(
@@ -702,7 +702,7 @@ def execute(args):
     LOGGER.debug('Turbine Dictionary: %s', val_parameters_dict)
 
     # Pixel size to be used in later calculations and raster creations
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
         harvested_masked_uri)
     # URI for final distance transform used in valuation calculations
     tmp_dist_final_uri = os.path.join(
@@ -748,7 +748,7 @@ def execute(args):
         # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
-        pygeoprocessing.geoprocessing.dictionary_to_point_shapefile(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
             grid_dict, 'grid_points', grid_ds_uri)
 
         # In case any of the above points lie outside the AOI, clip the
@@ -765,7 +765,7 @@ def execute(args):
             # Create a point shapefile from the land point dictionary.
             # This makes it easier for future distance calculations and
             # provides a nice intermediate output for users
-            pygeoprocessing.geoprocessing.dictionary_to_point_shapefile(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
                 land_dict, 'land_points', land_ds_uri)
 
             # In case any of the above points lie outside the AOI, clip the
@@ -806,19 +806,19 @@ def execute(args):
         # The average land cable distance in km converted to meters
         avg_grid_distance = float(args['avg_grid_distance']) * 1000.0
 
-        land_poly_rasterized_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
+        land_poly_rasterized_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename('.tif')
         # Create new raster and fill with 0s to set up for distance transform
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
             harvested_masked_uri, land_poly_rasterized_uri, 'GTiff',
             out_nodata, gdal.GDT_Float32, fill_value=0.0)
         # Burn polygon features into raster with values of 1s to set up for
         # distance transform
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
             land_poly_rasterized_uri, land_poly_proj_uri, burn_values=[1.0],
             option_list=["ALL_TOUCHED=TRUE"])
 
-        tmp_dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
-        pygeoprocessing.geoprocessing.distance_transform_edt(
+        tmp_dist_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename('.tif')
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
             land_poly_rasterized_uri, tmp_dist_uri)
 
         def add_avg_dist_op(tmp_dist):
@@ -834,7 +834,7 @@ def execute(args):
                 tmp_dist != out_nodata,
                 tmp_dist * pixel_size + avg_grid_distance, out_nodata)
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
             [tmp_dist_uri], add_avg_dist_op, tmp_dist_final_uri,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
             vectorize_op=False)
@@ -1110,17 +1110,17 @@ def execute(args):
         out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
     carbon_uri = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [harvested_masked_uri, tmp_dist_final_uri], calculate_npv_op,
         npv_uri, gdal.GDT_Float32, out_nodata, pixel_size,
         'intersection', vectorize_op=False)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [harvested_masked_uri, tmp_dist_final_uri],
         calculate_levelized_op, levelized_uri, gdal.GDT_Float32,
         out_nodata, pixel_size, 'intersection', vectorize_op=False)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [harvested_masked_uri], calculate_carbon_op, carbon_uri,
         gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
         vectorize_op=False)
@@ -1393,8 +1393,8 @@ def mask_by_distance(
 
         returns - nothing"""
 
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dataset_uri)
-    dataset_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(dataset_uri)
+    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(dataset_uri)
+    dataset_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(dataset_uri)
 
     def dist_op(dist_pix):
         """Vectorize_dataset operation that multiplies distance
@@ -1410,12 +1410,12 @@ def mask_by_distance(
             ((dist_pix >= max_dist) | (dist_pix <= min_dist)), out_nodata,
             dist_pix)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [dataset_uri], dist_op, dist_uri, gdal.GDT_Float32,
         out_nodata, cell_size, 'intersection',
         assert_datasets_projected = True, vectorize_op = False)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [dist_uri], mask_op, mask_uri, gdal.GDT_Float32,
         out_nodata, cell_size, 'intersection',
         assert_datasets_projected = True, vectorize_op = False)
@@ -1550,30 +1550,30 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
 
     LOGGER.debug('Entering clip_and_reproject_raster')
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_uri)
+    aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_uri)
     aoi_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the raster
-    raster_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(raster_uri)
+    raster_wkt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_dataset_projection_wkt_uri(raster_uri)
 
     # Temporary filename for an intermediate step
-    aoi_reprojected_uri = pygeoprocessing.geoprocessing.temporary_folder()
+    aoi_reprojected_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_folder()
 
     # Reproject the AOI to the spatial reference of the raster so that the
     # AOI can be used to clip the raster properly
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
         aoi_uri, raster_wkt, aoi_reprojected_uri)
 
     # Temporary URI for an intermediate step
-    clipped_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    clipped_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
 
     LOGGER.debug('Clipping dataset')
-    pygeoprocessing.geoprocessing.clip_dataset_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
         raster_uri, aoi_reprojected_uri, clipped_uri, False)
 
     # Get a point from the clipped data object to use later in helping
     # determine proper pixel size
-    raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(clipped_uri)
+    raster_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(clipped_uri)
     point_one = (raster_gt[0], raster_gt[3])
 
     # Create a Spatial Reference from the rasters WKT
@@ -1589,7 +1589,7 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
 
     LOGGER.debug('Reprojecting dataset')
     # Reproject the raster to the projection of the AOI
-    pygeoprocessing.geoprocessing.reproject_dataset_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_dataset_uri(
         clipped_uri, pixel_size[0], aoi_wkt, 'bilinear', projected_uri)
 
     LOGGER.debug('Leaving clip_and_reproject_dataset')
@@ -1609,20 +1609,20 @@ def clip_and_reproject_shapefile(
         None.
     """
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_vector_path)
+    aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_vector_path)
     aoi_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the shapefile
-    base_vector = pygeoprocessing.geoprocessing.get_spatial_ref_uri(
+    base_vector = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
         base_vector_path)
     base_vector_coordinate_system = base_vector.ExportToWkt()
 
     # Temporary URI for an intermediate step
-    aoi_reprojected_path = pygeoprocessing.geoprocessing.temporary_folder()
+    aoi_reprojected_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_folder()
 
     # Reproject the AOI to the spatial reference of the shapefile so that the
     # AOI can be used to clip the shapefile properly
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
         aoi_vector_path, base_vector_coordinate_system, aoi_reprojected_path)
 
     # Temporary URI for an intermediate step
@@ -1632,7 +1632,7 @@ def clip_and_reproject_shapefile(
     clip_datasource(aoi_reprojected_path, base_vector_path, clipped_path)
 
     # Reproject the clipped shapefile to that of the AOI
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
         clipped_path, aoi_wkt, output_vector_path)
     shutil.rmtree(clipped_path)
 
@@ -1747,10 +1747,10 @@ def calculate_distances_land_grid(
     land_point_distance_raster_path_list = []
 
     # Get nodata value from biophsyical output raster
-    out_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    out_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
         harvested_masked_uri)
     # Get pixel size
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
         harvested_masked_uri)
 
     # Get the original_layer definition which holds needed attribute values
@@ -1798,22 +1798,22 @@ def calculate_distances_land_grid(
         output_datasource.SyncToDisk()
 
         land_pts_rasterized_uri = (
-            pygeoprocessing.geoprocessing.temporary_filename('.tif'))
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename('.tif'))
         # Create a new raster based on a biophysical output and fill with 0's
         # to set up for distance transform
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
             harvested_masked_uri, land_pts_rasterized_uri, 'GTiff',
             out_nodata, gdal.GDT_Float32, fill_value=0.0)
         # Burn single feature onto the raster with value of 1 to set up for
         # distance transform
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
             land_pts_rasterized_uri, single_feature_vector_path,
             burn_values=[1.0], option_list=["ALL_TOUCHED=TRUE"])
 
         output_layer.DeleteFeature(point_feature.GetFID())
 
-        dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
-        pygeoprocessing.geoprocessing.distance_transform_edt(
+        dist_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename('.tif')
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
             land_pts_rasterized_uri, dist_uri)
         # Add each features distance transform result to list
         land_point_distance_raster_path_list.append(dist_uri)
@@ -1839,7 +1839,7 @@ def calculate_distances_land_grid(
         min_land_grid_dist = l2g_dist_array[np.argmin(grid_distances, axis=0)]
         return min_distances * pixel_size + min_land_grid_dist
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         land_point_distance_raster_path_list, _min_land_ocean_dist,
         tmp_dist_final_uri, gdal.GDT_Float32, out_nodata, pixel_size,
         'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
@@ -1864,25 +1864,25 @@ def calculate_distances_grid(
 
         returns - Nothing
     """
-    land_pts_rasterized_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
+    land_pts_rasterized_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename('.tif')
     # Get nodata value to use in raster creation and masking
-    out_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(harvested_masked_uri)
+    out_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(harvested_masked_uri)
     # Get pixel size from biophysical output
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
     # Create a new raster based on harvested_masked_uri and fill with 0's
     # to set up for distance transform
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
         harvested_masked_uri, land_pts_rasterized_uri, 'GTiff',
         out_nodata, gdal.GDT_Float32, fill_value=0.0)
     # Burn features from land_shape_uri onto raster with values of 1 to
     # set up for distance transform
-    pygeoprocessing.geoprocessing.rasterize_layer_uri(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
         land_pts_rasterized_uri, land_shape_uri, burn_values=[1.0],
         option_list=["ALL_TOUCHED=TRUE"])
 
-    tmp_dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
+    tmp_dist_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename('.tif')
     # Run distance transform
-    pygeoprocessing.geoprocessing.distance_transform_edt(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
         land_pts_rasterized_uri, tmp_dist_uri)
 
     def dist_meters_op(tmp_dist):
@@ -1895,7 +1895,7 @@ def calculate_distances_grid(
         return np.where(
             tmp_dist != out_nodata, tmp_dist * pixel_size, out_nodata)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [tmp_dist_uri], dist_meters_op, tmp_dist_final_uri, gdal.GDT_Float32,
         out_nodata, pixel_size, 'intersection', vectorize_op=False)
 
@@ -1938,3 +1938,95 @@ def pixel_size_based_on_coordinate_transform_uri(
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
     return (pixel_diff_x, pixel_diff_y)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    context = validation.ValidationContext(args, limit_to)
+    if context.is_arg_complete('wind_data_uri', require=True):
+        # Implement validation for wind_data_uri here
+        pass
+
+    # element has requiredIf logic.  See config.
+    if context.is_arg_complete('aoi_uri', require=False):
+        # Implement validation for aoi_uri here
+        pass
+
+    if context.is_arg_complete('bathymetry_uri', require=True):
+        # Implement validation for bathymetry_uri here
+        pass
+
+    # element has requiredIf logic.  See config.
+    if context.is_arg_complete('land_polygon_uri', require=False):
+        # Implement validation for land_polygon_uri here
+        pass
+
+    if context.is_arg_complete('global_wind_parameters_uri', require=True):
+        # Implement validation for global_wind_parameters_uri here
+        pass
+
+    if context.is_arg_complete('turbine_parameters_uri', require=True):
+        # Implement validation for turbine_parameters_uri here
+        pass
+
+    if context.is_arg_complete('number_of_turbines', require=True):
+        # Implement validation for number_of_turbines here
+        pass
+
+    if context.is_arg_complete('min_depth', require=True):
+        # Implement validation for min_depth here
+        pass
+
+    if context.is_arg_complete('max_depth', require=True):
+        # Implement validation for max_depth here
+        pass
+
+    # element has requiredIf logic.  See config.
+    if context.is_arg_complete('min_distance', require=False):
+        # Implement validation for min_distance here
+        pass
+
+    # element has requiredIf logic.  See config.
+    if context.is_arg_complete('max_distance', require=False):
+        # Implement validation for max_distance here
+        pass
+
+    if context.is_arg_complete('foundation_cost', require=True):
+        # Implement validation for foundation_cost here
+        pass
+
+    if context.is_arg_complete('discount_rate', require=True):
+        # Implement validation for discount_rate here
+        pass
+
+    if context.is_arg_complete('grid_points_uri', require=False):
+        # Implement validation for grid_points_uri here
+        pass
+
+    if context.is_arg_complete('avg_grid_distance', require=True):
+        # Implement validation for avg_grid_distance here
+        pass
+
+    if context.is_arg_complete('price_table', require=False):
+        # Implement validation for price_table here
+        pass
+
+    if context.is_arg_complete('wind_schedule', require=True):
+        # Implement validation for wind_schedule here
+        pass
+
+    if context.is_arg_complete('wind_price', require=True):
+        # Implement validation for wind_price here
+        pass
+
+    if context.is_arg_complete('rate_change', require=True):
+        # Implement validation for rate_change here
+        pass
+
+    if limit_to is None:
+        # Implement any validation that uses multiple inputs here.
+        # Report multi-input warnings with:
+        # context.warn(<warning>, keys=<keys_iterable>)
+        pass
+
+    return context.warnings

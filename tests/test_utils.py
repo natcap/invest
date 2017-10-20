@@ -3,9 +3,16 @@ import unittest
 import os
 import tempfile
 import shutil
+import logging
+import threading
+import warnings
+import re
+import glob
+import textwrap
 
 from pygeoprocessing.testing import scm
 import pygeoprocessing.testing
+from osgeo import gdal
 
 
 class SuffixUtilsTests(unittest.TestCase):
@@ -187,8 +194,365 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel_100.tif')
         utils.exponential_decay_kernel_raster(
             expected_distance, kernel_filepath)
+        shutil.copyfile(kernel_filepath, 'kernel.tif')
 
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(
                 ExponentialDecayUtilsTests._REGRESSION_PATH,
-                'kernel_100.tif'), kernel_filepath, 1e-6)
+                'kernel_100.tif'), kernel_filepath, abs_tol=1e-6)
+
+
+class SandboxTempdirTests(unittest.TestCase):
+    def setUp(self):
+        """Setup workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_sandbox_manager(self):
+        from natcap.invest import utils
+
+        with utils.sandbox_tempdir(suffix='foo',
+                                   prefix='bar',
+                                   dir=self.workspace_dir) as new_dir:
+            self.assertTrue(new_dir.startswith(self.workspace_dir))
+            basename = os.path.basename(new_dir)
+            self.assertTrue(basename.startswith('bar'))
+            self.assertTrue(basename.endswith('foo'))
+
+            # trigger the exception handling for coverage.
+            shutil.rmtree(new_dir)
+
+
+class TimeFormattingTests(unittest.TestCase):
+    def test_format_time_hours(self):
+        from natcap.invest.utils import _format_time
+
+        seconds = 3667
+        self.assertEqual(_format_time(seconds), '1h 1m 7s')
+
+    def test_format_time_minutes(self):
+        from natcap.invest.utils import _format_time
+
+        seconds = 67
+        self.assertEqual(_format_time(seconds), '1m 7s')
+
+    def test_format_time_seconds(self):
+        from natcap.invest.utils import _format_time
+
+        seconds = 7
+        self.assertEqual(_format_time(seconds), '7s')
+
+
+class LogToFileTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
+    def test_log_to_file_no_thread(self):
+        """Utils: Verify that we can exclude messages not from this thread."""
+        from natcap.invest.utils import log_to_file
+
+        logfile = os.path.join(self.workspace, 'logfile.txt')
+
+        def _log_from_other_thread():
+            thread_logger = logging.getLogger()
+            thread_logger.info('this should not be logged')
+
+        local_logger = logging.getLogger()
+
+        # create the file before we log to it, so we know a warning should
+        # be logged.
+        with open(logfile, 'w') as new_file:
+            new_file.write(' ')
+
+        with log_to_file(logfile) as handler:
+            thread = threading.Thread(target=_log_from_other_thread)
+            thread.start()
+            local_logger.info('this should be logged')
+            local_logger.info('this should also be logged')
+
+            thread.join()
+            handler.flush()
+
+        messages = [msg for msg in open(logfile).read().split('\n')
+                    if msg if msg]
+        self.assertEqual(len(messages), 2)
+
+    def test_log_to_file_from_thread(self):
+        """Utils: Verify that we can filter from a threading.Thread."""
+        from natcap.invest.utils import log_to_file
+
+        logfile = os.path.join(self.workspace, 'logfile.txt')
+
+        def _log_from_other_thread():
+            thread_logger = logging.getLogger()
+            thread_logger.info('this should be logged')
+
+        local_logger = logging.getLogger()
+
+        thread = threading.Thread(target=_log_from_other_thread)
+
+        with log_to_file(logfile, threadname=thread.name) as handler:
+            thread.start()
+            local_logger.info('this should not be logged')
+            local_logger.info('neither should this message')
+
+            thread.join()
+            handler.flush()
+
+        messages = [msg for msg in open(logfile).read().split('\n')
+                    if msg if msg]
+        self.assertEqual(len(messages), 1)
+
+
+class ThreadFilterTests(unittest.TestCase):
+    def test_thread_filter_same_thread(self):
+        from natcap.invest.utils import ThreadFilter
+
+        # name, level, pathname, lineno, msg, args, exc_info, func=None
+        record = logging.LogRecord(
+            name='foo',
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=500,
+            msg='some logging message',
+            args=(),
+            exc_info=None,
+            func='test_thread_filter_same_thread')
+        filterer = ThreadFilter(threading.currentThread().name)
+
+        # The record comes from the same thread.
+        self.assertEqual(filterer.filter(record), True)
+
+    def test_thread_filter_different_thread(self):
+        from natcap.invest.utils import ThreadFilter
+
+        # name, level, pathname, lineno, msg, args, exc_info, func=None
+        record = logging.LogRecord(
+            name='foo',
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=500,
+            msg='some logging message',
+            args=(),
+            exc_info=None,
+            func='test_thread_filter_same_thread')
+        filterer = ThreadFilter('Thread-nonexistent')
+
+        # The record comes from the same thread.
+        self.assertEqual(filterer.filter(record), False)
+
+
+class BuildLookupFromCsvTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.build_lookup_from_csv."""
+
+    def setUp(self):
+        """Make temporary directory for workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_build_lookup_from_csv(self):
+        """utils: test build_lookup_from_csv."""
+        from natcap.invest import utils
+        table_str = 'a,b,foo,bar,_\n0.0,x,-1,bar,apple\n'
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(table_str)
+        result = utils.build_lookup_from_csv(
+            table_path, 'a', to_lower=True, numerical_cast=True)
+        expected_dict = {
+            0.0: {
+                'a': 0.0,
+                'b': 'x',
+                'foo': -1.0,
+                'bar': 'bar',
+                '_': 'apple'
+                },
+            }
+        self.assertEqual(result, expected_dict)
+
+
+class MakeDirectoryTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.make_directories."""
+
+    def setUp(self):
+        """Make temporary directory for workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_make_directories(self):
+        """utils: test that make directories works as expected."""
+        from natcap.invest import utils
+        directory_list = [
+            os.path.join(self.workspace_dir, x) for x in [
+                'apple', 'apple/pie', 'foo/bar/baz']]
+        utils.make_directories(directory_list)
+        for path in directory_list:
+            self.assertTrue(os.path.isdir(path))
+
+    def test_make_directories_on_existing(self):
+        """utils: test that no error if directory already exists."""
+        from natcap.invest import utils
+        path = os.path.join(self.workspace_dir, 'foo', 'bar', 'baz')
+        os.makedirs(path)
+        utils.make_directories([path])
+        self.assertTrue(os.path.isdir(path))
+
+    def test_make_directories_on_file(self):
+        """utils: test that value error raised if file exists on directory."""
+        from natcap.invest import utils
+        dir_path = os.path.join(self.workspace_dir, 'foo', 'bar')
+        os.makedirs(dir_path)
+        file_path = os.path.join(dir_path, 'baz')
+        file = open(file_path, 'w')
+        file.close()
+        with self.assertRaises(OSError):
+            utils.make_directories([file_path])
+
+    def test_make_directories_wrong_type(self):
+        """utils: test that ValueError raised if value not a list."""
+        from natcap.invest import utils
+        with self.assertRaises(ValueError):
+            utils.make_directories(self.workspace_dir)
+
+
+class GDALWarningsLoggingTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
+    def test_log_warnings(self):
+        """utils: test that we can capture GDAL warnings to logging."""
+        from natcap.invest import utils
+
+        logfile = os.path.join(self.workspace, 'logfile.txt')
+
+        # this warning should go to stdout.
+        gdal.Open('this_file_should_not_exist.tif')
+
+        with utils.log_to_file(logfile) as handler:
+            with utils.capture_gdal_logging():
+                # warning should be captured.
+                gdal.Open('file_file_should_also_not_exist.tif')
+            handler.flush()
+
+        # warning should go to stdout
+        gdal.Open('this_file_should_not_exist.tif')
+
+        messages = [msg for msg in open(logfile).read().split('\n')
+                    if msg]
+
+        self.assertEqual(len(messages), 1)
+
+
+class PrepareWorkspaceTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
+    def test_prepare_workspace(self):
+        """utils: test that prepare_workspace does what is expected."""
+        from natcap.invest import utils
+
+        workspace = os.path.join(self.workspace, 'foo')
+
+        try:
+            with utils.prepare_workspace(workspace,
+                                         'some_model'):
+                warnings.warn('deprecated', UserWarning)
+                gdal.Open('file should not exist')
+        except Warning as warning_raised:
+            self.fail('Warning was not captured: %s' % warning_raised)
+
+        self.assertTrue(os.path.exists(workspace))
+        logfile_glob = glob.glob(os.path.join(workspace, '*.txt'))
+        self.assertEqual(len(logfile_glob), 1)
+        self.assertTrue(
+            os.path.basename(logfile_glob[0]).startswith('InVEST-some_model'))
+        with open(logfile_glob[0]) as logfile:
+            logfile_text = logfile.read()
+            print logfile_text
+            self.assertTrue('osgeo' in logfile_text)  # gdal error captured
+            self.assertEqual(len(re.findall('WARNING', logfile_text)), 1)
+            self.assertTrue('Elapsed time:' in logfile_text)
+
+
+class BuildLookupFromCSVTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
+
+    def test_key_not_in_header(self):
+        """utils: test that ValueError is raised when key not in header."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,header2,header3
+                1,2,3
+                4,FOO,bar
+                """
+            ))
+
+        with self.assertRaises(ValueError):
+            utils.build_lookup_from_csv(csv_file, 'some_key')
+
+    def test_results_lowercase_non_numeric(self):
+        """utils: text handling of converting to lowercase."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,HEADER2,header3
+                1,2,3
+                4,FOO,bar
+                """
+            ).strip())
+
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header1', to_lower=True, numerical_cast=False)
+
+        self.assertEqual(lookup_dict['4']['header2'], 'foo')
+        self.assertEqual(lookup_dict['1']['header2'], '2')
+
+    def test_results_uppercase_numeric_cast(self):
+        """utils: test handling of uppercase, num. casting, blank values."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,HEADER2,header3,missing_column,
+                1,2,3,
+                4,FOO,bar,
+                """
+            ).strip())
+
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header1', to_lower=False)
+
+        self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
+        self.assertEqual(lookup_dict[4]['header3'], 'bar')
+        self.assertEqual(lookup_dict[1]['header1'], 1)

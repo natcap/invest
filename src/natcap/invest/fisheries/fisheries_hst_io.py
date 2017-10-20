@@ -9,7 +9,7 @@ import csv
 import copy
 
 import numpy as np
-import pygeoprocessing
+import natcap.invest.pygeoprocessing_0_3_3
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst_io')
 
@@ -71,15 +71,17 @@ def fetch_args(args):
         }
 
     '''
+    args = args.copy()
     sexsp_dict = {
         'no': 1,
         'yes': 2,
     }
     args['sexsp'] = sexsp_dict[args['sexsp'].lower()]
+    args['gamma'] = float(args['gamma'])
 
     # Fetch Data
     args['output_dir'] = os.path.join(args['workspace_dir'], 'output')
-    pygeoprocessing.create_directories([args['workspace_dir'],
+    natcap.invest.pygeoprocessing_0_3_3.create_directories([args['workspace_dir'],
                                         args['output_dir']])
     pop_dict = read_population_csv(args)
     habitat_chg_dict = read_habitat_chg_csv(args)
