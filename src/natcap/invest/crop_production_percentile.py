@@ -1,6 +1,5 @@
 """InVEST Crop Production Percentile Model."""
 import collections
-import functools
 import logging
 import os
 import re
@@ -8,6 +7,7 @@ import re
 import numpy
 from osgeo import gdal
 from osgeo import osr
+from osgeo import ogr
 import pygeoprocessing
 
 from . import utils
@@ -503,78 +503,78 @@ def execute(args):
 # This decorator ensures the input arguments are formatted for InVEST
 @validation.invest_validator
 def validate(args, limit_to=None):
-    """Validate Crop Production Percentile Model.
+    """Validate args to ensure they conform to `execute`'s contract.
 
     Parameters:
-        args (dict): InVEST-wide args input argument for .execute function.
-        limit_to (string): if not None, only validate that key in args to
-            avoid unnecessary computation.
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
     Returns:
-        list of warning strings if a warning occurred, or an empty list if
-            not.
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
     """
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('model_data_path', require=True):
-        if not os.path.isdir(args['model_data_path']):
-            context.warn('%s must be a directory' % args['model_data_path'],
-                         keys=('model_data_path'))
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('landcover_raster_path', require=True):  # TODO: I'm trying to understand what happens if 'landocver_raster_path' is not defined in args.  It seems that the predicate returns false and the if statement falls through?
-        def _append_gdal_warnings(err_level, err_no, err_msg):
-            warning_message = ('Could not open landcover raster {path}: '
-                               '[errno {err}] {msg}').format(
-                                    err=err_no,
-                                    path=args['landcover_raster_path'],
-                                    msg=err_msg.replace('\n', ' '))
-            context.warn(warning_message, keys=('landcover_raster_path',))
+    required_keys = [
+        'workspace_dir',
+        'model_data_path',
+        'landcover_raster_path',
+        'landcover_to_crop_table_path'
+        ]
 
-        gdal.PushErrorHandler(_append_gdal_warnings)
-        _ = gdal.Open(args['landcover_raster_path'])
-        gdal.PopErrorHandler()
+    if limit_to in [None, 'aggregate_polygon_id', 'aggregate_polygon_path']:
+        if ('aggregate_polygon_path' in args and
+                args['aggregate_polygon_path'] not in ['', None]):
+            required_keys.append('aggregate_polygon_id')
+            required_keys.append('aggregate_polygon_path')
 
-    if context.is_arg_complete('landcover_to_crop_table_path'):
-        try:
-            crop_to_landcover_table = utils.build_lookup_from_csv(
-                args['landcover_to_crop_table_path'], 'crop_name',
-                to_lower=True, numerical_cast=True)
-        except Exception as error:
-            context.warn(str(error), ('landcover_to_crop_table_path',))
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if limit_to is None:
-        LOGGER.info(
-            "Calculating total land area and warning if the landcover raster "
-            "is missing lucodes")
-        crop_lucodes = [
-            x[_EXPECTED_LUCODE_TABLE_HEADER]
-            for x in crop_to_landcover_table.itervalues()]
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
 
-        unique_lucodes = numpy.array([])
-        total_area = 0.0
-        for _, lu_band_data in pygeoprocessing.iterblocks(
-                args['landcover_raster_path']):
-            unique_block = numpy.unique(lu_band_data)
-            unique_lucodes = numpy.unique(numpy.concatenate(
-                (unique_lucodes, unique_block)))
-            total_area += numpy.count_nonzero((lu_band_data != _NODATA_YIELD))
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
 
-        missing_lucodes = set(crop_lucodes).difference(
-            set(unique_lucodes))
-        if len(missing_lucodes) > 0:
-            LOGGER.warn(
-                "The following lucodes are in the landcover to crop table but "
-                "aren't in the landcover raster: %s", missing_lucodes)
+    file_type_list = [
+        ('landcover_raster_path', 'raster'),
+        ('aggregate_polygon_path', 'vector')]
 
-        LOGGER.info("Checking that crops correspond to known types.")
-        for crop_name in crop_to_landcover_table:
-            crop_climate_bin_raster_path = os.path.join(
-                args['model_data_path'],
-                _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
-            if not os.path.exists(crop_climate_bin_raster_path):
-                context.warn(
-                    ("Expected climate bin raster called %s for crop %s "
-                     "because it specified in %s, but instead that file was not "
-                     "found") % (crop_climate_bin_raster_path, crop_name,
-                                 args['landcover_to_crop_table_path']),
-                     keys=('landcover_to_crop_table_path', 'model_data_path'))
-    return context.warnings
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+    return validation_error_list

@@ -4,9 +4,14 @@ model
 '''
 from __future__ import absolute_import
 import logging
+import csv
+import os
+
+from osgeo import ogr
 
 from . import fisheries_io as io
 from . import fisheries_model as model
+from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.fisheries')
@@ -214,79 +219,132 @@ def execute(args, create_outputs=True):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('aoi_uri', require=False):
-        # Implement validation for aoi_uri here
-        pass
+    """Validate an input dictionary for Fisheries.
 
-    if context.is_arg_complete('total_timesteps', require=True):
-        # Implement validation for total_timesteps here
-        pass
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
 
-    if context.is_arg_complete('population_type', require=True):
-        # Implement validation for population_type here
-        pass
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
 
-    if context.is_arg_complete('sexsp', require=True):
-        # Implement validation for sexsp here
-        pass
+    missing_keys = set([])
+    keys_with_empty_values = set([])
+    for key, required in (('workspace_dir', True),
+                          ('results_suffix', False),
+                          ('aoi_uri', False),
+                          ('total_timesteps', True),
+                          ('population_type', True),
+                          ('sexsp', True),
+                          ('harvest_units', True),
+                          ('population_csv_uri', False),
+                          ('population_csv_dir', False),
+                          ('total_init_recruits', True),
+                          ('recruitment_type', True),
+                          ('spawn_units', True),
+                          ('alpha', False),
+                          ('beta', False),
+                          ('total_recur_recruits', False),
+                          ('migration_dir', False),
+                          ('migr_cont', True),
+                          ('val_cont', True),
+                          ('frac_post_process', True),
+                          ('unit_price', True)):
+        if key in (None, limit_to):
+            try:
+                if args[key] in ('', None) and required:
+                    keys_with_empty_values.add(key)
+            except KeyError:
+                missing_keys.add(key)
 
-    if context.is_arg_complete('harvest_units', require=True):
-        # Implement validation for harvest_units here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError(
+            'Args is missing required keys: %s' % ', '.join(
+                sorted(missing_keys)))
 
-    if context.is_arg_complete('do_batch', require=True):
-        # Implement validation for do_batch here
-        pass
+    if len(keys_with_empty_values) > 0:
+        warnings.append((keys_with_empty_values,
+                         'Argument must have a value.'))
 
-    if context.is_arg_complete('population_csv_uri', require=True):
-        # Implement validation for population_csv_uri here
-        pass
+    if limit_to in ('aoi_uri', None):
+        with utils.capture_gdal_logging():
+            dataset = ogr.Open(args['aoi_uri'])
+        if dataset is None:
+            warnings.append(
+                (['aoi_uri'],
+                 'AOI vector must be an OGR-compatible vector.'))
+        else:
+            layer = dataset.GetLayer()
+            column_names = [defn.GetName() for defn in layer.schema]
+            if 'Name' not in column_names:
+                warnings.append(
+                    ['aoi_uri'],
+                    'Case-sensitive column name "Name" is missing')
 
-    if context.is_arg_complete('population_csv_dir', require=True):
-        # Implement validation for population_csv_dir here
-        pass
+    if limit_to in ('do_batch', None):
+        if args['do_batch'] not in (True, False):
+            warnings.append((['do_batch'],
+                             'Parameter must be either True or False"'))
 
-    if context.is_arg_complete('total_init_recruits', require=True):
-        # Implement validation for total_init_recruits here
-        pass
+    if limit_to in ('population_csv_uri', None):
+        try:
+            csv.reader(open(args['population_csv_uri'], 'r'))
+        except (csv.Error, IOError):
+            warnings.append((['population_csv_uri'],
+                             'Parameter must be a valid CSV file.'))
 
-    if context.is_arg_complete('recruitment_type', require=True):
-        # Implement validation for recruitment_type here
-        pass
+    for directory_key in ('population_csv_dir', 'migration_dir'):
+        try:
+            if (limit_to in (directory_key, None) and not
+                    os.path.isdir(args[directory_key])):
+                warnings.append(([directory_key],
+                                'Directory could not be found.'))
+        except KeyError:
+            # These parameters are not necessarily required, and may not be in
+            # args.
+            pass
 
-    if context.is_arg_complete('spawn_units', require=True):
-        # Implement validation for spawn_units here
-        pass
+    for float_key, max_value in (('total_init_recruits', None),
+                                 ('alpha', None),
+                                 ('beta', None),
+                                 ('total_timesteps', None),
+                                 ('total_recur_recruits', None),
+                                 ('unit_price', None),
+                                 ('frac_post_process', 1.0)):
+        if limit_to in (float_key, None):
+            try:
+                if float(args[float_key]) < 0:
+                    warnings.append(([float_key],
+                                     'Value must be positive'))
 
-    if context.is_arg_complete('alpha', require=False):
-        # Implement validation for alpha here
-        pass
+                if (max_value is not None and
+                        float(args[float_key]) > max_value):
+                    warnings.append(
+                        ([float_key],
+                         'Value cannot be greater than %s' % max_value))
+            except ValueError, TypeError:
+                warnings.append(([float_key],
+                                 'Value must be a number.'))
+            except KeyError:
+                # Parameter is not necessarily required.
+                pass
 
-    if context.is_arg_complete('beta', require=False):
-        # Implement validation for beta here
-        pass
+    for options_key, options in (
+            ('recruitment_type', ('Beverton-Holt', 'Ricker', 'Fecundity',
+                                  'Fixed', 'Other')),
+            ('harvest_units', ('Individuals', 'Weight')),
+            ('spawn_units', ('Individuals', 'Weight')),
+            ('sexsp', ('Yes', 'No')),
+            ('population_type', ("Age-Based", "Stage-Based"))):
+        if (limit_to in (options_key, None) and
+                args[options_key] not in options):
+            warnings.append(
+                ([options_key],
+                    'Parameter must be one of %s' % ', '.join(options)))
 
-    if context.is_arg_complete('total_recur_recruits', require=False):
-        # Implement validation for total_recur_recruits here
-        pass
-
-    if context.is_arg_complete('migration_dir', require=False):
-        # Implement validation for migration_dir here
-        pass
-
-    if context.is_arg_complete('frac_post_process', require=True):
-        # Implement validation for frac_post_process here
-        pass
-
-    if context.is_arg_complete('unit_price', require=True):
-        # Implement validation for unit_price here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return warnings

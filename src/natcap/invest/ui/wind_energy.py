@@ -310,6 +310,13 @@ class WindEnergy(model.InVESTModel):
             self.min_depth.args_key: self.min_depth.value(),
             self.max_depth.args_key: self.max_depth.value(),
             self.valuation_container.args_key: self.valuation_container.value(),
+            self.avg_grid_dist.args_key: self.avg_grid_dist.value(),
+            self.foundation_cost.args_key: self.foundation_cost.value(),
+            self.discount_rate.args_key: self.discount_rate.value(),
+            self.price_table.args_key: self.price_table.value(),
+            self.wind_schedule.args_key: self.wind_schedule.value(),
+            self.wind_price.args_key: self.wind_price.value(),
+            self.rate_change.args_key: self.rate_change.value(),
         }
         if self.results_suffix.value():
             args[self.results_suffix.args_key] = self.results_suffix.value()
@@ -323,13 +330,5 @@ class WindEnergy(model.InVESTModel):
             args[self.max_distance.args_key] = self.max_distance.value()
         if self.grid_points.value():
             args[self.grid_points.args_key] = self.grid_points.value()
-        if self.valuation_container.value():
-            args[self.foundation_cost.args_key] = self.foundation_cost.value()
-            args[self.discount_rate.args_key] = self.discount_rate.value()
-            args[self.avg_grid_dist.args_key] = self.avg_grid_dist.value()
-            args[self.price_table.args_key] = self.price_table.value()
-            args[self.wind_schedule.args_key] = self.wind_schedule.value()
-            args[self.wind_price.args_key] = self.wind_price.value()
-            args[self.rate_change.args_key] = self.rate_change.value()
 
         return args

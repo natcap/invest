@@ -1940,9 +1940,9 @@ class Dropdown(GriddedInput):
         Returns:
             ``None``
         """
-        # QComboBoxes are 1-indexed.  An index of 0 means there are no options
+        # QComboBoxes are 1-indexed.  An index of -1 means there are no options
         # in the dropdown.
-        if newindex > 0:
+        if newindex >= 0:
             value = self.options[newindex]
         else:
             value = None
@@ -2356,6 +2356,17 @@ class Multi(Container):
 
         self.value_changed.emit(list(values))
 
+    def _value_changed(self, new_value):
+        """A slot to re-emit that the value has changed.
+
+        Parameters:
+            new_value: The value of the contained input that changed.
+
+        Returns:
+            ``None``.
+        """
+        self.value_changed.emit(self.value())
+
     @QtCore.Slot(unicode)
     def _add_templated_item(self, link_text):
         """A slot to add a templated item to the Multi.
@@ -2383,6 +2394,7 @@ class Multi(Container):
             new_input = self.callable_()
 
         new_input.add_to(self.layout())
+        new_input.value_changed.connect(self._value_changed)
         self.items.append(new_input)
 
         layout = self.layout()
@@ -2453,6 +2465,7 @@ class Multi(Container):
         self.remove_buttons = []
         for item in old_items:
             self.add_item(item)
+        self.value_changed.emit(self.value())
 
 
 class Form(QtWidgets.QWidget):

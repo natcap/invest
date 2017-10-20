@@ -10,11 +10,14 @@ from decimal import Decimal
 
 import numpy as np
 import scipy as sp
-from osgeo import gdal, ogr
+from osgeo import gdal
+from osgeo import ogr
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
-from .. import utils as invest_utils
+from .. import utils
 from .. import validation
+
+
 
 LOGGER = logging.getLogger(
     'natcap.invest.scenario_generator.scenario_generator')
@@ -683,7 +686,7 @@ def execute(args):
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
 
-    file_registry = invest_utils.build_file_registry(
+    file_registry = utils.build_file_registry(
         [(_OUTPUT, workspace), (_INTERMEDIATE, intermediate_dir)],
         args['suffix'])
 
@@ -1706,107 +1709,97 @@ def execute(args):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('landcover', require=True):
-        # Implement validation for landcover here
-        pass
+    """Validate args to ensure they conform to `execute`'s contract.
 
-    if context.is_arg_complete('transition', require=False):
-        # Implement validation for transition here
-        pass
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
-    if context.is_arg_complete('calculate_priorities', require=False):
-        # Implement validation for calculate_priorities here
-        pass
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
 
-    if context.is_arg_complete('priorities_csv_uri', require=True):
-        # Implement validation for priorities_csv_uri here
-        pass
+    required_keys = [
+        'workspace_dir',
+        'landcover',
+        'transition',
+        'calculate_priorities',
+        'calculate_proximity',
+        'calculate_transition',
+        'calculate_factors',
+        'calculate_constraints',
+        'override_layer',
+        'seed',
+        ]
 
-    if context.is_arg_complete('proximity_weight', require=True):
-        # Implement validation for proximity_weight here
-        pass
+    if 'calculate_factors' in args and args['calculate_factors']:
+        required_keys.append('suitability_folder')
+        required_keys.append('suitability')
+        required_keys.append('weight')
 
-    if context.is_arg_complete('transition_id', require=True):
-        # Implement validation for transition_id here
-        pass
+    if 'calculate_priorities' in args and args['calculate_priorities']:
+        required_keys.append('priorities_csv_uri')
 
-    if context.is_arg_complete('change_field', require=True):
-        # Implement validation for change_field here
-        pass
+    if 'calculate_constraints' in args and args['calculate_constraints']:
+        required_keys.append('constraints')
 
-    if context.is_arg_complete('area_field', require=True):
-        # Implement validation for area_field here
-        pass
+    if 'override_layer' in args and args['override_layer']:
+        required_keys.append('override')
 
-    if context.is_arg_complete('priority_field', require=False):
-        # Implement validation for priority_field here
-        pass
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
 
-    if context.is_arg_complete('proximity_field', require=False):
-        # Implement validation for proximity_field here
-        pass
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
 
-    if context.is_arg_complete('suitability_folder', require=True):
-        # Implement validation for suitability_folder here
-        pass
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
 
-    if context.is_arg_complete('suitability', require=False):
-        # Implement validation for suitability here
-        pass
+    file_type_list = [
+        ('landcover', 'raster'),
+        ('transition', 'table'),
+        ('suitability_folder', 'directory'),
+        ('suitability', 'table'),
+        ('constraints', 'vector'),
+        ('override', 'vector')]
 
-    if context.is_arg_complete('weight', require=True):
-        # Implement validation for weight here
-        pass
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
 
-    if context.is_arg_complete('factor_inclusion', require=True):
-        # Implement validation for factor_inclusion here
-        pass
-
-    if context.is_arg_complete('suitability_id', require=True):
-        # Implement validation for suitability_id here
-        pass
-
-    if context.is_arg_complete('suitability_layer', require=True):
-        # Implement validation for suitability_layer here
-        pass
-
-    if context.is_arg_complete('suitability_field', require=True):
-        # Implement validation for suitability_field here
-        pass
-
-    if context.is_arg_complete('distance_field', require=True):
-        # Implement validation for distance_field here
-        pass
-
-    if context.is_arg_complete('constraints', require=False):
-        # Implement validation for constraints here
-        pass
-
-    if context.is_arg_complete('constraints_field', require=False):
-        # Implement validation for constraints_field here
-        pass
-
-    if context.is_arg_complete('override', require=False):
-        # Implement validation for override here
-        pass
-
-    if context.is_arg_complete('override_field', require=False):
-        # Implement validation for override_field here
-        pass
-
-    if context.is_arg_complete('override_inclusion', require=True):
-        # Implement validation for override_inclusion here
-        pass
-
-    if context.is_arg_complete('seed', require=False):
-        # Implement validation for seed here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return validation_error_list

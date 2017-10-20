@@ -377,16 +377,14 @@ class CoastalVulnerability(model.InVESTModel):
             self.rays_per_sector.args_key: self.rays_per_sector.value(),
             self.spread_radius.args_key: self.spread_radius.value(),
             self.population_radius.args_key: self.population_radius.value(),
+            self.bathymetry_layer.args_key: self.bathymetry_layer.value(),
+            self.relief.args_key: self.relief.value(),
         }
         if self.results_suffix.value():
             args[self.results_suffix.args_key] = self.results_suffix.value()
-        if self.bathymetry_layer.value():
-            args[self.bathymetry_layer.args_key] = self.bathymetry_layer.value()
         if self.bathymetry_constant.value():
             args[self.bathymetry_constant.args_key] = (
                 self.bathymetry_constant.value())
-        if self.relief.value():
-            args[self.relief.args_key] = self.relief.value()
         if self.relief_constant.value():
             args[self.relief_constant.args_key] = self.relief_constant.value()
         if self.depth_threshold.value():

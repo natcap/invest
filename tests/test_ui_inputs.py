@@ -11,6 +11,8 @@ import time
 import tempfile
 import shutil
 import textwrap
+import imp
+import uuid
 
 import faulthandler
 faulthandler.enable()
@@ -247,7 +249,7 @@ class InVESTModelInputTest(_QtTest):
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), True)
 
-    def test_visiblity_when_shown(self):
+    def test_visibility_when_shown(self):
         from natcap.invest.ui import inputs
         container = inputs.Container(label='sample container')
         input_instance = self.__class__.create_input(label='foo',
@@ -2418,6 +2420,24 @@ class ModelTests(_QtTest):
 
         QtCore.QTimer.singleShot(50, _cancel_workspace_overwrite)
         model_ui.execute_model()
+
+    def test_save_to_python(self):
+        """UI Model: Verify that we can make a python script from params."""
+
+        model_ui = ModelTests.build_model()
+
+        python_file = os.path.join(self.workspace, 'python_script.py')
+
+        model_ui.save_to_python(python_file)
+
+        self.assertTrue(os.path.exists(python_file))
+
+        module_name = str(uuid.uuid4()) + 'testscript'
+        try:
+            module = imp.load_source(module_name, python_file)
+            self.assertEqual(module.args, model_ui.assemble_args())
+        finally:
+            del sys.modules[module_name]
 
 
 class ValidatorTest(_QtTest):
