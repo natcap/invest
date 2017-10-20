@@ -2015,6 +2015,21 @@ def check(options):
         if reqname not in existing_reqs:
             requirements.append((req, required, None, None))
 
+    # Set the SIP API to v2 for Qt4 compatibility.
+    # If we can't import sip, then the import error issue should be handled by
+    # paver check.
+    try:
+        import sip
+        sip.setapi('QString', 2)
+        sip.setapi('QVariant', 2)
+        sip.setapi('QDate', 2)
+        sip.setapi('QDateTime', 2)
+        sip.setapi('QTextStream', 2)
+        sip.setapi('QTime', 2)
+        sip.setapi('QUrl', 2)
+    except ImportError:
+        pass
+
     warnings_found = False
     for requirement, severity, import_name, install_msg in sorted(
         requirements, key=lambda x: x[0].lower()):
