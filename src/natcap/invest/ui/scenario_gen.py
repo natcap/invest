@@ -110,14 +110,6 @@ class ScenarioGenerator(model.InVESTModel):
             target=natcap.invest.scenario_generator.scenario_generator.execute,
             validator=natcap.invest.scenario_generator.scenario_generator.validate,
             localdoc=u'../documentation/scenario_generator.html')
-
-
-        self.suffix = inputs.Text(
-            args_key=u'suffix',
-            helptext=u'A suffix to append to results.',
-            label=u'Results Suffix',
-            validator=self.validator)
-        self.add_input(self.suffix)
         self.landcover = inputs.File(
             args_key=u'landcover',
             helptext=u'A GDAL-supported raster file representing land-use/land-cover.',
@@ -324,7 +316,6 @@ class ScenarioGenerator(model.InVESTModel):
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
-            self.suffix.args_key: self.suffix.value(),
             self.suffix.args_key: self.suffix.value(),
             self.landcover.args_key: self.landcover.value(),
             self.transition.args_key: self.transition.value(),
