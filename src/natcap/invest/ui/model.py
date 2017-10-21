@@ -937,7 +937,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.dev_menu = QtWidgets.QMenu('&Development')
         self.dev_menu.addAction(
             qtawesome.icon('fa.file-code-o'),
-            'Save as to python script ...', self.save_to_python)
+            'Save to python script ...', self.save_to_python)
         self.menuBar().addMenu(self.dev_menu)
 
         self.help_menu = QtWidgets.QMenu('&Help')
