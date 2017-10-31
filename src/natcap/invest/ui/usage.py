@@ -128,7 +128,7 @@ def _calculate_args_bounding_box(args_dict):
             return False
 
         def _is_ogr(arg):
-            """Tests if input argument is a path to an ogr vector."""
+            """Test if input argument is a path to an ogr vector."""
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
@@ -273,6 +273,15 @@ def _log_model(model_name, model_args, session_id=None):
 
 
 def _post_payload(data, url):
+    """Encode and post a data payload to a given url.
+
+    Parameters:
+        data: A python object to encode via ``urllib.urlencode``.
+        url (string): The url to post to.
+
+    Returns:
+        A urllib2 response.
+    """
     request = urllib2.Request(url, urllib.urlencode(data))
     response = urllib2.urlopen(request)
     return response

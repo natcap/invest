@@ -54,7 +54,6 @@ class ModelLoggingTests(unittest.TestCase):
             usage_logger.LoggingServer._LOG_FIELD_NAMES)
         logging_server.log_invest_run(sample_data, 'log')
 
-
     def test_add_exit_status(self):
         """Usage logger record run and then exit and verify they are added."""
         from natcap.invest.ui import usage_logger
@@ -72,8 +71,9 @@ class ModelLoggingTests(unittest.TestCase):
             logging_server.log_invest_run(sample_data, 'log')
         mock_obj.assert_called_once()
         sample_data['ip_address'] = 'local'
-        self.assertEqual(sorted(mock_obj.call_args[0][0].get_data().split('&')),
-                         sorted(urllib.urlencode(sample_data).split('&')))
+        self.assertEqual(
+            sorted(mock_obj.call_args[0][0].get_data().split('&')),
+            sorted(urllib.urlencode(sample_data).split('&')))
 
         exit_sample_data = dict(
             (key_field, key_field) for key_field in
@@ -83,8 +83,9 @@ class ModelLoggingTests(unittest.TestCase):
             logging_server.log_invest_run(exit_sample_data, 'exit')
         mock_obj.assert_called_once()
         exit_sample_data['ip_address'] = 'local'
-        self.assertEqual(sorted(mock_obj.call_args[0][0].get_data().split('&')),
-                         sorted(urllib.urlencode(exit_sample_data).split('&')))
+        self.assertEqual(
+            sorted(mock_obj.call_args[0][0].get_data().split('&')),
+            sorted(urllib.urlencode(exit_sample_data).split('&')))
 
     def test_unknown_mode(self):
         """Usage logger test that an unknown mode raises an exception."""

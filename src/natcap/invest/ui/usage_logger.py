@@ -12,7 +12,7 @@ Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 _START_URL = ('https://us-central1-natcap-servers.cloudfunctions.net/'
               'function-invest-model-start')
 _FINISH_URL = ('https://us-central1-natcap-servers.cloudfunctions.net/'
-              'function-invest-model-finish')
+               'function-invest-model-finish')
 
 
 class LoggingServer(object):
@@ -87,7 +87,6 @@ class LoggingServer(object):
                 "Warning there were extra fields %s passed to logger. "
                 " Expected: %s Received: %s", sorted(extra_fields),
                 sorted(self._LOG_FIELD_NAMES), sorted(data_copy))
-
 
 
 def execute(args):
