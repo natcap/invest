@@ -9,6 +9,10 @@ import Pyro4
 LOGGER = logging.getLogger('natcap.invest.remote_logging')
 
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
+_START_URL = ('https://us-central1-natcap-servers.cloudfunctions.net/'
+              'function-invest-model-start')
+_FINISH_URL = ('https://us-central1-natcap-servers.cloudfunctions.net/'
+              'function-invest-model-finish')
 
 
 class LoggingServer(object):
@@ -34,6 +38,7 @@ class LoggingServer(object):
         'status',
         ]
 
+    @Pyro4.expose
     def log_invest_run(self, data, mode):
         """Log some parameters of an InVEST run.
 
@@ -55,13 +60,9 @@ class LoggingServer(object):
         """
         try:
             if mode == 'log':
-                url = (
-                    'https://us-central1-natcap-servers.cloudfunctions.net/'
-                    'function-invest-model-finish')
+                url = _START_URL
             elif mode == 'exit':
-                url = (
-                    'https://us-central1-natcap-servers.cloudfunctions.net/'
-                    'function-invest-model-start')
+                url = _FINISH_URL
             else:
                 raise ValueError(
                     "Unknown mode '%s', expected 'log' or 'exit'" % mode)
