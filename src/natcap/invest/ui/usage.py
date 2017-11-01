@@ -217,7 +217,8 @@ def _log_exit_status(session_id, status):
             'status': status,
         }
 
-        _post_payload(payload, INVEST_USAGE_LOGGER_FINISH_URL)
+        urllib2.urlopen(urllib2.Request(INVEST_USAGE_LOGGER_FINISH_URL,
+                                        urllib.urlencode(payload)))
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
@@ -265,23 +266,9 @@ def _log_model(model_name, model_args, session_id=None):
             'session_id': session_id,
         }
 
-        _post_payload(payload, INVEST_USAGE_LOGGER_START_URL)
+        urllib2.urlopen(urllib2.Request(INVEST_USAGE_LOGGER_START_URL,
+                                        urllib.urlencode(payload)))
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
             'an exception encountered when logging %s', repr(exception))
-
-
-def _post_payload(data, url):
-    """Encode and post a data payload to a given url.
-
-    Parameters:
-        data: A python object to encode via ``urllib.urlencode``.
-        url (string): The url to post to.
-
-    Returns:
-        A urllib2 response.
-    """
-    request = urllib2.Request(url, urllib.urlencode(data))
-    response = urllib2.urlopen(request)
-    return response
