@@ -1378,9 +1378,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         if filepath is None:
             save_filepath = self.file_dialog.save_file(
                 'Save parameters as a python script',
-                start_dir=start_dir,
                 savefile='python_script.py')
-            if save_filepath is None:
+            if save_filepath == '':
                 return
         else:
             save_filepath = filepath
