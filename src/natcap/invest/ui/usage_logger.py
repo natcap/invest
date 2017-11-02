@@ -1,15 +1,18 @@
 """Functions to assist with remote logging of InVEST usage."""
 
-import os
-import datetime
 import logging
-import sqlite3
+import urllib
+import urllib2
 
 import Pyro4
 
 LOGGER = logging.getLogger('natcap.invest.remote_logging')
 
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
+_START_URL = ('https://us-central1-natcap-servers.cloudfunctions.net/'
+              'function-invest-model-start')
+_FINISH_URL = ('https://us-central1-natcap-servers.cloudfunctions.net/'
+               'function-invest-model-finish')
 
 
 class LoggingServer(object):
@@ -34,41 +37,8 @@ class LoggingServer(object):
         'ip_address',
         'status',
         ]
-    _LOG_TABLE_NAME = 'model_log_table'
-    _EXIT_LOG_TABLE_NAME = 'model_exit_status_table'
 
-    def __init__(self, database_filepath):
-        """Launch a logger and initialize an sqlite database.
-
-        Parameters:
-            database_filepath (string): path to a database filepath, will
-                create the file and directory path if it doesn't exist.
-
-        Returns:
-            None.
-        """
-        self.database_filepath = database_filepath
-        # make directory if it doesn't exist and isn't the current directory
-        filepath_directory = os.path.dirname(self.database_filepath)
-        if filepath_directory != '' and not os.path.exists(filepath_directory):
-            os.mkdir(os.path.dirname(self.database_filepath))
-        db_connection = sqlite3.connect(self.database_filepath)
-        db_cursor = db_connection.cursor()
-        db_cursor.execute(
-            'CREATE TABLE IF NOT EXISTS %s (%s)' % (
-                self._LOG_TABLE_NAME,
-                ','.join([
-                    '%s text' % field_id for field_id in
-                    self._LOG_FIELD_NAMES])))
-        db_cursor.execute(
-            'CREATE TABLE IF NOT EXISTS %s (%s)' % (
-                self._EXIT_LOG_TABLE_NAME,
-                ','.join([
-                    '%s text' % field_id for field_id in
-                    self._EXIT_LOG_FIELD_NAMES])))
-        db_connection.commit()
-        db_connection.close()
-
+    @Pyro4.expose
     def log_invest_run(self, data, mode):
         """Log some parameters of an InVEST run.
 
@@ -90,11 +60,9 @@ class LoggingServer(object):
         """
         try:
             if mode == 'log':
-                table_name = self._LOG_TABLE_NAME
-                field_names = self._LOG_FIELD_NAMES
+                url = _START_URL
             elif mode == 'exit':
-                table_name = self._EXIT_LOG_TABLE_NAME
-                field_names = self._EXIT_LOG_FIELD_NAMES
+                url = _FINISH_URL
             else:
                 raise ValueError(
                     "Unknown mode '%s', expected 'log' or 'exit'" % mode)
@@ -105,30 +73,14 @@ class LoggingServer(object):
                     Pyro4.current_context.client.sock.getpeername()[0])
             else:
                 data_copy['ip_address'] = 'local'
-            data_copy['time'] = datetime.datetime.now().isoformat(' ')
 
-            # Get data into the same order as the field names
-            ordered_data = [
-                data_copy[field_id] for field_id in field_names]
-            # get as many '?'s as there are fields for the insert command
-            position_format = ','.join(['?'] * len(field_names))
-
-            insert_command = (
-                'INSERT OR REPLACE INTO %s'
-                '(%s) VALUES (%s)' % (
-                    (table_name,) + (
-                        ','.join(field_names), position_format)))
-
-            db_connection = sqlite3.connect(self.database_filepath)
-            db_cursor = db_connection.cursor()
-            # pass in ordered_data to the command
-            db_cursor.execute(insert_command, ordered_data)
-            db_connection.commit()
-            db_connection.close()
+            urllib2.urlopen(
+                urllib2.Request(url, urllib.urlencode(data_copy)))
         except:
             # print something locally for our log and raise back to client
             LOGGER.exception("log_invest_run failed")
             raise
+
         extra_fields = set(data_copy).difference(self._LOG_FIELD_NAMES)
         if len(extra_fields) > 0:
             LOGGER.warn(
@@ -136,22 +88,11 @@ class LoggingServer(object):
                 " Expected: %s Received: %s", sorted(extra_fields),
                 sorted(self._LOG_FIELD_NAMES), sorted(data_copy))
 
-    def get_run_summary_db(self):
-        """Retrieve the raw sqlite database of runs as a binary stream."""
-        try:
-            return open(self.database_filepath, 'rb').read()
-        except:
-            # print something locally for our log and raise back to client
-            LOGGER.exception("get_run_summary_db failed")
-            raise
-
 
 def execute(args):
     """Function to start a remote procedure call server.
 
     Parameters:
-        args['database_filepath'] (string): local filepath to the sqlite
-            database
         args['hostname'] (string): network interface to bind to
         args['port'] (int): TCP port to bind to
 
@@ -160,7 +101,7 @@ def execute(args):
     """
     daemon = Pyro4.Daemon(args['hostname'], args['port'])
     uri = daemon.register(
-        LoggingServer(args['database_filepath']),
+        LoggingServer(),
         'natcap.invest.remote_logging')
     LOGGER.info("natcap.invest.usage_logger ready. Object uri = %s", uri)
     daemon.requestLoop()

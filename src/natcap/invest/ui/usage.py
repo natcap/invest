@@ -10,20 +10,24 @@ import sys
 import threading
 import traceback
 import urllib
+import urllib2
 import uuid
 
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import Pyro4
 import natcap.invest
 import pygeoprocessing
 
 from .. import utils
 
 ENCODING = sys.getfilesystemencoding()
-INVEST_USAGE_LOGGER_URL = ('http://data.naturalcapitalproject.org/'
-                           'server_registry/invest_usage_logger/')
+INVEST_USAGE_LOGGER_START_URL = (
+    'https://us-central1-natcap-servers.cloudfunctions.net/'
+    'function-invest-model-start')
+INVEST_USAGE_LOGGER_FINISH_URL = (
+    'https://us-central1-natcap-servers.cloudfunctions.net/'
+    'function-invest-model-finish')
 
 
 @contextlib.contextmanager
@@ -124,12 +128,17 @@ def _calculate_args_bounding_box(args_dict):
             return False
 
         def _is_ogr(arg):
-            """Tests if input argument is a path to an ogr vector."""
+            """Test if input argument is a path to an ogr vector."""
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
                     vector = ogr.Open(arg)
                     if vector is not None:
+                        # OGR opens CSV files.  For now, we should not
+                        # consider these to be vectors.
+                        driver_name = vector.GetDriver().GetName()
+                        if driver_name == 'CSV':
+                            return False
                         return True
             return False
 
@@ -208,8 +217,8 @@ def _log_exit_status(session_id, status):
             'status': status,
         }
 
-        logging_server = _get_logging_server()
-        logging_server.log_invest_run(payload, 'exit')
+        urllib2.urlopen(urllib2.Request(INVEST_USAGE_LOGGER_FINISH_URL,
+                                        urllib.urlencode(payload)))
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
@@ -257,25 +266,9 @@ def _log_model(model_name, model_args, session_id=None):
             'session_id': session_id,
         }
 
-        logging_server = _get_logging_server()
-        logging_server.log_invest_run(payload, 'log')
+        urllib2.urlopen(urllib2.Request(INVEST_USAGE_LOGGER_START_URL,
+                                        urllib.urlencode(payload)))
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
             'an exception encountered when logging %s', repr(exception))
-
-
-def _get_logging_server(path=None):
-    """Return a remote procedure call logging server.
-
-    Searches  https://bitbucket.org/natcap/natcap_model_logger for appropriate
-    object.
-
-    Parameters:
-        path (string): A Pyro4 compatible url for getting a Proxy object.
-
-    """
-    if path is None:
-        path = urllib.urlopen(INVEST_USAGE_LOGGER_URL).read().rstrip()
-    logging_server = Pyro4.Proxy(path)
-    return logging_server
