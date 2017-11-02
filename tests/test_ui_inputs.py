@@ -615,7 +615,16 @@ class PathTest(TextTest):
                 input_instance.textfield.pos()))
 
         def _click_out_of_contextmenu():
-            QT_APP.activePopupWidget().close()
+            # In case the popup isn't shown until after the callback is called,
+            # we should be sure to wait for when it is shown.
+            popup = None
+            while popup is None:
+                popup = QT_APP.activePopupWidget()
+                try:
+                    popup.close()
+                except AttributeError:
+                    # When popup is None
+                    QTest.qWait(25)
 
         QtCore.QTimer.singleShot(25, _click_out_of_contextmenu)
         input_instance.textfield.contextMenuEvent(event)
@@ -2295,7 +2304,7 @@ class ModelTests(_QtTest):
 
         # Need to wait a little longer on this one to compensate for other
         # singleshot timers in model.run().
-        QtCore.QTimer.singleShot(100, _confirm_workspace_overwrite)
+        QtCore.QTimer.singleShot(500, _confirm_workspace_overwrite)
         model_ui.run(quickrun=True)
 
         while model_ui.isVisible():

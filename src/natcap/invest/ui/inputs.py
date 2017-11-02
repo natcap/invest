@@ -548,7 +548,10 @@ class InfoButton(QtWidgets.QPushButton):
                 to be here to match the signature the clicked signal expects.
         """
         QtWidgets.QWhatsThis.enterWhatsThisMode()
-        QtWidgets.QWhatsThis.showText(self.mapToGlobal(self.pos()),
+
+        # QtCore.QPoint(0, 0) maps to the top-left corner of this widget.
+        # mapToGlobal() turns that coordinate into a global coordinate.
+        QtWidgets.QWhatsThis.showText(self.mapToGlobal(QtCore.QPoint(0, 0)),
                                       self.whatsThis(), self)
 
 
