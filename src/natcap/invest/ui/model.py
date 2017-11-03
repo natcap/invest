@@ -1302,12 +1302,15 @@ class InVESTModel(QtWidgets.QMainWindow):
         # window.  I'd prefer to have the window resized according to some
         # internal properties, but the scroll area (self.form.scroll_area)
         # makes that difficult.
-        # Adding 100, 150 to the dimensions allows for the window to be wide
+        # Adding 200, 250 to the dimensions allows for the window to be wide
         # enough to not hide any widgets in the form, and tall enough to
         # usually show most of the rows in the layout.
+        ideal_width = self.form.scroll_area.widget().minimumSize().width()+200
+        ideal_height = self.form.scroll_area.widget().minimumSize().height()+250
+        screen_geometry = QtWidgets.QDesktopWidget().availableGeometry()
         self.resize(
-            self.form.scroll_area.widget().minimumSize().width()+100,
-            self.form.scroll_area.widget().minimumSize().height()+150)
+            min(screen_geometry.width(), ideal_width),
+            min(screen_geometry.height(), ideal_height))
 
         inputs.center_window(self)
 
