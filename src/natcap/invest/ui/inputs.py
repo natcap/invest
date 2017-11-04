@@ -1709,6 +1709,19 @@ class _Path(Text):
             self.help_button,
         ]
 
+    def _handle_file_button_selection(self, value):
+        """Handle the case when the user presses 'cancel' in the file dialog.
+
+        Parameters:
+            value (string): The path selected.  This path will be ``''`` if the
+                dialog was cancelled.
+
+        Returns:
+            ``None``
+        """
+        if value != '':
+            self.textfield.setText(value)
+
 
 class Folder(_Path):
     """An InVESTModelInput for selecting a folder."""
@@ -1739,7 +1752,7 @@ class Folder(_Path):
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FolderButton('Select folder')
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(self._handle_file_button_selection)
 
         # index 3 is the column place right before the help button, after the
         # textfield.
@@ -1778,7 +1791,8 @@ class File(_Path):
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FileButton('Select file')
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(
+            self._handle_file_button_selection)
 
         # Index 3 is the column to the right of the textfield, to the left of
         # the help button.
@@ -1819,7 +1833,8 @@ class SaveFile(_Path):
                        hideable, validator=validator)
         self.path_select_button = SaveFileButton('Select file',
                                                  default_savefile)
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(
+            self._handle_file_button_selection)
         self.widgets[3] = self.path_select_button
 
         if self.hideable:
