@@ -754,6 +754,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.label.setWordWrap(True)
         self.scroll_widget.widget().layout().addWidget(self.label)
         self.scroll_widget.widget().layout().insertStretch(-1)
+        self.scroll_widget.setWidgetResizable(True)
 
         self.buttonbox = QtWidgets.QDialogButtonBox()
         self.back_button = QtWidgets.QPushButton(' Back')
@@ -1305,8 +1306,10 @@ class InVESTModel(QtWidgets.QMainWindow):
         # Adding 200, 250 to the dimensions allows for the window to be wide
         # enough to not hide any widgets in the form, and tall enough to
         # usually show most of the rows in the layout.
-        ideal_width = self.form.scroll_area.widget().minimumSize().width()+200
-        ideal_height = self.form.scroll_area.widget().minimumSize().height()+250
+        ideal_width = self.form.scroll_area.widget().minimumSize().width() + 200
+        ideal_height = max(
+            self.sizeHint().height() + 100,
+            self.form.scroll_area.widget().minimumSize().height() + 250)
         screen_geometry = QtWidgets.QDesktopWidget().availableGeometry()
         self.resize(
             min(screen_geometry.width(), ideal_width),
