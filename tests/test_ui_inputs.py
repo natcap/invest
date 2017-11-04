@@ -641,6 +641,17 @@ class PathTest(TextTest):
             input_instance.path_select_button.path_selected.emit(u'/tmp/foo')
             self.assertTrue(input_instance.value(), '/tmp/foo')
 
+    def test_path_dialog_cancelled(self):
+        input_instance = self.__class__.create_input(label='foo')
+        # Only run this test on subclasses of path
+        if input_instance.__class__.__name__ != '_Path':
+            # initial value should not be overwritten by the new value.
+            input_instance.set_value('some_value')
+
+            # path is blank when the dialog was cancelled.
+            input_instance.path_select_button.path_selected.emit(u'')
+            self.assertTrue(input_instance.value(), 'some_value')
+
     def test_path_selected_cyrillic(self):
         input_instance = self.__class__.create_input(label='foo')
         # Only run this test on subclasses of path
