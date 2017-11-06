@@ -2471,6 +2471,35 @@ class Multi(Container):
         self.value_changed.emit(self.value())
 
 
+class FormScrollArea(QtWidgets.QScrollArea):
+    """Object to contain scrollarea-related functionality."""
+
+    def __init__(self):
+        """Initialize the ScrollArea."""
+        QtWidgets.QScrollArea.__init__(self)
+        self.setWidgetResizable(True)
+        self.verticalScrollBar().rangeChanged.connect(
+            self.update_scroll_border)
+        self.update_scroll_border(
+            self.verticalScrollBar().minimum(),
+            self.verticalScrollBar().maximum())
+
+    def update_scroll_border(self, range_min, range_max):
+        """Show or hide the border of the scrolling area as needed.
+
+        Parameters:
+            range_min (int): The scroll area's range minimum.
+            range_max (int): The scroll area's range maximum.
+
+        Returns:
+            ``None``
+        """
+        if range_min == 0 and range_max == 0:
+            self.setStyleSheet("QScrollArea { border: None } ")
+        else:
+            self.setStyleSheet("")
+
+
 class Form(QtWidgets.QWidget):
     """A form that contains multiple InVESTModelInputs."""
 
@@ -2503,14 +2532,8 @@ class Form(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.Minimum)
 
         # Make the inputs container scrollable.
-        self.scroll_area = QtWidgets.QScrollArea()
+        self.scroll_area = FormScrollArea()
         self.layout().addWidget(self.scroll_area)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.verticalScrollBar().rangeChanged.connect(
-            self.update_scroll_border)
-        self.update_scroll_border(
-            self.scroll_area.verticalScrollBar().minimum(),
-            self.scroll_area.verticalScrollBar().maximum())
         self.scroll_area.setWidget(self.inputs)
 
         # set the sizehint of the inputs again ... needed after setting
@@ -2539,21 +2562,6 @@ class Form(QtWidgets.QWidget):
         # creating a bound method of Form to handle this.  Useful for MESH
         # demo.
         self.submitted.emit()
-
-    def update_scroll_border(self, range_min, range_max):
-        """Show or hide the border of the scrolling area as needed.
-
-        Parameters:
-            range_min (int): The scroll area's range minimum.
-            range_max (int): The scroll area's range maximum.
-
-        Returns:
-            ``None``
-        """
-        if range_min == 0 and range_max == 0:
-            self.scroll_area.setStyleSheet("QScrollArea { border: None } ")
-        else:
-            self.scroll_area.setStyleSheet("")
 
     def run(self, target, args=(), kwargs=None, window_title='',
             out_folder='/'):
