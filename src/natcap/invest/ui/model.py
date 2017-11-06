@@ -1444,3 +1444,28 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.statusBar().showMessage('Loaded parameters from previous run.',
                                      STATUSBAR_MSG_DURATION)
         self.window_title.filename = 'loaded from autosave'
+
+    def dragEnterEvent(self, event):
+
+        if (event.mimeData().hasText() and
+                len(event.mimeData().urls()) == 1):
+            LOGGER.info('Accepting drag enter event for "%s"',
+                        event.mimeData().text())
+            self.setStyleSheet(
+                'QWidget {background-color: rgb(255, 255, 255); '
+                'color: rgb(200, 200, 200)}')
+            event.accept()
+        else:
+            LOGGER.info('Rejecting drag enter event for "%s"',
+                        event.mimeData().text())
+            self.setStyleSheet('')
+            event.reject()
+
+    def dragLeaveEvent(self, event):
+        self.setStyleSheet('')
+
+    def dropEvent(self, event):
+        path = event.mimeData().urls()[0].path()
+        self.setStyleSheet('')
+        self.load_scenario(path)
+
