@@ -2448,6 +2448,18 @@ class ModelTests(_QtTest):
         finally:
             del sys.modules[module_name]
 
+    def test_clear_local_settings(self):
+        """UI Model: Check that we can clear local settings."""
+        model_ui = ModelTests.build_model()
+
+        # write something to settings and check it's been saved
+        model_ui.save_lastrun()
+        self.assertEqual(model_ui.settings.allKeys(), ['lastrun'])
+
+        # clear settings and verify it's been cleared.
+        model_ui.clear_local_settings()
+        self.assertEqual(model_ui.settings.allKeys(), [])
+
 
 class ValidatorTest(_QtTest):
     def test_in_progress(self):
