@@ -252,6 +252,7 @@ class SettingsDialog(OptionsDialog):
         """
         OptionsDialog.__init__(self, title='InVEST Settings',
                                modal=True)
+        self.resize(600, 200)
 
         self.global_label = QtWidgets.QLabel(
             'Note: these settings affect all InVEST models.')
@@ -260,6 +261,7 @@ class SettingsDialog(OptionsDialog):
 
         self._global_opts_container = inputs.Container(label='Global options')
         self.layout().addWidget(self._global_opts_container)
+
 
         try:
             # Qt4
@@ -934,6 +936,13 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtGui.QKeySequence('Ctrl+Q'))
         self.menuBar().addMenu(self.file_menu)
 
+        self.edit_menu = QtWidgets.QMenu('&Edit')
+        self.edit_menu.addAction(
+            qtawesome.icon('fa.trash-o'),
+            'Clear parameter cache for %s' % self.label,
+            self.clear_local_settings)
+        self.menuBar().addMenu(self.edit_menu)
+
         self.dev_menu = QtWidgets.QMenu('&Development')
         self.dev_menu.addAction(
             qtawesome.icon('fa.file-code-o'),
@@ -955,6 +964,15 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtCore.QSettings.UserScope,
             'Natural Capital Project',
             self.label)
+
+    def clear_local_settings(self):
+        """Clear all parameters saved for this model.
+
+        Returns:
+            None."""
+        self.settings.clear()
+        self.statusBar().showMessage('Cached parameters have been cleared.',
+                                     STATUSBAR_MSG_DURATION)
 
     def __setattr__(self, name, value):
         """Track Input instances in self.inputs.
