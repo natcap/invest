@@ -95,7 +95,6 @@ class ScenariosTest(unittest.TestCase):
         source_vector_path = os.path.join(FW_DATA, 'watersheds.shp')
         source_vector = ogr.Open(source_vector_path)
 
-
         for format_name, extension in (('ESRI Shapefile', 'shp'),
                                        ('GeoJSON', 'geojson')):
             dest_dir = os.path.join(self.workspace, format_name)
@@ -487,6 +486,82 @@ class ScenariosTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             scenarios.read_parameters_from_logfile(logfile_path)
+
+
+class IsProbablyScenarioTests(unittest.TestCase):
+    """Tests for our quick check for whether a file is a scenario."""
+
+    def setUp(self):
+        """Create a new workspace for each test."""
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up the workspace created for each test."""
+        shutil.rmtree(self.workspace)
+
+    def test_json_extension(self):
+        """Scenarios: invest.json extension is probably a scenario"""
+        from natcap.invest import scenarios
+
+        filepath = 'some_model.invest.json'
+        self.assertTrue(scenarios.is_probably_scenario(filepath))
+
+    def test_tar_gz_extension(self):
+        """Scenarios: invest.tar.gz extension is probably a scenario"""
+        from natcap.invest import scenarios
+
+        filepath = 'some_model.invest.tar.gz'
+        self.assertTrue(scenarios.is_probably_scenario(filepath))
+
+    def test_parameter_set(self):
+        """Scenarios: a parameter set should be a scenario."""
+        from natcap.invest import scenarios
+
+        filepath = os.path.join(self.workspace, 'paramset.json')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        scenarios.write_parameter_set(filepath, args, 'test_model')
+
+        self.assertTrue(scenarios.is_probably_scenario(filepath))
+
+    def test_parameter_archive(self):
+        """Scenarios: a parameter archive should be a scenario."""
+        from natcap.invest import scenarios
+
+        filepath = os.path.join(self.workspace, 'paramset.tar.gz')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        scenarios.build_scenario_archive(args, 'test_model', filepath)
+
+        self.assertTrue(scenarios.is_probably_scenario(filepath))
+
+    def test_parameter_logfile(self):
+        """Scenarios: a textfile should be interpreted as a scenario."""
+        from natcap.invest import scenarios
+
+        filepath = os.path.join(self.workspace, 'logfile.txt')
+        with open(filepath, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO
+                Arguments:
+                suffix                           foo
+                some_int                         1
+                some_float                       2.33
+                workspace_dir                    some_workspace_dir
+
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
+            """))
+
+        self.assertTrue(scenarios.is_probably_scenario(filepath))
+
+    def test_csv_not_a_parameter(self):
+        """Scenarios: a CSV is probably not a parameter set."""
+        from natcap.invest import scenarios
+
+        filepath = os.path.join(self.workspace, 'sample.csv')
+        with open(filepath, 'w') as sample_csv:
+            sample_csv.write('A,B,C\n')
+            sample_csv.write('"aaa","bbb","ccc"\n')
+
+        self.assertFalse(scenarios.is_probably_scenario(filepath))
 
 
 class UtilitiesTest(unittest.TestCase):
