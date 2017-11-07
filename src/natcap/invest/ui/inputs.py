@@ -567,6 +567,11 @@ class ValidButton(InfoButton):
         InfoButton.__init__(self, *args, **kwargs)
         self.successful = True
 
+    def clear(self):
+        self.setIcon(QtGui.QIcon())  # clear the icon
+        self.setWhatsThis('')
+        self.setToolTip('')
+
     def set_errors(self, errors):
         """Set the error message and style based on the provided errors.
 
@@ -1051,6 +1056,9 @@ class InVESTModelInput(QtCore.QObject):
             self.sufficient = new_sufficiency
             self.sufficiency_changed.emit(new_sufficiency)
 
+    def clear(self):
+        raise NotImplementedError
+
     def visible(self):
         """Whether the input is supposed to be visible.
 
@@ -1356,6 +1364,12 @@ class GriddedInput(InVESTModelInput):
         self.validator_lock.release()
         return self._valid
 
+    def clear(self):
+        with self.validator_lock:
+            self._valid = None
+            self.sufficient = False
+        self.valid_button.clear()
+
     @QtCore.Slot(int)
     def _hideability_changed(self, show_widgets):
         """Set the hidden state of component widgets.
@@ -1553,6 +1567,10 @@ class Text(GriddedInput):
             self.set_hidden(False)
 
         self.textfield.setText(value)
+
+    def clear(self):
+        self.textfield.clear()
+        GriddedInput.clear(self)
 
 
 class _Path(Text):
@@ -1861,6 +1879,10 @@ class Checkbox(GriddedInput):
         self.widgets[1] = self.checkbox  # replace label with checkbox
         self.satisfied = True
 
+    def clear(self):
+        self.set_value(False)
+        GriddedInput.clear(self)
+
     def value(self):
         """Get the value of the checkbox.
 
@@ -1930,6 +1952,10 @@ class Dropdown(GriddedInput):
         # Init hideability if needed
         if self.hideable:
             self._hideability_changed(False)
+
+    def clear(self):
+        self.set_value(self.options[0])
+        GriddedInput.clear(self)
 
     @QtCore.Slot(int)
     def _index_changed(self, newindex):
@@ -2098,6 +2124,10 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,  # horizontal
             QtWidgets.QSizePolicy.MinimumExpanding)  # vertical
+
+    def clear(self):
+        if self.expandable:
+            self.setChecked(False)
 
     @QtCore.Slot(bool)
     def _hide_widgets(self, check_state):

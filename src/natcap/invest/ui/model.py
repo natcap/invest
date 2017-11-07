@@ -938,6 +938,9 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.edit_menu = QtWidgets.QMenu('&Edit')
         self.edit_menu.addAction(
+            qtawesome.icon('fa.undo', color='red'),
+            'Clear inputs', self.clear_inputs)
+        self.edit_menu.addAction(
             qtawesome.icon('fa.trash-o'),
             'Clear parameter cache for %s' % self.label,
             self.clear_local_settings)
@@ -973,6 +976,12 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.settings.clear()
         self.statusBar().showMessage('Cached parameters have been cleared.',
                                      STATUSBAR_MSG_DURATION)
+
+    def clear_inputs(self):
+        for input_obj in self.inputs:
+            if input_obj is self.workspace:
+                continue
+            input_obj.clear()
 
     def __setattr__(self, name, value):
         """Track Input instances in self.inputs.
