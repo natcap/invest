@@ -1578,7 +1578,7 @@ class FormTest(_QtTest):
         form = FormTest.make_ui()
         form.show()
         self.assertTrue('border: None' in form.scroll_area.styleSheet())
-        form.update_scroll_border(50, 50)  # simulate form resize
+        form.scroll_area.update_scroll_border(50, 50)  # simulate form resize
         self.assertTrue(len(form.scroll_area.styleSheet()) == 0)
 
     def test_add_input(self):
