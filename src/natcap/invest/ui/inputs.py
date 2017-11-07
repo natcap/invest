@@ -1954,7 +1954,11 @@ class Dropdown(GriddedInput):
             self._hideability_changed(False)
 
     def clear(self):
-        self.set_value(self.options[0])
+        try:
+            self.set_value(self.options[0])
+        except IndexError:
+            # When there are no options
+            pass
         GriddedInput.clear(self)
 
     @QtCore.Slot(int)
@@ -2381,7 +2385,7 @@ class Multi(Container):
         Returns:
             ``None``
         """
-        self.clear()
+        self.clear_layout()
         for input_value in values:
             new_input_instance = self.callable_()
             new_input_instance.set_value(input_value)
@@ -2468,16 +2472,21 @@ class Multi(Container):
                          1,  # row span
                          layout.columnCount())  # span all columns
 
+    def clear_layout(self):
+        layout = self.layout()
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(None)
+        self._append_add_link()
+
     def clear(self):
         """Clear all inputs that have been added to the Multi.
 
         Returns:
             ``None``
         """
-        layout = self.layout()
-        for i in reversed(range(layout.count())):
-            layout.itemAt(i).widget().setParent(None)
-        self._append_add_link()
+        self.clear_layout()
+        self.items = []
+        self.remove_buttons = []
 
     def remove(self, index):
         """Remove a specific input from the Multi.
@@ -2489,7 +2498,7 @@ class Multi(Container):
             ``None``
         """
         # clear all widgets from the layout.
-        self.clear()
+        self.clear_layout()
 
         self.items.pop(index)
         self.remove_buttons.pop(index)
