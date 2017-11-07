@@ -1460,6 +1460,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             LOGGER.info('Rejecting drag enter event for "%s"',
                         event.mimeData().text())
             self.setStyleSheet('')
+            event.ignore()
 
     def dragLeaveEvent(self, event):
         self.setStyleSheet('')

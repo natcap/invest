@@ -13,6 +13,7 @@ import shutil
 import textwrap
 import imp
 import uuid
+import json
 
 import faulthandler
 faulthandler.enable()
@@ -2447,6 +2448,60 @@ class ModelTests(_QtTest):
             self.assertEqual(module.args, model_ui.assemble_args())
         finally:
             del sys.modules[module_name]
+
+    def test_drag_n_drop_scenario(self):
+        """UI Model: Verify that we can drag-n-drop a valid scenario."""
+        # Write a sample scenario file to drop
+        scenario_filepath = os.path.join(self.workspace, 'scenario.invest.json')
+        with open(scenario_filepath, 'w') as sample_scenario:
+            sample_scenario.write(json.dumps(
+                {'args': {'workspace_dir': '/foo/bar',
+                          'suffix': 'baz'},
+                 'name': 'test_model',
+                 'invest_version': 'testing'}))
+
+        model = ModelTests.build_model()
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Some scenario')
+        mime_data.setUrls([QtCore.QUrl(scenario_filepath)])
+
+        drag_event = QtGui.QDragEnterEvent(
+            model.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+        model.dragEnterEvent(drag_event)
+        self.assertTrue(drag_event.isAccepted())
+
+        event = QtGui.QDropEvent(
+            model.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        # When the scenario is dropped, the scenario is loaded.
+        model.dropEvent(event)
+        self.assertEqual(model.workspace.value(), '/foo/bar')
+        self.assertEqual(model.suffix.value(), 'baz')
+
+    def test_drag_n_drop_rejected_multifile(self):
+        """UI Model: Drag-n-drop fails when dragging several files."""
+        model = ModelTests.build_model()
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Some scenarios')
+        mime_data.setUrls([QtCore.QUrl('/path/1'),
+                           QtCore.QUrl('/path/2')])
+
+        drag_event = QtGui.QDragEnterEvent(
+            model.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+        model.dragEnterEvent(drag_event)
+        self.assertFalse(drag_event.isAccepted())
 
 
 class ValidatorTest(_QtTest):
