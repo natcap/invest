@@ -186,7 +186,6 @@ setup(
         'natcap.invest',
         'natcap.invest.coastal_blue_carbon',
         'natcap.invest.coastal_vulnerability',
-        'natcap.invest.dbfpy',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
         'natcap.invest.habitat_risk_assessment',
