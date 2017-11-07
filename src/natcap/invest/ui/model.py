@@ -1446,9 +1446,10 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.filename = 'loaded from autosave'
 
     def dragEnterEvent(self, event):
-
         if (event.mimeData().hasText() and
-                len(event.mimeData().urls()) == 1):
+                len(event.mimeData().urls()) == 1 and
+                scenarios.is_probably_scenario(
+                    event.mimeData().urls()[0].path())):
             LOGGER.info('Accepting drag enter event for "%s"',
                         event.mimeData().text())
             self.setStyleSheet(
@@ -1459,7 +1460,6 @@ class InVESTModel(QtWidgets.QMainWindow):
             LOGGER.info('Rejecting drag enter event for "%s"',
                         event.mimeData().text())
             self.setStyleSheet('')
-            event.reject()
 
     def dragLeaveEvent(self, event):
         self.setStyleSheet('')
