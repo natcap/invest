@@ -111,6 +111,14 @@ class InVESTModelInputTest(_QtTest):
         input_instance = self.__class__.create_input(label='foo', helptext='bar')
         self.assertEqual(input_instance.helptext, 'bar')
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo')
+        if input_instance.__class__.__name__ == 'InVESTModelInput':
+            with self.assertRaises(NotImplementedError):
+                input_instance.clear()
+        else:
+            self.fail('Test class must reimplement this test method.')
+
     def test_interactive(self):
         input_instance = self.__class__.create_input(label='foo', interactive=True)
         self.assertEqual(input_instance.interactive, True)
@@ -295,6 +303,17 @@ class GriddedInputTest(InVESTModelInputTest):
         input_instance = self.__class__.create_input(label='foo')
         self.assertTrue(isinstance(input_instance.help_button,
                                    QtWidgets.QWidget))
+
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo')
+        # simulate successful validation completion.
+        input_instance._validation_finished([])
+        self.assertEqual(input_instance._valid, True)
+        input_instance.clear()
+        self.assertEqual(input_instance.valid_button.whatsThis(), '')
+        self.assertEqual(input_instance.valid_button.toolTip(), '')
+        self.assertEqual(input_instance._valid, None)
+        self.assertEqual(input_instance.sufficient, False)
 
     def test_validate_passes(self):
         #"""UI: Validation that passes should affect validity."""
@@ -596,6 +615,13 @@ class TextTest(GriddedInputTest):
         self.assertEqual(event.isAccepted(), True)
         self.assertEqual(input_instance.value(), 'Hello world!')
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='text')
+        input_instance.set_value('foo')
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), '')
+        self.assertEqual(input_instance.valid(), None)
+
 
 class PathTest(TextTest):
     @staticmethod
@@ -799,6 +825,12 @@ class CheckboxTest(GriddedInputTest):
 
         callback.assert_called_with(True)
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='new_label')
+        input_instance.set_value(True)
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), False)
+
     def test_valid(self):
         input_instance = self.__class__.create_input(label='new_label')
         self.assertEqual(input_instance.value(), False)
@@ -918,6 +950,19 @@ class DropdownTest(GriddedInputTest):
             label='label', options=(u'Þingvellir',))
         self.assertEqual(input_instance.options, [u'Þingvellir'])
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=('foo', 'bar', 'baz'))
+        input_instance.set_value('bar')
+        self.assertEqual(input_instance.value(), 'bar')
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), 'foo')
+
+    def test_clear_no_options(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=())
+        input_instance.clear()
+
     def test_set_value(self):
         input_instance = self.__class__.create_input(
             label='label', options=('foo', 'bar', 'baz'))
@@ -1036,6 +1081,13 @@ class ContainerTest(InVESTModelInputTest):
         self.assertEqual(input_instance.expanded, True)
 
         input_instance.expanded = False
+        self.assertEqual(input_instance.expanded, False)
+
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo',
+                                                     expandable=True)
+        input_instance.expanded = True
+        input_instance.clear()
         self.assertEqual(input_instance.expanded, False)
 
     def test_value_changed_signal(self):
@@ -1197,6 +1249,18 @@ class MultiTest(ContainerTest):
         input_instance.add_link.linkActivated.emit('add_new')
 
         self.assertEqual(input_instance.value(), [''])
+
+    def test_clear(self):
+        input_instance = self.__class__.create_input(
+            label='foo',
+            callable_=self.__class__.create_sample_callable(label='foo'))
+
+        # Add a few text inputs to this multi
+        for _ in xrange(3):
+            input_instance.add_item()
+
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), [])
 
     def test_set_value_nonexpandable(self):
         pass
