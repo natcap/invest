@@ -568,6 +568,10 @@ class ValidButton(InfoButton):
         self.successful = True
 
     def clear(self):
+        """Clear the icon, WhatsThis text and ToolTip text.
+
+        Returns:
+            None."""
         self.setIcon(QtGui.QIcon())  # clear the icon
         self.setWhatsThis('')
         self.setToolTip('')
@@ -1057,6 +1061,16 @@ class InVESTModelInput(QtCore.QObject):
             self.sufficiency_changed.emit(new_sufficiency)
 
     def clear(self):
+        """Reset the input to an initial, 'blank' state.
+
+        This method must be reimplemented for each subclass.
+
+        Returns:
+            None.
+
+        Raises:
+            NotImplementedError
+        """
         raise NotImplementedError
 
     def visible(self):
@@ -1365,6 +1379,10 @@ class GriddedInput(InVESTModelInput):
         return self._valid
 
     def clear(self):
+        """Reset validity, sufficiency and the valid button state.
+
+        Returns:
+            None."""
         with self.validator_lock:
             self._valid = None
             self.sufficient = False
@@ -1569,6 +1587,10 @@ class Text(GriddedInput):
         self.textfield.setText(value)
 
     def clear(self):
+        """Reset the input to a 'blank' state.
+
+        Returns:
+            None."""
         self.textfield.clear()
         GriddedInput.clear(self)
 
@@ -1954,6 +1976,14 @@ class Dropdown(GriddedInput):
             self._hideability_changed(False)
 
     def clear(self):
+        """Reset the dropdown to a 'blank' state.
+
+        If the dropdown has options set, the menu will be reset to the item at
+        index 0.  If there are no options, validity and sufficiency is reset
+        only.
+
+        Returns:
+            None."""
         try:
             self.set_value(self.options[0])
         except IndexError:
@@ -2473,6 +2503,10 @@ class Multi(Container):
                          layout.columnCount())  # span all columns
 
     def clear_layout(self):
+        """Remove all widgets within the multi from the layout.
+
+        Returns:
+            None."""
         layout = self.layout()
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)

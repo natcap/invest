@@ -978,6 +978,13 @@ class InVESTModel(QtWidgets.QMainWindow):
                                      STATUSBAR_MSG_DURATION)
 
     def clear_inputs(self):
+        """Clear the values from any inputs except the workspace.
+
+        This is done for each input object by calling its clear() method.
+
+        Returns:
+            None
+        """
         for input_obj in self.inputs:
             if input_obj is self.workspace:
                 continue
