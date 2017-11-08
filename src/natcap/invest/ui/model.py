@@ -956,10 +956,6 @@ class InVESTModel(QtWidgets.QMainWindow):
             'View documentation', self._check_local_docs)
         self.menuBar().addMenu(self.help_menu)
 
-    def autosave(self):
-        LOGGER.info('Adding autosave for current arguments.')
-        self._add_to_open_menu('autosaves', self.assemble_args())
-
     def build_open_menu(self):
         self.open_menu.clear()
         self.open_menu.addAction(
@@ -969,7 +965,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.open_menu.addSeparator()
 
         recently_opened_keys = [key for key in self.settings.allKeys()
-                                if key.startswith(('autosaves', 'scenarios'))]
+                                if key.startswith('scenarios')]
         for key in sorted(recently_opened_keys,
                           key=lambda key: key.split('/')[-1]):
             timestamp = datetime.datetime.strptime(key.split('/')[1],
@@ -990,7 +986,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                                           datetime.datetime.now().isoformat()),
                                json.dumps(data))
 
-        # If we have more than 10 autosave keys, remove the earliest keys so we
+        # If we have more than 10 keys, remove the earliest keys so we
         # only keep 10.
         # Sorted in increasing order of times.
         group_keys = sorted([key for key in self.settings.allKeys() if
@@ -1190,8 +1186,6 @@ class InVESTModel(QtWidgets.QMainWindow):
             # When the user pressed cancel, scenario_path == ''
             if not scenario_path:
                 return
-
-        self.autosave()
 
         LOGGER.info('Loading scenario from "%s"', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
