@@ -972,10 +972,18 @@ class InVESTModel(QtWidgets.QMainWindow):
                                 if key.startswith(('autosaves', 'scenarios'))]
         for key in sorted(recently_opened_keys,
                           key=lambda key: key.split('/')[-1]):
-            if key.startswith('autosaves'):
-                self.open_menu.addAction('Autosave: %s' % key)
+            timestamp = datetime.datetime.strptime(key.split('/')[1],
+                                                   '%Y-%m-%dT%H:%M:%S.%f')
+            if timestamp.date() == datetime.date.today():
+                date_label = 'Today at %s' % timestamp.strftime('%H:%M')
             else:
-                self.open_menu.addAction(key)
+                date_label = timestamp.strftime('%Y-%m-%d at %H:%m')
+
+            if key.startswith('autosaves'):
+                self.open_menu.addAction('Autosave: %s' % date_label)
+            else:
+                self.open_menu.addAction('Scenario: %s' %
+                                         os.path.basename(self.settings.value(key)))
 
     def _add_to_open_menu(self, key_group, data):
         self.settings.setValue('%s/%s' % (key_group,
