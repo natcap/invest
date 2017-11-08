@@ -916,6 +916,13 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.form.submitted.connect(self.execute_model)
 
+        # Settings files
+        self.settings = QtCore.QSettings(
+            QtCore.QSettings.IniFormat,
+            QtCore.QSettings.UserScope,
+            'Natural Capital Project',
+            self.label)
+
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File')
         self.file_menu.addAction(
@@ -926,10 +933,9 @@ class InVESTModel(QtWidgets.QMainWindow):
             qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_scenario_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
-        self.file_menu.addAction(
-            qtawesome.icon('fa.arrow-circle-o-up'),
-            'Open parameter file ...', self.load_scenario,
-            QtGui.QKeySequence(QtGui.QKeySequence.Open))
+        self.open_menu = QtWidgets.QMenu('Load parameters')
+        self.build_open_menu()
+        self.file_menu.addMenu(self.open_menu)
         self.file_menu.addAction(
             'Quit', self.close,
             QtGui.QKeySequence('Ctrl+Q'))
@@ -950,12 +956,43 @@ class InVESTModel(QtWidgets.QMainWindow):
             'View documentation', self._check_local_docs)
         self.menuBar().addMenu(self.help_menu)
 
-        # Settings files
-        self.settings = QtCore.QSettings(
-            QtCore.QSettings.IniFormat,
-            QtCore.QSettings.UserScope,
-            'Natural Capital Project',
-            self.label)
+    def autosave(self):
+        LOGGER.info('Adding autosave for current arguments.')
+        self._add_to_open_menu('autosaves', self.assemble_args())
+
+    def build_open_menu(self):
+        self.open_menu.clear()
+        self.open_menu.addAction(
+            qtawesome.icon('fa.arrow-circle-o-up'),
+            'Open parameter file ...', self.load_scenario,
+            QtGui.QKeySequence(QtGui.QKeySequence.Open))
+        self.open_menu.addSeparator()
+
+        recently_opened_keys = [key for key in self.settings.allKeys()
+                                if key.startswith(('autosaves', 'scenarios'))]
+        for key in sorted(recently_opened_keys,
+                          key=lambda key: key.split('/')[-1]):
+            if key.startswith('autosaves'):
+                self.open_menu.addAction('Autosave: %s' % key)
+            else:
+                self.open_menu.addAction(key)
+
+    def _add_to_open_menu(self, key_group, data):
+        self.settings.setValue('%s/%s' % (key_group,
+                                          datetime.datetime.now().isoformat()),
+                               json.dumps(data))
+
+        # If we have more than 10 autosave keys, remove the earliest keys so we
+        # only keep 10.
+        # Sorted in increasing order of times.
+        group_keys = sorted([key for key in self.settings.allKeys() if
+                             key.startswith(key_group)])
+        if len(group_keys) > 10:
+            # Remove the earliest keys.
+            for key in group_keys[:-10]:
+                self.settings.remove(key)
+
+        self.build_open_menu()
 
     def __setattr__(self, name, value):
         """Track Input instances in self.inputs.
@@ -1146,6 +1183,8 @@ class InVESTModel(QtWidgets.QMainWindow):
             if not scenario_path:
                 return
 
+        self.autosave()
+
         LOGGER.info('Loading scenario from "%s"', scenario_path)
         if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
             # Where should the tarfile be extracted to?
@@ -1166,6 +1205,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.load_args(args)
         self.window_title.filename = window_title_filename
 
+        self._add_to_open_menu('scenarios', scenario_path)
         self.statusBar().showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path),
             STATUSBAR_MSG_DURATION)
