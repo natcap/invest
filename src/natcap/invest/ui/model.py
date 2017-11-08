@@ -979,11 +979,11 @@ class InVESTModel(QtWidgets.QMainWindow):
             else:
                 date_label = timestamp.strftime('%Y-%m-%d at %H:%m')
 
-            if key.startswith('autosaves'):
-                self.open_menu.addAction('Autosave: %s' % date_label)
-            else:
-                self.open_menu.addAction('Scenario: %s' %
-                                         os.path.basename(self.settings.value(key)))
+            scenario_filename = json.loads(self.settings.value(key))
+
+            self.open_menu.addAction('%s (Loaded %s)' % (
+                os.sep.join(scenario_filename.split(os.sep)[-2:]),
+                date_label))
 
     def _add_to_open_menu(self, key_group, data):
         self.settings.setValue('%s/%s' % (key_group,
