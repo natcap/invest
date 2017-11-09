@@ -977,9 +977,18 @@ class InVESTModel(QtWidgets.QMainWindow):
 
             scenario_filename = json.loads(self.settings.value(key))
 
-            self.open_menu.addAction('%s (Loaded %s)' % (
+            scenario_action = QtWidgets.QAction('%s (Loaded %s)' % (
                 os.sep.join(scenario_filename.split(os.sep)[-2:]),
-                date_label))
+                date_label), self.open_menu)
+            scenario_action.setData(key)
+            scenario_action.triggered.connect(self._load_scenario_from_settings_key)
+            self.open_menu.addAction(scenario_action)
+
+    def _load_scenario_from_settings_key(self):
+        # self.sender() is set when this is called as a slot
+        previous_run_requested = self.sender().data()
+        scenario_path =json.loads(self.settings.value(previous_run_requested))
+        self.load_scenario(scenario_path)
 
     def _add_to_open_menu(self, key_group, data):
         self.settings.setValue('%s/%s' % (key_group,
