@@ -2519,3 +2519,83 @@ class ValidatorTest(_QtTest):
             return []
 
         validator.validate(target=_validate, args={})
+
+
+class IsProbablyScenarioTests(unittest.TestCase):
+    """Tests for our quick check for whether a file is a scenario."""
+
+    def setUp(self):
+        """Create a new workspace for each test."""
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up the workspace created for each test."""
+        shutil.rmtree(self.workspace)
+
+    def test_json_extension(self):
+        """Model UI scenario: invest.json extension is a scenario"""
+        from natcap.invest.ui import model
+
+        filepath = 'some_model.invest.json'
+        self.assertTrue(model.is_probably_scenario(filepath))
+
+    def test_tar_gz_extension(self):
+        """Model UI scenario: invest.tar.gz extension is a scenario"""
+        from natcap.invest.ui import model
+
+        filepath = 'some_model.invest.tar.gz'
+        self.assertTrue(model.is_probably_scenario(filepath))
+
+    def test_parameter_set(self):
+        """Model UI scenario: a parameter set should be a scenario."""
+        from natcap.invest.ui import model
+        from natcap.invest import scenarios
+
+        filepath = os.path.join(self.workspace, 'paramset.json')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        scenarios.write_parameter_set(filepath, args, 'test_model')
+
+        self.assertTrue(model.is_probably_scenario(filepath))
+
+    def test_parameter_archive(self):
+        """Model UI scenario: a parameter archive should be a scenario."""
+        from natcap.invest.ui import model
+        from natcap.invest import scenarios
+
+        filepath = os.path.join(self.workspace, 'paramset.tar.gz')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        scenarios.build_scenario_archive(args, 'test_model', filepath)
+
+        self.assertTrue(model.is_probably_scenario(filepath))
+
+    def test_parameter_logfile(self):
+        """Model UI scenario: a logfile should be a scenario."""
+        from natcap.invest.ui import model
+
+        filepath = os.path.join(self.workspace, 'logfile.txt')
+        with open(filepath, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO
+                Arguments:
+                suffix                           foo
+                some_int                         1
+                some_float                       2.33
+                workspace_dir                    some_workspace_dir
+
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
+            """))
+
+        self.assertTrue(model.is_probably_scenario(filepath))
+
+    def test_csv_not_a_parameter(self):
+        """Model UI scenario: a CSV is probably not a parameter set."""
+        from natcap.invest.ui import model
+
+        filepath = os.path.join(self.workspace, 'sample.csv')
+        with open(filepath, 'w') as sample_csv:
+            sample_csv.write('A,B,C\n')
+            sample_csv.write('"aaa","bbb","ccc"\n')
+
+        self.assertFalse(model.is_probably_scenario(filepath))
+
+
