@@ -2459,6 +2459,75 @@ class ModelTests(_QtTest):
         finally:
             del sys.modules[module_name]
 
+    def test_open_recent_menu(self):
+        """UI Model: Check for correct behavior of the open-recent menu."""
+        from natcap.invest import scenarios
+
+        model_ui = ModelTests.build_model()
+
+        scenarios_created = []
+        for scenario_index in range(11):
+            scenario_path = os.path.join(self.workspace,
+                                         'scenario_%s.invest.json' %
+                                         scenario_index)
+            args = {
+                'workspace_dir': 'workspace_%s' % scenario_index,
+            }
+
+            scenarios.write_parameter_set(scenario_path, args, 'test')
+            scenarios_created.append(scenario_path)
+            model_ui.load_scenario(scenario_path)
+
+        previous_scenario_actions = []
+        for action in model_ui.open_menu.actions():
+            if action.isSeparator() or action is model_ui.open_file_action:
+                continue
+            previous_scenario_actions.append(action.data())
+
+        # We should only have the 10 most recent scenarios
+        self.assertEqual(len(previous_scenario_actions), 10)
+        self.assertEqual(max(previous_scenario_actions),
+                         max(scenarios_created))
+
+        # The earliest scenario should have been booted off the list since
+        # we're only keeping the 10 most recent.
+        self.assertEqual(min(previous_scenario_actions),
+                         sorted(scenarios_created)[1])
+
+    def test_load_scenario_from_open_recent(self):
+        """UI Model: Check loading of scenario via open-recent menu."""
+        from natcap.invest import scenarios
+        model_ui = ModelTests.build_model()
+
+        scenario_filepath = os.path.join(self.workspace,
+                                         'scenario.invest.json')
+        args = {
+            'workspace_dir': 'workspace_foo',
+        }
+        scenarios.write_parameter_set(scenario_filepath, args, 'test')
+
+        model_ui.load_scenario(scenario_filepath)
+        self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
+        model_ui.workspace.set_value('some_other_workspace')
+        self.assertEqual(model_ui.workspace.value(), 'some_other_workspace')
+
+        last_run_scenario_actions = []
+        for action in model_ui.open_menu.actions():
+            if action.isSeparator() or action is model_ui.open_file_action:
+                continue
+            last_run_scenario_actions.append(action)
+
+        # There should be exactly one recently-loaded scenario
+        self.assertEqual(len(last_run_scenario_actions), 1)
+        self.assertEqual(last_run_scenario_actions[0].data(), scenario_filepath)
+
+        # When we trigger the action and process events, the scenario should
+        # be loaded into the UI.
+        action = last_run_scenario_actions[0]
+        action.trigger()
+        QT_APP.processEvents()
+        self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
+
 
 class ValidatorTest(_QtTest):
     def test_in_progress(self):

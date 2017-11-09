@@ -970,7 +970,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             None.
         """
         self.open_menu.clear()
-        self.open_menu.addAction(
+        self.open_file_action = self.open_menu.addAction(
             qtawesome.icon('fa.arrow-circle-o-up'),
             'Open parameter file ...', self.load_scenario,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
