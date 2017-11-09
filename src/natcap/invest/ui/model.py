@@ -1487,6 +1487,25 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.filename = 'loaded from autosave'
 
     def dragEnterEvent(self, event):
+        """Handle the event where something has been dragged into the window.
+
+        If the thing dragged into the window meets all the following rules:
+
+            * It has text data
+            * It has exactly 1 URL
+            * The filepath passed via the URL is probably a scenario (as
+                determined by ``model.is_probably_scenario()``)
+
+        Then a visual change is made to the model window (text color changes
+        and the background color of the window changes) and we accept the
+        event.
+
+        Parameters:
+            event (QDragEnterEvent): The event to handle.
+
+        Returns:
+            None.
+        """
         if (event.mimeData().hasText() and
                 len(event.mimeData().urls()) == 1 and
                 is_probably_scenario(event.mimeData().urls()[0].path())):
@@ -1503,9 +1522,32 @@ class InVESTModel(QtWidgets.QMainWindow):
             event.ignore()
 
     def dragLeaveEvent(self, event):
+        """If the user drags something out of the model, reset the stylesheet.
+
+        This is triggered when something dragged into the window is dragged
+        back out.
+
+        Parameters:
+            event (QDragLeaveEvent): The event to handle.
+
+        Returns:
+            None.
+        """
         self.setStyleSheet('')
 
     def dropEvent(self, event):
+        """When something is dropped onto the window.
+
+        Called after it's been dragged into the winodw via a QDragEnterEvent.
+        When something is dropped, we assume that it has 1 URL and that its
+        path should be loaded as a scenario.
+
+        Parameters:
+            event (QDropEvent): The event to handle.
+
+        Returns:
+            None.
+        """
         path = event.mimeData().urls()[0].path()
         self.setStyleSheet('')
         self.load_scenario(path)
