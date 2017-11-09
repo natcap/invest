@@ -957,6 +957,18 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.menuBar().addMenu(self.help_menu)
 
     def build_open_menu(self):
+        """(Re-)Build the "Open paramaeter file" menu.
+
+        This menu consists of:
+
+            * An option to select a new parameter file
+            * A separator
+            * A dynamically-generated list of the 10 most recently-accessed
+              scenario files.
+
+        Returns:
+            None.
+        """
         self.open_menu.clear()
         self.open_menu.addAction(
             qtawesome.icon('fa.arrow-circle-o-up'),
@@ -983,14 +995,38 @@ class InVESTModel(QtWidgets.QMainWindow):
                 os.sep.join(scenario_filepath.split(os.sep)[-2:]),
                 date_label), self.open_menu)
             scenario_action.setData(scenario_filepath)
-            scenario_action.triggered.connect(self._load_scenario_from_settings_key)
+            scenario_action.triggered.connect(
+                self._load_recent_scenario_from_action)
             self.open_menu.addAction(scenario_action)
 
-    def _load_scenario_from_settings_key(self):
+    @QtCore.Slot()
+    def _load_recent_scenario_from_action(self):
+        """Load a recent scenario when an action is triggered.
+
+        This slot is assumed to be called when an appropriate QAction is
+        triggered.  The ``data()`` set on the QAction must be the filename of
+        the scenario selected.  The scenario will be loaded in the model
+        interface.
+
+        Returns:
+            None.
+        """
         # self.sender() is set when this is called as a slot
         self.load_scenario(self.sender().data())
 
     def _add_to_open_menu(self, scenario_path):
+        """Add a scenario file to the Open-Recent menu.
+
+        This will also store the scenario path in the model's settings object
+        and will cause the Open-Recent menu to be rebuilt, limiting the number
+        of items in the menu to the 10 most recently-loaded scenario files.
+
+        Parameters:
+            scenario_path (string): The path to the scenario file.
+
+        Returns:
+            None.
+        """
         # load the {path: timestamp} map as a dict from self.settings
         # set the {path: timestamp} tuple
         # store the new value.
@@ -1006,7 +1042,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.settings.setValue('recent_scenarios',
                                json.dumps(dict(most_recent_scenario_tuples)))
-
         self.build_open_menu()
 
     def __setattr__(self, name, value):
