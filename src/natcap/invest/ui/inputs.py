@@ -571,7 +571,8 @@ class ValidButton(InfoButton):
         """Clear the icon, WhatsThis text and ToolTip text.
 
         Returns:
-            None."""
+            None.
+        """
         self.setIcon(QtGui.QIcon())  # clear the icon
         self.setWhatsThis('')
         self.setToolTip('')
@@ -1382,7 +1383,8 @@ class GriddedInput(InVESTModelInput):
         """Reset validity, sufficiency and the valid button state.
 
         Returns:
-            None."""
+            None.
+        """
         with self.validator_lock:
             self._valid = None
             self.sufficient = False
@@ -1572,7 +1574,6 @@ class Text(GriddedInput):
         Returns:
             ``None``
         """
-
         try:
             if isinstance(value, (int, float)):
                 value = str(value)
@@ -1590,7 +1591,8 @@ class Text(GriddedInput):
         """Reset the input to a 'blank' state.
 
         Returns:
-            None."""
+            None.
+        """
         self.textfield.clear()
         GriddedInput.clear(self)
 
@@ -1902,6 +1904,11 @@ class Checkbox(GriddedInput):
         self.satisfied = True
 
     def clear(self):
+        """Clear the checkbox's input by setting to unchecked.
+
+        Returns:
+            None.
+        """
         self.set_value(False)
         GriddedInput.clear(self)
 
@@ -1983,7 +1990,8 @@ class Dropdown(GriddedInput):
         only.
 
         Returns:
-            None."""
+            None.
+        """
         try:
             self.set_value(self.options[0])
         except IndexError:
@@ -2160,6 +2168,13 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
             QtWidgets.QSizePolicy.MinimumExpanding)  # vertical
 
     def clear(self):
+        """Reset the container to unchecked if it is checkable.
+
+        If the container is not checkable, nothing is done.
+
+        Returns:
+            None.
+        """
         if self.expandable:
             self.setChecked(False)
 
@@ -2506,7 +2521,8 @@ class Multi(Container):
         """Remove all widgets within the multi from the layout.
 
         Returns:
-            None."""
+            None.
+        """
         layout = self.layout()
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
