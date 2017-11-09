@@ -262,7 +262,6 @@ class SettingsDialog(OptionsDialog):
         self._global_opts_container = inputs.Container(label='Global options')
         self.layout().addWidget(self._global_opts_container)
 
-
         try:
             # Qt4
             cache_dir = QtGui.QDesktopServices.storageLocation(
@@ -351,8 +350,8 @@ class AboutDialog(QtWidgets.QDialog):
             <h1>InVEST</h1>
             <b>Version {version}</b> <br/> <br/>
 
-            Documentation: <a href="http://data.naturalcapitalproject.org/nightly-
-            build/invest-users-guide/html/">online</a><br/>
+            Documentation: <a href="http://data.naturalcapitalproject.org/
+            nightly-build/invest-users-guide/html/">online</a><br/>
             Homepage: <a href="http://naturalcapitalproject.org">
                         naturalcapitalproject.org</a><br/>
             Copyright 2017, The Natural Capital Project<br/>
@@ -477,6 +476,7 @@ class WindowTitle(QtCore.QObject):
         modified (bool): Whether the scenario file has been modified.  If so,
             a ``'*'`` is displayed next to the scenario filename.
     """
+
     # Signals must be defined as class attributes, and are transformed into
     # instance attributes on object initialization.
     title_changed = QtCore.Signal(unicode)
@@ -531,8 +531,10 @@ class WindowTitle(QtCore.QObject):
         except AttributeError:
             return ''
 
+
 ScenarioSaveOpts = collections.namedtuple(
-    'ScenarioSaveOpts', 'scenario_type use_relpaths include_workspace archive_path')
+    'ScenarioSaveOpts',
+    'scenario_type use_relpaths include_workspace archive_path')
 
 
 class ScenarioOptionsDialog(OptionsDialog):
@@ -556,7 +558,8 @@ class ScenarioOptionsDialog(OptionsDialog):
         """Initialize the ScenarioOptionsDialog.
 
         Parameters:
-            paramset_basename (string): The basename of the new parameter set file.
+            paramset_basename (string): The basename of the new parameter set
+                file.
 
         Returns:
             ``None``
@@ -814,6 +817,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
     If any of these attributes are not overridden, a warning will be raised.
     """
+
     def __init__(self, label, target, validator, localdoc):
         """Initialize the Model.
 
@@ -972,7 +976,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         """Clear all parameters saved for this model.
 
         Returns:
-            None."""
+            None.
+        """
         self.settings.clear()
         self.statusBar().showMessage('Cached parameters have been cleared.',
                                      STATUSBAR_MSG_DURATION)
