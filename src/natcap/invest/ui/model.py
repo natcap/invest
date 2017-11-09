@@ -964,46 +964,48 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
 
-        recently_opened_keys = [key for key in self.settings.allKeys()
-                                if key.startswith('scenarios')]
-        for key in sorted(recently_opened_keys,
-                          key=lambda key: key.split('/')[-1]):
-            timestamp = datetime.datetime.strptime(key.split('/')[1],
-                                                   '%Y-%m-%dT%H:%M:%S.%f')
-            if timestamp.date() == datetime.date.today():
-                date_label = 'Today at %s' % timestamp.strftime('%H:%M')
-            else:
-                date_label = timestamp.strftime('%Y-%m-%d at %H:%m')
 
-            scenario_filename = json.loads(self.settings.value(key))
+        recently_opened_scenarios = json.loads(
+            self.settings.value('recent_scenarios', '{}'))
+
+        for scenario_filepath, timestamp in sorted(
+                recently_opened_scenarios.items(), key=lambda x: x[1]):
+
+
+            time_obj = datetime.datetime.strptime(timestamp,
+                                                   '%Y-%m-%dT%H:%M:%S.%f')
+            if time_obj .date() == datetime.date.today():
+                date_label = 'Today at %s' % time_obj.strftime('%H:%M')
+            else:
+                date_label = time_obj.strftime('%Y-%m-%d at %H:%m')
 
             scenario_action = QtWidgets.QAction('%s (Loaded %s)' % (
-                os.sep.join(scenario_filename.split(os.sep)[-2:]),
+                os.sep.join(scenario_filepath.split(os.sep)[-2:]),
                 date_label), self.open_menu)
-            scenario_action.setData(key)
+            scenario_action.setData(scenario_filepath)
             scenario_action.triggered.connect(self._load_scenario_from_settings_key)
             self.open_menu.addAction(scenario_action)
 
     def _load_scenario_from_settings_key(self):
         # self.sender() is set when this is called as a slot
-        previous_run_requested = self.sender().data()
-        scenario_path =json.loads(self.settings.value(previous_run_requested))
-        self.load_scenario(scenario_path)
+        self.load_scenario(self.sender().data())
 
-    def _add_to_open_menu(self, key_group, data):
-        self.settings.setValue('%s/%s' % (key_group,
-                                          datetime.datetime.now().isoformat()),
-                               json.dumps(data))
+    def _add_to_open_menu(self, scenario_path):
+        # load the {path: timestamp} map as a dict from self.settings
+        # set the {path: timestamp} tuple
+        # store the new value.
+        recently_opened_scenarios = json.loads(
+            self.settings.value('recent_scenarios', '{}'))
+        timestamp = datetime.datetime.now().isoformat()
 
-        # If we have more than 10 keys, remove the earliest keys so we
-        # only keep 10.
-        # Sorted in increasing order of times.
-        group_keys = sorted([key for key in self.settings.allKeys() if
-                             key.startswith(key_group)])
-        if len(group_keys) > 10:
-            # Remove the earliest keys.
-            for key in group_keys[:-10]:
-                self.settings.remove(key)
+        recently_opened_scenarios[scenario_path] = timestamp
+
+        most_recent_scenario_tuples = sorted(
+            recently_opened_scenarios.items(), key=lambda x: x[1],
+            reverse=True)[:10]
+
+        self.settings.setValue('recent_scenarios',
+                               json.dumps(dict(most_recent_scenario_tuples)))
 
         self.build_open_menu()
 
@@ -1216,7 +1218,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.load_args(args)
         self.window_title.filename = window_title_filename
 
-        self._add_to_open_menu('scenarios', scenario_path)
+        self._add_to_open_menu(scenario_path)
         self.statusBar().showMessage(
             'Loaded scenario from %s' % os.path.abspath(scenario_path),
             STATUSBAR_MSG_DURATION)
