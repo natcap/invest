@@ -89,20 +89,13 @@ def is_probably_scenario(filepath):
 
     # Is it a scenario parameter set?
     with open(filepath) as opened_file:
-        try:
-            # Valid JSON starts with '{'
-            if open(filepath).read(1) == '{':
-                return True
-        except Exception:
-            pass
+        # Valid JSON starts with '{'
+        if opened_file.read(1) == '{':
+            return True
 
         # Is it a logfile?
-        try:
-            if 'Arguments:' in ' '.join(opened_file.readlines(20)):
-                return True
-        except ValueError:
-            # When parameters not parseable, so not a logfile.
-            pass
+        if 'Arguments:' in ' '.join(opened_file.readlines(20)):
+            return True
 
     try:
         # If we can open it as a .tar.gz, assume it's a scenario
