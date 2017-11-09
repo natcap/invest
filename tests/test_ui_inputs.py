@@ -961,7 +961,10 @@ class DropdownTest(GriddedInputTest):
     def test_clear_no_options(self):
         input_instance = self.__class__.create_input(
             label='label', options=())
-        input_instance.clear()
+        try:
+            input_instance.clear()
+        except Exception as e:
+            self.fail("Unexpected exception: %s" % repr(e))
 
     def test_set_value(self):
         input_instance = self.__class__.create_input(
