@@ -721,6 +721,20 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
         return (None, None)
 
 
+class UndoScenarioCommand(QtWidgets.QUndoCommand):
+    def __init__(self, model_window, new_scenario_path):
+        QtWidgets.QUndoCommand.__init__(self, 'Undo scenario load')
+        self.model_window = model_window
+        self.scenario_path = new_scenario_path
+        self.current_args = model_window.assemble_args()
+
+    def undo(self):
+        self.model_window.load_args(self.current_args)
+
+    def redo(self):
+        self.model_window.load_scenario(self.scenario_path)
+
+
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
     """A dialog for presenting errors from whole-model validation."""
 
@@ -839,6 +853,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self._validator.finished.connect(self._validation_finished)
         self.prompt_on_close = True
         self.exit_code = None
+        self.undo_stack = QtWidgets.QUndoStack(self)
 
         # dialogs
         self.about_dialog = AboutDialog()
@@ -1252,6 +1267,9 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
+
+        undo_command = UndoScenarioCommand(self, scenario_path)
+        self.undo_stack.push(undo_command)
 
         self._add_to_open_menu(scenario_path)
         self.statusBar().showMessage(
