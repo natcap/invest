@@ -295,7 +295,7 @@ autodoc_mock_imports = [
     'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
     'shapely.wkt', 'shapely.ops',
     'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
-    'PyQt4.QtCore',
+    'PyQt4.QtCore', 'geoprocessing_core'
 ]
 
 # Mock class with attribute handling.  As suggested by:
