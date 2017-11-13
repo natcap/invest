@@ -81,7 +81,7 @@ def is_probably_scenario(filepath):
         filepath (string): A path to a file on disk.
 
     Returns:
-        Boolean, whether the filepath is believed to be a scenario.
+        True if the filepath is likely to be a scenario.  False otherwise.
     """
     # Does the extension indicate that it's probably a scenario?
     if filepath.endswith(('.invest.json', '.invest.tar.gz')):
