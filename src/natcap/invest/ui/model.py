@@ -286,6 +286,7 @@ class SettingsDialog(OptionsDialog):
         """
         OptionsDialog.__init__(self, title='InVEST Settings',
                                modal=True)
+        self.resize(600, 200)
 
         self.global_label = QtWidgets.QLabel(
             'Note: these settings affect all InVEST models.')
@@ -383,8 +384,8 @@ class AboutDialog(QtWidgets.QDialog):
             <h1>InVEST</h1>
             <b>Version {version}</b> <br/> <br/>
 
-            Documentation: <a href="http://data.naturalcapitalproject.org/nightly-
-            build/invest-users-guide/html/">online</a><br/>
+            Documentation: <a href="http://data.naturalcapitalproject.org/
+            nightly-build/invest-users-guide/html/">online</a><br/>
             Homepage: <a href="http://naturalcapitalproject.org">
                         naturalcapitalproject.org</a><br/>
             Copyright 2017, The Natural Capital Project<br/>
@@ -509,6 +510,7 @@ class WindowTitle(QtCore.QObject):
         modified (bool): Whether the scenario file has been modified.  If so,
             a ``'*'`` is displayed next to the scenario filename.
     """
+
     # Signals must be defined as class attributes, and are transformed into
     # instance attributes on object initialization.
     title_changed = QtCore.Signal(unicode)
@@ -563,8 +565,10 @@ class WindowTitle(QtCore.QObject):
         except AttributeError:
             return ''
 
+
 ScenarioSaveOpts = collections.namedtuple(
-    'ScenarioSaveOpts', 'scenario_type use_relpaths include_workspace archive_path')
+    'ScenarioSaveOpts',
+    'scenario_type use_relpaths include_workspace archive_path')
 
 
 class ScenarioOptionsDialog(OptionsDialog):
@@ -588,7 +592,8 @@ class ScenarioOptionsDialog(OptionsDialog):
         """Initialize the ScenarioOptionsDialog.
 
         Parameters:
-            paramset_basename (string): The basename of the new parameter set file.
+            paramset_basename (string): The basename of the new parameter set
+                file.
 
         Returns:
             ``None``
@@ -788,6 +793,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.label.setWordWrap(True)
         self.scroll_widget.widget().layout().addWidget(self.label)
         self.scroll_widget.widget().layout().insertStretch(-1)
+        self.scroll_widget.setWidgetResizable(True)
 
         self.buttonbox = QtWidgets.QDialogButtonBox()
         self.back_button = QtWidgets.QPushButton(' Back')
@@ -846,6 +852,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
     If any of these attributes are not overridden, a warning will be raised.
     """
+
     def __init__(self, label, target, validator, localdoc):
         """Initialize the Model.
 
@@ -968,6 +975,16 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtGui.QKeySequence('Ctrl+Q'))
         self.menuBar().addMenu(self.file_menu)
 
+        self.edit_menu = QtWidgets.QMenu('&Edit')
+        self.edit_menu.addAction(
+            qtawesome.icon('fa.undo', color='red'),
+            'Clear inputs', self.clear_inputs)
+        self.edit_menu.addAction(
+            qtawesome.icon('fa.trash-o'),
+            'Clear parameter cache for %s' % self.label,
+            self.clear_local_settings)
+        self.menuBar().addMenu(self.edit_menu)
+
         self.dev_menu = QtWidgets.QMenu('&Development')
         self.dev_menu.addAction(
             qtawesome.icon('fa.file-code-o'),
@@ -989,6 +1006,29 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtCore.QSettings.UserScope,
             'Natural Capital Project',
             self.label)
+
+    def clear_local_settings(self):
+        """Clear all parameters saved for this model.
+
+        Returns:
+            None.
+        """
+        self.settings.clear()
+        self.statusBar().showMessage('Cached parameters have been cleared.',
+                                     STATUSBAR_MSG_DURATION)
+
+    def clear_inputs(self):
+        """Clear the values from any inputs except the workspace.
+
+        This is done for each input object by calling its clear() method.
+
+        Returns:
+            None
+        """
+        for input_obj in self.inputs:
+            if input_obj is self.workspace:
+                continue
+            input_obj.clear()
 
     def __setattr__(self, name, value):
         """Track Input instances in self.inputs.
@@ -1336,12 +1376,17 @@ class InVESTModel(QtWidgets.QMainWindow):
         # window.  I'd prefer to have the window resized according to some
         # internal properties, but the scroll area (self.form.scroll_area)
         # makes that difficult.
-        # Adding 100, 150 to the dimensions allows for the window to be wide
+        # Adding 200, 250 to the dimensions allows for the window to be wide
         # enough to not hide any widgets in the form, and tall enough to
         # usually show most of the rows in the layout.
+        ideal_width = self.form.scroll_area.widget().minimumSize().width() + 200
+        ideal_height = max(
+            self.sizeHint().height() + 100,
+            self.form.scroll_area.widget().minimumSize().height() + 250)
+        screen_geometry = QtWidgets.QDesktopWidget().availableGeometry()
         self.resize(
-            self.form.scroll_area.widget().minimumSize().width()+100,
-            self.form.scroll_area.widget().minimumSize().height()+150)
+            min(screen_geometry.width(), ideal_width),
+            min(screen_geometry.height(), ideal_height))
 
         inputs.center_window(self)
 

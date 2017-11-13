@@ -97,7 +97,6 @@ InVEST relies on the following python packages:
   * pyAMG
   * cython
   * setuptools
-  * dbfpy
   * poster
   * pygeoprocessing
   * natcap.versioner

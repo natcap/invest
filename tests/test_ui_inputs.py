@@ -112,6 +112,14 @@ class InVESTModelInputTest(_QtTest):
         input_instance = self.__class__.create_input(label='foo', helptext='bar')
         self.assertEqual(input_instance.helptext, 'bar')
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo')
+        if input_instance.__class__.__name__ == 'InVESTModelInput':
+            with self.assertRaises(NotImplementedError):
+                input_instance.clear()
+        else:
+            self.fail('Test class must reimplement this test method.')
+
     def test_interactive(self):
         input_instance = self.__class__.create_input(label='foo', interactive=True)
         self.assertEqual(input_instance.interactive, True)
@@ -296,6 +304,17 @@ class GriddedInputTest(InVESTModelInputTest):
         input_instance = self.__class__.create_input(label='foo')
         self.assertTrue(isinstance(input_instance.help_button,
                                    QtWidgets.QWidget))
+
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo')
+        # simulate successful validation completion.
+        input_instance._validation_finished([])
+        self.assertEqual(input_instance._valid, True)
+        input_instance.clear()
+        self.assertEqual(input_instance.valid_button.whatsThis(), '')
+        self.assertEqual(input_instance.valid_button.toolTip(), '')
+        self.assertEqual(input_instance._valid, None)
+        self.assertEqual(input_instance.sufficient, False)
 
     def test_validate_passes(self):
         #"""UI: Validation that passes should affect validity."""
@@ -597,6 +616,13 @@ class TextTest(GriddedInputTest):
         self.assertEqual(event.isAccepted(), True)
         self.assertEqual(input_instance.value(), 'Hello world!')
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='text')
+        input_instance.set_value('foo')
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), '')
+        self.assertEqual(input_instance.valid(), None)
+
 
 class PathTest(TextTest):
     @staticmethod
@@ -641,6 +667,17 @@ class PathTest(TextTest):
         if input_instance.__class__.__name__ != '_Path':
             input_instance.path_select_button.path_selected.emit(u'/tmp/foo')
             self.assertTrue(input_instance.value(), '/tmp/foo')
+
+    def test_path_dialog_cancelled(self):
+        input_instance = self.__class__.create_input(label='foo')
+        # Only run this test on subclasses of path
+        if input_instance.__class__.__name__ != '_Path':
+            # initial value should not be overwritten by the new value.
+            input_instance.set_value('some_value')
+
+            # path is blank when the dialog was cancelled.
+            input_instance.path_select_button.path_selected.emit(u'')
+            self.assertTrue(input_instance.value(), 'some_value')
 
     def test_path_selected_cyrillic(self):
         input_instance = self.__class__.create_input(label='foo')
@@ -800,6 +837,12 @@ class CheckboxTest(GriddedInputTest):
 
         callback.assert_called_with(True)
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='new_label')
+        input_instance.set_value(True)
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), False)
+
     def test_valid(self):
         input_instance = self.__class__.create_input(label='new_label')
         self.assertEqual(input_instance.value(), False)
@@ -919,6 +962,22 @@ class DropdownTest(GriddedInputTest):
             label='label', options=(u'Þingvellir',))
         self.assertEqual(input_instance.options, [u'Þingvellir'])
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=('foo', 'bar', 'baz'))
+        input_instance.set_value('bar')
+        self.assertEqual(input_instance.value(), 'bar')
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), 'foo')
+
+    def test_clear_no_options(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=())
+        try:
+            input_instance.clear()
+        except Exception as e:
+            self.fail("Unexpected exception: %s" % repr(e))
+
     def test_set_value(self):
         input_instance = self.__class__.create_input(
             label='label', options=('foo', 'bar', 'baz'))
@@ -1037,6 +1096,13 @@ class ContainerTest(InVESTModelInputTest):
         self.assertEqual(input_instance.expanded, True)
 
         input_instance.expanded = False
+        self.assertEqual(input_instance.expanded, False)
+
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo',
+                                                     expandable=True)
+        input_instance.expanded = True
+        input_instance.clear()
         self.assertEqual(input_instance.expanded, False)
 
     def test_value_changed_signal(self):
@@ -1198,6 +1264,18 @@ class MultiTest(ContainerTest):
         input_instance.add_link.linkActivated.emit('add_new')
 
         self.assertEqual(input_instance.value(), [''])
+
+    def test_clear(self):
+        input_instance = self.__class__.create_input(
+            label='foo',
+            callable_=self.__class__.create_sample_callable(label='foo'))
+
+        # Add a few text inputs to this multi
+        for _ in xrange(3):
+            input_instance.add_item()
+
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), [])
 
     def test_set_value_nonexpandable(self):
         pass
@@ -2502,6 +2580,18 @@ class ModelTests(_QtTest):
             QtCore.Qt.NoModifier)
         model.dragEnterEvent(drag_event)
         self.assertFalse(drag_event.isAccepted())
+
+    def test_clear_local_settings(self):
+        """UI Model: Check that we can clear local settings."""
+        model_ui = ModelTests.build_model()
+
+        # write something to settings and check it's been saved
+        model_ui.save_lastrun()
+        self.assertEqual(model_ui.settings.allKeys(), ['lastrun'])
+
+        # clear settings and verify it's been cleared.
+        model_ui.clear_local_settings()
+        self.assertEqual(model_ui.settings.allKeys(), [])
 
 
 class ValidatorTest(_QtTest):

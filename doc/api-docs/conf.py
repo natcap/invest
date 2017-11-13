@@ -293,7 +293,7 @@ autodoc_mock_imports = [
     'pylab', 'pyamg', 'osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
     'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
     'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
-    'shapely.wkt', 'shapely.ops',
+    'shapely.wkt', 'shapely.ops', 'shapely.speedups',
     'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
     'PyQt4.QtCore',
 ]

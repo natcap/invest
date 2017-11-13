@@ -567,6 +567,16 @@ class ValidButton(InfoButton):
         InfoButton.__init__(self, *args, **kwargs)
         self.successful = True
 
+    def clear(self):
+        """Clear the icon, WhatsThis text and ToolTip text.
+
+        Returns:
+            None.
+        """
+        self.setIcon(QtGui.QIcon())  # clear the icon
+        self.setWhatsThis('')
+        self.setToolTip('')
+
     def set_errors(self, errors):
         """Set the error message and style based on the provided errors.
 
@@ -1051,6 +1061,19 @@ class InVESTModelInput(QtCore.QObject):
             self.sufficient = new_sufficiency
             self.sufficiency_changed.emit(new_sufficiency)
 
+    def clear(self):
+        """Reset the input to an initial, 'blank' state.
+
+        This method must be reimplemented for each subclass.
+
+        Returns:
+            None.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError
+
     def visible(self):
         """Whether the input is supposed to be visible.
 
@@ -1356,6 +1379,17 @@ class GriddedInput(InVESTModelInput):
         self.validator_lock.release()
         return self._valid
 
+    def clear(self):
+        """Reset validity, sufficiency and the valid button state.
+
+        Returns:
+            None.
+        """
+        with self.validator_lock:
+            self._valid = None
+            self.sufficient = False
+        self.valid_button.clear()
+
     @QtCore.Slot(int)
     def _hideability_changed(self, show_widgets):
         """Set the hidden state of component widgets.
@@ -1540,7 +1574,6 @@ class Text(GriddedInput):
         Returns:
             ``None``
         """
-
         try:
             if isinstance(value, (int, float)):
                 value = str(value)
@@ -1553,6 +1586,15 @@ class Text(GriddedInput):
             self.set_hidden(False)
 
         self.textfield.setText(value)
+
+    def clear(self):
+        """Reset the input to a 'blank' state.
+
+        Returns:
+            None.
+        """
+        self.textfield.clear()
+        GriddedInput.clear(self)
 
 
 class _Path(Text):
@@ -1709,6 +1751,19 @@ class _Path(Text):
             self.help_button,
         ]
 
+    def _handle_file_button_selection(self, value):
+        """Handle the case when the user presses 'cancel' in the file dialog.
+
+        Parameters:
+            value (string): The path selected.  This path will be ``''`` if the
+                dialog was cancelled.
+
+        Returns:
+            ``None``
+        """
+        if value != '':
+            self.textfield.setText(value)
+
 
 class Folder(_Path):
     """An InVESTModelInput for selecting a folder."""
@@ -1739,7 +1794,7 @@ class Folder(_Path):
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FolderButton('Select folder')
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(self._handle_file_button_selection)
 
         # index 3 is the column place right before the help button, after the
         # textfield.
@@ -1778,7 +1833,8 @@ class File(_Path):
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FileButton('Select file')
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(
+            self._handle_file_button_selection)
 
         # Index 3 is the column to the right of the textfield, to the left of
         # the help button.
@@ -1819,7 +1875,8 @@ class SaveFile(_Path):
                        hideable, validator=validator)
         self.path_select_button = SaveFileButton('Select file',
                                                  default_savefile)
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(
+            self._handle_file_button_selection)
         self.widgets[3] = self.path_select_button
 
         if self.hideable:
@@ -1860,6 +1917,15 @@ class Checkbox(GriddedInput):
         self.widgets[0] = None  # No need for a valid button
         self.widgets[1] = self.checkbox  # replace label with checkbox
         self.satisfied = True
+
+    def clear(self):
+        """Clear the checkbox's input by setting to unchecked.
+
+        Returns:
+            None.
+        """
+        self.set_value(False)
+        GriddedInput.clear(self)
 
     def value(self):
         """Get the value of the checkbox.
@@ -1930,6 +1996,23 @@ class Dropdown(GriddedInput):
         # Init hideability if needed
         if self.hideable:
             self._hideability_changed(False)
+
+    def clear(self):
+        """Reset the dropdown to a 'blank' state.
+
+        If the dropdown has options set, the menu will be reset to the item at
+        index 0.  If there are no options, validity and sufficiency is reset
+        only.
+
+        Returns:
+            None.
+        """
+        try:
+            self.set_value(self.options[0])
+        except IndexError:
+            # When there are no options
+            pass
+        GriddedInput.clear(self)
 
     @QtCore.Slot(int)
     def _index_changed(self, newindex):
@@ -2097,7 +2180,18 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
 
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,  # horizontal
-            QtWidgets.QSizePolicy.MinimumExpanding)  # vertical
+            QtWidgets.QSizePolicy.Maximum)  # vertical
+
+    def clear(self):
+        """Reset the container to unchecked if it is checkable.
+
+        If the container is not checkable, nothing is done.
+
+        Returns:
+            None.
+        """
+        if self.expandable:
+            self.setChecked(False)
 
     @QtCore.Slot(bool)
     def _hide_widgets(self, check_state):
@@ -2131,7 +2225,6 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         """
         if self.isCheckable():
             self._hide_widgets(self.value())
-        self.resize(self.sizeHint())
 
     @property
     def expanded(self):
@@ -2351,7 +2444,7 @@ class Multi(Container):
         Returns:
             ``None``
         """
-        self.clear()
+        self.clear_layout()
         for input_value in values:
             new_input_instance = self.callable_()
             new_input_instance.set_value(input_value)
@@ -2438,16 +2531,26 @@ class Multi(Container):
                          1,  # row span
                          layout.columnCount())  # span all columns
 
+    def clear_layout(self):
+        """Remove all widgets within the multi from the layout.
+
+        Returns:
+            None.
+        """
+        layout = self.layout()
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(None)
+        self._append_add_link()
+
     def clear(self):
         """Clear all inputs that have been added to the Multi.
 
         Returns:
             ``None``
         """
-        layout = self.layout()
-        for i in reversed(range(layout.count())):
-            layout.itemAt(i).widget().setParent(None)
-        self._append_add_link()
+        self.clear_layout()
+        self.items = []
+        self.remove_buttons = []
 
     def remove(self, index):
         """Remove a specific input from the Multi.
@@ -2459,7 +2562,7 @@ class Multi(Container):
             ``None``
         """
         # clear all widgets from the layout.
-        self.clear()
+        self.clear_layout()
 
         self.items.pop(index)
         self.remove_buttons.pop(index)
