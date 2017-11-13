@@ -1,11 +1,217 @@
 """InVEST specific code utils."""
 import math
 import os
+import contextlib
+import logging
+import threading
+import tempfile
+import shutil
+from datetime import datetime
+import time
+import csv
 
 import numpy
 from osgeo import gdal
 from osgeo import osr
-import natcap.invest.pygeoprocessing_0_3_3
+import pygeoprocessing
+
+LOGGER = logging.getLogger(__name__)
+LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
+DATE_FMT = "%m/%d/%Y %H:%M:%S "
+
+# GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
+# A dict clarifies the mapping between levels.
+GDAL_ERROR_LEVELS = {
+    gdal.CE_None: logging.NOTSET,
+    gdal.CE_Debug: logging.DEBUG,
+    gdal.CE_Warning: logging.WARNING,
+    gdal.CE_Failure: logging.ERROR,
+    gdal.CE_Fatal: logging.CRITICAL,
+}
+
+
+@contextlib.contextmanager
+def capture_gdal_logging():
+    """Context manager for logging GDAL errors with python logging.
+
+    GDAL error messages are logged via python's logging system, at a severity
+    that corresponds to a log level in ``logging``.  Error messages are logged
+    with the ``osgeo.gdal`` logger.
+
+    Parameters:
+        ``None``
+
+    Returns:
+        ``None``"""
+    osgeo_logger = logging.getLogger('osgeo')
+
+    def _log_gdal_errors(err_level, err_no, err_msg):
+        """Log error messages to osgeo.
+
+        All error messages are logged with reasonable ``logging`` levels based
+        on the GDAL error level.
+
+        Parameters:
+            err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
+            err_no (int): The GDAL error number.  For a full listing of error
+                codes, see: http://www.gdal.org/cpl__error_8h.html
+            err_msg (string): The error string.
+
+        Returns:
+            ``None``"""
+        osgeo_logger.log(
+            level=GDAL_ERROR_LEVELS[err_level],
+            msg='[errno {err}] {msg}'.format(
+                err=err_no, msg=err_msg.replace('\n', ' ')))
+
+    gdal.PushErrorHandler(_log_gdal_errors)
+    try:
+        yield
+    finally:
+        gdal.PopErrorHandler()
+
+
+def _format_time(seconds):
+    """Render the integer number of seconds as a string.  Returns a string.
+    """
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    hours = int(hours)
+    minutes = int(minutes)
+
+    if hours > 0:
+        return "%sh %sm %ss" % (hours, minutes, seconds)
+
+    if minutes > 0:
+        return "%sm %ss" % (minutes, seconds)
+    return "%ss" % seconds
+
+
+@contextlib.contextmanager
+def prepare_workspace(workspace, name, logging_level=logging.NOTSET):
+    if not os.path.exists(workspace):
+        os.makedirs(workspace)
+
+    logfile = os.path.join(
+        workspace,
+        'InVEST-{modelname}-log-{timestamp}.txt'.format(
+            modelname='-'.join(name.replace(':', '').split(' ')),
+            timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
+
+    with capture_gdal_logging(), log_to_file(logfile,
+                                             logging_level=logging_level):
+        with sandbox_tempdir(dir=workspace):
+            logging.captureWarnings(True)
+            LOGGER.info('Writing log messages to %s', logfile)
+            start_time = time.time()
+            try:
+                yield
+            finally:
+                LOGGER.info('Elapsed time: %s',
+                            _format_time(round(time.time() - start_time, 2)))
+                logging.captureWarnings(False)
+
+
+class ThreadFilter(logging.Filter):
+    """When used, this filters out log messages that were recorded from other
+    threads.  This is especially useful if we have logging coming from several
+    concurrent threads.
+    Arguments passed to the constructor:
+        thread_name - the name of the thread to identify.  If the record was
+            reported from this thread name, it will be passed on.
+    """
+    def __init__(self, thread_name):
+        logging.Filter.__init__(self)
+        self.thread_name = thread_name
+
+    def filter(self, record):
+        if record.threadName == self.thread_name:
+            return True
+        return False
+
+
+@contextlib.contextmanager
+def log_to_file(logfile, threadname=None, logging_level=logging.NOTSET,
+                log_fmt=LOG_FMT, date_fmt=DATE_FMT):
+    """Log all messages within this context to a file.
+
+    Parameters:
+        logfile (string): The path to where the logfile will be written.
+            If there is already a file at this location, it will be
+            overwritten.
+        threadname=None (string): If None, logging from all threads will be
+            included in the log.  If a string, only logging from the thread
+            with the same name will be included in the logfile.
+        logging_level=logging.NOTSET (int): The logging threshold.  Log
+            messages with a level less than this will be automatically
+            excluded from the logfile.  The default value (``logging.NOTSET``)
+            will cause all logging to be captured.
+        log_fmt=LOG_FMT (string): The logging format string to use.  If not
+            provided, ``utils.LOG_FMT`` will be used.
+        date_fmt=DATE_FMT (string): The logging date format string to use.
+            If not provided, ``utils.DATE_FMT`` will be used.
+
+
+    Yields:
+        ``handler``: An instance of ``logging.FileHandler`` that
+            represents the file that is being written to.
+
+    Returns:
+        ``None``"""
+    if os.path.exists(logfile):
+        LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+
+    if not threadname:
+        threadname = threading.current_thread().name
+
+    handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
+    formatter = logging.Formatter(log_fmt, date_fmt)
+    thread_filter = ThreadFilter(threadname)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.NOTSET)
+    root_logger.addHandler(handler)
+    handler.addFilter(thread_filter)
+    handler.setFormatter(formatter)
+    handler.setLevel(logging_level)
+    try:
+        yield handler
+    finally:
+        handler.close()
+        root_logger.removeHandler(handler)
+
+
+@contextlib.contextmanager
+def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
+    """Create a temporary directory for this context and clean it up on exit.
+
+    Parameters are identical to those for :py:func:`tempfile.mkdtemp`.
+
+    When the context manager exits, the created temporary directory is
+    recursively removed.
+
+    Parameters:
+        suffix='' (string): a suffix for the name of the directory.
+        prefix='tmp' (string): the prefix to use for the directory name.
+        dir=None (string or None): If a string, a directory that should be
+            the parent directory of the new temporary directory.  If None,
+            tempfile will determine the appropriate tempdir to use as the
+            parent folder.
+
+    Yields:
+        ``sandbox`` (string): The path to the new folder on disk.
+
+    Returns:
+        ``None``"""
+    sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
+
+    try:
+        yield sandbox
+    finally:
+        try:
+            shutil.rmtree(sandbox)
+        except OSError:
+            LOGGER.exception('Could not remove sandbox %s', sandbox)
 
 
 def make_suffix_string(args, suffix_key):
@@ -118,7 +324,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     # object in interblocks()
     kernel_dataset.FlushCache()
 
-    for block_data, kernel_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(
+    for block_data, kernel_block in pygeoprocessing.iterblocks(
             kernel_filepath):
         kernel_block /= integration
         kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
@@ -190,3 +396,94 @@ def build_file_registry(base_file_path_list, file_suffix):
                 duplicate_keys, duplicate_paths))
 
     return f_reg
+
+
+def _attempt_float(value):
+    """Attempt to cast `value` to a float.  If fail, return original value."""
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
+
+def build_lookup_from_csv(
+        table_path, key_field, to_lower=True, numerical_cast=True,
+        warn_if_missing=True):
+    """Read a CSV table into a dictionary indexed by `key_field`.
+
+    Creates a dictionary from a CSV whose keys are unique entries in the CSV
+    table under the column named by `key_field` and values are dictionaries
+    indexed by the other columns in `table_path` including `key_field` whose
+    values are the values on that row of the CSV table.
+
+    Parameters:
+        table_path (string): path to a CSV file containing at
+            least the header key_field
+        key_field: (string): a column in the CSV file at `table_path` that
+            can uniquely identify each row in the table.  If `numerical_cast`
+            is true the values will be cast to floats/ints/unicode if
+            possible.
+        to_lower (string): if True, converts all unicode in the CSV,
+            including headers and values to lowercase, otherwise uses raw
+            string values.
+        numerical_cast (bool): If true, all values in the CSV table will
+            attempt to be cast to a floating point type; if it fails will be
+            left as unicode.  If false, all values will be considered raw
+            unicode.
+        warn_if_missing (bool): If True, warnings are logged if there are
+            empty headers or value rows.
+
+    Returns:
+        lookup_dict (dict): a dictionary of the form {
+                key_field_0: {csv_header_0: value0, csv_header_1: value1...},
+                key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}
+            }
+
+        if `to_lower` all strings including key_fields and values are
+        converted to lowercase unicde.  if `numerical_cast` all values
+        that can be represented as floats are, otherwise unicode.
+    """
+    with open(table_path) as table_file:
+        reader = csv.reader(table_file)
+        header_row = reader.next()
+        header_row = [unicode(x) for x in header_row]
+        key_field = unicode(key_field)
+        if to_lower:
+            key_field = key_field.lower()
+            header_row = [x.lower() for x in header_row]
+        if key_field not in header_row:
+            raise ValueError(
+                '%s expected in %s for the CSV file at %s' % (
+                    key_field, header_row, table_path))
+        if warn_if_missing and '' in header_row:
+            LOGGER.warn(
+                "There are empty strings in the header row at %s", table_path)
+        key_index = header_row.index(key_field)
+        lookup_dict = {}
+        for row in reader:
+            if to_lower:
+                row = [x.lower() for x in row]
+            if numerical_cast:
+                row = [_attempt_float(x) for x in row]
+            if warn_if_missing and '' in row:
+                LOGGER.warn(
+                    "There are empty strings in row %s in %s", row,
+                    table_path)
+            lookup_dict[row[key_index]] = dict(zip(header_row, row))
+        return lookup_dict
+
+
+def make_directories(directory_list):
+    """Create directories in `directory_list` if they do not already exist."""
+    if not isinstance(directory_list, list):
+        raise ValueError(
+            "Expected `directory_list` to be an instance of `list` instead "
+            "got type %s instead", type(directory_list))
+
+    for path in directory_list:
+        # From http://stackoverflow.com/a/14364249/42897
+        try:
+            os.makedirs(path)
+        except OSError:
+            if not os.path.isdir(path):
+                raise

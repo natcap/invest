@@ -1,4 +1,5 @@
 """InVEST Seasonal Water Yield Model."""
+from __future__ import absolute_import
 
 import os
 import logging
@@ -14,12 +15,12 @@ from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
-from  ..  import utils
+import pygeoprocessing
+
+from .. import utils
+from .. import validation
 
 import seasonal_water_yield_core  #pylint: disable=import-error
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger(
     'natcap.invest.seasonal_water_yield.seasonal_water_yield')
@@ -71,6 +72,7 @@ _TMP_BASE_FILES = {
     'kc_path_list': ['kc_%d.tif' % x for x in xrange(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
+    'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
     }
 
 
@@ -326,13 +328,12 @@ def _execute(args):
         l_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(file_registry['l_path'])
 
         def l_avail_op(l_array):
-            """Calculate equation [8] L_avail = max(gamma*L, 0)."""
+            """Calculate equation [8] L_avail = min(gamma*L, L)"""
             result = numpy.empty(l_array.shape)
             result[:] = l_nodata
             valid_mask = (l_array != l_nodata)
-            valid_l_array = l_array[valid_mask]
-            valid_l_array[valid_l_array < 0.0] = 0.0
-            result[valid_mask] = valid_l_array * gamma
+            result[valid_mask] = numpy.min(numpy.stack(
+                (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
             return result
         natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [file_registry['l_path']], l_avail_op,
@@ -470,8 +471,25 @@ def _execute(args):
         file_registry['l_path'],
         file_registry['zero_absorption_source_path'],
         file_registry['loss_path'],
-        file_registry['l_sum_path'], 'flux_only',
+        file_registry['l_sum_pre_clamp'], 'flux_only',
         stream_uri=file_registry['stream_path'])
+
+    # The result of route_flux can be slightly negative due to roundoff error
+    # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
+    l_sum_pre_clamp_nodata = pygeoprocessing.get_raster_info(
+        file_registry['l_sum_pre_clamp'])['nodata'][0]
+
+    def clamp_l_sum(l_sum_pre_clamp):
+        """Clamp any negative values to 0.0."""
+        result = l_sum_pre_clamp.copy()
+        result[
+            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
+            (l_sum_pre_clamp < 0.0)] = 0.0
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(file_registry['l_sum_pre_clamp'], 1)], clamp_l_sum,
+        file_registry['l_sum_path'], gdal.GDT_Float32, l_sum_pre_clamp_nodata)
 
     LOGGER.info('calculate B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
@@ -490,18 +508,20 @@ def _execute(args):
         file_registry['b_sum_path'])
 
     def op_b(b_sum, l_avail, l_sum):
-        """Calculate B=B_sum*Lavail/L_sum."""
+        """Calculate B=max(B_sum*Lavail/L_sum, 0)."""
         valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
         result = numpy.empty(b_sum.shape)
         result[:] = b_sum_nodata
         result[valid_mask] = (
             b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
-
+        # if l_sum is zero, it's okay to make B zero says Perrine in an email
+        result[l_sum == 0] = 0.0
+        result[(result < 0) & valid_mask] = 0
         return result
 
     natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [file_registry['b_sum_path'],
-         file_registry['l_avail_path'],
+         file_registry['l_path'],
          file_registry['l_sum_path']], op_b,
         file_registry['b_path'],
         gdal.GDT_Float32, b_sum_nodata, pixel_size, 'intersection',
@@ -587,7 +607,7 @@ def _calculate_monthly_quick_flow(
         """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (s_i != 0.0) & (stream_array != 1) &
+            (stream_array != 1) &
             (n_events != n_events_nodata) & (n_events > 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
@@ -605,6 +625,7 @@ def _calculate_monthly_quick_flow(
         # exponent will also be zero because of a divide by zero. rather than
         # raise that numerical warning, just handle it manually
         E1 = scipy.special.expn(1, valid_si / a_im)  #pylint: disable=invalid-name,no-member
+        E1[valid_si == 0] = 0
         nonzero_e1_mask = E1 != 0
         exp_result = numpy.zeros(valid_si.shape)
         exp_result[nonzero_e1_mask] = numpy.exp(
@@ -801,6 +822,8 @@ def _aggregate_recharge(
             all_touched=False)
 
         aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
+        aggregate_field.SetWidth(24)
+        aggregate_field.SetPrecision(11)
         aggregate_layer.CreateField(aggregate_field)
 
         aggregate_layer.ResetReading()
@@ -887,3 +910,111 @@ def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
             mask_if_not_both_valid, output_raster_path_list[index],
             gdal.GDT_Float32, nodata_list[0], pixel_size, 'intersection',
             vectorize_op=False, datasets_are_pre_aligned=True)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    required_keys = [
+        'workspace_dir',
+        'threshold_flow_accumulation',
+        'dem_raster_path',
+        'lulc_raster_path',
+        'aoi_path',
+        'biophysical_table_path',
+        'beta_i',
+        'gamma']
+
+    if ('user_defined_climate_zones' in args and
+            args['user_defined_climate_zones']):
+        required_keys.extend([
+            'climate_zone_table_path',
+            'climate_zone_raster_path'])
+
+    if 'user_defined_local_recharge' in args:
+        if args['user_defined_local_recharge']:
+            required_keys.append('l_path')
+        else:
+            required_keys.extend([
+                'et0_dir',
+                'precip_dir',
+                'soil_group_path',
+                'rain_events_table_path'])
+
+    if 'monthly_alpha_path' in args:
+        if args['monthly_alpha_path']:
+            required_keys.append('monthly_alpha_path')
+        else:
+            required_keys.append('alpha_m')
+
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
+
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    file_type_list = [
+        ('dem_raster_path', 'raster'),
+        ('lulc_raster_path', 'raster'),
+        ('aoi_path', 'vector'),
+        ('biophysical_table_path', 'table'),
+        ('climate_zone_table_path', 'table'),
+        ('climate_zone_raster_path', 'raster'),
+        ('monthly_alpha_path', 'table'),
+        ('precip_dir', 'directory'),
+        ('soil_group_path', 'raster'),
+        ('rain_events_table_path', 'table'),
+        ('l_path', 'raster')]
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

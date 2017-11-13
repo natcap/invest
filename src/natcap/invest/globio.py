@@ -1,5 +1,5 @@
 """GLOBIO InVEST Model."""
-
+from __future__ import absolute_import
 import os
 import logging
 import collections
@@ -13,6 +13,8 @@ import numpy
 import natcap.invest.pygeoprocessing_0_3_3
 
 from . import utils
+from . import validation
+
 
 LOGGER = logging.getLogger('natcap.invest.globio')
 
@@ -290,6 +292,8 @@ def execute(args):
             original_datasource, summary_aoi_uri)
         layer = datasource_copy.GetLayer()
         msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
+        msa_summary_field_def.SetWidth(24)
+        msa_summary_field_def.SetPrecision(11)
         layer.CreateField(msa_summary_field_def)
 
         # make an identifying id per polygon that can be used for aggregation
@@ -678,3 +682,95 @@ def _collapse_infrastructure_layers(
     # clean up the temporary filenames
     for filename in infrastructure_tmp_filenames:
         os.remove(filename)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    required_keys = [
+        'workspace_dir',
+        'aoi_uri',
+        'infrastructure_dir',
+        'intensification_fraction',
+        'msa_parameters_uri']
+
+    if 'predefined_globio' in args:
+        if args['predefined_globio']:
+            required_keys.append('globio_lulc_uri')
+        else:
+            required_keys.extend([
+                'lulc_to_globio_table_uri',
+                'lulc_uri',
+                'pasture_uri',
+                'potential_vegetation_uri',
+                'primary_threshold',
+                'pasture_threshold'])
+
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
+
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    file_type_list = [
+        ('aoi_uri', 'vector'),
+        ('infrastructure_dir', 'directory'),
+        ('msa_parameters_uri', 'table'),
+        ('globio_lulc_uri', 'raster'),
+        ('lulc_to_globio_table_uri', 'table'),
+        ('lulc_uri', 'raster'),
+        ('pasture_uri', 'raster'),
+        ('potential_vegetation_uri', 'raster')]
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

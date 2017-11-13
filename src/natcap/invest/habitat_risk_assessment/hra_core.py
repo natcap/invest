@@ -16,8 +16,6 @@ from osgeo import gdal, ogr, osr
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra_core')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-   %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 # Global safe nodata value for rasters that have values [0..1]
 _RISK_NODATA = -1
@@ -1283,6 +1281,8 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
 
     band = raster.GetRasterBand(1)

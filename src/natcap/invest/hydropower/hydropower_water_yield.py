@@ -1,5 +1,6 @@
 """Module that contains the core computational components for the hydropower
     model including the water yield, water scarcity, and valuation functions"""
+from __future__ import absolute_import
 
 import logging
 import os
@@ -11,6 +12,8 @@ from osgeo import gdal
 from osgeo import ogr
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.hydropower.hydropower_water_yield')
 
@@ -958,3 +961,98 @@ def _extract_vector_table_by_key(vector_path, key_field):
     layer = None
     vector = None
     return attribute_dictionary
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    required_keys = [
+        'workspace_dir',
+        'precipitation_uri',
+        'eto_uri',
+        'depth_to_root_rest_layer_uri',
+        'pawc_uri',
+        'lulc_uri',
+        'watersheds_uri',
+        'biophysical_table_uri',
+        'seasonality_constant',
+        'calculate_water_scarcity',
+        'calculate_valuation']
+
+    if 'calculate_water_scarcity' in args and args['calculate_water_scarcity']:
+        required_keys.append('demand_table_uri')
+
+    if 'calculate_valuation' in args and args['calculate_valuation']:
+        required_keys.append('valuation_table_uri')
+
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
+
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    file_type_list = [
+        ('lulc_uri', 'raster'),
+        ('eto_uri', 'raster'),
+        ('precipitation_uri', 'raster'),
+        ('depth_to_root_rest_layer_uri', 'raster'),
+        ('pawc_uri', 'raster'),
+        ('watersheds_uri', 'vector'),
+        ('sub_watersheds_uri', 'vector'),
+        ('biophysical_table_uri', 'table'),
+        ('demand_table_uri', 'table'),
+        ('valuation_table_uri', 'table'),
+        ]
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

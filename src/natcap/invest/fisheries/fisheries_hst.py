@@ -4,12 +4,15 @@ generating a new Population Parameters CSV File based on habitat area
 change and the dependencies that particular classes of the given species
 have on particular habitats.
 '''
+from __future__ import absolute_import
 import logging
 import pprint
+import csv
 
 import numpy as np
 
 from . import fisheries_hst_io as io
+from .. import validation
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -163,3 +166,68 @@ def convert_survival_matrix(vars_dict):
     vars_dict['Surv_nat_xsa_mod'] = S_mod_sxa.swapaxes(0, 1)
 
     return vars_dict
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for Fisheries HST.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    keys_with_empty_values = set([])
+    missing_keys = set([])
+    for key in ('workspace_dir',
+                'results_suffix',
+                'population_csv_uri',
+                'sexsp',
+                'habitat_dep_csv_uri',
+                'habitat_chg_csv_uri',
+                'gamma'):
+        if key in (None, limit_to):
+            try:
+                if args[key] in ('', None):
+                    keys_with_empty_values.add(key)
+            except KeyError:
+                missing_keys.add(key)
+
+    if len(missing_keys) > 0:
+        raise KeyError(
+            'Args is missing required keys: %s' % ', '.join(
+                sorted(missing_keys)))
+
+    if len(keys_with_empty_values) > 0:
+        warnings.append((keys_with_empty_values,
+                         'Argument must have a value'))
+
+    for csv_key in ('population_csv_uri',
+                    'habitat_dep_csv_uri',
+                    'habitat_chg_csv_uri'):
+        if limit_to in (csv_key, None):
+            try:
+                csv.reader(open(args[csv_key], 'r'))
+            except (csv.Error, IOError):
+                warnings.append(([csv_key],
+                                 'Parameter must be a valid CSV file'))
+
+    if limit_to in ('sexsp', None):
+        if args['sexsp'] not in ('Yes', 'No'):
+            warnings.append((['sexsp'],
+                             'Parameter must be either "Yes" or "No"'))
+
+    if limit_to in ('gamma', None):
+        try:
+            float(args['gamma'])
+        except ValueError:
+            warnings.append((['gamma'],
+                             'Parameter must be a number'))
+
+    return warnings

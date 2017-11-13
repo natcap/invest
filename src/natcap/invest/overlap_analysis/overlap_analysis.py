@@ -1,5 +1,5 @@
 """Invest overlap analysis filehandler for data passed in through UI"""
-
+from __future__ import absolute_import
 import os
 import csv
 import logging
@@ -12,10 +12,10 @@ import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from osgeo import gdal
 from scipy import ndimage
 
+from .. import validation
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.overlap_analysis.overlap_analysis')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 def execute(args):
@@ -655,3 +655,98 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
 
     LOGGER.debug("Just made the following URIs %s" % str(raster_uris))
     return raster_uris, raster_names
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for OA.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
+    for required_key in ('workspace_dir',
+                         'zone_layer_uri',
+                         'grid_size',
+                         'overlap_data_dir_uri',
+                         'do_intra',
+                         'do_inter',
+                         'do_hubs'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
+
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have a defined value.'))
+
+    for vector_key in ('zone_layer_uri', 'hubs_uri'):
+        try:
+            if args[vector_key] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args[vector_key])
+                    if vector is None:
+                        warnings.append(([vector_key],
+                                         ('Parameter must be a path to an '
+                                          'OGR-compatible file on disk.')))
+        except KeyError:
+            # not all inputs here are required.
+            pass
+
+    for bool_key in ('do_intra', 'do_inter', 'do_hubs'):
+        if args[bool_key] not in (True, False):
+            warnings.append(([bool_key],
+                             'Parameter must be either True or False'))
+
+    if limit_to in ('grid_size', None):
+        try:
+            assert int(args['grid_size']) > 0
+        except AssertionError:
+            warnings.append((['grid_size'],
+                             'Parameter must be a positive integer'))
+        except ValueError:
+            warnings.append((['grid_size'],
+                             'Parameter must be an integer.'))
+
+    if limit_to in ('overlap_data_dir_uri', None):
+        if not os.path.isdir(args['overlap_data_dir_uri']):
+            warnings.append((['overlap_data_dir_uri'],
+                             'Parameter must be a path to a folder on disk.'))
+
+    if limit_to in ('overlap_layer_tbl', None):
+        try:
+            if args['overlap_layer_tbl'] not in ('', None):
+                csv.reader(open(args['overlap_layer_tbl']))
+        except IOError:
+            warnings.append((['overlap_layer_tbl'],
+                             'File not found'))
+        except csv.Error:
+            warnings.append((['overlap_layer_tbl'],
+                             'Could not read CSV file.'))
+
+    if limit_to in ('decay_amt', None):
+        try:
+            if args['decay_amt'] not in ('', None):
+                float(args['decay_amt'])
+        except TypeError:
+            warnings.append((['decay_amt'],
+                             'Parameter must be a number.'))
+        except KeyError:
+            pass
+
+    return warnings

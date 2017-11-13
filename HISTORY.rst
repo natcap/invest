@@ -4,6 +4,15 @@
 
 Unreleased Changes
 ------------------
+* Removed vendored ``natcap.invest.dbfpy`` subpackage.
+* Removed deprecated ``natcap.invest.fileio`` module.
+* Removed ``natcap.invest.iui`` UI subpackage in favor of a new UI framework found at ``natcap.invest.ui``. This new UI features a greatly improved API, good test coverage, support for Qt4 and Qt5, and includes updates to all InVEST models to support validation of model arguments from a python script, independent of the UI.
+* Updated core model of seasonal water yield to allow for negative `L_avail`.
+* Updated RouteDEM to allow for file suffixes, finer control over what DEM routing algorithms to run, and removal of the multiple stepped stream threshold classification.
+* Redesign/refactor of pollination model. Long term bugs in the model are resolved, managed pollinators added, and many simplifications to the end user's experience.  The updated user's guide chapter is available here: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/croppollination.html
+* Scenario Generator - Rule Based now has an optional input to define a seed.
+  This input is used to seed the random shuffling of parcels that have equal
+  priorities.
 * InVEST on mac is now distributed as a single application bundle, allowing InVEST to run as expected on mac OSX Sierra.  Individual models are selected and launched from a new launcher window.
 * The InVEST CLI now has a GUI model launcher:  ``$ invest launcher``
 * Updated the Coastal Blue Carbon model to improve handling of blank lines in input CSV tables and improve memory efficiency of the current implementation.
@@ -13,6 +22,9 @@ Unreleased Changes
 * Adding sample data to Blue Carbon model that were missing.
 * Deprecating the InVEST Marine Water Quality model.  This also removes InVEST's dependancy on the pyamg package which has been removed from REQUIREMENTS.TXT.
 * Deprecating the ArcGIS-based Coastal Protection model and ArcGIS-based data-preprocessing scripts.  The toolbox and scripts may still be found at https://bitbucket.org/natcap/invest.arcgis.
+* Fixing an issue in the carbon edge effect model that caused output values in the shapefile to be rounded to the nearest integer.
+* Fixing issue in SDR model that would occasionally cause users to see errors about field widths in the output shapefile generation.
+* Updated the erodibility sample raster that ships with InVEST for the SDR model.  The old version was in US units, in this version we convert to SI units as the model requires, and clipped the raster to the extents of the other stack to save disk space.
 
 3.3.3 (2017-02-06)
 ------------------

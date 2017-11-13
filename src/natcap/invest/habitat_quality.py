@@ -1,5 +1,5 @@
 """InVEST Habitat Quality model."""
-
+from __future__ import absolute_import
 import collections
 import os
 import logging
@@ -7,14 +7,13 @@ import csv
 
 import numpy
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 import natcap.invest.pygeoprocessing_0_3_3
 
 from . import utils
+from . import validation
 
-logging.basicConfig(
-    format='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
-    level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.habitat_quality')
 
@@ -620,3 +619,84 @@ def make_linear_decay_kernel_uri(max_distance, kernel_uri):
             xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
         kernel_row /= integration
         kernel_band.WriteArray(kernel_row, 0, row_index)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    # required args
+    for key in [
+            'workspace_dir',
+            'landuse_cur_uri',
+            'threat_raster_folder',
+            'threats_uri',
+            'sensitivity_uri',
+            'half_saturation_constant']:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing" +
+            ', '.join(missing_key_list))
+
+    # check for required file existence:
+    for key in [
+            'landuse_cur_uri',
+            'threat_raster_folder',
+            'threats_uri',
+            'sensitivity_uri']:
+        if (limit_to is None or limit_to == key) and (
+                not os.path.exists(args[key])):
+            validation_error_list.append(
+                ([key], 'not found on disk'))
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in [
+                ('landuse_cur_uri', 'raster'),
+                ('landuse_fut_uri', 'raster'),
+                ('landuse_bas_uri', 'raster'),
+                ('access_uri', 'vector')]:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

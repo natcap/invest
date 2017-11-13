@@ -1,20 +1,23 @@
 """Scenario Generator Module."""
+from __future__ import absolute_import
 
 import os
 import math
 import struct
 import logging
+import contextlib
 from decimal import Decimal
 
 import numpy as np
 import scipy as sp
-from osgeo import gdal, ogr
+from osgeo import gdal
+from osgeo import ogr
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
-from .. import utils as invest_utils
+from .. import utils
+from .. import validation
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 
 LOGGER = logging.getLogger(
     'natcap.invest.scenario_generator.scenario_generator')
@@ -530,6 +533,26 @@ def filter_fragments(input_uri, size, output_uri):
     dst_band.WriteArray(dst_array)
 
 
+@contextlib.contextmanager
+def manage_numpy_randomstate(seed):
+    """Set a seed for ``numpy.random`` and reset it on exit.
+
+    Parameters:
+        seed (int or None): The seed to set via ``numpy.random.seed``.  If
+            ``none``, the numpy random number generator will be un-set.
+
+    Returns:
+        ``None``
+
+    Yields:
+        ``None``
+    """
+    seed_state = np.random.get_state()
+    np.random.seed(seed)
+    yield
+    np.random.set_state(seed_state)
+
+
 def execute(args):
     """Scenario Generator: Rule-Based.
 
@@ -565,6 +588,8 @@ def execute(args):
         override (str): path to override shapefile
         override_field (str): shapefile field containing override value
         override_inclusion (int): the rasterization method
+        seed (int or None): a number to use as the randomization seed.
+            If not provided, ``None`` is assumed.
 
     Example Args::
 
@@ -610,6 +635,14 @@ def execute(args):
     """
     LOGGER.info("Starting Scenario Generator model run...")
 
+    try:
+        args['seed'] = int(args['seed'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when seed not in args.
+        # ValueError when args['seed'] == '' (when UI input is empty).
+        # TypeError when args['seed'] == None
+        args['seed'] = None
+
     # SHOULD BE INPUT AND VALIDATION FUNCTIONS
     LOGGER.info("Fetching and validating inputs...")
     # Preliminary tests
@@ -653,7 +686,7 @@ def execute(args):
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
 
-    file_registry = invest_utils.build_file_registry(
+    file_registry = utils.build_file_registry(
         [(_OUTPUT, workspace), (_INTERMEDIATE, intermediate_dir)],
         args['suffix'])
 
@@ -1408,7 +1441,8 @@ def execute(args):
             patch_locations = sp.ndimage.find_objects(label_im, nb_labels)
 
             # randomize patch order
-            np.random.shuffle(patch_labels)
+            with manage_numpy_randomstate(args['seed']):
+                np.random.shuffle(patch_labels)
 
             # check patches for conversion
             patch_label_count = patch_labels.size
@@ -1437,7 +1471,7 @@ def execute(args):
 
                     # select the number of pixels that need to be converted
                     tmp_index = np.argsort(tmp_array)
-                    tmp_index = tmp_index[:count - pixels_changed]
+                    tmp_index = tmp_index[:count - int(pixels_changed)]
 
                     # convert the selected pixels into coordinates
                     # pixels_to_change = np.array(zip(patch[0], patch[1]))
@@ -1671,3 +1705,101 @@ def execute(args):
     htm.close()
 
     LOGGER.info("...model run complete.")
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    required_keys = [
+        'workspace_dir',
+        'landcover',
+        'transition',
+        'calculate_priorities',
+        'calculate_proximity',
+        'calculate_transition',
+        'calculate_factors',
+        'calculate_constraints',
+        'override_layer',
+        'seed',
+        ]
+
+    if 'calculate_factors' in args and args['calculate_factors']:
+        required_keys.append('suitability_folder')
+        required_keys.append('suitability')
+        required_keys.append('weight')
+
+    if 'calculate_priorities' in args and args['calculate_priorities']:
+        required_keys.append('priorities_csv_uri')
+
+    if 'calculate_constraints' in args and args['calculate_constraints']:
+        required_keys.append('constraints')
+
+    if 'override_layer' in args and args['override_layer']:
+        required_keys.append('override')
+
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
+
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    file_type_list = [
+        ('landcover', 'raster'),
+        ('transition', 'table'),
+        ('suitability_folder', 'directory'),
+        ('suitability', 'table'),
+        ('constraints', 'vector'),
+        ('override', 'vector')]
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

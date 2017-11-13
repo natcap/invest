@@ -1,4 +1,6 @@
 """InVEST Wave Energy Model Core Code"""
+from __future__ import absolute_import
+
 import heapq
 import math
 import os
@@ -15,9 +17,9 @@ from bisect import bisect
 import scipy
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
+from .. import utils
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
 class IntersectionError(Exception):
@@ -354,6 +356,8 @@ def execute(args):
 
         # Create a new field for the depth attribute
         field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
 
         clipped_wave_layer = clipped_wave_shape.GetLayer()
         clipped_wave_layer.CreateField(field_defn)
@@ -592,6 +596,8 @@ def execute(args):
         # the distances
         for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
             field_defn = ogr.FieldDefn(field, ogr.OFTReal)
+            field_defn.SetWidth(24)
+            field_defn.SetPrecision(11)
             wave_data_layer.CreateField(field_defn)
         # For each feature in the shapefile add the corresponding
         # distances from wave_to_land_dist and land_to_grid_dist
@@ -654,6 +660,8 @@ def execute(args):
         # and Units field to shapefile
         for field_name in ['NPV_25Y', 'CAPWE_ALL', 'UNITS']:
             field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+            field_defn.SetWidth(24)
+            field_defn.SetPrecision(11)
             wave_data_layer.CreateField(field_defn)
         wave_data_layer.ResetReading()
         feat_npv = wave_data_layer.GetNextFeature()
@@ -1136,6 +1144,8 @@ def wave_power(shape_uri):
     # Add a waver power field to the shapefile.
     layer = shape.GetLayer()
     field_defn = ogr.FieldDefn('WE_kWM', ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
     layer.ResetReading()
     feat = layer.GetNextFeature()
@@ -1369,8 +1379,10 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
     wave_shape = ogr.Open(wave_shape_uri, 1)
     wave_layer = wave_shape.GetLayer()
     # Create a new field for the shapefile
-    field_def = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
-    wave_layer.CreateField(field_def)
+    field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
+    wave_layer.CreateField(field_defn)
     # For all of the features (points) in the shapefile, get the
     # corresponding point/value from the dictionary and set the 'capWE_Sum'
     # field as the value from the dictionary
@@ -1619,3 +1631,148 @@ def _create_rat(dataset_path, attr_dict, column_name):
     # Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for Wave Energy.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    keys_missing_value = []
+    missing_keys = []
+    for required_key in ('workspace_dir',
+                         'wave_base_data_uri',
+                         'analysis_area_uri',
+                         'machine_perf_uri',
+                         'machine_param_uri',
+                         'dem_uri'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('Keys are missing from args: %s' % str(missing_keys))
+
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter is required but has no value'))
+
+    if limit_to in ('wave_base_data_uri', None):
+        if not os.path.isdir(args['wave_base_data_uri']):
+            warnings.append((
+                ['wave_base_data_uri'],
+                'Parameter not found or is not a folder.'))
+
+    if limit_to in ('analysis_area_uri', None):
+        if args['analysis_area_uri'] not in (
+                "West Coast of North America and Hawaii",
+                "East Coast of North America and Puerto Rico",
+                "North Sea 4 meter resolution",
+                "North Sea 10 meter resolution",
+                "Australia",
+                "Global"):
+            warnings.append((['analysis_area_uri'],
+                             'Parameter must be a known analysis area.'))
+
+    if limit_to in ('aoi_uri', None):
+        try:
+            if args['aoi_uri'] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args['aoi_uri'])
+                    layer = vector.GetLayer()
+                    geometry_type = layer.GetGeomType()
+                    if geometry_type != ogr.wkbPolygon:
+                        warnings.append((
+                            ['aoi_uri'],
+                            'Vector must contain only polygons.'))
+                    srs = layer.GetSpatialRef()
+                    units = srs.GetLinearUnitsName().lower()
+                    if units not in ('meter', 'metre'):
+                        warnings.append((['aoi_uri'],
+                                         'Vector must be projected in meters'))
+
+                    datum = srs.GetAttrValue('DATUM')
+                    if datum != 'WGS_1984':
+                        warnings.append((
+                            ['aoi_uri'],
+                            'Vector must use the WGS_1984 datum.'))
+        except KeyError:
+            # Parameter is not required.
+            pass
+
+    for csv_key, required_fields in (
+            ('machine_perf_uri', set([])),
+            ('machine_param_uri', set(['name', 'value', 'note'])),
+            ('land_gridPts_uri',
+             set(['id', 'type', 'lat', 'long', 'location'])),
+            ('machine_econ_uri', set(['name', 'value', 'note']))):
+        try:
+            reader = csv.reader(open(args[csv_key]))
+            headers = set([field.lower() for field in reader.next()])
+            missing_fields = required_fields - headers
+            if len(missing_fields) > 0:
+                warnings.append('CSV is missing columns :%s' %
+                                ', '.join(sorted(missing_fields)))
+        except KeyError:
+            # Not all these are required inputs.
+            pass
+        except IOError:
+            warnings.append(([csv_key], 'File not found.'))
+        except csv.Error:
+            warnings.append(([csv_key], 'CSV could not be read.'))
+
+    if limit_to in ('dem_uri', None):
+        with utils.capture_gdal_logging():
+            raster = gdal.Open(args['dem_uri'])
+        if raster is None:
+            warnings.append((
+                ['dem_uri'],
+                ('Parameter must be a filepath to a GDAL-compatible '
+                 'raster file.')))
+
+    if limit_to in ('number_of_machines', None):
+        try:
+            num_machines = args['number_of_machines']
+            if (int(float(num_machines)) != float(num_machines)
+                    or float(num_machines) < 0):
+                warnings.append((['number_of_machines'],
+                                 'Parameter must be a positive integer.'))
+        except KeyError:
+            pass
+        except ValueError:
+            warnings.append((['number_of_machines'],
+                             'Parameter must be a number.'))
+
+    if limit_to is None:
+        if 'valuation_container' in args:
+            missing_keys = []
+            keys_with_no_value = []
+            for required_key in ('land_gridPts_uri',
+                                 'machine_econ_uri',
+                                 'number_of_machines'):
+                try:
+                    if args[required_key] in ('', None):
+                        keys_with_no_value.append(required_key)
+                except KeyError:
+                    missing_keys.append(required_key)
+
+            if len(missing_keys) > 0:
+                raise KeyError('Keys are missing: %s' % missing_keys)
+
+            if len(keys_with_no_value) > 0:
+                warnings.append((keys_with_no_value,
+                                 'Parameter must have a value'))
+
+    return warnings

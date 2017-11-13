@@ -43,15 +43,16 @@ kwargs = {
         'natcap.versioner',
         'natcap.versioner.version',
         'natcap.invest.version',
-        'natcap.invest.iui.launcher',
+        'natcap.invest.ui.launcher',
         'yaml',
         'distutils',
         'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
+        'taskgraph.version',
     ],
 }
 
-cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'iui', 'cli.py')
+cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'cli.py')
 a = Analysis([cli_file], **kwargs)
 
 # Compress pyc and pyo Files into ZlibArchive Objects
@@ -71,7 +72,7 @@ if is_darwin:
     # add gdal dynamic libraries from homebrew
     a.binaries += [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
     a.binaries += [
-        (os.path.basename(name), name, 'BINARY') for name in 
+        (os.path.basename(name), name, 'BINARY') for name in
          itertools.chain(
             glob.glob('/usr/local/lib/libgeos*.dylib'),
             glob.glob('/usr/local/lib/libgeotiff*.dylib'),

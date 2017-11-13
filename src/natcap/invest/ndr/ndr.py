@@ -1,4 +1,5 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
+from __future__ import absolute_import
 import logging
 import os
 
@@ -10,13 +11,11 @@ import natcap.invest.pygeoprocessing_0_3_3
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
+from .. import validation
 from .. import utils
 import ndr_core
 
 LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
-logging.basicConfig(
-    format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
-    level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
@@ -723,6 +722,8 @@ def _add_fields_to_shapefile(
     """
     for field_name in field_header_order:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_def.SetWidth(24)
+        field_def.SetPrecision(11)
         output_layer.CreateField(field_def)
 
     # Initialize each feature field to 0.0
@@ -734,3 +735,98 @@ def _add_fields_to_shapefile(
                 field_name, float(field_summaries[field_name][ws_id]))
         # Save back to datasource
         output_layer.SetFeature(feature)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    required_keys = [
+        'workspace_dir',
+        'dem_path',
+        'lulc_path',
+        'runoff_proxy_path',
+        'watersheds_path',
+        'biophysical_table_path',
+        'calc_p',
+        'calc_n',
+        'threshold_flow_accumulation',
+        'k_param']
+
+    if 'calc_n' in args and args['calc_n']:
+        required_keys.extend([
+            'subsurface_critical_length_n', 'subsurface_eff_n'])
+
+    if 'calc_p' in args and args['calc_p']:
+        required_keys.extend([
+            'subsurface_critical_length_p', 'subsurface_eff_p'])
+
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
+
+    if limit_to is None and (not args['calc_p'] and not args['calc_n']):
+        validation_error_list.append(
+            (['calc_p', 'calc_n', 'dem_path', 'lulc_path'],
+             "At least nitrogen or phosphorous must be selected"))
+
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    file_type_list = [
+        ('lulc_path', 'raster'),
+        ('dem_path', 'raster'),
+        ('runoff_proxy_path', 'raster'),
+        ('biophysical_table_path', 'table'),
+        ('watersheds_path', 'vector')]
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to is None or limit_to == key) and key in args:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

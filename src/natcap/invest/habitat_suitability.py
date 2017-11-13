@@ -8,9 +8,6 @@ import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 
 from . import utils
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
 _HSI_NODATA = -1.0  # HSI values are floats in [0..1] so -1 as nodata is safe
 

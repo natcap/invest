@@ -1,9 +1,10 @@
 """InVEST Wind Energy model."""
+from __future__ import absolute_import
+
 import tempfile
 import logging
 import os
 import csv
-import struct
 import shutil
 import math
 
@@ -13,16 +14,15 @@ from osgeo import osr
 
 import numpy as np
 from scipy import integrate
-#required for py2exe to build
+# required for py2exe to build
 from scipy.sparse.csgraph import _validation
 import shapely.wkt
 import shapely.ops
 from shapely import speedups
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
-
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from .. import validation
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy.wind_energy')
 
@@ -1938,3 +1938,277 @@ def pixel_size_based_on_coordinate_transform_uri(
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
     return (pixel_diff_x, pixel_diff_y)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for Wind Energy.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    keys_missing_value = set([])
+    missing_keys = set([])
+
+    for required_key in ('workspace_dir',
+                         'wind_data_uri',
+                         'bathymetry_uri',
+                         'global_wind_parameters_uri',
+                         'turbine_parameters_uri',
+                         'number_of_turbines',
+                         'min_depth',
+                         'max_depth',
+                         'foundation_cost',
+                         'discount_rate',
+                         'avg_grid_distance',
+                         'wind_schedule',
+                         'wind_price',
+                         'rate_change'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.add(required_key)
+        except KeyError:
+            missing_keys.add(required_key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('Required keys are missing from args: %s'
+                       % ', '.join(sorted(missing_keys)))
+
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have a value.'))
+
+    for vector_key in ('aoi_uri', 'land_polygon_uri'):
+        try:
+            if args[vector_key] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args[vector_key])
+                    if vector is None:
+                        warnings.append(
+                            ([vector_key],
+                             ('Parameter must be a path to an OGR-compatible '
+                              'vector file.')))
+        except KeyError:
+            # neither of these vectors are required, so they may be omitted.
+            pass
+
+    if limit_to in ('bathymetry_uri', None):
+        with utils.capture_gdal_logging():
+            raster = gdal.Open(args['bathymetry_uri'])
+        if raster is None:
+            warnings.append((['bathymetry_uri'],
+                             ('Parameter must be a path to a GDAL-compatible '
+                              'raster on disk.')))
+
+    if limit_to in ('wind_data_uri', None):
+        try:
+            table_dict = utils.build_lookup_from_csv(
+                args['wind_data_uri'], 'REF')
+
+            missing_fields = (set(['long', 'lati', 'lam', 'k', 'ref']) -
+                              set(table_dict.itervalues().next().keys()))
+            if len(missing_fields) > 0:
+                warnings.append((
+                    ['wind_data_uri'],
+                    ('CSV missing required fields: %s' % (
+                        ', '.join(missing_fields)))))
+
+            try:
+                for ref_key, record in table_dict.iteritems():
+                    for float_field in ('long', 'lati', 'lam', 'k'):
+                        try:
+                            float(record[float_field])
+                        except ValueError:
+                            warnings.append(
+                                (['wind_data_uri'],
+                                ('Ref %s column %s must be a number.'
+                                % (ref_key, float_field))))
+
+                        try:
+                            if not float(ref_key) == int(float(ref_key)):
+                                raise ValueError()
+                        except ValueError:
+                            warnings.append(
+                                (['wind_data_uri'],
+                                ('Ref %s ust be an integer.' % ref_key)))
+            except KeyError:
+                # missing keys are reported earlier.
+                pass
+        except IOError:
+            warnings.append((['wind_data_uri'], 'Could not locate file.'))
+        except csv.Error:
+            warnings.append((['wind_data_uri'],
+                             'Could not open CSV file.'))
+
+    if limit_to in ('aoi_uri', None):
+        try:
+            if args['aoi_uri'] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args['aoi_uri'])
+                    layer = vector.GetLayer()
+                    srs = layer.GetSpatialRef()
+                    units = srs.GetLinearUnitsName().lower()
+                    if units not in ('meter', 'metre'):
+                        warnings.append((['aoi_uri'],
+                                         'Vector must be projected in meters'))
+        except KeyError:
+            # Parameter is not required.
+            pass
+
+    for simple_csv_key in ('global_wind_parameters_uri',
+                           'turbine_parameters_uri'):
+        try:
+            csv.reader(open(args[simple_csv_key]))
+        except IOError:
+            warnings.append(([simple_csv_key], 'File not found.'))
+        except csv.Error:
+            warnings.append(([simple_csv_key], 'Could not read CSV file.'))
+
+    if limit_to in ('number_of_turbines', None):
+        try:
+            num_turbines = args['number_of_turbines']
+            if not float(num_turbines) == int(float(num_turbines)):
+                raise ValueError()
+        except ValueError:
+            warnings.append((['number_of_turbines'],
+                             ('Parameter must be an integer.')))
+
+    for float_key in ('min_depth',
+                      'max_depth',
+                      'min_distance',
+                      'max_distance',
+                      'foundation_cost',
+                      'discount_rate',
+                      'avg_grid_distance',
+                      'wind_price',
+                      'rate_change'):
+        try:
+            float(args[float_key])
+        except ValueError:
+            warnings.append(([float_key], 'Parameter must be a number.'))
+        except KeyError:
+            pass
+
+    if limit_to in ('grid_points_uri', None):
+        try:
+            table_dict = utils.build_lookup_from_csv(
+                args['grid_points_uri'], 'id')
+
+            missing_fields = (set(['long', 'lati', 'id', 'type']) -
+                              set(table_dict.itervalues().next().keys()))
+            if len(missing_fields) > 0:
+                warnings.append((
+                    ['grid_points_uri'],
+                    ('CSV missing required fields: %s' % (
+                        ', '.join(missing_fields)))))
+
+            try:
+                for id_key, record in table_dict.iteritems():
+                    for float_field in ('long', 'lati'):
+                        try:
+                            float(record[float_field])
+                        except ValueError:
+                            warnings.append(
+                                (['grid_points_uri'],
+                                 ('ID %s column %s must be a number.'
+                                  % (id_key, float_field))))
+
+                        try:
+                            if not float(id_key) == int(float(id_key)):
+                                raise ValueError()
+                        except ValueError:
+                            warnings.append(
+                                (['grid_points_uri'],
+                                 ('ID %s must be an integer.' % id_key)))
+
+                        if record['type'] not in ('land', 'grid'):
+                            warnings.append((
+                                ['grid_points_uri'],
+                                ('ID %s column TYPE must be either "land" or '
+                                 '"grid" (case-insensitive)') % id_key))
+            except KeyError:
+                # missing keys are reported earlier.
+                pass
+        except KeyError:
+            # This is not a required input.
+            pass
+        except IOError:
+            warnings.append((['grid_points_uri'], 'Could not locate file.'))
+        except csv.Error:
+            warnings.append((['grid_points_uri'],
+                             'Could not open CSV file.'))
+
+    if limit_to in ('wind_schedule', None):
+        try:
+            table_dict = utils.build_lookup_from_csv(
+                args['wind_schedule'], 'year')
+
+            missing_fields = (set(['year', 'price']) -
+                              set(table_dict.itervalues().next().keys()))
+            if len(missing_fields) > 0:
+                warnings.append((
+                    ['wind_schedule'],
+                    ('CSV missing required fields: %s' % (
+                        ', '.join(missing_fields)))))
+
+            try:
+                for year_key, record in table_dict.iteritems():
+                    try:
+                        if not float(year_key) == int(float(year_key)):
+                            raise ValueError()
+                    except ValueError:
+                        warnings.append(
+                            (['wind_schedule'],
+                             ('Year %s must be an integer.' % year_key)))
+
+                    try:
+                        float(record['price'])
+                    except ValueError:
+                        warnings.append((
+                            ['wind_schedule'],
+                            ('Price %s must be a number' % record['price'])))
+
+            except KeyError:
+                # missing keys are reported earlier.
+                pass
+        except IOError:
+            warnings.append((['wind_schedule'], 'Could not locate file.'))
+        except csv.Error:
+            warnings.append((['wind_schedule'],
+                             'Could not open CSV file.'))
+
+    if limit_to in ('price_table', None):
+        if args['price_table'] not in (True, False):
+            warnings.append((['price_table'],
+                             'Parameter must be either True or False'))
+
+    if limit_to is None:
+        # Require land_polygon_uri if any of min_distance, max_distance, or
+        # valuation_container have a value.
+        try:
+            if any((args['min_distance'] not in ('', None),
+                    args['max_distance'] not in ('', None),
+                    args['valuation_container'] is True)):
+                if args['land_polygon_uri'] in ('', None):
+                    warnings.append((['land_polygon_uri'],
+                                    'Parameter is required, but has no value.'))
+        except KeyError:
+            # It's possible for some of these args to be missing, in which case
+            # the land polygon isn't required.
+            pass
+
+        # If we're doing valuation, min and max distance are required.
+        if args['valuation_container']:
+            for key in ('min_distance', 'max_distance'):
+                if args[key] in ('', None):
+                    warnings.append(([key], 'Value must be defined.'))
+
+    return warnings

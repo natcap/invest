@@ -1,11 +1,11 @@
 {
-    "data/invest-data": "128",
-    "data/invest-test-data": "118",
-    "doc/users-guide": "3429257d974a",
+    "data/invest-data": "162",
+    "data/invest-test-data": "128",
+    "doc/users-guide": "fbf97910a6ab",
     "src/pygeoprocessing": "REQUIREMENTS_TXT:pygeoprocessing",
     "src/pyinstaller": {
         "Darwin": "v3.1.1",
-        "Windows": "v2.1",
+        "Windows": "v3.2.1",
         "Linux": "064388440f8ed6b592b1c6a2f980e9cb378c7d6f"
     }
 }

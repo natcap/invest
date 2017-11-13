@@ -25,9 +25,6 @@ import buffered_numpy_disk_map
 _ARRAY_TUPLE_TYPE = (
     buffered_numpy_disk_map.BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE)
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger(
     'natcap.invest.recmodel_server.out_of_core_quadtree')
 

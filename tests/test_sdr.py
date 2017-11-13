@@ -35,7 +35,8 @@ class SDRTests(unittest.TestCase):
             'biophysical_table_path': os.path.join(
                 SAMPLE_DATA, 'biophysical_table.csv'),
             'dem_path': os.path.join(SAMPLE_DATA, 'dem'),
-            'erodibility_path': os.path.join(SAMPLE_DATA, 'erodibility'),
+            'erodibility_path': os.path.join(
+                SAMPLE_DATA, 'erodibility_SI_clip.tif'),
             'erosivity_path': os.path.join(SAMPLE_DATA, 'erosivity'),
             'ic_0_param': '0.5',
             'k_param': '2',

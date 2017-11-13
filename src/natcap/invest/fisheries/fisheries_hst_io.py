@@ -71,11 +71,13 @@ def fetch_args(args):
         }
 
     '''
+    args = args.copy()
     sexsp_dict = {
         'no': 1,
         'yes': 2,
     }
     args['sexsp'] = sexsp_dict[args['sexsp'].lower()]
+    args['gamma'] = float(args['gamma'])
 
     # Fetch Data
     args['output_dir'] = os.path.join(args['workspace_dir'], 'output')

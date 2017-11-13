@@ -10,8 +10,6 @@ import sqlite3
 import numpy
 import natcap.invest.pygeoprocessing_0_3_3
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger(
     'natcap.invest.recmodel_server.buffered_numpy_disk_map')

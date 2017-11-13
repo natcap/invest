@@ -1,6 +1,6 @@
 '''This will be the preperatory module for HRA. It will take all unprocessed
 and pre-processed data from the UI and pass it to the hra_core module.'''
-
+from __future__ import absolute_import
 import os
 import shutil
 import logging
@@ -13,10 +13,10 @@ from osgeo import gdal, ogr, osr
 from natcap.invest.habitat_risk_assessment import hra_core
 from natcap.invest.habitat_risk_assessment import hra_preprocessor
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 class ImproperCriteriaAttributeName(Exception):
@@ -202,6 +202,13 @@ def execute(args):
 #            dependent on this.
 #        hra_args['max_risk']- The highest possible risk value for any given
 #            pairing of habitat and stressor.
+    args = args.copy()
+    for key in ('grid_size', 'max_rating', 'max_stress'):
+        try:
+            args[key] = float(args[key])
+        except (KeyError, ValueError):
+            LOGGER.info('Key %s not in args or could not be cast to float',
+                        key)
 
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -1266,3 +1273,81 @@ def unpack_over_dict(csv_uri, args):
 
     for dict_name in dicts:
         args[dict_name] = dicts[dict_name]
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for HRA.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
+    for required_key in ('workspace_dir',
+                         'csv_uri',
+                         'grid_size',
+                         'risk_eq',
+                         'decay_eq',
+                         'max_rating',
+                         'max_stress',
+                         'aoi_tables'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
+
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have a value'))
+
+    if limit_to in ('csv_uri', None):
+        if not os.path.isdir(args['csv_uri']):
+            warnings.append((['csv_uri'],
+                             'Parameter must be a path to a folder.'))
+
+    for int_key in ('grid_size', 'max_rating', 'max_stress'):
+        if limit_to in (int_key, None):
+            try:
+                int(args[int_key])
+            except ValueError:
+                warnings.append(([int_key],
+                                 'Parameter must be an integer.'))
+
+    for options_key, options in (
+            ('risk_eq', ('Multiplicative', 'Euclidean')),
+            ('decay_eq', ('None', 'Linear', 'Exponential'))):
+        if limit_to in (options_key, None):
+            if args[options_key] not in options:
+                warnings.append(
+                    ([options_key],
+                     'Parameter must be one of %s' % ', '.join(options)))
+
+    if limit_to in ('aoi_tables', None):
+        try:
+            if args['aoi_tables'] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args['aoi_tables'])
+                    if vector is None:
+                        warnings.append(
+                            (['aoi_tables'],
+                             ('Parameter must be a filepath to an '
+                              'OGR-compatible vector on disk.')))
+        except KeyError:
+            # file is not required.
+            pass
+
+    return warnings

@@ -170,11 +170,8 @@ def requirements(*pkgnames):
                           'requirements for %s') % list(missing_pkgs))
     return found_pkgnames.values()
 
-
-#BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
-#                                                        'natcap.versioner')
-BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('natcap.versioner')
-
+BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
+                                                        'natcap.versioner')
 
 setup(
     name='natcap.invest',
@@ -187,19 +184,15 @@ setup(
     packages=[
         'natcap',
         'natcap.invest',
-        'natcap.invest.crop_production',
         'natcap.invest.coastal_blue_carbon',
         'natcap.invest.coastal_vulnerability',
-        'natcap.invest.dbfpy',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
         'natcap.invest.habitat_risk_assessment',
         'natcap.invest.hydropower',
-        'natcap.invest.iui',
-        'natcap.invest.iui.dbfpy',
+        'natcap.invest.ui',
         'natcap.invest.ndr',
         'natcap.invest.overlap_analysis',
-        'natcap.invest.pollination',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
         'natcap.invest.routing',
@@ -238,17 +231,14 @@ setup(
     ext_modules=EXTENSION_LIST,
     entry_points={
         'console_scripts': [
-            'invest = natcap.invest.iui.cli:main'
+            'invest = natcap.invest.cli:main'
         ],
+    },
+    extras_require={
+        'ui': ('qtpy', 'qtawesome', 'six'),
     },
     cmdclass=CMDCLASS,
     package_data={
-        'natcap.invest.iui': [
-            '*.png',
-            '*.json',
-            'iui_resources/resources.json',
-            'iui_resources/images/*.png',
-        ],
         'natcap.invest.reporting': [
             'reporting_data/*.js',
             'reporting_data/*.css',

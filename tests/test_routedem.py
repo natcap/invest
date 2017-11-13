@@ -30,47 +30,17 @@ class RouteDEMTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_routedem_multi_threshold(self):
-        """RouteDem: regression testing multiple stream thresholds."""
-        from natcap.invest.routing import routedem
-        args = {
-            'calculate_downstream_distance': True,
-            'calculate_slope': True,
-            'dem_uri': os.path.join(SAMPLE_DATA, 'dem'),
-            'downstream_distance_filename': 'downstream_distance.tif',
-            'flow_accumulation_filename': 'flow_accumulation.tif',
-            'flow_direction_filename': 'flow_direction.tif',
-            'multiple_stream_thresholds': True,
-            'pit_filled_filename': 'pit_filled_dem.tif',
-            'slope_filename': 'slope.tif',
-            'threshold_flow_accumulation': '1000',
-            'threshold_flow_accumulation_stepsize': '100',
-            'threshold_flow_accumulation_upper': '2000',
-            'workspace_dir': self.workspace_dir,
-        }
-        routedem.execute(args)
-        RouteDEMTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'expected_file_list_multiple.txt'),
-            args['workspace_dir'])
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-            os.path.join(REGRESSION_DATA, 'v_stream_1000.tif'),
-            os.path.join(self.workspace_dir, 'v_stream_1000.tif'), 1e-6)
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_routedem_single_threshold(self):
         """RouteDem: regression testing single stream threshold."""
         from natcap.invest.routing import routedem
         args = {
+            'calculate_stream_threshold': True,
+            'results_suffix': 'test',
             'calculate_downstream_distance': True,
             'calculate_slope': True,
-            'dem_uri': os.path.join(SAMPLE_DATA, 'dem'),
-            'downstream_distance_filename': 'downstream_distance.tif',
-            'flow_accumulation_filename': 'flow_accumulation.tif',
-            'flow_direction_filename': 'flow_direction.tif',
-            'multiple_stream_thresholds': False,
-            'pit_filled_filename': 'pit_filled_dem.tif',
-            'slope_filename': 'slope.tif',
+            'dem_path': os.path.join(SAMPLE_DATA, 'dem'),
+            'calculate_stream_threshold': True,
+            'calculate_flow_accumulation': True,
             'threshold_flow_accumulation': '1000',
             'workspace_dir': self.workspace_dir,
         }
@@ -80,7 +50,7 @@ class RouteDEMTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'v_stream_1000.tif'),
-            os.path.join(self.workspace_dir, 'v_stream.tif'), 1e-6)
+            os.path.join(self.workspace_dir, 'stream_mask_test.tif'), 1e-6)
 
 
     @staticmethod

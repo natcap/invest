@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import os
 import sys
 import math
@@ -14,9 +15,9 @@ from osgeo import osr
 from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing
 from natcap.invest.scenic_quality import scenic_quality_core
 #from natcap.invest.overlap_analysis import overlap_analysis
+from .. import validation
+from .. import utils
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 
@@ -509,6 +510,14 @@ def execute(args):
 
     #create copy of args
     aq_args=args.copy()
+    for float_key in ('cell_size', 'refraction', 'a_coefficient',
+                      'b_coefficient', 'c_coefficient', 'd_coefficient',
+                      'max_valuation_radius'):
+        try:
+            aq_args[float_key] = float(aq_args[float_key])
+        except (KeyError, ValueError):
+            LOGGER.debug('Key %s not in args or could not be cast to float',
+                         float_key)
 
     #validate input
     LOGGER.debug("Validating parameters.")
@@ -752,3 +761,104 @@ def execute(args):
 
         LOGGER.debug("Set area field values.")
         set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for Scenic Quality.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = set([])
+    keys_without_value = set([])
+    for key in ('workspace_dir',
+                'aoi_uri',
+                'structure_uri',
+                'dem_uri',
+                'refraction',
+                'valuation_function',
+                'a_coefficient',
+                'b_coefficient',
+                'c_coefficient',
+                'd_coefficient',
+                'max_valuation_radius'):
+        try:
+            if args[key] in ('', None):
+                keys_without_value.add(key)
+        except KeyError:
+            missing_keys.add(key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('These keys are missing from args: %s' % (
+            ', '.join(sorted(missing_keys))))
+
+    if len(keys_without_value) > 0:
+        warnings.append((keys_without_value, 'Parameter must have a value.'))
+
+    for vector_key in ('aoi_uri', 'structure_uri', 'overlap_uri'):
+        if limit_to not in (vector_key, None):
+            continue
+
+        try:
+            with utils.capture_gdal_logging():
+                vector = ogr.Open(args[vector_key])
+                if vector is None:
+                    warnings.append(
+                        ([vector_key],
+                         ('Parameter must be a path to an OGR-compatible '
+                          'vector file.')))
+        except KeyError:
+            # overlap_uri is optional.
+            pass
+
+    for raster_key in ('dem_uri', 'pop_uri'):
+        if limit_to not in (raster_key, None):
+            continue
+
+        try:
+            with utils.capture_gdal_logging():
+                raster = gdal.Open(args[raster_key])
+                if raster is None:
+                    warnings.append(
+                        ([raster_key],
+                         ('Parameter must be a path to a GDAL-compatible '
+                          'raster file.')))
+        except KeyError:
+            # pop_uri is optional.
+            pass
+
+    for float_key in ('cell_size',
+                      'refraction',
+                      'max_valuation_radius') + tuple(
+                          '%s_coefficient' % letter for letter in 'abcd'):
+        if limit_to not in (float_key, None):
+            continue
+
+        try:
+            if args[float_key] not in ('', None):
+                float(args[float_key])
+        except ValueError:
+            warnings.append(([float_key], 'Parameter must be a number.'))
+        except KeyError:
+            # Not all arguments are required
+            pass
+
+    if limit_to in ('valuation_function', None):
+        valid_funcs = (
+            'polynomial: a + bx + cx^2 + dx^3',
+            'logarithmic: a + b ln(x)')
+        if args['valuation_function'] not in valid_funcs:
+            warnings.append(
+                (['valuation_function'],
+                 'Function must be either "%s" or "%s"' % valid_funcs))
+
+    return warnings
