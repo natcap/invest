@@ -720,7 +720,7 @@ class DatastackArchiveExtractionDialog(OptionsDialog):
 
         if result == QtWidgets.QDialog.Accepted:
             extract_to_dir = self.extraction_point.value()
-            args = datastacks.extract_datastack_archive(
+            args = datastack.extract_datastack_archive(
                 archive_path, extract_to_dir)
             return (args, extract_to_dir)
         return (None, None)
@@ -1048,13 +1048,13 @@ class InVESTModel(QtWidgets.QMainWindow):
         LOGGER.info('Current parameters:\n%s', pprint.pformat(current_args))
 
         if datastack_opts.datastack_type == _DATASTACK_DATA_ARCHIVE:
-            datastacks.build_datastack_archive(
+            datastack.build_datastack_archive(
                 args=current_args,
                 name=self.target.__module__,
                 datastack_path=datastack_opts.archive_path
             )
         else:
-            datastacks.write_parameter_set(
+            datastack.write_parameter_set(
                 filepath=datastack_opts.archive_path,
                 args=current_args,
                 name=self.target.__module__,
@@ -1134,9 +1134,9 @@ class InVESTModel(QtWidgets.QMainWindow):
                                          name,
                                          logging_level=logfile_log_level):
                 with usage.log_run(self.target.__module__, args):
-                    LOGGER.log(datastacks.ARGS_LOG_LEVEL,
+                    LOGGER.log(datastack.ARGS_LOG_LEVEL,
                                'Starting model with parameters: \n%s',
-                               datastacks.format_args_dict(args))
+                               datastack.format_args_dict(args))
                     try:
                         return self.target(args=args)
                     except:
@@ -1195,11 +1195,11 @@ class InVESTModel(QtWidgets.QMainWindow):
             window_title_filename = os.path.basename(extract_dir)
         else:
             try:
-                paramset = datastacks.read_parameter_set(datastack_path)
+                paramset = datastack.read_parameter_set(datastack_path)
                 args = paramset.args
             except ValueError:
                 # when a JSON object cannot be decoded, assume it's a logfile.
-                args = datastacks.read_parameters_from_logfile(datastack_path)
+                args = datastack.read_parameters_from_logfile(datastack_path)
             window_title_filename = os.path.basename(datastack_path)
 
         self.load_args(args)

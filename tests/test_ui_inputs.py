@@ -2275,13 +2275,13 @@ class ModelTests(_QtTest):
 
     def test_load_datastack_paramset(self):
         """UI Model: Check that we can load a parameter set datastack."""
-        from natcap.invest import datastacks
+        from natcap.invest import datastack
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'paramset.json')
-        datastacks.write_parameter_set(
+        datastack.write_parameter_set(
             datastack_filepath,
             args=args,
             name='test_model',
@@ -2295,13 +2295,13 @@ class ModelTests(_QtTest):
 
     def test_load_datastack_archive(self):
         """UI Model: Check that we can load a parameter archive."""
-        from natcap.invest import datastacks
+        from natcap.invest import datastack
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        datastacks.build_datastack_archive(args, 'test_model', datastack_filepath)
+        datastack.build_datastack_archive(args, 'test_model', datastack_filepath)
 
         extracted_archive = os.path.join(self.workspace, 'archive_dir')
         model_ui = ModelTests.build_model()
@@ -2337,13 +2337,13 @@ class ModelTests(_QtTest):
 
     def test_load_datastack_extraction_dialog_cancelled(self):
         """UI Model: coverage when user clicks cancel in datastack dialog."""
-        from natcap.invest import datastacks
+        from natcap.invest import datastack
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        datastacks.build_datastack_archive(args, 'test_model', datastack_filepath)
+        datastack.build_datastack_archive(args, 'test_model', datastack_filepath)
         model_ui = ModelTests.build_model()
 
         def _cancel_dialog():
