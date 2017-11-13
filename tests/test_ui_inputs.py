@@ -1932,7 +1932,7 @@ class ScenarioOptionsDialogTests(_QtTest):
         return_options = options_dialog.exec_()
 
         self.assertEqual(
-            model.ScenarioSaveOpts(
+            model.DatastackSaveOpts(
                 model._DATASTACK_PARAMETER_SET,  # datastack type
                 False,  # use relative paths
                 False,  # include workpace

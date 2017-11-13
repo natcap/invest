@@ -25,7 +25,7 @@ import qtawesome
 from . import inputs
 from . import usage
 from .. import utils
-from .. import datastacks
+from .. import datastack
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -532,8 +532,8 @@ class WindowTitle(QtCore.QObject):
             return ''
 
 
-ScenarioSaveOpts = collections.namedtuple(
-    'ScenarioSaveOpts',
+DatastackSaveOpts = collections.namedtuple(
+    'DatastackSaveOpts',
     'datastack_type use_relpaths include_workspace archive_path')
 
 
@@ -551,7 +551,7 @@ class ScenarioOptionsDialog(OptionsDialog):
     datastacks may optionally include the value of the workspace input.
 
     Returns:
-        An instance of :ref:ScenarioSaveOpts namedtuple.
+        An instance of :ref:DatastackSaveOpts namedtuple.
     """
 
     def __init__(self, paramset_basename):
@@ -668,12 +668,12 @@ class ScenarioOptionsDialog(OptionsDialog):
 
         Returns:
             If the dialog is rejected, ``None`` is returned.
-            If the dialog is accepted, a ``ScenarioSaveOpts`` instance is
+            If the dialog is accepted, a ``DatastackSaveOpts`` instance is
                 returned.
         """
         result = OptionsDialog.exec_(self)
         if result == QtWidgets.QDialog.Accepted:
-            return ScenarioSaveOpts(
+            return DatastackSaveOpts(
                 self.datastack_type.value(),
                 self.use_relative_paths.value(),
                 self.include_workspace.value(),
@@ -1162,7 +1162,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             * A parameter set (*.invs.json)
             * A parameter archive (*.invs.tar.gz)
 
-        Scenarios may be saved and loaded through the Model UI. For API access
+        Datastacks may be saved and loaded through the Model UI. For API access
         to datastacks, look at :ref:natcap.invest.datastacks.
 
         Parameters:
