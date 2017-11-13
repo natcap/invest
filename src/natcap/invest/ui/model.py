@@ -42,9 +42,9 @@ _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
 _DATASTACK_BASE_FILENAME = 'datastack.invest.%s'
-_DATASTACK_DIALOG_TITLE = 'Select where to save the data stack'
-_DATASTACK_PARAMETER_SET = 'Parameter set (archive parameters)'
-_DATASTACK_DATA_ARCHIVE = 'Data archive (archive parameters and files)'
+_DATASTACK_DIALOG_TITLE = 'Select where to save the datastack'
+_DATASTACK_PARAMETER_SET = 'Parameter set (saves parameter values only)'
+_DATASTACK_DATA_ARCHIVE = 'Data archive (archives parameters and files)'
 _DATASTACK_SAVE_OPTS = {
     _DATASTACK_PARAMETER_SET: {
         'title': _DATASTACK_DIALOG_TITLE,
@@ -934,7 +934,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
         self.file_menu.addAction(
             qtawesome.icon('fa.arrow-circle-o-up'),
-            'Open parameter file ...', self.load_datastack,
+            'L&oad datastack ...', self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.file_menu.addAction(
             'Quit', self.close,
