@@ -537,7 +537,7 @@ DatastackSaveOpts = collections.namedtuple(
     'datastack_type use_relpaths include_workspace archive_path')
 
 
-class ScenarioOptionsDialog(OptionsDialog):
+class DatastackOptionsDialog(OptionsDialog):
     """Provide a GUI model dialog with options for saving a datastack.
 
     There are two types of datastacks:
@@ -555,7 +555,7 @@ class ScenarioOptionsDialog(OptionsDialog):
     """
 
     def __init__(self, paramset_basename):
-        """Initialize the ScenarioOptionsDialog.
+        """Initialize the DatastackOptionsDialog.
 
         Parameters:
             paramset_basename (string): The basename of the new parameter set
@@ -565,16 +565,16 @@ class ScenarioOptionsDialog(OptionsDialog):
             ``None``
         """
         OptionsDialog.__init__(self,
-                               title='Scenario options',
+                               title='Datastack options',
                                modal=True,
                                accept_text='Save datastack',
                                reject_text='Cancel')
-        self._container = inputs.Container(label='Scenario options')
+        self._container = inputs.Container(label='Datastack options')
         self.layout().addWidget(self._container)
         self.paramset_basename = paramset_basename
 
         self.datastack_type = inputs.Dropdown(
-            label='Scenario type',
+            label='Datastack type',
             options=sorted(_DATASTACK_SAVE_OPTS.keys()))
         self.datastack_type.set_value(_DATASTACK_PARAMETER_SET)
         self.use_relative_paths = inputs.Checkbox(
@@ -682,18 +682,18 @@ class ScenarioOptionsDialog(OptionsDialog):
         return None
 
 
-class ScenarioArchiveExtractionDialog(OptionsDialog):
+class DatastackArchiveExtractionDialog(OptionsDialog):
     """A dialog for extracting a datastack archive."""
 
     def __init__(self):
-        """Initialize the ScenarioArchiveExtractionDialog."""
+        """Initialize the DatastackArchiveExtractionDialog."""
         OptionsDialog.__init__(self,
                                title='Extract datastack',
                                modal=True,
                                accept_text='Extract',
                                reject_text='Cancel')
         self._container = inputs.Container(
-            label='Scenario extraction parameters')
+            label='Datastack extraction parameters')
         self.layout().addWidget(self._container)
 
         self.extraction_point = inputs.Folder(
@@ -852,11 +852,11 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.file_dialog = inputs.FileDialog()
 
         paramset_basename = self.target.__module__.split('.')[-1]
-        self.datastack_options_dialog = ScenarioOptionsDialog(
+        self.datastack_options_dialog = DatastackOptionsDialog(
             paramset_basename=paramset_basename)
 
         self.datastack_archive_extract_dialog = (
-            ScenarioArchiveExtractionDialog())
+            DatastackArchiveExtractionDialog())
         self.quit_confirm_dialog = QuitConfirmDialog()
         self.validation_report_dialog = WholeModelValidationErrorDialog()
         self.workspace_overwrite_confirm_dialog = (
@@ -1227,7 +1227,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             try:
                 _inputs[args_key].set_value(args_value)
             except KeyError:
-                LOGGER.warning(('Scenario args_key %s not associated with '
+                LOGGER.warning(('Datastack args_key %s not associated with '
                                 'any inputs'), args_key)
             except Exception:
                 LOGGER.exception('Error setting %s to %s', args_key,

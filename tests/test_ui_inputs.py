@@ -1885,7 +1885,7 @@ class SettingsDialogTest(_SettingsSandbox):
             settings_dialog.close()
 
 
-class ScenarioOptionsDialogTests(_QtTest):
+class DatastackOptionsDialogTests(_QtTest):
     def setUp(self):
         self.workspace = tempfile.mkdtemp()
 
@@ -1893,10 +1893,10 @@ class ScenarioOptionsDialogTests(_QtTest):
         shutil.rmtree(self.workspace)
 
     def test_dialog_invalid_datastack_path(self):
-        """UI Scenario Options: verify datastack file validity."""
+        """UI Datastack Options: verify datastack file validity."""
         from natcap.invest.ui import model
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
         new_paramset_path = os.path.join(
             self.workspace, 'testdir1', 'test.invs.json')
@@ -1910,11 +1910,11 @@ class ScenarioOptionsDialogTests(_QtTest):
             self.assertFalse(options_dialog.save_parameters.valid())
 
     def test_dialog_return_value(self):
-        """UI Scenario Options: Verify return value of dialog."""
+        """UI Datastack Options: Verify return value of dialog."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         # set this option to ensure coverage of the slot
@@ -1940,11 +1940,11 @@ class ScenarioOptionsDialogTests(_QtTest):
             return_options)
 
     def test_dialog_cancelled(self):
-        """UI Scenario Options: Verify return value when dialog cancelled."""
+        """UI Datastack Options: Verify return value when dialog cancelled."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         # set this option to ensure coverage of the slot
@@ -1961,11 +1961,11 @@ class ScenarioOptionsDialogTests(_QtTest):
         self.assertEqual(return_options, None)
 
     def test_dialog_savefile_validation_fails(self):
-        """UI Scenario Options: Verify validation fails when expected."""
+        """UI Datastack Options: Verify validation fails when expected."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         save_path_with_missing_dir = os.path.join(
