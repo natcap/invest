@@ -13,6 +13,7 @@ import csv
 import numpy
 from osgeo import gdal
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
+import pygeoprocessing
 
 from .. import validation
 from .. import utils as invest_utils
@@ -652,12 +653,27 @@ def get_inputs(args):
 
     d['timesteps'] = d['snapshot_years'][-1] - d['snapshot_years'][0]
 
-    d['C_prior_raster'] = args['lulc_baseline_map_uri']
-
     try:
-        d['C_r_rasters'] = args['lulc_transition_maps_list']
+        transition_raster_paths = args['lulc_transition_maps_list']
     except KeyError:
-        d['C_r_rasters'] = []
+        transition_raster_paths = []
+
+    aligned_baseline_lulc_path = os.path.join(
+        intermediate_dir, 'aligned_lulc_%s.tif' % args['results_suffix'])
+    aligned_transition_raster_paths = [
+        os.path.join(intermediate_dir, 'aligned_transition_%s.tif' % year)
+        for year in d['transition_years']]
+    baseline_info = pygeoprocessing.get_raster_info(
+        args['lulc_baseline_map_uri'])
+
+    pygeoprocessing.align_and_resize_raster_stack(
+        [args['lulc_baseline_map_uri']] + transition_raster_paths,
+        [aligned_baseline_lulc_path] + aligned_transition_raster_paths,
+        ['nearest'] * (1 + len(aligned_transition_raster_paths)),
+        baseline_info['pixel_size'], 'intersection')
+
+    d['C_prior_raster'] = aligned_baseline_lulc_path
+    d['C_r_rasters'] = aligned_transition_raster_paths
 
     # Reclass Dictionaries
     lulc_lookup_dict = geoprocess.get_lookup_from_table(
