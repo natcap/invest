@@ -1885,18 +1885,18 @@ class SettingsDialogTest(_SettingsSandbox):
             settings_dialog.close()
 
 
-class ScenarioOptionsDialogTests(_QtTest):
+class DatastackOptionsDialogTests(_QtTest):
     def setUp(self):
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
         shutil.rmtree(self.workspace)
 
-    def test_dialog_invalid_scenario_path(self):
-        """UI Scenario Options: verify scenario file validity."""
+    def test_dialog_invalid_datastack_path(self):
+        """UI Datastack Options: verify datastack file validity."""
         from natcap.invest.ui import model
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
         new_paramset_path = os.path.join(
             self.workspace, 'testdir1', 'test.invs.json')
@@ -1910,16 +1910,16 @@ class ScenarioOptionsDialogTests(_QtTest):
             self.assertFalse(options_dialog.save_parameters.valid())
 
     def test_dialog_return_value(self):
-        """UI Scenario Options: Verify return value of dialog."""
+        """UI Datastack Options: Verify return value of dialog."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         # set this option to ensure coverage of the slot
-        options_dialog.scenario_type.set_value(model._SCENARIO_DATA_ARCHIVE)
-        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
+        options_dialog.datastack_type.set_value(model._DATASTACK_DATA_ARCHIVE)
+        options_dialog.datastack_type.set_value(model._DATASTACK_PARAMETER_SET)
         inputs.QT_APP.processEvents()
 
         new_paramset_path = os.path.join(self.workspace, 'test.invs.json')
@@ -1932,24 +1932,24 @@ class ScenarioOptionsDialogTests(_QtTest):
         return_options = options_dialog.exec_()
 
         self.assertEqual(
-            model.ScenarioSaveOpts(
-                model._SCENARIO_PARAMETER_SET,  # scenario type
+            model.DatastackSaveOpts(
+                model._DATASTACK_PARAMETER_SET,  # datastack type
                 False,  # use relative paths
                 False,  # include workpace
-                new_paramset_path),  # scenario path
+                new_paramset_path),  # datastack path
             return_options)
 
     def test_dialog_cancelled(self):
-        """UI Scenario Options: Verify return value when dialog cancelled."""
+        """UI Datastack Options: Verify return value when dialog cancelled."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         # set this option to ensure coverage of the slot
-        options_dialog.scenario_type.set_value(model._SCENARIO_DATA_ARCHIVE)
-        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
+        options_dialog.datastack_type.set_value(model._DATASTACK_DATA_ARCHIVE)
+        options_dialog.datastack_type.set_value(model._DATASTACK_PARAMETER_SET)
         inputs.QT_APP.processEvents()
 
         def _press_accept():
@@ -1961,17 +1961,17 @@ class ScenarioOptionsDialogTests(_QtTest):
         self.assertEqual(return_options, None)
 
     def test_dialog_savefile_validation_fails(self):
-        """UI Scenario Options: Verify validation fails when expected."""
+        """UI Datastack Options: Verify validation fails when expected."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         save_path_with_missing_dir = os.path.join(
             self.workspace, 'foo', 'parameters.invs.json')
 
-        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
+        options_dialog.datastack_type.set_value(model._DATASTACK_PARAMETER_SET)
         options_dialog.save_parameters.set_value(save_path_with_missing_dir)
         inputs.QT_APP.processEvents()
 
@@ -2273,50 +2273,50 @@ class ModelTests(_QtTest):
                 # simulate about --> view documentation menu.
                 model_ui._check_local_docs('http://some_file_that_exists')
 
-    def test_load_scenario_paramset(self):
-        """UI Model: Check that we can load a parameter set scenario."""
-        from natcap.invest import scenarios
+    def test_load_datastack_paramset(self):
+        """UI Model: Check that we can load a parameter set datastack."""
+        from natcap.invest import datastack
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
-        scenario_filepath = os.path.join(self.workspace, 'paramset.json')
-        scenarios.write_parameter_set(
-            scenario_filepath,
+        datastack_filepath = os.path.join(self.workspace, 'paramset.json')
+        datastack.write_parameter_set(
+            datastack_filepath,
             args=args,
             name='test_model',
             relative=False)
 
         model_ui = ModelTests.build_model()
-        model_ui.load_scenario(scenario_filepath)
+        model_ui.load_datastack(datastack_filepath)
 
         self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
         self.assertEqual(model_ui.suffix.value(), args['suffix'])
 
-    def test_load_scenario_archive(self):
+    def test_load_datastack_archive(self):
         """UI Model: Check that we can load a parameter archive."""
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
-        scenario_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        scenarios.build_scenario_archive(args, 'test_model', scenario_filepath)
+        datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
+        datastack.build_datastack_archive(args, 'test_model', datastack_filepath)
 
         extracted_archive = os.path.join(self.workspace, 'archive_dir')
         model_ui = ModelTests.build_model()
         def _set_extraction_dir():
-            model_ui.scenario_archive_extract_dialog.extraction_point.set_value(
+            model_ui.datastack_archive_extract_dialog.extraction_point.set_value(
                 extracted_archive)
-            model_ui.scenario_archive_extract_dialog.accept()
+            model_ui.datastack_archive_extract_dialog.accept()
 
         QtCore.QTimer.singleShot(25, _set_extraction_dir)
-        model_ui.load_scenario(scenario_filepath)
+        model_ui.load_datastack(datastack_filepath)
 
         # Workspace isn't saved in a parameter archive, so just test suffix
         self.assertEqual(model_ui.suffix.value(), args['suffix'])
 
-    def test_load_scenario_from_logfile(self):
+    def test_load_datastack_from_logfile(self):
         """UI Model: Check that we can load parameters from a logfile."""
         # write a sample logfile
         logfile_path = os.path.join(self.workspace, 'logfile')
@@ -2330,30 +2330,30 @@ class ModelTests(_QtTest):
             """))
 
         model_ui = ModelTests.build_model()
-        model_ui.load_scenario(logfile_path)
+        model_ui.load_datastack(logfile_path)
 
         self.assertEqual(model_ui.workspace.value(), 'some_workspace_dir')
         self.assertEqual(model_ui.suffix.value(), 'foo')
 
-    def test_load_scenario_extraction_dialog_cancelled(self):
-        """UI Model: coverage when user clicks cancel in scenario dialog."""
-        from natcap.invest import scenarios
+    def test_load_datastack_extraction_dialog_cancelled(self):
+        """UI Model: coverage when user clicks cancel in datastack dialog."""
+        from natcap.invest import datastack
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
-        scenario_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        scenarios.build_scenario_archive(args, 'test_model', scenario_filepath)
+        datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
+        datastack.build_datastack_archive(args, 'test_model', datastack_filepath)
         model_ui = ModelTests.build_model()
 
         def _cancel_dialog():
-            model_ui.scenario_archive_extract_dialog.reject()
+            model_ui.datastack_archive_extract_dialog.reject()
 
         QtCore.QTimer.singleShot(25, _cancel_dialog)
-        model_ui.load_scenario(scenario_filepath)
+        model_ui.load_datastack(datastack_filepath)
         self.assertFalse(model_ui.isVisible())
 
-    def test_load_scenario_file_dialog_cancelled(self):
+    def test_load_datastack_file_dialog_cancelled(self):
         """UI Model: coverage for when the file select dialog is cancelled."""
         # I'm mocking up the file dialog because I can't figure out how to
         # programmatically press the cancel button in a way that works on both
@@ -2361,7 +2361,7 @@ class ModelTests(_QtTest):
         with mock.patch('qtpy.QtWidgets.QFileDialog.getOpenFileName',
                         return_value=(None, None)):
             model_ui = ModelTests.build_model()
-            model_ui.load_scenario()
+            model_ui.load_datastack()
 
     def test_model_quickrun(self):
         """UI Model: Test the quickrun path through model.run()."""
@@ -2388,17 +2388,17 @@ class ModelTests(_QtTest):
         while model_ui.isVisible():
             QTest.qWait(25)
 
-    def test_save_scenario_cancel_coverage(self):
-        """UI Model: Test coverage for cancelling save scenario dialog."""
+    def test_save_datastack_cancel_coverage(self):
+        """UI Model: Test coverage for cancelling save datastack dialog."""
         model_ui = ModelTests.build_model()
 
-        def _cancel_scenario_dialog():
-            model_ui.scenario_options_dialog.reject()
+        def _cancel_datastack_dialog():
+            model_ui.datastack_options_dialog.reject()
 
-        QtCore.QTimer.singleShot(25, _cancel_scenario_dialog)
-        model_ui._save_scenario_as()
+        QtCore.QTimer.singleShot(25, _cancel_datastack_dialog)
+        model_ui._save_datastack_as()
 
-    def test_save_scenario_as_archive(self):
+    def test_save_datastack_as_archive(self):
         """UI Model: Test coverage for saving parameter archives."""
         from natcap.invest.ui import model
         model_ui = ModelTests.build_model()
@@ -2408,18 +2408,18 @@ class ModelTests(_QtTest):
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
         def _set_archive_options():
-            model_ui.scenario_options_dialog.scenario_type.set_value(
-                model._SCENARIO_DATA_ARCHIVE)
-            model_ui.scenario_options_dialog.save_parameters.set_value(
+            model_ui.datastack_options_dialog.datastack_type.set_value(
+                model._DATASTACK_DATA_ARCHIVE)
+            model_ui.datastack_options_dialog.save_parameters.set_value(
                 archive_path)
             QT_APP.processEvents()
-            model_ui.scenario_options_dialog.accept()
+            model_ui.datastack_options_dialog.accept()
 
         QtCore.QTimer.singleShot(25, _set_archive_options)
-        model_ui._save_scenario_as()
+        model_ui._save_datastack_as()
         self.assertNotEqual(starting_window_title, model_ui.windowTitle())
 
-    def test_save_scenario_as_parameter_set(self):
+    def test_save_datastack_as_parameter_set(self):
         """UI Model: Test coverage for saving parameter set."""
         from natcap.invest.ui import model
         model_ui = ModelTests.build_model()
@@ -2429,19 +2429,19 @@ class ModelTests(_QtTest):
         archive_path = os.path.join(self.workspace, 'parameters.invs.json')
 
         def _set_archive_options():
-            model_ui.scenario_options_dialog.scenario_type.set_value(
-                model._SCENARIO_PARAMETER_SET)
-            model_ui.scenario_options_dialog.use_relative_paths.set_value(
+            model_ui.datastack_options_dialog.datastack_type.set_value(
+                model._DATASTACK_PARAMETER_SET)
+            model_ui.datastack_options_dialog.use_relative_paths.set_value(
                 True)
-            model_ui.scenario_options_dialog.include_workspace.set_value(
+            model_ui.datastack_options_dialog.include_workspace.set_value(
                 True)
-            model_ui.scenario_options_dialog.save_parameters.set_value(
+            model_ui.datastack_options_dialog.save_parameters.set_value(
                 archive_path)
             QT_APP.processEvents()
-            model_ui.scenario_options_dialog.accept()
+            model_ui.datastack_options_dialog.accept()
 
         QtCore.QTimer.singleShot(25, _set_archive_options)
-        model_ui._save_scenario_as()
+        model_ui._save_datastack_as()
         self.assertNotEqual(starting_window_title, model_ui.windowTitle())
 
     def test_settings_saved_message(self):

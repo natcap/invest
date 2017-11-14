@@ -5,7 +5,7 @@ import os
 import json
 import itertools
 
-from natcap.invest import scenarios
+from natcap.invest import datastack
 
 DATA_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data'))
@@ -115,7 +115,7 @@ def main(userargs=None):
                         help='Run for every known IUI file.')
     parser.add_argument('iui_config', nargs='?', default=[],
                         help='The IUI configuration file to use')
-    parser.add_argument('scenario_path', nargs='?', default=[],
+    parser.add_argument('datastack_path', nargs='?', default=[],
                         help='Where to save the parameter set')
 
     args = parser.parse_args(userargs)
@@ -123,35 +123,35 @@ def main(userargs=None):
     # Convert params to lists if needed.
     # There's probably a better argparse way to do this, but I can't seem to
     # make it happen immediately and this works just fine.
-    for attrname in ('iui_config', 'scenario_path'):
+    for attrname in ('iui_config', 'datastack_path'):
         if not isinstance(getattr(args, attrname), list):
             setattr(args, attrname, [getattr(args, attrname)])
 
     if args.convert_all:
-        for model_key, scenario_name in IUI_SCENARIOS.iteritems():
-            print model_key, scenario_name
+        for model_key, datastack_name in IUI_SCENARIOS.iteritems():
+            print model_key, datastack_name
             iui_json_path = os.path.join('src', 'natcap', 'invest', 'iui',
-                                        '%s.json' % model_key)
+                                         '%s.json' % model_key)
             args.iui_config.append(iui_json_path)
             assert os.path.exists(iui_json_path), 'File not found: %s' % iui_json_path
-            scenario_path = os.path.join(DATA_DIR, scenario_name + '.invs.json')
-            args.scenario_path.append(scenario_path)
+            datastack_path = os.path.join(DATA_DIR, datastack_name + '.invs.json')
+            args.datastack_path.append(datastack_path)
 
-    for iui_config, scenario_path in itertools.izip(args.iui_config,
-                                                    args.scenario_path):
+    for iui_config, datastack_path in itertools.izip(args.iui_config,
+                                                     args.datastack_path):
 
         modelname, new_params = extract_parameters(
             iui_config_path=iui_config,
-            relative_to=os.path.dirname(os.path.abspath(scenario_path)))
+            relative_to=os.path.dirname(os.path.abspath(datastack_path)))
         try:
             del new_params['workspace_dir']
         except KeyError:
             pass
 
-        scenarios.write_parameter_set(filepath=scenario_path,
-                                      args=new_params,
-                                      name=modelname,
-                                      relative=True)
+        datastack.write_parameter_set(filepath=datastack_path,
+                                       args=new_params,
+                                       name=modelname,
+                                       relative=True)
 
 
 if __name__ == '__main__':
