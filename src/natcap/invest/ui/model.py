@@ -983,11 +983,11 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.menuBar().addMenu(self.help_menu)
 
     def build_open_menu(self):
-        """(Re-)Build the "Open paramaeter file" menu.
+        """(Re-)Build the "Open datastack" menu.
 
         This menu consists of:
 
-            * An option to select a new parameter file
+            * An option to select a new datastack file
             * A separator
             * A dynamically-generated list of the 10 most recently-accessed
               datastack files.
@@ -1002,16 +1002,14 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
 
-
         recently_opened_datastacks = json.loads(
             self.settings.value('recent_datastacks', '{}'))
 
         for datastack_filepath, timestamp in sorted(
                 recently_opened_datastacks.items(), key=lambda x: x[1]):
 
-
             time_obj = datetime.datetime.strptime(timestamp,
-                                                   '%Y-%m-%dT%H:%M:%S.%f')
+                                                  '%Y-%m-%dT%H:%M:%S.%f')
             if time_obj .date() == datetime.date.today():
                 date_label = 'Today at %s' % time_obj.strftime('%H:%M')
             else:
