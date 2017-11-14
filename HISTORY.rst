@@ -4,6 +4,10 @@
 
 Unreleased Changes
 ------------------
+* Spatial inputs to Coastal Blue Carbon are now aligned as part of the model.
+  This resolves a longstanding issue with the model where inputs would need to
+  perfectly overlap (even down to pixel indices), or else the model would yield
+  strange results.
 * Removed vendored ``natcap.invest.dbfpy`` subpackage.
 * Removed deprecated ``natcap.invest.fileio`` module.
 * Removed ``natcap.invest.iui`` UI subpackage in favor of a new UI framework found at ``natcap.invest.ui``. This new UI features a greatly improved API, good test coverage, support for Qt4 and Qt5, and includes updates to all InVEST models to support validation of model arguments from a python script, independent of the UI.
