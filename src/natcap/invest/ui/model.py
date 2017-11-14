@@ -220,20 +220,23 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
         return QtWidgets.QMessageBox.exec_(self)
 
 
-class WorkspaceOverwriteConfirmDialog(QtWidgets.QMessageBox):
-    """A message box to confirm that the workspace should be overwritten."""
+class ConfirmDialog(QtWidgets.QMessageBox):
+    """A message box for confirming something with the user."""
 
-    def __init__(self):
+    def __init__(self, title_text, body_text):
         """Initialize the dialog.
 
+        Parameters:
+            title_text (string): The title of the dialog.
+            body_text (string): The body text of the dialog.
+
         Returns:
-            ``None``
+            None.
         """
         QtWidgets.QMessageBox.__init__(self)
         self.setWindowFlags(QtCore.Qt.Dialog)
-        self.setText('<h2>Workspace exists!<h2>')
-        self.setInformativeText(
-            'Overwrite files from a previous run?')
+        self.setText('<h2>%s<h2>' % title_text)
+        self.setInformativeText(body_text)
         self.setStandardButtons(
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
         self.setDefaultButton(QtWidgets.QMessageBox.Yes)
@@ -859,9 +862,15 @@ class InVESTModel(QtWidgets.QMainWindow):
             DatastackArchiveExtractionDialog())
         self.quit_confirm_dialog = QuitConfirmDialog()
         self.validation_report_dialog = WholeModelValidationErrorDialog()
-        self.workspace_overwrite_confirm_dialog = (
-            WorkspaceOverwriteConfirmDialog())
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
+        self.input_overwrite_confirm_dialog = ConfirmDialog(
+            title_text='Overwrite parameters?',
+            body_text=('Loading a datastack will overwrite any unsaved '
+                       'parameters. Are you sure you want to continue?')
+        )
+        self.workspace_overwrite_confirm_dialog = ConfirmDialog(
+            title_text='Workspace exists!',
+            body_text='Overwrite files from a previous run?')
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
@@ -1029,7 +1038,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             None.
         """
         # self.sender() is set when this is called as a slot
-        self.load_datastack(self.sender().data())
+        self.load_datastack(self.sender().data(), confirm=True)
 
     def _add_to_open_menu(self, datastack_path):
         """Add a datastack file to the Open-Recent menu.
@@ -1239,7 +1248,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                       out_folder=args['workspace_dir'])
 
     @QtCore.Slot()
-    def load_datastack(self, datastack_path=None):
+    def load_datastack(self, datastack_path=None, confirm=False):
         """Load a datastack.
 
         This method is also a slot that accepts no arguments.
@@ -1247,26 +1256,33 @@ class InVESTModel(QtWidgets.QMainWindow):
         A datastack could be any one of:
 
             * A logfile from a previous model run.
-            * A parameter set (*.invs.json)
-            * A parameter archive (*.invs.tar.gz)
+            * A parameter set (*.invest.json)
+            * A parameter archive (*.invest.tar.gz)
 
         Datastacks may be saved and loaded through the Model UI. For API access
-        to datastacks, look at :ref:natcap.invest.datastacks.
+        to datastacks, look at :ref:natcap.invest.datastack.
 
         Parameters:
             datastack_path=None (string): The path to the datastack file to
                 load.  If ``None``, the user will be prompted for a file
                 with a file dialog.
+            confirm=False (boolean): If True, confirm that values will be
+                overwritten by the new scenario.
 
         Returns:
             ``None``
         """
+        if confirm is True:
+            confirm_response = self.input_overwrite_confirm_dialog.exec_()
+            if confirm_response != QtWidgets.QMessageBox.Yes:
+                return
+
         if not datastack_path:
             datastack_path = self.file_dialog.open_file(
                 title='Select datastack', filters=(
                     'Any file (*.*)',
-                    'Parameter set (*.invs.json)',
-                    'Parameter archive (*.invs.tar.gz)',
+                    'Parameter set (*.invest.json)',
+                    'Parameter archive (*.invest.tar.gz)',
                     'Logfile (*.txt)'))
 
             # When the user pressed cancel, datastack_path == ''

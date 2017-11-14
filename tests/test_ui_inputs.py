@@ -2497,7 +2497,7 @@ class ModelTests(_QtTest):
 
         self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
 
-    def test_overwrite_reject(self):
+    def test_workspace_overwrite_reject(self):
         """UI Model: Verify coverage when overwrite dialog is rejected."""
 
         model_ui = ModelTests.build_model()
@@ -2591,8 +2591,16 @@ class ModelTests(_QtTest):
         # When we trigger the action and process events, the datastack should
         # be loaded into the UI.
         action = last_run_datastack_actions[0]
+        def _accept_parameter_overwrite():
+            QTest.mouseClick(
+                model_ui.input_overwrite_confirm_dialog.button(
+                    QtWidgets.QMessageBox.Yes),
+                QtCore.Qt.LeftButton)
+
+        QtCore.QTimer.singleShot(50, _accept_parameter_overwrite)
         action.trigger()
         QT_APP.processEvents()
+
         self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
 
     def test_clear_local_settings(self):
