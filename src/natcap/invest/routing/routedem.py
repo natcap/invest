@@ -1,136 +1,188 @@
-"""RouteDEM entry point for exposing the natcap.invest's routing package
-    to a UI."""
+"""RouteDEM for exposing the natcap.invest's routing package to UI."""
+from __future__ import absolute_import
 
 import os
 import logging
 
-
-import pygeoprocessing.geoprocessing
+from osgeo import gdal
+from osgeo import ogr
+import pygeoprocessing
 import pygeoprocessing.routing
-import pygeoprocessing.routing.routing_core
+import natcap.invest.pygeoprocessing_0_3_3.routing
+import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from .. import utils
+from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.routing.routedem')
+
+# replace %s with file suffix
+_TARGET_SLOPE_FILE_PATTERN = 'slope%s.tif'
+_TARGET_FLOW_DIRECTION_FILE_PATTERN = 'flow_direction%s.tif'
+_FLOW_ACCUMULATION_FILE_PATTERN = 'flow_accumulation%s.tif'
+_STREAM_MASK_FILE_PATTERN = 'stream_mask%s.tif'
+_DOWNSTREAM_DISTANCE_FILE_PATTERN = 'downstream_distance%s.tif'
+
 
 def execute(args):
     """RouteDEM: D-Infinity Routing.
 
-    This model exposes the pygeoprocessing d-infinity routing functionality in
-    the InVEST model API.
+    This model exposes the pygeoprocessing_0_3_3 d-infinity routing
+    functionality as an InVEST model.
 
     Parameters:
-        workspace_dir (string):  The selected folder is used as the workspace
-            where all intermediate and output files will be written. If the
-            selected folder does not exist, it will be created. If
-            datasets already exist in the selected folder, they will be
-            overwritten. (required)
-        dem_uri (string):  A GDAL-supported raster file containing a base
-            Digital Elevation Model to execute the routing functionality
-            across. (required)
-        pit_filled_filename (string):  The filename of the output raster
-            with pits filled in. It will go in the project workspace.
-            (required)
-        flow_direction_filename (string):  The filename of the flow direction
-            raster. It will go in the project workspace. (required)
-        flow_accumulation_filename (string):  The filename of the flow
-            accumulation raster. It will go in the project workspace.
-            (required)
-        threshold_flow_accumulation (int):  The number of upstream cells
-            that must flow into a cell before it's classified as a stream.
-            (required)
-        multiple_stream_thresholds (bool):  Set to ``True`` to calculate
-            multiple maps. If enabled, set stream threshold to the lowest
-            amount, then set upper and step size thresholds. (optional)
-        threshold_flow_accumulation_upper (int):  The number of upstream
-            pixels that must flow into a cell before it's classified as a
-            stream. (required)
-        threshold_flow_accumulation_stepsize (int):  The number of cells
-            to step up from lower to upper threshold range. (required)
-        calculate_slope (bool):  Set to ``True`` to output a slope raster.
-            (optional)
-        slope_filename (string):  The filename of the output slope raster.
-            This will go in the project workspace. (required)
-        calculate_downstream_distance (bool):  Select to calculate a distance
-            stream raster, based on uppper threshold limit. (optional)
-        downstream_distance_filename (string):  The filename of the output
-            raster. It will go in the project workspace. (required)
+        args['workspace_dir'] (string): output directory for intermediate,
+            temporary, and final files
+        args['results_suffix'] (string): (optional) string to append to any
+            output file names
+        args['dem_path'] (string): path to a digital elevation raster
+        args['calculate_flow_accumulation'] (bool): If True, model will
+            calculate a flow accumulation raster.
+        args['calculate_stream_threshold'] (bool): if True, model will
+            calculate a stream classification layer by thresholding flow
+            accumulation to the provided value in
+            args['threshold_flow_accumulation'].
+        args['threshold_flow_accumulation'] (int): The number of upstream
+            cells that must flow into a cell before it's classified as a
+            stream.
+        args['calculate_downstream_distance'] (bool): If True, and a stream
+            threshold is calculated, model will calculate a downstream
+            distance raster in units of pixels.
+        args['calculate_slope'] (bool):  If True, model will calculate a
+            slope raster.
 
     Returns:
         ``None``
     """
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    utils.make_directories([args['workspace_dir']])
+    dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
+    if dem_info['n_bands'] > 1:
+        LOGGER.warn(
+            "There are more than 1 bands in %s.  RouteDEM will only operate "
+            "on band 1.", args['dem_path'])
+    dem_raster_path_band = (args['dem_path'], 1)
 
-    output_directory = args['workspace_dir']
-    LOGGER.info('creating directory %s', output_directory)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-    file_suffix = ''
-    dem_uri = args['dem_uri']
-
-    LOGGER.info('resolving filling pits')
-
-    prefix, suffix = os.path.splitext(args['pit_filled_filename'])
-    dem_tiled_uri = os.path.join(
-        output_directory, 'dem_tiled' + file_suffix + '.tif')
-    pygeoprocessing.geoprocessing.tile_dataset_uri(dem_uri, dem_tiled_uri, 256)
-    dem_pit_filled_uri = os.path.join(
-        output_directory, prefix + file_suffix + suffix)
-    pygeoprocessing.routing.fill_pits(dem_tiled_uri, dem_pit_filled_uri)
-    dem_uri = dem_pit_filled_uri
-
-    #Calculate slope
-    if args['calculate_slope']:
+    # Calculate slope
+    if 'calculate_slope' in args and bool(args['calculate_slope']):
         LOGGER.info("Calculating slope")
-        prefix, suffix = os.path.splitext(args['slope_filename'])
-        slope_uri = os.path.join(
-            output_directory, prefix + file_suffix + suffix)
-        pygeoprocessing.geoprocessing.calculate_slope(dem_uri, slope_uri)
+        target_slope_path = os.path.join(
+            args['workspace_dir'], _TARGET_SLOPE_FILE_PATTERN % file_suffix)
+        pygeoprocessing.calculate_slope(
+            dem_raster_path_band, target_slope_path)
 
-    #Calculate flow accumulation
+    # Calculate flow accumulation
     LOGGER.info("calculating flow direction")
-    prefix, suffix = os.path.splitext(args['flow_direction_filename'])
-    flow_direction_uri = os.path.join(
-        output_directory, prefix + file_suffix + suffix)
-    pygeoprocessing.routing.flow_direction_d_inf(dem_uri, flow_direction_uri)
+    flow_direction_path = os.path.join(
+        args['workspace_dir'],
+        _TARGET_FLOW_DIRECTION_FILE_PATTERN % file_suffix)
+    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
+        args['dem_path'], flow_direction_path)
 
-    LOGGER.info("calculating flow accumulation")
-    prefix, suffix = os.path.splitext(args['flow_accumulation_filename'])
-    flow_accumulation_uri = os.path.join(
-        output_directory, prefix + file_suffix + suffix)
-    pygeoprocessing.routing.flow_accumulation(
-        flow_direction_uri, dem_uri, flow_accumulation_uri)
+    if ('calculate_flow_accumulation' in args and
+            bool(args['calculate_flow_accumulation'])):
+        LOGGER.info("calculating flow accumulation")
+        flow_accumulation_path = os.path.join(
+            args['workspace_dir'],
+            _FLOW_ACCUMULATION_FILE_PATTERN % file_suffix)
+        natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
+            flow_direction_path, args['dem_path'], flow_accumulation_path)
 
-    #classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
+        if ('calculate_stream_threshold' in args and
+                bool(args['calculate_stream_threshold'])):
+            LOGGER.info("Classifying streams from flow accumulation raster")
 
-    if args['multiple_stream_thresholds']:
-        lower_threshold = int(args['threshold_flow_accumulation'])
-        upper_threshold = int(args['threshold_flow_accumulation_upper'])
-        threshold_step = int(args['threshold_flow_accumulation_stepsize'])
+            flow_accumulation_threshold = float(
+                args['threshold_flow_accumulation'])
 
-        for threshold_amount in range(
-                lower_threshold, upper_threshold+1, threshold_step):
             LOGGER.info(
                 "Calculating stream threshold at %s pixels",
-                threshold_amount)
-            v_stream_uri = os.path.join(
-                output_directory, 'v_stream%s_%s.tif' %
-                (file_suffix, str(threshold_amount)))
+                flow_accumulation_threshold)
+            stream_mask_path = os.path.join(
+                args['workspace_dir'],
+                _STREAM_MASK_FILE_PATTERN % file_suffix)
 
-            pygeoprocessing.routing.stream_threshold(
-                flow_accumulation_uri, threshold_amount, v_stream_uri)
-    else:
-        v_stream_uri = os.path.join(
-            output_directory, 'v_stream%s.tif' % file_suffix)
-        pygeoprocessing.routing.stream_threshold(
-            flow_accumulation_uri, float(args['threshold_flow_accumulation']),
-            v_stream_uri)
+            natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
+                flow_accumulation_path, flow_accumulation_threshold,
+                stream_mask_path)
 
-    if args['calculate_downstream_distance']:
-        prefix, suffix = os.path.splitext(args['downstream_distance_filename'])
-        distance_uri = os.path.join(
-            output_directory, prefix + file_suffix + suffix)
-        pygeoprocessing.routing.distance_to_stream(
-            flow_direction_uri, v_stream_uri, distance_uri)
+            if ('calculate_downstream_distance' in args and
+                    bool(args['calculate_downstream_distance'])):
+                distance_path = os.path.join(
+                    args['workspace_dir'],
+                    _DOWNSTREAM_DISTANCE_FILE_PATTERN % file_suffix)
+                natcap.invest.pygeoprocessing_0_3_3.routing.distance_to_stream(
+                    flow_direction_path, stream_mask_path, distance_path)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    required_keys = [
+        'workspace_dir',
+        'dem_path']
+
+    if ('calculate_stream_threshold' in args and
+            args['calculate_stream_threshold']):
+        required_keys.append('threshold_flow_accumulation')
+
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
+
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    file_type_list = [('dem_path', 'raster')]
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

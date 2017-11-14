@@ -7,8 +7,8 @@ import csv
 import codecs
 
 from osgeo import ogr
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'src', 'natcap', 'invest')
@@ -78,7 +78,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         reporting.generate_report(args)
 
-        pygeoprocessing.testing.assert_text_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_text_equal(
             args['out_uri'],
             os.path.join(
                 REGRESSION_DATA, 'html_reports', 'report_csv_style.html'))
@@ -110,7 +110,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         reporting.generate_report(args)
 
-        pygeoprocessing.testing.assert_text_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_text_equal(
             args['out_uri'],
             os.path.join(
                 REGRESSION_DATA, 'html_reports', 'report_dict_script.html'))
@@ -138,7 +138,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         reporting.generate_report(args)
 
-        pygeoprocessing.testing.assert_text_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_text_equal(
             args['out_uri'],
             os.path.join(
                 REGRESSION_DATA, 'html_reports', 'report_shape_json.html'))
@@ -218,7 +218,7 @@ class ReportingRegressionTests(unittest.TestCase):
         # Run again to make sure output file that was created is removed
         reporting.generate_report(args)
 
-        pygeoprocessing.testing.assert_text_equal(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_text_equal(
             args['out_uri'],
             os.path.join(
                 REGRESSION_DATA, 'html_reports', 'report_dict_script.html'))

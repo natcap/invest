@@ -1,7 +1,70 @@
 .. :changelog:
 
+.. Unreleased Changes
+
 Unreleased Changes
 ------------------
+* Removed vendored ``natcap.invest.dbfpy`` subpackage.
+* Removed deprecated ``natcap.invest.fileio`` module.
+* Removed ``natcap.invest.iui`` UI subpackage in favor of a new UI framework found at ``natcap.invest.ui``. This new UI features a greatly improved API, good test coverage, support for Qt4 and Qt5, and includes updates to all InVEST models to support validation of model arguments from a python script, independent of the UI.
+* Updated core model of seasonal water yield to allow for negative `L_avail`.
+* Updated RouteDEM to allow for file suffixes, finer control over what DEM routing algorithms to run, and removal of the multiple stepped stream threshold classification.
+* Redesign/refactor of pollination model. Long term bugs in the model are resolved, managed pollinators added, and many simplifications to the end user's experience.  The updated user's guide chapter is available here: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/croppollination.html
+* Scenario Generator - Rule Based now has an optional input to define a seed.
+  This input is used to seed the random shuffling of parcels that have equal
+  priorities.
+* InVEST on mac is now distributed as a single application bundle, allowing InVEST to run as expected on mac OSX Sierra.  Individual models are selected and launched from a new launcher window.
+* The InVEST CLI now has a GUI model launcher:  ``$ invest launcher``
+* Updated the Coastal Blue Carbon model to improve handling of blank lines in input CSV tables and improve memory efficiency of the current implementation.
+* Improved the readability of a cryptic error message in Coastal Vulnerability that is normally raised when the depth threshold is too high or the exposure proportion is too low to detect any shoreline segments.
+* Adding InVEST HTML documentation to the Mac disk image distribution.
+* Upgrading dependency of PyGeoprocessing to 0.3.3.  This fixes a memory leak associated with any model that aggregates rasters over complicated overlapping polygons.
+* Adding sample data to Blue Carbon model that were missing.
+* Deprecating the InVEST Marine Water Quality model.  This also removes InVEST's dependancy on the pyamg package which has been removed from REQUIREMENTS.TXT.
+* Deprecating the ArcGIS-based Coastal Protection model and ArcGIS-based data-preprocessing scripts.  The toolbox and scripts may still be found at https://bitbucket.org/natcap/invest.arcgis.
+* Fixing an issue in the carbon edge effect model that caused output values in the shapefile to be rounded to the nearest integer.
+* Fixing issue in SDR model that would occasionally cause users to see errors about field widths in the output shapefile generation.
+* Updated the erodibility sample raster that ships with InVEST for the SDR model.  The old version was in US units, in this version we convert to SI units as the model requires, and clipped the raster to the extents of the other stack to save disk space.
+
+3.3.3 (2017-02-06)
+------------------
+* Fixed an issue in the UI where the carbon model wouldn't accept negative numbers in the price increase of carbon.
+* RouteDEM no longer produces a "tiled_dem.tif" file since that functionality is being deprecated in PyGeoprocessing.
+* Fixing an issue in SDR where the optional drainage layer would not be used in most of the SDR biophysical calculations.
+* Refactoring so water yield pixels with Kc and et0 equal to be 0 now yields a 0.0 value of water yield on that pixel rather than nodata.
+* Light optimization refactor of wind energy model that improves runtimes in some cases by a factor of 2-3.
+* Performance optimizations to HRA that improve runtimes by approximately 30%.
+* Fixed a broken UI link to Seasonal Water Yield's user's guide.
+* Fixed an issue with DelineateIT that caused ArcGIS users to see both the watershed and inverse watershed polygons when viewing the output of the tool.
+* Upgrading dependency to PyGeoprocessing 0.3.2.
+* Fixed an issue with SDR that caused the LS factor to be an order of magnitue too high in areas where the slope was greater than 9%.  In our sample case this caused sediment export estimates to be about 6% too high, but in cases where analyses are run over steep slopes the error would have been greater.
+* ``paver check`` now warns if the ``PYTHONHOME`` environment variable is set.
+* API docs now correctly reflect installation steps needed for python development headers on linux.
+* Fixed a side effect in the InVEST user interface that would cause ``tempfile.tempdir`` to be set and then not be reset after a model run is finished.
+* The InVEST user interface will now record GDAL/OGR log messages in the log messages window and in the logfile written to the workspace.
+* Updated branding and usability of the InVEST installer for Windows, and the Mac Disk Image (.dmg).
+
+
+3.3.2 (2016-10-17)
+------------------
+* Partial test coverage for HRA model.
+* Full test coverage for Overlap Analysis model.
+* Full test coverage for Finfish Aquaculture.
+* Full test coverage for DelineateIT.
+* Full test coverage for RouteDEM.
+* Fixed an issue in Habitat Quality where an error in the sample table or malformed threat raster names would display a confusing message to the user.
+* Full test coverage for scenario generator proximity model.
+* Patching an issue in seasonal water yield that causes an int overflow error if the user provides a floating point landcover map and the nodata value is outside of the range of an int64.
+* Full test coverage for the fisheries model.
+* Patched an issue that would cause the Seasonal Water Edge model to crash when the curve number was 100.
+* Patching a critical issue with forest carbon edge that would give incorrect results for edge distance effects.
+* Patching a minor issue with forest carbon edge that would cause the model to crash if only one  interpolation point were selected.
+* Full test coverage for pollination model.
+* Removed "farms aggregation" functionality from the InVEST pollination model.
+* Full test coverage for the marine water quality model.
+* Full test coverage for GLOBIO model.
+* Full test coverage for carbon forest edge model.
+* Upgraded SciPy dependancy to 0.16.1.
 * Patched bug in NDR that would cause a phosphorus density to be reported per pixel rather than total amount of phosporous in a pixel.
 * Corrected an issue with the uses of buffers in the euclidean risk function of Habitat Risk Assessment.  (issue #3564)
 * Complete code coverage tests for Habitat Quality model.

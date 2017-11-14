@@ -4,21 +4,19 @@ generating a new Population Parameters CSV File based on habitat area
 change and the dependencies that particular classes of the given species
 have on particular habitats.
 '''
+from __future__ import absolute_import
 import logging
 import pprint
+import csv
 
 import numpy as np
 
-try:
-    from natcap.invest.fisheries import fisheries_hst_io as io
-except:
-    import fisheries_hst_io as io
+from . import fisheries_hst_io as io
+from .. import validation
 
 pp = pprint.PrettyPrinter(indent=4)
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 def execute(args):
@@ -68,7 +66,7 @@ def execute(args):
     Note:
 
         + Modified Population Parameters CSV File saved to 'workspace_dir/output/'
-    '''
+    """
 
     # Parse, Verify Inputs
     vars_dict = io.fetch_args(args)
@@ -81,7 +79,7 @@ def execute(args):
 
 
 def convert_survival_matrix(vars_dict):
-    '''
+    """
     Creates a new survival matrix based on the information provided by
     the user related to habitat area changes and class-level dependencies
     on those habitats.
@@ -146,7 +144,7 @@ def convert_survival_matrix(vars_dict):
     H_xa = H_xha.sum(axis=1)
 
     # Divide by number of habitats and cancel non-class-transition elements
-    H_xa_weighted = (H_xa * t_a) / n_a
+    H_xa_weighted = np.where(n_a == 0, 0, (H_xa * t_a) / n_a)
 
     # Add unchanged elements back in to matrix
     nan_elements = np.isnan(H_xa_weighted)
@@ -168,3 +166,68 @@ def convert_survival_matrix(vars_dict):
     vars_dict['Surv_nat_xsa_mod'] = S_mod_sxa.swapaxes(0, 1)
 
     return vars_dict
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for Fisheries HST.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    keys_with_empty_values = set([])
+    missing_keys = set([])
+    for key in ('workspace_dir',
+                'results_suffix',
+                'population_csv_uri',
+                'sexsp',
+                'habitat_dep_csv_uri',
+                'habitat_chg_csv_uri',
+                'gamma'):
+        if key in (None, limit_to):
+            try:
+                if args[key] in ('', None):
+                    keys_with_empty_values.add(key)
+            except KeyError:
+                missing_keys.add(key)
+
+    if len(missing_keys) > 0:
+        raise KeyError(
+            'Args is missing required keys: %s' % ', '.join(
+                sorted(missing_keys)))
+
+    if len(keys_with_empty_values) > 0:
+        warnings.append((keys_with_empty_values,
+                         'Argument must have a value'))
+
+    for csv_key in ('population_csv_uri',
+                    'habitat_dep_csv_uri',
+                    'habitat_chg_csv_uri'):
+        if limit_to in (csv_key, None):
+            try:
+                csv.reader(open(args[csv_key], 'r'))
+            except (csv.Error, IOError):
+                warnings.append(([csv_key],
+                                 'Parameter must be a valid CSV file'))
+
+    if limit_to in ('sexsp', None):
+        if args['sexsp'] not in ('Yes', 'No'):
+            warnings.append((['sexsp'],
+                             'Parameter must be either "Yes" or "No"'))
+
+    if limit_to in ('gamma', None):
+        try:
+            float(args['gamma'])
+        except ValueError:
+            warnings.append((['gamma'],
+                             'Parameter must be a number'))
+
+    return warnings

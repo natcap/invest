@@ -1,13 +1,17 @@
 """inVEST finfish aquaculture filehandler for biophysical and valuation data"""
+from __future__ import absolute_import
 
 import os
 import csv
 import logging
 
-from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
+from osgeo import ogr
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
+from .. import validation
+from .. import utils
+
+
 LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.finfish_aquaculture')
 
 
@@ -92,15 +96,16 @@ def execute(args):
     ff_aqua_args['workspace_dir'] = args['workspace_dir']
     ff_aqua_args['ff_farm_file'] = args['ff_farm_loc']
     ff_aqua_args['farm_ID'] = args['farm_ID']
-    ff_aqua_args['outplant_buffer'] = args['outplant_buffer']
-    ff_aqua_args['g_param_a'] = args['g_param_a']
-    ff_aqua_args['g_param_b'] = args['g_param_b']
-    ff_aqua_args['g_param_tau'] = args['g_param_tau']
+    ff_aqua_args['outplant_buffer'] = int(args['outplant_buffer'])
+    ff_aqua_args['g_param_a'] = float(args['g_param_a'])
+    ff_aqua_args['g_param_b'] = float(args['g_param_b'])
+    ff_aqua_args['g_param_tau'] = float(args['g_param_tau'])
 
     if args['use_uncertainty']:
         LOGGER.debug('Adding uncertainty parameters')
-        for key in ['g_param_a_sd', 'g_param_b_sd', 'num_monte_carlo_runs']:
-            ff_aqua_args[key] = args[key]
+        ff_aqua_args['num_monte_carlo_runs'] = int(args['num_monte_carlo_runs'])
+        for key in ['g_param_a_sd', 'g_param_b_sd']:
+            ff_aqua_args[key] = float(args[key])
 
     #Both CSVs are being pulled in, but need to do some maintenance to remove
     #undesirable information before they can be passed into core
@@ -116,9 +121,9 @@ def execute(args):
     if ff_aqua_args['do_valuation'] is True:
         LOGGER.debug('Yes, we want to do valuation')
 
-        ff_aqua_args['p_per_kg'] = args['p_per_kg']
-        ff_aqua_args['frac_p'] = args['frac_p']
-        ff_aqua_args['discount'] = args['discount']
+        ff_aqua_args['p_per_kg'] = float(args['p_per_kg'])
+        ff_aqua_args['frac_p'] = float(args['frac_p'])
+        ff_aqua_args['discount'] = float(args['discount'])
 
     #Fire up the biophysical function in finfish_aquaculture_core with the
     #gathered arguments
@@ -278,3 +283,83 @@ def format_temp_table(temp_path, ff_aqua_args):
         new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
 
     ff_aqua_args['water_temp_dict'] = new_dict_temp
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for Finfish Aquaculture.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    keys_missing_values = set([])
+    missing_keys = set([])
+    for required_key in ('workspace_dir',
+                         'ff_farm_loc',
+                         'farm_ID',
+                         'g_param_a',
+                         'g_param_b',
+                         'g_param_tau',
+                         'use_uncertainty',
+                         'water_temp_tbl',
+                         'farm_op_tbl',
+                         'outplant_buffer',
+                         'do_valuation'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_values.add(required_key)
+        except KeyError:
+            missing_keys.add(required_key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing keys: %s' % ', '.join(
+            sorted(missing_keys)))
+
+    if len(keys_missing_values) > 0:
+        warnings.append((keys_missing_values, 'Parameter must have a value'))
+
+    if limit_to in ('ff_farm_loc', None):
+        with utils.capture_gdal_logging():
+            vector = ogr.Open(args['ff_farm_loc'])
+            if vector is None:
+                warnings.append((['ff_farm_loc'],
+                                 ('Parameter must be a filepath to an '
+                                  'OGR-compatible vector')))
+
+    for float_key in ('g_param_a', 'g_param_b', 'g_param_tau', 'g_param_a_sd',
+                      'g_param_b_sd', 'num_monte_carlo_runs',
+                      'outplant_buffer', 'p_per_kg', 'frac_p', 'discount'):
+        if limit_to in (float_key, None):
+            try:
+                if args[float_key] not in ('', None):
+                    try:
+                        float(args[float_key])
+                    except ValueError:
+                        warnings.append(([float_key],
+                                        'Parameter must be a number.'))
+            except KeyError:
+                # Not all of these parameters are required.
+                pass
+
+    for csv_key in ('water_temp_tbl', 'farm_op_tbl'):
+        if limit_to in (csv_key, None):
+            try:
+                csv.reader(open(args[csv_key], 'r'))
+            except (csv.Error, IOError):
+                warnings.append(([csv_key],
+                                 'Parameter must be a valid CSV file.'))
+
+    if limit_to in ('do_valuation', None):
+        if args['do_valuation'] not in (True, False):
+            warnings.append((['do_valuation'],
+                             'Parameter must be either True or False.'))
+
+    return warnings

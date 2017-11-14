@@ -1,5 +1,7 @@
 import sys
 import os
+import itertools
+import glob
 from PyInstaller.compat import is_win, is_darwin
 
 # Global Variables
@@ -34,20 +36,23 @@ kwargs = {
     'hookspath': [os.path.join(current_dir, 'hooks')],
     'excludes': None,
     'pathex': path_extension,
+    'runtime_hooks': [os.path.join(current_dir, 'hooks', 'rthook.py')],
     'hiddenimports': [
         'natcap',
         'natcap.invest',
         'natcap.versioner',
         'natcap.versioner.version',
         'natcap.invest.version',
+        'natcap.invest.ui.launcher',
         'yaml',
         'distutils',
         'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
+        'taskgraph.version',
     ],
 }
 
-cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'iui', 'cli.py')
+cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'cli.py')
 a = Analysis([cli_file], **kwargs)
 
 # Compress pyc and pyo Files into ZlibArchive Objects
@@ -66,13 +71,14 @@ if is_darwin:
     a.binaries = filter(lambda x: x[0] != 'libpng16.16.dylib', a.binaries)
     # add gdal dynamic libraries from homebrew
     a.binaries += [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
-    a.binaries += [('libgeos_c.dylib', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
-    a.binaries += [('libgeos_c.1.dylib', '/usr/local/lib/libgeos_c.1.dylib', 'BINARY')]
-    a.binaries += [('libgeos-3.5.0.dylib', '/usr/local/lib/libgeos-3.5.0.dylib', 'BINARY')]
-    a.binaries += [('libgeotiff.dylib', '/usr/local/lib/libgeotiff.dylib', 'BINARY')]
-    a.binaries += [('libgeotiff.2.dylib', '/usr/local/lib/libgeotiff.2.dylib', 'BINARY')]
-    a.binaries += [('libpng.dylib', '/usr/local/lib/libpng.dylib', 'BINARY')]
-    a.binaries += [('libpng16.16.dylib', '/usr/local/lib/libpng16.16.dylib', 'BINARY')]
+    a.binaries += [
+        (os.path.basename(name), name, 'BINARY') for name in
+         itertools.chain(
+            glob.glob('/usr/local/lib/libgeos*.dylib'),
+            glob.glob('/usr/local/lib/libgeotiff*.dylib'),
+            glob.glob('/usr/local/lib/libpng*.dylib'),
+            glob.glob('/usr/local/lib/libspatialindex*.dylib')
+        )]
 
 exe = EXE(
     pyz,

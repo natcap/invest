@@ -1,7 +1,0 @@
-placeholder.txt
-
-This file is just a placeholder, to ensure mercurial keeps this folder in the
-repository.
-
-This folder (/python/iui/cfg) will contain all the user's saved runs for each 
-model and machine.

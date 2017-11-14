@@ -103,8 +103,8 @@ pygments_style = 'sphinx'
 #modindex_common_prefix = []
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
-#keep_warnings = False
-keep_warnings = True
+keep_warnings = False
+#keep_warnings = True
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -292,8 +292,8 @@ autodoc_mock_imports = [
     'sextante', 'matplotlib', 'matplotlib.pyplot', 'matplotlib.pylab',
     'pylab', 'pyamg', 'osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
     'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
-    'shapely.geometry', 'osgeo.osr',
-    'shapely.wkt', 'shapely.ops',
+    'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
+    'shapely.wkt', 'shapely.ops', 'shapely.speedups',
     'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
     'PyQt4.QtCore',
 ]
@@ -310,6 +310,10 @@ class Mock(mock.Mock):
 # mocked up.
 for name in autodoc_mock_imports:
     sys.modules[name] = Mock()
+
+sys.modules['osgeo'].gdal.GetDriverCount.return_value = 1
+sys.modules['osgeo.gdal'].GetDriverCount.return_value = 1
+sys.modules['gdal'].GetDriverCount.return_value = 1
 
 from sphinx import apidoc
 apidoc.main([

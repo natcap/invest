@@ -13,8 +13,6 @@ import logging
 import numpy as np
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.model')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 def initialize_vars(vars_dict):
@@ -91,10 +89,7 @@ def _calc_survtotalfrac(vars_dict):
     I = np.array(I)
 
     S_tot = S_nat * (1 - I)
-
-    if np.isnan(S_tot).any():
-        LOGGER.warning("Survival Matrix Contains NaN Values")
-
+    assert not np.isnan(S_tot).any(), "Survival Matrix Contains NaN Values"
     return S_tot
 
 
@@ -122,10 +117,8 @@ def _calc_p_g_survtotalfrac(vars_dict):
     I_2 = S_tot ** (D_sa - 1)
     P = S_tot * ((1 - I_2) / (1 - I))
 
-    if (np.isnan(G).any() or np.isnan(P).any()):
-        LOGGER.warning(
-            "Stage-based Survival Matrices Contain NaN Values")
-
+    assert not (np.isnan(G).any() or np.isnan(P).any()), (
+        "Stage-based Survival Matrices Contain NaN Values")
     return G, P
 
 
@@ -145,7 +138,7 @@ def set_recru_func(vars_dict):
 
         N_next[0], spawners = rec_func(N_prev)
     '''
-    sexsp = vars_dict['sexsp']
+    sexsp = int(vars_dict['sexsp'])
     LarvDisp = vars_dict['Larvaldispersal']
 
     # Initialize Weight vector according to spawn_units
@@ -154,30 +147,32 @@ def set_recru_func(vars_dict):
     else:
         Weight = np.ones([sexsp, len(vars_dict['Classes'])])
 
-    alpha = vars_dict['alpha']
-    beta = vars_dict['beta']
-    Matu = vars_dict['Maturity']
-    Fec = vars_dict['Fecundity']
-    fixed = vars_dict['total_recur_recruits']
-
     def spawners(N_prev):
+        Matu = vars_dict['Maturity']
         return (N_prev * Matu * Weight).sum()
 
     def rec_func_BH(N_prev):
+        alpha = float(vars_dict['alpha'])
+        beta = float(vars_dict['beta'])
         N_0 = (LarvDisp * ((alpha * spawners(
             N_prev) / (beta + spawners(N_prev)))) / sexsp)
         return (N_0, spawners(N_prev))
 
     def rec_func_Ricker(N_prev):
+        alpha = float(vars_dict['alpha'])
+        beta = float(vars_dict['beta'])
         N_0 = (LarvDisp * (alpha * spawners(N_prev) * (
             np.e ** (-beta * spawners(N_prev)))) / sexsp)
         return (N_0, spawners(N_prev))
 
     def rec_func_Fecundity(N_prev):
+        Fec = vars_dict['Fecundity']
+        Matu = vars_dict['Maturity']
         N_0 = (LarvDisp * (N_prev * Matu * Fec).sum() / sexsp)
         return (N_0, spawners(N_prev))
 
     def rec_func_Fixed(N_prev):
+        fixed = float(vars_dict['total_recur_recruits'])
         N_0 = LarvDisp * fixed / sexsp
         return (N_0, None)
 
@@ -185,19 +180,25 @@ def set_recru_func(vars_dict):
     if vars_dict['recruitment_type'] == "Other":
         try:
             rec_func = vars_dict['recruitment_func']
-            assert(hasattr(rec_func, '__call__'))
+            assert hasattr(rec_func, '__call__'), ('Recruitment object is '
+                                                   'missing __call__')
 
             # Test function
             N_prev = np.ones([len(vars_dict['Classes']), sexsp, len(
                 vars_dict['Regions'])]).swapaxes(0, 2)
             N_0, spawn = rec_func(N_prev)
-            assert(type(spawn) is np.float64)
-            assert(N_0.shape == (len(vars_dict['Regions']),))
+            assert type(spawn) is np.float64, ('The second return value of the '
+                                               'recruitment callable must be '
+                                               'of type numpy.float64')
+            assert N_0.shape == (len(vars_dict['Regions']),), (
+                'The first return value of the recruitement callable must '
+                'have the shape (%s,), not %s' % (len(vars_dict['Regions']),
+                                                  N_0.shape))
             return rec_func
 
-        except Exception, e:
-            LOGGER.error("User-defined recruitment function could not be validated.")
-            raise ValueError
+        except Exception as error:
+            raise ValueError(("User-defined recruitment function could not be "
+                              "validated: %s") % error)
 
     elif vars_dict['recruitment_type'] == "Beverton-Holt":
         return rec_func_BH
@@ -208,8 +209,7 @@ def set_recru_func(vars_dict):
     elif vars_dict['recruitment_type'] == "Fixed":
         return rec_func_Fixed
     else:
-        LOGGER.error("Could not determine correct recruitment function")
-        raise ValueError
+        raise ValueError("Could not determine correct recruitment function")
 
 
 def set_init_cond_func(vars_dict):
@@ -228,8 +228,8 @@ def set_init_cond_func(vars_dict):
     '''
     S = vars_dict['Survtotalfrac']  # S_asx
     LarvDisp = vars_dict['Larvaldispersal']
-    sexsp = vars_dict['sexsp']
-    total_init_recruits = vars_dict['total_init_recruits']
+    sexsp = int(vars_dict['sexsp'])
+    total_init_recruits = float(vars_dict['total_init_recruits'])
     num_regions = len(vars_dict['Regions'])
     num_classes = len(vars_dict['Classes'])
 
@@ -268,9 +268,8 @@ def set_init_cond_func(vars_dict):
     elif vars_dict['population_type'] == 'Stage-Based':
         return stage_based_init_cond
     else:
-        LOGGER.error(
-            "Could not determine which initial_condition function to use")
-        raise ValueError
+        raise ValueError("Could not determine which initial_condition "
+                         "function to use")
 
 
 def set_cycle_func(vars_dict, rec_func):
@@ -354,7 +353,11 @@ def set_cycle_func(vars_dict, rec_func):
 
         N_prev_xsa = N_prev.swapaxes(0, 2)
         N_next_0_xsa, spawners = rec_func(N_prev_xsa)
-        N_next[0] = N_next_0_xsa.swapaxes(0, 2)
+        try:
+            N_next[0] = N_next_0_xsa.swapaxes(0, 2)
+        except ValueError:
+            # See the note in age_based_cycle_func
+            N_next[0] = N_next_0_xsa
 
         N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0])) * S[0]
 
@@ -369,12 +372,8 @@ def set_cycle_func(vars_dict, rec_func):
 
     if vars_dict['population_type'] == 'Age-Based':
         return age_based_cycle_func
-    elif vars_dict['population_type'] == 'Stage-Based':
+    else:  # population_type == 'Stage-Based'
         return stage_based_cycle_func
-    else:
-        LOGGER.error(
-            "Could not determine which initial_condition function to use")
-        raise ValueError
 
 
 def set_harvest_func(vars_dict):
@@ -396,8 +395,8 @@ def set_harvest_func(vars_dict):
     unit_price = 0
 
     if vars_dict['val_cont']:
-        frac_post_process = vars_dict['frac_post_process']
-        unit_price = vars_dict['unit_price']
+        frac_post_process = float(vars_dict['frac_post_process'])
+        unit_price = float(vars_dict['unit_price'])
 
     # Initialize Weight vector according to harvest_units
     if vars_dict['harvest_units'] == "Weight":
@@ -472,28 +471,29 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
     N_tasx[0] = init_cond_func()
 
     # Run Cycles
-    for i in range(0, len(N_tasx)-1):
+    num_cycles = len(N_tasx)
+    for i in xrange(0, num_cycles):
         # Run Harvest and Check Equilibrium for Current Population
         # Consider Wrapping this into a function
         if harvest_func:
             H_x, V_x = harvest_func(N_tasx[i])
             H_tx[i] = H_x
             V_tx[i] = V_x
-        if not equilibrate_timestep and i >= subset_size and _is_equilibrated(H_tx, i, subset_size=subset_size):
+        if (not equilibrate_timestep and i >= subset_size and
+                _is_equilibrated(H_tx, i, subset_size=subset_size)):
             equilibrate_timestep = i
-            LOGGER.info('Model Equilibrated at Timestep %i', equilibrate_timestep)
-        # Find Numbers for Next Population
-        N_next, Spawners_t[i+1] = cycle_func(N_tasx[i])
-        N_tasx[i+1] = N_next
+            LOGGER.info('Model Equilibrated at Timestep %i',
+                        equilibrate_timestep)
+        if i < num_cycles-1:
+            # Find Numbers for Next Population
+            N_next, Spawners_t[i+1] = cycle_func(N_tasx[i])
+            N_tasx[i+1] = N_next
 
     # Run Harvest and Check Equilibrium for Final Population
     if harvest_func:
         H_x, V_x = harvest_func(N_tasx[-1])
         H_tx[-1] = H_x
         V_tx[-1] = V_x
-    if not equilibrate_timestep and len(N_tasx) >= subset_size and _is_equilibrated(H_tx, len(N_tasx)-1, subset_size=subset_size):
-        equilibrate_timestep = len(N_tasx)
-        LOGGER.info('Model Equilibrated at Timestep %i', equilibrate_timestep)
 
     # Store Results in Variables Dictionary
     vars_dict['N_tasx'] = N_tasx

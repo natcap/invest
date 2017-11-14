@@ -19,8 +19,6 @@ from scipy.stats import norm
 from natcap.invest.reporting import html
 
 LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.core')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 NUM_HISTOGRAM_BINS = 30
 
@@ -108,6 +106,8 @@ def execute(args):
     #This adds the number of cycles completed by each farm to their shapefile
     #feature
     cycle_field = ogr.FieldDefn('Tot_Cycles', ogr.OFTReal)
+    cycle_field.SetWidth(24)
+    cycle_field.SetPrecision(11)
     layer.CreateField(cycle_field)
 
     for feature in layer:
@@ -115,7 +115,6 @@ def execute(args):
         feature_ID = feature.items()[accessor]
         num_cycles = len(cycle_history[feature_ID])
         feature.SetField('Tot_Cycles', num_cycles)
-
         layer.SetFeature(feature)
 
     #Now want to add the total processed weight of each farm as a second
@@ -131,6 +130,8 @@ def execute(args):
 
     #Now, add the total processed weight as a shapefile feature
     hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
+    hrv_field.SetWidth(24)
+    hrv_field.SetPrecision(11)
     layer.CreateField(hrv_field)
 
     for feature in layer:
@@ -148,6 +149,8 @@ def execute(args):
         #And add it into the shape file
         layer.ResetReading()
         npv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
+        npv_field.SetWidth(24)
+        npv_field.SetPrecision(11)
         layer.CreateField(npv_field)
 
         for feature in layer:

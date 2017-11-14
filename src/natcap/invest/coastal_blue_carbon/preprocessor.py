@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
+from __future__ import absolute_import
 import os
 import csv
 from itertools import product
@@ -8,16 +9,16 @@ import ast
 import copy
 
 from osgeo import gdal
-import pygeoprocessing.geoprocessing as geoprocess
-from pygeoprocessing.geoprocessing import get_lookup_from_table
-from pygeoprocessing import create_directories
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
+from natcap.invest.pygeoprocessing_0_3_3.geoprocessing import get_lookup_from_table
+from natcap.invest.pygeoprocessing_0_3_3 import create_directories
 
 from .. import utils as invest_utils
+from .. import validation
+
 
 NODATA_INT = -9999  # typical integer nodata value used in rasters
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
 
@@ -369,3 +370,60 @@ def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
         for code in code_to_lulc_dict.keys():
             row = [code, code_to_lulc_dict[code]] + [''] * 10
             writer.writerow(row)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for Coastal Blue Carbon: Preprocessor.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
+    for required_key in ('workspace_dir', 'lulc_lookup_uri'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
+
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have a value.'))
+
+    if limit_to in ('lulc_lookup_uri', None):
+        try:
+            csv.reader(open(args['lulc_lookup_uri']))
+        except IOError:
+            warnings.append((['lulc_lookup_uri'], 'File not found.'))
+        except csv.Error:
+            warnings.append((['lulc_lookup_uri'], 'Could not open CSV'))
+
+    if limit_to in ('lulc_snapshot_list', None):
+        try:
+            with invest_utils.capture_gdal_logging():
+                for index, raster_path in enumerate(
+                        args['lulc_snapshot_list']):
+                    raster = gdal.Open(raster_path)
+                    if raster is None:
+                        warnings.append(
+                            (['lulc_snapshot_list'],
+                             ('Raster index %s must be a path to a '
+                              'GDAL-compatible file on disk.') % index))
+        except KeyError:
+            pass
+
+    return warnings

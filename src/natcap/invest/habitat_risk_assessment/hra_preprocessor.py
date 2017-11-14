@@ -1,5 +1,5 @@
 """Entry point for the Habitat Risk Assessment module"""
-
+from __future__ import absolute_import
 import csv
 import os
 import logging
@@ -7,8 +7,9 @@ import json
 import fnmatch
 import shutil
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from .. import validation
+
+
 LOGGER = logging.getLogger('natcap.invest.habitat_risk.preprocessor')
 
 
@@ -1062,3 +1063,56 @@ def parse_stress_buffer(uri):
                     left blank.")
 
     return buff_dict
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for HRA preprocessor.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
+
+    for required_key in ('workspace_dir',
+                         'stressors_dir'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
+
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have value.'))
+
+    for folder_key in ('habitats_dir',
+                       'species_dir',
+                       'stressors_dir',
+                       'criteria_dir'):
+        try:
+            if args[folder_key] in ('', None):
+                continue
+
+            if not os.path.isdir(args[folder_key]):
+                warnings.append(([folder_key],
+                                 ('Parameter must be a path to a folder '
+                                  'that exists.')))
+        except KeyError:
+            # Not all of these inputs are required.
+            pass
+
+    return warnings

@@ -9,21 +9,19 @@ import csv
 from osgeo import ogr
 import numpy as np
 
-import pygeoprocessing.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest import reporting
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
-class MissingParameter(StandardError):
+class MissingParameter(ValueError):
     '''
     An exception class that may be raised when a necessary parameter is not
     provided by the user.
     '''
-    def __init__(self, msg):
-        self.msg = msg
+    pass
 
 
 # Fetch and Verify Arguments
@@ -91,15 +89,18 @@ def fetch_args(args, create_outputs=True):
         This function receives an unmodified 'args' dictionary from the user
 
     '''
+    args['do_batch'] = bool(args['do_batch'])
+
     try:
         args['results_suffix']
     except:
         args['results_suffix'] = ''
 
-    if args['sexsp'].lower() == 'yes':
-        args['sexsp'] = 2
-    else:
-        args['sexsp'] = 1
+    sexsp_dict = {
+        'yes': 2,
+        'no': 1,
+    }
+    args['sexsp'] = sexsp_dict[args['sexsp'].lower()]
 
     params_dict = _verify_single_params(args, create_outputs=create_outputs)
 
@@ -220,49 +221,35 @@ def read_population_csv(args, uri):
     Necessary_Params = ['Classes', 'Exploitationfraction', 'Regions',
                         'Survnaturalfrac', 'Vulnfishing']
     Matching_Params = [i for i in pop_dict.keys() if i in Necessary_Params]
-    if len(Matching_Params) != len(Necessary_Params):
-        LOGGER.error("Population Parameters File does not contain all \
-necessary parameters. %s" % uri)
-        raise MissingParameter("Population Parameters File does not contain \
-all necessary parameters")
+    assert len(Matching_Params) == len(Necessary_Params), (
+        "Population Parameters File does not contain all necessary parameters")
 
-    if (args['recruitment_type'] != 'Fixed') and (
-            'Maturity' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Maturity' \
-vector when running the given recruitment function. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Maturity' vector when running the given recruitment function")
+    if (args['recruitment_type'] != 'Fixed'):
+        assert 'Maturity' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Maturity' vector when "
+            "running the given recruitment function. %s" % uri)
 
-    if (args['population_type'] == 'Stage-Based') and (
-            'Duration' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Duration' \
-vector when running Stage-Based models. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Duration' vector when running Stage-Based models")
+    if (args['population_type'] == 'Stage-Based'):
+        assert 'Duration' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Duration' vector when "
+            "running Stage-Based models. %s" % uri)
 
     if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and (
-            args['spawn_units'] == 'Weight') and (
-            'Weight' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Weight' \
-vector when Spawners are calulated by weight using the \
-Beverton-Holt or Ricker recruitment functions. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Weight' vector when Spawners are calulated by weight using the \
-Beverton-Holt or Ricker recruitment functions")
+            args['spawn_units'] == 'Weight'):
+        assert 'Weight' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Weight' vector when "
+            "Spawners are calulated by weight using the Beverton-Holt or "
+            "Ricker recruitment functions. %s" % uri)
 
-    if (args['harvest_units'] == 'Weight') and (
-            'Weight' not in pop_dict.keys()):
-        LOGGER.error("Population Parameters File must contain a 'Weight' \
-vector when 'Harvest by Weight' is selected. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Weight' vector when 'Harvest by Weight' is selected")
+    if (args['harvest_units'] == 'Weight'):
+        assert 'Weight' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Weight' vector when "
+            "'Harvest by Weight' is selected. %s" % uri)
 
-    if (args['recruitment_type'] == 'Fecundity' and (
-            'Fecundity' not in pop_dict.keys())):
-        LOGGER.error("Population Parameters File must contain a 'Fecundity' \
-vector when using the Fecundity recruitment function. %s" % uri)
-        raise MissingParameter("Population Parameters File must contain a \
-'Fecundity' vector when using the Fecundity recruitment function")
+    if (args['recruitment_type'] == 'Fecundity'):
+        assert 'Fecundity' in pop_dict.keys(), (
+            "Population Parameters File must contain a 'Fecundity' vector "
+            "when using the Fecundity recruitment function. %s" % uri)
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -271,15 +258,14 @@ vector when using the Fecundity recruitment function. %s" % uri)
                                        num_regions))
 
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
-    if not (pop_dict['Larvaldispersal'].shape == pop_dict[
-            'Exploitationfraction'].shape):
-        LOGGER.error("Region vector shapes do not match. %s" % uri)
-        raise ValueError
+    assert (pop_dict['Larvaldispersal'].shape ==
+            pop_dict['Exploitationfraction'].shape), (
+                "Region vector shapes do not match. %s" % uri)
 
     # Check that information is correct
-    if not np.allclose(pop_dict['Larvaldispersal'].sum(), 1):
-        LOGGER.warning("The Larvaldisperal vector does not sum exactly to one\
-. %s" % uri)
+    assert natcap.invest.pygeoprocessing_0_3_3.testing.isclose(
+        pop_dict['Larvaldispersal'].sum(), 1), (
+            "The Larvaldisperal vector does not sum exactly to one.. %s" % uri)
 
     # Check that certain attributes have fraction elements
     Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing',
@@ -288,9 +274,9 @@ vector when using the Fecundity recruitment function. %s" % uri)
         Frac_Vectors.append('Maturity')
     for attr in Frac_Vectors:
         a = pop_dict[attr]
-        if np.any(a > 1) or np.any(a < 0):
-            LOGGER.warning("The %s vector has elements that are not decimal \
-fractions. %s" % (attr, uri))
+        assert (a.min() >= 0.0 and a.max() <= 1.0), (
+            "The %s vector has elements that are not decimal "
+            "fractions. %s") % (attr, uri)
 
     # Make duration vector of type integer
     if args['population_type'] == 'Stage-Based':
@@ -365,22 +351,17 @@ def _parse_population_csv(uri, sexsp):
     region_attributes_table = _get_table(
         csv_data, start_rows[1], start_cols[0])
 
+    assert sexsp in (1, 2), 'Sex-specificity must be one of (1, 2)'
     if sexsp == 1:
         # Sex Neutral
         pop_dict['Survnaturalfrac'] = np.array(
             [surv_table], dtype=np.float_).swapaxes(1, 2).swapaxes(0, 1)
-
     elif sexsp == 2:
         # Sex Specific
         female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
         male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
         pop_dict['Survnaturalfrac'] = np.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
-
-    else:
-        # Throw exception about sex-specific conflict or formatting issue
-        LOGGER.error("Could not parse table given Sex-Specific inputs")
-        raise Exception
 
     for col in range(0, len(class_attributes_table[0])):
         pop_dict.update(_vectorize_attribute(
@@ -435,16 +416,14 @@ def read_migration_tables(args, class_list, region_list):
             matrix_list[i] = np.matrix(np.identity(len(region_list)))
 
     # Check migration regions are equal across matrices
-    if not all(map(lambda x: x.shape == matrix_list[0].shape, matrix_list)):
-        LOGGER.error("Shape of migration matrices are not equal across \
-lifecycle classes")
-        raise ValueError
+    assert all((x.shape == matrix_list[0].shape for x in matrix_list)), (
+        "Shape of migration matrices are not equal across lifecycle classes")
 
     # Check that all migration vectors approximately sum to one
-    if not all([np.allclose(vector.sum(
-            ), 1) for matrix in matrix_list for vector in matrix]):
-        LOGGER.warning("Elements in at least one migration matrices source \
-vector do not sum to one")
+    if not all((np.allclose(vector.sum(), 1)
+                for matrix in matrix_list for vector in matrix)):
+        LOGGER.warning("Elements in at least one migration matrices source "
+                       "vector do not sum to one")
 
     migration_dict['Migration'] = matrix_list
     return migration_dict
@@ -476,42 +455,29 @@ def _parse_migration_tables(args, class_list):
     mig_dict = {}
 
     if args['migr_cont']:
-        uri = args['migration_dir']
-        if not os.path.isdir(uri):
-            LOGGER.error("Migration directory does not exist")
-            raise OSError
-        try:
-            for mig_csv in _listdir(uri):
-                basename = os.path.splitext(os.path.basename(mig_csv))[0]
-                class_name = basename.split('_').pop().lower()
-                if class_name.lower() in class_list:
-                    with open(mig_csv, 'rU') as param_file:
-                        csv_reader = csv.reader(param_file)
-                        lines = []
-                        for row in csv_reader:
-                            lines.append(row)
+        uri = os.path.abspath(args['migration_dir'])
+        for mig_csv in _listdir(uri):
+            basename = os.path.splitext(os.path.basename(mig_csv))[0]
+            class_name = basename.split('_').pop().lower()
+            if class_name.lower() in class_list:
+                LOGGER.info('Parsing csv %s for class %s', mig_csv,
+                            class_name)
+                with open(mig_csv, 'rU') as param_file:
+                    csv_reader = csv.reader(param_file)
+                    lines = []
+                    for row in csv_reader:
+                        lines.append(row)
 
-                        matrix = []
-                        for row in range(1, len(lines)):
-                            if lines[row][0] == '':
-                                break
-                            array = []
-                            for entry in range(1, len(lines[row])):
-                                array.append(float(lines[row][entry]))
-                            matrix.append(array)
+                    matrix = []
+                    for row in range(1, len(lines)):
+                        array = []
+                        for entry in range(1, len(lines[row])):
+                            array.append(float(lines[row][entry]))
+                        matrix.append(array)
 
-                        Migration = np.matrix(matrix)
+                    Migration = np.matrix(matrix)
 
-                    mig_dict[class_name] = Migration
-                else:
-                    # Warn user if possible mig matrix isn't being added
-                    LOGGER.warning("The suffix '%s' in the Migration Directory \
-did not match any class name in the Population Parameters \
-File. This could result in no migration for a class \
-with expected migration.", class_name.capitalize())
-
-        except:
-            LOGGER.warning("Issue parsing at least one migration table")
+                mig_dict[class_name] = Migration
 
     return mig_dict
 
@@ -550,87 +516,17 @@ def _verify_single_params(args, create_outputs=True):
     params_dict = args
 
     if create_outputs:
-        # Check that workspace directory exists, if not, try to create directory
-        if not os.path.isdir(args['workspace_dir']):
-            try:
-                os.makedirs(args['workspace_dir'])
-            except:
-                LOGGER.error("Cannot create Workspace Directory")
-                raise OSError
-
         # Create output directory
         output_dir = os.path.join(args['workspace_dir'], 'output')
-        if not os.path.isdir(output_dir):
-            try:
-                os.makedirs(output_dir)
-            except:
-                LOGGER.error("Cannot create Output Directory")
-                raise OSError
-        params_dict['output_dir'] = output_dir
-
-        # Create intermediate directory
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-        if not os.path.isdir(intermediate_dir):
-            try:
-                os.makedirs(intermediate_dir)
-            except:
-                LOGGER.error("Cannot create Intermediate Directory")
-                raise OSError
+        params_dict['output_dir'] = output_dir
         params_dict['intermediate_dir'] = intermediate_dir
+        natcap.invest.pygeoprocessing_0_3_3.create_directories([args['workspace_dir'],
+                                            output_dir,
+                                            intermediate_dir])
 
     # Check that timesteps is positive integer
-    total_timesteps = args['total_timesteps']
-    if type(total_timesteps) != int or total_timesteps < 1:
-        LOGGER.error("Total Time Steps value must be positive integer")
-        raise ValueError
-    params_dict['total_timesteps'] = total_timesteps + 1
-
-    # Check total_init_recruits for non-negative float
-    total_init_recruits = args['total_init_recruits']
-    if type(total_init_recruits) != float:
-        try:
-            total_timesteps = float(total_init_recruits)
-        except:
-            LOGGER.error("Total Initial Recruits value must be non-negative float")
-            raise ValueError
-    if total_init_recruits < 0:
-        LOGGER.error("Total Initial Recruits value must be non-negative float")
-        raise ValueError
-
-    # Check that corresponding recruitment parameters exist
-    recruitment_type = args['recruitment_type']
-    if recruitment_type in ['Beverton-Holt', 'Ricker']:
-        if args['alpha'] is None or args['beta'] is None:
-            LOGGER.error("Not all required recruitment parameters provided")
-            raise ValueError
-        if args['alpha'] <= 0 or args['beta'] <= 0:
-            LOGGER.error("Alpha and Beta parameters must be positive")
-            raise ValueError
-    if recruitment_type is 'Fixed':
-        if args['total_recur_recruits'] is None:
-            LOGGER.error("Not all required recruitment parameters provided")
-            raise ValueError
-        if args['total_recur_recruits'] < 0:
-            LOGGER.error(
-                "Total Recruits per Time Step must be non-negative float")
-            raise ValueError
-
-    # If Harvest:
-    if args['val_cont']:
-        frac_post_process = args['frac_post_process']
-        unit_price = args['unit_price']
-        if frac_post_process is None or unit_price is None:
-            LOGGER.error("Not all required harvest parameters are provided")
-            raise ValueError
-        # Check frac_post_process float between [0,1]
-        if frac_post_process < 0 or frac_post_process > 1:
-            LOGGER.error("The fraction of harvest kept after processing must \
-                be a float between 0 and 1 (inclusive)")
-            raise ValueError
-        # Check unit_price non-negative float
-        if unit_price < 0:
-            LOGGER.error("Unit price of harvest must be non-negative float")
-            raise ValueError
+    params_dict['total_timesteps'] = int(float(args['total_timesteps'])) + 1
 
     return params_dict
 
@@ -794,7 +690,7 @@ def _create_intermediate_csv(vars_dict):
     Classes = vars_dict['Classes']
     N_tasx = vars_dict['N_tasx']
     N_txsa = N_tasx.swapaxes(1, 3)
-    sexsp = vars_dict['sexsp']
+    sexsp = int(vars_dict['sexsp'])
     Sexes = ['Female', 'Male']
 
     with open(uri, 'wb') as c_file:
@@ -846,7 +742,7 @@ def _create_results_csv(vars_dict):
     Spawners_t = vars_dict['Spawners_t']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
-    equilibrate_timestep = int(vars_dict['equilibrate_timestep'])
+    equilibrate_timestep = float(vars_dict['equilibrate_timestep'])
     Regions = vars_dict['Regions']
 
     with open(uri, 'wb') as csv_file:
@@ -1096,9 +992,10 @@ def _create_results_aoi(vars_dict):
         filename = basename + '_results_aoi.shp'
 
     output_aoi_uri = os.path.join(vars_dict['output_dir'], filename)
+    LOGGER.info('Copying AOI %s to %s', aoi_uri, output_aoi_uri)
 
     # Copy AOI file to outputs directory
-    pygeoprocessing.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
 
     # Append attributes to Shapefile
     ds = ogr.Open(output_aoi_uri, update=1)
@@ -1106,6 +1003,8 @@ def _create_results_aoi(vars_dict):
 
     # Set Harvest
     harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
+    harvest_field.SetWidth(24)
+    harvest_field.SetPrecision(11)
     layer.CreateField(harvest_field)
 
     harv_reg_dict = {}
@@ -1115,6 +1014,8 @@ def _create_results_aoi(vars_dict):
     # Set Valuation
     if vars_dict['val_cont']:
         val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
+        val_field.SetWidth(24)
+        val_field.SetPrecision(11)
         layer.CreateField(val_field)
 
     val_reg_dict = {}
@@ -1123,15 +1024,10 @@ def _create_results_aoi(vars_dict):
 
     # Add Information to Shapefile
     for feature in layer:
-        try:
-            region_name = str(feature.items()['Name'])
-            feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
-            if vars_dict['val_cont']:
-                feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
-            layer.SetFeature(feature)
-        except:
-            LOGGER.warning("A feature in the given AOI shapefile either does \
-                not have a 'Name' attribute (case-sensitive) or does not match \
-                any of the given sub-regions. Skipping feature.")
+        region_name = str(feature.items()['Name'])
+        feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
+        if vars_dict['val_cont']:
+            feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
+        layer.SetFeature(feature)
 
     layer.ResetReading()

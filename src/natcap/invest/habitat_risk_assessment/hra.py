@@ -1,6 +1,6 @@
 '''This will be the preperatory module for HRA. It will take all unprocessed
 and pre-processed data from the UI and pass it to the hra_core module.'''
-
+from __future__ import absolute_import
 import os
 import shutil
 import logging
@@ -12,11 +12,11 @@ import numpy as np
 from osgeo import gdal, ogr, osr
 from natcap.invest.habitat_risk_assessment import hra_core
 from natcap.invest.habitat_risk_assessment import hra_preprocessor
-import pygeoprocessing.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import validation
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 
 class ImproperCriteriaAttributeName(Exception):
@@ -202,6 +202,13 @@ def execute(args):
 #            dependent on this.
 #        hra_args['max_risk']- The highest possible risk value for any given
 #            pairing of habitat and stressor.
+    args = args.copy()
+    for key in ('grid_size', 'max_rating', 'max_stress'):
+        try:
+            args[key] = float(args[key])
+        except (KeyError, ValueError):
+            LOGGER.info('Key %s not in args or could not be cast to float',
+                        key)
 
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -305,14 +312,14 @@ def execute(args):
     # will be used to define a raster to use for burning vectors onto.
     bounding_box = reduce(
         functools.partial(merge_bounding_boxes, mode="union"),
-        [pygeoprocessing.geoprocessing.get_datasource_bounding_box(vector_uri)
+        [natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_datasource_bounding_box(vector_uri)
             for vector_uri in hab_list + stress_list])
 
     # If there is an AOI, we want to limit the bounding box to its extents.
     if 'aoi_tables' in args:
         bounding_box = merge_bounding_boxes(
             bounding_box,
-            pygeoprocessing.geoprocessing.get_datasource_bounding_box(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_datasource_bounding_box(
                 args['aoi_tables']), "intersection")
 
     # Determine what the maximum buffer is to use in deciding how much
@@ -373,7 +380,7 @@ def execute(args):
 
     grid_raster_path = os.path.join(inter_dir, 'raster_grid_base.tif')
     # Use the first habitat shapefile to set the spatial reference / projection
-    spat_ref = pygeoprocessing.geoprocessing.get_spatial_ref_uri(hab_list[0])
+    spat_ref = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(hab_list[0])
     wkt_str = spat_ref.ExportToWkt()
 
     # Create a raster that has a bounding box which is the UNION of all
@@ -522,9 +529,9 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
                      compute_overlap, pair)
 
         h, s = pair
-        h_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        h_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
             habitats[h]['DS'])
-        s_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        s_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
             stress_dict[s])
 
         files = [habitats[h]['DS'], stress_dict[s]]
@@ -545,7 +552,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
 
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
             files,
             add_h_s_pixels,
             out_uri,
@@ -612,14 +619,14 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, grid
         # Create a base raster for burning vectors onto from a raster that
         # was set up such that each shapefile is burned onto a consistant
         # grid, ensuring alignment.
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
             grid_path, out_uri, 'GTiff', -1., gdal.GDT_Float32, fill_value=nodata)
 
         # Burn polygon land values onto newly constructed raster
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
             out_uri, shape, burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
 
-        nodata_to_zero_uri = pygeoprocessing.geoprocessing.temporary_filename()
+        nodata_to_zero_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
 
         def nodata_to_zero(chunk):
             """vectorize_dataset operation to turn nodata values
@@ -631,9 +638,9 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, grid
             """
             return np.where(chunk == nodata, 0., chunk)
 
-        cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(out_uri)
+        cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(out_uri)
         # Convert nodata values to 0 to prep for distance transform
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
             [out_uri],
             nodata_to_zero,
             nodata_to_zero_uri,
@@ -643,8 +650,8 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict, grid
             "intersection",
             vectorize_op=False)
 
-        dist_trans_uri = pygeoprocessing.geoprocessing.temporary_filename()
-        pygeoprocessing.geoprocessing.distance_transform_edt(
+        dist_trans_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
             nodata_to_zero_uri, dist_trans_uri)
 
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
@@ -691,8 +698,8 @@ def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
         # want to turn that back into 1's. everything else will just be nodata
         return np.where(chunk == 0., 1, nodata)
 
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [dist_trans_uri],
         zero_buff_op,
         out_uri,
@@ -719,7 +726,7 @@ def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
     Returns: Nothing
     '''
     buff = float(buff)
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
+    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
 
     def lin_decay_op(chunk):
         """vecorize_dataset operation to create a buffer around
@@ -735,7 +742,7 @@ def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
         lin_decay_chunk = -chunk_met / buff + 1.0
         return np.where(lin_decay_chunk < 0.0, nodata, lin_decay_chunk)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [dist_trans_uri],
         lin_decay_op,
         out_uri,
@@ -769,7 +776,7 @@ def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
 
     # Need a value representing the decay rate for the exponential decay
     rate = -math.log(cutoff) / buff
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
+    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
 
     def exp_decay_op(chunk):
         """vecorize_dataset operation to create a buffer around
@@ -783,7 +790,7 @@ def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
         exp_decay_chunk = np.exp(-rate * chunk_met)
         return np.where(exp_decay_chunk < cutoff, nodata, exp_decay_chunk)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [dist_trans_uri],
         exp_decay_op,
         out_uri,
@@ -812,7 +819,7 @@ def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
     '''
 
     buff = float(buff)
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
+    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
 
     def no_decay_op(chunk):
         """vecorize_dataset operation to create a constant buffer
@@ -826,7 +833,7 @@ def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
         # that distance to nodata.
         return np.where(chunk_met <= buff, 1., nodata)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [dist_trans_uri],
         no_decay_op,
         out_uri,
@@ -873,10 +880,10 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size, grid_path):
         # Create a base raster for burning vectors onto from a raster that
         # was set up such that each shapefile is burned onto a consistent
         # grid, ensuring alignment.
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
             grid_path, out_uri, 'GTiff', -1., gdal.GDT_Float32, fill_value=-1.)
 
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
             out_uri, shape, burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
 
         habitats[name]['DS'] = out_uri
@@ -1027,10 +1034,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
 
-            pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
 
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
                 out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib[
                              'rating'], 'ALL_TOUCHED=TRUE'])
@@ -1038,7 +1045,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # Want to do a vectorize with the base layer, to make sure we're not
             # adding in values where there should be none
             base_uri = h_s_c[pair]['DS']
-            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_uri)
+            base_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(base_uri)
 
             def overlap_hsc_spat_crit(base_pix, spat_pix):
 
@@ -1049,7 +1056,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif')
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
                 [base_uri, out_uri_pre_overlap],
                 overlap_hsc_spat_crit,
                 out_uri,
@@ -1102,10 +1109,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
 
-            pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
 
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
                 out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],
                              'ALL_TOUCHED=TRUE'])
@@ -1113,7 +1120,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # Want to do a vectorize with the base layer to make sure we're not
             # adding in values where there should be none
             base_uri = habitats[h]['DS']
-            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_uri)
+            base_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(base_uri)
 
             def overlap_h_spat_crit(base_pix, spat_pix):
 
@@ -1124,7 +1131,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif')
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
                 [base_uri, out_uri_pre_overlap],
                 overlap_h_spat_crit,
                 out_uri,
@@ -1175,10 +1182,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
 
-            pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
 
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
                 out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],
                              'ALL_TOUCHED=TRUE'])
@@ -1186,7 +1193,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # Want to do a vectorize with the base layer, to make sure we're not
             # adding in values where there should be none
             base_uri = h_s_e[pair]['DS']
-            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_uri)
+            base_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(base_uri)
 
             def overlap_hse_spat_crit(base_pix, spat_pix):
 
@@ -1197,7 +1204,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif')
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
                 [base_uri, out_uri_pre_overlap],
                 overlap_hse_spat_crit,
                 out_uri,
@@ -1266,3 +1273,81 @@ def unpack_over_dict(csv_uri, args):
 
     for dict_name in dicts:
         args[dict_name] = dicts[dict_name]
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for HRA.
+
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = []
+    keys_missing_value = []
+    for required_key in ('workspace_dir',
+                         'csv_uri',
+                         'grid_size',
+                         'risk_eq',
+                         'decay_eq',
+                         'max_rating',
+                         'max_stress',
+                         'aoi_tables'):
+        try:
+            if args[required_key] in ('', None):
+                keys_missing_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
+
+    if len(missing_keys) > 0:
+        raise KeyError('Args is missing these keys: %s'
+                       % ', '.join(missing_keys))
+
+    if len(keys_missing_value) > 0:
+        warnings.append((keys_missing_value,
+                         'Parameter must have a value'))
+
+    if limit_to in ('csv_uri', None):
+        if not os.path.isdir(args['csv_uri']):
+            warnings.append((['csv_uri'],
+                             'Parameter must be a path to a folder.'))
+
+    for int_key in ('grid_size', 'max_rating', 'max_stress'):
+        if limit_to in (int_key, None):
+            try:
+                int(args[int_key])
+            except ValueError:
+                warnings.append(([int_key],
+                                 'Parameter must be an integer.'))
+
+    for options_key, options in (
+            ('risk_eq', ('Multiplicative', 'Euclidean')),
+            ('decay_eq', ('None', 'Linear', 'Exponential'))):
+        if limit_to in (options_key, None):
+            if args[options_key] not in options:
+                warnings.append(
+                    ([options_key],
+                     'Parameter must be one of %s' % ', '.join(options)))
+
+    if limit_to in ('aoi_tables', None):
+        try:
+            if args['aoi_tables'] not in ('', None):
+                with utils.capture_gdal_logging():
+                    vector = ogr.Open(args['aoi_tables'])
+                    if vector is None:
+                        warnings.append(
+                            (['aoi_tables'],
+                             ('Parameter must be a filepath to an '
+                              'OGR-compatible vector on disk.')))
+        except KeyError:
+            # file is not required.
+            pass
+
+    return warnings

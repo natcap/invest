@@ -644,9 +644,8 @@ REPOS_DICT = {
     'users-guide': HgRepository('doc/users-guide', 'https://bitbucket.org/natcap/invest.users-guide'),
     'invest-data': SVNRepository('data/invest-data', 'svn://scm.naturalcapitalproject.org/svn/invest-sample-data'),
     'test-data': SVNRepository('data/invest-test-data', 'svn://scm.naturalcapitalproject.org/svn/invest-test-data'),
-    'invest-2': HgRepository('src/invest-natcap.default', 'http://bitbucket.org/natcap/invest.arcgis'),
     'pyinstaller': GitRepository('src/pyinstaller', 'https://github.com/pyinstaller/pyinstaller.git'),
-    'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richpsharp/pygeoprocessing'),
+    'pygeoprocessing': HgRepository('src/pygeoprocessing', 'https://bitbucket.org/richsharp/pygeoprocessing'),
 }
 REPOS = REPOS_DICT.values()
 
@@ -932,6 +931,8 @@ def after_install(options, home_dir):
         distutils_dir = os.path.join(home_dir, 'lib', 'python27', 'distutils')
     distutils_cfg = os.path.join(distutils_dir, 'distutils.cfg')
 
+    subprocess.call([join(home_dir, bindir, 'pip'), 'install', '-I', 'git+https://github.com/phargogh/qtawesome.git@natcap-version'])
+
 """
 
     # If the user has a distutils.cfg file defined in their global distutils
@@ -946,7 +947,7 @@ def after_install(options, home_dir):
     ).format(src_distutils_cfg=source_file)
 
     # Track preinstalled packages so we don't install them twice.
-    preinstalled_pkgs = set([])
+    preinstalled_pkgs = set(['qtawesome'])
 
     if options.env.compiler:
         _valid_compilers = distutils.ccompiler.compiler_class.keys()
@@ -1858,6 +1859,21 @@ def check(options):
             print 'Python %s OK' % python_version
         print ''  # add newline between this section and the next one.
 
+    # PYTHONHOME, if defined, forces the python interpreter to use the given
+    # location for its site-packages folder.  This confounds virtualenv, and
+    # undermines all of the functionality that we depend on in pavement that
+    # requires virtualenvs to work as expected.
+    print bold('Checking environment')
+    try:
+        pythonhome = os.environ['PYTHONHOME']
+        print red('CRITICAL:') + ('PYTHONHOME is set to %s. This undermines '
+                                  'the functionality of virtualenv and should '
+                                  'be unset.') % pythonhome
+        errors_found = True
+    except KeyError:
+        print 'PYTHONHOME unset: ' + green('OK')
+    print ''
+
     # verify required programs exist
     programs = [
         ('hg', 'everything'),
@@ -1869,6 +1885,9 @@ def check(options):
     ]
     if platform.system() == 'Linux':
         programs.append(('fpm', 'installers'))
+
+    if platform.system() == 'Darwin':
+        programs.append(('dmgbuild', 'installers'))
 
     print bold("Checking binaries")
     for program, build_steps in programs:
@@ -1914,6 +1933,21 @@ def check(options):
         ('pygeoprocessing', install_managed, None, None),
         ('PyQt4', lib_needed, 'PyQt4', None),
     ]
+
+    # Set the SIP API to v2 for Qt4 compatibility.
+    # If we can't import sip, then the import error issue should be handled by
+    # paver check.
+    try:
+        import sip
+        sip.setapi('QString', 2)
+        sip.setapi('QVariant', 2)
+        sip.setapi('QDate', 2)
+        sip.setapi('QDateTime', 2)
+        sip.setapi('QTextStream', 2)
+        sip.setapi('QTime', 2)
+        sip.setapi('QUrl', 2)
+    except ImportError:
+        pass
 
     try:
         # poster stores its version in a triple of ints
@@ -2514,14 +2548,6 @@ def build_bin(options):
         commit_sha1 = sh('hg log -r . --template="{node}\n"', capture=True)
         buildinfo_textfile.write(commit_sha1)
 
-    # If we're on windows, set the CLI to have slightly different default
-    # behavior when the binary is clicked.  In this case, the CLI should prompt
-    # for the user to define which model they would like to run.
-    if platform.system() == 'Windows':
-        iui_dir = os.path.join(bindir, 'natcap', 'invest', 'iui')
-        with open(os.path.join(iui_dir, 'cli_config.json'), 'w') as json_file:
-            json.dump({'prompt_on_empty_input': True}, json_file)
-
     if not os.path.exists('dist'):
         dry('mkdir dist',
             os.makedirs, 'dist')
@@ -2593,34 +2619,17 @@ def build_bin(options):
                 shutil.copyfile, versioner_egg, versioner_egg_dest)
 
     if platform.system() == 'Windows':
-        # If we're on Windows, write out a batfile to testall.bat that will run
-        # each model UI in sequence and record model success or failure.
         binary = os.path.join(invest_dist, 'invest.exe')
         _write_console_files(binary, 'bat')
-
-        # Using codecs to open the file, to ensure that the script is in
-        # latin-1 (codepage-1252)
-        testall_script = codecs.open(os.path.join(invest_dist, 'testall.bat'),
-                                     'w', encoding='cp1252')
-        for filename in os.listdir(os.path.join(os.path.dirname(__file__),
-                                                'src', 'natcap', 'invest',
-                                                'iui')):
-            if not filename.endswith('.json'):
-                continue
-
-            json_basename = os.path.splitext(filename)[0]
-            testall_script.write('call runmodel {modelname}\n'.format(
-                modelname=json_basename))
-
-        # the script writes run statuses to `invest_bintest_results.txt`,
-        # so print the run statuses at the end of the script.
-        # runmodel script is at installer/windows/runmodel.bat
-        testall_script.write('type invest_bintest_results.txt\n')
-        testall_script.close()
 
     else:
         binary = os.path.join(invest_dist, 'invest')
         _write_console_files(binary, 'sh')
+
+    # Copy the invest_autotest.py script to the dist folder.
+    shutil.copyfile(os.path.join(os.path.dirname(__file__), 'scripts',
+                                 'invest-autotest.py'),
+                    os.path.join(invest_dist, 'invest-autotest.py'))
 
 
 @task
@@ -2653,11 +2662,6 @@ def build_installer(options):
 
     command = options.insttype.lower()
     if command == 'nsis':
-        call_task('check_repo', options={
-            'force_dev': options.build_installer.force_dev,
-            'repo': REPOS_DICT['invest-2'].local_path,
-            'fetch': True,
-        })
         _build_nsis(version, options.build_installer.bindir, 'x86')
     elif command == 'dmg':
         _build_dmg(version, options.build_installer.bindir)
@@ -2729,7 +2733,6 @@ def _build_nsis(version, bindir, arch):
 
     The InVEST NSIS script *requires* the following conditions are met:
         * The User's guide has been built (paver build_docs)
-        * The invest-2 repo has been cloned to src (paver fetch src/invest-natcap.default)
 
     If these two conditions have not been met, the installer will fail.
     """
@@ -2770,7 +2773,7 @@ def _build_nsis(version, bindir, arch):
     else:
         short_version = version
 
-    hg_path = sh('hg paths', capture=True).rstrip()
+    hg_path = sh('hg showconfig paths.default', capture=True).rstrip()
     forkuser, forkreponame = hg_path.split('/')[-2:]
     if forkuser == 'natcap':
         data_location = 'invest-data/%s' % short_version
@@ -2862,7 +2865,7 @@ def _get_local_version():
 
 def _write_console_files(binary, mode):
     """
-    Write simple console files, one for each model presented by IUI.
+    Write simple console files, one for each model presented by the CLI.
 
     Parameters:
         binary (string): The path to the invest binary.
@@ -2892,7 +2895,7 @@ def _write_console_files(binary, mode):
                    capture=True).split('\n'):
         # Models always preceded by 4 spaces in printout.
         if line.startswith('    '):
-            model_name = line.replace('UNSTABLE', '').lstrip().rstrip()
+            model_name = re.findall('[a-z_]+', line.strip())[0]
 
             console_filename = os.path.join(bindir, filename_template).format(
                 modelname=model_name, extension=mode)
@@ -2963,7 +2966,6 @@ def build(options):
     for repo, taskname, skip_condition in [
             (REPOS_DICT['users-guide'], 'build_docs', 'skip_guide'),
             (REPOS_DICT['invest-data'], 'build', 'skip_data'),
-            (REPOS_DICT['invest-2'], 'build', 'skip_installer'),
             (REPOS_DICT['pyinstaller'], 'build', 'skip_bin')]:
         tracked_rev = repo.tracked_version()
 
@@ -3176,12 +3178,19 @@ def jenkins_installer(options):
     for opt_name, build_opts, needed_repo in [
             ('nodata', ['skip_data'], 'data/invest-data'),
             ('nodocs', ['skip_guide', 'skip_api'], 'doc/users-guide'),
-            ('noinstaller', ['skip_installer'], 'src/invest-natcap.default'),
+            ('noinstaller', ['skip_installer'], None),
             ('nopython', ['skip_python'], None),
             ('nobin', ['skip_bin'], 'src/pyinstaller')]:
         # set these options based on whether they were provided.
         try:
             user_option = getattr(options.jenkins_installer, opt_name)
+
+            # Only prepare data zips if we're on a windows machine.
+            if (platform.system() != 'Windows' and
+                    opt_name in ('nodata',)):
+                LOGGER.debug('Not on Windows; skipping %s', opt_name[3:])
+                user_option = 'true'
+
             if user_option.lower() in ['true', '1']:
                 user_option = True
             elif user_option.lower() in ['', "''", '""', 'false', '0']:
@@ -3281,7 +3290,7 @@ def forked_by(options):
     Print the name of the user who forked this repo.
     """
 
-    hg_path = sh('hg paths', capture=True).rstrip()
+    hg_path = sh('hg showconfig paths.default', capture=True).rstrip()
 
     username, reponame = hg_path.split('/')[-2:]
     print 'username=%s' % username
@@ -3350,38 +3359,6 @@ def compress_raster(args):
         ))
 
 
-def fetch_crop_data():
-    """Fetch InVEST Crop Model data and extract to data directory.
-
-    Args:
-        extract_path (str): path to store global dataset.
-        url (str): remote location of data.
-    """
-    print "Fetching data/crop-model-data"
-    extract_path = os.path.abspath('data/crop-model-data')
-    if os.path.exists(extract_path):
-        print "Data data/crop-model-data exists"
-        return
-
-    url = 'http://data.naturalcapitalproject.org/invest_crop_production/' \
-          'global_dataset_20151210.zip'
-    tmp_path = os.path.join(os.path.abspath('tmp'), 'global_dataset.zip')
-    try:
-        dry('mkdir -p %s' % 'tmp', os.makedirs, os.path.abspath('tmp'))
-    except OSError:
-        # Folder already exists.  Skipping.
-        pass
-
-    print 'Downloading Crop Model data to %s' % tmp_path
-    rsp = urllib.urlretrieve(url, tmp_path)
-    zf = zipfile.ZipFile(tmp_path, 'r')
-    print 'Extracting crop data to %s' % extract_path
-    zf.extractall(path=extract_path)
-    del rsp
-    del zf
-    os.remove(tmp_path)
-
-
 @task
 @consume_args
 def test(args):
@@ -3408,10 +3385,7 @@ def test(args):
     parser.add_argument('--jenkins', default=False, action='store_true',
                         help='Use options that are useful for Jenkins reports')
     parser.add_argument('--with-data', default=False, action='store_true',
-                        help=('Clone/update the data repo if needed. '
-                              'Also downloads crop data if needed'))
-    parser.add_argument('--skip-crop-data', default=False, action='store_true',
-                        help="Don't download crop data.")
+                        help=('Clone/update the data repo if needed.'))
     parser.add_argument('nose_args', nargs='*',
                         help=('Nosetests-compatible strings indicating '
                               'filename[:classname[.testname]]'),
@@ -3422,10 +3396,6 @@ def test(args):
     if parsed_args.with_data or parsed_args.jenkins:
         call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
         call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
-        if not parsed_args.skip_crop_data:
-            fetch_crop_data()
-        else:
-            print 'Skipping crop data download'
 
     compiler = None
     if parsed_args.jenkins and platform.system() == 'Windows':
@@ -3437,17 +3407,20 @@ def test(args):
         Run tests within a virtualenv.  If we're running with the --jenkins
         flag, add a couple more options suitable for that environment.
         """
+        _coverage_flags = (
+            '--with-coverage '
+            '--cover-package=natcap.invest '
+            '--cover-erase ')
         if parsed_args.jenkins:
-            jenkins_flags = (
+            flags = _coverage_flags + (
                 '--with-xunit '
-                '--with-coverage '
                 '--cover-xml '
                 '--cover-tests '
                 '--logging-filter=None '
                 '--nologcapture '
             )
         else:
-            jenkins_flags = ''
+            flags = _coverage_flags + '--cover-html '
 
         if len(parsed_args.nose_args) == 0:
             # Specifying all tests by hand here because Windows doesn't like the *
@@ -3462,8 +3435,8 @@ def test(args):
             # If the user gave us some test names to run, run those instead!
             tests = parsed_args.nose_args
 
-        sh(('nosetests -vs {jenkins_opts} {tests}').format(
-                jenkins_opts=jenkins_flags,
+        sh(('nosetests -vsP --nologcapture {opts} {tests}').format(
+                opts=flags,
                 tests=' '.join(tests)
             ))
 
@@ -3547,7 +3520,7 @@ def jenkins_push_artifacts(options):
     try:
         hg_path = getattr(options.jenkins_push_artifacts, 'upstream')
     except AttributeError:
-        hg_path = sh('hg paths', capture=True).rstrip()
+        hg_path = sh('hg showconfig paths.default', capture=True).rstrip()
 
     username, reponame = hg_path.split('/')[-2:]
 

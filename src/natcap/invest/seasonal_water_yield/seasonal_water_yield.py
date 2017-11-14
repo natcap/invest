@@ -1,4 +1,5 @@
 """InVEST Seasonal Water Yield Model."""
+from __future__ import absolute_import
 
 import os
 import logging
@@ -11,15 +12,15 @@ import scipy.special
 import numpy
 from osgeo import gdal
 from osgeo import ogr
+import natcap.invest.pygeoprocessing_0_3_3
+import natcap.invest.pygeoprocessing_0_3_3.routing
+import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 import pygeoprocessing
-import pygeoprocessing.routing
-import pygeoprocessing.routing.routing_core
-from  ..  import utils
+
+from .. import utils
+from .. import validation
 
 import seasonal_water_yield_core  #pylint: disable=import-error
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger(
     'natcap.invest.seasonal_water_yield.seasonal_water_yield')
@@ -71,6 +72,7 @@ _TMP_BASE_FILES = {
     'kc_path_list': ['kc_%d.tif' % x for x in xrange(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
+    'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
     }
 
 
@@ -181,17 +183,17 @@ def _execute(args):
     if (not args['user_defined_local_recharge'] and
             not args['user_defined_climate_zones']):
         rain_events_lookup = (
-            pygeoprocessing.get_lookup_from_table(
+            natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
                 args['rain_events_table_path'], 'month'))
 
-    biophysical_table = pygeoprocessing.get_lookup_from_table(
+    biophysical_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
         args['biophysical_table_path'], 'lucode')
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
         alpha_month = dict(
             (key, val['alpha']) for key, val in
-            pygeoprocessing.get_lookup_from_table(
+            natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
                 args['monthly_alpha_path'], 'month').iteritems())
     else:
         # make all 12 entries equal to args['alpha_m']
@@ -202,13 +204,13 @@ def _execute(args):
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
     threshold_flow_accumulation = float(args['threshold_flow_accumulation'])
-    pixel_size = pygeoprocessing.get_cell_size_from_uri(
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         args['dem_raster_path'])
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = args['workspace_dir']
-    pygeoprocessing.create_directories(
+    natcap.invest.pygeoprocessing_0_3_3.create_directories(
         [intermediate_output_dir, output_dir])
 
     LOGGER.info('Building file registry')
@@ -277,7 +279,7 @@ def _execute(args):
             file_registry['cz_aligned_raster_path'])
     interpolate_list = ['nearest'] * len(input_align_list)
 
-    pygeoprocessing.align_dataset_list(
+    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
         input_align_list, output_align_list, interpolate_list, pixel_size,
         'intersection', align_index, aoi_uri=args['aoi_path'],
         assert_datasets_projected=True)
@@ -298,24 +300,24 @@ def _execute(args):
     _mask_any_nodata(input_raster_path_list, output_valid_raster_path_list)
 
     LOGGER.info('flow direction')
-    pygeoprocessing.routing.flow_direction_d_inf(
+    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
         file_registry['dem_valid_path'],
         file_registry['flow_dir_path'])
 
     LOGGER.info('flow weights')
-    pygeoprocessing.routing.routing_core.calculate_flow_weights(
+    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.calculate_flow_weights(
         file_registry['flow_dir_path'],
         file_registry['outflow_weights_path'],
         file_registry['outflow_direction_path'])
 
     LOGGER.info('flow accumulation')
-    pygeoprocessing.routing.flow_accumulation(
+    natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
         file_registry['flow_dir_path'],
         file_registry['dem_valid_path'],
         file_registry['flow_accum_path'])
 
     LOGGER.info('stream thresholding')
-    pygeoprocessing.routing.stream_threshold(
+    natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
         file_registry['flow_accum_path'],
         threshold_flow_accumulation,
         file_registry['stream_path'])
@@ -323,18 +325,17 @@ def _execute(args):
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
         file_registry['l_path'] = file_registry['l_aligned_path']
-        l_nodata = pygeoprocessing.get_nodata_from_uri(file_registry['l_path'])
+        l_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(file_registry['l_path'])
 
         def l_avail_op(l_array):
-            """Calculate equation [8] L_avail = max(gamma*L, 0)."""
+            """Calculate equation [8] L_avail = min(gamma*L, L)"""
             result = numpy.empty(l_array.shape)
             result[:] = l_nodata
             valid_mask = (l_array != l_nodata)
-            valid_l_array = l_array[valid_mask]
-            valid_l_array[valid_l_array < 0.0] = 0.0
-            result[valid_mask] = valid_l_array * gamma
+            result[valid_mask] = numpy.min(numpy.stack(
+                (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
             return result
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [file_registry['l_path']], l_avail_op,
             file_registry['l_avail_path'], gdal.GDT_Float32, l_nodata,
             pixel_size, 'intersection', vectorize_op=False,
@@ -345,14 +346,14 @@ def _execute(args):
         for month_id in xrange(N_MONTHS):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
-                    pygeoprocessing.get_lookup_from_table(
+                    natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
                         args['climate_zone_table_path'], 'cz_id'))
                 month_label = MONTH_ID_TO_LABEL[month_id]
                 climate_zone_rain_events_month = dict([
                     (cz_id, cz_rain_events_lookup[cz_id][month_label]) for
                     cz_id in cz_rain_events_lookup])
                 n_events_nodata = -1
-                pygeoprocessing.reclassify_dataset_uri(
+                natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
                     file_registry['cz_aligned_raster_path'],
                     climate_zone_rain_events_month,
                     file_registry['n_events_path_list'][month_id],
@@ -360,7 +361,7 @@ def _execute(args):
             else:
                 # rain_events_lookup defined near entry point of execute
                 n_events = rain_events_lookup[month_id+1]['events']
-                pygeoprocessing.make_constant_raster_from_base_uri(
+                natcap.invest.pygeoprocessing_0_3_3.make_constant_raster_from_base_uri(
                     file_registry['dem_valid_path'], n_events,
                     file_registry['n_events_path_list'][month_id])
 
@@ -399,7 +400,7 @@ def _execute(args):
             qf_sum[valid_mask] = valid_qf_sum
             return qf_sum
 
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             file_registry['qfm_path_list'], qfi_sum_op,
             file_registry['qf_path'], gdal.GDT_Float32, qf_nodata,
             pixel_size, 'intersection', vectorize_op=False,
@@ -413,7 +414,7 @@ def _execute(args):
                 (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
                 for lucode in biophysical_table])
             kc_nodata = -1  # a reasonable nodata value
-            pygeoprocessing.reclassify_dataset_uri(
+            natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
                 file_registry['lulc_valid_path'], kc_lookup,
                 file_registry['kc_path_list'][month_index], gdal.GDT_Float32,
                 kc_nodata)
@@ -439,9 +440,9 @@ def _execute(args):
     qb_sum, qb_valid_count = _sum_valid(file_registry['l_path'])
     qb_result = qb_sum / qb_valid_count
 
-    pixel_size = pygeoprocessing.get_cell_size_from_uri(
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         file_registry['l_path'])
-    ri_nodata = pygeoprocessing.get_nodata_from_uri(
+    ri_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         file_registry['l_path'])
 
     def vri_op(ri_array):
@@ -449,7 +450,7 @@ def _execute(args):
         return numpy.where(
             ri_array != ri_nodata,
             ri_array / qb_result / qb_valid_count, ri_nodata)
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [file_registry['l_path']], vri_op,
         file_registry['vri_path'], gdal.GDT_Float32, ri_nodata,
         pixel_size, 'intersection', vectorize_op=False,
@@ -461,17 +462,34 @@ def _execute(args):
         file_registry['aggregate_vector_path'])
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
-    pygeoprocessing.make_constant_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.make_constant_raster_from_base_uri(
         file_registry['dem_valid_path'], 0.0,
         file_registry['zero_absorption_source_path'])
-    pygeoprocessing.routing.route_flux(
+    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
         file_registry['flow_dir_path'],
         file_registry['dem_valid_path'],
         file_registry['l_path'],
         file_registry['zero_absorption_source_path'],
         file_registry['loss_path'],
-        file_registry['l_sum_path'], 'flux_only',
+        file_registry['l_sum_pre_clamp'], 'flux_only',
         stream_uri=file_registry['stream_path'])
+
+    # The result of route_flux can be slightly negative due to roundoff error
+    # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
+    l_sum_pre_clamp_nodata = pygeoprocessing.get_raster_info(
+        file_registry['l_sum_pre_clamp'])['nodata'][0]
+
+    def clamp_l_sum(l_sum_pre_clamp):
+        """Clamp any negative values to 0.0."""
+        result = l_sum_pre_clamp.copy()
+        result[
+            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
+            (l_sum_pre_clamp < 0.0)] = 0.0
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(file_registry['l_sum_pre_clamp'], 1)], clamp_l_sum,
+        file_registry['l_sum_path'], gdal.GDT_Float32, l_sum_pre_clamp_nodata)
 
     LOGGER.info('calculate B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
@@ -486,22 +504,24 @@ def _execute(args):
 
     LOGGER.info('calculate B')
 
-    b_sum_nodata = ri_nodata = pygeoprocessing.get_nodata_from_uri(
+    b_sum_nodata = ri_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         file_registry['b_sum_path'])
 
     def op_b(b_sum, l_avail, l_sum):
-        """Calculate B=B_sum*Lavail/L_sum."""
+        """Calculate B=max(B_sum*Lavail/L_sum, 0)."""
         valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
         result = numpy.empty(b_sum.shape)
         result[:] = b_sum_nodata
         result[valid_mask] = (
             b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
-
+        # if l_sum is zero, it's okay to make B zero says Perrine in an email
+        result[l_sum == 0] = 0.0
+        result[(result < 0) & valid_mask] = 0
         return result
 
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [file_registry['b_sum_path'],
-         file_registry['l_avail_path'],
+         file_registry['l_path'],
          file_registry['l_sum_path']], op_b,
         file_registry['b_path'],
         gdal.GDT_Float32, b_sum_nodata, pixel_size, 'intersection',
@@ -551,7 +571,7 @@ def _calculate_monthly_quick_flow(
         None
     """
     si_nodata = -1
-    cn_nodata = pygeoprocessing.get_nodata_from_uri(cn_path)
+    cn_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(cn_path)
 
     def si_op(ci_array, stream_array):
         """Potential maximum retention."""
@@ -560,16 +580,16 @@ def _calculate_monthly_quick_flow(
         si_array[stream_array == 1] = 0
         return si_array
 
-    pixel_size = pygeoprocessing.get_cell_size_from_uri(
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         lulc_raster_path)
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [cn_path, stream_path], si_op, si_path, gdal.GDT_Float32,
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
 
     qf_nodata = -1
-    p_nodata = pygeoprocessing.get_nodata_from_uri(precip_path)
-    n_events_nodata = pygeoprocessing.get_nodata_from_uri(n_events_raster_path)
+    p_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(precip_path)
+    n_events_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(n_events_raster_path)
 
     def qf_op(p_im, s_i, n_events, stream_array):
         """Calculate quick flow as in Eq [1] in user's guide.
@@ -587,8 +607,8 @@ def _calculate_monthly_quick_flow(
         """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (stream_array != 1) & (n_events != n_events_nodata) &
-            (n_events > 0))
+            (stream_array != 1) &
+            (n_events != n_events_nodata) & (n_events > 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
@@ -605,6 +625,7 @@ def _calculate_monthly_quick_flow(
         # exponent will also be zero because of a divide by zero. rather than
         # raise that numerical warning, just handle it manually
         E1 = scipy.special.expn(1, valid_si / a_im)  #pylint: disable=invalid-name,no-member
+        E1[valid_si == 0] = 0
         nonzero_e1_mask = E1 != 0
         exp_result = numpy.zeros(valid_si.shape)
         exp_result[nonzero_e1_mask] = numpy.exp(
@@ -622,7 +643,7 @@ def _calculate_monthly_quick_flow(
         qf_im[stream_array == 1] = p_im[stream_array == 1]
         return qf_im
 
-    pygeoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [precip_path, si_path, n_events_raster_path, stream_path], qf_op,
         qf_monthly_path, gdal.GDT_Float32, qf_nodata, pixel_size,
         'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
@@ -647,7 +668,7 @@ def _calculate_curve_number_raster(
     Returns:
         None
     """
-    soil_nodata = pygeoprocessing.get_nodata_from_uri(soil_group_path)
+    soil_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(soil_group_path)
     map_soil_type_to_header = {
         1: 'cn_a',
         2: 'cn_b',
@@ -657,7 +678,7 @@ def _calculate_curve_number_raster(
     # curve numbers are always positive so -1 a good nodata choice
     cn_nodata = -1
     lulc_to_soil = {}
-    lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_raster_path)
+    lulc_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(lulc_raster_path)
     for soil_id, soil_column in map_soil_type_to_header.iteritems():
         lulc_to_soil[soil_id] = {
             'lulc_values': [],
@@ -673,11 +694,11 @@ def _calculate_curve_number_raster(
                 lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
                 lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
 
-        # Making the array an int64 to make sure it's big enough to handle
-        # both signed and unsigned int32 values
+        # Making the landcover array a float32 in case the user provides a
+        # float landcover map like Kate did.
         lulc_to_soil[soil_id]['lulc_values'] = (
             numpy.array(lulc_to_soil[soil_id]['lulc_values'],
-                        dtype=numpy.int64))
+                        dtype=numpy.float32))
         lulc_to_soil[soil_id]['cn_values'] = (
             numpy.array(lulc_to_soil[soil_id]['cn_values'],
                         dtype=numpy.float32))
@@ -700,8 +721,8 @@ def _calculate_curve_number_raster(
         return cn_result
 
     cn_nodata = -1
-    pixel_size = pygeoprocessing.get_cell_size_from_uri(lulc_raster_path)
-    pygeoprocessing.vectorize_datasets(
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(lulc_raster_path)
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [lulc_raster_path, soil_group_path], cn_op, cn_path, gdal.GDT_Float32,
         cn_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
@@ -719,7 +740,7 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
         None
     """
     si_nodata = -1
-    cn_nodata = pygeoprocessing.get_nodata_from_uri(cn_path)
+    cn_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(cn_path)
 
     def si_op(ci_factor, stream_mask):
         """Calculate si factor."""
@@ -733,8 +754,8 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
                 stream_mask[valid_mask] != 1))
         return si_array
 
-    pixel_size = pygeoprocessing.get_cell_size_from_uri(cn_path)
-    pygeoprocessing.vectorize_datasets(
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(cn_path)
+    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [cn_path, stream_path], si_op, si_path, gdal.GDT_Float32,
         si_nodata, pixel_size, 'intersection', vectorize_op=False,
         datasets_are_pre_aligned=True)
@@ -795,13 +816,14 @@ def _aggregate_recharge(
             (l_path, 'qb', 'mean'), (vri_path, 'vri_sum', 'sum')]:
 
         # aggregate carbon stocks by the new ID field
-        aggregate_stats = pygeoprocessing.aggregate_raster_values_uri(
+        aggregate_stats = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
             raster_path, aggregate_vector_path,
             shapefile_field=poly_id_field, ignore_nodata=True,
-            threshold_amount_lookup=None, ignore_value_list=[],
-            process_pool=None, all_touched=False)
+            all_touched=False)
 
         aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
+        aggregate_field.SetWidth(24)
+        aggregate_field.SetPrecision(11)
         aggregate_layer.CreateField(aggregate_field)
 
         aggregate_layer.ResetReading()
@@ -844,9 +866,9 @@ def _sum_valid(raster_path):
     """
     raster_sum = 0
     raster_count = 0
-    raster_nodata = pygeoprocessing.get_nodata_from_uri(raster_path)
+    raster_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(raster_path)
 
-    for _, block in pygeoprocessing.iterblocks(raster_path, band_list=[1]):
+    for _, block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(raster_path, band_list=[1]):
         valid_mask = block != raster_nodata
         raster_sum += numpy.sum(block[valid_mask])
         raster_count += numpy.count_nonzero(valid_mask)
@@ -866,9 +888,9 @@ def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
     Returns:
         None
     """
-    base_nodata_list = [pygeoprocessing.get_nodata_from_uri(
+    base_nodata_list = [natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         path) for path in input_raster_path_list]
-    pixel_size = pygeoprocessing.get_cell_size_from_uri(
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         input_raster_path_list[0])
     nodata_list = None
     for index in xrange(len(input_raster_path_list)):
@@ -883,8 +905,116 @@ def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
                     value_list[value_index] != nodata_list[value_index])
             return numpy.where(valid_mask, value_list[0], nodata_list[0])
 
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             input_raster_path_list[index:]+input_raster_path_list[:index],
             mask_if_not_both_valid, output_raster_path_list[index],
             gdal.GDT_Float32, nodata_list[0], pixel_size, 'intersection',
             vectorize_op=False, datasets_are_pre_aligned=True)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    required_keys = [
+        'workspace_dir',
+        'threshold_flow_accumulation',
+        'dem_raster_path',
+        'lulc_raster_path',
+        'aoi_path',
+        'biophysical_table_path',
+        'beta_i',
+        'gamma']
+
+    if ('user_defined_climate_zones' in args and
+            args['user_defined_climate_zones']):
+        required_keys.extend([
+            'climate_zone_table_path',
+            'climate_zone_raster_path'])
+
+    if 'user_defined_local_recharge' in args:
+        if args['user_defined_local_recharge']:
+            required_keys.append('l_path')
+        else:
+            required_keys.extend([
+                'et0_dir',
+                'precip_dir',
+                'soil_group_path',
+                'rain_events_table_path'])
+
+    if 'monthly_alpha_path' in args:
+        if args['monthly_alpha_path']:
+            required_keys.append('monthly_alpha_path')
+        else:
+            required_keys.append('alpha_m')
+
+    for key in required_keys:
+        if limit_to is None or limit_to == key:
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ['', None]:
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        # if there are missing keys, we have raise KeyError to stop hard
+        raise KeyError(
+            "The following keys were expected in `args` but were missing " +
+            ', '.join(missing_key_list))
+
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    file_type_list = [
+        ('dem_raster_path', 'raster'),
+        ('lulc_raster_path', 'raster'),
+        ('aoi_path', 'vector'),
+        ('biophysical_table_path', 'table'),
+        ('climate_zone_table_path', 'table'),
+        ('climate_zone_raster_path', 'raster'),
+        ('monthly_alpha_path', 'table'),
+        ('precip_dir', 'directory'),
+        ('soil_group_path', 'raster'),
+        ('rain_events_table_path', 'table'),
+        ('l_path', 'raster')]
+
+    # check that existing/optional files are the correct types
+    with utils.capture_gdal_logging():
+        for key, key_type in file_type_list:
+            if (limit_to in [None, key]) and key in required_keys:
+                if not os.path.exists(args[key]):
+                    validation_error_list.append(
+                        ([key], 'not found on disk'))
+                    continue
+                if key_type == 'raster':
+                    raster = gdal.Open(args[key])
+                    if raster is None:
+                        validation_error_list.append(
+                            ([key], 'not a raster'))
+                    del raster
+                elif key_type == 'vector':
+                    vector = ogr.Open(args[key])
+                    if vector is None:
+                        validation_error_list.append(
+                            ([key], 'not a vector'))
+                    del vector
+
+    return validation_error_list

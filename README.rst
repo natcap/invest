@@ -97,7 +97,6 @@ InVEST relies on the following python packages:
   * pyAMG
   * cython
   * setuptools
-  * dbfpy
   * poster
   * pygeoprocessing
   * natcap.versioner
@@ -116,7 +115,7 @@ on the command-line somewhere on your PATH, depending on what you'd like to buil
   * ``make`` (GNU Make, for building documentation)
   * ``fpm`` (for generating .deb and .rpm packages, can be installed via ``gem``)
   * ``makensis`` (NSIS, for generating Windows installers)
-  * ``hdiutil`` (for generating mac DMGs)
+  * ``dmgbuild`` (for generating mac DMGs)
   * ``pdflatex`` (for generating PDF versions of the User's Guide)
   * ``pandoc`` (for converting .docx files to rst when building the User's
     Guide.  See http://pandoc.org/installing.html)

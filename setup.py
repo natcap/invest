@@ -114,6 +114,16 @@ EXTENSION_LIST = ([
         name="seasonal_water_yield_core",
         sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
         language="c++"),
+    Extension(
+        name="natcap.invest.pygeoprocessing_0_3_3.geoprocessing_core",
+        sources=[
+            'src/natcap/invest/pygeoprocessing_0_3_3/geoprocessing_core.pyx'],
+        language="c++"),
+    Extension(
+        name="natcap.invest.pygeoprocessing_0_3_3.routing.routing_core",
+        sources=[
+            'src/natcap/invest/pygeoprocessing_0_3_3/routing/routing_core.pyx'],
+        language="c++"),
     ])
 
 if not USE_CYTHON:
@@ -160,10 +170,8 @@ def requirements(*pkgnames):
                           'requirements for %s') % list(missing_pkgs))
     return found_pkgnames.values()
 
-
 BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
                                                         'natcap.versioner')
-
 
 setup(
     name='natcap.invest',
@@ -176,29 +184,27 @@ setup(
     packages=[
         'natcap',
         'natcap.invest',
-        'natcap.invest.crop_production',
         'natcap.invest.coastal_blue_carbon',
         'natcap.invest.coastal_vulnerability',
-        'natcap.invest.dbfpy',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
         'natcap.invest.habitat_risk_assessment',
         'natcap.invest.hydropower',
-        'natcap.invest.iui',
-        'natcap.invest.iui.dbfpy',
-        'natcap.invest.marine_water_quality',
+        'natcap.invest.ui',
         'natcap.invest.ndr',
         'natcap.invest.overlap_analysis',
-        'natcap.invest.pollination',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
         'natcap.invest.routing',
         'natcap.invest.scenario_generator',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
-        'natcap.invest.testing',
         'natcap.invest.wave_energy',
         'natcap.invest.wind_energy',
+        'natcap.invest.pygeoprocessing_0_3_3',
+        'natcap.invest.pygeoprocessing_0_3_3.routing',
+        'natcap.invest.pygeoprocessing_0_3_3.dbfpy',
+        'natcap.invest.pygeoprocessing_0_3_3.testing',
     ],
     package_dir={
         'natcap': 'src/natcap'
@@ -207,7 +213,7 @@ setup(
     include_package_data=True,
     install_requires=BUILD_REQUIREMENTS,
     setup_requires=requirements('natcap.versioner'),
-    license=open('LICENSE.txt').read(),
+    license='BSD',
     zip_safe=False,
     keywords='gis invest',
     classifiers=[
@@ -219,22 +225,20 @@ setup(
         'Operating System :: Microsoft',
         'Operating System :: POSIX',
         'Programming Language :: Python :: 2 :: Only',
+        'License :: OSI Approved :: BSD License',
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=EXTENSION_LIST,
     entry_points={
         'console_scripts': [
-            'invest = natcap.invest.iui.cli:main'
+            'invest = natcap.invest.cli:main'
         ],
+    },
+    extras_require={
+        'ui': ('qtpy', 'qtawesome', 'six'),
     },
     cmdclass=CMDCLASS,
     package_data={
-        'natcap.invest.iui': [
-            '*.png',
-            '*.json',
-            'iui_resources/resources.json',
-            'iui_resources/images/*.png',
-        ],
         'natcap.invest.reporting': [
             'reporting_data/*.js',
             'reporting_data/*.css',

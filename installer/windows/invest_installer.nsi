@@ -63,7 +63,6 @@
 ;           Pollination.zip
 ;           Base_Data.zip
 ;           <other zipfiles, as desired, downloaded from our website>
-
 !include nsProcess.nsh
 !include LogicLib.nsh
 ; HM NIS Edit Wizard helper defines
@@ -79,6 +78,26 @@ SetCompressor zlib
 
 ; MUI has some graphical files that I want to define, which must be defined
 ; here before the macros are declared.
+;
+; NOTES ABOUT GRAPHICS:
+; ---------------------
+; NSIS is surprisingly picky about the sorts of graphics that can be displayed.
+; Here's what I know about these images after a fair amount of
+; trial and error:
+;  * Image format must be Windows Bitmap (.bmp).
+;       * I've used 24-bit ad 32-bit encodings without issue.
+;       * 24-bit encodings should be sufficient, and yield ~30% filesize reduction.
+;       * If using GIMP, be sure to check the compatibility option marked
+;         "Do not write color space information".
+;  * Vertical images must have dimensions 164Wx314H.
+;       * Within this, the InVEST logo currently has dimensions 130Wx109H.
+;  * Horizontal (top) banner must have dimensions 150Wx57H.
+;       * Within this, the InVEST logo currently has dimensions 48Wx40H.
+;
+; GIMP notes: I've had good results with just opening the existing BMPs from
+; the repo, inserting a new layer with the InVEST logo, scaling the layer,
+; repositioning the logo to perfectly cover the old logo, flattening the
+; layers and then exporting as a 24-bit windows bitmap.
 !define MUI_WELCOMEFINISHPAGE_BITMAP "InVEST-vertical.bmp"
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "InVEST-vertical.bmp"
 !define MUI_HEADERIMAGE
@@ -102,7 +121,7 @@ SetCompressor zlib
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW AddAdvancedOptions
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ValidateAdvZipFile
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "license.rtf"
+!insertmacro MUI_PAGE_LICENSE "..\..\LICENSE.txt"
 
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipComponents
 !insertmacro MUI_PAGE_COMPONENTS
@@ -127,6 +146,7 @@ Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile ${INSTALLER_NAME}
 InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
 ShowInstDetails show
+RequestExecutionLevel admin
 
 ; This function allows us to test to see if a process is currently running.
 ; If the process name passed in is actually found, a message box is presented
@@ -278,7 +298,8 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}"
 
   CreateDirectory "${SMPATH}"
-  CreateShortCut "${SMPATH}\Crop Production (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Crop Production (Percentile) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production_percentile.bat" "" "${INVEST_ICON}"
+  CreateShortCut "${SMPATH}\Crop Production (Regression) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production_regression.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Scenic Quality (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenic_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"
@@ -286,7 +307,6 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   CreateShortCut "${SMPATH}\GLOBIO (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_globio.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
   CreateShortCut "${SMPATH}\Finfish Aquaculture (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_finfish_aquaculture.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Marine Water Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_marine_water_quality_biophysical.bat" "" "${INVEST_ICON}"
   CreateDirectory "${OVERLAP}"
   CreateShortCut "${OVERLAP}\Overlap Analysis (Management Zones) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis_mz.bat" "" "${INVEST_ICON}"
   CreateShortCut "${OVERLAP}\Overlap Analysis (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis.bat" "" "${INVEST_ICON}"
@@ -336,16 +356,9 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
 
   ; Actually install the information we want to disk.
   SetOutPath "$INSTDIR"
-  File license.txt
-  File ..\..\src\invest-natcap.default\*.tbx
+  File ..\..\LICENSE.txt
   File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
   file ..\..\HISTORY.rst
-
-  SetOutPath "$INSTDIR\invest_helper_utils\"
-  File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\utils\*
-
-  SetOutPath "$INSTDIR\python\"
-  File /r /x *.hg* /x *.svn* ..\..\src\invest-natcap.default\python\*
 
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
   File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
@@ -458,7 +471,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 117760
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 784
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 8116
-    !insertmacro downloadData "Marine Water Quality (optional)" "MarineWaterQuality.zip" 13312
     !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3692
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831620
@@ -468,20 +480,12 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
     !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 0
-
-    ; Custom download for the Crop Production Global Datasets.
-    Section "Crop Production Global Datasets (Required for Crop Production)"
-        AddSize "138000"
-        SetOutPath "$INSTDIR\CropProduction"
-        !insertmacro downloadFile "http://data.naturalcapitalproject.org/invest_crop_production/global_dataset_20151210.zip" "crop_data.zip"
-        SetOutPath "$INSTDIR"
-    SectionEnd
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
     !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
-    !insertmacro downloadData "Pollination (optional)" "Pollination.zip" 176
+    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 176
     !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 0
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
   SectionGroupEnd

@@ -11,9 +11,9 @@ import copy
 
 import numpy
 from osgeo import gdal
-from pygeoprocessing import geoprocessing as geoprocess
-import pygeoprocessing.testing as pygeotest
-from pygeoprocessing.testing import scm
+from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing as geoprocess
+import natcap.invest.pygeoprocessing_0_3_3.testing as pygeotest
+from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
@@ -586,9 +586,9 @@ class TestModel(unittest.TestCase):
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
         #       Total: 10.5 + 20.5 = 31.
-        netseq_test = numpy.array([[numpy.nan, 31.], [31., 31.]])
+        netseq_test = numpy.array([[cbc.NODATA_FLOAT, 31.], [31., 31.]])
         npv_test = numpy.array(
-            [[numpy.nan, 60.27801514], [60.27801514, 60.27801514]])
+            [[cbc.NODATA_FLOAT, 60.27801514], [60.27801514, 60.27801514]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
@@ -624,7 +624,7 @@ class TestModel(unittest.TestCase):
         # Initial Stock from Baseline: 5+5=10
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5
-        netseq_test = numpy.array([[numpy.nan, 10.5], [10.5, 10.5]])
+        netseq_test = numpy.array([[cbc.NODATA_FLOAT, 10.5], [10.5, 10.5]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
@@ -655,7 +655,7 @@ class TestModel(unittest.TestCase):
         # Sequest:
         #    2000-->2005: (1+1.1)*5=10.5, 2005-->2010: (2+2.1)*5=20.5
         #       Total: 10.5 + 20.5 = 31.
-        netseq_test = numpy.array([[numpy.nan, 31.], [31., 31.]])
+        netseq_test = numpy.array([[cbc.NODATA_FLOAT, 31.], [31., 31.]])
 
         # just a simple regression test.  this demonstrates that a NaN value
         # will properly propagate across the model. the npv raster was chosen
@@ -777,7 +777,7 @@ class CBCRefactorTest(unittest.TestCase):
         Returns:
             A dict of the model arguments.
         """
-        from pygeoprocessing.testing import sampledata
+        from natcap.invest.pygeoprocessing_0_3_3.testing import sampledata
 
         args = {
             'workspace_dir': workspace,

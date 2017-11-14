@@ -1,0 +1,159 @@
+import unittest
+
+from osgeo import gdal
+
+
+class ValidatorTest(unittest.TestCase):
+    def test_args_wrong_type(self):
+        """Validation: check for error when args is the wrong type."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            pass
+
+        with self.assertRaises(AssertionError):
+            validate(args=123)
+
+    def test_limit_to_wrong_type(self):
+        """Validation: check for error when limit_to is the wrong type."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            pass
+
+        with self.assertRaises(AssertionError):
+            validate(args={}, limit_to=1234)
+
+    def test_limit_to_not_in_args(self):
+        """Validation: check for error when limit_to is not a key in args."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            pass
+
+        with self.assertRaises(AssertionError):
+            validate(args={}, limit_to='bar')
+
+    def test_args_keys_must_be_strings(self):
+        """Validation: check for error when args keys are not all strings."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            pass
+
+        with self.assertRaises(AssertionError):
+            validate(args={1: 'foo'})
+
+    def test_invalid_return_value(self):
+        """Validation: check for error when the return value type is wrong."""
+        from natcap.invest import validation
+
+        for invalid_value in (1, True, None):
+            @validation.invest_validator
+            def validate(args, limit_to=None):
+                return invalid_value
+
+            with self.assertRaises(AssertionError):
+                validate({})
+
+    def test_invalid_keys_iterable(self):
+        """Validation: check for error when return keys not an iterable."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            return [('a', 'error 1')]
+
+        with self.assertRaises(AssertionError):
+            validate({'a': 'foo'})
+
+    def test_return_keys_in_args(self):
+        """Validation: check for error when return keys not all in args."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            return [(('a',), 'error 1')]
+
+        with self.assertRaises(AssertionError):
+            validate({})
+
+    def test_error_string_wrong_type(self):
+        """Validation: check for error when error message not a string."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            return [(('a',), 1234)]
+
+        with self.assertRaises(AssertionError):
+            validate({'a': 'foo'})
+
+    def test_wrong_parameter_names(self):
+        """Validation: check for error when wrong function signature used."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(foo):
+            pass
+
+        with self.assertRaises(AssertionError):
+            validate({})
+
+    def test_return_value(self):
+        """Validation: validation errors should be returned from decorator."""
+        from natcap.invest import validation
+
+        errors = [(('a', 'b'), 'Error!')]
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            return errors
+
+        validation_errors = validate({'a': 'foo', 'b': 'bar'})
+        self.assertEqual(validation_errors, errors)
+
+
+class ValidationContextTests(unittest.TestCase):
+    def test_is_arg_complete_require(self):
+        """Validation: context returns a warning for incomplete args."""
+        from natcap.invest import validation
+        context = validation.ValidationContext(
+            args={}, limit_to=None)
+        is_complete = context.is_arg_complete('some_key', require=True)
+
+        self.assertEqual(is_complete, False)
+        self.assertEqual(len(context.warnings), 1)
+
+    def test_is_arg_complete_require_and_present(self):
+        """Validation: context ok when arg complete."""
+        from natcap.invest import validation
+
+        context = validation.ValidationContext(
+            args={'some_key': 'foo'}, limit_to=None)
+        is_complete = context.is_arg_complete('some_key', require=True)
+
+        self.assertEqual(is_complete, True)
+        self.assertEqual(context.warnings, [])
+
+    def test_warn_single_key(self):
+        """Validation: check warnings when single key is given."""
+        from natcap.invest import validation
+
+        context = validation.ValidationContext(
+            args={'some_key': 'foo'}, limit_to=None)
+        context.warn('some error', 'some_key')
+        self.assertEqual(context.warnings, [(('some_key',), 'some error')])
+
+    def test_warn_iterable_keys(self):
+        """Validation: check warnings when keys are iterable."""
+        from natcap.invest import validation
+
+        context = validation.ValidationContext(
+            args={'some_key': 'foo'}, limit_to=None)
+        context.warn('some error', keys=['some_key'])
+        self.assertEqual(context.warnings, [(('some_key',), 'some error')])

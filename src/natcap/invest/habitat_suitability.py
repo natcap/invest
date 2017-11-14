@@ -4,12 +4,9 @@ import logging
 
 import numpy
 from osgeo import gdal
-import pygeoprocessing.geoprocessing
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 
 from . import utils
-
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.habitat_suitability')
 _HSI_NODATA = -1.0  # HSI values are floats in [0..1] so -1 as nodata is safe
@@ -110,7 +107,7 @@ def execute(args):
 
     LOGGER.info('Creating output directories and file registry.')
     output_dir = os.path.join(args['workspace_dir'])
-    pygeoprocessing.create_directories([output_dir])
+    natcap.invest.pygeoprocessing_0_3_3.create_directories([output_dir])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     f_reg = utils.build_file_registry(
@@ -123,7 +120,7 @@ def execute(args):
     else:
         # cell size is the min cell size of all the biophysical inputs
         output_cell_size = min(
-            [pygeoprocessing.get_cell_size_from_uri(entry['raster_path'])
+            [natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(entry['raster_path'])
              for entry in args['hsi_ranges'].itervalues()])
 
     LOGGER.info("Aligning base biophysical raster list.")
@@ -152,7 +149,7 @@ def execute(args):
         aligned_raster_stack[key] = aligned_path
         base_path = aligned_path + '_base.tif'
 
-        pygeoprocessing.create_raster_from_vector_extents_uri(
+        natcap.invest.pygeoprocessing_0_3_3.create_raster_from_vector_extents_uri(
             entry['vector_path'], output_cell_size, gdal.GDT_Float32,
             _HSI_NODATA, base_path)
 
@@ -164,7 +161,7 @@ def execute(args):
         out_aligned_raster_list.append(aligned_path)
         base_raster_list.append(base_path)
 
-    pygeoprocessing.geoprocessing.align_dataset_list(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.align_dataset_list(
         base_raster_list, out_aligned_raster_list,
         ['nearest'] * len(base_raster_list),
         output_cell_size, 'intersection', 0, aoi_uri=args['aoi_path'])
@@ -183,7 +180,7 @@ def execute(args):
     for key, entry in args['hsi_ranges'].iteritems():
         LOGGER.info("Mapping biophysical to HSI on %s", key)
         base_raster_path = aligned_raster_stack[key]
-        base_nodata = pygeoprocessing.get_nodata_from_uri(base_raster_path)
+        base_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(base_raster_path)
         suitability_range = entry['suitability_range']
         suitability_key = key+'_suitability%s' % file_suffix
 
@@ -229,7 +226,7 @@ def execute(args):
             return numpy.piecewise(
                 biophysical_values.astype(numpy.float), condlist, funclist)
 
-        pygeoprocessing.vectorize_datasets(
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [base_raster_path], local_map, f_reg[suitability_key],
             gdal.GDT_Float32, _HSI_NODATA, output_cell_size,
             'intersection', vectorize_op=False)
@@ -238,8 +235,8 @@ def execute(args):
     for key, entry in args['categorical_geometry'].iteritems():
         LOGGER.info("Rasterizing categorical geometry on %s", key)
         base_raster_path = aligned_raster_stack[key]
-        base_nodata = pygeoprocessing.get_nodata_from_uri(base_raster_path)
-        pygeoprocessing.rasterize_layer_uri(
+        base_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(base_raster_path)
+        natcap.invest.pygeoprocessing_0_3_3.rasterize_layer_uri(
             base_raster_path, entry['vector_path'],
             option_list=["ATTRIBUTE=%s" % entry['fieldname']])
         suitability_raster_list.append(base_raster_path)
@@ -261,7 +258,7 @@ def execute(args):
             running_product[~running_mask]**(1./len(suitability_values)))
         return result
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         suitability_raster_list, geo_mean_op, f_reg['suitability_path'],
         gdal.GDT_Float32, _HSI_NODATA, output_cell_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
@@ -278,20 +275,20 @@ def execute(args):
         result[invalid_mask] = _HSI_NODATA
         return result
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [f_reg['suitability_path']], threshold_op,
         f_reg['threshold_suitability_path'], gdal.GDT_Float32,
         _HSI_NODATA, output_cell_size, "intersection", vectorize_op=False)
 
     LOGGER.info("Masking threshold by exclusions.")
-    pygeoprocessing.new_raster_from_base_uri(
+    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         f_reg['threshold_suitability_path'],
         f_reg['screened_mask_path'], 'GTiff', _HSI_NODATA,
         gdal.GDT_Byte, fill_value=0)
     if 'exclusion_path_list' in args:
         for exclusion_mask_path in args['exclusion_path_list']:
             LOGGER.info("Building raster mask for %s", exclusion_mask_path)
-            pygeoprocessing.rasterize_layer_uri(
+            natcap.invest.pygeoprocessing_0_3_3.rasterize_layer_uri(
                 f_reg['screened_mask_path'], exclusion_mask_path,
                 burn_values=[1])
 
@@ -301,7 +298,7 @@ def execute(args):
         result[mask_values == 1] = _HSI_NODATA
         return result
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [f_reg['threshold_suitability_path'],
          f_reg['screened_mask_path']], mask_exclusion_op,
         f_reg['screened_suitability_path'], gdal.GDT_Float32, _HSI_NODATA,
