@@ -194,12 +194,11 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
     Returns:
         transition_set (set): a set of all types of transitions
     """
-    iter_r1 = pygeoprocessing.iterblocks(raster_t1_uri)
     transition_nodata = pygeoprocessing.get_raster_info(
         raster_t1_uri)['nodata'][0]
     transition_set = set()
 
-    for d, a1 in iter_r1:
+    for d, a1 in pygeoprocessing.iterblocks(raster_t1_uri):
         a2 = read_from_raster(raster_t2_uri, d)
         transition_list = zip(a1.flatten(), a2.flatten())
         transition_set = transition_set.union(set(transition_list))
