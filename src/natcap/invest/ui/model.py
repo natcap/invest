@@ -1280,7 +1280,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         Returns:
             ``None``
         """
-        if confirm is True:
+        if confirm:
             confirm_response = self.input_overwrite_confirm_dialog.exec_()
             if confirm_response != QtWidgets.QMessageBox.Yes:
                 return
