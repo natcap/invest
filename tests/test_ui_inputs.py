@@ -2561,6 +2561,42 @@ class ModelTests(_QtTest):
         self.assertEqual(min(previous_datastack_actions),
                          sorted(datastack_created)[1])
 
+    def test_load_datastack_display_short_filepaths(self):
+        """UI Model: Check handling of long filepaths in open-recent menu."""
+        model_ui = ModelTests.build_model()
+
+        # synthesize a recent scenario path by adding it to the right setting.
+        model_ui._add_to_open_menu('/foo.invest.json')
+
+        last_run_datastack_actions = []
+        for action in model_ui.open_menu.actions():
+            if action.isSeparator() or action is model_ui.open_file_action:
+                continue
+            last_run_datastack_actions.append((action.text(), action.data()))
+
+        self.assertEqual(len(last_run_datastack_actions), 1)
+        self.assertTrue('/foo.invest.json' in last_run_datastack_actions[0][0])
+        self.assertEqual(last_run_datastack_actions[0][1], '/foo.invest.json')
+
+    def test_load_datastack_display_long_filepaths(self):
+        """UI Model: Check handling of long filepaths in open-recent menu."""
+        model_ui = ModelTests.build_model()
+
+        # synthesize a recent scenario path by adding it to the right setting.
+        deep_directory = os.path.join(*[str(uuid.uuid4()) for x in xrange(10)])
+        filepath = os.path.join(deep_directory, 'something.invest.json')
+        model_ui._add_to_open_menu(filepath)
+
+        last_run_datastack_actions = []
+        for action in model_ui.open_menu.actions():
+            if action.isSeparator() or action is model_ui.open_file_action:
+                continue
+            last_run_datastack_actions.append((action.text(), action.data()))
+
+        self.assertEqual(len(last_run_datastack_actions), 1)
+        self.assertTrue('something.invest.json' in last_run_datastack_actions[0][0])
+        self.assertEqual(last_run_datastack_actions[0][1], filepath)
+
     def test_load_datastack_from_open_recent(self):
         """UI Model: Check loading of datastack via open-recent menu."""
         from natcap.invest import datastack
