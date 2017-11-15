@@ -1015,9 +1015,19 @@ class InVESTModel(QtWidgets.QMainWindow):
             else:
                 date_label = time_obj.strftime('%Y-%m-%d at %H:%m')
 
+            # Shorten the path label to only show the topmost directory and the
+            # datastack filename.
+            datastack_path_directories = datastack_filepath.split(os.sep)
+            if len(datastack_path_directories) <= 2:
+                # path should be short, show the whole path in the menu.
+                path_label = datastack_filepath
+            else:
+                # show the filename and its parent directory in the menu.
+                path_label = os.sep.join(
+                    ['...'] + datastack_path_directories[-2:])
+
             datastack_action = QtWidgets.QAction('%s (Loaded %s)' % (
-                os.sep.join(datastack_filepath.split(os.sep)[-2:]),
-                date_label), self.open_menu)
+                path_label, date_label), self.open_menu)
             datastack_action.setData(datastack_filepath)
             datastack_action.triggered.connect(
                 self._load_recent_datastack_from_action)
