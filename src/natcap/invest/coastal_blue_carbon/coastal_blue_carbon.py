@@ -16,7 +16,7 @@ import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 import pygeoprocessing
 
 from .. import validation
-from .. import utils as invest_utils
+from .. import utils
 
 # using largest negative 32-bit floating point number
 # reasons: practical limit for 32 bit floating point and most outputs should
@@ -621,12 +621,13 @@ def get_inputs(args):
     }
 
     # Directories
-    args['results_suffix'] = invest_utils.make_suffix_string(
+    args['results_suffix'] = utils.make_suffix_string(
         args, 'results_suffix')
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    geoprocess.create_directories([args['workspace_dir'], outputs_dir,
-                                   intermediate_dir])
+    utils.make_directories([args['workspace_dir'],
+                            outputs_dir,
+                            intermediate_dir])
 
     # Rasters
     try:
@@ -795,7 +796,7 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
     if do_economic_analysis:
         raster_registry_dict['NPV_raster'] = 'net_present_value.tif'
 
-    file_registry = invest_utils.build_file_registry(
+    file_registry = utils.build_file_registry(
         [(raster_registry_dict, outputs_dir),
          (_INTERMEDIATE, intermediate_dir)], results_suffix)
 
@@ -1012,7 +1013,7 @@ def validate(args, limit_to=None):
             warnings.append(([csv_key], 'Could not open CSV'))
 
     if limit_to in ('lulc_baseline_map_uri', None):
-        with invest_utils.capture_gdal_logging():
+        with utils.capture_gdal_logging():
             raster = gdal.Open(args['lulc_baseline_map_uri'])
         if raster is None:
             warnings.append((['lulc_baseline_map_uri'],
@@ -1044,7 +1045,7 @@ def validate(args, limit_to=None):
                                 'Parameter must be a number'))
 
     if limit_to in ('lulc_transition_maps_list', None):
-        with invest_utils.capture_gdal_logging():
+        with utils.capture_gdal_logging():
             for index, raster_path in enumerate(
                     args['lulc_transition_maps_list']):
                 raster = gdal.Open(raster_path)
