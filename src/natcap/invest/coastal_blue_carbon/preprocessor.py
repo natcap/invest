@@ -65,15 +65,15 @@ def execute(args):
 
     aligned_lulcs = [reg['aligned_lulc_template'] % index
                      for index in xrange(len(args['lulc_snapshot_list']))]
-    raster_infos = sorted([pygeoprocessing.get_raster_info(path) for path in
-                           vars_dict['lulc_snapshot_list']],
-                          key=lambda info: info['mean_pixel_size'])
-    min_pixel_size = raster_infos[0]['pixel_size']
+    min_pixel_raster_info = min(
+        (pygeoprocessing.get_raster_info(path) for path
+         in vars_dict['lulc_snapshot_list']),
+        key=lambda info: info['mean_pixel_size'])
     pygeoprocessing.align_and_resize_raster_stack(
         vars_dict['lulc_snapshot_list'],
         aligned_lulcs,
         ['nearest'] * len(aligned_lulcs),
-        min_pixel_size,
+        min_pixel_raster_info['pixel_size'],
         'intersection')
 
     # Run Preprocessor
