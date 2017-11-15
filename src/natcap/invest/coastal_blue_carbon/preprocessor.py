@@ -7,6 +7,7 @@ from itertools import product
 import logging
 import ast
 import copy
+import itertools
 
 from osgeo import gdal
 import pygeoprocessing
@@ -166,15 +167,12 @@ def _validate_inputs(lulc_snapshot_list, lulc_lookup_dict):
         raise ValueError('Provided rasters have different nodata values')
 
     # assert all raster values in lookup table
-    raster_val_set = set()
-    for snapshot in lulc_snapshot_list:
-        # use numpy to find the pixel values within the raster
-        unique_values = numpy.array([])
-        for offset_data, pixel_values in pygeoprocessing.iterblocks(snapshot):
-            array = numpy.append(pixel_values, unique_values)
-            unique_values = numpy.unique(array)
-
-        raster_val_set = raster_val_set.union(set(unique_values))
+    raster_val_set = set(reduce(
+        lambda accum_value, x: numpy.unique(
+            numpy.append(accum_value, x.next()[1].flat)),
+        itertools.chain(pygeoprocessing.iterblocks(snapshot)
+                        for snapshot in lulc_snapshot_list),
+        numpy.array([])))
 
     code_set = set(lulc_lookup_dict.keys())
     code_set.add(
