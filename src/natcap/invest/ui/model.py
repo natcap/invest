@@ -220,20 +220,23 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
         return QtWidgets.QMessageBox.exec_(self)
 
 
-class WorkspaceOverwriteConfirmDialog(QtWidgets.QMessageBox):
-    """A message box to confirm that the workspace should be overwritten."""
+class ConfirmDialog(QtWidgets.QMessageBox):
+    """A message box for confirming something with the user."""
 
-    def __init__(self):
+    def __init__(self, title_text, body_text):
         """Initialize the dialog.
 
+        Parameters:
+            title_text (string): The title of the dialog.
+            body_text (string): The body text of the dialog.
+
         Returns:
-            ``None``
+            None.
         """
         QtWidgets.QMessageBox.__init__(self)
         self.setWindowFlags(QtCore.Qt.Dialog)
-        self.setText('<h2>Workspace exists!<h2>')
-        self.setInformativeText(
-            'Overwrite files from a previous run?')
+        self.setText('<h2>%s<h2>' % title_text)
+        self.setInformativeText(body_text)
         self.setStandardButtons(
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
         self.setDefaultButton(QtWidgets.QMessageBox.Yes)
@@ -859,9 +862,15 @@ class InVESTModel(QtWidgets.QMainWindow):
             DatastackArchiveExtractionDialog())
         self.quit_confirm_dialog = QuitConfirmDialog()
         self.validation_report_dialog = WholeModelValidationErrorDialog()
-        self.workspace_overwrite_confirm_dialog = (
-            WorkspaceOverwriteConfirmDialog())
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
+        self.input_overwrite_confirm_dialog = ConfirmDialog(
+            title_text='Overwrite parameters?',
+            body_text=('Loading a datastack will overwrite any unsaved '
+                       'parameters. Are you sure you want to continue?')
+        )
+        self.workspace_overwrite_confirm_dialog = ConfirmDialog(
+            title_text='Workspace exists!',
+            body_text='Overwrite files from a previous run?')
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
@@ -922,6 +931,13 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.form.submitted.connect(self.execute_model)
 
+        # Settings files
+        self.settings = QtCore.QSettings(
+            QtCore.QSettings.IniFormat,
+            QtCore.QSettings.UserScope,
+            'Natural Capital Project',
+            self.label)
+
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File')
         self.file_menu.addAction(
@@ -932,10 +948,10 @@ class InVESTModel(QtWidgets.QMainWindow):
             qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
-        self.file_menu.addAction(
-            qtawesome.icon('fa.arrow-circle-o-up'),
-            'L&oad datastack ...', self.load_datastack,
-            QtGui.QKeySequence(QtGui.QKeySequence.Open))
+        self.open_menu = QtWidgets.QMenu('Load datastack')
+        self.build_open_menu()
+        self.file_menu.addMenu(self.open_menu)
+
         self.file_menu.addAction(
             'Quit', self.close,
             QtGui.QKeySequence('Ctrl+Q'))
@@ -966,12 +982,101 @@ class InVESTModel(QtWidgets.QMainWindow):
             'View documentation', self._check_local_docs)
         self.menuBar().addMenu(self.help_menu)
 
-        # Settings files
-        self.settings = QtCore.QSettings(
-            QtCore.QSettings.IniFormat,
-            QtCore.QSettings.UserScope,
-            'Natural Capital Project',
-            self.label)
+    def build_open_menu(self):
+        """(Re-)Build the "Open datastack" menu.
+
+        This menu consists of:
+
+            * An option to select a new datastack file
+            * A separator
+            * A dynamically-generated list of the 10 most recently-accessed
+              datastack files.
+
+        Returns:
+            None.
+        """
+        self.open_menu.clear()
+        self.open_file_action = self.open_menu.addAction(
+            qtawesome.icon('fa.arrow-circle-o-up'),
+            'L&oad datastack ...', self.load_datastack,
+            QtGui.QKeySequence(QtGui.QKeySequence.Open))
+        self.open_menu.addSeparator()
+
+        recently_opened_datastacks = json.loads(
+            self.settings.value('recent_datastacks', '{}'))
+
+        for datastack_filepath, timestamp in sorted(
+                recently_opened_datastacks.items(), key=lambda x: x[1]):
+
+            time_obj = datetime.datetime.strptime(timestamp,
+                                                  '%Y-%m-%dT%H:%M:%S.%f')
+            if time_obj .date() == datetime.date.today():
+                date_label = 'Today at %s' % time_obj.strftime('%H:%M')
+            else:
+                date_label = time_obj.strftime('%Y-%m-%d at %H:%m')
+
+            # Shorten the path label to only show the topmost directory and the
+            # datastack filename.
+            datastack_path_directories = datastack_filepath.split(os.sep)
+            if len(datastack_path_directories) <= 2:
+                # path should be short, show the whole path in the menu.
+                path_label = datastack_filepath
+            else:
+                # show the filename and its parent directory in the menu.
+                path_label = os.sep.join(
+                    ['...'] + datastack_path_directories[-2:])
+
+            datastack_action = QtWidgets.QAction('%s (Loaded %s)' % (
+                path_label, date_label), self.open_menu)
+            datastack_action.setData(datastack_filepath)
+            datastack_action.triggered.connect(
+                self._load_recent_datastack_from_action)
+            self.open_menu.addAction(datastack_action)
+
+    @QtCore.Slot()
+    def _load_recent_datastack_from_action(self):
+        """Load a recent datastack when an action is triggered.
+
+        This slot is assumed to be called when an appropriate QAction is
+        triggered.  The ``data()`` set on the QAction must be the filename of
+        the datastack selected.  The datastack will be loaded in the model
+        interface.
+
+        Returns:
+            None.
+        """
+        # self.sender() is set when this is called as a slot
+        self.load_datastack(self.sender().data(), confirm=True)
+
+    def _add_to_open_menu(self, datastack_path):
+        """Add a datastack file to the Open-Recent menu.
+
+        This will also store the datastack path in the model's settings object
+        and will cause the Open-Recent menu to be rebuilt, limiting the number
+        of items in the menu to the 10 most recently-loaded datastack files.
+
+        Parameters:
+            datastack_path (string): The path to the datastack file.
+
+        Returns:
+            None.
+        """
+        # load the {path: timestamp} map as a dict from self.settings
+        # set the {path: timestamp} tuple
+        # store the new value.
+        recently_opened_datastacks = json.loads(
+            self.settings.value('recent_datastacks', '{}'))
+        timestamp = datetime.datetime.now().isoformat()
+
+        recently_opened_datastacks[datastack_path] = timestamp
+
+        most_recent_datastack_tuples = sorted(
+            recently_opened_datastacks.items(), key=lambda x: x[1],
+            reverse=True)[:10]
+
+        self.settings.setValue('recent_datastacks',
+                               json.dumps(dict(most_recent_datastack_tuples)))
+        self.build_open_menu()
 
     def clear_local_settings(self):
         """Clear all parameters saved for this model.
@@ -1151,7 +1256,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                       out_folder=args['workspace_dir'])
 
     @QtCore.Slot()
-    def load_datastack(self, datastack_path=None):
+    def load_datastack(self, datastack_path=None, confirm=False):
         """Load a datastack.
 
         This method is also a slot that accepts no arguments.
@@ -1159,26 +1264,33 @@ class InVESTModel(QtWidgets.QMainWindow):
         A datastack could be any one of:
 
             * A logfile from a previous model run.
-            * A parameter set (*.invs.json)
-            * A parameter archive (*.invs.tar.gz)
+            * A parameter set (*.invest.json)
+            * A parameter archive (*.invest.tar.gz)
 
         Datastacks may be saved and loaded through the Model UI. For API access
-        to datastacks, look at :ref:natcap.invest.datastacks.
+        to datastacks, look at :ref:natcap.invest.datastack.
 
         Parameters:
             datastack_path=None (string): The path to the datastack file to
                 load.  If ``None``, the user will be prompted for a file
                 with a file dialog.
+            confirm=False (boolean): If True, confirm that values will be
+                overwritten by the new scenario.
 
         Returns:
             ``None``
         """
+        if confirm:
+            confirm_response = self.input_overwrite_confirm_dialog.exec_()
+            if confirm_response != QtWidgets.QMessageBox.Yes:
+                return
+
         if not datastack_path:
             datastack_path = self.file_dialog.open_file(
                 title='Select datastack', filters=(
                     'Any file (*.*)',
-                    'Parameter set (*.invs.json)',
-                    'Parameter archive (*.invs.tar.gz)',
+                    'Parameter set (*.invest.json)',
+                    'Parameter archive (*.invest.tar.gz)',
                     'Logfile (*.txt)'))
 
             # When the user pressed cancel, datastack_path == ''
@@ -1205,6 +1317,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.load_args(args)
         self.window_title.filename = window_title_filename
 
+        self._add_to_open_menu(datastack_path)
         self.statusBar().showMessage(
             'Loaded datastack from %s' % os.path.abspath(datastack_path),
             STATUSBAR_MSG_DURATION)

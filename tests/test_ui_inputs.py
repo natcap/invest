@@ -2497,7 +2497,7 @@ class ModelTests(_QtTest):
 
         self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
 
-    def test_overwrite_reject(self):
+    def test_workspace_overwrite_reject(self):
         """UI Model: Verify coverage when overwrite dialog is rejected."""
 
         model_ui = ModelTests.build_model()
@@ -2525,6 +2525,119 @@ class ModelTests(_QtTest):
             self.assertEqual(module.args, model_ui.assemble_args())
         finally:
             del sys.modules[module_name]
+
+    def test_open_recent_menu(self):
+        """UI Model: Check for correct behavior of the open-recent menu."""
+        from natcap.invest import datastack
+
+        model_ui = ModelTests.build_model()
+
+        datastack_created = []
+        for datastack_index in range(11):
+            datastack_path = os.path.join(self.workspace,
+                                         'datastack_%s.invest.json' %
+                                         datastack_index)
+            args = {
+                'workspace_dir': 'workspace_%s' % datastack_index,
+            }
+
+            datastack.write_parameter_set(datastack_path, args, 'test')
+            datastack_created.append(datastack_path)
+            model_ui.load_datastack(datastack_path)
+
+        previous_datastack_actions = []
+        for action in model_ui.open_menu.actions():
+            if action.isSeparator() or action is model_ui.open_file_action:
+                continue
+            previous_datastack_actions.append(action.data())
+
+        # We should only have the 10 most recent datastack
+        self.assertEqual(len(previous_datastack_actions), 10)
+        self.assertEqual(max(previous_datastack_actions),
+                         max(datastack_created))
+
+        # The earliest datastack should have been booted off the list since
+        # we're only keeping the 10 most recent.
+        self.assertEqual(min(previous_datastack_actions),
+                         sorted(datastack_created)[1])
+
+    def test_load_datastack_display_short_filepaths(self):
+        """UI Model: Check handling of long filepaths in open-recent menu."""
+        model_ui = ModelTests.build_model()
+
+        # synthesize a recent scenario path by adding it to the right setting.
+        model_ui._add_to_open_menu('/foo.invest.json')
+
+        last_run_datastack_actions = []
+        for action in model_ui.open_menu.actions():
+            if action.isSeparator() or action is model_ui.open_file_action:
+                continue
+            last_run_datastack_actions.append((action.text(), action.data()))
+
+        self.assertEqual(len(last_run_datastack_actions), 1)
+        self.assertTrue('/foo.invest.json' in last_run_datastack_actions[0][0])
+        self.assertEqual(last_run_datastack_actions[0][1], '/foo.invest.json')
+
+    def test_load_datastack_display_long_filepaths(self):
+        """UI Model: Check handling of long filepaths in open-recent menu."""
+        model_ui = ModelTests.build_model()
+
+        # synthesize a recent scenario path by adding it to the right setting.
+        deep_directory = os.path.join(*[str(uuid.uuid4()) for x in xrange(10)])
+        filepath = os.path.join(deep_directory, 'something.invest.json')
+        model_ui._add_to_open_menu(filepath)
+
+        last_run_datastack_actions = []
+        for action in model_ui.open_menu.actions():
+            if action.isSeparator() or action is model_ui.open_file_action:
+                continue
+            last_run_datastack_actions.append((action.text(), action.data()))
+
+        self.assertEqual(len(last_run_datastack_actions), 1)
+        self.assertTrue('something.invest.json' in last_run_datastack_actions[0][0])
+        self.assertEqual(last_run_datastack_actions[0][1], filepath)
+
+    def test_load_datastack_from_open_recent(self):
+        """UI Model: Check loading of datastack via open-recent menu."""
+        from natcap.invest import datastack
+        model_ui = ModelTests.build_model()
+
+        datastack_filepath = os.path.join(self.workspace,
+                                         'datastack.invest.json')
+        args = {
+            'workspace_dir': 'workspace_foo',
+        }
+        datastack.write_parameter_set(datastack_filepath, args, 'test')
+
+        model_ui.load_datastack(datastack_filepath)
+        self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
+        model_ui.workspace.set_value('some_other_workspace')
+        self.assertEqual(model_ui.workspace.value(), 'some_other_workspace')
+
+        last_run_datastack_actions = []
+        for action in model_ui.open_menu.actions():
+            if action.isSeparator() or action is model_ui.open_file_action:
+                continue
+            last_run_datastack_actions.append(action)
+
+        # There should be exactly one recently-loaded datastack
+        self.assertEqual(len(last_run_datastack_actions), 1)
+        self.assertEqual(last_run_datastack_actions[0].data(), datastack_filepath)
+
+        # When we trigger the action and process events, the datastack should
+        # be loaded into the UI.
+        action = last_run_datastack_actions[0]
+        def _accept_parameter_overwrite():
+            QTest.mouseClick(
+                model_ui.input_overwrite_confirm_dialog.button(
+                    QtWidgets.QMessageBox.Yes),
+                QtCore.Qt.LeftButton)
+
+        QtCore.QTimer.singleShot(50, _accept_parameter_overwrite)
+        action.trigger()
+        QT_APP.processEvents()
+
+        self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
 
     def test_clear_local_settings(self):
         """UI Model: Check that we can clear local settings."""
