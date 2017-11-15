@@ -12,7 +12,6 @@ import csv
 
 import numpy
 from osgeo import gdal
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
 import pygeoprocessing
 
 from .. import validation
@@ -132,9 +131,10 @@ def execute(args):
     last_time = time.time()
 
     # Limit block size here to try to improve memory usage of the application.
-    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster'],
-                                                     largest_block=2**10))
-    C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
+    block_iterator = enumerate(pygeoprocessing.iterblocks(
+        d['C_prior_raster'], largest_block=2**10))
+    C_nodata = pygeoprocessing.get_raster_info(
+        d['C_prior_raster'])['nodata'][0]
 
     for block_idx, (offset_dict, C_prior) in block_iterator:
         current_time = time.time()
@@ -677,11 +677,11 @@ def get_inputs(args):
     d['C_r_rasters'] = aligned_transition_raster_paths
 
     # Reclass Dictionaries
-    lulc_lookup_dict = geoprocess.get_lookup_from_table(
+    lulc_lookup_dict = utils.build_lookup_from_csv(
         args['lulc_lookup_uri'], 'lulc-class')
     lulc_to_code_dict = \
         dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items() if k)
-    initial_dict = geoprocess.get_lookup_from_table(
+    initial_dict = utils.build_lookup_from_csv(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
     code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
@@ -806,41 +806,40 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
     # but won't have a corresponding raster.
     aligned_lulc_files = [file_registry['aligned_lulc_template'] % year
                           for year in snapshot_years[:len(incoming_rasters)]]
-    min_pixel_size = min(geoprocess.get_cell_size_from_uri(filepath)
-                         for filepath in incoming_rasters)
-    geoprocess.align_dataset_list(
-        dataset_uri_list=[C_prior_raster]+transition_rasters,
-        dataset_out_uri_list=aligned_lulc_files,
-        resample_method_list=['nearest']*len(aligned_lulc_files),
-        out_pixel_size=min_pixel_size,
-        mode='intersection',
-        dataset_to_align_index=0  # Align to baseline LULC
-    )
+    baseline_pixel_size = pygeoprocessing.get_raster_info(
+        C_prior_raster)['pixel_size']
+
+    pygeoprocessing.align_and_resize_raster_stack(
+        [C_prior_raster] + transition_rasters,
+        aligned_lulc_files,
+        ['nearest'] * len(aligned_lulc_files),
+        baseline_pixel_size,
+        'intersection')
 
     raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
-    num_temporal_rasters = sum([len(file_registry[key]) for key in raster_lists])
+    num_temporal_rasters = sum(
+        [len(file_registry[key]) for key in raster_lists])
     LOGGER.info('Creating %s temporal rasters', num_temporal_rasters)
     for index, raster_filepath in enumerate(itertools.chain(
             *[file_registry[key] for key in raster_lists])):
         LOGGER.info('Setting up temporal raster %s of %s at %s', index+1,
                     num_temporal_rasters, os.path.basename(raster_filepath))
-        geoprocess.new_raster_from_base_uri(
+        pygeoprocessing.new_raster_from_base(
             template_raster,
             raster_filepath,
-            'GTiff',
-            NODATA_FLOAT,
-            gdal.GDT_Float32)
+            gdal.GDT_Float32,
+            [NODATA_FLOAT])
+
     for raster_key in ['N_total_raster', 'NPV_raster']:
         try:
             filepath = file_registry[raster_key]
             LOGGER.info('Setting up valuation raster %s',
                         os.path.basename(filepath))
-            geoprocess.new_raster_from_base_uri(
+            pygeoprocessing.new_raster_from_base(
                 template_raster,
                 filepath,
-                'GTiff',
-                NODATA_FLOAT,
-                gdal.GDT_Float32)
+                gdal.GDT_Float32,
+                [NODATA_FLOAT])
         except KeyError:
             # KeyError raised when ``raster_key`` is not in the file registry.
             pass
@@ -869,9 +868,9 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
             ...
         }
     """
-    lulc_transition_dict = geoprocess.get_lookup_from_table(
+    lulc_transition_dict = utils.build_lookup_from_csv(
         lulc_transition_uri, 'lulc-class')
-    lulc_lookup_dict = geoprocess.get_lookup_from_table(
+    lulc_lookup_dict = utils.build_lookup_from_csv(
         lulc_lookup_uri, 'lulc-class')
     lulc_to_code_dict = \
         dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items())
@@ -907,7 +906,7 @@ def _create_transient_dict(carbon_pool_transient_uri):
         biomass_transient_dict (dict): transient biomass values
         soil_transient_dict (dict): transient soil values
     """
-    transient_dict = geoprocess.get_lookup_from_table(
+    transient_dict = utils.build_lookup_from_csv(
         carbon_pool_transient_uri, 'code')
 
     def _filter_dict_by_header(header_prefix):
@@ -936,7 +935,7 @@ def _get_price_table(price_table_uri, start_year, end_year):
     Returns:
         price_t (numpy.array): price for each year.
     """
-    price_dict = geoprocess.get_lookup_from_table(price_table_uri, 'year')
+    price_dict = utils.build_lookup_from_csv(price_table_uri, 'year')
 
     try:
         return numpy.array([price_dict[year]['price']
