@@ -1553,12 +1553,14 @@ class FormTest(_QtTest):
                 form.run_dialog.openWorkspaceCB.setChecked(True)
                 self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
+        def _close_modal_dialog():
+            # close the window by pressing the back button.
+            QTest.mouseClick(form.run_dialog.backButton,
+                                QtCore.Qt.LeftButton)
+        QtCore.QTimer.singleShot(25, _close_modal_dialog)
+
         if QT_APP.hasPendingEvents():
             QT_APP.processEvents()
-
-        # close the window by pressing the back button.
-        QTest.mouseClick(form.run_dialog.backButton,
-                            QtCore.Qt.LeftButton)
 
         open_workspace.assert_called_once()
 
