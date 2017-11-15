@@ -9,11 +9,10 @@ import ast
 import copy
 
 from osgeo import gdal
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
-from natcap.invest.pygeoprocessing_0_3_3.geoprocessing import get_lookup_from_table
-from natcap.invest.pygeoprocessing_0_3_3 import create_directories
+import pygeoprocessing
+import numpy
 
-from .. import utils as invest_utils
+from .. import utils
 from .. import validation
 
 
@@ -60,22 +59,22 @@ def execute(args):
     vars_dict = _get_inputs(args)
 
     base_file_path_list = [(_OUTPUT, vars_dict['output_dir'])]
-    reg = invest_utils.build_file_registry(
+    reg = utils.build_file_registry(
         base_file_path_list,
         vars_dict['results_suffix'])
 
     aligned_lulcs = [reg['aligned_lulc_template'] % index
                      for index in xrange(len(args['lulc_snapshot_list']))]
-    min_pixel_size = min(geoprocess.get_cell_size_from_uri(path) for path in
-                         vars_dict['lulc_snapshot_list'])
-    geoprocess.align_dataset_list(
-        dataset_uri_list=vars_dict['lulc_snapshot_list'],
-        dataset_out_uri_list=aligned_lulcs,
-        resample_method_list=['nearest']*len(aligned_lulcs),
-        out_pixel_size=min_pixel_size,
-        mode='intersection',
-        dataset_to_align_index=0
-    )
+    raster_infos = sorted([pygeoprocessing.get_raster_info(path) for path in
+                           vars_dict['lulc_snapshot_list']],
+                          key=lambda info: info['mean_pixel_size'])
+    min_pixel_size = raster_infos[0]['pixel_size']
+    pygeoprocessing.align_and_resize_raster_stack(
+        vars_dict['lulc_snapshot_list'],
+        aligned_lulcs,
+        ['nearest'] * len(aligned_lulcs),
+        min_pixel_size,
+        'intersection')
 
     # Run Preprocessor
     vars_dict['transition_matrix_dict'] = _preprocess_data(
@@ -110,10 +109,11 @@ def _get_inputs(args):
     """
     LOGGER.info('Getting inputs...')
     vars_dict = dict(args.items())
-    results_suffix = invest_utils.make_suffix_string(
+    results_suffix = utils.make_suffix_string(
         args, 'results_suffix')
 
-    lulc_lookup_dict = get_lookup_from_table(args['lulc_lookup_uri'], 'code')
+    lulc_lookup_dict = utils.build_lookup_from_csv(
+        args['lulc_lookup_uri'], 'code')
 
     for code in lulc_lookup_dict.keys():
         sub_dict = lulc_lookup_dict[code]
@@ -132,7 +132,7 @@ def _get_inputs(args):
 
     # Create workspace and output directories
     output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
-    create_directories([output_dir])
+    utils.make_directories([output_dir])
 
     _validate_inputs(args['lulc_snapshot_list'], lulc_lookup_dict)
 
@@ -160,22 +160,25 @@ def _validate_inputs(lulc_snapshot_list, lulc_lookup_dict):
     lulc_snapshot_list = lulc_snapshot_list
     lulc_lookup_dict = lulc_lookup_dict
 
-    for snapshot_idx in xrange(0, len(lulc_snapshot_list)-1):
-        nodata_1 = geoprocess.get_nodata_from_uri(
-            lulc_snapshot_list[snapshot_idx])
-        nodata_2 = geoprocess.get_nodata_from_uri(
-            lulc_snapshot_list[snapshot_idx+1])
-        if nodata_1 != nodata_2:
-            raise ValueError('Provided rasters have different nodata values.')
+    nodata_values = set([pygeoprocessing.get_raster_info(filepath)['nodata'][0]
+                         for filepath in lulc_snapshot_list])
+    if len(nodata_values) > 1:
+        raise ValueError('Provided rasters have different nodata values')
 
     # assert all raster values in lookup table
     raster_val_set = set()
     for snapshot in lulc_snapshot_list:
-        raster_val_set = raster_val_set.union(set(
-            geoprocess.unique_raster_values_uri(snapshot)))
+        # use numpy to find the pixel values within the raster
+        unique_values = numpy.array([])
+        for offset_data, pixel_values in pygeoprocessing.iterblocks(snapshot):
+            array = numpy.append(pixel_values, unique_values)
+            unique_values = numpy.unique(array)
+
+        raster_val_set = raster_val_set.union(set(unique_values))
 
     code_set = set(lulc_lookup_dict.keys())
-    code_set.add(geoprocess.get_nodata_from_uri(lulc_snapshot_list[0]))
+    code_set.add(
+        pygeoprocessing.get_raster_info(lulc_snapshot_list[0])['nodata'][0])
 
     if raster_val_set.difference(code_set):
         msg = "These raster values are not in the lookup table: %s" % \
@@ -193,8 +196,9 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
     Returns:
         transition_set (set): a set of all types of transitions
     """
-    iter_r1 = geoprocess.iterblocks(raster_t1_uri)
-    transition_nodata = geoprocess.get_nodata_from_uri(raster_t1_uri)
+    iter_r1 = pygeoprocessing.iterblocks(raster_t1_uri)
+    transition_nodata = pygeoprocessing.get_raster_info(
+        raster_t1_uri)['nodata'][0]
     transition_set = set()
 
     for d, a1 in iter_r1:
@@ -414,7 +418,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('lulc_snapshot_list', None):
         try:
-            with invest_utils.capture_gdal_logging():
+            with utils.capture_gdal_logging():
                 for index, raster_path in enumerate(
                         args['lulc_snapshot_list']):
                     raster = gdal.Open(raster_path)
