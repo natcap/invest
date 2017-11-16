@@ -1,6 +1,6 @@
-"""Functions for creating and extracting InVEST demonstration scenarios.
+"""Functions for creating and extracting InVEST demonstration datastacks.
 
-A demonstration scenario for InVEST is a compressed archive that includes the
+A demonstration datastack for InVEST is a compressed archive that includes the
 arguments for a model, all of the data files referenced by the arguments, and
 a logfile with some extra information about how the archive was created.  The
 resulting archive can then be extracted on a different computer and should
@@ -39,7 +39,7 @@ def _collect_spatial_files(filepath, data_dir):
 
     This function detects whether a filepath is a raster or vector
     recignizeable by GDAL/OGR and does what is needed to copy the dataset
-    into the scenario's archive folder.
+    into the datastack's archive folder.
 
     Rasters copied into the archive will be stored in a new folder with the
     ``raster_`` prefix.  Vectors will be stored in a new folder with the
@@ -218,20 +218,20 @@ def format_args_dict(args_dict):
 
 
 
-def build_scenario_archive(args, name, scenario_path):
-    """Build an InVEST demonstration scenario from an arguments dict.
+def build_datastack_archive(args, name, datastack_path):
+    """Build an InVEST demonstration datastack from an arguments dict.
 
     Parameters:
         args (dict): The arguments dictionary to include in the demonstration
-            scenario.
-        scenario_path (string): The path to where the scenario archive should
+            datastack.
+        datastack_path (string): The path to where the datastack archive should
             be written.
 
     Returns:
         ``None``
     """
     args = args.copy()
-    temp_workspace = tempfile.mkdtemp(prefix='scenario_')
+    temp_workspace = tempfile.mkdtemp(prefix='datastack_')
     logfile = os.path.join(temp_workspace, 'log')
     data_dir = os.path.join(temp_workspace, 'data')
     os.makedirs(data_dir)
@@ -311,26 +311,26 @@ def build_scenario_archive(args, name, scenario_path):
         archive_name = shutil.make_archive(
             temp_archive, 'gztar', root_dir=temp_workspace,
             logger=LOGGER, verbose=True)
-        shutil.move(archive_name, scenario_path)
+        shutil.move(archive_name, datastack_path)
 
 
-def extract_scenario_archive(scenario_path, dest_dir_path):
-    """Extract a demonstration scenario to a given folder.
+def extract_datastack_archive(datastack_path, dest_dir_path):
+    """Extract a demonstration datastack to a given folder.
 
     Parameters:
-        scenario_path (string): The path to a demonstration scenario archive
+        datastack_path (string): The path to a demonstration datastack archive
             on disk.
         dest_dir_path (string): The path to a directory.  The contents of the
-            demonstration scenario archive will be extracted into this
+            demonstration datastack archive will be extracted into this
             directory. If the directory does not exist, it will be created.
 
     Returns:
         ``args`` (dict): A dictionary of arguments from the extracted
             archive
     """
-    LOGGER.info('Extracting archive %s to %s', scenario_path, dest_dir_path)
+    LOGGER.info('Extracting archive %s to %s', datastack_path, dest_dir_path)
     # extract the archive to the workspace
-    with tarfile.open(scenario_path) as tar:
+    with tarfile.open(datastack_path) as tar:
         tar.extractall(dest_dir_path)
 
     # get the arguments dictionary
@@ -371,7 +371,7 @@ def write_parameter_set(filepath, args, name, relative=False):
         name (string): An identifier string for the callable or InVEST
             model that would accept the arguments given.
         relative (bool): Whether to save the paths as relative.  If ``True``,
-            The scenario assumes that paths are relative to the parent
+            The datastack assumes that paths are relative to the parent
             directory of ``filepath``.
 
     Returns:

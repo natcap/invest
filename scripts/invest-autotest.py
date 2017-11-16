@@ -12,9 +12,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('invest-autotest.py')
 
-# Mapping of model keys to scenarios to run through the model's UI.
+# Mapping of model keys to datastacks to run through the model's UI.
 # Paths are assumed to be relative to the data root.
-SCENARIOS = {
+DATASTACKS = {
     'carbon': [os.path.join('carbon', 'carbon_willamette.invs.json')],
     'coastal_blue_carbon': [
         os.path.join('CoastalBlueCarbon', 'cbc_galveston_bay.invs.json')],
@@ -98,11 +98,11 @@ def sh(command, capture=True):
         return p_stdout
 
 
-def run_model(modelname, binary, workspace, scenario, headless=False):
+def run_model(modelname, binary, workspace, datastack, headless=False):
     """Run an InVEST model, checking the error code of the process."""
     # Using a list here allows subprocess to handle escaping of paths.
     command = [binary, modelname, '--quickrun', '--workspace=%s' % workspace,
-               '-y', '--scenario=%s' % scenario]
+               '-y', '--datastack=%s' % datastack]
     if headless:
         command.append('--headless')
 
@@ -146,7 +146,7 @@ def main(user_args=None):
               'be ./data/invest-data/ or a directory at the same '
               'level. If executing from a built InVEST binary, this will be '
               'the current directory (".").  Default value: "."'
-              ))
+             ))
     parser.add_argument(
         '--workspace',
         default=tempfile.mkdtemp(),
@@ -163,17 +163,17 @@ def main(user_args=None):
     LOGGER.info('Running on %s CPUs', args.max_cpus)
 
     pairs = []
-    for name, scenarios in SCENARIOS.iteritems():
+    for name, datastacks in DATASTACKS.iteritems():
         if not name.startswith(args.prefix):
             continue
 
-        for scenario_index, scenario in enumerate(scenarios):
-            pairs.append((name, scenario, scenario_index))
+        for datastack_index, datastack in enumerate(datastacks):
+            pairs.append((name, datastack, datastack_index))
 
     pool = multiprocessing.Pool(processes=args.max_cpus)  # cpu_count()-1
     processes = []
-    for modelname, scenario, scenario_index in pairs:
-        scenario = os.path.join(args.cwd, scenario)
+    for modelname, datastack, datastack_index in pairs:
+        datastack = os.path.join(args.cwd, datastack)
 
         for headless in (True, False):
             headless_string = ''
@@ -184,25 +184,25 @@ def main(user_args=None):
             workspace = os.path.join(os.path.abspath(args.workspace),
                                      'autorun_%s_%s_%s' % (modelname,
                                                            headless_string,
-                                                           scenario_index))
+                                                           datastack_index))
             process = pool.apply_async(run_model, (modelname,
                                                    args.binary,
                                                    workspace,
-                                                   scenario,
+                                                   datastack,
                                                    headless))
-            processes.append((process, scenario, headless, workspace))
+            processes.append((process, datastack, headless, workspace))
 
     # get() blocks until the result is ready.
     model_results = {}
-    for _process, _scenario, _headless, _workspace in processes:
+    for _process, _datastack, _headless, _workspace in processes:
         result = _process.get()
-        model_results[(result[0], _scenario, _headless, _workspace)] = result[1:]
+        model_results[(result[0], _datastack, _headless, _workspace)] = result[1:]
 
     # add 10 for ' (headless)'
     max_width = max([len(key[0])+11 for key in model_results.keys()])
     failures = 0
 
-    scenario_width = max([len(key[1]) for key in model_results.keys()])
+    datastack_width = max([len(key[1]) for key in model_results.keys()])
 
     # record all statuses, sorted by the modelname, being sure to start on a
     # new line.
@@ -210,15 +210,15 @@ def main(user_args=None):
     status_messages += '\n%s %s %s\n' % (
         string.ljust('MODELNAME', max_width+1),
         string.ljust('EXIT CODE', 10),  # len('EXIT CODE')+1
-        'SCENARIO')
-    for (modelname, scenario, headless, _), exitcode in sorted(
+        'DATASTACK')
+    for (modelname, datastack, headless, _), exitcode in sorted(
             model_results.iteritems(), key=lambda x: x[0]):
         if headless:
             modelname += ' (headless)'
         status_messages += "%s %s %s\n" % (
             string.ljust(modelname, max_width+1),
             string.ljust(str(exitcode[0]), 10),
-            scenario)
+            datastack)
         if exitcode[0] > 0:
             failures += 1
 
@@ -227,10 +227,10 @@ def main(user_args=None):
         status_messages += '%s %s %s %s\n' % (
             string.ljust('MODELNAME', max_width+1),
             string.ljust('EXIT CODE', 10),
-            string.ljust('SCENARIO', scenario_width),
+            string.ljust('DATASTACK', datastack_width),
             'WORKSPACE'
         )
-        for (modelname, scenario, headless, workspace), exitcode in sorted(
+        for (modelname, datastack, headless, workspace), exitcode in sorted(
                 [(k, v) for (k, v) in model_results.iteritems()
                  if v[0] != 0],
                 key=lambda x: x[0]):
@@ -239,7 +239,7 @@ def main(user_args=None):
             status_messages += "%s %s %s %s\n" % (
                 string.ljust(modelname, max_width+1),
                 string.ljust(str(exitcode[0]), 10),
-                string.ljust(scenario, scenario_width),
+                string.ljust(datastack, datastack_width),
                 workspace
             )
 
