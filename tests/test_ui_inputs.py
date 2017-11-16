@@ -2532,12 +2532,12 @@ class ModelTests(_QtTest):
         finally:
             del sys.modules[module_name]
 
-    def test_drag_n_drop_scenario(self):
-        """UI Model: Verify that we can drag-n-drop a valid scenario."""
-        # Write a sample scenario file to drop
-        scenario_filepath = os.path.join(self.workspace, 'scenario.invest.json')
-        with open(scenario_filepath, 'w') as sample_scenario:
-            sample_scenario.write(json.dumps(
+    def test_drag_n_drop_datastack(self):
+        """UI Model: Verify that we can drag-n-drop a valid datastack."""
+        # Write a sample datastack file to drop
+        datastack_filepath = os.path.join(self.workspace, 'datastack.invest.json')
+        with open(datastack_filepath, 'w') as sample_datastack:
+            sample_datastack.write(json.dumps(
                 {'args': {'workspace_dir': '/foo/bar',
                           'suffix': 'baz'},
                  'name': 'test_model',
@@ -2545,8 +2545,8 @@ class ModelTests(_QtTest):
 
         model = ModelTests.build_model()
         mime_data = QtCore.QMimeData()
-        mime_data.setText('Some scenario')
-        mime_data.setUrls([QtCore.QUrl(scenario_filepath)])
+        mime_data.setText('Some datastack')
+        mime_data.setUrls([QtCore.QUrl(datastack_filepath)])
 
         drag_event = QtGui.QDragEnterEvent(
             model.pos(),
@@ -2564,7 +2564,7 @@ class ModelTests(_QtTest):
             QtCore.Qt.LeftButton,
             QtCore.Qt.NoModifier)
 
-        # When the scenario is dropped, the scenario is loaded.
+        # When the datastack is dropped, the datastack is loaded.
         model.dropEvent(event)
         self.assertEqual(model.workspace.value(), '/foo/bar')
         self.assertEqual(model.suffix.value(), 'baz')
@@ -2573,7 +2573,7 @@ class ModelTests(_QtTest):
         """UI Model: Drag-n-drop fails when dragging several files."""
         model = ModelTests.build_model()
         mime_data = QtCore.QMimeData()
-        mime_data.setText('Some scenarios')
+        mime_data.setText('Some datastack')
         mime_data.setUrls([QtCore.QUrl('/path/1'),
                            QtCore.QUrl('/path/2')])
 
@@ -2625,7 +2625,7 @@ class ModelTests(_QtTest):
         """UI Model: Check handling of long filepaths in open-recent menu."""
         model_ui = ModelTests.build_model()
 
-        # synthesize a recent scenario path by adding it to the right setting.
+        # synthesize a recent datastack path by adding it to the right setting.
         model_ui._add_to_open_menu('/foo.invest.json')
 
         last_run_datastack_actions = []
@@ -2642,7 +2642,7 @@ class ModelTests(_QtTest):
         """UI Model: Check handling of long filepaths in open-recent menu."""
         model_ui = ModelTests.build_model()
 
-        # synthesize a recent scenario path by adding it to the right setting.
+        # synthesize a recent datastack path by adding it to the right setting.
         deep_directory = os.path.join(*[str(uuid.uuid4()) for x in xrange(10)])
         filepath = os.path.join(deep_directory, 'something.invest.json')
         model_ui._add_to_open_menu(filepath)
@@ -2729,8 +2729,8 @@ class ValidatorTest(_QtTest):
         validator.validate(target=_validate, args={})
 
 
-class IsProbablyScenarioTests(unittest.TestCase):
-    """Tests for our quick check for whether a file is a scenario."""
+class IsProbablyDatastackTests(unittest.TestCase):
+    """Tests for our quick check for whether a file is a datastack."""
 
     def setUp(self):
         """Create a new workspace for each test."""
@@ -2741,43 +2741,43 @@ class IsProbablyScenarioTests(unittest.TestCase):
         shutil.rmtree(self.workspace)
 
     def test_json_extension(self):
-        """Model UI scenario: invest.json extension is a scenario"""
+        """Model UI datastack: invest.json extension is a datastack"""
         from natcap.invest.ui import model
 
         filepath = 'some_model.invest.json'
-        self.assertTrue(model.is_probably_scenario(filepath))
+        self.assertTrue(model.is_probably_datastack(filepath))
 
     def test_tar_gz_extension(self):
-        """Model UI scenario: invest.tar.gz extension is a scenario"""
+        """Model UI datastack: invest.tar.gz extension is a datastack"""
         from natcap.invest.ui import model
 
         filepath = 'some_model.invest.tar.gz'
-        self.assertTrue(model.is_probably_scenario(filepath))
+        self.assertTrue(model.is_probably_datastack(filepath))
 
     def test_parameter_set(self):
-        """Model UI scenario: a parameter set should be a scenario."""
+        """Model UI datastack: a parameter set should be a datastack."""
         from natcap.invest.ui import model
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
 
         filepath = os.path.join(self.workspace, 'paramset.json')
         args = {'foo': 'foo', 'bar': 'bar'}
-        scenarios.write_parameter_set(filepath, args, 'test_model')
+        datastack.write_parameter_set(filepath, args, 'test_model')
 
-        self.assertTrue(model.is_probably_scenario(filepath))
+        self.assertTrue(model.is_probably_datastack(filepath))
 
     def test_parameter_archive(self):
-        """Model UI scenario: a parameter archive should be a scenario."""
+        """Model UI datastack: a parameter archive should be a datastack."""
         from natcap.invest.ui import model
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
 
         filepath = os.path.join(self.workspace, 'paramset.tar.gz')
         args = {'foo': 'foo', 'bar': 'bar'}
-        scenarios.build_scenario_archive(args, 'test_model', filepath)
+        datastack.build_datastack_archive(args, 'test_model', filepath)
 
-        self.assertTrue(model.is_probably_scenario(filepath))
+        self.assertTrue(model.is_probably_datastack(filepath))
 
     def test_parameter_logfile(self):
-        """Model UI scenario: a logfile should be a scenario."""
+        """Model UI datastack: a logfile should be a datastack."""
         from natcap.invest.ui import model
 
         filepath = os.path.join(self.workspace, 'logfile.txt')
@@ -2793,10 +2793,10 @@ class IsProbablyScenarioTests(unittest.TestCase):
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
             """))
 
-        self.assertTrue(model.is_probably_scenario(filepath))
+        self.assertTrue(model.is_probably_datastack(filepath))
 
     def test_csv_not_a_parameter(self):
-        """Model UI scenario: a CSV is probably not a parameter set."""
+        """Model UI datastack: a CSV is probably not a parameter set."""
         from natcap.invest.ui import model
 
         filepath = os.path.join(self.workspace, 'sample.csv')
@@ -2804,6 +2804,6 @@ class IsProbablyScenarioTests(unittest.TestCase):
             sample_csv.write('A,B,C\n')
             sample_csv.write('"aaa","bbb","ccc"\n')
 
-        self.assertFalse(model.is_probably_scenario(filepath))
+        self.assertFalse(model.is_probably_datastack(filepath))
 
 
