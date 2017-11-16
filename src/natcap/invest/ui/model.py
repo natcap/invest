@@ -871,6 +871,11 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.workspace_overwrite_confirm_dialog = ConfirmDialog(
             title_text='Workspace exists!',
             body_text='Overwrite files from a previous run?')
+        self.model_mismatch_confirm_dialog = ConfirmDialog(
+            title_text='Are you sure this is the right model?',
+            body_text=("This datastack's parameters look like they're for "
+                       "InVEST {target_model}.  Are you sure you want to load "
+                       "them anyways?"))
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
@@ -1309,10 +1314,16 @@ class InVESTModel(QtWidgets.QMainWindow):
             try:
                 paramset = datastack.read_parameter_set(datastack_path)
                 args = paramset.args
+                modelname = paramset.name
             except ValueError:
                 # when a JSON object cannot be decoded, assume it's a logfile.
                 args = datastack.read_parameters_from_logfile(datastack_path)
             window_title_filename = os.path.basename(datastack_path)
+
+        if modelname != self.target.__name__:
+            confirm_response = self.model_mismatch_confirm_dialog.exec_()
+            if confirm_response != QtWidgets.QMessageBox.Yes:
+                return
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
