@@ -66,17 +66,11 @@ def wait_on_signal(signal, timeout=250):
 
 class _QtTest(unittest.TestCase):
     def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        # Found this through programming my coincidence, but it appear to avoid
-        # the segfaulting issue on all the computers I've tried it on.
-        # I'd prefer to find the root problem of the segfault, but I'm OK with
-        # this because these segfaults only happen when I'm running the suite of
-        # unittests.  If something segfaults in the normal operation of
-        # the model, I will absolutely fix that.
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
-        #QTest.qWait(50)
-
+        """Clear the QApplication's event queue."""
+        # After each test, empty the event queue.
+        # This should help to make sure that there aren't any event-based race
+        # conditions where a C/C++ object is deleted before a slot is called.
+        QT_APP.sendPostedEvents()
 
 class _SettingsSandbox(_QtTest):
     def setUp(self):
@@ -1356,7 +1350,6 @@ class FolderButtonTest(_QtTest):
         QT_APP.processEvents()
 
         _callback.assert_called_with('/some/path')
-        QT_APP.processEvents()
 
     def test_button_title(self):
         from natcap.invest.ui.inputs import FolderButton
@@ -1553,18 +1546,11 @@ class FormTest(_QtTest):
                 form.run_dialog.openWorkspaceCB.setChecked(True)
                 self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-            if QT_APP.hasPendingEvents():
-                QT_APP.processEvents()
-
         def _close_modal_dialog():
             # close the window by pressing the back button.
             QTest.mouseClick(form.run_dialog.backButton,
                                 QtCore.Qt.LeftButton)
         QtCore.QTimer.singleShot(25, _close_modal_dialog)
-
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
-
         open_workspace.assert_called_once()
 
     def test_run_prevent_dialog_close_esc(self):
