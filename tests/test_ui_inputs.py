@@ -2276,6 +2276,7 @@ class ModelTests(_QtTest):
     def test_load_datastack_paramset(self):
         """UI Model: Check that we can load a parameter set datastack."""
         from natcap.invest import datastack
+        model_ui = ModelTests.build_model()
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
@@ -2284,10 +2285,9 @@ class ModelTests(_QtTest):
         datastack.write_parameter_set(
             datastack_filepath,
             args=args,
-            name='test_model',
+            name=model_ui.target.__module__,
             relative=False)
 
-        model_ui = ModelTests.build_model()
         model_ui.load_datastack(datastack_filepath)
 
         self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
@@ -2296,15 +2296,16 @@ class ModelTests(_QtTest):
     def test_load_datastack_archive(self):
         """UI Model: Check that we can load a parameter archive."""
         from natcap.invest import datastack
+        model_ui = ModelTests.build_model()
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        datastack.build_datastack_archive(args, 'test_model', datastack_filepath)
+        datastack.build_datastack_archive(args, model_ui.target.__module__,
+                                          datastack_filepath)
 
         extracted_archive = os.path.join(self.workspace, 'archive_dir')
-        model_ui = ModelTests.build_model()
         def _set_extraction_dir():
             model_ui.datastack_archive_extract_dialog.extraction_point.set_value(
                 extracted_archive)
@@ -2318,18 +2319,19 @@ class ModelTests(_QtTest):
 
     def test_load_datastack_from_logfile(self):
         """UI Model: Check that we can load parameters from a logfile."""
+        import natcap.invest
+        model_ui = ModelTests.build_model()
         # write a sample logfile
         logfile_path = os.path.join(self.workspace, 'logfile')
         with open(logfile_path, 'w') as logfile:
             logfile.write(textwrap.dedent("""
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO
-                Arguments:
+                Arguments for InVEST %s %s:
                 suffix                           foo
                 workspace_dir                    some_workspace_dir
 
-            """))
+            """ % (model_ui.target.__module__, natcap.invest.__version__)))
 
-        model_ui = ModelTests.build_model()
         model_ui.load_datastack(logfile_path)
 
         self.assertEqual(model_ui.workspace.value(), 'some_workspace_dir')
@@ -2338,13 +2340,14 @@ class ModelTests(_QtTest):
     def test_load_datastack_extraction_dialog_cancelled(self):
         """UI Model: coverage when user clicks cancel in datastack dialog."""
         from natcap.invest import datastack
+        model_ui = ModelTests.build_model()
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        datastack.build_datastack_archive(args, 'test_model', datastack_filepath)
-        model_ui = ModelTests.build_model()
+        datastack.build_datastack_archive(args, model_ui.target.__module__,
+                                          datastack_filepath)
 
         def _cancel_dialog():
             model_ui.datastack_archive_extract_dialog.reject()
@@ -2535,13 +2538,14 @@ class ModelTests(_QtTest):
         datastack_created = []
         for datastack_index in range(11):
             datastack_path = os.path.join(self.workspace,
-                                         'datastack_%s.invest.json' %
-                                         datastack_index)
+                                          'datastack_%s.invest.json' %
+                                          datastack_index)
             args = {
                 'workspace_dir': 'workspace_%s' % datastack_index,
             }
 
-            datastack.write_parameter_set(datastack_path, args, 'test')
+            datastack.write_parameter_set(datastack_path, args,
+                                          model_ui.target.__module__)
             datastack_created.append(datastack_path)
             model_ui.load_datastack(datastack_path)
 
@@ -2603,11 +2607,12 @@ class ModelTests(_QtTest):
         model_ui = ModelTests.build_model()
 
         datastack_filepath = os.path.join(self.workspace,
-                                         'datastack.invest.json')
+                                          'datastack.invest.json')
         args = {
             'workspace_dir': 'workspace_foo',
         }
-        datastack.write_parameter_set(datastack_filepath, args, 'test')
+        datastack.write_parameter_set(datastack_filepath, args,
+                                      model_ui.target.__module__)
 
         model_ui.load_datastack(datastack_filepath)
         self.assertEqual(model_ui.workspace.value(), 'workspace_foo')

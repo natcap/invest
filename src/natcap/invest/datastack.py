@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 
 ParameterSet = collections.namedtuple('ParameterSet',
-                                      'args invest_version name')
+                                      'args invest_version model_name')
 
 
 def _collect_spatial_files(filepath, data_dir):
@@ -190,7 +190,7 @@ class _ArgsKeyFilter(logging.Filter):
         return True
 
 
-def format_args_dict(args_dict):
+def format_args_dict(args_dict, model_name):
     """Nicely format an arguments dictionary for writing to a stream.
 
     If printed to a console, the returned string will be aligned in two columns
@@ -199,6 +199,7 @@ def format_args_dict(args_dict):
 
     Parameters:
         args_dict (dict): The args dictionary to format.
+        model_name (string): The model name (in python package import format)
 
     Returns:
         A formatted, unicode string.
@@ -212,10 +213,33 @@ def format_args_dict(args_dict):
     format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
 
     args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = u"Arguments:\n%s\n" % args_string
+    args_string = u"Arguments for InVEST %s %s:\n%s\n" % (model_name,
+                                                          __version__,
+                                                          args_string)
     return args_string
 
 
+def get_datastack_info(datastack_path):
+    if tarfile.is_tarfile(datastack_path):
+        # If it's a tarfile, we need to extract the parameters file to be able
+        # to inspect the parameters and model details.
+        with tarfile.open(datastack_path) as archive:
+            try:
+                temp_directory = tempfile.mkdtemp()
+                archive.extract('./parameters.json',
+                                temp_directory)
+                return 'archive', read_parameter_set(
+                    os.path.join(temp_directory, 'parameters.json'))
+            finally:
+                shutil.rmtree(temp_directory)
+
+    try:
+        return 'json', read_parameter_set(datastack_path)
+    except ValueError:
+        # When a JSON object can't be decoded, it must not be a paramset.
+        pass
+
+    return 'logfile', read_parameters_from_logfile(datastack_path)
 
 
 def build_datastack_archive(args, name, datastack_path):
@@ -473,7 +497,11 @@ def read_parameters_from_logfile(logfile_path):
             line = line.strip()
 
             if not args_started:
-                if line == 'Arguments:':
+                # Line would look something like this:
+                # "Arguments for InVEST natcap.invest.carbon 3.4.1rc1:\n"
+                if line.startswith('Arguments for '):
+                    modelname, invest_version = line.split(' ')[3:5]
+                    invest_version = invest_version.replace(':', '')
                     args_started = True
                     continue
             else:
@@ -498,4 +526,4 @@ def read_parameters_from_logfile(logfile_path):
                 pass
 
         args_dict[args_key] = args_value
-    return args_dict
+    return ParameterSet(args_dict, invest_version, modelname)

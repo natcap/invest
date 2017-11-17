@@ -459,7 +459,7 @@ class DatastacksTest(unittest.TestCase):
         with open(logfile_path, 'w') as logfile:
             logfile.write(textwrap.dedent("""
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO
-                Arguments:
+                Arguments for InVEST some_model some_version:
                 suffix                           foo
                 some_int                         1
                 some_float                       2.33
@@ -470,10 +470,15 @@ class DatastacksTest(unittest.TestCase):
 
         params = datastack.read_parameters_from_logfile(logfile_path)
 
-        self.assertEqual(params, {u'suffix': u'foo',
-                                  u'some_int': 1,
-                                  u'some_float': 2.33,
-                                  u'workspace_dir': u'some_workspace_dir'})
+        expected_params = datastack.ParameterSet(
+            {u'suffix': u'foo',
+             u'some_int': 1,
+             u'some_float': 2.33,
+             u'workspace_dir': u'some_workspace_dir'},
+            'some_version',
+            'some_model')
+
+        self.assertEqual(params, expected_params)
 
     def test_read_parameters_from_logfile_valueerror(self):
         """Datastacks: verify that valuerror raised when no params found."""
@@ -492,16 +497,17 @@ class DatastacksTest(unittest.TestCase):
 class UtilitiesTest(unittest.TestCase):
     def test_print_args(self):
         """Datastacks: verify that we format args correctly."""
-        from natcap.invest.datastack import format_args_dict
+        from natcap.invest.datastack import format_args_dict, __version__
 
         args_dict = {
             'some_arg': [1, 2, 3, 4],
             'foo': 'bar',
         }
 
-        args_string = format_args_dict(args_dict=args_dict)
+        args_string = format_args_dict(args_dict=args_dict,
+                                       model_name='test_model')
         expected_string = six.text_type(
-            'Arguments:\n'
+            'Arguments for InVEST test_model %s:\n'
             'foo      bar\n'
-            'some_arg [1, 2, 3, 4]\n')
+            'some_arg [1, 2, 3, 4]\n') % __version__
         self.assertEqual(args_string, expected_string)

@@ -15,6 +15,8 @@ import contextlib
 import functools
 import datetime
 import codecs
+import shutil
+import tempfile
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -704,29 +706,18 @@ class DatastackArchiveExtractionDialog(OptionsDialog):
         )
         self._container.add_input(self.extraction_point)
 
-    def exec_(self, archive_path):
+    def exec_(self):
         """Execute the dialog.
 
-        Parameters:
-            archive_path (string): The path to the archive that needs to be
-                extracted.
-
         Returns:
-            A 2-tuple.
-
-            If the dialog was accepted, the return value is a 2-tuple of the
-            extracted datastack args and the extracion directory.
-
-            If the value was rejected, ``(None, None)`` is returned.
+            The string path to the extraction directory.  None if the dialog
+            was cancelled.
         """
         result = OptionsDialog.exec_(self)
 
         if result == QtWidgets.QDialog.Accepted:
-            extract_to_dir = self.extraction_point.value()
-            args = datastack.extract_datastack_archive(
-                archive_path, extract_to_dir)
-            return (args, extract_to_dir)
-        return (None, None)
+            return self.extraction_point.value()
+        return None
 
 
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
@@ -1246,7 +1237,9 @@ class InVESTModel(QtWidgets.QMainWindow):
                 with usage.log_run(self.target.__module__, args):
                     LOGGER.log(datastack.ARGS_LOG_LEVEL,
                                'Starting model with parameters: \n%s',
-                               datastack.format_args_dict(args))
+                               datastack.format_args_dict(
+                                   args, self.target.__module__))
+
                     try:
                         return self.target(args=args)
                     except:
@@ -1303,27 +1296,34 @@ class InVESTModel(QtWidgets.QMainWindow):
                 return
 
         LOGGER.info('Loading datastack from "%s"', datastack_path)
-        if tarfile.is_tarfile(datastack_path):  # it's a datastack archive!
-            # Where should the tarfile be extracted to?
-            args, extract_dir = self.datastack_archive_extract_dialog.exec_(
-                datastack_path)
-            if args is None:
-                return
-            window_title_filename = os.path.basename(extract_dir)
-        else:
-            try:
-                paramset = datastack.read_parameter_set(datastack_path)
-                args = paramset.args
-                modelname = paramset.name
-            except ValueError:
-                # when a JSON object cannot be decoded, assume it's a logfile.
-                args = datastack.read_parameters_from_logfile(datastack_path)
-            window_title_filename = os.path.basename(datastack_path)
+        try:
+            stack_type, stack_info = datastack.get_datastack_info(datastack_path)
+        except ValueError:
+            LOGGER.exception('Could not load datastack %s', datastack_path)
+            return
 
-        if modelname != self.target.__name__:
+        if stack_info.model_name != self.target.__module__:
+            _old_text = self.model_mismatch_confirm_dialog.informativeText()
+            self.model_mismatch_confirm_dialog.setInformativeText(
+                _old_text.format(target_model=stack_info.model_name))
             confirm_response = self.model_mismatch_confirm_dialog.exec_()
             if confirm_response != QtWidgets.QMessageBox.Yes:
+                self.model_mismatch_confirm_dialog.setInformativeText(
+                    _old_text)
                 return
+
+        if stack_type == 'archive':
+            extract_dir = self.datastack_archive_extract_dialog.exec_()
+            if extract_dir is None:
+                return
+
+            args = datastack.extract_datastack_archive(datastack_path, extract_dir)
+            window_title_filename = os.path.basename(extract_dir)
+        elif stack_type in ('json', 'logfile'):
+            args = stack_info.args
+            window_title_filename = os.path.basename(datastack_path)
+        else:
+            raise ValueError('Unknown stack type "%s"' % stack_type)
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
