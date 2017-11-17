@@ -296,8 +296,8 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
         self._current_modelname = current_modelname
 
         self._body_text = (
-            "This datastack was created for {datastack_model}, which "
-            "looks different from this model ({current_model}). Load "
+            "This datastack was created for the model \"{datastack_model}\", "
+            "which looks different from this model (\"{current_model}\"). Load "
             "these parameters anyways?"
         )
 
