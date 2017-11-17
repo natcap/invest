@@ -74,6 +74,40 @@ def wait_on_signal(signal, timeout=250):
     loop = None
 
 
+def is_probably_datastack(filepath):
+    """Check to see if the file provided is probably a datastack.
+
+    Parameters:
+        filepath (string): A path to a file on disk.
+
+    Returns:
+        True if the filepath is likely to be a datastack.  False otherwise.
+    """
+    # Does the extension indicate that it's probably a datastack?
+    if filepath.endswith(('.invest.json', '.invest.tar.gz')):
+        return True
+
+    # Is it a datastack parameter set?
+    with open(filepath) as opened_file:
+        # Valid JSON starts with '{'
+        if opened_file.read(1) == '{':
+            return True
+
+        # Is it a logfile?
+        if 'Arguments:' in ' '.join(opened_file.readlines(20)):
+            return True
+
+    try:
+        # If we can open it as a .tar.gz, assume it's a datastack
+        tarfile.open(filepath, mode='r|gz', bufsize=1024)
+        return True
+    except tarfile.ReadError:
+        # tarfile.ReadError raised when the file is not formatted as expected.
+        pass
+
+    return False
+
+
 class OptionsDialog(QtWidgets.QDialog):
     """A common dialog class for Options-style functionality.
 
@@ -1275,7 +1309,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                 load.  If ``None``, the user will be prompted for a file
                 with a file dialog.
             confirm=False (boolean): If True, confirm that values will be
-                overwritten by the new scenario.
+                overwritten by the new datastack.
 
         Returns:
             ``None``
@@ -1602,3 +1636,70 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.statusBar().showMessage('Loaded parameters from previous run.',
                                      STATUSBAR_MSG_DURATION)
         self.window_title.filename = 'loaded from autosave'
+
+    def dragEnterEvent(self, event):
+        """Handle the event where something has been dragged into the window.
+
+        If the thing dragged into the window meets all the following rules:
+
+            * It has text data
+            * It has exactly 1 URL
+            * The filepath passed via the URL is probably a datastack (as
+                determined by ``model.is_probably_datastack()``)
+
+        Then a visual change is made to the model window (text color changes
+        and the background color of the window changes) and we accept the
+        event.
+
+        Parameters:
+            event (QDragEnterEvent): The event to handle.
+
+        Returns:
+            None.
+        """
+        if (event.mimeData().hasText() and
+                len(event.mimeData().urls()) == 1 and
+                is_probably_datastack(event.mimeData().urls()[0].path())):
+            LOGGER.info('Accepting drag enter event for "%s"',
+                        event.mimeData().text())
+            self.setStyleSheet(
+                'QWidget {background-color: rgb(255, 255, 255); '
+                'color: rgb(200, 200, 200)}')
+            event.accept()
+        else:
+            LOGGER.info('Rejecting drag enter event for "%s"',
+                        event.mimeData().text())
+            self.setStyleSheet('')
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        """If the user drags something out of the model, reset the stylesheet.
+
+        This is triggered when something dragged into the window is dragged
+        back out.
+
+        Parameters:
+            event (QDragLeaveEvent): The event to handle.
+
+        Returns:
+            None.
+        """
+        self.setStyleSheet('')
+
+    def dropEvent(self, event):
+        """When something is dropped onto the window.
+
+        Called after it's been dragged into the winodw via a QDragEnterEvent.
+        When something is dropped, we assume that it has 1 URL and that its
+        path should be loaded as a datastack.
+
+        Parameters:
+            event (QDropEvent): The event to handle.
+
+        Returns:
+            None.
+        """
+        path = event.mimeData().urls()[0].path()
+        self.setStyleSheet('')
+        self.load_datastack(path)
+

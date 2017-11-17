@@ -95,7 +95,6 @@ class DatastacksTest(unittest.TestCase):
         source_vector_path = os.path.join(FW_DATA, 'watersheds.shp')
         source_vector = ogr.Open(source_vector_path)
 
-
         for format_name, extension in (('ESRI Shapefile', 'shp'),
                                        ('GeoJSON', 'geojson')):
             dest_dir = os.path.join(self.workspace, format_name)
