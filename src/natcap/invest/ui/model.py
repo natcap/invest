@@ -280,6 +280,52 @@ class ConfirmDialog(QtWidgets.QMessageBox):
             ICON_ALERT.pixmap(100, 100))
 
 
+class ModelMismatchConfirmDialog(ConfirmDialog):
+    """Confirm datastack load when it looks like the wrong model."""
+
+    def __init__(self, current_modelname):
+        """Initialize the dialog.
+
+        Parameters:
+            current_modelname (string): The modelname of the current
+                InVESTModel target.
+
+        Returns:
+            None.
+        """
+        self._current_modelname = current_modelname
+
+        self._body_text = (
+            "This datastack was created for {datastack_model}, which "
+            "looks different from this model ({current_model}). Load "
+            "these parameters anyways?"
+        )
+
+        ConfirmDialog.__init__(
+            self,
+            title_text='Are you sure this is the right model?',
+            body_text=self._body_text)
+
+    def exec_(self, datastack_modelname):
+        """Show the dialog and enter its event loop.
+
+        Also updates the informative text based on the provided datastack
+        modelname.
+
+        Parameters:
+            datastack_modelname (string): The modelname of the datastack.
+
+        Returns:
+            The result code of ``ConfirmDialog.exec_()``.
+        """
+        new_text = self._body_text.format(
+            datastack_model=datastack_modelname,
+            current_model=self._current_modelname)
+        self.setInformativeText(new_text)
+
+        return ConfirmDialog.exec_(self)
+
+
 class SettingsDialog(OptionsDialog):
     """A dialog for global InVEST settings."""
 
@@ -896,11 +942,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.workspace_overwrite_confirm_dialog = ConfirmDialog(
             title_text='Workspace exists!',
             body_text='Overwrite files from a previous run?')
-        self.model_mismatch_confirm_dialog = ConfirmDialog(
-            title_text='Are you sure this is the right model?',
-            body_text=("This datastack's parameters look like they're for "
-                       "InVEST {target_model}. We're running {current_model}. "
-                       "Are you sure you want to load them anyways?"))
+        self.model_mismatch_confirm_dialog = ModelMismatchConfirmDialog(
+            self.target.__module__)
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
@@ -1337,14 +1380,9 @@ class InVESTModel(QtWidgets.QMainWindow):
             return
 
         if stack_info.model_name != self.target.__module__:
-            _old_text = self.model_mismatch_confirm_dialog.informativeText()
-            self.model_mismatch_confirm_dialog.setInformativeText(
-                _old_text.format(target_model=stack_info.model_name,
-                                 current_model = self.target.__module__))
-            confirm_response = self.model_mismatch_confirm_dialog.exec_()
+            confirm_response = self.model_mismatch_confirm_dialog.exec_(
+                stack_info.model_name)
             if confirm_response != QtWidgets.QMessageBox.Yes:
-                self.model_mismatch_confirm_dialog.setInformativeText(
-                    _old_text)
                 return
 
         if stack_type == 'archive':

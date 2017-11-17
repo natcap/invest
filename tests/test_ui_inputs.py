@@ -2523,16 +2523,16 @@ class ModelTests(_QtTest):
 
     def test_drag_n_drop_datastack(self):
         """UI Model: Verify that we can drag-n-drop a valid datastack."""
+        model = ModelTests.build_model()
         # Write a sample datastack file to drop
         datastack_filepath = os.path.join(self.workspace, 'datastack.invest.json')
         with open(datastack_filepath, 'w') as sample_datastack:
             sample_datastack.write(json.dumps(
                 {'args': {'workspace_dir': '/foo/bar',
                           'suffix': 'baz'},
-                 'name': 'test_model',
+                 'name': model.target.__module__,
                  'invest_version': 'testing'}))
 
-        model = ModelTests.build_model()
         mime_data = QtCore.QMimeData()
         mime_data.setText('Some datastack')
         mime_data.setUrls([QtCore.QUrl(datastack_filepath)])
