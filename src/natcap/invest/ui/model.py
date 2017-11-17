@@ -899,8 +899,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.model_mismatch_confirm_dialog = ConfirmDialog(
             title_text='Are you sure this is the right model?',
             body_text=("This datastack's parameters look like they're for "
-                       "InVEST {target_model}.  Are you sure you want to load "
-                       "them anyways?"))
+                       "InVEST {target_model}. We're running {current_model}. "
+                       "Are you sure you want to load them anyways?"))
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
@@ -1339,7 +1339,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         if stack_info.model_name != self.target.__module__:
             _old_text = self.model_mismatch_confirm_dialog.informativeText()
             self.model_mismatch_confirm_dialog.setInformativeText(
-                _old_text.format(target_model=stack_info.model_name))
+                _old_text.format(target_model=stack_info.model_name,
+                                 current_model = self.target.__module__))
             confirm_response = self.model_mismatch_confirm_dialog.exec_()
             if confirm_response != QtWidgets.QMessageBox.Yes:
                 self.model_mismatch_confirm_dialog.setInformativeText(
