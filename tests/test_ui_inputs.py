@@ -13,6 +13,7 @@ import shutil
 import textwrap
 import imp
 import uuid
+import json
 
 import faulthandler
 faulthandler.enable()
@@ -65,17 +66,11 @@ def wait_on_signal(signal, timeout=250):
 
 class _QtTest(unittest.TestCase):
     def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        # Found this through programming my coincidence, but it appear to avoid
-        # the segfaulting issue on all the computers I've tried it on.
-        # I'd prefer to find the root problem of the segfault, but I'm OK with
-        # this because these segfaults only happen when I'm running the suite of
-        # unittests.  If something segfaults in the normal operation of
-        # the model, I will absolutely fix that.
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
-        #QTest.qWait(50)
-
+        """Clear the QApplication's event queue."""
+        # After each test, empty the event queue.
+        # This should help to make sure that there aren't any event-based race
+        # conditions where a C/C++ object is deleted before a slot is called.
+        QT_APP.sendPostedEvents()
 
 class _SettingsSandbox(_QtTest):
     def setUp(self):
@@ -1355,7 +1350,6 @@ class FolderButtonTest(_QtTest):
         QT_APP.processEvents()
 
         _callback.assert_called_with('/some/path')
-        QT_APP.processEvents()
 
     def test_button_title(self):
         from natcap.invest.ui.inputs import FolderButton
@@ -1552,13 +1546,11 @@ class FormTest(_QtTest):
                 form.run_dialog.openWorkspaceCB.setChecked(True)
                 self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
-
-        # close the window by pressing the back button.
-        QTest.mouseClick(form.run_dialog.backButton,
-                            QtCore.Qt.LeftButton)
-
+        def _close_modal_dialog():
+            # close the window by pressing the back button.
+            QTest.mouseClick(form.run_dialog.backButton,
+                                QtCore.Qt.LeftButton)
+        QtCore.QTimer.singleShot(25, _close_modal_dialog)
         open_workspace.assert_called_once()
 
     def test_run_prevent_dialog_close_esc(self):
@@ -1655,7 +1647,7 @@ class FormTest(_QtTest):
         form = FormTest.make_ui()
         form.show()
         self.assertTrue('border: None' in form.scroll_area.styleSheet())
-        form.update_scroll_border(50, 50)  # simulate form resize
+        form.scroll_area.update_scroll_border(50, 50)  # simulate form resize
         self.assertTrue(len(form.scroll_area.styleSheet()) == 0)
 
     def test_add_input(self):
@@ -2529,6 +2521,60 @@ class ModelTests(_QtTest):
         finally:
             del sys.modules[module_name]
 
+    def test_drag_n_drop_datastack(self):
+        """UI Model: Verify that we can drag-n-drop a valid datastack."""
+        # Write a sample datastack file to drop
+        datastack_filepath = os.path.join(self.workspace, 'datastack.invest.json')
+        with open(datastack_filepath, 'w') as sample_datastack:
+            sample_datastack.write(json.dumps(
+                {'args': {'workspace_dir': '/foo/bar',
+                          'suffix': 'baz'},
+                 'name': 'test_model',
+                 'invest_version': 'testing'}))
+
+        model = ModelTests.build_model()
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Some datastack')
+        mime_data.setUrls([QtCore.QUrl(datastack_filepath)])
+
+        drag_event = QtGui.QDragEnterEvent(
+            model.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+        model.dragEnterEvent(drag_event)
+        self.assertTrue(drag_event.isAccepted())
+
+        event = QtGui.QDropEvent(
+            model.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+
+        # When the datastack is dropped, the datastack is loaded.
+        model.dropEvent(event)
+        self.assertEqual(model.workspace.value(), '/foo/bar')
+        self.assertEqual(model.suffix.value(), 'baz')
+
+    def test_drag_n_drop_rejected_multifile(self):
+        """UI Model: Drag-n-drop fails when dragging several files."""
+        model = ModelTests.build_model()
+        mime_data = QtCore.QMimeData()
+        mime_data.setText('Some datastack')
+        mime_data.setUrls([QtCore.QUrl('/path/1'),
+                           QtCore.QUrl('/path/2')])
+
+        drag_event = QtGui.QDragEnterEvent(
+            model.pos(),
+            QtCore.Qt.CopyAction,
+            mime_data,
+            QtCore.Qt.LeftButton,
+            QtCore.Qt.NoModifier)
+        model.dragEnterEvent(drag_event)
+        self.assertFalse(drag_event.isAccepted())
+
     def test_open_recent_menu(self):
         """UI Model: Check for correct behavior of the open-recent menu."""
         from natcap.invest import datastack
@@ -2569,7 +2615,7 @@ class ModelTests(_QtTest):
         """UI Model: Check handling of long filepaths in open-recent menu."""
         model_ui = ModelTests.build_model()
 
-        # synthesize a recent scenario path by adding it to the right setting.
+        # synthesize a recent datastack path by adding it to the right setting.
         model_ui._add_to_open_menu('/foo.invest.json')
 
         last_run_datastack_actions = []
@@ -2586,7 +2632,7 @@ class ModelTests(_QtTest):
         """UI Model: Check handling of long filepaths in open-recent menu."""
         model_ui = ModelTests.build_model()
 
-        # synthesize a recent scenario path by adding it to the right setting.
+        # synthesize a recent datastack path by adding it to the right setting.
         deep_directory = os.path.join(*[str(uuid.uuid4()) for x in xrange(10)])
         filepath = os.path.join(deep_directory, 'something.invest.json')
         model_ui._add_to_open_menu(filepath)
@@ -2672,3 +2718,83 @@ class ValidatorTest(_QtTest):
             return []
 
         validator.validate(target=_validate, args={})
+
+
+class IsProbablyDatastackTests(unittest.TestCase):
+    """Tests for our quick check for whether a file is a datastack."""
+
+    def setUp(self):
+        """Create a new workspace for each test."""
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up the workspace created for each test."""
+        shutil.rmtree(self.workspace)
+
+    def test_json_extension(self):
+        """Model UI datastack: invest.json extension is a datastack"""
+        from natcap.invest.ui import model
+
+        filepath = 'some_model.invest.json'
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_tar_gz_extension(self):
+        """Model UI datastack: invest.tar.gz extension is a datastack"""
+        from natcap.invest.ui import model
+
+        filepath = 'some_model.invest.tar.gz'
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_parameter_set(self):
+        """Model UI datastack: a parameter set should be a datastack."""
+        from natcap.invest.ui import model
+        from natcap.invest import datastack
+
+        filepath = os.path.join(self.workspace, 'paramset.json')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        datastack.write_parameter_set(filepath, args, 'test_model')
+
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_parameter_archive(self):
+        """Model UI datastack: a parameter archive should be a datastack."""
+        from natcap.invest.ui import model
+        from natcap.invest import datastack
+
+        filepath = os.path.join(self.workspace, 'paramset.tar.gz')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        datastack.build_datastack_archive(args, 'test_model', filepath)
+
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_parameter_logfile(self):
+        """Model UI datastack: a logfile should be a datastack."""
+        from natcap.invest.ui import model
+
+        filepath = os.path.join(self.workspace, 'logfile.txt')
+        with open(filepath, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO
+                Arguments:
+                suffix                           foo
+                some_int                         1
+                some_float                       2.33
+                workspace_dir                    some_workspace_dir
+
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
+            """))
+
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_csv_not_a_parameter(self):
+        """Model UI datastack: a CSV is probably not a parameter set."""
+        from natcap.invest.ui import model
+
+        filepath = os.path.join(self.workspace, 'sample.csv')
+        with open(filepath, 'w') as sample_csv:
+            sample_csv.write('A,B,C\n')
+            sample_csv.write('"aaa","bbb","ccc"\n')
+
+        self.assertFalse(model.is_probably_datastack(filepath))
+
+
