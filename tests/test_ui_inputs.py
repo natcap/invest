@@ -2754,7 +2754,7 @@ class IsProbablyDatastackTests(unittest.TestCase):
 
         filepath = os.path.join(self.workspace, 'paramset.json')
         args = {'foo': 'foo', 'bar': 'bar'}
-        datastack.build_parameter_set(filepath, args, 'test_model')
+        datastack.build_parameter_set(args, 'test_model', filepath)
 
         self.assertTrue(model.is_probably_datastack(filepath))
 
