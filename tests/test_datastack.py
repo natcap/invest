@@ -542,9 +542,52 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(stack_info, datastack.ParameterSet(
             params, 'sample_model', natcap.invest.__version__))
 
-    def test_get_datastack_info_logfile(self):
-        # TODO: TEST ME
-        pass
+    def test_get_datastack_info_logfile_new_style(self):
+        import natcap.invest
+        from natcap.invest import datastack
+        args = {
+            'a': 1,
+            'b': 2.7,
+            'c': [1, 2, 3.55],
+            'd': 'hello, world!'
+        }
+
+        logfile_path = os.path.join(self.workspace, 'logfile.txt')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(datastack.format_args_dict(args, 'some_modelname'))
+
+        stack_type, stack_info = datastack.get_datastack_info(logfile_path)
+        self.assertEqual(stack_type, 'logfile')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            args, 'some_modelname', natcap.invest.__version__))
+
+    def test_get_datastack_info_logfile_iui_style(self):
+        from natcap.invest import datastack
+
+        logfile_path = os.path.join(self.workspace, 'logfile.txt')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                Arguments:
+                suffix                           foo
+                some_int                         1
+                some_float                       2.33
+                workspace_dir                    some_workspace_dir
+
+                some other logging here.
+            """))
+
+        expected_args = {
+            'suffix': 'foo',
+            'some_int': 1,
+            'some_float': 2.33,
+            'workspace_dir': 'some_workspace_dir',
+        }
+
+        stack_type, stack_info = datastack.get_datastack_info(logfile_path)
+        self.assertEqual(stack_type, 'logfile')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
+
 
 
 

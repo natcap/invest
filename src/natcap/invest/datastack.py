@@ -32,6 +32,7 @@ ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 DATASTACK_EXTENSION = '.invest.tar.gz'
 PARAMETER_SET_EXTENSION = '.invest.json'
 DATASTACK_PARAMETER_FILENAME = 'parameters' + PARAMETER_SET_EXTENSION
+UNKNOWN = 'UNKNOWN'
 
 ParameterSet = collections.namedtuple('ParameterSet',
                                       'args model_name invest_version')
@@ -520,9 +521,15 @@ def extract_parameters_from_logfile(filepath):
             if not args_started:
                 # Line would look something like this:
                 # "Arguments for InVEST natcap.invest.carbon 3.4.1rc1:\n"
-                if line.startswith('Arguments for '):
-                    modelname, invest_version = line.split(' ')[3:5]
-                    invest_version = invest_version.replace(':', '')
+                if line.startswith('Arguments'):
+                    try:
+                        modelname, invest_version = line.split(' ')[3:5]
+                        invest_version = invest_version.replace(':', '')
+                    except ValueError:
+                        # Old-style logfiles don't provide the modelename or
+                        # version info.
+                        modelname = UNKNOWN
+                        invest_version = UNKNOWN
                     args_started = True
                     continue
             else:
@@ -539,12 +546,32 @@ def extract_parameters_from_logfile(filepath):
         args_key = re.findall(r'^\w*', argument)[0]
         args_value = re.sub('^%s' % args_key, '', argument).strip()
 
-        for cast_to_type in (float, int):
-            try:
-                args_value = cast_to_type(args_value)
-                break
-            except ValueError:
-                pass
+        def _smart_cast(value):
+            """Attempt to cast a value to an int or a float.
+
+            Leave the value be if the value cannot be cast to either one.
+
+            Parameters:
+                value: The parameter value to try to cast.
+
+            Returns:
+                A possibly-cast version of the original value.
+            """
+            for cast_to_type in (float, int):
+                try:
+                    value = cast_to_type(value)
+                    break
+                except ValueError:
+                    pass
+            return value
+
+        if args_value.startswith('[') and args_value.endswith(']'):
+            # it's a list!  Just need to cast the types.
+            # fancy indexing excludes [ / ]
+            args_value = [_smart_cast(list_item) for list_item in
+                          args_value[1:-1].split(', ')]
+        else:
+            args_value = _smart_cast(args_value)
 
         args_dict[args_key] = args_value
     return ParameterSet(args_dict, modelname, invest_version)
