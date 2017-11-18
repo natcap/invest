@@ -29,9 +29,12 @@ from . import __version__
 
 LOGGER = logging.getLogger(__name__)
 ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
+DATASTACK_EXTENSION = '.invest.tar.gz'
+PARAMETER_SET_EXTENSION = '.invest.json'
+DATASTACK_PARAMETER_FILENAME = 'parameters' + PARAMETER_SET_EXTENSION
 
 ParameterSet = collections.namedtuple('ParameterSet',
-                                      'args invest_version model_name')
+                                      'args model_name invest_version')
 
 
 def _collect_spatial_files(filepath, data_dir):
@@ -241,10 +244,10 @@ def get_datastack_info(datastack_path):
         with tarfile.open(datastack_path) as archive:
             try:
                 temp_directory = tempfile.mkdtemp()
-                archive.extract('./parameters.json',
+                archive.extract('./' + DATASTACK_PARAMETER_FILENAME,
                                 temp_directory)
                 return 'archive', read_parameter_set(
-                    os.path.join(temp_directory, 'parameters.json'))
+                    os.path.join(temp_directory, DATASTACK_PARAMETER_FILENAME))
             finally:
                 shutil.rmtree(temp_directory)
 
@@ -330,14 +333,15 @@ def build_datastack_archive(args, name, datastack_path):
     with utils.log_to_file(logfile, log_fmt=log_format) as handler:
         new_args = {
             'args': _recurse(args, handler),
-            'name': name,
+            'model_name': name,
             'invest_version': __version__
         }
 
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
     LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
     # write parameters to a new json file in the temp workspace
-    param_file_uri = os.path.join(temp_workspace, 'parameters.json')
+    param_file_uri = os.path.join(temp_workspace,
+                                  'parameters' + PARAMETER_SET_EXTENSION)
     with codecs.open(param_file_uri, 'w', encoding='UTF-8') as params:
         params.write(json.dumps(new_args,
                                 encoding='UTF-8',
@@ -374,7 +378,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
 
     # get the arguments dictionary
     arguments_dict = json.load(open(
-        os.path.join(dest_dir_path, 'parameters.json')))['args']
+        os.path.join(dest_dir_path, DATASTACK_PARAMETER_FILENAME)))['args']
 
     def _recurse(args_param):
         if isinstance(args_param, dict):
@@ -436,7 +440,7 @@ def write_parameter_set(filepath, args, name, relative=False):
                 return normalized_path
         return args_param
     parameter_data = {
-        'name': name,
+        'model_name': name,
         'invest_version': __version__,
         'args': _recurse(args)
     }
@@ -484,8 +488,8 @@ def read_parameter_set(filepath):
         return args_param
 
     return ParameterSet(_recurse(read_params['args']),
-                        read_params['invest_version'],
-                        read_params['name'])
+                        read_params['model_name'],
+                        read_params['invest_version'])
 
 
 def read_parameters_from_logfile(logfile_path):
@@ -541,4 +545,4 @@ def read_parameters_from_logfile(logfile_path):
                 pass
 
         args_dict[args_key] = args_value
-    return ParameterSet(args_dict, invest_version, modelname)
+    return ParameterSet(args_dict, modelname, invest_version)

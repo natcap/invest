@@ -43,8 +43,9 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(len(os.listdir(out_directory)), 3)
 
         self.assertEqual(
-            json.load(open(os.path.join(out_directory,
-                                        'parameters.json')))['args'],
+            json.load(open(
+                os.path.join(out_directory,
+                             datastack.DATASTACK_PARAMETER_FILENAME)))['args'],
             {'a': 1, 'b': u'hello there', 'c': u'plain bytestring', 'd': ''})
 
     @scm.skip_if_data_missing(FW_DATA)
@@ -65,7 +66,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
 
         self.assertEqual(len(archived_params), 1)
         pygeoprocessing.testing.assert_rasters_equal(
@@ -120,7 +122,9 @@ class DatastacksTest(unittest.TestCase):
                 tar.extractall(out_directory)
 
             archived_params = json.load(
-                open(os.path.join(out_directory, 'parameters.json')))['args']
+                open(os.path.join(
+                    out_directory,
+                    datastack.DATASTACK_PARAMETER_FILENAME)))['args']
             pygeoprocessing.testing.assert_vectors_equal(
                 params['vector'], os.path.join(out_directory,
                                                archived_params['vector']),
@@ -146,7 +150,9 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(
+                out_directory,
+                datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         pygeoprocessing.testing.assert_csv_equal(
             params['table'], os.path.join(out_directory,
                                           archived_params['table'])
@@ -173,7 +179,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         pygeoprocessing.testing.assert_text_equal(
             params['some_file'], os.path.join(out_directory,
                                               archived_params['some_file'])
@@ -211,7 +218,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         dest_datadir_digest = pygeoprocessing.testing.digest_folder(
             os.path.join(out_directory, archived_params['data_dir']))
 
@@ -245,7 +253,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         dest_digest = pygeoprocessing.testing.digest_file_list(
             [os.path.join(out_directory, filename)
              for filename in archived_params['file_list']])
@@ -274,7 +283,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
 
         # Assert that the archived 'foo' and 'bar' params point to the same
         # file.
@@ -389,7 +399,7 @@ class DatastacksTest(unittest.TestCase):
         datastack.write_parameter_set(paramset_filename, params, modelname)
 
         # Read back the parameter set
-        args, invest_version, callable_name = datastack.read_parameter_set(
+        args, callable_name, invest_version = datastack.read_parameter_set(
             paramset_filename)
 
         # parameter set calculations normalizes all paths.
@@ -444,7 +454,7 @@ class DatastacksTest(unittest.TestCase):
 
         # Read back the parameter set and verify the returned paths are
         # absolute
-        args, invest_version, callable_name = datastack.read_parameter_set(
+        args, callable_name, invest_version = datastack.read_parameter_set(
             paramset_filename)
 
         self.assertEqual(args, params)
@@ -474,8 +484,8 @@ class DatastacksTest(unittest.TestCase):
              u'some_int': 1,
              u'some_float': 2.33,
              u'workspace_dir': u'some_workspace_dir'},
-            'some_version',
-            'some_model')
+            'some_model',
+            'some_version')
 
         self.assertEqual(params, expected_params)
 
@@ -511,7 +521,7 @@ class DatastacksTest(unittest.TestCase):
 
         self.assertEqual(stack_type, 'archive')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            params, natcap.invest.__version__, 'sample_model'))
+            params, 'sample_model', natcap.invest.__version__))
 
     def test_get_datatack_info_parameter_set(self):
         import natcap.invest
@@ -530,7 +540,7 @@ class DatastacksTest(unittest.TestCase):
         stack_type, stack_info = datastack.get_datastack_info(json_path)
         self.assertEqual(stack_type, 'json')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            params, natcap.invest.__version__, 'sample_model'))
+            params, 'sample_model', natcap.invest.__version__))
 
     def test_get_datastack_info_logfile(self):
         # TODO: TEST ME
