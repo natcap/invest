@@ -1022,7 +1022,8 @@ class InVESTModel(QtWidgets.QMainWindow):
             qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
-        self.open_menu = QtWidgets.QMenu('Load datastack')
+        self.open_menu = QtWidgets.QMenu('Load parameters')
+        self.open_menu.setIcon(qtawesome.icon('fa.folder-open-o'))
         self.build_open_menu()
         self.file_menu.addMenu(self.open_menu)
 
@@ -1072,7 +1073,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.open_menu.clear()
         self.open_file_action = self.open_menu.addAction(
             qtawesome.icon('fa.arrow-circle-o-up'),
-            'L&oad datastack ...', self.load_datastack,
+            'L&oad datastack, parameter set or logfile...', self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
 
@@ -1363,7 +1364,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         if not datastack_path:
             datastack_path = self.file_dialog.open_file(
-                title='Select datastack', filters=(
+                title='Select datastack, parameter set or logfile', filters=(
                     'Any file (*.*)',
                     'Parameter set (*.invest.json)',
                     'Parameter archive (*.invest.tar.gz)',
