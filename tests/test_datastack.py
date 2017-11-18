@@ -492,6 +492,52 @@ class DatastacksTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             datastack.read_parameters_from_logfile(logfile_path)
 
+    def test_get_datastack_info_archive(self):
+        """Datastacks: verify we can get info from an archive."""
+        import natcap.invest
+        from natcap.invest import datastack
+
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'd': '',
+        }
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
+
+        stack_type, stack_info = datastack.get_datastack_info(archive_path)
+
+        self.assertEqual(stack_type, 'archive')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            params, natcap.invest.__version__, 'sample_model'))
+
+    def test_get_datatack_info_parameter_set(self):
+        import natcap.invest
+        from natcap.invest import datastack
+
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'd': '',
+        }
+
+        json_path = os.path.join(self.workspace, 'archive.invs.json')
+        datastack.write_parameter_set(json_path, params, 'sample_model')
+
+        stack_type, stack_info = datastack.get_datastack_info(json_path)
+        self.assertEqual(stack_type, 'json')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            params, natcap.invest.__version__, 'sample_model'))
+
+    def test_get_datastack_info_logfile(self):
+        # TODO: TEST ME
+        pass
+
+
+
 
 class UtilitiesTest(unittest.TestCase):
     def test_print_args(self):

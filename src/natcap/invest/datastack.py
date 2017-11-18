@@ -220,6 +220,21 @@ def format_args_dict(args_dict, model_name):
 
 
 def get_datastack_info(datastack_path):
+    """Get information about a datastack.
+
+    Parameters:
+        datastack_path (string): The path to a file on disk.
+
+    Returns:
+        A 2-tuple.  The first item of the tuple is one of:
+
+            * ``"archive"`` when the datastack is an archive.
+            * ``"json"`` when the datatack is a json parameter set.
+            * ``"logfile"`` when the datastack is a text logfile.
+
+        The second item of the tuple is a ParameterSet namedtuple with the raw
+        parsed args, modelname and invest version.
+    """
     if tarfile.is_tarfile(datastack_path):
         # If it's a tarfile, we need to extract the parameters file to be able
         # to inspect the parameters and model details.
