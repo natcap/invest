@@ -396,10 +396,10 @@ class DatastacksTest(unittest.TestCase):
         paramset_filename = os.path.join(self.workspace, 'paramset.json')
 
         # Write the parameter set
-        datastack.write_parameter_set(paramset_filename, params, modelname)
+        datastack.build_parameter_set(params, modelname, paramset_filename)
 
         # Read back the parameter set
-        args, callable_name, invest_version = datastack.read_parameter_set(
+        args, callable_name, invest_version = datastack.extract_parameter_set(
             paramset_filename)
 
         # parameter set calculations normalizes all paths.
@@ -441,8 +441,8 @@ class DatastacksTest(unittest.TestCase):
         os.makedirs(params['data_dir'])
 
         # Write the parameter set
-        datastack.write_parameter_set(
-            paramset_filename, params, modelname, relative=True)
+        datastack.build_parameter_set(
+            params, modelname, paramset_filename, relative=True)
 
         # Check that the written parameter set file contains relative paths
         raw_args = json.load(open(paramset_filename))['args']
@@ -454,14 +454,14 @@ class DatastacksTest(unittest.TestCase):
 
         # Read back the parameter set and verify the returned paths are
         # absolute
-        args, callable_name, invest_version = datastack.read_parameter_set(
+        args, callable_name, invest_version = datastack.extract_parameter_set(
             paramset_filename)
 
         self.assertEqual(args, params)
         self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
-    def test_read_parameters_from_logfile(self):
+    def test_extract_parameters_from_logfile(self):
         """Datastacks: Verify we can read args from a logfile."""
         from natcap.invest import datastack
         logfile_path = os.path.join(self.workspace, 'logfile')
@@ -477,7 +477,7 @@ class DatastacksTest(unittest.TestCase):
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
             """))
 
-        params = datastack.read_parameters_from_logfile(logfile_path)
+        params = datastack.extract_parameters_from_logfile(logfile_path)
 
         expected_params = datastack.ParameterSet(
             {u'suffix': u'foo',
@@ -489,7 +489,7 @@ class DatastacksTest(unittest.TestCase):
 
         self.assertEqual(params, expected_params)
 
-    def test_read_parameters_from_logfile_valueerror(self):
+    def test_extract_parameters_from_logfile_valueerror(self):
         """Datastacks: verify that valuerror raised when no params found."""
         from natcap.invest import datastack
         logfile_path = os.path.join(self.workspace, 'logfile')
@@ -500,7 +500,7 @@ class DatastacksTest(unittest.TestCase):
             """))
 
         with self.assertRaises(ValueError):
-            datastack.read_parameters_from_logfile(logfile_path)
+            datastack.extract_parameters_from_logfile(logfile_path)
 
     def test_get_datastack_info_archive(self):
         """Datastacks: verify we can get info from an archive."""
@@ -535,7 +535,7 @@ class DatastacksTest(unittest.TestCase):
         }
 
         json_path = os.path.join(self.workspace, 'archive.invs.json')
-        datastack.write_parameter_set(json_path, params, 'sample_model')
+        datastack.build_parameter_set(params, 'sample_model', json_path)
 
         stack_type, stack_info = datastack.get_datastack_info(json_path)
         self.assertEqual(stack_type, 'json')

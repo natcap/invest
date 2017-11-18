@@ -86,7 +86,8 @@ def is_probably_datastack(filepath):
         True if the filepath is likely to be a datastack.  False otherwise.
     """
     # Does the extension indicate that it's probably a datastack?
-    if filepath.endswith(('.invest.json', '.invest.tar.gz')):
+    if filepath.endswith((datastack.DATASTACK_EXTENSION,
+                          datastack.PARAMETER_SET_EXTENSION)):
         return True
 
     # Is it a datastack parameter set?

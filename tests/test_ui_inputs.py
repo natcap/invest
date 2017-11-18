@@ -2274,7 +2274,7 @@ class ModelTests(_QtTest):
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'paramset.json')
-        datastack.write_parameter_set(
+        datastack.build_parameter_set(
             datastack_filepath,
             args=args,
             name=model_ui.target.__module__,
@@ -2590,7 +2590,7 @@ class ModelTests(_QtTest):
                 'workspace_dir': 'workspace_%s' % datastack_index,
             }
 
-            datastack.write_parameter_set(datastack_path, args,
+            datastack.build_parameter_set(datastack_path, args,
                                           model_ui.target.__module__)
             datastack_created.append(datastack_path)
             model_ui.load_datastack(datastack_path)
@@ -2657,7 +2657,7 @@ class ModelTests(_QtTest):
         args = {
             'workspace_dir': 'workspace_foo',
         }
-        datastack.write_parameter_set(datastack_filepath, args,
+        datastack.build_parameter_set(datastack_filepath, args,
                                       model_ui.target.__module__)
 
         model_ui.load_datastack(datastack_filepath)
@@ -2752,7 +2752,7 @@ class IsProbablyDatastackTests(unittest.TestCase):
 
         filepath = os.path.join(self.workspace, 'paramset.json')
         args = {'foo': 'foo', 'bar': 'bar'}
-        datastack.write_parameter_set(filepath, args, 'test_model')
+        datastack.build_parameter_set(filepath, args, 'test_model')
 
         self.assertTrue(model.is_probably_datastack(filepath))
 
