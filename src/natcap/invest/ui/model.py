@@ -1229,14 +1229,14 @@ class InVESTModel(QtWidgets.QMainWindow):
         if datastack_opts.datastack_type == _DATASTACK_DATA_ARCHIVE:
             datastack.build_datastack_archive(
                 args=current_args,
-                name=self.target.__module__,
-                datastack_path=datastack_opts.archive_path
+                model_name=self.target.__module__,
+                filepath=datastack_opts.archive_path
             )
         else:
-            datastack.write_parameter_set(
-                filepath=datastack_opts.archive_path,
+            datastack.build_parameter_set(
                 args=current_args,
-                name=self.target.__module__,
+                model_name=self.target.__module__,
+                filepath=datastack_opts.archive_path,
                 relative=datastack_opts.use_relpaths
             )
 

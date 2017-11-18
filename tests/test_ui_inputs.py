@@ -2275,9 +2275,9 @@ class ModelTests(_QtTest):
         }
         datastack_filepath = os.path.join(self.workspace, 'paramset.json')
         datastack.build_parameter_set(
-            datastack_filepath,
             args=args,
-            name=model_ui.target.__module__,
+            model_name=model_ui.target.__module__,
+            filepath=datastack_filepath,
             relative=False)
 
         model_ui.load_datastack(datastack_filepath)
@@ -2524,13 +2524,13 @@ class ModelTests(_QtTest):
     def test_drag_n_drop_datastack(self):
         """UI Model: Verify that we can drag-n-drop a valid datastack."""
         model = ModelTests.build_model()
-        # Write a sample datastack file to drop
+        # Write a sample parameter set file to drop
         datastack_filepath = os.path.join(self.workspace, 'datastack.invest.json')
         with open(datastack_filepath, 'w') as sample_datastack:
             sample_datastack.write(json.dumps(
                 {'args': {'workspace_dir': '/foo/bar',
                           'suffix': 'baz'},
-                 'name': model.target.__module__,
+                 'model_name': model.target.__module__,
                  'invest_version': 'testing'}))
 
         mime_data = QtCore.QMimeData()
@@ -2590,8 +2590,9 @@ class ModelTests(_QtTest):
                 'workspace_dir': 'workspace_%s' % datastack_index,
             }
 
-            datastack.build_parameter_set(datastack_path, args,
-                                          model_ui.target.__module__)
+            datastack.build_parameter_set(args,
+                                          model_ui.target.__module__,
+                                          datastack_path)
             datastack_created.append(datastack_path)
             model_ui.load_datastack(datastack_path)
 
@@ -2657,8 +2658,9 @@ class ModelTests(_QtTest):
         args = {
             'workspace_dir': 'workspace_foo',
         }
-        datastack.build_parameter_set(datastack_filepath, args,
-                                      model_ui.target.__module__)
+        datastack.build_parameter_set(args,
+                                      model_ui.target.__module__,
+                                      datastack_filepath)
 
         model_ui.load_datastack(datastack_filepath)
         self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
