@@ -15,8 +15,6 @@ import contextlib
 import functools
 import datetime
 import codecs
-import shutil
-import tempfile
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -1321,7 +1319,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
                     try:
                         return self.target(args=args)
-                    except:
+                    except Exception:
                         LOGGER.exception('Exception while executing %s',
                                          self.target)
                         raise
@@ -1376,8 +1374,9 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         LOGGER.info('Loading datastack from "%s"', datastack_path)
         try:
-            stack_type, stack_info = datastack.get_datastack_info(datastack_path)
-        except ValueError:
+            stack_type, stack_info = datastack.get_datastack_info(
+                datastack_path)
+        except Exception:
             LOGGER.exception('Could not load datastack %s', datastack_path)
             return
 
@@ -1392,7 +1391,8 @@ class InVESTModel(QtWidgets.QMainWindow):
             if extract_dir is None:
                 return
 
-            args = datastack.extract_datastack_archive(datastack_path, extract_dir)
+            args = datastack.extract_datastack_archive(
+                datastack_path, extract_dir)
             window_title_filename = os.path.basename(extract_dir)
         elif stack_type in ('json', 'logfile'):
             args = stack_info.args
@@ -1754,4 +1754,3 @@ class InVESTModel(QtWidgets.QMainWindow):
         path = event.mimeData().urls()[0].path()
         self.setStyleSheet('')
         self.load_datastack(path)
-
