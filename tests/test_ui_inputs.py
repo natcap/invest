@@ -2704,6 +2704,41 @@ class ModelTests(_QtTest):
         model_ui.clear_local_settings()
         self.assertEqual(model_ui.settings.allKeys(), [])
 
+    def test_reject_on_modelname_mismatch(self):
+        """UI Model: confirm when datastack modelname != model modelname."""
+        from natcap.invest.ui import model
+        from natcap.invest import datastack
+
+        filepath = os.path.join(self.workspace, 'paramset.json')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        datastack.build_parameter_set(args, 'test_model', filepath)
+
+        model_ui = ModelTests.build_model()
+
+        def _confirm_datastack_load():
+            self.assertTrue(
+                model_ui.model_mismatch_confirm_dialog.isVisible())
+
+            # Both the parameter's model name ('test_model') and the target
+            # model's module name ('test_ui_inputs') should be in the
+            # informative text.
+            info_text = model_ui.model_mismatch_confirm_dialog.informativeText()
+            self.assertTrue(model_ui.target.__module__ in info_text)
+            self.assertTrue('test_model' in info_text)
+
+            # Reject the dialog.
+            QTest.mouseClick(
+                model_ui.model_mismatch_confirm_dialog.button(
+                    QtWidgets.QMessageBox.Cancel),
+                QtCore.Qt.LeftButton)
+
+        QtCore.QTimer.singleShot(500, _confirm_datastack_load)
+
+        # Verify that we haven't changed anything when the dialog is cancelled.
+        previous_args = model_ui.assemble_args()
+        model_ui.load_datastack(filepath)
+        self.assertEqual(previous_args, model_ui.assemble_args())
+
 
 class ValidatorTest(_QtTest):
     def test_in_progress(self):
