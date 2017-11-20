@@ -86,7 +86,7 @@ class DatastacksTest(unittest.TestCase):
 
         dest_dir = os.path.join(self.workspace, 'extracted_archive')
         archived_params = datastack.extract_datastack_archive(archive_path,
-                                                             dest_dir)
+                                                              dest_dir)
         pygeoprocessing.testing.assert_rasters_equal(
             params['raster'],
             os.path.join(dest_dir, 'data', archived_params['raster']))
@@ -114,7 +114,7 @@ class DatastacksTest(unittest.TestCase):
 
             # Collect the vector's files into a single archive
             datastack.build_datastack_archive(params, 'sample_model',
-                                             archive_path)
+                                              archive_path)
 
             # extract the archive
             out_directory = os.path.join(dest_dir, 'extracted_archive')
@@ -587,9 +587,6 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(stack_type, 'logfile')
         self.assertEqual(stack_info, datastack.ParameterSet(
             expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
-
-
-
 
 
 class UtilitiesTest(unittest.TestCase):

@@ -1,11 +1,19 @@
-"""Functions for creating and extracting InVEST demonstration datastacks.
+"""Functions for reading and writing InVEST model parameters.
 
-A demonstration datastack for InVEST is a compressed archive that includes the
+A **datastack** for InVEST is a compressed archive that includes the
 arguments for a model, all of the data files referenced by the arguments, and
 a logfile with some extra information about how the archive was created.  The
 resulting archive can then be extracted on a different computer and should
 have all of the information it needs to run an InVEST model in its entirity.
 
+A **parameter set** for InVEST is a JSON-formatted text file that contains all
+of the parameters needed to run the current model, where the parameters are
+located on the local hard disk.  Paths to files may be either relative or
+absolute.  If paths are relative, they are interpreted as relative to the
+location of the parameter set file.
+
+A **logfile** for InVEST is a text file that is written to disk for each model
+run.
 """
 
 import os
@@ -233,12 +241,12 @@ def get_datastack_info(filepath):
     Returns:
         A 2-tuple.  The first item of the tuple is one of:
 
-            * ``"archive"`` when the datastack is an archive.
-            * ``"json"`` when the datatack is a json parameter set.
-            * ``"logfile"`` when the datastack is a text logfile.
+            * ``"archive"`` when the file is a datastack archive.
+            * ``"json"`` when the file is a json parameter set.
+            * ``"logfile"`` when the file is a text logfile.
 
         The second item of the tuple is a ParameterSet namedtuple with the raw
-        parsed args, modelname and invest version.
+        parsed args, modelname and invest version that the file was built with.
     """
     if tarfile.is_tarfile(filepath):
         # If it's a tarfile, we need to extract the parameters file to be able
@@ -263,11 +271,10 @@ def get_datastack_info(filepath):
 
 
 def build_datastack_archive(args, model_name, filepath):
-    """Build an InVEST demonstration datastack from an arguments dict.
+    """Build an InVEST datastack from an arguments dict.
 
     Parameters:
-        args (dict): The arguments dictionary to include in the demonstration
-            datastack.
+        args (dict): The arguments dictionary to include in the datastack.
         model_name (string): The python-importable module string of the model
             these args are for.
         filepath (string): The path to where the datastack archive should
@@ -362,7 +369,7 @@ def build_datastack_archive(args, model_name, filepath):
 
 
 def extract_datastack_archive(filepath, dest_dir_path):
-    """Extract a demonstration datastack to a given folder.
+    """Extract a datastack to a given folder.
 
     Parameters:
         filepath (string): The path to a datastack archive on disk.
@@ -372,7 +379,7 @@ def extract_datastack_archive(filepath, dest_dir_path):
 
     Returns:
         ``args`` (dict): A dictionary of arguments from the extracted
-            archive
+            archive.  Paths to files are absolute paths.
     """
     LOGGER.info('Extracting archive %s to %s', filepath, dest_dir_path)
     # extract the archive to the workspace
@@ -466,7 +473,7 @@ def extract_parameter_set(filepath):
             args (dict): The arguments dict for the callable
             invest_version (string): The version of InVEST used to record the
                 parameter set.
-            name (string): The name of the callable or model that these
+            model_name (string): The name of the callable or model that these
                 arguments are intended for.
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(filepath))
@@ -499,15 +506,22 @@ def extract_parameters_from_logfile(filepath):
     """Parse an InVEST logfile for the parameters (args) dictionary.
 
     Argument key-value pairs are parsed, one pair per line, starting the line
-    after the line matching ``Arguments:``, and ending with a blank line.
+    after the line starting with ``"Arguments"``, and ending with a blank line.
     If no such section exists within the logfile, ``ValueError`` will be
     raised.
+
+    If possible, the model name and InVEST version will be parsed from the
+    same line as ``"Arguments"``, but IUI-formatted logfiles (without model
+    name and InVEST version information) are also supported.
 
     Parameters:
         filepath (string): The path to an InVEST logfile on disk.
 
     Returns:
-        args (dict): A dictionary of key-value pairs parsed from the logfile.
+        An instance of the ParameterSet namedtuple.  If a model name and InVEST
+        version cannot be parsed from the Arguments section of the logfile,
+        ``ParameterSet.model_name`` and ``ParameterSet.invest_version`` will be
+        set to ``datastack.UNKNOWN``.
 
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
