@@ -3,16 +3,16 @@
 import logging
 import urllib
 import urllib2
+import json
 
 import Pyro4
 
 LOGGER = logging.getLogger('natcap.invest.remote_logging')
 
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
-_START_URL = ('https://us-central1-natcap-servers.cloudfunctions.net/'
-              'function-invest-model-start')
-_FINISH_URL = ('https://us-central1-natcap-servers.cloudfunctions.net/'
-               'function-invest-model-finish')
+_ENDPOINTS_INDEX_URL = (
+    'http://data.naturalcapitalproject.org/server_registry/'
+    'invest_usage_logger_v2')
 
 
 class LoggingServer(object):
@@ -58,11 +58,14 @@ class LoggingServer(object):
         Returns:
             None
         """
+        endpoints = json.loads(urllib.urlopen(
+            _ENDPOINTS_INDEX_URL).read().strip())
+
         try:
             if mode == 'log':
-                url = _START_URL
+                url = endpoints['START']
             elif mode == 'exit':
-                url = _FINISH_URL
+                url = endpoints['FINISH']
             else:
                 raise ValueError(
                     "Unknown mode '%s', expected 'log' or 'exit'" % mode)
