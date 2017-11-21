@@ -710,13 +710,21 @@ class DatastackOptionsDialog(OptionsDialog):
         """
         result = OptionsDialog.exec_(self)
         if result == QtWidgets.QDialog.Accepted:
-            return DatastackSaveOpts(
+            return_value = DatastackSaveOpts(
                 self.datastack_type.value(),
                 self.use_relative_paths.value(),
                 self.include_workspace.value(),
                 self.save_parameters.value()
             )
-        return None
+        else:
+            return_value = None
+
+        # Clear the inputs now that we have what we need.
+        for input_obj in (self.datastack_type, self.use_relative_paths,
+                          self.include_workspace, self.save_parameters):
+            input_obj.clear()
+
+        return return_value
 
 
 class DatastackArchiveExtractionDialog(OptionsDialog):
