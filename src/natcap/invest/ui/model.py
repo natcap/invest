@@ -25,7 +25,7 @@ import qtawesome
 from . import inputs
 from . import usage
 from .. import utils
-from .. import scenarios
+from .. import datastack
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -41,18 +41,18 @@ ICON_ALERT = qtawesome.icon('fa.exclamation-triangle',
 _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
-_SCENARIO_BASE_FILENAME = 'scenario.invest.%s'
-_SCENARIO_DIALOG_TITLE = 'Select where to save the scenario'
-_SCENARIO_PARAMETER_SET = 'Parameter set (archive parameters)'
-_SCENARIO_DATA_ARCHIVE = 'Data archive (archive parameters and files)'
-_SCENARIO_SAVE_OPTS = {
-    _SCENARIO_PARAMETER_SET: {
-        'title': _SCENARIO_DIALOG_TITLE,
-        'savefile': _SCENARIO_BASE_FILENAME % 'json',
+_DATASTACK_BASE_FILENAME = 'datastack.invest.%s'
+_DATASTACK_DIALOG_TITLE = 'Select where to save the datastack'
+_DATASTACK_PARAMETER_SET = 'Parameter set (saves parameter values only)'
+_DATASTACK_DATA_ARCHIVE = 'Data archive (archives parameters and files)'
+_DATASTACK_SAVE_OPTS = {
+    _DATASTACK_PARAMETER_SET: {
+        'title': _DATASTACK_DIALOG_TITLE,
+        'savefile': _DATASTACK_BASE_FILENAME % 'json',
     },
-    _SCENARIO_DATA_ARCHIVE: {
-        'title': _SCENARIO_DIALOG_TITLE,
-        'savefile': _SCENARIO_BASE_FILENAME % 'tar.gz',
+    _DATASTACK_DATA_ARCHIVE: {
+        'title': _DATASTACK_DIALOG_TITLE,
+        'savefile': _DATASTACK_BASE_FILENAME % 'tar.gz',
     }
 }
 
@@ -72,6 +72,40 @@ def wait_on_signal(signal, timeout=250):
             QtCore.QTimer.singleShot(timeout, loop.quit)
         loop.exec_()
     loop = None
+
+
+def is_probably_datastack(filepath):
+    """Check to see if the file provided is probably a datastack.
+
+    Parameters:
+        filepath (string): A path to a file on disk.
+
+    Returns:
+        True if the filepath is likely to be a datastack.  False otherwise.
+    """
+    # Does the extension indicate that it's probably a datastack?
+    if filepath.endswith(('.invest.json', '.invest.tar.gz')):
+        return True
+
+    # Is it a datastack parameter set?
+    with open(filepath) as opened_file:
+        # Valid JSON starts with '{'
+        if opened_file.read(1) == '{':
+            return True
+
+        # Is it a logfile?
+        if 'Arguments:' in ' '.join(opened_file.readlines(20)):
+            return True
+
+    try:
+        # If we can open it as a .tar.gz, assume it's a datastack
+        tarfile.open(filepath, mode='r|gz', bufsize=1024)
+        return True
+    except tarfile.ReadError:
+        # tarfile.ReadError raised when the file is not formatted as expected.
+        pass
+
+    return False
 
 
 class OptionsDialog(QtWidgets.QDialog):
@@ -220,20 +254,23 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
         return QtWidgets.QMessageBox.exec_(self)
 
 
-class WorkspaceOverwriteConfirmDialog(QtWidgets.QMessageBox):
-    """A message box to confirm that the workspace should be overwritten."""
+class ConfirmDialog(QtWidgets.QMessageBox):
+    """A message box for confirming something with the user."""
 
-    def __init__(self):
+    def __init__(self, title_text, body_text):
         """Initialize the dialog.
 
+        Parameters:
+            title_text (string): The title of the dialog.
+            body_text (string): The body text of the dialog.
+
         Returns:
-            ``None``
+            None.
         """
         QtWidgets.QMessageBox.__init__(self)
         self.setWindowFlags(QtCore.Qt.Dialog)
-        self.setText('<h2>Workspace exists!<h2>')
-        self.setInformativeText(
-            'Overwrite files from a previous run?')
+        self.setText('<h2>%s<h2>' % title_text)
+        self.setInformativeText(body_text)
         self.setStandardButtons(
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
         self.setDefaultButton(QtWidgets.QMessageBox.Yes)
@@ -252,6 +289,7 @@ class SettingsDialog(OptionsDialog):
         """
         OptionsDialog.__init__(self, title='InVEST Settings',
                                modal=True)
+        self.resize(600, 200)
 
         self.global_label = QtWidgets.QLabel(
             'Note: these settings affect all InVEST models.')
@@ -349,8 +387,8 @@ class AboutDialog(QtWidgets.QDialog):
             <h1>InVEST</h1>
             <b>Version {version}</b> <br/> <br/>
 
-            Documentation: <a href="http://data.naturalcapitalproject.org/nightly-
-            build/invest-users-guide/html/">online</a><br/>
+            Documentation: <a href="http://data.naturalcapitalproject.org/
+            nightly-build/invest-users-guide/html/">online</a><br/>
             Homepage: <a href="http://naturalcapitalproject.org">
                         naturalcapitalproject.org</a><br/>
             Copyright 2017, The Natural Capital Project<br/>
@@ -452,8 +490,8 @@ class WindowTitle(QtCore.QObject):
     The title string is dependent on several characteristics:
 
         * The name of the model currently being run.
-        * The filename (basename) of the current scenario file
-        * Whether the scenario has been modified from the time it was last
+        * The filename (basename) of the current datastack file
+        * Whether the datastack has been modified from the time it was last
             saved.
 
     The window's title is updated based on the state of three attributes.
@@ -471,10 +509,11 @@ class WindowTitle(QtCore.QObject):
         filename (string or None): If a string, the filename to be displayed
             to the user in the title bar.  No manipulations are performed on
             this filename; it will be used verbatim.  If ``None``,
-            ``"new scenario"`` is assumed.
-        modified (bool): Whether the scenario file has been modified.  If so,
-            a ``'*'`` is displayed next to the scenario filename.
+            ``"new datastack"`` is assumed.
+        modified (bool): Whether the datastack file has been modified.  If so,
+            a ``'*'`` is displayed next to the datastack filename.
     """
+
     # Signals must be defined as class attributes, and are transformed into
     # instance attributes on object initialization.
     title_changed = QtCore.Signal(unicode)
@@ -489,7 +528,7 @@ class WindowTitle(QtCore.QObject):
         Parameters:
             modelname (string or None): The modelname to use.
             filename (string or None): The filename to use.
-            modified (bool): Whether the scenario file has been modified.
+            modified (bool): Whether the datastack file has been modified.
         """
         QtCore.QObject.__init__(self)
         self.modelname = modelname
@@ -524,58 +563,61 @@ class WindowTitle(QtCore.QObject):
         try:
             return WindowTitle.format_string.format(
                 modelname=self.modelname if self.modelname else 'InVEST',
-                filename=self.filename if self.filename else 'new scenario',
+                filename=self.filename if self.filename else 'new datastack',
                 modified='*' if self.modified else '')
         except AttributeError:
             return ''
 
-ScenarioSaveOpts = collections.namedtuple(
-    'ScenarioSaveOpts', 'scenario_type use_relpaths include_workspace archive_path')
+
+DatastackSaveOpts = collections.namedtuple(
+    'DatastackSaveOpts',
+    'datastack_type use_relpaths include_workspace archive_path')
 
 
-class ScenarioOptionsDialog(OptionsDialog):
-    """Provide a GUI model dialog with options for saving a scenario.
+class DatastackOptionsDialog(OptionsDialog):
+    """Provide a GUI model dialog with options for saving a datastack.
 
-    There are two types of scenarios:
+    There are two types of datastacks:
 
         * Parameter sets (a file with the values of the current inputs)
         * Data archives (all-inclusive archive of current inputs)
 
     This dialog provides a couple of options to the user depending on which
-    type of scenario is desired.  If a parameter set is selected, paths may
-    be stored relative to the location of the scenario file.  Both types of
-    scenarios may optionally include the value of the workspace input.
+    type of datastack is desired.  If a parameter set is selected, paths may
+    be stored relative to the location of the datastack file.  Both types of
+    datastacks may optionally include the value of the workspace input.
 
     Returns:
-        An instance of :ref:ScenarioSaveOpts namedtuple.
+        An instance of :ref:DatastackSaveOpts namedtuple.
     """
 
     def __init__(self, paramset_basename):
-        """Initialize the ScenarioOptionsDialog.
+        """Initialize the DatastackOptionsDialog.
 
         Parameters:
-            paramset_basename (string): The basename of the new parameter set file.
+            paramset_basename (string): The basename of the new parameter set
+                file.
 
         Returns:
             ``None``
         """
         OptionsDialog.__init__(self,
-                               title='Scenario options',
+                               title='Datastack options',
                                modal=True,
-                               accept_text='Save scenario',
+                               accept_text='Save datastack',
                                reject_text='Cancel')
-        self._container = inputs.Container(label='Scenario options')
+        self._container = inputs.Container(label='Datastack options')
         self.layout().addWidget(self._container)
         self.paramset_basename = paramset_basename
 
-        self.scenario_type = inputs.Dropdown(
-            label='Scenario type',
-            options=sorted(_SCENARIO_SAVE_OPTS.keys()))
-        self.scenario_type.set_value(_SCENARIO_PARAMETER_SET)
+        self.datastack_type = inputs.Dropdown(
+            label='Datastack type',
+            options=sorted(_DATASTACK_SAVE_OPTS.keys()))
+        self.datastack_type.set_value(_DATASTACK_PARAMETER_SET)
         self.use_relative_paths = inputs.Checkbox(
             label='Use relative paths')
         self.include_workspace = inputs.Checkbox(
-            label='Include workspace path in scenario')
+            label='Include workspace path in datastack')
         self.include_workspace.set_value(False)
 
         @validation.invest_validator
@@ -605,15 +647,15 @@ class ScenarioOptionsDialog(OptionsDialog):
             return warnings
 
         self.save_parameters = inputs.SaveFile(
-            label=_SCENARIO_SAVE_OPTS[_SCENARIO_PARAMETER_SET]['title'],
+            label=_DATASTACK_SAVE_OPTS[_DATASTACK_PARAMETER_SET]['title'],
             args_key='archive_path',
             validator=_validate_parameter_file,
             default_savefile='{model}_{file_base}'.format(
                 model=self.paramset_basename,
-                file_base=_SCENARIO_SAVE_OPTS[
-                    _SCENARIO_PARAMETER_SET]['savefile']))
+                file_base=_DATASTACK_SAVE_OPTS[
+                    _DATASTACK_PARAMETER_SET]['savefile']))
 
-        self._container.add_input(self.scenario_type)
+        self._container.add_input(self.datastack_type)
         self._container.add_input(self.use_relative_paths)
         self._container.add_input(self.include_workspace)
         self._container.add_input(self.save_parameters)
@@ -621,11 +663,11 @@ class ScenarioOptionsDialog(OptionsDialog):
 
         @QtCore.Slot(unicode)
         def _optionally_disable(value):
-            """A slot to optionally disable inputs based on scenario type.
+            """A slot to optionally disable inputs based on datastack type.
 
             Parameters:
-                value (string): The scenario type, one of the strings in the
-                    scenario type dropdown menu.
+                value (string): The datastack type, one of the strings in the
+                    datastack type dropdown menu.
 
             Returns:
                 ``None``
@@ -635,13 +677,13 @@ class ScenarioOptionsDialog(OptionsDialog):
                 return
 
             self.use_relative_paths.set_interactive(
-                value == _SCENARIO_PARAMETER_SET)
+                value == _DATASTACK_PARAMETER_SET)
 
             self.save_parameters.path_select_button.set_dialog_options(
-                title=_SCENARIO_SAVE_OPTS[value]['title'],
+                title=_DATASTACK_SAVE_OPTS[value]['title'],
                 savefile='{model}_{file_base}'.format(
                     model=self.paramset_basename,
-                    file_base=_SCENARIO_SAVE_OPTS[value]['savefile']))
+                    file_base=_DATASTACK_SAVE_OPTS[value]['savefile']))
 
         @QtCore.Slot(bool)
         def _enable_continue_button(new_validity):
@@ -655,7 +697,7 @@ class ScenarioOptionsDialog(OptionsDialog):
             """
             self.ok_button.setEnabled(new_validity)
 
-        self.scenario_type.value_changed.connect(_optionally_disable)
+        self.datastack_type.value_changed.connect(_optionally_disable)
         self.save_parameters.validity_changed.connect(_enable_continue_button)
 
     def exec_(self):
@@ -663,13 +705,13 @@ class ScenarioOptionsDialog(OptionsDialog):
 
         Returns:
             If the dialog is rejected, ``None`` is returned.
-            If the dialog is accepted, a ``ScenarioSaveOpts`` instance is
+            If the dialog is accepted, a ``DatastackSaveOpts`` instance is
                 returned.
         """
         result = OptionsDialog.exec_(self)
         if result == QtWidgets.QDialog.Accepted:
-            return ScenarioSaveOpts(
-                self.scenario_type.value(),
+            return DatastackSaveOpts(
+                self.datastack_type.value(),
                 self.use_relative_paths.value(),
                 self.include_workspace.value(),
                 self.save_parameters.value()
@@ -677,18 +719,18 @@ class ScenarioOptionsDialog(OptionsDialog):
         return None
 
 
-class ScenarioArchiveExtractionDialog(OptionsDialog):
-    """A dialog for extracting a scenario archive."""
+class DatastackArchiveExtractionDialog(OptionsDialog):
+    """A dialog for extracting a datastack archive."""
 
     def __init__(self):
-        """Initialize the ScenarioArchiveExtractionDialog."""
+        """Initialize the DatastackArchiveExtractionDialog."""
         OptionsDialog.__init__(self,
-                               title='Extract scenario',
+                               title='Extract datastack',
                                modal=True,
                                accept_text='Extract',
                                reject_text='Cancel')
         self._container = inputs.Container(
-            label='Scenario extraction parameters')
+            label='Datastack extraction parameters')
         self.layout().addWidget(self._container)
 
         self.extraction_point = inputs.Folder(
@@ -707,7 +749,7 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
             A 2-tuple.
 
             If the dialog was accepted, the return value is a 2-tuple of the
-            extracted scenario args and the extracion directory.
+            extracted datastack args and the extracion directory.
 
             If the value was rejected, ``(None, None)`` is returned.
         """
@@ -715,7 +757,7 @@ class ScenarioArchiveExtractionDialog(OptionsDialog):
 
         if result == QtWidgets.QDialog.Accepted:
             extract_to_dir = self.extraction_point.value()
-            args = scenarios.extract_scenario_archive(
+            args = datastack.extract_datastack_archive(
                 archive_path, extract_to_dir)
             return (args, extract_to_dir)
         return (None, None)
@@ -813,6 +855,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
     If any of these attributes are not overridden, a warning will be raised.
     """
+
     def __init__(self, label, target, validator, localdoc):
         """Initialize the Model.
 
@@ -846,16 +889,22 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.file_dialog = inputs.FileDialog()
 
         paramset_basename = self.target.__module__.split('.')[-1]
-        self.scenario_options_dialog = ScenarioOptionsDialog(
+        self.datastack_options_dialog = DatastackOptionsDialog(
             paramset_basename=paramset_basename)
 
-        self.scenario_archive_extract_dialog = (
-            ScenarioArchiveExtractionDialog())
+        self.datastack_archive_extract_dialog = (
+            DatastackArchiveExtractionDialog())
         self.quit_confirm_dialog = QuitConfirmDialog()
         self.validation_report_dialog = WholeModelValidationErrorDialog()
-        self.workspace_overwrite_confirm_dialog = (
-            WorkspaceOverwriteConfirmDialog())
         self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
+        self.input_overwrite_confirm_dialog = ConfirmDialog(
+            title_text='Overwrite parameters?',
+            body_text=('Loading a datastack will overwrite any unsaved '
+                       'parameters. Are you sure you want to continue?')
+        )
+        self.workspace_overwrite_confirm_dialog = ConfirmDialog(
+            title_text='Workspace exists!',
+            body_text='Overwrite files from a previous run?')
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
@@ -916,6 +965,13 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.form.submitted.connect(self.execute_model)
 
+        # Settings files
+        self.settings = QtCore.QSettings(
+            QtCore.QSettings.IniFormat,
+            QtCore.QSettings.UserScope,
+            'Natural Capital Project',
+            self.label)
+
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File')
         self.file_menu.addAction(
@@ -924,16 +980,26 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtGui.QKeySequence(QtGui.QKeySequence.Preferences))
         self.file_menu.addAction(
             qtawesome.icon('fa.floppy-o'),
-            'Save as ...', self._save_scenario_as,
+            'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
-        self.file_menu.addAction(
-            qtawesome.icon('fa.arrow-circle-o-up'),
-            'Open parameter file ...', self.load_scenario,
-            QtGui.QKeySequence(QtGui.QKeySequence.Open))
+        self.open_menu = QtWidgets.QMenu('Load datastack')
+        self.build_open_menu()
+        self.file_menu.addMenu(self.open_menu)
+
         self.file_menu.addAction(
             'Quit', self.close,
             QtGui.QKeySequence('Ctrl+Q'))
         self.menuBar().addMenu(self.file_menu)
+
+        self.edit_menu = QtWidgets.QMenu('&Edit')
+        self.edit_menu.addAction(
+            qtawesome.icon('fa.undo', color='red'),
+            'Clear inputs', self.clear_inputs)
+        self.edit_menu.addAction(
+            qtawesome.icon('fa.trash-o'),
+            'Clear parameter cache for %s' % self.label,
+            self.clear_local_settings)
+        self.menuBar().addMenu(self.edit_menu)
 
         self.dev_menu = QtWidgets.QMenu('&Development')
         self.dev_menu.addAction(
@@ -950,12 +1016,124 @@ class InVESTModel(QtWidgets.QMainWindow):
             'View documentation', self._check_local_docs)
         self.menuBar().addMenu(self.help_menu)
 
-        # Settings files
-        self.settings = QtCore.QSettings(
-            QtCore.QSettings.IniFormat,
-            QtCore.QSettings.UserScope,
-            'Natural Capital Project',
-            self.label)
+    def build_open_menu(self):
+        """(Re-)Build the "Open datastack" menu.
+
+        This menu consists of:
+
+            * An option to select a new datastack file
+            * A separator
+            * A dynamically-generated list of the 10 most recently-accessed
+              datastack files.
+
+        Returns:
+            None.
+        """
+        self.open_menu.clear()
+        self.open_file_action = self.open_menu.addAction(
+            qtawesome.icon('fa.arrow-circle-o-up'),
+            'L&oad datastack ...', self.load_datastack,
+            QtGui.QKeySequence(QtGui.QKeySequence.Open))
+        self.open_menu.addSeparator()
+
+        recently_opened_datastacks = json.loads(
+            self.settings.value('recent_datastacks', '{}'))
+
+        for datastack_filepath, timestamp in sorted(
+                recently_opened_datastacks.items(), key=lambda x: x[1]):
+
+            time_obj = datetime.datetime.strptime(timestamp,
+                                                  '%Y-%m-%dT%H:%M:%S.%f')
+            if time_obj .date() == datetime.date.today():
+                date_label = 'Today at %s' % time_obj.strftime('%H:%M')
+            else:
+                date_label = time_obj.strftime('%Y-%m-%d at %H:%m')
+
+            # Shorten the path label to only show the topmost directory and the
+            # datastack filename.
+            datastack_path_directories = datastack_filepath.split(os.sep)
+            if len(datastack_path_directories) <= 2:
+                # path should be short, show the whole path in the menu.
+                path_label = datastack_filepath
+            else:
+                # show the filename and its parent directory in the menu.
+                path_label = os.sep.join(
+                    ['...'] + datastack_path_directories[-2:])
+
+            datastack_action = QtWidgets.QAction('%s (Loaded %s)' % (
+                path_label, date_label), self.open_menu)
+            datastack_action.setData(datastack_filepath)
+            datastack_action.triggered.connect(
+                self._load_recent_datastack_from_action)
+            self.open_menu.addAction(datastack_action)
+
+    @QtCore.Slot()
+    def _load_recent_datastack_from_action(self):
+        """Load a recent datastack when an action is triggered.
+
+        This slot is assumed to be called when an appropriate QAction is
+        triggered.  The ``data()`` set on the QAction must be the filename of
+        the datastack selected.  The datastack will be loaded in the model
+        interface.
+
+        Returns:
+            None.
+        """
+        # self.sender() is set when this is called as a slot
+        self.load_datastack(self.sender().data(), confirm=True)
+
+    def _add_to_open_menu(self, datastack_path):
+        """Add a datastack file to the Open-Recent menu.
+
+        This will also store the datastack path in the model's settings object
+        and will cause the Open-Recent menu to be rebuilt, limiting the number
+        of items in the menu to the 10 most recently-loaded datastack files.
+
+        Parameters:
+            datastack_path (string): The path to the datastack file.
+
+        Returns:
+            None.
+        """
+        # load the {path: timestamp} map as a dict from self.settings
+        # set the {path: timestamp} tuple
+        # store the new value.
+        recently_opened_datastacks = json.loads(
+            self.settings.value('recent_datastacks', '{}'))
+        timestamp = datetime.datetime.now().isoformat()
+
+        recently_opened_datastacks[datastack_path] = timestamp
+
+        most_recent_datastack_tuples = sorted(
+            recently_opened_datastacks.items(), key=lambda x: x[1],
+            reverse=True)[:10]
+
+        self.settings.setValue('recent_datastacks',
+                               json.dumps(dict(most_recent_datastack_tuples)))
+        self.build_open_menu()
+
+    def clear_local_settings(self):
+        """Clear all parameters saved for this model.
+
+        Returns:
+            None.
+        """
+        self.settings.clear()
+        self.statusBar().showMessage('Cached parameters have been cleared.',
+                                     STATUSBAR_MSG_DURATION)
+
+    def clear_inputs(self):
+        """Clear the values from any inputs except the workspace.
+
+        This is done for each input object by calling its clear() method.
+
+        Returns:
+            None
+        """
+        for input_obj in self.inputs:
+            if input_obj is self.workspace:
+                continue
+            input_obj.clear()
 
     def __setattr__(self, name, value):
         """Track Input instances in self.inputs.
@@ -987,42 +1165,42 @@ class InVESTModel(QtWidgets.QMainWindow):
             else:
                 self.local_docs_missing_dialog.exec_()
 
-    def _save_scenario_as(self):
-        """Save the current set of inputs as a scenario.
+    def _save_datastack_as(self):
+        """Save the current set of inputs as a datastack.
 
-        Presents a dialog to the user for input on how to save the scenario,
+        Presents a dialog to the user for input on how to save the datastack,
         and then makes it happen.  A status message is displayed to the
         satus bar when the operation is complete.
 
         Returns:
            ``None``.
         """
-        scenario_opts = self.scenario_options_dialog.exec_()
-        if not scenario_opts:  # user pressed cancel
+        datastack_opts = self.datastack_options_dialog.exec_()
+        if not datastack_opts:  # user pressed cancel
             return
 
         current_args = self.assemble_args()
-        if (not scenario_opts.include_workspace or
-                scenario_opts.scenario_type == _SCENARIO_DATA_ARCHIVE):
+        if (not datastack_opts.include_workspace or
+                datastack_opts.datastack_type == _DATASTACK_DATA_ARCHIVE):
             del current_args['workspace_dir']
 
         LOGGER.info('Current parameters:\n%s', pprint.pformat(current_args))
 
-        if scenario_opts.scenario_type == _SCENARIO_DATA_ARCHIVE:
-            scenarios.build_scenario_archive(
+        if datastack_opts.datastack_type == _DATASTACK_DATA_ARCHIVE:
+            datastack.build_datastack_archive(
                 args=current_args,
                 name=self.target.__module__,
-                scenario_path=scenario_opts.archive_path
+                datastack_path=datastack_opts.archive_path
             )
         else:
-            scenarios.write_parameter_set(
-                filepath=scenario_opts.archive_path,
+            datastack.write_parameter_set(
+                filepath=datastack_opts.archive_path,
                 args=current_args,
                 name=self.target.__module__,
-                relative=scenario_opts.use_relpaths
+                relative=datastack_opts.use_relpaths
             )
 
-        save_filepath = os.path.basename(scenario_opts.archive_path)
+        save_filepath = os.path.basename(datastack_opts.archive_path)
         alert_message = (
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
@@ -1095,9 +1273,9 @@ class InVESTModel(QtWidgets.QMainWindow):
                                          name,
                                          logging_level=logfile_log_level):
                 with usage.log_run(self.target.__module__, args):
-                    LOGGER.log(scenarios.ARGS_LOG_LEVEL,
+                    LOGGER.log(datastack.ARGS_LOG_LEVEL,
                                'Starting model with parameters: \n%s',
-                               scenarios.format_args_dict(args))
+                               datastack.format_args_dict(args))
                     try:
                         return self.target(args=args)
                     except:
@@ -1112,69 +1290,77 @@ class InVESTModel(QtWidgets.QMainWindow):
                       out_folder=args['workspace_dir'])
 
     @QtCore.Slot()
-    def load_scenario(self, scenario_path=None):
-        """Load a scenario.
+    def load_datastack(self, datastack_path=None, confirm=False):
+        """Load a datastack.
 
         This method is also a slot that accepts no arguments.
 
-        A scenario could be any one of:
+        A datastack could be any one of:
 
             * A logfile from a previous model run.
-            * A parameter set (*.invs.json)
-            * A parameter archive (*.invs.tar.gz)
+            * A parameter set (*.invest.json)
+            * A parameter archive (*.invest.tar.gz)
 
-        Scenarios may be saved and loaded through the Model UI. For API access
-        to scenarios, look at :ref:natcap.invest.scenarios.
+        Datastacks may be saved and loaded through the Model UI. For API access
+        to datastacks, look at :ref:natcap.invest.datastack.
 
         Parameters:
-            scenario_path=None (string): The path to the scenario file to
+            datastack_path=None (string): The path to the datastack file to
                 load.  If ``None``, the user will be prompted for a file
                 with a file dialog.
+            confirm=False (boolean): If True, confirm that values will be
+                overwritten by the new datastack.
 
         Returns:
             ``None``
         """
-        if not scenario_path:
-            scenario_path = self.file_dialog.open_file(
-                title='Select scenario', filters=(
-                    'Any file (*.*)',
-                    'Parameter set (*.invs.json)',
-                    'Parameter archive (*.invs.tar.gz)',
-                    'Logfile (*.txt)'))
-
-            # When the user pressed cancel, scenario_path == ''
-            if not scenario_path:
+        if confirm:
+            confirm_response = self.input_overwrite_confirm_dialog.exec_()
+            if confirm_response != QtWidgets.QMessageBox.Yes:
                 return
 
-        LOGGER.info('Loading scenario from "%s"', scenario_path)
-        if tarfile.is_tarfile(scenario_path):  # it's a scenario archive!
+        if not datastack_path:
+            datastack_path = self.file_dialog.open_file(
+                title='Select datastack', filters=(
+                    'Any file (*.*)',
+                    'Parameter set (*.invest.json)',
+                    'Parameter archive (*.invest.tar.gz)',
+                    'Logfile (*.txt)'))
+
+            # When the user pressed cancel, datastack_path == ''
+            if not datastack_path:
+                return
+
+        LOGGER.info('Loading datastack from "%s"', datastack_path)
+        if tarfile.is_tarfile(datastack_path):  # it's a datastack archive!
             # Where should the tarfile be extracted to?
-            args, extract_dir = self.scenario_archive_extract_dialog.exec_(
-                scenario_path)
+            args, extract_dir = self.datastack_archive_extract_dialog.exec_(
+                datastack_path)
             if args is None:
                 return
             window_title_filename = os.path.basename(extract_dir)
         else:
             try:
-                paramset = scenarios.read_parameter_set(scenario_path)
+                paramset = datastack.read_parameter_set(datastack_path)
                 args = paramset.args
             except ValueError:
                 # when a JSON object cannot be decoded, assume it's a logfile.
-                args = scenarios.read_parameters_from_logfile(scenario_path)
-            window_title_filename = os.path.basename(scenario_path)
+                args = datastack.read_parameters_from_logfile(datastack_path)
+            window_title_filename = os.path.basename(datastack_path)
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
 
+        self._add_to_open_menu(datastack_path)
         self.statusBar().showMessage(
-            'Loaded scenario from %s' % os.path.abspath(scenario_path),
+            'Loaded datastack from %s' % os.path.abspath(datastack_path),
             STATUSBAR_MSG_DURATION)
 
-    def load_args(self, scenario_args):
+    def load_args(self, datastack_args):
         """Load arguments from an args dict.
 
         Parameters:
-            scenario_args (dict): The arguments dictionary from which model
+            datastack_args (dict): The arguments dictionary from which model
                 parameters will be loaded.
 
         Returns:
@@ -1184,11 +1370,11 @@ class InVESTModel(QtWidgets.QMainWindow):
                        self.inputs)
         LOGGER.debug(pprint.pformat(_inputs))
 
-        for args_key, args_value in scenario_args.iteritems():
+        for args_key, args_value in datastack_args.iteritems():
             try:
                 _inputs[args_key].set_value(args_value)
             except KeyError:
-                LOGGER.warning(('Scenario args_key %s not associated with '
+                LOGGER.warning(('Datastack args_key %s not associated with '
                                 'any inputs'), args_key)
             except Exception:
                 LOGGER.exception('Error setting %s to %s', args_key,
@@ -1317,7 +1503,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         inputs.center_window(self)
 
-        # if we're not working off a scenario file, load the last run.
+        # if we're not working off a datastack file, load the last run.
         if not self.window_title.filename:
             self.load_lastrun()
 
@@ -1450,3 +1636,70 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.statusBar().showMessage('Loaded parameters from previous run.',
                                      STATUSBAR_MSG_DURATION)
         self.window_title.filename = 'loaded from autosave'
+
+    def dragEnterEvent(self, event):
+        """Handle the event where something has been dragged into the window.
+
+        If the thing dragged into the window meets all the following rules:
+
+            * It has text data
+            * It has exactly 1 URL
+            * The filepath passed via the URL is probably a datastack (as
+                determined by ``model.is_probably_datastack()``)
+
+        Then a visual change is made to the model window (text color changes
+        and the background color of the window changes) and we accept the
+        event.
+
+        Parameters:
+            event (QDragEnterEvent): The event to handle.
+
+        Returns:
+            None.
+        """
+        if (event.mimeData().hasText() and
+                len(event.mimeData().urls()) == 1 and
+                is_probably_datastack(event.mimeData().urls()[0].path())):
+            LOGGER.info('Accepting drag enter event for "%s"',
+                        event.mimeData().text())
+            self.setStyleSheet(
+                'QWidget {background-color: rgb(255, 255, 255); '
+                'color: rgb(200, 200, 200)}')
+            event.accept()
+        else:
+            LOGGER.info('Rejecting drag enter event for "%s"',
+                        event.mimeData().text())
+            self.setStyleSheet('')
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        """If the user drags something out of the model, reset the stylesheet.
+
+        This is triggered when something dragged into the window is dragged
+        back out.
+
+        Parameters:
+            event (QDragLeaveEvent): The event to handle.
+
+        Returns:
+            None.
+        """
+        self.setStyleSheet('')
+
+    def dropEvent(self, event):
+        """When something is dropped onto the window.
+
+        Called after it's been dragged into the winodw via a QDragEnterEvent.
+        When something is dropped, we assume that it has 1 URL and that its
+        path should be loaded as a datastack.
+
+        Parameters:
+            event (QDropEvent): The event to handle.
+
+        Returns:
+            None.
+        """
+        path = event.mimeData().urls()[0].path()
+        self.setStyleSheet('')
+        self.load_datastack(path)
+
