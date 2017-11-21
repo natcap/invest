@@ -15,75 +15,46 @@ LOGGER = logging.getLogger('invest-autotest.py')
 # Mapping of model keys to datastacks to run through the model's UI.
 # Paths are assumed to be relative to the data root.
 DATASTACKS = {
-    'carbon': [os.path.join('carbon', 'carbon_willamette.invs.json')],
-    'coastal_blue_carbon': [
-        os.path.join('CoastalBlueCarbon', 'cbc_galveston_bay.invs.json')],
-    'coastal_blue_carbon_preprocessor': [
-        os.path.join('CoastalBlueCarbon', 'cbc_pre_galveston_bay.invs.json')],
-    'coastal_vulnerability': [
-        os.path.join('CoastalProtection', 'coastal_vuln_wcvi.invs.json')],
+    'carbon': ['carbon_willamette.invs.json'],
+    'coastal_blue_carbon': ['cbc_galveston_bay.invs.json'],
+    'coastal_blue_carbon_preprocessor': ['cbc_pre_galveston_bay.invs.json'],
+    'coastal_vulnerability': ['coastal_vuln_wcvi.invs.json'],
     'crop_production_percentile': [
-        os.path.join('CropProduction', 'sample_user_data',
-                     'crop_production_percentile_demo.invs.json')],
+        'crop_production_percentile_demo.invs.json'],
     'crop_production_regression': [
-        os.path.join('CropProduction', 'sample_user_data',
-                     'crop_production_regression_demo.invs.json')],
-    'delineateit': [
-        os.path.join('Base_Data', 'Freshwater',
-                     'delineateit_willamette.invs.json')],
-    'finfish_aquaculture': [
-        os.path.join('Aquaculture',
-                     'atlantic_salmon_british_columbia.invs.json')],
+        'crop_production_regression_demo.invs.json'],
+    'delineateit': ['delineateit_willamette.invs.json'],
+    'finfish_aquaculture': ['atlantic_salmon_british_columbia.invs.json'],
     'fisheries': [
-        os.path.join('Fisheries', 'blue_crab_galveston_bay.invs.json'),
-        os.path.join('Fisheries', 'dungeness_crab_hood_canal.invs.json'),
-        os.path.join('Fisheries', 'spiny_lobster_belize.invs.json'),
-        os.path.join('Fisheries', 'white_shrimp_galveston_bay.invs.json'),
+        'blue_crab_galveston_bay.invs.json',
+        'dungeness_crab_hood_canal.invs.json',
+        'spiny_lobster_belize.invs.json',
+        'white_shrimp_galveston_bay.invs.json',
     ],
-    'fisheries_hst': [
-        os.path.join('Fisheries', 'fisheries_hst_demo.invs.json')],
-    'forest_carbon_edge_effect': [
-        os.path.join('forest_carbon_edge_effect',
-                     'forest_carbon_amazonia.invs.json')],
-    'globio': [os.path.join('globio', 'globio_demo.invs.json')],
-    'habitat_quality': [
-        os.path.join('HabitatQuality', 'habitat_quality_willamette.invs.json')],
-    'hra': [os.path.join('HabitatRiskAssess', 'hra_wcvi.invs.json')],
-    'habitat_risk_assessment_preprocessor': [
-        os.path.join('HabitatRiskAssess', 'hra_pre_wcvi.invs.json')],
-    'hydropower_water_yield': [
-        os.path.join('Hydropower', 'annual_water_yield_willamette.invs.json')],
-    'ndr': [
-        os.path.join('Base_Data', 'Freshwater',
-                     'ndr_n_p_willamette.invs.json')],
-    'overlap_analysis': [
-        os.path.join('OverlapAnalysis', 'overlap_wcvi.invs.json')],
-    'overlap_analysis_mz': [
-        os.path.join('OverlapAnalysis', 'overlap_mz_wcvi.invs.json')],
-    'pollination': [
-        os.path.join('pollination', 'pollination_willamette.invs.json')],
-    'recreation': [
-        os.path.join('recreation', 'recreation_andros.invs.json')],
-    'routedem': [
-        os.path.join('Base_Data', 'Freshwater',
-                     'routedem_willamette.invs.json')],
-    'scenario_generator_proximity': [
-        os.path.join('scenario_proximity',
-                     'scenario_proximity_amazonia.invs.json')],
-    'scenario_generator': [
-        os.path.join('ScenarioGenerator', 'scenario_generator_demo.invs.json')],
-    'scenic_quality': [
-        os.path.join('ScenicQuality', 'wind_turbines_wcvi.invs.json')],
-    'sdr': [
-        os.path.join('Base_Data', 'Freshwater', 'sdr_willamette.invs.json')],
-    'seasonal_water_yield': [
-        os.path.join('seasonal_water_yield', 'swy_willamette.invs.json')],
-    'wind_energy': [os.path.join('WindEnergy', 'new_england.invs.json')],
+    'fisheries_hst': ['fisheries_hst_demo.invs.json'],
+    'forest_carbon_edge_effect': ['forest_carbon_amazonia.invs.json'],
+    'globio': ['globio_demo.invs.json'],
+    'habitat_quality': ['habitat_quality_willamette.invs.json'],
+    'hra': ['hra_wcvi.invs.json'],
+    'habitat_risk_assessment_preprocessor': ['hra_pre_wcvi.invs.json'],
+    'hydropower_water_yield': ['annual_water_yield_willamette.invs.json'],
+    'ndr': ['ndr_n_p_willamette.invs.json'],
+    'overlap_analysis': ['overlap_wcvi.invs.json'],
+    'overlap_analysis_mz': ['overlap_mz_wcvi.invs.json'],
+    'pollination': ['pollination_willamette.invs.json'],
+    'recreation': ['recreation_andros.invs.json'],
+    'routedem': ['routedem_willamette.invs.json'],
+    'scenario_generator_proximity': ['scenario_proximity_amazonia.invs.json'],
+    'scenario_generator': ['scenario_generator_demo.invs.json'],
+    'scenic_quality': ['wind_turbines_wcvi.invs.json'],
+    'sdr': ['sdr_willamette.invs.json'],
+    'seasonal_water_yield': ['swy_willamette.invs.json'],
+    'wind_energy': ['new_england.invs.json'],
     'wave_energy': [
-        os.path.join('WaveEnergy', 'wave_energy_aquabuoy_wcvi.invs.json'),
-        os.path.join('WaveEnergy', 'wave_energy_owc_wcvi.invs.json'),
-        os.path.join('WaveEnergy', 'wave_energy_pelamis_wcvi.invs.json'),
-        os.path.join('WaveEnergy', 'wave_energy_wavedragon_wcvi.invs.json'),
+        'wave_energy_aquabuoy_wcvi.invs.json',
+        'wave_energy_owc_wcvi.invs.json',
+        'wave_energy_pelamis_wcvi.invs.json',
+        'wave_energy_wavedragon_wcvi.invs.json',
     ],
 }
 
