@@ -1,17 +1,21 @@
 """Script to generate shapefiles from InVEST logging database."""
 
-import os
 import urllib
 import urllib2
 import datetime
+import json
 
 
-INVEST_USAGE_POLYGON_FUNC = (
-    'https://us-central1-natcap-servers.cloudfunctions.net/'
-    'function-invest-model-fetch-usage-polygon')
+_ENDPOINTS_INDEX_URL = (
+    'http://data.naturalcapitalproject.org/server_registry/'
+    'invest_usage_logger_v2/index.html')
 
 
 if __name__ == '__main__':
+    USAGE_POLYGON_URL = json.loads(urllib.urlopen(
+        _ENDPOINTS_INDEX_URL).read().strip())['STATS']
+
+
     OUT_FILENAME = 'invest_usage_%s.geojson' % (
         datetime.datetime.now().isoformat('_'))
     print 'Writing usage to %s' % OUT_FILENAME
@@ -19,5 +23,5 @@ if __name__ == '__main__':
         print 'downloading run_summary vector'
         out_geojson.write(
             urllib2.urlopen(urllib2.Request(
-                INVEST_USAGE_POLYGON_FUNC)).read())
+                USAGE_POLYGON_URL)).read())
     print 'Done.'

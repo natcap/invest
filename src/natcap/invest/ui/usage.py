@@ -22,12 +22,10 @@ import pygeoprocessing
 from .. import utils
 
 ENCODING = sys.getfilesystemencoding()
-INVEST_USAGE_LOGGER_START_URL = (
-    'https://us-central1-natcap-servers.cloudfunctions.net/'
-    'function-invest-model-start')
-INVEST_USAGE_LOGGER_FINISH_URL = (
-    'https://us-central1-natcap-servers.cloudfunctions.net/'
-    'function-invest-model-finish')
+
+_ENDPOINTS_INDEX_URL = (
+    'http://data.naturalcapitalproject.org/server_registry/'
+    'invest_usage_logger_v2/index.html')
 
 
 @contextlib.contextmanager
@@ -216,8 +214,10 @@ def _log_exit_status(session_id, status):
             'session_id': session_id,
             'status': status,
         }
+        log_finish_url = json.loads(urllib.urlopen(
+            _ENDPOINTS_INDEX_URL).read().strip())['FINISH']
 
-        urllib2.urlopen(urllib2.Request(INVEST_USAGE_LOGGER_FINISH_URL,
+        urllib2.urlopen(urllib2.Request(log_finish_url,
                                         urllib.urlencode(payload)))
     except Exception as exception:
         # An exception was thrown, we don't care.
@@ -265,8 +265,10 @@ def _log_model(model_name, model_args, session_id=None):
             'bounding_box_union': str(bounding_box_union),
             'session_id': session_id,
         }
+        log_start_url = json.loads(urllib.urlopen(
+            _ENDPOINTS_INDEX_URL).read().strip())['START']
 
-        urllib2.urlopen(urllib2.Request(INVEST_USAGE_LOGGER_START_URL,
+        urllib2.urlopen(urllib2.Request(log_start_url,
                                         urllib.urlencode(payload)))
     except Exception as exception:
         # An exception was thrown, we don't care.
