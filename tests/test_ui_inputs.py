@@ -1931,6 +1931,16 @@ class DatastackOptionsDialogTests(_QtTest):
                 new_paramset_path),  # datastack path
             return_options)
 
+        # verify that the options have been cleared.
+        for input_obj, expected_value in (
+                (options_dialog.datastack_type,
+                 options_dialog.datastack_type.options[0]),
+                (options_dialog.use_relative_paths, False),
+                (options_dialog.include_workspace, False),
+                (options_dialog.save_parameters, '')):
+            self.assertEqual(input_obj.value(), expected_value)
+
+
     def test_dialog_cancelled(self):
         """UI Datastack Options: Verify return value when dialog cancelled."""
         from natcap.invest.ui import model
