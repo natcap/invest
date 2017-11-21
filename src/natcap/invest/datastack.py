@@ -1,11 +1,19 @@
-"""Functions for creating and extracting InVEST demonstration datastacks.
+"""Functions for reading and writing InVEST model parameters.
 
-A demonstration datastack for InVEST is a compressed archive that includes the
+A **datastack** for InVEST is a compressed archive that includes the
 arguments for a model, all of the data files referenced by the arguments, and
 a logfile with some extra information about how the archive was created.  The
 resulting archive can then be extracted on a different computer and should
 have all of the information it needs to run an InVEST model in its entirity.
 
+A **parameter set** for InVEST is a JSON-formatted text file that contains all
+of the parameters needed to run the current model, where the parameters are
+located on the local hard disk.  Paths to files may be either relative or
+absolute.  If paths are relative, they are interpreted as relative to the
+location of the parameter set file.
+
+A **logfile** for InVEST is a text file that is written to disk for each model
+run.
 """
 
 import os
@@ -29,9 +37,13 @@ from . import __version__
 
 LOGGER = logging.getLogger(__name__)
 ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
+DATASTACK_EXTENSION = '.invest.tar.gz'
+PARAMETER_SET_EXTENSION = '.invest.json'
+DATASTACK_PARAMETER_FILENAME = 'parameters' + PARAMETER_SET_EXTENSION
+UNKNOWN = 'UNKNOWN'
 
 ParameterSet = collections.namedtuple('ParameterSet',
-                                      'args invest_version name')
+                                      'args model_name invest_version')
 
 
 def _collect_spatial_files(filepath, data_dir):
@@ -190,7 +202,7 @@ class _ArgsKeyFilter(logging.Filter):
         return True
 
 
-def format_args_dict(args_dict):
+def format_args_dict(args_dict, model_name):
     """Nicely format an arguments dictionary for writing to a stream.
 
     If printed to a console, the returned string will be aligned in two columns
@@ -199,6 +211,7 @@ def format_args_dict(args_dict):
 
     Parameters:
         args_dict (dict): The args dictionary to format.
+        model_name (string): The model name (in python package import format)
 
     Returns:
         A formatted, unicode string.
@@ -212,18 +225,64 @@ def format_args_dict(args_dict):
     format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
 
     args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = u"Arguments:\n%s\n" % args_string
+    args_string = u"Arguments for InVEST %s %s:\n%s\n" % (model_name,
+                                                          __version__,
+                                                          args_string)
     return args_string
 
 
-
-
-def build_datastack_archive(args, name, datastack_path):
-    """Build an InVEST demonstration datastack from an arguments dict.
+def get_datastack_info(filepath):
+    """Get information about a datastack.
 
     Parameters:
-        args (dict): The arguments dictionary to include in the demonstration
-            datastack.
+        filepath (string): The path to a file on disk that can be extracted as
+            a datastack, parameter set, or logfile.
+
+    Returns:
+        A 2-tuple.  The first item of the tuple is one of:
+
+            * ``"archive"`` when the file is a datastack archive.
+            * ``"json"`` when the file is a json parameter set.
+            * ``"logfile"`` when the file is a text logfile.
+
+        The second item of the tuple is a ParameterSet namedtuple with the raw
+        parsed args, modelname and invest version that the file was built with.
+    """
+    if tarfile.is_tarfile(filepath):
+        # If it's a tarfile, we need to extract the parameters file to be able
+        # to inspect the parameters and model details.
+        with tarfile.open(filepath) as archive:
+            try:
+                temp_directory = tempfile.mkdtemp()
+                archive.extract('./' + DATASTACK_PARAMETER_FILENAME,
+                                temp_directory)
+                return 'archive', extract_parameter_set(
+                    os.path.join(temp_directory, DATASTACK_PARAMETER_FILENAME))
+            finally:
+                try:
+                    shutil.rmtree(temp_directory)
+                except OSError:
+                    # If something happens and we can't remove temp_directory,
+                    # just log the exception and continue with program
+                    # execution.
+                    LOGGER.exception('Could not remove %s', temp_directory)
+
+    try:
+        return 'json', extract_parameter_set(filepath)
+    except ValueError:
+        # When a JSON object can't be decoded, it must not be a paramset.
+        pass
+
+    return 'logfile', extract_parameters_from_logfile(filepath)
+
+
+def build_datastack_archive(args, model_name, datastack_path):
+    """Build an InVEST datastack from an arguments dict.
+
+    Parameters:
+        args (dict): The arguments dictionary to include in the datastack.
+        model_name (string): The python-importable module string of the model
+            these args are for.
         datastack_path (string): The path to where the datastack archive should
             be written.
 
@@ -291,14 +350,15 @@ def build_datastack_archive(args, name, datastack_path):
     with utils.log_to_file(logfile, log_fmt=log_format) as handler:
         new_args = {
             'args': _recurse(args, handler),
-            'name': name,
+            'model_name': model_name,
             'invest_version': __version__
         }
 
     LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
     LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
     # write parameters to a new json file in the temp workspace
-    param_file_uri = os.path.join(temp_workspace, 'parameters.json')
+    param_file_uri = os.path.join(temp_workspace,
+                                  'parameters' + PARAMETER_SET_EXTENSION)
     with codecs.open(param_file_uri, 'w', encoding='UTF-8') as params:
         params.write(json.dumps(new_args,
                                 encoding='UTF-8',
@@ -315,18 +375,17 @@ def build_datastack_archive(args, name, datastack_path):
 
 
 def extract_datastack_archive(datastack_path, dest_dir_path):
-    """Extract a demonstration datastack to a given folder.
+    """Extract a datastack to a given folder.
 
     Parameters:
-        datastack_path (string): The path to a demonstration datastack archive
-            on disk.
+        datastack_path (string): The path to a datastack archive on disk.
         dest_dir_path (string): The path to a directory.  The contents of the
             demonstration datastack archive will be extracted into this
             directory. If the directory does not exist, it will be created.
 
     Returns:
         ``args`` (dict): A dictionary of arguments from the extracted
-            archive
+            archive.  Paths to files are absolute paths.
     """
     LOGGER.info('Extracting archive %s to %s', datastack_path, dest_dir_path)
     # extract the archive to the workspace
@@ -335,7 +394,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
 
     # get the arguments dictionary
     arguments_dict = json.load(open(
-        os.path.join(dest_dir_path, 'parameters.json')))['args']
+        os.path.join(dest_dir_path, DATASTACK_PARAMETER_FILENAME)))['args']
 
     def _recurse(args_param):
         if isinstance(args_param, dict):
@@ -361,18 +420,18 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
     return new_args
 
 
-def write_parameter_set(filepath, args, name, relative=False):
+def build_parameter_set(args, model_name, paramset_path, relative=False):
     """Record a parameter set to a file on disk.
 
     Parameters:
-        filepath (string): The path to the file on disk where the parameters
-            should be recorded.
         args (dict): The args dictionary to record to the parameter set.
-        name (string): An identifier string for the callable or InVEST
+        model_name (string): An identifier string for the callable or InVEST
             model that would accept the arguments given.
+        paramset_path (string): The path to the file on disk where the
+            parameters should be recorded.
         relative (bool): Whether to save the paths as relative.  If ``True``,
             The datastack assumes that paths are relative to the parent
-            directory of ``filepath``.
+            directory of ``paramset_path``.
 
     Returns:
         ``None``
@@ -390,29 +449,29 @@ def write_parameter_set(filepath, args, name, relative=False):
                     # Handle special case where python assumes that '.'
                     # represents the CWD
                     if (normalized_path == '.' or
-                            os.path.dirname(filepath) == normalized_path):
+                            os.path.dirname(paramset_path) == normalized_path):
                         return '.'
                     return os.path.relpath(normalized_path,
-                                           os.path.dirname(filepath))
+                                           os.path.dirname(paramset_path))
                 return normalized_path
         return args_param
     parameter_data = {
-        'name': name,
+        'model_name': model_name,
         'invest_version': __version__,
         'args': _recurse(args)
     }
-    json.dump(parameter_data, codecs.open(filepath, 'w', encoding='UTF-8'),
+    json.dump(parameter_data, codecs.open(paramset_path, 'w', encoding='UTF-8'),
               encoding='UTF-8', indent=4, sort_keys=True)
 
 
-def read_parameter_set(filepath):
+def extract_parameter_set(paramset_path):
     """Extract and return attributes from a parameter set.
 
     Any string values found will have environment variables expanded.  See
     :py:ref:os.path.expandvars and :py:ref:os.path.expanduser for details.
 
     Parameters:
-        filepath (string): The file containing a parameter set.
+        paramset_path (string): The file containing a parameter set.
 
     Returns:
         A ``ParameterSet`` namedtuple with these attributes::
@@ -420,11 +479,11 @@ def read_parameter_set(filepath):
             args (dict): The arguments dict for the callable
             invest_version (string): The version of InVEST used to record the
                 parameter set.
-            name (string): The name of the callable or model that these
+            model_name (string): The name of the callable or model that these
                 arguments are intended for.
     """
-    paramset_parent_dir = os.path.dirname(os.path.abspath(filepath))
-    read_params = json.load(codecs.open(filepath, 'r', encoding='UTF-8'))
+    paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
+    read_params = json.load(codecs.open(paramset_path, 'r', encoding='UTF-8'))
 
     def _recurse(args_param):
         if isinstance(args_param, dict):
@@ -445,23 +504,30 @@ def read_parameter_set(filepath):
         return args_param
 
     return ParameterSet(_recurse(read_params['args']),
-                        read_params['invest_version'],
-                        read_params['name'])
+                        read_params['model_name'],
+                        read_params['invest_version'])
 
 
-def read_parameters_from_logfile(logfile_path):
+def extract_parameters_from_logfile(logfile_path):
     """Parse an InVEST logfile for the parameters (args) dictionary.
 
     Argument key-value pairs are parsed, one pair per line, starting the line
-    after the line matching ``Arguments:``, and ending with a blank line.
+    after the line starting with ``"Arguments"``, and ending with a blank line.
     If no such section exists within the logfile, ``ValueError`` will be
     raised.
+
+    If possible, the model name and InVEST version will be parsed from the
+    same line as ``"Arguments"``, but IUI-formatted logfiles (without model
+    name and InVEST version information) are also supported.
 
     Parameters:
         logfile_path (string): The path to an InVEST logfile on disk.
 
     Returns:
-        args (dict): A dictionary of key-value pairs parsed from the logfile.
+        An instance of the ParameterSet namedtuple.  If a model name and InVEST
+        version cannot be parsed from the Arguments section of the logfile,
+        ``ParameterSet.model_name`` and ``ParameterSet.invest_version`` will be
+        set to ``datastack.UNKNOWN``.
 
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
@@ -473,7 +539,17 @@ def read_parameters_from_logfile(logfile_path):
             line = line.strip()
 
             if not args_started:
-                if line == 'Arguments:':
+                # Line would look something like this:
+                # "Arguments for InVEST natcap.invest.carbon 3.4.1rc1:\n"
+                if line.startswith('Arguments'):
+                    try:
+                        modelname, invest_version = line.split(' ')[3:5]
+                        invest_version = invest_version.replace(':', '')
+                    except ValueError:
+                        # Old-style logfiles don't provide the modelename or
+                        # version info.
+                        modelname = UNKNOWN
+                        invest_version = UNKNOWN
                     args_started = True
                     continue
             else:
@@ -490,12 +566,32 @@ def read_parameters_from_logfile(logfile_path):
         args_key = re.findall(r'^\w*', argument)[0]
         args_value = re.sub('^%s' % args_key, '', argument).strip()
 
-        for cast_to_type in (float, int):
-            try:
-                args_value = cast_to_type(args_value)
-                break
-            except ValueError:
-                pass
+        def _smart_cast(value):
+            """Attempt to cast a value to an int or a float.
+
+            Leave the value be if the value cannot be cast to either one.
+
+            Parameters:
+                value: The parameter value to try to cast.
+
+            Returns:
+                A possibly-cast version of the original value.
+            """
+            for cast_to_type in (float, int):
+                try:
+                    value = cast_to_type(value)
+                    break
+                except ValueError:
+                    pass
+            return value
+
+        if args_value.startswith('[') and args_value.endswith(']'):
+            # it's a list!  Just need to cast the types.
+            # fancy indexing excludes [ / ]
+            args_value = [_smart_cast(list_item) for list_item in
+                          args_value[1:-1].split(', ')]
+        else:
+            args_value = _smart_cast(args_value)
 
         args_dict[args_key] = args_value
-    return args_dict
+    return ParameterSet(args_dict, modelname, invest_version)

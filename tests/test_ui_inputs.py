@@ -2278,18 +2278,18 @@ class ModelTests(_QtTest):
     def test_load_datastack_paramset(self):
         """UI Model: Check that we can load a parameter set datastack."""
         from natcap.invest import datastack
+        model_ui = ModelTests.build_model()
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'paramset.json')
-        datastack.write_parameter_set(
-            datastack_filepath,
+        datastack.build_parameter_set(
             args=args,
-            name='test_model',
+            model_name=model_ui.target.__module__,
+            paramset_path=datastack_filepath,
             relative=False)
 
-        model_ui = ModelTests.build_model()
         model_ui.load_datastack(datastack_filepath)
 
         self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
@@ -2298,15 +2298,16 @@ class ModelTests(_QtTest):
     def test_load_datastack_archive(self):
         """UI Model: Check that we can load a parameter archive."""
         from natcap.invest import datastack
+        model_ui = ModelTests.build_model()
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        datastack.build_datastack_archive(args, 'test_model', datastack_filepath)
+        datastack.build_datastack_archive(args, model_ui.target.__module__,
+                                          datastack_filepath)
 
         extracted_archive = os.path.join(self.workspace, 'archive_dir')
-        model_ui = ModelTests.build_model()
         def _set_extraction_dir():
             model_ui.datastack_archive_extract_dialog.extraction_point.set_value(
                 extracted_archive)
@@ -2320,18 +2321,19 @@ class ModelTests(_QtTest):
 
     def test_load_datastack_from_logfile(self):
         """UI Model: Check that we can load parameters from a logfile."""
+        import natcap.invest
+        model_ui = ModelTests.build_model()
         # write a sample logfile
         logfile_path = os.path.join(self.workspace, 'logfile')
         with open(logfile_path, 'w') as logfile:
             logfile.write(textwrap.dedent("""
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO
-                Arguments:
+                Arguments for InVEST %s %s:
                 suffix                           foo
                 workspace_dir                    some_workspace_dir
 
-            """))
+            """ % (model_ui.target.__module__, natcap.invest.__version__)))
 
-        model_ui = ModelTests.build_model()
         model_ui.load_datastack(logfile_path)
 
         self.assertEqual(model_ui.workspace.value(), 'some_workspace_dir')
@@ -2340,13 +2342,14 @@ class ModelTests(_QtTest):
     def test_load_datastack_extraction_dialog_cancelled(self):
         """UI Model: coverage when user clicks cancel in datastack dialog."""
         from natcap.invest import datastack
+        model_ui = ModelTests.build_model()
         args = {
             'workspace_dir': 'foodir',
             'suffix': 'suffix',
         }
         datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        datastack.build_datastack_archive(args, 'test_model', datastack_filepath)
-        model_ui = ModelTests.build_model()
+        datastack.build_datastack_archive(args, model_ui.target.__module__,
+                                          datastack_filepath)
 
         def _cancel_dialog():
             model_ui.datastack_archive_extract_dialog.reject()
@@ -2530,16 +2533,16 @@ class ModelTests(_QtTest):
 
     def test_drag_n_drop_datastack(self):
         """UI Model: Verify that we can drag-n-drop a valid datastack."""
-        # Write a sample datastack file to drop
+        model = ModelTests.build_model()
+        # Write a sample parameter set file to drop
         datastack_filepath = os.path.join(self.workspace, 'datastack.invest.json')
         with open(datastack_filepath, 'w') as sample_datastack:
             sample_datastack.write(json.dumps(
                 {'args': {'workspace_dir': '/foo/bar',
                           'suffix': 'baz'},
-                 'name': 'test_model',
+                 'model_name': model.target.__module__,
                  'invest_version': 'testing'}))
 
-        model = ModelTests.build_model()
         mime_data = QtCore.QMimeData()
         mime_data.setText('Some datastack')
         mime_data.setUrls([QtCore.QUrl(datastack_filepath)])
@@ -2591,13 +2594,15 @@ class ModelTests(_QtTest):
         datastack_created = []
         for datastack_index in range(11):
             datastack_path = os.path.join(self.workspace,
-                                         'datastack_%s.invest.json' %
-                                         datastack_index)
+                                          'datastack_%s.invest.json' %
+                                          datastack_index)
             args = {
                 'workspace_dir': 'workspace_%s' % datastack_index,
             }
 
-            datastack.write_parameter_set(datastack_path, args, 'test')
+            datastack.build_parameter_set(args,
+                                          model_ui.target.__module__,
+                                          datastack_path)
             datastack_created.append(datastack_path)
             model_ui.load_datastack(datastack_path)
 
@@ -2659,11 +2664,13 @@ class ModelTests(_QtTest):
         model_ui = ModelTests.build_model()
 
         datastack_filepath = os.path.join(self.workspace,
-                                         'datastack.invest.json')
+                                          'datastack.invest.json')
         args = {
             'workspace_dir': 'workspace_foo',
         }
-        datastack.write_parameter_set(datastack_filepath, args, 'test')
+        datastack.build_parameter_set(args,
+                                      model_ui.target.__module__,
+                                      datastack_filepath)
 
         model_ui.load_datastack(datastack_filepath)
         self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
@@ -2706,6 +2713,41 @@ class ModelTests(_QtTest):
         # clear settings and verify it's been cleared.
         model_ui.clear_local_settings()
         self.assertEqual(model_ui.settings.allKeys(), [])
+
+    def test_reject_on_modelname_mismatch(self):
+        """UI Model: confirm when datastack modelname != model modelname."""
+        from natcap.invest.ui import model
+        from natcap.invest import datastack
+
+        filepath = os.path.join(self.workspace, 'paramset.json')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        datastack.build_parameter_set(args, 'test_model', filepath)
+
+        model_ui = ModelTests.build_model()
+
+        def _confirm_datastack_load():
+            self.assertTrue(
+                model_ui.model_mismatch_confirm_dialog.isVisible())
+
+            # Both the parameter's model name ('test_model') and the target
+            # model's module name ('test_ui_inputs') should be in the
+            # informative text.
+            info_text = model_ui.model_mismatch_confirm_dialog.informativeText()
+            self.assertTrue(model_ui.target.__module__ in info_text)
+            self.assertTrue('test_model' in info_text)
+
+            # Reject the dialog.
+            QTest.mouseClick(
+                model_ui.model_mismatch_confirm_dialog.button(
+                    QtWidgets.QMessageBox.Cancel),
+                QtCore.Qt.LeftButton)
+
+        QtCore.QTimer.singleShot(500, _confirm_datastack_load)
+
+        # Verify that we haven't changed anything when the dialog is cancelled.
+        previous_args = model_ui.assemble_args()
+        model_ui.load_datastack(filepath)
+        self.assertEqual(previous_args, model_ui.assemble_args())
 
 
 class ValidatorTest(_QtTest):
@@ -2757,7 +2799,7 @@ class IsProbablyDatastackTests(unittest.TestCase):
 
         filepath = os.path.join(self.workspace, 'paramset.json')
         args = {'foo': 'foo', 'bar': 'bar'}
-        datastack.write_parameter_set(filepath, args, 'test_model')
+        datastack.build_parameter_set(args, 'test_model', filepath)
 
         self.assertTrue(model.is_probably_datastack(filepath))
 
