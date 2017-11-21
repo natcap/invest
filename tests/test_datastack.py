@@ -43,8 +43,9 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(len(os.listdir(out_directory)), 3)
 
         self.assertEqual(
-            json.load(open(os.path.join(out_directory,
-                                        'parameters.json')))['args'],
+            json.load(open(
+                os.path.join(out_directory,
+                             datastack.DATASTACK_PARAMETER_FILENAME)))['args'],
             {'a': 1, 'b': u'hello there', 'c': u'plain bytestring', 'd': ''})
 
     @scm.skip_if_data_missing(FW_DATA)
@@ -65,7 +66,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
 
         self.assertEqual(len(archived_params), 1)
         pygeoprocessing.testing.assert_rasters_equal(
@@ -84,7 +86,7 @@ class DatastacksTest(unittest.TestCase):
 
         dest_dir = os.path.join(self.workspace, 'extracted_archive')
         archived_params = datastack.extract_datastack_archive(archive_path,
-                                                             dest_dir)
+                                                              dest_dir)
         pygeoprocessing.testing.assert_rasters_equal(
             params['raster'],
             os.path.join(dest_dir, 'data', archived_params['raster']))
@@ -112,7 +114,7 @@ class DatastacksTest(unittest.TestCase):
 
             # Collect the vector's files into a single archive
             datastack.build_datastack_archive(params, 'sample_model',
-                                             archive_path)
+                                              archive_path)
 
             # extract the archive
             out_directory = os.path.join(dest_dir, 'extracted_archive')
@@ -120,7 +122,9 @@ class DatastacksTest(unittest.TestCase):
                 tar.extractall(out_directory)
 
             archived_params = json.load(
-                open(os.path.join(out_directory, 'parameters.json')))['args']
+                open(os.path.join(
+                    out_directory,
+                    datastack.DATASTACK_PARAMETER_FILENAME)))['args']
             pygeoprocessing.testing.assert_vectors_equal(
                 params['vector'], os.path.join(out_directory,
                                                archived_params['vector']),
@@ -146,7 +150,9 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(
+                out_directory,
+                datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         pygeoprocessing.testing.assert_csv_equal(
             params['table'], os.path.join(out_directory,
                                           archived_params['table'])
@@ -173,7 +179,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         pygeoprocessing.testing.assert_text_equal(
             params['some_file'], os.path.join(out_directory,
                                               archived_params['some_file'])
@@ -211,7 +218,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         dest_datadir_digest = pygeoprocessing.testing.digest_folder(
             os.path.join(out_directory, archived_params['data_dir']))
 
@@ -245,7 +253,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         dest_digest = pygeoprocessing.testing.digest_file_list(
             [os.path.join(out_directory, filename)
              for filename in archived_params['file_list']])
@@ -274,7 +283,8 @@ class DatastacksTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
 
         # Assert that the archived 'foo' and 'bar' params point to the same
         # file.
@@ -386,10 +396,10 @@ class DatastacksTest(unittest.TestCase):
         paramset_filename = os.path.join(self.workspace, 'paramset.json')
 
         # Write the parameter set
-        datastack.write_parameter_set(paramset_filename, params, modelname)
+        datastack.build_parameter_set(params, modelname, paramset_filename)
 
         # Read back the parameter set
-        args, invest_version, callable_name = datastack.read_parameter_set(
+        args, callable_name, invest_version = datastack.extract_parameter_set(
             paramset_filename)
 
         # parameter set calculations normalizes all paths.
@@ -431,8 +441,8 @@ class DatastacksTest(unittest.TestCase):
         os.makedirs(params['data_dir'])
 
         # Write the parameter set
-        datastack.write_parameter_set(
-            paramset_filename, params, modelname, relative=True)
+        datastack.build_parameter_set(
+            params, modelname, paramset_filename, relative=True)
 
         # Check that the written parameter set file contains relative paths
         raw_args = json.load(open(paramset_filename))['args']
@@ -444,21 +454,21 @@ class DatastacksTest(unittest.TestCase):
 
         # Read back the parameter set and verify the returned paths are
         # absolute
-        args, invest_version, callable_name = datastack.read_parameter_set(
+        args, callable_name, invest_version = datastack.extract_parameter_set(
             paramset_filename)
 
         self.assertEqual(args, params)
         self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
-    def test_read_parameters_from_logfile(self):
+    def test_extract_parameters_from_logfile(self):
         """Datastacks: Verify we can read args from a logfile."""
         from natcap.invest import datastack
         logfile_path = os.path.join(self.workspace, 'logfile')
         with open(logfile_path, 'w') as logfile:
             logfile.write(textwrap.dedent("""
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO
-                Arguments:
+                Arguments for InVEST some_model some_version:
                 suffix                           foo
                 some_int                         1
                 some_float                       2.33
@@ -467,14 +477,19 @@ class DatastacksTest(unittest.TestCase):
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
             """))
 
-        params = datastack.read_parameters_from_logfile(logfile_path)
+        params = datastack.extract_parameters_from_logfile(logfile_path)
 
-        self.assertEqual(params, {u'suffix': u'foo',
-                                  u'some_int': 1,
-                                  u'some_float': 2.33,
-                                  u'workspace_dir': u'some_workspace_dir'})
+        expected_params = datastack.ParameterSet(
+            {u'suffix': u'foo',
+             u'some_int': 1,
+             u'some_float': 2.33,
+             u'workspace_dir': u'some_workspace_dir'},
+            'some_model',
+            'some_version')
 
-    def test_read_parameters_from_logfile_valueerror(self):
+        self.assertEqual(params, expected_params)
+
+    def test_extract_parameters_from_logfile_valueerror(self):
         """Datastacks: verify that valuerror raised when no params found."""
         from natcap.invest import datastack
         logfile_path = os.path.join(self.workspace, 'logfile')
@@ -485,22 +500,109 @@ class DatastacksTest(unittest.TestCase):
             """))
 
         with self.assertRaises(ValueError):
-            datastack.read_parameters_from_logfile(logfile_path)
+            datastack.extract_parameters_from_logfile(logfile_path)
+
+    def test_get_datastack_info_archive(self):
+        """Datastacks: verify we can get info from an archive."""
+        import natcap.invest
+        from natcap.invest import datastack
+
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'd': '',
+        }
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
+
+        stack_type, stack_info = datastack.get_datastack_info(archive_path)
+
+        self.assertEqual(stack_type, 'archive')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            params, 'sample_model', natcap.invest.__version__))
+
+    def test_get_datatack_info_parameter_set(self):
+        import natcap.invest
+        from natcap.invest import datastack
+
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'd': '',
+        }
+
+        json_path = os.path.join(self.workspace, 'archive.invs.json')
+        datastack.build_parameter_set(params, 'sample_model', json_path)
+
+        stack_type, stack_info = datastack.get_datastack_info(json_path)
+        self.assertEqual(stack_type, 'json')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            params, 'sample_model', natcap.invest.__version__))
+
+    def test_get_datastack_info_logfile_new_style(self):
+        import natcap.invest
+        from natcap.invest import datastack
+        args = {
+            'a': 1,
+            'b': 2.7,
+            'c': [1, 2, 3.55],
+            'd': 'hello, world!'
+        }
+
+        logfile_path = os.path.join(self.workspace, 'logfile.txt')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(datastack.format_args_dict(args, 'some_modelname'))
+
+        stack_type, stack_info = datastack.get_datastack_info(logfile_path)
+        self.assertEqual(stack_type, 'logfile')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            args, 'some_modelname', natcap.invest.__version__))
+
+    def test_get_datastack_info_logfile_iui_style(self):
+        from natcap.invest import datastack
+
+        logfile_path = os.path.join(self.workspace, 'logfile.txt')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                Arguments:
+                suffix                           foo
+                some_int                         1
+                some_float                       2.33
+                workspace_dir                    some_workspace_dir
+
+                some other logging here.
+            """))
+
+        expected_args = {
+            'suffix': 'foo',
+            'some_int': 1,
+            'some_float': 2.33,
+            'workspace_dir': 'some_workspace_dir',
+        }
+
+        stack_type, stack_info = datastack.get_datastack_info(logfile_path)
+        self.assertEqual(stack_type, 'logfile')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
 
 
 class UtilitiesTest(unittest.TestCase):
     def test_print_args(self):
         """Datastacks: verify that we format args correctly."""
-        from natcap.invest.datastack import format_args_dict
+        from natcap.invest.datastack import format_args_dict, __version__
 
         args_dict = {
             'some_arg': [1, 2, 3, 4],
             'foo': 'bar',
         }
 
-        args_string = format_args_dict(args_dict=args_dict)
+        args_string = format_args_dict(args_dict=args_dict,
+                                       model_name='test_model')
         expected_string = six.text_type(
-            'Arguments:\n'
+            'Arguments for InVEST test_model %s:\n'
             'foo      bar\n'
-            'some_arg [1, 2, 3, 4]\n')
+            'some_arg [1, 2, 3, 4]\n') % __version__
         self.assertEqual(args_string, expected_string)

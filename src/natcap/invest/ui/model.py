@@ -84,7 +84,8 @@ def is_probably_datastack(filepath):
         True if the filepath is likely to be a datastack.  False otherwise.
     """
     # Does the extension indicate that it's probably a datastack?
-    if filepath.endswith(('.invest.json', '.invest.tar.gz')):
+    if filepath.endswith((datastack.DATASTACK_EXTENSION,
+                          datastack.PARAMETER_SET_EXTENSION)):
         return True
 
     # Is it a datastack parameter set?
@@ -276,6 +277,52 @@ class ConfirmDialog(QtWidgets.QMessageBox):
         self.setDefaultButton(QtWidgets.QMessageBox.Yes)
         self.setIconPixmap(
             ICON_ALERT.pixmap(100, 100))
+
+
+class ModelMismatchConfirmDialog(ConfirmDialog):
+    """Confirm datastack load when it looks like the wrong model."""
+
+    def __init__(self, current_modelname):
+        """Initialize the dialog.
+
+        Parameters:
+            current_modelname (string): The modelname of the current
+                InVESTModel target.
+
+        Returns:
+            None.
+        """
+        self._current_modelname = current_modelname
+
+        self._body_text = (
+            "This datastack was created for the model \"{datastack_model}\", "
+            "which looks different from this model (\"{current_model}\"). Load "
+            "these parameters anyways?"
+        )
+
+        ConfirmDialog.__init__(
+            self,
+            title_text='Are you sure this is the right model?',
+            body_text=self._body_text)
+
+    def exec_(self, datastack_modelname):
+        """Show the dialog and enter its event loop.
+
+        Also updates the informative text based on the provided datastack
+        modelname.
+
+        Parameters:
+            datastack_modelname (string): The modelname of the datastack.
+
+        Returns:
+            The result code of ``ConfirmDialog.exec_()``.
+        """
+        new_text = self._body_text.format(
+            datastack_model=datastack_modelname,
+            current_model=self._current_modelname)
+        self.setInformativeText(new_text)
+
+        return ConfirmDialog.exec_(self)
 
 
 class SettingsDialog(OptionsDialog):
@@ -710,13 +757,21 @@ class DatastackOptionsDialog(OptionsDialog):
         """
         result = OptionsDialog.exec_(self)
         if result == QtWidgets.QDialog.Accepted:
-            return DatastackSaveOpts(
+            return_value = DatastackSaveOpts(
                 self.datastack_type.value(),
                 self.use_relative_paths.value(),
                 self.include_workspace.value(),
                 self.save_parameters.value()
             )
-        return None
+        else:
+            return_value = None
+
+        # Clear the inputs now that we have what we need.
+        for input_obj in (self.datastack_type, self.use_relative_paths,
+                          self.include_workspace, self.save_parameters):
+            input_obj.clear()
+
+        return return_value
 
 
 class DatastackArchiveExtractionDialog(OptionsDialog):
@@ -738,29 +793,18 @@ class DatastackArchiveExtractionDialog(OptionsDialog):
         )
         self._container.add_input(self.extraction_point)
 
-    def exec_(self, archive_path):
+    def exec_(self):
         """Execute the dialog.
 
-        Parameters:
-            archive_path (string): The path to the archive that needs to be
-                extracted.
-
         Returns:
-            A 2-tuple.
-
-            If the dialog was accepted, the return value is a 2-tuple of the
-            extracted datastack args and the extracion directory.
-
-            If the value was rejected, ``(None, None)`` is returned.
+            The string path to the extraction directory.  None if the dialog
+            was cancelled.
         """
         result = OptionsDialog.exec_(self)
 
         if result == QtWidgets.QDialog.Accepted:
-            extract_to_dir = self.extraction_point.value()
-            args = datastack.extract_datastack_archive(
-                archive_path, extract_to_dir)
-            return (args, extract_to_dir)
-        return (None, None)
+            return self.extraction_point.value()
+        return None
 
 
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
@@ -905,6 +949,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.workspace_overwrite_confirm_dialog = ConfirmDialog(
             title_text='Workspace exists!',
             body_text='Overwrite files from a previous run?')
+        self.model_mismatch_confirm_dialog = ModelMismatchConfirmDialog(
+            self.target.__module__)
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
@@ -982,7 +1028,8 @@ class InVESTModel(QtWidgets.QMainWindow):
             qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
-        self.open_menu = QtWidgets.QMenu('Load datastack')
+        self.open_menu = QtWidgets.QMenu('Load parameters')
+        self.open_menu.setIcon(qtawesome.icon('fa.folder-open-o'))
         self.build_open_menu()
         self.file_menu.addMenu(self.open_menu)
 
@@ -1032,7 +1079,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.open_menu.clear()
         self.open_file_action = self.open_menu.addAction(
             qtawesome.icon('fa.arrow-circle-o-up'),
-            'L&oad datastack ...', self.load_datastack,
+            'L&oad datastack, parameter set or logfile...', self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
 
@@ -1189,14 +1236,14 @@ class InVESTModel(QtWidgets.QMainWindow):
         if datastack_opts.datastack_type == _DATASTACK_DATA_ARCHIVE:
             datastack.build_datastack_archive(
                 args=current_args,
-                name=self.target.__module__,
+                model_name=self.target.__module__,
                 datastack_path=datastack_opts.archive_path
             )
         else:
-            datastack.write_parameter_set(
-                filepath=datastack_opts.archive_path,
+            datastack.build_parameter_set(
                 args=current_args,
-                name=self.target.__module__,
+                model_name=self.target.__module__,
+                paramset_path=datastack_opts.archive_path,
                 relative=datastack_opts.use_relpaths
             )
 
@@ -1275,10 +1322,12 @@ class InVESTModel(QtWidgets.QMainWindow):
                 with usage.log_run(self.target.__module__, args):
                     LOGGER.log(datastack.ARGS_LOG_LEVEL,
                                'Starting model with parameters: \n%s',
-                               datastack.format_args_dict(args))
+                               datastack.format_args_dict(
+                                   args, self.target.__module__))
+
                     try:
                         return self.target(args=args)
-                    except:
+                    except Exception:
                         LOGGER.exception('Exception while executing %s',
                                          self.target)
                         raise
@@ -1321,7 +1370,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         if not datastack_path:
             datastack_path = self.file_dialog.open_file(
-                title='Select datastack', filters=(
+                title='Select datastack, parameter set or logfile', filters=(
                     'Any file (*.*)',
                     'Parameter set (*.invest.json)',
                     'Parameter archive (*.invest.tar.gz)',
@@ -1332,21 +1381,32 @@ class InVESTModel(QtWidgets.QMainWindow):
                 return
 
         LOGGER.info('Loading datastack from "%s"', datastack_path)
-        if tarfile.is_tarfile(datastack_path):  # it's a datastack archive!
-            # Where should the tarfile be extracted to?
-            args, extract_dir = self.datastack_archive_extract_dialog.exec_(
+        try:
+            stack_type, stack_info = datastack.get_datastack_info(
                 datastack_path)
-            if args is None:
+        except Exception:
+            LOGGER.exception('Could not load datastack %s', datastack_path)
+            return
+
+        if stack_info.model_name != self.target.__module__:
+            confirm_response = self.model_mismatch_confirm_dialog.exec_(
+                stack_info.model_name)
+            if confirm_response != QtWidgets.QMessageBox.Yes:
                 return
+
+        if stack_type == 'archive':
+            extract_dir = self.datastack_archive_extract_dialog.exec_()
+            if extract_dir is None:
+                return
+
+            args = datastack.extract_datastack_archive(
+                datastack_path, extract_dir)
             window_title_filename = os.path.basename(extract_dir)
-        else:
-            try:
-                paramset = datastack.read_parameter_set(datastack_path)
-                args = paramset.args
-            except ValueError:
-                # when a JSON object cannot be decoded, assume it's a logfile.
-                args = datastack.read_parameters_from_logfile(datastack_path)
+        elif stack_type in ('json', 'logfile'):
+            args = stack_info.args
             window_title_filename = os.path.basename(datastack_path)
+        else:
+            raise ValueError('Unknown stack type "%s"' % stack_type)
 
         self.load_args(args)
         self.window_title.filename = window_title_filename
@@ -1702,4 +1762,3 @@ class InVESTModel(QtWidgets.QMainWindow):
         path = event.mimeData().urls()[0].path()
         self.setStyleSheet('')
         self.load_datastack(path)
-
