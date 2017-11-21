@@ -259,7 +259,13 @@ def get_datastack_info(filepath):
                 return 'archive', extract_parameter_set(
                     os.path.join(temp_directory, DATASTACK_PARAMETER_FILENAME))
             finally:
-                shutil.rmtree(temp_directory)
+                try:
+                    shutil.rmtree(temp_directory)
+                except OSError:
+                    # If something happens and we can't remove temp_directory,
+                    # just log the exception and continue with program
+                    # execution.
+                    LOGGER.exception('Could not remove %s', temp_directory)
 
     try:
         return 'json', extract_parameter_set(filepath)
