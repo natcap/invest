@@ -1229,13 +1229,13 @@ class InVESTModel(QtWidgets.QMainWindow):
             datastack.build_datastack_archive(
                 args=current_args,
                 model_name=self.target.__module__,
-                filepath=datastack_opts.archive_path
+                datastack_path=datastack_opts.archive_path
             )
         else:
             datastack.build_parameter_set(
                 args=current_args,
                 model_name=self.target.__module__,
-                filepath=datastack_opts.archive_path,
+                paramset_path=datastack_opts.archive_path,
                 relative=datastack_opts.use_relpaths
             )
 

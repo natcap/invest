@@ -276,14 +276,14 @@ def get_datastack_info(filepath):
     return 'logfile', extract_parameters_from_logfile(filepath)
 
 
-def build_datastack_archive(args, model_name, filepath):
+def build_datastack_archive(args, model_name, datastack_path):
     """Build an InVEST datastack from an arguments dict.
 
     Parameters:
         args (dict): The arguments dictionary to include in the datastack.
         model_name (string): The python-importable module string of the model
             these args are for.
-        filepath (string): The path to where the datastack archive should
+        datastack_path (string): The path to where the datastack archive should
             be written.
 
     Returns:
@@ -371,14 +371,14 @@ def build_datastack_archive(args, model_name, filepath):
         archive_name = shutil.make_archive(
             temp_archive, 'gztar', root_dir=temp_workspace,
             logger=LOGGER, verbose=True)
-        shutil.move(archive_name, filepath)
+        shutil.move(archive_name, datastack_path)
 
 
-def extract_datastack_archive(filepath, dest_dir_path):
+def extract_datastack_archive(datastack_path, dest_dir_path):
     """Extract a datastack to a given folder.
 
     Parameters:
-        filepath (string): The path to a datastack archive on disk.
+        datastack_path (string): The path to a datastack archive on disk.
         dest_dir_path (string): The path to a directory.  The contents of the
             demonstration datastack archive will be extracted into this
             directory. If the directory does not exist, it will be created.
@@ -387,9 +387,9 @@ def extract_datastack_archive(filepath, dest_dir_path):
         ``args`` (dict): A dictionary of arguments from the extracted
             archive.  Paths to files are absolute paths.
     """
-    LOGGER.info('Extracting archive %s to %s', filepath, dest_dir_path)
+    LOGGER.info('Extracting archive %s to %s', datastack_path, dest_dir_path)
     # extract the archive to the workspace
-    with tarfile.open(filepath) as tar:
+    with tarfile.open(datastack_path) as tar:
         tar.extractall(dest_dir_path)
 
     # get the arguments dictionary
@@ -420,18 +420,18 @@ def extract_datastack_archive(filepath, dest_dir_path):
     return new_args
 
 
-def build_parameter_set(args, model_name, filepath, relative=False):
+def build_parameter_set(args, model_name, paramset_path, relative=False):
     """Record a parameter set to a file on disk.
 
     Parameters:
         args (dict): The args dictionary to record to the parameter set.
         model_name (string): An identifier string for the callable or InVEST
             model that would accept the arguments given.
-        filepath (string): The path to the file on disk where the parameters
-            should be recorded.
+        paramset_path (string): The path to the file on disk where the
+            parameters should be recorded.
         relative (bool): Whether to save the paths as relative.  If ``True``,
             The datastack assumes that paths are relative to the parent
-            directory of ``filepath``.
+            directory of ``paramset_path``.
 
     Returns:
         ``None``
@@ -449,10 +449,10 @@ def build_parameter_set(args, model_name, filepath, relative=False):
                     # Handle special case where python assumes that '.'
                     # represents the CWD
                     if (normalized_path == '.' or
-                            os.path.dirname(filepath) == normalized_path):
+                            os.path.dirname(paramset_path) == normalized_path):
                         return '.'
                     return os.path.relpath(normalized_path,
-                                           os.path.dirname(filepath))
+                                           os.path.dirname(paramset_path))
                 return normalized_path
         return args_param
     parameter_data = {
@@ -460,18 +460,18 @@ def build_parameter_set(args, model_name, filepath, relative=False):
         'invest_version': __version__,
         'args': _recurse(args)
     }
-    json.dump(parameter_data, codecs.open(filepath, 'w', encoding='UTF-8'),
+    json.dump(parameter_data, codecs.open(paramset_path, 'w', encoding='UTF-8'),
               encoding='UTF-8', indent=4, sort_keys=True)
 
 
-def extract_parameter_set(filepath):
+def extract_parameter_set(paramset_path):
     """Extract and return attributes from a parameter set.
 
     Any string values found will have environment variables expanded.  See
     :py:ref:os.path.expandvars and :py:ref:os.path.expanduser for details.
 
     Parameters:
-        filepath (string): The file containing a parameter set.
+        paramset_path (string): The file containing a parameter set.
 
     Returns:
         A ``ParameterSet`` namedtuple with these attributes::
@@ -482,8 +482,8 @@ def extract_parameter_set(filepath):
             model_name (string): The name of the callable or model that these
                 arguments are intended for.
     """
-    paramset_parent_dir = os.path.dirname(os.path.abspath(filepath))
-    read_params = json.load(codecs.open(filepath, 'r', encoding='UTF-8'))
+    paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
+    read_params = json.load(codecs.open(paramset_path, 'r', encoding='UTF-8'))
 
     def _recurse(args_param):
         if isinstance(args_param, dict):
@@ -508,7 +508,7 @@ def extract_parameter_set(filepath):
                         read_params['invest_version'])
 
 
-def extract_parameters_from_logfile(filepath):
+def extract_parameters_from_logfile(logfile_path):
     """Parse an InVEST logfile for the parameters (args) dictionary.
 
     Argument key-value pairs are parsed, one pair per line, starting the line
@@ -521,7 +521,7 @@ def extract_parameters_from_logfile(filepath):
     name and InVEST version information) are also supported.
 
     Parameters:
-        filepath (string): The path to an InVEST logfile on disk.
+        logfile_path (string): The path to an InVEST logfile on disk.
 
     Returns:
         An instance of the ParameterSet namedtuple.  If a model name and InVEST
@@ -532,7 +532,7 @@ def extract_parameters_from_logfile(filepath):
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
     """
-    with codecs.open(filepath, 'r', encoding='utf-8') as logfile:
+    with codecs.open(logfile_path, 'r', encoding='utf-8') as logfile:
         detected_args = []
         args_started = False
         for line in logfile:
@@ -558,7 +558,7 @@ def extract_parameters_from_logfile(filepath):
                 detected_args.append(line)
 
     if not detected_args:
-        raise ValueError('No arguments could be parsed from %s' % filepath)
+        raise ValueError('No arguments could be parsed from %s' % logfile_path)
 
     args_dict = {}
     for argument in detected_args:

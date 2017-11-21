@@ -2277,7 +2277,7 @@ class ModelTests(_QtTest):
         datastack.build_parameter_set(
             args=args,
             model_name=model_ui.target.__module__,
-            filepath=datastack_filepath,
+            paramset_path=datastack_filepath,
             relative=False)
 
         model_ui.load_datastack(datastack_filepath)
