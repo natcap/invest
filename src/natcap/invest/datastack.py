@@ -26,6 +26,7 @@ import codecs
 import pprint
 import collections
 import re
+import platform
 
 from osgeo import gdal
 from osgeo import ogr
@@ -410,7 +411,14 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
             if args_param.strip() == '':
                 return ''
 
-            data_path = os.path.join(dest_dir_path, args_param)
+            # Allow both windows and linux paths.
+            # If the datastack was saved on Windows, the paths will contain
+            # backslashes. These should be converted to forward slashes if
+            # we're on mac or linux. On Windows, os.path.normpath will convert
+            # forward slashes to backslashes.
+            data_path = os.path.normpath(
+                os.path.join(dest_dir_path,
+                             args_param.replace('\\', os.sep)))
             if os.path.exists(data_path):
                 return os.path.normpath(data_path)
         return args_param
