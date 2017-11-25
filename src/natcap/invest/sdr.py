@@ -142,7 +142,7 @@ def execute(args):
 
     base_list = []
     aligned_list = []
-    for file_key in ['lulc', 'dem', 'erosivity', 'erodibility']:
+    for file_key in ['dem', 'lulc','erosivity', 'erodibility']:
         base_list.append(args[file_key + "_path"])
         aligned_list.append(f_reg["aligned_" + file_key + "_path"])
 
