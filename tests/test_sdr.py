@@ -184,15 +184,16 @@ class SDRTests(unittest.TestCase):
         result_vector = ogr.Open(result_vector_path)
         result_layer = result_vector.GetLayer()
 
-        # The tolerance of 3 digits after the decimal was determined by
+        # The relative tolerance 1e-6 was determined by
         # experimentation on the application with the given range of numbers.
         # This is an apparently reasonable approach as described by ChrisF:
         # http://stackoverflow.com/a/3281371/42897
         # and even more reading about picking numerical tolerance (it's hard):
         # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-        tolerance_places = 3
+        rel_tol = 1e-6
 
         with open(agg_results_path, 'rb') as agg_result_file:
+            error_list = []
             for line in agg_result_file:
                 fid, sed_retent, sed_export, usle_tot = [
                     float(x) for x in line.split(',')]
@@ -201,15 +202,20 @@ class SDRTests(unittest.TestCase):
                         ('sed_retent', sed_retent),
                         ('sed_export', sed_export),
                         ('usle_tot', usle_tot)]:
-                    numpy.testing.assert_almost_equal(
-                        feature.GetField(field), value,
-                        decimal=tolerance_places)
+                    if not numpy.isclose(
+                            feature.GetField(field), value, rtol=rel_tol):
+                        error_list.append(
+                            "FID %d %s expected %f, got %f" % (
+                                fid, field, value, feature.GetField(field)))
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
 
         result_layer = None
         ogr.DataSource.__swig_destroy__(result_vector)
         result_vector = None
+
+        if error_list:
+            raise AssertionError('\n'.join(error_list))
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
