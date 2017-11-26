@@ -235,6 +235,8 @@ cdef route_local_recharge(
     cdef float qfi_m
     cdef float p_m
     cdef float l_i
+    cdef float li_avail_value
+    cdef float l_sum_avail_value
     cdef int neighbors_calculated = 0
 
     cdef time_t last_time, current_time
@@ -322,12 +324,20 @@ cdef route_local_recharge(
             else:
                 #'calculate l_avail_i and l_i'
                 #add the contribution of the upstream to l_avail and l_i eq [7]
+                # in cases of bad user data we can sometimes loop and still
+                # get nodata, treat it as zero flow.
+                li_avail_value = li_avail_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset]
+                if li_avail_value == local_recharge_nodata:
+                    li_avail_value = 0.0
+                l_sum_avail_value = l_sum_avail_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset]
+                if l_sum_avail_value == local_recharge_nodata:
+                    l_sum_avail_value = 0.0
                 current_l_sum_avail += (
-                    li_avail_block[
-                        neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset] +
-                    l_sum_avail_block[neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset]) * outflow_weight
+                    li_avail_value + l_sum_avail_value) * outflow_weight
 
         if not neighbors_calculated:
             continue
