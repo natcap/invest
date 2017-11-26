@@ -875,7 +875,7 @@ def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
     Returns:
         None
     """
-    nodata_list = [
+    base_nodata_list = [
         pygeoprocessing.get_raster_info(path)['nodata'][0]
         for path in input_raster_path_list]
     nodata_list = None
