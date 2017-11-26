@@ -38,8 +38,8 @@ cdef int N_MONTHS = 12
 
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double INF = numpy.inf
-cdef int N_BLOCK_ROWS = 6
-cdef int N_BLOCK_COLS = 6
+cdef int N_BLOCK_ROWS = 4
+cdef int N_BLOCK_COLS = 4
 
 
 @cython.boundscheck(False)
