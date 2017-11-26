@@ -4,18 +4,10 @@
 
 Unreleased Changes
 ------------------
-* When loading parameters from a datastack, parameter set or logfile, the UI
-  will check that the model that created the file being loaded matches the name
-  of the model that is currently running.  If there is a mismatch, a dialog is
-  presented for the user to confirm or cancel the loading of parameters.
-  Logfiles from IUI (which do not have clearly-recorded modelname or InVEST version
-  information) can still have their arguments parsed, but the resulting model
-  name and InVEST version will be set to ``"UNKNOWN"``.
+* Bug fixed in SDR that would align the output raster stack to match with the landcover pixel stack even though the rest of the rasters are scaled and clipped to the DEM.
+* When loading parameters from a datastack, parameter set or logfile, the UI will check that the model that created the file being loaded matches the name of the model that is currently running.  If there is a mismatch, a dialog is presented for the user to confirm or cancel the loading of parameters. Logfiles from IUI (which do not have clearly-recorded modelname or InVEST version information) can still have their arguments parsed, but the resulting model name and InVEST version will be set to ``"UNKNOWN"``.
 * Data Stack files (``*.invest.json``, ``*.invest.tar.gz``) can now be dragged and dropped on an InVEST model window, which will prompt the UI to load that parameter set.
-* Spatial inputs to Coastal Blue Carbon are now aligned as part of the model.
-  This resolves a longstanding issue with the model where inputs would need to
-  perfectly overlap (even down to pixel indices), or else the model would yield
-  strange results.
+* Spatial inputs to Coastal Blue Carbon are now aligned as part of the model. This resolves a longstanding issue with the model where inputs would need to perfectly overlap (even down to pixel indices), or else the model would yield strange results.
 * The InVEST UI now contains a submenu for opening a recently-opened datastack.  This submenu is automatically populated with the 10 most recently-opened datastacks for the current model.
 * Removed vendored ``natcap.invest.dbfpy`` subpackage.
 * Removed deprecated ``natcap.invest.fileio`` module.
