@@ -280,14 +280,6 @@ def _execute(args):
         pixel_size, 'intersection', base_vector_path_list=[args['aoi_path']],
         raster_align_index=align_index)
 
-    # sometimes users input data where the DEM is defined in places where the
-    # land cover isn't, mask those out
-    LOGGER.info("Masking invalid lulc, dem, and possible soil group overlap")
-    input_raster_path_list = [
-        file_registry['dem_aligned_path'],
-        file_registry['lulc_aligned_path']]
-    _mask_any_nodata(input_raster_path_list, output_valid_raster_path_list)
-
     LOGGER.info('flow direction')
     natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
         file_registry['dem_aligned_path'],
@@ -314,20 +306,20 @@ def _execute(args):
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
         file_registry['l_path'] = file_registry['l_aligned_path']
-        l_nodata = pygeoprocessing.get_raster_info(
+        li_nodata = pygeoprocessing.get_raster_info(
             file_registry['l_path'])['nodata'][0]
 
         def l_avail_op(l_array):
             """Calculate equation [8] L_avail = min(gamma*L, L)"""
             result = numpy.empty(l_array.shape)
-            result[:] = l_nodata
-            valid_mask = (l_array != l_nodata)
+            result[:] = li_nodata
+            valid_mask = (l_array != li_nodata)
             result[valid_mask] = numpy.min(numpy.stack(
                 (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
             return result
         pygeoprocessing.raster_calculator(
             [(file_registry['l_path'], 1)], l_avail_op,
-            file_registry['l_avail_path'], gdal.GDT_Float32, l_nodata)
+            file_registry['l_avail_path'], gdal.GDT_Float32, li_nodata)
     else:
         # user didn't predefine local recharge so calculate it
         LOGGER.info('loading number of monthly events')
@@ -379,6 +371,7 @@ def _execute(args):
         qf_nodata = -1
         LOGGER.info('calculate QFi')
 
+        # TODO: lose this loop
         def qfi_sum_op(*qf_values):
             """Sum the monthly qfis."""
             qf_sum = numpy.zeros(qf_values[0].shape)
@@ -426,20 +419,25 @@ def _execute(args):
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
     qb_sum, qb_valid_count = _sum_valid(file_registry['l_path'])
-    qb_result = qb_sum / qb_valid_count
+    qb_result = 0.0
+    if qb_valid_count > 0:
+        qb_result = qb_sum / qb_valid_count
 
-    ri_nodata = pygeoprocessing.get_raster_info(
+    li_nodata = pygeoprocessing.get_raster_info(
         file_registry['l_path'])['nodata'][0]
 
-    def vri_op(ri_array):
+    def vri_op(li_array):
         """Calculate vri index [Eq 10]."""
-        return numpy.where(
-            ri_array != ri_nodata,
-            ri_array / qb_result / qb_valid_count, ri_nodata)
+        result = numpy.empty_like(li_array)
+        result[:] = li_nodata
+        if qb_sum > 0:
+            valid_mask = li_array != li_nodata
+            result[valid_mask] = li_array[valid_mask] / qb_sum
+        return result
 
     pygeoprocessing.raster_calculator(
         [(file_registry['l_path'], 1)], vri_op, file_registry['vri_path'],
-        gdal.GDT_Float32, ri_nodata)
+        gdal.GDT_Float32, li_nodata)
 
     _aggregate_recharge(
         args['aoi_path'], file_registry['l_path'],
@@ -490,11 +488,13 @@ def _execute(args):
 
     LOGGER.info('calculate B')
 
-    b_sum_nodata = ri_nodata
+    b_sum_nodata = li_nodata
 
     def op_b(b_sum, l_avail, l_sum):
         """Calculate B=max(B_sum*Lavail/L_sum, 0)."""
-        valid_mask = ((b_sum != b_sum_nodata) & (l_sum != 0))
+        valid_mask = (
+            (b_sum != b_sum_nodata) & (l_avail != li_nodata) & (l_sum > 0) &
+            (l_sum != l_sum_pre_clamp_nodata))
         result = numpy.empty(b_sum.shape)
         result[:] = b_sum_nodata
         result[valid_mask] = (
@@ -508,7 +508,7 @@ def _execute(args):
         [(file_registry['b_sum_path'], 1),
          (file_registry['l_path'], 1),
          (file_registry['l_sum_path'], 1)], op_b, file_registry['b_path'],
-         gdal.GDT_Float32, b_sum_nodata)
+        gdal.GDT_Float32, b_sum_nodata)
 
     LOGGER.info('deleting temporary files')
     for file_id in _TMP_BASE_FILES:
@@ -558,10 +558,12 @@ def _calculate_monthly_quick_flow(
 
     def si_op(ci_array, stream_array):
         """Potential maximum retention."""
-        si_array = 1000.0 / ci_array - 10
-        si_array = numpy.where(ci_array != cn_nodata, si_array, si_nodata)
-        si_array[stream_array == 1] = 0
-        return si_array
+        result = numpy.empty_like(ci_array)
+        result[:] = si_nodata
+        valid_mask = (ci_array != cn_nodata) & (ci_array != 0)
+        result[valid_mask] = 1000.0 / ci_array[valid_mask] - 10
+        result[(stream_array == 1) & valid_mask] = 0
+        return result
 
     pygeoprocessing.raster_calculator(
          [(cn_path, 1), (stream_path, 1)], si_op, si_path, gdal.GDT_Float32,
@@ -596,7 +598,7 @@ def _calculate_monthly_quick_flow(
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
         a_im = numpy.empty(valid_n_events.shape)
-        a_im = p_im[valid_mask] / valid_n_events / 25.4
+        a_im = p_im[valid_mask] / (valid_n_events * 25.4)
         qf_im = numpy.empty(p_im.shape)
         qf_im[:] = qf_nodata
 
