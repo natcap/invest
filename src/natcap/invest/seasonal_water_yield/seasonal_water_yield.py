@@ -401,8 +401,8 @@ def _execute(args):
             return qf_sum
 
         pygeoprocessing.raster_calculator(
-            [(file_registry['qfm_path_list'], 1)], qfi_sum_op,
-            file_registry['qf_path'], gdal.GDT_Float32, qf_nodata)
+            [(path, 1) for path in file_registry['qfm_path_list']],
+            qfi_sum_op, file_registry['qf_path'], gdal.GDT_Float32, qf_nodata)
 
         LOGGER.info('calculate local recharge')
         kc_lookup = {}
@@ -413,7 +413,7 @@ def _execute(args):
                 for lucode in biophysical_table])
             kc_nodata = -1  # a reasonable nodata value
             pygeoprocessing.reclassify_raster(
-                file_registry['lulc_valid_path'], kc_lookup,
+                (file_registry['lulc_valid_path'], 1), kc_lookup,
                 file_registry['kc_path_list'][month_index], gdal.GDT_Float32,
                 kc_nodata)
 
@@ -816,10 +816,9 @@ def _aggregate_recharge(
         aggregate_layer.ResetReading()
         for poly_index, poly_feat in enumerate(aggregate_layer):
             if op_type == 'mean':
-                n_pixels = aggregate_stats.n_pixels[poly_index]
-                if n_pixels != 0:
-                    value = (aggregate_stats.total[poly_index] /
-                             aggregate_stats.n_pixels[poly_index])
+                pixel_count = aggregate_stats[poly_index]['count']
+                if pixel_count != 0:
+                    value = (aggregate_stats[poly_index]['sum'] / pixel_count)
                 else:
                     LOGGER.warn(
                         "no coverage for polygon %s", ', '.join(
@@ -827,7 +826,7 @@ def _aggregate_recharge(
                                 poly_feat.GetFieldCount())]))
                     value = 0.0
             elif op_type == 'sum':
-                value = aggregate_stats.total[poly_index]
+                value = aggregate_stats[poly_index]['sum']
             poly_feat.SetField(aggregate_field_id, value)
             aggregate_layer.SetFeature(poly_feat)
 
@@ -854,7 +853,8 @@ def _sum_valid(raster_path):
     raster_count = 0
     raster_nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
 
-    for _, block in pygeoprocessing.iterblocks(raster_path, band_list=[1]):
+    for _, block in pygeoprocessing.iterblocks(
+            raster_path, band_index_list=[1]):
         valid_mask = block != raster_nodata
         raster_sum += numpy.sum(block[valid_mask])
         raster_count += numpy.count_nonzero(valid_mask)
