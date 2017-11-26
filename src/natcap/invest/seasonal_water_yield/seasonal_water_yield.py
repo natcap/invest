@@ -59,12 +59,9 @@ _TMP_BASE_FILES = {
     'si_path': 'Si.tif',
     'lulc_aligned_path': 'lulc_aligned.tif',
     'dem_aligned_path': 'dem_aligned.tif',
-    'lulc_valid_path': 'lulc_valid.tif',
-    'dem_valid_path': 'dem_valid.tif',
     'loss_path': 'loss.tif',
     'zero_absorption_source_path': 'zero_absorption.tif',
     'soil_group_aligned_path': 'soil_group_aligned.tif',
-    'soil_group_valid_path': 'soil_group_valid.tif',
     'flow_accum_path': 'flow_accum.tif',
     'precip_path_aligned_list': ['prcp_a%d.tif' % x for x in xrange(N_MONTHS)],
     'n_events_path_list': ['n_events%d.tif' % x for x in xrange(N_MONTHS)],
@@ -289,18 +286,11 @@ def _execute(args):
     input_raster_path_list = [
         file_registry['dem_aligned_path'],
         file_registry['lulc_aligned_path']]
-    output_valid_raster_path_list = [
-        file_registry['dem_valid_path'],
-        file_registry['lulc_valid_path']]
-    if not args['user_defined_local_recharge']:
-        input_raster_path_list.append(file_registry['soil_group_aligned_path'])
-        output_valid_raster_path_list.append(
-            file_registry['soil_group_valid_path'])
     _mask_any_nodata(input_raster_path_list, output_valid_raster_path_list)
 
     LOGGER.info('flow direction')
     natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
-        file_registry['dem_valid_path'],
+        file_registry['dem_aligned_path'],
         file_registry['flow_dir_path'])
 
     LOGGER.info('flow weights')
@@ -312,7 +302,7 @@ def _execute(args):
     LOGGER.info('flow accumulation')
     natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
         file_registry['flow_dir_path'],
-        file_registry['dem_valid_path'],
+        file_registry['dem_aligned_path'],
         file_registry['flow_accum_path'])
 
     LOGGER.info('stream thresholding')
@@ -360,14 +350,14 @@ def _execute(args):
                 # rain_events_lookup defined near entry point of execute
                 n_events = rain_events_lookup[month_id+1]['events']
                 pygeoprocessing.new_raster_from_base(
-                    file_registry['dem_valid_path'],
+                    file_registry['dem_aligned_path'],
                     file_registry['n_events_path_list'][month_id],
                     gdal.GDT_Float32, [TARGET_NODATA],
                     fill_value_list=[n_events])
 
         LOGGER.info('calculate curve number')
         _calculate_curve_number_raster(
-            file_registry['lulc_valid_path'],
+            file_registry['lulc_aligned_path'],
             file_registry['soil_group_aligned_path'],
             biophysical_table, file_registry['cn_path'])
 
@@ -380,7 +370,7 @@ def _execute(args):
             LOGGER.info('calculate quick flow for month %d', month_index+1)
             _calculate_monthly_quick_flow(
                 file_registry['precip_path_aligned_list'][month_index],
-                file_registry['lulc_valid_path'], file_registry['cn_path'],
+                file_registry['lulc_aligned_path'], file_registry['cn_path'],
                 file_registry['n_events_path_list'][month_index],
                 file_registry['stream_path'],
                 file_registry['qfm_path_list'][month_index],
@@ -413,7 +403,7 @@ def _execute(args):
                 for lucode in biophysical_table])
             kc_nodata = -1  # a reasonable nodata value
             pygeoprocessing.reclassify_raster(
-                (file_registry['lulc_valid_path'], 1), kc_lookup,
+                (file_registry['lulc_aligned_path'], 1), kc_lookup,
                 file_registry['kc_path_list'][month_index], gdal.GDT_Float32,
                 kc_nodata)
 
@@ -426,8 +416,8 @@ def _execute(args):
             file_registry['flow_dir_path'],
             file_registry['outflow_weights_path'],
             file_registry['outflow_direction_path'],
-            file_registry['dem_valid_path'],
-            file_registry['lulc_valid_path'], alpha_month,
+            file_registry['dem_aligned_path'],
+            file_registry['lulc_aligned_path'], alpha_month,
             beta_i, gamma, file_registry['stream_path'],
             file_registry['l_path'],
             file_registry['l_avail_path'],
@@ -458,12 +448,12 @@ def _execute(args):
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
     pygeoprocessing.new_raster_from_base(
-        file_registry['dem_valid_path'],
+        file_registry['dem_aligned_path'],
         file_registry['zero_absorption_source_path'],
         gdal.GDT_Float32, [TARGET_NODATA], fill_value_list=[0.0])
     natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
         file_registry['flow_dir_path'],
-        file_registry['dem_valid_path'],
+        file_registry['dem_aligned_path'],
         file_registry['l_path'],
         file_registry['zero_absorption_source_path'],
         file_registry['loss_path'],
@@ -489,7 +479,7 @@ def _execute(args):
 
     LOGGER.info('calculate B_sum')
     seasonal_water_yield_core.route_baseflow_sum(
-        file_registry['dem_valid_path'],
+        file_registry['dem_aligned_path'],
         file_registry['l_path'],
         file_registry['l_avail_path'],
         file_registry['l_sum_path'],
@@ -859,43 +849,6 @@ def _sum_valid(raster_path):
         raster_sum += numpy.sum(block[valid_mask])
         raster_count += numpy.count_nonzero(valid_mask)
     return raster_sum, raster_count
-
-
-# TODO: Can I re-write without this funciton, seems like something to handle in ops
-def _mask_any_nodata(input_raster_path_list, output_raster_path_list):
-    """Mask local pixel stacks that include nodata anywhere in the stack.
-
-    Parameters:
-        input_raster_path_list (list): list of input raster paths, all rasters
-            are of the same projection, shape, and cell pixel_size
-        output_raster_path_list (list): a parallel list to
-            `input_raster_path_list` to hold the masked results of each input
-            file
-
-    Returns:
-        None
-    """
-    base_nodata_list = [
-        pygeoprocessing.get_raster_info(path)['nodata'][0]
-        for path in input_raster_path_list]
-    nodata_list = None
-    for index in xrange(len(input_raster_path_list)):
-        nodata_list = base_nodata_list[index:] + base_nodata_list[:index]
-
-        def mask_if_not_both_valid(*value_list):
-            """If values are nodata, nodata_list[0], else `value_list[0]`."""
-            valid_mask = numpy.empty(value_list[0].shape, dtype=numpy.bool)
-            valid_mask[:] = True
-            for value_index in xrange(len(value_list)):
-                valid_mask &= (
-                    value_list[value_index] != nodata_list[value_index])
-            return numpy.where(valid_mask, value_list[0], nodata_list[0])
-
-        pygeoprocessing.raster_calculator(
-            [(path, 1) for path in
-             input_raster_path_list[index:]+input_raster_path_list[:index]],
-            mask_if_not_both_valid, output_raster_path_list[index],
-            gdal.GDT_Float32, nodata_list[0])
 
 
 @validation.invest_validator
