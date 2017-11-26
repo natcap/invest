@@ -4,6 +4,7 @@
 
 Unreleased Changes
 ------------------
+* Fixed an issue/bug in Seasonal Water Yield that would occur when a user provided a datastack that had nodata values overlapping with valid DEM locations. Previously this would generate an NaN for various biophysical values at that pixel and cascade it downslope. Now any question of nodata on a valid DEM pixel is treated as "0". This will make serious visual artifacts on the output, but should help users pinpoint the source of bad data rather than crash.
 * When loading parameters from a datastack, parameter set or logfile, the UI
   will check that the model that created the file being loaded matches the name
   of the model that is currently running.  If there is a mismatch, a dialog is
