@@ -434,7 +434,6 @@ def _execute(args):
             valid_mask = li_array != li_nodata
             result[valid_mask] = li_array[valid_mask] / qb_sum
         return result
-
     pygeoprocessing.raster_calculator(
         [(file_registry['l_path'], 1)], vri_op, file_registry['vri_path'],
         gdal.GDT_Float32, li_nodata)
@@ -573,6 +572,7 @@ def _calculate_monthly_quick_flow(
     p_nodata = pygeoprocessing.get_raster_info(precip_path)['nodata'][0]
     n_events_nodata = pygeoprocessing.get_raster_info(
         n_events_raster_path)['nodata'][0]
+    stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
 
     def qf_op(p_im, s_i, n_events, stream_array):
         """Calculate quick flow as in Eq [1] in user's guide.
@@ -624,6 +624,10 @@ def _calculate_monthly_quick_flow(
         qf_im[(p_im == 0) | (n_events == 0)] = 0.0
         # if we're on a stream, set quickflow to the precipitation
         qf_im[stream_array == 1] = p_im[stream_array == 1]
+
+        # this handles some user cases where they don't have data defined on
+        # their landcover raster. It otherwise crashes later with some NaNs
+        qf_im[(qf_im == qf_nodata) & (stream_array != stream_nodata)] = 0.0
         return qf_im
 
     pygeoprocessing.raster_calculator(

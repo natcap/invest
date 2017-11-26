@@ -341,9 +341,13 @@ cdef route_local_recharge(
             p_m = precip_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
             p_i += p_m
             # Eq [6]
-            pet_m = (
-                kc_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset] *
-                et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
+            # This check for nodata came up when several users had ill aligned data
+            if et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset] != et0_nodata:
+                pet_m = (
+                    kc_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset] *
+                    et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
+            else:
+                pet_m = 0.0
             qfi_m = qfi_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
             qf_i += qfi_m
             # Eq [5]
