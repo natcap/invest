@@ -623,7 +623,8 @@ def _calculate_monthly_quick_flow(
         # if precip is 0, then QF should be zero
         qf_im[(p_im == 0) | (n_events == 0)] = 0.0
         # if we're on a stream, set quickflow to the precipitation
-        qf_im[stream_array == 1] = p_im[stream_array == 1]
+        valid_stream_precip_mask = (stream_array == 1) & (p_im != p_nodata)
+        qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
 
         # this handles some user cases where they don't have data defined on
         # their landcover raster. It otherwise crashes later with some NaNs
