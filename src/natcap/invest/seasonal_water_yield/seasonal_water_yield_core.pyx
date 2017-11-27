@@ -349,13 +349,13 @@ cdef route_local_recharge(
         aet_sum = 0.0
         for month_index in xrange(N_MONTHS):
             p_m = precip_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
-            if p_m != precip_nodata:
+            if abs(p_m-precip_nodata) > 1e-6:  # it's too far apart to be nodata
                 p_i += p_m
             else:
                 p_m = 0.0 # don't add a nodata value later
             # Eq [6]
             # This check for nodata came up when several users had ill aligned data
-            if et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset] != et0_nodata:
+            if abs(et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]-et0_nodata) > 1e-6:
                 pet_m = (
                     kc_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset] *
                     et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
