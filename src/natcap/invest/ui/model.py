@@ -125,11 +125,12 @@ class OptionsDialog(QtWidgets.QDialog):
           the button can be set via the ``reject_text`` parameter.
     """
 
-    def __init__(self, title=None, modal=False, accept_text='save',
+    def __init__(self, parent, title=None, modal=False, accept_text='save',
                  reject_text='cancel'):
         """Initialize the OptionsDialog.
 
         Parameters:
+            parent (QWidget): parent QWidget object.
             title=None (string): The title of the dialog.  If ``None``, the
                 dialog title will not be set.
             modal=False (bool): The dialog's modality. If ``True``, the dialog
@@ -142,20 +143,23 @@ class OptionsDialog(QtWidgets.QDialog):
         Returns:
             ``None``
         """
-        QtWidgets.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self, parent=parent)
         self._accept_text = ' ' + accept_text.strip()
         self._reject_text = ' ' + reject_text.strip()
         if title:
             self.setWindowTitle(title)
 
         self.setModal(modal)
-        self.setLayout(QtWidgets.QVBoxLayout())
+        # passing self as the parent reference
+        self.setLayout(QtWidgets.QVBoxLayout(self))
 
         self._buttonbox = None
-        self.ok_button = QtWidgets.QPushButton(self._accept_text)
+        self.ok_button = QtWidgets.QPushButton(
+            self._accept_text, parent=self)
         self.ok_button.setIcon(inputs.ICON_ENTER)
         self.ok_button.clicked.connect(self.accept)
-        self.cancel_button = QtWidgets.QPushButton(self._reject_text)
+        self.cancel_button = QtWidgets.QPushButton(
+            self._reject_text, parent=self)
         self.cancel_button.setIcon(qtawesome.icon('fa.times',
                                                   color='grey'))
         self.cancel_button.clicked.connect(self.reject)
@@ -202,7 +206,7 @@ class OptionsDialog(QtWidgets.QDialog):
         """
         # last thing: add the buttonbox if it hasn't been created yet.
         if not self._buttonbox:
-            self._buttonbox = QtWidgets.QDialogButtonBox()
+            self._buttonbox = QtWidgets.QDialogButtonBox(parent=self)
             self._buttonbox.addButton(self.ok_button,
                                       QtWidgets.QDialogButtonBox.AcceptRole)
             self._buttonbox.addButton(self.cancel_button,
@@ -223,9 +227,9 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
     attribute.
     """
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the QuitConfirmDialog."""
-        QtWidgets.QMessageBox.__init__(self)
+        QtWidgets.QMessageBox.__init__(self, parent=parent)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText('<h2>Are you sure you want to quit?</h2>')
         self.setInformativeText(
@@ -236,7 +240,7 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
         self.setIconPixmap(
             qtawesome.icon(
                 'fa.question').pixmap(100, 100))
-        self.checkbox = QtWidgets.QCheckBox('Remember inputs')
+        self.checkbox = QtWidgets.QCheckBox('Remember inputs', parent=self)
         self.layout().addWidget(self.checkbox,
                                 self.layout().rowCount()-1,
                                 0, 1, 1)
@@ -258,7 +262,7 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
 class ConfirmDialog(QtWidgets.QMessageBox):
     """A message box for confirming something with the user."""
 
-    def __init__(self, title_text, body_text):
+    def __init__(self, parent, title_text, body_text):
         """Initialize the dialog.
 
         Parameters:
@@ -268,7 +272,7 @@ class ConfirmDialog(QtWidgets.QMessageBox):
         Returns:
             None.
         """
-        QtWidgets.QMessageBox.__init__(self)
+        QtWidgets.QMessageBox.__init__(self, parent=parent)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText('<h2>%s<h2>' % title_text)
         self.setInformativeText(body_text)
@@ -282,10 +286,11 @@ class ConfirmDialog(QtWidgets.QMessageBox):
 class ModelMismatchConfirmDialog(ConfirmDialog):
     """Confirm datastack load when it looks like the wrong model."""
 
-    def __init__(self, current_modelname):
+    def __init__(self, parent, current_modelname):
         """Initialize the dialog.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             current_modelname (string): The modelname of the current
                 InVESTModel target.
 
@@ -302,6 +307,7 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
 
         ConfirmDialog.__init__(
             self,
+            parent=parent,
             title_text='Are you sure this is the right model?',
             body_text=self._body_text)
 
@@ -328,22 +334,23 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
 class SettingsDialog(OptionsDialog):
     """A dialog for global InVEST settings."""
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the SettingsDialog.
 
         Returns:
             ``None``
         """
-        OptionsDialog.__init__(self, title='InVEST Settings',
-                               modal=True)
+        OptionsDialog.__init__(
+            self, title='InVEST Settings', modal=True, parent=parent)
         self.resize(600, 200)
 
         self.global_label = QtWidgets.QLabel(
-            'Note: these settings affect all InVEST models.')
+            'Note: these settings affect all InVEST models.', parent=self)
         self.global_label.setStyleSheet(inputs.QLABEL_STYLE_INFO)
         self.layout().addWidget(self.global_label)
 
-        self._global_opts_container = inputs.Container(label='Global options')
+        self._global_opts_container = inputs.Container(
+            parent=self, label='Global options')
         self.layout().addWidget(self._global_opts_container)
 
         try:
@@ -355,6 +362,7 @@ class SettingsDialog(OptionsDialog):
             cache_dir = QtCore.QStandardPaths.writableLocation(
                 QtCore.QStandardPaths.CacheLocation)
         self.cache_directory = inputs.Folder(
+            parent=self,
             label='Cache directory',
             helptext=('Where local files will be stored.'
                       'Default value: %s') % cache_dir)
@@ -370,6 +378,7 @@ class SettingsDialog(OptionsDialog):
             'DEBUG',
             'NOTSET')
         self.dialog_logging_level = inputs.Dropdown(
+            parent=self,
             label='Dialog logging threshold',
             helptext=('The minimum logging level for messages to be '
                       'displayed in the run dialog.  Log messages with '
@@ -381,6 +390,7 @@ class SettingsDialog(OptionsDialog):
         self._global_opts_container.add_input(self.dialog_logging_level)
 
         self.logfile_logging_level = inputs.Dropdown(
+            parent=self,
             label='Logfile logging threshold',
             helptext=('The minimum logging level for messages to be '
                       'displayed in the logfile for a run.  Log messages with '
@@ -424,11 +434,12 @@ class AboutDialog(QtWidgets.QDialog):
         None.
     """
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the AboutDialog."""
-        QtWidgets.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self, parent=parent)
         self.setWindowTitle('About InVEST')
-        self.setLayout(QtWidgets.QVBoxLayout())
+        # passing self as the parent reference
+        self.setLayout(QtWidgets.QVBoxLayout(self))
         label_text = textwrap.dedent(
             """
             <h1>InVEST</h1>
@@ -487,13 +498,13 @@ class AboutDialog(QtWidgets.QDialog):
             </p>
             """)
 
-        self.label = QtWidgets.QLabel(label_text)
+        self.label = QtWidgets.QLabel(label_text, parent=self)
         self.label.setTextFormat(QtCore.Qt.RichText)
         self.label.setOpenExternalLinks(True)
         self.layout().addWidget(self.label)
 
-        self.button_box = QtWidgets.QDialogButtonBox()
-        self.accept_button = QtWidgets.QPushButton('OK')
+        self.button_box = QtWidgets.QDialogButtonBox(parent=self)
+        self.accept_button = QtWidgets.QPushButton('OK', parent=self)
         self.button_box.addButton(
             self.accept_button,
             QtWidgets.QDialogButtonBox.AcceptRole)
@@ -504,17 +515,18 @@ class AboutDialog(QtWidgets.QDialog):
 class LocalDocsMissingDialog(QtWidgets.QMessageBox):
     """A dialog to explain that local documentation can't be found."""
 
-    def __init__(self, local_docs_link):
+    def __init__(self, parent, local_docs_link):
         """Initialize the LocalDocsMissingDialog.
 
         Parameters:
+            parent (QWidget): parent QWidget object
             local_docs_link (string): The local path to the local HTML
                 documentation.
 
         Returns:
             ``None``
         """
-        QtWidgets.QMessageBox.__init__(self)
+        QtWidgets.QMessageBox.__init__(self, parent=parent)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText("<h2>Local docs not found<h2>")
         local_docs_link = os.path.basename(local_docs_link)
@@ -638,10 +650,11 @@ class DatastackOptionsDialog(OptionsDialog):
         An instance of :ref:DatastackSaveOpts namedtuple.
     """
 
-    def __init__(self, paramset_basename):
+    def __init__(self, parent, paramset_basename):
         """Initialize the DatastackOptionsDialog.
 
         Parameters:
+            parent (QWidget): parent QWidget object.
             paramset_basename (string): The basename of the new parameter set
                 file.
 
@@ -649,22 +662,24 @@ class DatastackOptionsDialog(OptionsDialog):
             ``None``
         """
         OptionsDialog.__init__(self,
+                               parent=parent,
                                title='Datastack options',
                                modal=True,
                                accept_text='Save datastack',
                                reject_text='Cancel')
-        self._container = inputs.Container(label='Datastack options')
+        self._container = inputs.Container(
+            parent=self, label='Datastack options')
         self.layout().addWidget(self._container)
         self.paramset_basename = paramset_basename
 
         self.datastack_type = inputs.Dropdown(
-            label='Datastack type',
+            parent=self, label='Datastack type',
             options=sorted(_DATASTACK_SAVE_OPTS.keys()))
         self.datastack_type.set_value(_DATASTACK_PARAMETER_SET)
         self.use_relative_paths = inputs.Checkbox(
-            label='Use relative paths')
+            parent=self, label='Use relative paths')
         self.include_workspace = inputs.Checkbox(
-            label='Include workspace path in datastack')
+            parent=self, label='Include workspace path in datastack')
         self.include_workspace.set_value(False)
 
         @validation.invest_validator
@@ -694,6 +709,7 @@ class DatastackOptionsDialog(OptionsDialog):
             return warnings
 
         self.save_parameters = inputs.SaveFile(
+            parent=self,
             label=_DATASTACK_SAVE_OPTS[_DATASTACK_PARAMETER_SET]['title'],
             args_key='archive_path',
             validator=_validate_parameter_file,
@@ -777,20 +793,27 @@ class DatastackOptionsDialog(OptionsDialog):
 class DatastackArchiveExtractionDialog(OptionsDialog):
     """A dialog for extracting a datastack archive."""
 
-    def __init__(self):
-        """Initialize the DatastackArchiveExtractionDialog."""
+    def __init__(self, parent):
+        """Initialize the DatastackArchiveExtractionDialog.
+
+        Parameters:
+            parent (QWidget): reference to parent QWidget object.
+
+        Returns:
+            None.
+        """
         OptionsDialog.__init__(self,
+                               parent=parent,
                                title='Extract datastack',
                                modal=True,
                                accept_text='Extract',
                                reject_text='Cancel')
         self._container = inputs.Container(
-            label='Datastack extraction parameters')
+            parent=self, label='Datastack extraction parameters')
         self.layout().addWidget(self._container)
 
         self.extraction_point = inputs.Folder(
-            label='Where should this archive be extracted?',
-        )
+            parent=self, label='Where should this archive be extracted?')
         self._container.add_input(self.extraction_point)
 
     def exec_(self):
@@ -810,40 +833,49 @@ class DatastackArchiveExtractionDialog(OptionsDialog):
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
     """A dialog for presenting errors from whole-model validation."""
 
-    def __init__(self):
-        """Initialize the WholeModelValidationErrorDialog."""
-        QtWidgets.QDialog.__init__(self)
-        self.warnings = []
-        self.setLayout(QtWidgets.QVBoxLayout())
+    def __init__(self, parent):
+        """Initialize the WholeModelValidationErrorDialog.
 
-        self.title_icon = QtWidgets.QLabel()
+        Parameters:
+            parent (QWidget): reference to parent QWidget object.
+
+        """
+        QtWidgets.QDialog.__init__(self, parent=parent)
+        self.warnings = []
+        # self refers to the box layout's parent reference
+        self.setLayout(QtWidgets.QVBoxLayout(self))
+
+        self.title_icon = QtWidgets.QLabel(parent=self)
         self.title_icon.setPixmap(ICON_ALERT.pixmap(75, 75))
         self.title_icon.setAlignment(QtCore.Qt.AlignCenter)
-        self.title = QtWidgets.QWidget()
-        self.title.setLayout(QtWidgets.QHBoxLayout())
+        self.title = QtWidgets.QWidget(parent=self)
+        # self refers to the parent referance
+        self.title.setLayout(QtWidgets.QHBoxLayout(self))
         self.title.layout().addWidget(self.title_icon)
 
-        self.title_label = QtWidgets.QLabel('<h2>Validating inputs ...</h2>')
+        self.title_label = QtWidgets.QLabel(
+            '<h2>Validating inputs ...</h2>', parent=self)
         self.title.layout().addWidget(self.title_label)
         self.layout().addWidget(self.title)
 
-        self.scroll_widget = QtWidgets.QScrollArea()
+        self.scroll_widget = QtWidgets.QScrollArea(parent=self)
         self.scroll_widget.setWidgetResizable(True)
-        self.scroll_widget_container = QtWidgets.QWidget()
-        self.scroll_widget_container.setLayout(QtWidgets.QVBoxLayout())
+        self.scroll_widget_container = QtWidgets.QWidget(parent=self)
+        # self refers to t parent reference
+        self.scroll_widget_container.setLayout(QtWidgets.QVBoxLayout(self))
         self.scroll_widget.setWidget(self.scroll_widget_container)
         self.scroll_widget.setHorizontalScrollBarPolicy(
             QtCore.Qt.ScrollBarAlwaysOff)
         self.layout().addWidget(self.scroll_widget)
 
-        self.label = QtWidgets.QLabel('')
+        self.label = QtWidgets.QLabel('', parent=self)
         self.label.setWordWrap(True)
         self.scroll_widget.widget().layout().addWidget(self.label)
         self.scroll_widget.widget().layout().insertStretch(-1)
         self.scroll_widget.setWidgetResizable(True)
 
-        self.buttonbox = QtWidgets.QDialogButtonBox()
-        self.back_button = QtWidgets.QPushButton(' Back')
+        self.buttonbox = QtWidgets.QDialogButtonBox(parent=self)
+        self.back_button = QtWidgets.QPushButton(' Back', parent=self)
         self.back_button.setIcon(ICON_BACK)
         self.back_button.clicked.connect(self.close)
         self.buttonbox.addButton(self.back_button,
@@ -900,7 +932,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     If any of these attributes are not overridden, a warning will be raised.
     """
 
-    def __init__(self, label, target, validator, localdoc):
+    def __init__(self, label, target, validator, localdoc, parent=None):
         """Initialize the Model.
 
         Parameters:
@@ -911,8 +943,10 @@ class InVESTModel(QtWidgets.QMainWindow):
                 function.
             localdoc (string): The filename of the user's guide chapter for
                 this model.
+            parent (QWidget): reference to parent QWidget object. Defaults to
+                None because it's likely this is the top object.
         """
-        QtWidgets.QMainWindow.__init__(self)
+        QtWidgets.QMainWindow.__init__(self, parent=parent)
         self.label = label
         self.target = target
         self.validator = validator
@@ -928,29 +962,32 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.exit_code = None
 
         # dialogs
-        self.about_dialog = AboutDialog()
-        self.settings_dialog = SettingsDialog()
-        self.file_dialog = inputs.FileDialog()
+        self.about_dialog = AboutDialog(parent=self)
+        self.settings_dialog = SettingsDialog(parent=self)
+        self.file_dialog = inputs.FileDialog(parent=self)
 
         paramset_basename = self.target.__module__.split('.')[-1]
         self.datastack_options_dialog = DatastackOptionsDialog(
-            paramset_basename=paramset_basename)
+            parent=self, paramset_basename=paramset_basename)
 
         self.datastack_archive_extract_dialog = (
-            DatastackArchiveExtractionDialog())
-        self.quit_confirm_dialog = QuitConfirmDialog()
-        self.validation_report_dialog = WholeModelValidationErrorDialog()
-        self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
+            DatastackArchiveExtractionDialog(parent=self))
+        self.quit_confirm_dialog = QuitConfirmDialog(parent=self)
+        self.validation_report_dialog = WholeModelValidationErrorDialog(
+            parent=self)
+        self.local_docs_missing_dialog = LocalDocsMissingDialog(
+            parent=self, local_docs_link=self.localdoc)
         self.input_overwrite_confirm_dialog = ConfirmDialog(
+            parent=self,
             title_text='Overwrite parameters?',
             body_text=('Loading a datastack will overwrite any unsaved '
                        'parameters. Are you sure you want to continue?')
         )
         self.workspace_overwrite_confirm_dialog = ConfirmDialog(
-            title_text='Workspace exists!',
+            parent=self, title_text='Workspace exists!',
             body_text='Overwrite files from a previous run?')
         self.model_mismatch_confirm_dialog = ModelMismatchConfirmDialog(
-            self.target.__module__)
+            parent=self, current_modelname=self.target.__module__)
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
@@ -958,12 +995,13 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.settings_dialog.accepted.connect(_settings_saved_message)
 
         # Main operational widgets for the form
-        self._central_widget = QtWidgets.QWidget()
+        self._central_widget = QtWidgets.QWidget(parent=self)
         self.setCentralWidget(self._central_widget)
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
-        self._central_widget.setLayout(QtWidgets.QVBoxLayout())
+        # self refers to parent reference
+        self._central_widget.setLayout(QtWidgets.QVBoxLayout(self))
         self.menuBar().setNativeMenuBar(True)
         self._central_widget.layout().setSizeConstraint(
             QtWidgets.QLayout.SetMinimumSize)
@@ -973,7 +1011,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.modelname = self.label
 
         # Format the text links at the top of the window.
-        self.links = QtWidgets.QLabel()
+        self.links = QtWidgets.QLabel(parent=self)
         self.links.setAlignment(QtCore.Qt.AlignRight)
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
@@ -983,14 +1021,14 @@ class InVESTModel(QtWidgets.QMainWindow):
         self._central_widget.layout().addWidget(self.links)
         self.links.linkActivated.connect(self._check_local_docs)
 
-        self.form = inputs.Form()
+        self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
-        self.run_dialog = inputs.FileSystemRunDialog()
+        self.run_dialog = inputs.FileSystemRunDialog(parent=self)
 
         # start with workspace and suffix inputs
-        self.workspace = inputs.Folder(args_key='workspace_dir',
-                                       label='Workspace',
-                                       validator=self.validator)
+        self.workspace = inputs.Folder(
+            parent=self, args_key='workspace_dir', label='Workspace',
+            validator=self.validator)
 
         # natcap.invest.pollination.pollination --> pollination
         modelname = self.target.__module__.split('.')[-1]
@@ -999,6 +1037,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                 model=modelname)))
 
         self.suffix = inputs.Text(
+            parent=self,
             args_key='suffix',
             helptext=(
                 u'A string that will be added to the end of the output file '
@@ -1019,7 +1058,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             self.label)
 
         # Menu items.
-        self.file_menu = QtWidgets.QMenu('&File')
+        self.file_menu = QtWidgets.QMenu('&File', parent=self)
         self.file_menu.addAction(
             qtawesome.icon('fa.cog'),
             'Settings ...', self.settings_dialog.exec_,
@@ -1028,7 +1067,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
-        self.open_menu = QtWidgets.QMenu('Load parameters')
+        self.open_menu = QtWidgets.QMenu('Load parameters', parent=self)
         self.open_menu.setIcon(qtawesome.icon('fa.folder-open-o'))
         self.build_open_menu()
         self.file_menu.addMenu(self.open_menu)
@@ -1038,7 +1077,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtGui.QKeySequence('Ctrl+Q'))
         self.menuBar().addMenu(self.file_menu)
 
-        self.edit_menu = QtWidgets.QMenu('&Edit')
+        self.edit_menu = QtWidgets.QMenu('&Edit', parent=self)
         self.edit_menu.addAction(
             qtawesome.icon('fa.undo', color='red'),
             'Clear inputs', self.clear_inputs)
@@ -1048,13 +1087,13 @@ class InVESTModel(QtWidgets.QMainWindow):
             self.clear_local_settings)
         self.menuBar().addMenu(self.edit_menu)
 
-        self.dev_menu = QtWidgets.QMenu('&Development')
+        self.dev_menu = QtWidgets.QMenu('&Development', parent=self)
         self.dev_menu.addAction(
             qtawesome.icon('fa.file-code-o'),
             'Save to python script ...', self.save_to_python)
         self.menuBar().addMenu(self.dev_menu)
 
-        self.help_menu = QtWidgets.QMenu('&Help')
+        self.help_menu = QtWidgets.QMenu('&Help', parent=self)
         self.help_menu.addAction(
             qtawesome.icon('fa.info'),
             'About InVEST', self.about_dialog.exec_)
@@ -1556,6 +1595,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         ideal_height = max(
             self.sizeHint().height() + 100,
             self.form.scroll_area.widget().minimumSize().height() + 250)
+        # TODO: does this need a parent reference?
         screen_geometry = QtWidgets.QDesktopWidget().availableGeometry()
         self.resize(
             min(screen_geometry.width(), ideal_width),

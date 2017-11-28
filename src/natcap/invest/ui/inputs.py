@@ -126,7 +126,7 @@ def center_window(window_ptr):
 
 
 class Validator(QtCore.QObject):
-    """A class to manage alidating in a separate Qt thread."""
+    """A class to manage validating in a separate Qt thread."""
 
     started = QtCore.Signal()
     finished = QtCore.Signal(list)
@@ -139,7 +139,7 @@ class Validator(QtCore.QObject):
                 parent of the validation thread.
         """
         QtCore.QObject.__init__(self, parent)
-        self._validation_thread = QtCore.QThread(parent=self)
+        self._validation_thread = QtCore.QThread(parent=parent)
         self._validation_worker = None
 
     def in_progress(self):
@@ -196,14 +196,17 @@ class MessageArea(QtWidgets.QLabel):
         area.set_error(False)  # sets the stylesheet for non-error messages.
     """
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the MessageArea.
 
         From a Qt perspective, this is little more than calling
         ``QLabel.__init__`` and ensuring that the qlabel has word wrapping and
         rich text enabled.
+
+        Parameters:
+            parent (QWidget): reference to parent QWidget object.
         """
-        QtWidgets.QLabel.__init__(self)
+        QtWidgets.QLabel.__init__(self, parent=parent)
         self.setWordWrap(True)
         self.setTextFormat(QtCore.Qt.RichText)
         self.error = False
@@ -257,12 +260,18 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
 
     message_received = QtCore.Signal(six.text_type)
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the LogMessagePane instance.
 
         Sets the stylesheet for the QPlainTextEdit, and sets it to read-only.
+
+        Parameters:
+            parent (QWidget): reference to parent QWidget object.
+
+        Returns:
+            None
         """
-        QtWidgets.QPlainTextEdit.__init__(self)
+        QtWidgets.QPlainTextEdit.__init__(self, parent=parent)
 
         self.setReadOnly(True)
         self.setStyleSheet("QWidget { background-color: White; "
@@ -317,24 +326,30 @@ class FileSystemRunDialog(QtWidgets.QDialog):
     open the workspace with the OS's default file explorer.
     """
 
-    def __init__(self):
-        """Initialize the dialog."""
-        QtWidgets.QDialog.__init__(self)
+    def __init__(self, parent):
+        """Initialize the dialog.
+
+        Parameters:
+            parent (QWidget): reference to parent QWidget object.
+
+        """
+        QtWidgets.QDialog.__init__(self, parent=parent)
 
         self.is_executing = False
         self.cancel = False
         self.out_folder = None
 
-        self.setLayout(QtWidgets.QVBoxLayout())
+        # self refers to parent reference
+        self.setLayout(QtWidgets.QVBoxLayout(self))
         self.resize(700, 500)
         center_window(self)
         self.setModal(True)
 
         # create statusArea-related widgets for the window.
         self.statusAreaLabel = QtWidgets.QLabel(
-            FileSystemRunDialog._build_status_area_label())
+            FileSystemRunDialog._build_status_area_label(), parent=self)
 
-        self.log_messages_pane = LogMessagePane()
+        self.log_messages_pane = LogMessagePane(parent=self)
         self.loghandler = QLogHandler(self.log_messages_pane)
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.NOTSET)
@@ -343,7 +358,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         # create an indeterminate progress bar.  According to the Qt
         # documentation, an indeterminate progress bar is created when a
         # QProgressBar's minimum and maximum are both set to 0.
-        self.progressBar = QtWidgets.QProgressBar()
+        self.progressBar = QtWidgets.QProgressBar(parent=self)
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(0)
         self.progressBar.setTextVisible(False)
@@ -352,14 +367,15 @@ class FileSystemRunDialog(QtWidgets.QDialog):
             self.progressBar.setMinimumSize(progress_sizehint)
 
         self.openWorkspaceCB = QtWidgets.QCheckBox(
-            'Open workspace after success')
-        self.openWorkspaceButton = QtWidgets.QPushButton('Open workspace')
+            'Open workspace after success', parent=self)
+        self.openWorkspaceButton = QtWidgets.QPushButton(
+            'Open workspace', parent=self)
         self.openWorkspaceButton.pressed.connect(self._request_workspace)
         self.openWorkspaceButton.setSizePolicy(
             QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         self.openWorkspaceButton.setMaximumWidth(150)
         self.openWorkspaceButton.setVisible(False)
-        self.messageArea = MessageArea()
+        self.messageArea = MessageArea(parent=self)
         self.messageArea.clear()
 
         # Add the new widgets to the window
@@ -370,7 +386,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.layout().addWidget(self.openWorkspaceCB)
         self.layout().addWidget(self.openWorkspaceButton)
 
-        self.backButton = QtWidgets.QPushButton(' Back')
+        self.backButton = QtWidgets.QPushButton(' Back', parent=self)
         self.backButton.setToolTip('Return to parameter list')
 
         # add button icons
@@ -381,7 +397,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
 
         # create the buttonBox (a container for buttons) and add the buttons to
         # the buttonBox.
-        self.buttonBox = QtWidgets.QDialogButtonBox()
+        self.buttonBox = QtWidgets.QDialogButtonBox(parent=self)
         self.buttonBox.addButton(
             self.backButton, QtWidgets.QDialogButtonBox.AcceptRole)
 
@@ -702,14 +718,17 @@ class ValidationWorker(QtCore.QObject):
 class FileDialog(object):
     """A convenience wrapper for QtWidgets.QFileDialog."""
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the FileDialog instance.
+
+        Parameters:
+            parent (QWidget): reference to parent QWidget object.
 
         Returns:
             ``None``
         """
         object.__init__(self)
-        self.file_dialog = QtWidgets.QFileDialog()
+        self.file_dialog = QtWidgets.QFileDialog(parent=parent)
 
     def __del__(self):
         """Destructor for the FileDialog instance."""
@@ -851,22 +870,23 @@ class AbstractFileSystemButton(QtWidgets.QPushButton):
 
     path_selected = QtCore.Signal(six.text_type)
 
-    def __init__(self, dialog_title):
+    def __init__(self, parent, dialog_title):
         """Initialize the AbstractFileSystemButton.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             dialog_title (string): The title of the filesystem dialog owned
                 by this object.
 
         Returns:
             ``None``
         """
-        QtWidgets.QPushButton.__init__(self)
+        QtWidgets.QPushButton.__init__(self, parent=parent)
         if not hasattr(self, '_icon'):
             self._icon = ICON_FOLDER
         self.setIcon(self._icon)
         self.dialog_title = dialog_title
-        self.dialog = FileDialog()
+        self.dialog = FileDialog(parent=self)
         self.open_method = None  # This should be overridden
         self.clicked.connect(self._get_path)
         self._dialog_kwargs = {
@@ -899,27 +919,29 @@ class AbstractFileSystemButton(QtWidgets.QPushButton):
 class FileButton(AbstractFileSystemButton):
     """A filesystem button that prompts to open a file."""
 
-    def __init__(self, dialog_title):
+    def __init__(self, parent, dialog_title):
         """Initialize the FileButton.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             dialog_title (string): The title of the file selection dialog.
 
         Returns:
             ``None``
         """
         self._icon = ICON_FILE
-        AbstractFileSystemButton.__init__(self, dialog_title)
+        AbstractFileSystemButton.__init__(self, parent, dialog_title)
         self.open_method = self.dialog.open_file
 
 
 class SaveFileButton(AbstractFileSystemButton):
     """A filesystem button that prompts to save a file."""
 
-    def __init__(self, dialog_title, default_savefile):
+    def __init__(self, parent, dialog_title, default_savefile):
         """Initialize the SaveFileButton.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             dialog_title (string): The title of the file selection dialog.
             default_savefile (string): The file basename to use by default.
                 The user may override this filename within the dialog.
@@ -928,7 +950,7 @@ class SaveFileButton(AbstractFileSystemButton):
             ``None``
         """
         self._icon = ICON_FILE
-        AbstractFileSystemButton.__init__(self, dialog_title)
+        AbstractFileSystemButton.__init__(self, parent, dialog_title)
         self.open_method = functools.partial(
             self.dialog.save_file,
             savefile=default_savefile)
@@ -937,16 +959,17 @@ class SaveFileButton(AbstractFileSystemButton):
 class FolderButton(AbstractFileSystemButton):
     """A filesystem button that prompts to select a folder."""
 
-    def __init__(self, dialog_title):
+    def __init__(self, parent, dialog_title):
         """Initialize the FolderButton.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             dialog_title (string): The title of the folder selection dialog.
 
         Returns:
             ``None``
         """
-        AbstractFileSystemButton.__init__(self, dialog_title)
+        AbstractFileSystemButton.__init__(self, parent, dialog_title)
         self.open_method = self.dialog.open_folder
 
 
@@ -1204,11 +1227,12 @@ class GriddedInput(InVESTModelInput):
     hidden_changed = QtCore.Signal(bool)
     validity_changed = QtCore.Signal(bool)
 
-    def __init__(self, label, helptext=None, interactive=True,
+    def __init__(self, parent, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
         """Initialize this GriddedInput instance.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1227,8 +1251,9 @@ class GriddedInput(InVESTModelInput):
         Returns:
             ``None``
         """
-        InVESTModelInput.__init__(self, label=label, helptext=helptext,
-                       interactive=interactive, args_key=args_key)
+        InVESTModelInput.__init__(
+            self, label=label, helptext=helptext, interactive=interactive,
+            args_key=args_key)
 
         self._valid = None
         self.validator_ref = validator
@@ -1236,15 +1261,14 @@ class GriddedInput(InVESTModelInput):
         self._validator.finished.connect(self._validation_finished)
         self.validator_lock = threading.Lock()
 
-
-        self.label_widget = QtWidgets.QLabel(self.label)
+        self.label_widget = QtWidgets.QLabel(self.label, parent)
         self.hideable = hideable
         self.sufficient = False  # False until value set and interactive
         self.valid_button = ValidButton()
         if helptext:
             self.help_button = HelpButton(helptext)
         else:
-            self.help_button = QtWidgets.QWidget()  # empty widget!
+            self.help_button = QtWidgets.QWidget(parent=parent)  # empty widget!
 
         # Within a GriddedInput, a single Input instance occupies a whole row
         # of the grid layout.  If the input should occupy only some of the
@@ -1451,20 +1475,21 @@ class Text(GriddedInput):
     class TextField(QtWidgets.QLineEdit):
         """A custom QLineEdit widget with tweaks for use by Text instances."""
 
-        def __init__(self, starting_value=''):
+        def __init__(self, parent, starting_value=''):
             """Initialize the TextField instance.
 
             This textfield may accept ``DragEnterEvent``s and ``DropEvent``s,
             but will only do so if the event has text MIME data.
 
             Parameters:
+                parent (QWidget): reference to parent QWidget object.
                 starting_value='' (string): The starting value of the
                     QLineEdit.
 
             Returns:
                 ``None``
             """
-            QtWidgets.QLineEdit.__init__(self, starting_value)
+            QtWidgets.QLineEdit.__init__(self, starting_value, parent=parent)
             self.setAcceptDrops(True)
 
         def dragEnterEvent(self, event):
@@ -1506,11 +1531,12 @@ class Text(GriddedInput):
             event.accept()
             self.setText(text)
 
-    def __init__(self, label, helptext=None, interactive=True,
+    def __init__(self, parent, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
         """Initialize a Text input.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1529,11 +1555,11 @@ class Text(GriddedInput):
         Returns:
             ``None``
         """
-        GriddedInput.__init__(self, label=label, helptext=helptext,
-                              interactive=interactive,
-                              args_key=args_key, hideable=hideable,
-                              validator=validator)
-        self.textfield = Text.TextField()
+        GriddedInput.__init__(
+            self, parent=parent, label=label, helptext=helptext,
+            interactive=interactive, args_key=args_key, hideable=hideable,
+            validator=validator)
+        self.textfield = Text.TextField(parent=parent)
         self.textfield.textChanged.connect(self._text_changed)
         self.widgets[2] = self.textfield
 
@@ -1607,7 +1633,7 @@ class _Path(Text):
         but will only do so if the event has exactly 1 URL in its MIME data.
         """
 
-        def __init__(self, starting_value=''):
+        def __init__(self, parent, starting_value=''):
             """Initialize the FileField instance.
 
             Parameters:
@@ -1617,7 +1643,8 @@ class _Path(Text):
             Returns:
                 ``None``
             """
-            QtWidgets.QLineEdit.__init__(self, starting_value)
+            QtWidgets.QLineEdit.__init__(
+                self, starting_value, parent=parent)
             self.setAcceptDrops(True)
 
         def dragEnterEvent(self, event=None):
@@ -1713,11 +1740,12 @@ class _Path(Text):
 
             menu.exec_(event.globalPos())
 
-    def __init__(self, label, helptext=None, interactive=True,
+    def __init__(self, parent, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
         """Initialize the _Path instance.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1736,9 +1764,9 @@ class _Path(Text):
         Returns:
             ``None``
         """
-        Text.__init__(self, label, helptext, interactive, args_key,
+        Text.__init__(self, parent, label, helptext, interactive, args_key,
                       hideable, validator=validator)
-        self.textfield = _Path.FileField()
+        self.textfield = _Path.FileField(parent=parent)
         self.textfield.textChanged.connect(self._text_changed)
 
         # None values are filler.  They represent an empty column in this row
@@ -1768,11 +1796,12 @@ class _Path(Text):
 class Folder(_Path):
     """An InVESTModelInput for selecting a folder."""
 
-    def __init__(self, label, helptext=None, interactive=True,
+    def __init__(self, parent, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
         """Initialize the Folder instance.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1791,9 +1820,9 @@ class Folder(_Path):
         Returns:
             ``None``
         """
-        _Path.__init__(self, label, helptext, interactive, args_key,
+        _Path.__init__(self, parent, label, helptext, interactive, args_key,
                        hideable, validator=validator)
-        self.path_select_button = FolderButton('Select folder')
+        self.path_select_button = FolderButton(parent, 'Select folder')
         self.path_select_button.path_selected.connect(self._handle_file_button_selection)
 
         # index 3 is the column place right before the help button, after the
@@ -1807,11 +1836,12 @@ class Folder(_Path):
 class File(_Path):
     """An InVESTModelInput for selecting a single file."""
 
-    def __init__(self, label, helptext=None, interactive=True,
+    def __init__(self, parent, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None):
         """Initialize the File instance.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1830,9 +1860,10 @@ class File(_Path):
         Returns:
             ``None``
         """
-        _Path.__init__(self, label, helptext, interactive, args_key,
+        _Path.__init__(self, parent, label, helptext, interactive, args_key,
                        hideable, validator=validator)
-        self.path_select_button = FileButton('Select file')
+        self.path_select_button = FileButton(
+            parent=parent, dialog_title='Select file')
         self.path_select_button.path_selected.connect(
             self._handle_file_button_selection)
 
@@ -1847,12 +1878,13 @@ class File(_Path):
 class SaveFile(_Path):
     """An InVESTModelInput for selecting a file to save to."""
 
-    def __init__(self, label, helptext=None, interactive=True,
+    def __init__(self, parent, label, helptext=None, interactive=True,
                  args_key=None, hideable=False, validator=None,
                  default_savefile='new_file.txt'):
         """Initialize the SaveFile instance.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1871,10 +1903,10 @@ class SaveFile(_Path):
         Returns:
             ``None``
         """
-        _Path.__init__(self, label, helptext, interactive, args_key,
+        _Path.__init__(self, parent, label, helptext, interactive, args_key,
                        hideable, validator=validator)
-        self.path_select_button = SaveFileButton('Select file',
-                                                 default_savefile)
+        self.path_select_button = SaveFileButton(
+            parent, 'Select file', default_savefile)
         self.path_select_button.path_selected.connect(
             self._handle_file_button_selection)
         self.widgets[3] = self.path_select_button
@@ -1892,10 +1924,11 @@ class Checkbox(GriddedInput):
     # linux via `python setup.py nosetests`.
     interactivity_changed = QtCore.Signal(bool)
 
-    def __init__(self, label, helptext=None, interactive=True, args_key=None):
+    def __init__(self, parent, label, helptext=None, interactive=True, args_key=None):
         """Initialize the Checkbox instance.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1908,11 +1941,12 @@ class Checkbox(GriddedInput):
         Returns:
             ``None``
         """
-        GriddedInput.__init__(self, label=label, helptext=helptext,
-                              interactive=interactive, args_key=args_key,
-                              hideable=False, validator=None)
+        GriddedInput.__init__(
+            self, parent=parent, label=label, helptext=helptext,
+            interactive=interactive, args_key=args_key, hideable=False,
+            validator=None)
 
-        self.checkbox = QtWidgets.QCheckBox(label)
+        self.checkbox = QtWidgets.QCheckBox(label, parent=parent)
         self.checkbox.stateChanged.connect(self.value_changed.emit)
         self.widgets[0] = None  # No need for a valid button
         self.widgets[1] = self.checkbox  # replace label with checkbox
@@ -1959,13 +1993,15 @@ class Checkbox(GriddedInput):
 class Dropdown(GriddedInput):
     """An InVESTModelInput for selecting one out of a set of defined options."""
 
-    def __init__(self, label, helptext=None, interactive=True, args_key=None,
-                 hideable=False, options=()):
+    def __init__(
+            self, parent, label, helptext=None, interactive=True,
+            args_key=None, hideable=False, options=()):
         """Initialize a Dropdown instance.
 
         Like the Checkbox class, a Dropdown is always valid.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1983,10 +2019,11 @@ class Dropdown(GriddedInput):
         Returns:
             ``None``
         """
-        GriddedInput.__init__(self, label=label, helptext=helptext,
-                              interactive=interactive, args_key=args_key,
-                              hideable=hideable, validator=None)
-        self.dropdown = QtWidgets.QComboBox()
+        GriddedInput.__init__(
+            self, parent=parent, label=label, helptext=helptext,
+            interactive=interactive, args_key=args_key, hideable=hideable,
+            validator=None)
+        self.dropdown = QtWidgets.QComboBox(parent=parent)
         self.widgets[2] = self.dropdown
         self.set_options(options)
         self.dropdown.currentIndexChanged.connect(self._index_changed)
@@ -2145,11 +2182,12 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
     interactivity_changed = QtCore.Signal(bool)
     sufficiency_changed = QtCore.Signal(bool)
 
-    def __init__(self, label, interactive=True, expandable=False,
+    def __init__(self, parent, label, interactive=True, expandable=False,
                  expanded=True, args_key=None):
         """Initialize a Container.
 
         Parameters:
+            parent (QWidget): reference to parent QWidget object.
             label (string): The label of the Container.
             interactive=True (bool): Whether the user can interact with this
                 container.
@@ -2163,9 +2201,9 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         Returns:
             ``None``
         """
-        QtWidgets.QGroupBox.__init__(self)
-        InVESTModelInput.__init__(self, label=label, interactive=interactive,
-                       args_key=args_key)
+        QtWidgets.QGroupBox.__init__(self, parent=parent)
+        InVESTModelInput.__init__(
+            self, label=label, interactive=interactive, args_key=args_key)
         self.widgets = [self]
         self.setCheckable(expandable)
         if expandable:
@@ -2577,9 +2615,14 @@ class Multi(Container):
 class FormScrollArea(QtWidgets.QScrollArea):
     """Object to contain scrollarea-related functionality."""
 
-    def __init__(self):
-        """Initialize the ScrollArea."""
-        QtWidgets.QScrollArea.__init__(self)
+    def __init__(self, parent):
+        """Initialize the ScrollArea.
+
+        Parameters:
+            parent (QWidget): reference to QWidget object.
+
+        """
+        QtWidgets.QScrollArea.__init__(self, parent=parent)
         self.setWidgetResizable(True)
         self.verticalScrollBar().rangeChanged.connect(
             self.update_scroll_border)
@@ -2609,13 +2652,13 @@ class Form(QtWidgets.QWidget):
     submitted = QtCore.Signal()
     run_finished = QtCore.Signal()
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the Form.
 
         Returns:
             ``None``
         """
-        QtWidgets.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self, parent=parent)
 
         # self._thread is redefined as an Executor when we run the target
         # callable.
@@ -2625,8 +2668,9 @@ class Form(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
 
-        self.setLayout(QtWidgets.QVBoxLayout())
-        self.inputs = Container(label='')
+        # self refers to parent reference
+        self.setLayout(QtWidgets.QVBoxLayout(self))
+        self.inputs = Container(parent=self, label='')
         self.inputs.setFlat(True)
 
         # Have the inputs take up as much space as needed
@@ -2635,7 +2679,7 @@ class Form(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.Minimum)
 
         # Make the inputs container scrollable.
-        self.scroll_area = FormScrollArea()
+        self.scroll_area = FormScrollArea(parent=self)
         self.layout().addWidget(self.scroll_area)
         self.scroll_area.setWidget(self.inputs)
 
@@ -2647,8 +2691,8 @@ class Form(QtWidgets.QWidget):
         self.inputs.layout().setSizeConstraint(
             QtWidgets.QLayout.SetMinimumSize)
 
-        self.buttonbox = QtWidgets.QDialogButtonBox()
-        self.run_button = QtWidgets.QPushButton(' Run')
+        self.buttonbox = QtWidgets.QDialogButtonBox(parent=self)
+        self.run_button = QtWidgets.QPushButton(' Run', parent=self)
         self.run_button.setIcon(QtGui.QIcon(ICON_ENTER))
 
         self.buttonbox.addButton(
@@ -2656,7 +2700,7 @@ class Form(QtWidgets.QWidget):
         self.layout().addWidget(self.buttonbox)
         self.run_button.pressed.connect(self._emit_submitted)
 
-        self.run_dialog = FileSystemRunDialog()
+        self.run_dialog = FileSystemRunDialog(parent=self)
 
     @QtCore.Slot()
     def _emit_submitted(self):
