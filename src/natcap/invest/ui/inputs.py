@@ -126,7 +126,7 @@ def center_window(window_ptr):
 
 
 class Validator(QtCore.QObject):
-    """A class to manage alidating in a separate Qt thread."""
+    """A class to manage validating in a separate Qt thread."""
 
     started = QtCore.Signal()
     finished = QtCore.Signal(list)
@@ -138,8 +138,8 @@ class Validator(QtCore.QObject):
             parent (QtWidgets.QWidget): The parent qwidget.  This will be the
                 parent of the validation thread.
         """
+        # TODO: remove parent here?
         QtCore.QObject.__init__(self, parent)
-        self._validation_thread = QtCore.QThread(parent=self)
         self._validation_worker = None
 
     def in_progress(self):
@@ -148,7 +148,8 @@ class Validator(QtCore.QObject):
         Returns:
             is_running (bool): Whether the validation thread is running.
         """
-        return self._validation_thread.isRunning()
+        return False
+        #return self._validation_thread.isRunning()
 
     def validate(self, target, args, limit_to=None):
         """Validate the provided args with the provided target.
@@ -164,27 +165,14 @@ class Validator(QtCore.QObject):
         Returns:
             ``None``
         """
-        if self._validation_thread.isRunning():
-            self._validation_thread.wait()
         self.started.emit()
         self._validation_worker = ValidationWorker(
             target=target,
             args=args,
             limit_to=limit_to)
-        self._validation_worker.moveToThread(self._validation_thread)
-
-        @QtCore.Slot()
-        def _finished():
-            """Slot to process warnings and emit ``self.finished``."""
-            LOGGER.info('Finished validation for args_key %s', limit_to)
-            warnings_ = [w for w in self._validation_worker.warnings]
-
-            LOGGER.debug(warnings_)
-            self.finished.emit(warnings_)
-
-        self._validation_worker.finished.connect(self._validation_thread.quit)
-        self._validation_worker.finished.connect(_finished)
-        self._validation_worker.start()
+        self._validation_worker.run()
+        warnings_ = [w for w in self._validation_worker.warnings]
+        self.finished.emit(warnings_)
 
 
 class MessageArea(QtWidgets.QLabel):
@@ -685,16 +673,18 @@ class ValidationWorker(QtCore.QObject):
             ``None``
         """
         # Target must adhere to InVEST validation API.
-        LOGGER.info(('Starting validation thread with target=%s, args=%s, '
-                     'limit_to=%s'), self.target, self.args, self.limit_to)
+        LOGGER.info(
+            'Starting validation thread with target=%s, args=%s, limit_to=%s',
+            self.target, self.args, self.limit_to)
         try:
-            self.warnings = self.target(self.args, limit_to=self.limit_to)
-            LOGGER.info('Validation thread returned warnings: %s',
-                        self.warnings)
+            self.warnings = self.target(
+                self.args, limit_to=self.limit_to)
+            LOGGER.info(
+                'Validation thread returned warnings: %s', self.warnings)
         except Exception as error:
             self.error = str(error)
-            LOGGER.exception('Validation: Error when validating %s:',
-                             self.target)
+            LOGGER.exception(
+                'Validation: Error when validating %s:', self.target)
         self._finished = True
         self.finished.emit()
 
@@ -1227,15 +1217,14 @@ class GriddedInput(InVESTModelInput):
         Returns:
             ``None``
         """
-        InVESTModelInput.__init__(self, label=label, helptext=helptext,
-                       interactive=interactive, args_key=args_key)
+        InVESTModelInput.__init__(
+            self, label=label, helptext=helptext, interactive=interactive,
+            args_key=args_key)
 
         self._valid = None
         self.validator_ref = validator
         self._validator = Validator(self)
         self._validator.finished.connect(self._validation_finished)
-        self.validator_lock = threading.Lock()
-
 
         self.label_widget = QtWidgets.QLabel(self.label)
         self.hideable = hideable
@@ -1273,52 +1262,45 @@ class GriddedInput(InVESTModelInput):
         Validation is intended to be triggered by events in the UI and not by
         the user, hence the private function signature.
         """
-        try:
-            if self.validator_ref is not None:
-                LOGGER.info(
-                    'Validation: validator taken from self.validator_ref: %s',
-                    self.validator_ref)
-                validator_ref = self.validator_ref
-            else:
-                if self.args_key is None:
-                    LOGGER.info(
-                        ('Validation: No validator and no args_id defined; '
-                         'skipping.  Input assumed to be valid. %s'),
-                        self)
-                    self._validation_finished(validation_warnings=[])
-                    return
-                else:
-                    # args key defined, but a validator is not; input assumed
-                    # to be valid.
-                    warnings.warn(('Validation: args_key defined, but no '
-                                   'validator defined.  Input assumed to be '
-                                   'valid. %s') % self)
-                    self._validation_finished(validation_warnings=[])
-                    return
-
-            try:
-                args = self.parent().assemble_args()
-            except AttributeError:
-                # When self.parent() is not set, as in testing.
-                # self.parent() is only set when the InVESTModelInput is added to a
-                # layout.
-                args = {self.args_key: self.value()}
-
+        if self.validator_ref is not None:
             LOGGER.info(
-                ('Starting validation thread for %s with target:%s, args:%s, '
-                 'limit_to:%s'),
-                self, validator_ref, args, self.args_key)
+                'Validation: validator taken from self.validator_ref: %s',
+                self.validator_ref)
+            validator_ref = self.validator_ref
+        else:
+            if self.args_key is None:
+                LOGGER.info(
+                    ('Validation: No validator and no args_id defined; '
+                     'skipping.  Input assumed to be valid. %s'),
+                    self)
+                self._validation_finished(validation_warnings=[])
+                return
+            else:
+                # args key defined, but a validator is not; input assumed
+                # to be valid.
+                warnings.warn(('Validation: args_key defined, but no '
+                               'validator defined.  Input assumed to be '
+                               'valid. %s') % self)
+                self._validation_finished(validation_warnings=[])
+                return
 
-            # Prevent multiple self._validator.validate runs
-            self.validator_lock.acquire()
-            self._validator.validate(
-                target=validator_ref,
-                args=args,
-                limit_to=self.args_key)
-        except Exception:
-            LOGGER.exception('Error found when validating %s, releasing lock.',
-                             self)
-            raise
+        try:
+            args = self.parent().assemble_args()
+        except AttributeError:
+            # When self.parent() is not set, as in testing.
+            # self.parent() is only set when the InVESTModelInput is added to a
+            # layout.
+            args = {self.args_key: self.value()}
+
+        LOGGER.info(
+            ('Starting validation thread for %s with target:%s, args:%s, '
+             'limit_to:%s'),
+            self, validator_ref, args, self.args_key)
+
+        self._validator.validate(
+            target=validator_ref,
+            args=args,
+            limit_to=self.args_key)
 
     def _validation_finished(self, validation_warnings):
         """Interpret any validation errors and format them for the UI.
@@ -1359,15 +1341,6 @@ class GriddedInput(InVESTModelInput):
         self._valid = new_validity
         if current_validity != new_validity:
             self.validity_changed.emit(new_validity)
-        try:
-            # this releases the lock because the _validate thread must be
-            # complete
-            self.validator_lock.release()
-        except threading.ThreadError:
-            # It's possible this function was called just to wrap up an error
-            # and the lock wasn't acquired at all.  That's okay and pass
-            # through
-            pass
 
     def valid(self):
         """Check the validity of the input.
@@ -1375,8 +1348,6 @@ class GriddedInput(InVESTModelInput):
         Returns:
             The boolean validity of the input.
         """
-        self.validator_lock.acquire()
-        self.validator_lock.release()
         return self._valid
 
     def clear(self):
@@ -1385,9 +1356,8 @@ class GriddedInput(InVESTModelInput):
         Returns:
             None.
         """
-        with self.validator_lock:
-            self._valid = None
-            self.sufficient = False
+        self._valid = None
+        self.sufficient = False
         self.valid_button.clear()
 
     @QtCore.Slot(int)
