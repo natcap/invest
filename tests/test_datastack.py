@@ -588,6 +588,42 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(stack_info, datastack.ParameterSet(
             expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
 
+    def test_mixed_path_separators(self):
+        """Datastacks: datastack archives must handle windows, linux paths."""
+        from natcap.invest import datastack
+
+        args = {
+            'windows_path': os.path.join(self.workspace,
+                                         'dir1\\filepath1.txt'),
+            'linux_path': os.path.join(self.workspace,
+                                       'dir2/filepath2.txt'),
+        }
+        for filepath in args.values():
+            normalized_path = os.path.normpath(filepath.replace('\\', os.sep))
+            try:
+                os.makedirs(os.path.dirname(normalized_path))
+            except OSError:
+                pass
+
+            with open(normalized_path, 'w') as open_file:
+                open_file.write('the contents of this file do not matter.')
+
+        datastack_path = os.path.join(self.workspace, 'archive.invest.tar.gz')
+        datastack.build_datastack_archive(args, 'sample_model', datastack_path)
+
+        extraction_path = os.path.join(self.workspace, 'extracted_dir')
+        extracted_args = datastack.extract_datastack_archive(datastack_path,
+                                                             extraction_path)
+
+        expected_args = {
+            u'windows_path': os.path.join(extraction_path, 'data',
+                                          u'filepath1.txt'),
+            u'linux_path': os.path.join(extraction_path, u'data',
+                                        u'filepath2.txt'),
+        }
+        self.maxDiff = None  # show whole exception on failure
+        self.assertEqual(extracted_args, expected_args)
+
 
 class UtilitiesTest(unittest.TestCase):
     def test_print_args(self):
