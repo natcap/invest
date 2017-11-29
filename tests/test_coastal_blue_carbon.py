@@ -469,13 +469,31 @@ class TestPreprocessor(unittest.TestCase):
             sample_data_path, 'inputs/GBJC_2100_mean_Resample.tif')
         args = {
             'workspace_dir': _create_workspace(),
-            'results_suffix': '',
+            'results_suffix': '150225',
             'lulc_lookup_uri': os.path.join(
                 sample_data_path,
                 'inputs/lulc_lookup.csv'),
             'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
         }
         preprocessor.execute(args)
+
+        # walk through all files in the workspace and assert that outputs have
+        # the file suffix.
+        non_suffixed_files = []
+        for root_dir, dirnames, filenames in os.walk(args['workspace_dir']):
+            for filename in filenames:
+                if not filename.lower().endswith('.txt'):  # ignore logfile
+                    basename, extension = os.path.splitext(filename)
+                    if not basename.endswith('_150225'):
+                        path_rel_to_workspace = os.path.relpath(
+                            os.path.join(root_dir, filename),
+                            self.args['workspace_dir'])
+                        non_suffixed_files.append(path_rel_to_workspace)
+
+        if non_suffixed_files:
+            self.fail('%s files are missing suffixes: %s' %
+                      (len(non_suffixed_files),
+                       pprint.pformat(non_suffixed_files)))
 
 
 class TestIO(unittest.TestCase):
@@ -744,7 +762,7 @@ class TestModel(unittest.TestCase):
         non_suffixed_files = []
         for root_dir, dirnames, filenames in os.walk(self.args['workspace_dir']):
             for filename in filenames:
-                if not filename.lower().endswith('.csv'):
+                if not filename.lower().endswith('.txt'):  # ignore logfile
                     basename, extension = os.path.splitext(filename)
                     if not basename.endswith('_150225'):
                         path_rel_to_workspace = os.path.relpath(
