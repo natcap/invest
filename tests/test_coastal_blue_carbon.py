@@ -83,7 +83,7 @@ def _read_array(raster_path):
 
 def _create_table(uri, rows_list):
     """Create csv file from list of lists."""
-    with open(uri, 'w') as f:
+    with open(uri, 'wb') as f:
         writer = csv.writer(f)
         writer.writerows(rows_list)
     return uri
