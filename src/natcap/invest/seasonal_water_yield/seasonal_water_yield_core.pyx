@@ -38,8 +38,8 @@ cdef int N_MONTHS = 12
 
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double INF = numpy.inf
-cdef int N_BLOCK_ROWS = 6
-cdef int N_BLOCK_COLS = 6
+cdef int N_BLOCK_ROWS = 4
+cdef int N_BLOCK_COLS = 4
 
 
 @cython.boundscheck(False)
@@ -235,6 +235,8 @@ cdef route_local_recharge(
     cdef float qfi_m
     cdef float p_m
     cdef float l_i
+    cdef float li_avail_value
+    cdef float l_sum_avail_value
     cdef int neighbors_calculated = 0
 
     cdef time_t last_time, current_time
@@ -322,12 +324,20 @@ cdef route_local_recharge(
             else:
                 #'calculate l_avail_i and l_i'
                 #add the contribution of the upstream to l_avail and l_i eq [7]
+                # in cases of bad user data we can sometimes loop and still
+                # get nodata, treat it as zero flow.
+                li_avail_value = li_avail_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset]
+                if li_avail_value == local_recharge_nodata:
+                    li_avail_value = 0.0
+                l_sum_avail_value = l_sum_avail_block[
+                    neighbor_row_index, neighbor_col_index,
+                    neighbor_row_block_offset, neighbor_col_block_offset]
+                if l_sum_avail_value == local_recharge_nodata:
+                    l_sum_avail_value = 0.0
                 current_l_sum_avail += (
-                    li_avail_block[
-                        neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset] +
-                    l_sum_avail_block[neighbor_row_index, neighbor_col_index,
-                        neighbor_row_block_offset, neighbor_col_block_offset]) * outflow_weight
+                    li_avail_value + l_sum_avail_value) * outflow_weight
 
         if not neighbors_calculated:
             continue
@@ -339,11 +349,18 @@ cdef route_local_recharge(
         aet_sum = 0.0
         for month_index in xrange(N_MONTHS):
             p_m = precip_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
-            p_i += p_m
+            if abs(p_m-precip_nodata) > 1e-6:  # it's too far apart to be nodata
+                p_i += p_m
+            else:
+                p_m = 0.0 # don't add a nodata value later
             # Eq [6]
-            pet_m = (
-                kc_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset] *
-                et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
+            # This check for nodata came up when several users had ill aligned data
+            if abs(et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]-et0_nodata) > 1e-6:
+                pet_m = (
+                    kc_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset] *
+                    et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
+            else:
+                pet_m = 0.0
             qfi_m = qfi_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
             qf_i += qfi_m
             # Eq [5]

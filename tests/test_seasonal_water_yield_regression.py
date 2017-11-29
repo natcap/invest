@@ -131,20 +131,27 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             REGRESSION_DATA, 'l_agg_results.csv')
         result_vector = ogr.Open(aggregate_vector_path)
         result_layer = result_vector.GetLayer()
+        incorrect_value_list = []
         with open(agg_results_base_path, 'rb') as agg_result_file:
             for line in agg_result_file:
                 fid, vri_sum, qb_val = [float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
                 for field, value in [('vri_sum', vri_sum), ('qb', qb_val)]:
-                    numpy.testing.assert_almost_equal(
-                        feature.GetField(field), value,
-                        decimal=tolerance_places)
+                    if not numpy.isclose(
+                            feature.GetField(field), value, rtol=1e-6):
+                        incorrect_value_list.append(
+                            'Unexpected value on feature %d, '
+                            'expected %f got %f' % (
+                                fid, value, feature.GetField(field)))
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
 
         result_layer = None
         ogr.DataSource.__swig_destroy__(result_vector)
         result_vector = None
+
+        if incorrect_value_list:
+            raise AssertionError('\n' + '\n'.join(incorrect_value_list))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_duplicate_aoi_assertion(self):
