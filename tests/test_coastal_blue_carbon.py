@@ -738,20 +738,21 @@ class TestModel(unittest.TestCase):
 
         # walk through all files in the workspace and assert that outputs have
         # the file suffix.
-        non_suffxed_files = []
+        non_suffixed_files = []
         for root_dir, dirnames, filenames in os.walk(self.args['workspace_dir']):
             for filename in filenames:
                 if not filename.lower().endswith('.csv'):
                     basename, extension = os.path.splitext(filename)
-                    if not basename.endswith('_xyz'):
+                    if not basename.endswith('_150225'):
                         path_rel_to_workspace = os.path.relpath(
                             os.path.join(root_dir, filename),
                             self.args['workspace_dir'])
-                        non_suffxed_files.append(path_rel_to_workspace)
+                        non_suffixed_files.append(path_rel_to_workspace)
 
-        if non_suffxed_files:
-            self.fail('Files are missing suffixes: %s' %
-                      pprint.pformat(non_suffxed_files))
+        if non_suffixed_files:
+            self.fail('%s files are missing suffixes: %s' %
+                      (len(non_suffixed_files),
+                       pprint.pformat(non_suffixed_files)))
 
     def test_1_transition_passes(self):
         """Coastal Blue Carbon: Test model runs with only 1 transition.
