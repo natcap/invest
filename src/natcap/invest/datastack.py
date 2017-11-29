@@ -324,7 +324,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                 return ''
 
             # It's a string and exists on disk, it's a file!
-            possible_path = os.path.abspath(args_param)
+            possible_path = os.path.normpath(args_param.replace('\\', os.sep))
             if os.path.exists(possible_path):
                 try:
                     filepath = files_found[possible_path]
@@ -335,8 +335,10 @@ def build_datastack_archive(args, model_name, datastack_path):
                 except KeyError:
                     found_filepath = _collect_filepath(possible_path,
                                                        data_dir)
+
+                    # Store only linux-style filepaths.
                     relative_filepath = os.path.relpath(
-                        found_filepath, temp_workspace)
+                        found_filepath, temp_workspace).replace('\\', '/')
                     files_found[possible_path] = relative_filepath
                     LOGGER.debug('Processed path %s to %s',
                                  args_param, relative_filepath)
@@ -410,7 +412,10 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
             if args_param.strip() == '':
                 return ''
 
-            data_path = os.path.join(dest_dir_path, args_param)
+            # Archives always store linux-style paths.  os.path.normpath
+            # converts forward slashes to backslashes if we're on Windows.
+            data_path = os.path.normpath(os.path.join(dest_dir_path,
+                                                      args_param))
             if os.path.exists(data_path):
                 return os.path.normpath(data_path)
         return args_param
