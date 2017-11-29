@@ -95,16 +95,15 @@ def _create_workspace():
     return tempfile.mkdtemp()
 
 
-def _get_args(num_transitions=2, valuation=True, workspace=None):
+def _get_args(workspace, num_transitions=2, valuation=True):
     """Create and return arguements for CBC main model.
 
     Parameters:
+        workspace(string): Apath to a folder on disk.  Generated inputs will be
+            saved to this directory.
         num_transitions=2 (int): The number of transitions to synthesize.
         valuation=True (bool): Whether to include parameters related to
             valuation in the args dict.
-        workspace=None (string or None): If not None, a path to a folder on
-            disk.  Generated inputs will be saved to this directory.  If None,
-            a new workspace folder will be created.
 
     Returns:
         args (dict): main model arguements
@@ -114,9 +113,6 @@ def _get_args(num_transitions=2, valuation=True, workspace=None):
     band_matrices_with_nodata = [numpy.ones((2, 2))]
     band_matrices_with_nodata[0][0][0] = NODATA_INT
     srs = pygeotest.sampledata.SRS_WILLAMETTE
-
-    if workspace is None:
-        workspace = _create_workspace()
 
     lulc_lookup_uri = _create_table(
         os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
@@ -158,7 +154,7 @@ def _get_args(num_transitions=2, valuation=True, workspace=None):
     possible_transition_years = [2000, 2005]
 
     args = {
-        'workspace_dir': workspace,
+        'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
@@ -652,7 +648,7 @@ class TestModel(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
-        self.args = _get_args(valuation=False)
+        self.args = _get_args(valuation=False, workspace=self.workspace)
         self.args['lulc_baseline_year']= 2000
         self.args['lulc_transition_years_list'] = [2005, 2010]
         self.args['analysis_year'] = None
