@@ -2650,7 +2650,7 @@ class ModelTests(_QtTest):
 
             mime_data = QtCore.QMimeData()
             mime_data.setText('Some datastack')
-            mime_data.setUrls([QtCore.QUrl(datastack_filepath)])
+            mime_data.setUrls([QtCore.QUrl.fromLocalFile(datastack_filepath)])
 
             drag_event = QtGui.QDragEnterEvent(
                 model.pos(),
@@ -2673,8 +2673,8 @@ class ModelTests(_QtTest):
             self.assertEqual(model.workspace.value(), '/foo/bar')
             self.assertEqual(model.suffix.value(), 'baz')
         finally:
-            model_ui.close(prompt=False)
-            model_ui.destroy()
+            model.close(prompt=False)
+            model.destroy()
 
     def test_drag_n_drop_rejected_multifile(self):
         """UI Model: Drag-n-drop fails when dragging several files."""

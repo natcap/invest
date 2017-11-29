@@ -1719,7 +1719,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         if (event.mimeData().hasText() and
                 len(event.mimeData().urls()) == 1 and
-                is_probably_datastack(event.mimeData().urls()[0].path())):
+                is_probably_datastack(
+                    event.mimeData().urls()[0].toLocalFile())):
             LOGGER.info('Accepting drag enter event for "%s"',
                         event.mimeData().text())
             self.setStyleSheet(
@@ -1759,6 +1760,6 @@ class InVESTModel(QtWidgets.QMainWindow):
         Returns:
             None.
         """
-        path = event.mimeData().urls()[0].path()
+        path = event.mimeData().urls()[0].toLocalFile()
         self.setStyleSheet('')
         self.load_datastack(path)
