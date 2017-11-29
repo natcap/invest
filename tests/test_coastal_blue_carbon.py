@@ -576,6 +576,7 @@ class TestModel(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
+        self.args['suffix'] = 'xyz'
         self.args['lulc_baseline_year'] = 2000
         self.args['lulc_transition_years_list'] = [2005, 2010]
         self.args['analysis_year'] = None
@@ -735,9 +736,22 @@ class TestModel(unittest.TestCase):
         a.sort()
         numpy.testing.assert_array_almost_equal(u, a, decimal=2)
 
-    def tearDown(self):
-        """Remove workspace."""
-        shutil.rmtree(self.args['workspace_dir'])
+        # walk through all files in the workspace and assert that outputs have
+        # the file suffix.
+        non_suffxed_files = []
+        for root_dir, dirnames, filenames in os.walk(self.args['workspace_dir']):
+            for filename in filenames:
+                if not filename.lower().endswith('.csv'):
+                    basename, extension = os.path.splitext(filename)
+                    if not basename.endswith('_xyz'):
+                        path_rel_to_workspace = os.path.relpath(
+                            os.path.join(root_dir, filename),
+                            self.args['workspace_dir'])
+                        non_suffxed_files.append(path_rel_to_workspace)
+
+        if non_suffxed_files:
+            self.fail('Files are missing suffixes: %s' %
+                      pprint.pformat(non_suffxed_files))
 
     def test_1_transition_passes(self):
         """Coastal Blue Carbon: Test model runs with only 1 transition.
