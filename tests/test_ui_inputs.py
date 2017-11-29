@@ -73,7 +73,6 @@ class _QtTest(unittest.TestCase):
         # This should help to make sure that there aren't any event-based race
         # conditions where a C/C++ object is deleted before a slot is called.
         self.qt_app.sendPostedEvents()
-        self.qt_app.quit()
 
 class _SettingsSandbox(_QtTest):
     def setUp(self):
