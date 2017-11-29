@@ -8,6 +8,7 @@ import logging
 import tempfile
 import functools
 import copy
+import pprint
 
 import numpy
 from osgeo import gdal
@@ -91,20 +92,19 @@ def _create_table(uri, rows_list):
 
 def _create_workspace():
     """Create workspace directory."""
-    path = os.path.dirname(os.path.realpath(__file__))
-    workspace = os.path.join(path, 'workspace')
-    if os.path.exists(workspace):
-        shutil.rmtree(workspace)
-    os.mkdir(workspace)
-    return workspace
+    return tempfile.mkdtemp()
 
 
-def _get_args(num_transitions=2, valuation=True):
+def _get_args(num_transitions=2, valuation=True, workspace=None):
     """Create and return arguements for CBC main model.
 
     Parameters:
+        num_transitions=2 (int): The number of transitions to synthesize.
         valuation=True (bool): Whether to include parameters related to
             valuation in the args dict.
+        workspace=None (string or None): If not None, a path to a folder on
+            disk.  Generated inputs will be saved to this directory.  If None,
+            a new workspace folder will be created.
 
     Returns:
         args (dict): main model arguements
@@ -115,7 +115,9 @@ def _get_args(num_transitions=2, valuation=True):
     band_matrices_with_nodata[0][0][0] = NODATA_INT
     srs = pygeotest.sampledata.SRS_WILLAMETTE
 
-    workspace = _create_workspace()
+    if workspace is None:
+        workspace = _create_workspace()
+
     lulc_lookup_uri = _create_table(
         os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
     lulc_transition_matrix_uri = _create_table(
@@ -183,11 +185,12 @@ def _get_args(num_transitions=2, valuation=True):
     return args
 
 
-def _get_preprocessor_args(args_choice):
+def _get_preprocessor_args(args_choice, workspace):
     """Create and return arguments for preprocessor model.
 
     Args:
         args_choice (int): which arguments to return
+        workspace (string): The path to a workspace directory.
 
     Returns:
         args (dict): preprocessor arguments
@@ -196,8 +199,6 @@ def _get_preprocessor_args(args_choice):
     band_matrices_ones = [numpy.ones((2, 2))]
     band_matrices_nodata = [numpy.ones((2, 2)) * NODATA_INT]
     srs = pygeotest.sampledata.SRS_WILLAMETTE
-
-    workspace = _create_workspace()
 
     lulc_lookup_uri = _create_table(
         os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
@@ -228,28 +229,28 @@ def _get_preprocessor_args(args_choice):
         filename=os.path.join(workspace, 'raster_4.tif'))
 
     args = {
-        'workspace_dir': workspace,
+        'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
     }
 
     args2 = {
-        'workspace_dir': workspace,
+        'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_3_uri]
     }
 
     args3 = {
-        'workspace_dir': workspace,
+        'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_3_uri]
     }
 
     args4 = {
-        'workspace_dir': workspace,
+        'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_4_uri]
@@ -268,11 +269,20 @@ def _get_preprocessor_args(args_choice):
 class TestPreprocessor(unittest.TestCase):
     """Test Coastal Blue Carbon preprocessor library functions."""
 
+    def setUp(self):
+        """Create a temp directory for the workspace."""
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove workspace."""
+        shutil.rmtree(self.workspace)
+
     def test_create_carbon_pool_transient_table_template(self):
         """Coastal Blue Carbon: Test creation of transient table template."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1)
-        filepath = os.path.join(args['workspace_dir'], 'transient_temp.csv')
+        args = _get_preprocessor_args(1, self.workspace)
+        filepath = os.path.join(self.workspace,
+                                'transient_temp.csv')
         code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
         preprocessor._create_carbon_pool_transient_table_template(
             filepath, code_to_lulc_dict)
@@ -287,7 +297,7 @@ class TestPreprocessor(unittest.TestCase):
         All rasters contain ones.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1)
+        args = _get_preprocessor_args(1, self.workspace)
         preprocessor.execute(args)
         trans_csv = os.path.join(
             args['workspace_dir'],
@@ -306,7 +316,7 @@ class TestPreprocessor(unittest.TestCase):
         First two rasters contain ones, last contains zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args2 = _get_preprocessor_args(2)
+        args2 = _get_preprocessor_args(2, self.workspace)
         preprocessor.execute(args2)
         trans_csv = os.path.join(
             args2['workspace_dir'],
@@ -326,7 +336,7 @@ class TestPreprocessor(unittest.TestCase):
         First raster contains ones, second nodata, third zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(3)
+        args = _get_preprocessor_args(3, self.workspace)
         preprocessor.execute(args)
         trans_csv = os.path.join(
             args['workspace_dir'],
@@ -345,10 +355,13 @@ class TestPreprocessor(unittest.TestCase):
         First raster contains ones, second nodata, third zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(4)
+        from natcap.invest import utils
+
+        args = _get_preprocessor_args(4, self.workspace)
         preprocessor.execute(args)
         trans_csv = os.path.join(
-            args['workspace_dir'],
+            self.workspace,
+            'workspace',
             'outputs_preprocessor',
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
@@ -361,7 +374,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_lookup_parsing_exception(self):
         """Coastal Blue Carbon: Test lookup table parsing exception."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1)
+        args = _get_preprocessor_args(1, self.workspace)
         _create_table(args['lulc_lookup_uri'], lulc_lookup_list_unreadable)
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
@@ -369,7 +382,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_raster_validation(self):
         """Coastal Blue Carbon: Test raster validation."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1)
+        args = _get_preprocessor_args(1, self.workspace)
         OTHER_NODATA = -1
         srs = pygeotest.sampledata.SRS_WILLAMETTE
         band_matrices_with_nodata = [numpy.ones((2, 2)) * OTHER_NODATA]
@@ -381,7 +394,7 @@ class TestPreprocessor(unittest.TestCase):
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
             filename=os.path.join(
-                args['workspace_dir'], 'raster_wrong_nodata.tif'))
+                self.workspace, 'raster_wrong_nodata.tif'))
         args['lulc_snapshot_list'][0] = raster_wrong_nodata
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
@@ -389,7 +402,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_raster_values_not_in_lookup_table(self):
         """Coastal Blue Carbon: Test raster values not in lookup table."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1)
+        args = _get_preprocessor_args(1, self.workspace)
         _create_table(args['lulc_lookup_uri'], lulc_lookup_list_no_ones)
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
@@ -397,7 +410,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_mark_transition_type(self):
         """Coastal Blue Carbon: Test mark_transition_type."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1)
+        args = _get_preprocessor_args(1, self.workspace)
 
         band_matrices_zero = [numpy.zeros((2, 2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
@@ -409,12 +422,13 @@ class TestPreprocessor(unittest.TestCase):
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
             filename=os.path.join(
-                args['workspace_dir'], 'raster_1.tif'))
+                self.workspace, 'raster_1.tif'))
         args['lulc_snapshot_list'][0] = raster_zeros
 
         preprocessor.execute(args)
         trans_csv = os.path.join(
-            args['workspace_dir'],
+            self.workspace,
+            'workspace',
             'outputs_preprocessor',
             'transitions_test.csv')
         with open(trans_csv, 'r') as f:
@@ -424,7 +438,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_mark_transition_type_nodata_check(self):
         """Coastal Blue Carbon: Test mark_transition_type with nodata check."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1)
+        args = _get_preprocessor_args(1, self.workspace)
 
         band_matrices_zero = [numpy.zeros((2, 2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
@@ -436,7 +450,7 @@ class TestPreprocessor(unittest.TestCase):
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
             filename=os.path.join(
-                args['workspace_dir'], 'raster_1.tif'))
+                self.workspace, 'raster_1.tif'))
         args['lulc_snapshot_list'][0] = raster_zeros
 
         preprocessor.execute(args)
@@ -463,11 +477,6 @@ class TestPreprocessor(unittest.TestCase):
             'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
         }
         preprocessor.execute(args)
-
-    def tearDown(self):
-        """Remove workspace."""
-        shutil.rmtree(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), 'workspace'))
 
 
 class TestIO(unittest.TestCase):
@@ -559,7 +568,12 @@ class TestModel(unittest.TestCase):
 
     def setUp(self):
         """Create arguments."""
-        self.args = _get_args()
+        self.workspace = tempfile.mkdtemp()
+        self.args = _get_args(workspace=self.workspace)
+
+    def tearDown(self):
+        """Remove workspace."""
+        shutil.rmtree(self.workspace)
 
     def test_model_run(self):
         """Coastal Blue Carbon: Test run function in main model."""
