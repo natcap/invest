@@ -11,16 +11,10 @@ class WindEnergy(model.InVESTModel):
             label=u'Wind Energy',
             target=wind_energy.execute,
             validator=wind_energy.validate,
-            localdoc=u'../documentation/wind_energy.html')
+            localdoc=u'../documentation/wind_energy.html',
+            suffix_args_key='suffix'
+        )
 
-        self.results_suffix = inputs.Text(
-            args_key=u'suffix',
-            helptext=(
-                u'A string that will be added to the end of the output file '
-                u'paths.'),
-            label=u'Results Suffix (Optional)',
-            validator=self.validator)
-        self.add_input(self.results_suffix)
         self.wind_data = inputs.File(
             args_key=u'wind_data_uri',
             helptext=(
@@ -318,8 +312,6 @@ class WindEnergy(model.InVESTModel):
             self.wind_price.args_key: self.wind_price.value(),
             self.rate_change.args_key: self.rate_change.value(),
         }
-        if self.results_suffix.value():
-            args[self.results_suffix.args_key] = self.results_suffix.value()
         if self.aoi.value():
             args[self.aoi.args_key] = self.aoi.value()
         if self.land_polygon.value():
