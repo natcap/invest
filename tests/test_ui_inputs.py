@@ -2112,7 +2112,6 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
-    @unittest.skip("this seg faults for now, fix later")
     def test_close_window_cancel(self):
         """UI Model: Close confirmation dialog cancel"""
         model_ui = ModelTests.build_model()
@@ -2313,7 +2312,6 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
-    @unittest.skip("this seg faults, fix later")
     def test_local_docs_launch(self):
         """UI Model: Check that we can launch local documentation."""
         model_ui = ModelTests.build_model()
@@ -2448,7 +2446,6 @@ class ModelTests(_QtTest):
                 model_ui.close(prompt=False)
                 model_ui.destroy()
 
-    @unittest.skip("seg faults fix later")
     def test_model_quickrun(self):
         """UI Model: Test the quickrun path through model.run()."""
         model_ui = ModelTests.build_model()
