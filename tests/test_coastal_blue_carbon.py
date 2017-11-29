@@ -156,7 +156,7 @@ def _get_args(workspace, num_transitions=2, valuation=True):
 
     args = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
-        'suffix': 'test',
+        'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
         'lulc_baseline_map_uri': raster_0_uri,
@@ -229,28 +229,28 @@ def _get_preprocessor_args(args_choice, workspace):
 
     args = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
-        'suffix': 'test',
+        'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
     }
 
     args2 = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
-        'suffix': 'test',
+        'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_3_uri]
     }
 
     args3 = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
-        'suffix': 'test',
+        'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_3_uri]
     }
 
     args4 = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
-        'suffix': 'test',
+        'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_uri,
         'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_4_uri]
     }
@@ -469,7 +469,7 @@ class TestPreprocessor(unittest.TestCase):
             sample_data_path, 'inputs/GBJC_2100_mean_Resample.tif')
         args = {
             'workspace_dir': _create_workspace(),
-            'suffix': '150225',
+            'results_suffix': '150225',
             'lulc_lookup_uri': os.path.join(
                 sample_data_path,
                 'inputs/lulc_lookup.csv'),
@@ -736,7 +736,7 @@ class TestModel(unittest.TestCase):
                 sample_data_path,
                 'outputs_preprocessor/transitions_sample.csv'),
             'price': 10.0,
-            'suffix': '150225'
+            'results_suffix': '150225'
         }
         cbc.execute(args)
         npv_raster = os.path.join(
