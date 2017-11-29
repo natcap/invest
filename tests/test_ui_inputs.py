@@ -2115,28 +2115,24 @@ class ModelTests(_QtTest):
     def test_close_window_cancel(self):
         """UI Model: Close confirmation dialog cancel"""
         model_ui = ModelTests.build_model()
-        try:
-            model_ui.show()
+        model_ui.show()
 
-            threading_event = threading.Event()
+        threading_event = threading.Event()
 
-            def _tests():
-                # click cancel.
-                button = QtWidgets.QMessageBox.Cancel
-                QTest.mouseClick(
-                    model_ui.quit_confirm_dialog.button(button),
-                    QtCore.Qt.LeftButton)
-                threading_event.set()
+        def _tests():
+            # click cancel.
+            button = QtWidgets.QMessageBox.Cancel
+            QTest.mouseClick(
+                model_ui.quit_confirm_dialog.button(button),
+                QtCore.Qt.LeftButton)
+            threading_event.set()
 
-            QtCore.QTimer.singleShot(25, _tests)
+        QtCore.QTimer.singleShot(25, _tests)
 
-            model_ui.close(prompt=False)
-            threading_event.wait(0.5)
-            self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
-            self.assertTrue(model_ui.isVisible())
-        finally:
-            model_ui.close(prompt=False)
-            model_ui.destroy()
+        model_ui.close()
+        threading_event.wait(0.5)
+        self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
+        self.assertTrue(model_ui.isVisible())
 
     def test_validation_passes(self):
         """UI Model: Check what happens when validation passes."""
