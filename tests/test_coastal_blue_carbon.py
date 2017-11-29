@@ -15,6 +15,7 @@ from osgeo import gdal
 from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing as geoprocess
 import natcap.invest.pygeoprocessing_0_3_3.testing as pygeotest
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+from natcap.invest import utils
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
@@ -167,6 +168,8 @@ def _get_args(workspace, num_transitions=2, valuation=True):
         'carbon_pool_transient_uri': carbon_pool_transient_uri,
         'do_economic_analysis': False,
     }
+
+    utils.make_directories([args['workspace_dir']])
 
     if valuation:
         args.update({
@@ -480,7 +483,11 @@ class TestIO(unittest.TestCase):
 
     def setUp(self):
         """Create arguments."""
-        self.args = _get_args()
+        self.workspace = tempfile.mkdtemp()
+        self.args = _get_args(self.workspace)
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace)
 
     def test_get_inputs(self):
         """Coastal Blue Carbon: Test get_inputs function in IO module."""
@@ -553,10 +560,6 @@ class TestIO(unittest.TestCase):
         # values.
         self.assertTrue((3.0, 0.0) in lulc_trans_to_Db.keys())
         self.assertTrue((3.0, 0.0) in lulc_trans_to_Ds.keys())
-
-    def tearDown(self):
-        """Remove workspace."""
-        shutil.rmtree(self.args['workspace_dir'])
 
 
 class TestModel(unittest.TestCase):
