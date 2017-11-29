@@ -11,7 +11,9 @@ class CoastalVulnerability(model.InVESTModel):
             label=u'Coastal Vulnerability Assessment Tool',
             target=coastal_vulnerability.execute,
             validator=coastal_vulnerability.validate,
-            localdoc=u'../documentation/coastal_vulnerability.html')
+            localdoc=u'../documentation/coastal_vulnerability.html',
+            suffix_args_key='suffix'
+        )
 
         self.general_tab = inputs.Container(
             interactive=True,
@@ -25,14 +27,6 @@ class CoastalVulnerability(model.InVESTModel):
             label=u'Output Area: Sheltered/Exposed?',
             options=[u'both', u'sheltered'])
         self.general_tab.add_input(self.area_computed)
-        self.results_suffix = inputs.Text(
-            args_key=u'suffix',
-            helptext=(
-                u'A string that will be added to the end of the output file '
-                'paths.'),
-            label=u'Results Suffix (Optional)',
-            validator=self.validator)
-        self.general_tab.add_input(self.results_suffix)
         self.area_of_interest = inputs.File(
             args_key=u'aoi_uri',
             helptext=(
@@ -380,8 +374,6 @@ class CoastalVulnerability(model.InVESTModel):
             self.bathymetry_layer.args_key: self.bathymetry_layer.value(),
             self.relief.args_key: self.relief.value(),
         }
-        if self.results_suffix.value():
-            args[self.results_suffix.args_key] = self.results_suffix.value()
         if self.bathymetry_constant.value():
             args[self.bathymetry_constant.args_key] = (
                 self.bathymetry_constant.value())
