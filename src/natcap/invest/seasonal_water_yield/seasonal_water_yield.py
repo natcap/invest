@@ -465,15 +465,9 @@ def _execute(args):
     def clamp_l_sum(l_sum_pre_clamp):
         """Clamp any negative values to 0.0."""
         result = l_sum_pre_clamp.copy()
-        try:
-            result[
-                (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
-                (l_sum_pre_clamp < 0.0)] = 0.0
-        except:
-            print numpy.unique(l_sum_pre_clamp)
-            print l_sum_pre_clamp_nodata
-            print numpy.unique(result)
-            raise
+        result[
+            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
+            (l_sum_pre_clamp < 0.0)] = 0.0
         return result
 
     pygeoprocessing.raster_calculator(
