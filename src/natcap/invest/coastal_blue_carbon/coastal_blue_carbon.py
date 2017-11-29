@@ -44,7 +44,7 @@ def execute(args):
     Args:
         workspace_dir (str): location into which all intermediate and
             output files should be placed.
-        results_suffix (str): a string to append to output filenames.
+        suffix (str): a string to append to output filenames.
         lulc_lookup_uri (str): filepath to a CSV table used to convert
             the lulc code to a name. Also used to determine if a given lulc
             type is a coastal blue carbon habitat.
@@ -104,7 +104,7 @@ def execute(args):
 
         args = {
             'workspace_dir': 'path/to/workspace/',
-            'results_suffix': '',
+            'suffix': '',
             'lulc_lookup_uri': 'path/to/lulc_lookup_uri',
             'lulc_transition_matrix_uri': 'path/to/lulc_transition_uri',
             'carbon_pool_initial_uri': 'path/to/carbon_pool_initial_uri',
@@ -556,7 +556,7 @@ def get_inputs(args):
 
     Parameters:
         workspace_dir (str): workspace directory
-        results_suffix (str): optional suffix appended to results
+        suffix (str): optional suffix appended to results
         lulc_lookup_uri (str): lulc lookup table filepath
         lulc_transition_matrix_uri (str): lulc transition table filepath
         carbon_pool_initial_uri (str): initial conditions table filepath
@@ -621,8 +621,8 @@ def get_inputs(args):
     }
 
     # Directories
-    args['results_suffix'] = utils.make_suffix_string(
-        args, 'results_suffix')
+    args['suffix'] = utils.make_suffix_string(
+        args, 'suffix')
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'],
@@ -660,10 +660,10 @@ def get_inputs(args):
         transition_raster_paths = []
 
     aligned_baseline_lulc_path = os.path.join(
-        intermediate_dir, 'aligned_lulc%s.tif' % args['results_suffix'])
+        intermediate_dir, 'aligned_lulc%s.tif' % args['suffix'])
     aligned_transition_raster_paths = [
         os.path.join(intermediate_dir, 'aligned_transition_%s%s.tif' % (
-            year, args['results_suffix']))
+            year, args['suffix']))
         for year in d['transition_years']]
     baseline_info = pygeoprocessing.get_raster_info(
         args['lulc_baseline_map_uri'])
@@ -737,7 +737,7 @@ def get_inputs(args):
         d['C_prior_raster'],
         d['C_r_rasters'],
         d['snapshot_years'],
-        args['results_suffix'],
+        args['suffix'],
         d['do_economic_analysis'],
         outputs_dir, intermediate_dir)
 
@@ -745,7 +745,7 @@ def get_inputs(args):
 
 
 def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
-                         results_suffix, do_economic_analysis, outputs_dir,
+                         suffix, do_economic_analysis, outputs_dir,
                          intermediate_dir):
     """Build an output file registry.
 
@@ -756,7 +756,7 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
             be an empty list.
         snapshot_years (list): years of provided snapshots to help with
             filenames
-        results_suffix (str): the results file suffix
+        suffix (str): the results file suffix
         do_economic_analysis (bool): whether or not to create a NPV raster
         outputs_dir (str): path to output directory
 
@@ -799,7 +799,7 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
 
     file_registry = utils.build_file_registry(
         [(raster_registry_dict, outputs_dir),
-         (_INTERMEDIATE, intermediate_dir)], results_suffix)
+         (_INTERMEDIATE, intermediate_dir)], suffix)
 
     LOGGER.info('Aligning and clipping incoming datasets')
     incoming_rasters = [C_prior_raster] + transition_rasters

@@ -41,7 +41,7 @@ def execute(args):
 
     Args:
         workspace_dir (string): directory path to workspace
-        results_suffix (string): append to outputs directory name if provided
+        suffix (string): append to outputs directory name if provided
         lulc_lookup_uri (string): filepath of lulc lookup table
         lulc_snapshot_list (list): a list of filepaths to lulc rasters
 
@@ -49,7 +49,7 @@ def execute(args):
 
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
-            'results_suffix': '',
+            'suffix': '',
             'lulc_lookup_uri': 'path/to/lookup.csv',
             'lulc_snapshot_list': ['path/to/raster1', 'path/to/raster2', ...]
         }
@@ -62,7 +62,7 @@ def execute(args):
     base_file_path_list = [(_OUTPUT, vars_dict['output_dir'])]
     reg = utils.build_file_registry(
         base_file_path_list,
-        vars_dict['results_suffix'])
+        vars_dict['suffix'])
 
     aligned_lulcs = [reg['aligned_lulc_template'] % index
                      for index in xrange(len(args['lulc_snapshot_list']))]
@@ -110,8 +110,8 @@ def _get_inputs(args):
     """
     LOGGER.info('Getting inputs...')
     vars_dict = dict(args.items())
-    results_suffix = utils.make_suffix_string(
-        args, 'results_suffix')
+    suffix = utils.make_suffix_string(
+        args, 'suffix')
 
     lulc_lookup_dict = utils.build_lookup_from_csv(
         args['lulc_lookup_uri'], 'code')
@@ -140,7 +140,7 @@ def _get_inputs(args):
     vars_dict = {
         'workspace_dir': args['workspace_dir'],
         'output_dir': output_dir,
-        'results_suffix': results_suffix,
+        'suffix': suffix,
         'lulc_snapshot_list': args['lulc_snapshot_list'],
         'lulc_lookup_dict': lulc_lookup_dict,
         'code_to_lulc_dict': code_to_lulc_dict,
