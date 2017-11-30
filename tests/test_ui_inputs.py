@@ -32,7 +32,7 @@ else:
     import mock
 
 LOGGER = logging.getLogger(__name__)
-
+logging.basicConfig()
 
 @contextlib.contextmanager
 def wait_on_signal(qt_app, signal, timeout=250):
@@ -2445,9 +2445,6 @@ class ModelTests(_QtTest):
         """UI Model: Test the quickrun path through model.run()."""
         model_ui = ModelTests.build_model()
         try:
-            def _update_workspace_value():
-                model_ui.workspace.set_value(self.workspace)
-
             def _confirm_workspace_overwrite():
                 # Just using dialog.accept() didn't work here, and I can't seem to
                 # figure out why.
@@ -2456,15 +2453,15 @@ class ModelTests(_QtTest):
                         QtWidgets.QMessageBox.Yes),
                     QtCore.Qt.LeftButton)
 
-            QtCore.QTimer.singleShot(25, _update_workspace_value)
-
+            # this line used to be in a singleshot, but i don't see why we
+            # can't set it directly, works when i do it.
+            model_ui.workspace.set_value(self.workspace)
             # Need to wait a little longer on this one to compensate for other
             # singleshot timers in model.run().
-            QtCore.QTimer.singleShot(500, _confirm_workspace_overwrite)
+            QtCore.QTimer.singleShot(1000, _confirm_workspace_overwrite)
             model_ui.run(quickrun=True)
-
             while model_ui.isVisible():
-                QTest.qWait(25)
+                QTest.qWait(1000)
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -2539,14 +2536,12 @@ class ModelTests(_QtTest):
         """UI Model: Verify that saving settings posts status to statusbar."""
         model_ui = ModelTests.build_model()
         try:
-            def _save_settings():
-                model_ui.settings_dialog.accept()
-
-            QtCore.QTimer.singleShot(25, _save_settings)
-            model_ui.settings_dialog.exec_()
-
-            self.qt_app.processEvents()
-            self.assertEqual(model_ui.statusBar().currentMessage(), 'Settings saved')
+            # this used to have a oneshot to get the dialog to exec_, but
+            # open seems to work just fine
+            model_ui.settings_dialog.open()
+            model_ui.settings_dialog.accept()
+            self.assertEqual(
+                model_ui.statusBar().currentMessage(), 'Settings saved')
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
