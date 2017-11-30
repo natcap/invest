@@ -109,7 +109,9 @@ class ScenarioGenerator(model.InVESTModel):
             label=u'Scenario Generator',
             target=natcap.invest.scenario_generator.scenario_generator.execute,
             validator=natcap.invest.scenario_generator.scenario_generator.validate,
-            localdoc=u'../documentation/scenario_generator.html')
+            localdoc=u'../documentation/scenario_generator.html',
+            suffix_args_key='suffix',
+        )
         self.landcover = inputs.File(
             args_key=u'landcover',
             helptext=u'A GDAL-supported raster file representing land-use/land-cover.',

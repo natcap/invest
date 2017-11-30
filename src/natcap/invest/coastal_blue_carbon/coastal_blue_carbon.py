@@ -660,9 +660,10 @@ def get_inputs(args):
         transition_raster_paths = []
 
     aligned_baseline_lulc_path = os.path.join(
-        intermediate_dir, 'aligned_lulc_%s.tif' % args['results_suffix'])
+        intermediate_dir, 'aligned_lulc%s.tif' % args['results_suffix'])
     aligned_transition_raster_paths = [
-        os.path.join(intermediate_dir, 'aligned_transition_%s.tif' % year)
+        os.path.join(intermediate_dir, 'aligned_transition_%s%s.tif' % (
+            year, args['results_suffix']))
         for year in d['transition_years']]
     baseline_info = pygeoprocessing.get_raster_info(
         args['lulc_baseline_map_uri'])

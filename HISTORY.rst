@@ -4,6 +4,7 @@
 
 Unreleased Changes
 ------------------
+* Fixed an issue with most InVEST models where the suffix was not being reflected in the output filenames.  This was due to a bug in the InVEST UI, where the suffix args key was assumed to be ``'suffix'``.  Instances of ``InVESTModel`` now accept a keyword argument to defined the suffix args key.
 * Fixed an issue/bug in Seasonal Water Yield that would occur when a user provided a datastack that had nodata values overlapping with valid DEM locations. Previously this would generate an NaN for various biophysical values at that pixel and cascade it downslope. Now any question of nodata on a valid DEM pixel is treated as "0". This will make serious visual artifacts on the output, but should help users pinpoint the source of bad data rather than crash.
 * Refactored all but routing components of SDR to use PyGeoprocessing 0.5.0 and laid a consistent raster floating point type of 'float32'. This will cause numerically insignificant differences between older versions of SDR and this one. But differences are well within the tolerance of the overall error of the model and expected error rate of data. Advantages are smaller disk footprint per run, cleaner and more maintainable design, and a slight performance increase.
 * Bug fixed in SDR that would align the output raster stack to match with the landcover pixel stack even though the rest of the rasters are scaled and clipped to the DEM.
