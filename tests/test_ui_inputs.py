@@ -2098,7 +2098,7 @@ class ModelTests(_QtTest):
                 threading_event.set()
 
             QtCore.QTimer.singleShot(25, _tests)
-            model_ui.close(prompt=False)
+            model_ui.close()
             QTest.qWait(25)
 
             threading_event.wait(0.5)
@@ -2109,7 +2109,6 @@ class ModelTests(_QtTest):
             self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
             self.assertFalse(model_ui.isVisible())
         finally:
-            model_ui.close(prompt=False)
             model_ui.destroy()
 
     def test_close_window_cancel(self):
