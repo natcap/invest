@@ -1739,7 +1739,6 @@ def validate(args, limit_to=None):
         'calculate_factors',
         'calculate_constraints',
         'override_layer',
-        'seed',
         ]
 
     if 'calculate_factors' in args and args['calculate_factors']:

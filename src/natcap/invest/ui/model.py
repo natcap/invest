@@ -900,7 +900,8 @@ class InVESTModel(QtWidgets.QMainWindow):
     If any of these attributes are not overridden, a warning will be raised.
     """
 
-    def __init__(self, label, target, validator, localdoc):
+    def __init__(self, label, target, validator, localdoc,
+                 suffix_args_key='results_suffix'):
         """Initialize the Model.
 
         Parameters:
@@ -911,6 +912,8 @@ class InVESTModel(QtWidgets.QMainWindow):
                 function.
             localdoc (string): The filename of the user's guide chapter for
                 this model.
+            suffix_args_key='results_suffix' (string): The args key to use for
+                suffix input.  Defaults to ``results_suffix``.
         """
         QtWidgets.QMainWindow.__init__(self)
         self.label = label
@@ -999,7 +1002,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                 model=modelname)))
 
         self.suffix = inputs.Text(
-            args_key='suffix',
+            args_key=suffix_args_key,
             helptext=(
                 u'A string that will be added to the end of the output file '
                 u'paths.'),
