@@ -692,14 +692,14 @@ class ValidationWorker(QtCore.QObject):
 class FileDialog(object):
     """A convenience wrapper for QtWidgets.QFileDialog."""
 
-    def __init__(self):
+    def __init__(self, parent=None):
         """Initialize the FileDialog instance.
 
         Returns:
             ``None``
         """
         object.__init__(self)
-        self.file_dialog = QtWidgets.QFileDialog()
+        self.file_dialog = QtWidgets.QFileDialog(parent=parent)
 
     def __del__(self):
         """Destructor for the FileDialog instance."""
@@ -2579,13 +2579,13 @@ class Form(QtWidgets.QWidget):
     submitted = QtCore.Signal()
     run_finished = QtCore.Signal()
 
-    def __init__(self):
+    def __init__(self, parent=None):
         """Initialize the Form.
 
         Returns:
             ``None``
         """
-        QtWidgets.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self, parent=parent)
 
         # self._thread is redefined as an Executor when we run the target
         # callable.
