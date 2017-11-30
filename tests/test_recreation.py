@@ -478,7 +478,7 @@ class TestRecServer(unittest.TestCase):
 
     def tearDown(self):
         """Delete workspace."""
-        shutil.rmtree(self.workspace_dir)
+        shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
 
 class TestLocalRecServer(unittest.TestCase):
