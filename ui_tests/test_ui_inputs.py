@@ -32,7 +32,6 @@ else:
     import mock
 
 LOGGER = logging.getLogger(__name__)
-logging.basicConfig()
 
 @contextlib.contextmanager
 def wait_on_signal(qt_app, signal, timeout=250):
