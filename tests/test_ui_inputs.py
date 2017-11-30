@@ -2127,11 +2127,14 @@ class ModelTests(_QtTest):
             threading_event.set()
 
         QtCore.QTimer.singleShot(25, _tests)
-
         model_ui.close()
-        threading_event.wait(0.5)
+        threading_event.wait()
+
         self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
         self.assertTrue(model_ui.isVisible())
+        # then close it for real so it doesn't hang around
+        model_ui.close(prompt=False)
+        model_ui.destroy()
 
     def test_validation_passes(self):
         """UI Model: Check what happens when validation passes."""
@@ -2536,7 +2539,7 @@ class ModelTests(_QtTest):
         """UI Model: Verify that saving settings posts status to statusbar."""
         model_ui = ModelTests.build_model()
         try:
-            # this used to have a oneshot to get the dialog to exec_, but
+            # this used to have a singleeshot to get the dialog to exec_, but
             # open seems to work just fine
             model_ui.settings_dialog.open()
             model_ui.settings_dialog.accept()
@@ -2590,6 +2593,8 @@ class ModelTests(_QtTest):
                 model_ui.execute_model()
 
             self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+            model_ui.form.run_dialog.close()
+            model_ui.form.run_dialog.destroy()
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
