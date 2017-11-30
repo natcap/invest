@@ -345,6 +345,7 @@ class RecModel(object):
                 target=_calc_poly_pud, args=(
                     local_qt_pickle_filename, aoi_path, date_range,
                     poly_test_queue, pud_poly_feature_queue))
+            polytest_process.daemon = True
             polytest_process.start()
 
         # Copy the input shapefile into the designated output folder

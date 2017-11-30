@@ -4,8 +4,8 @@ import datetime
 import glob
 import zipfile
 import socket
-import multiprocessing
-import multiprocessing.pool
+import threading
+import Queue
 import unittest
 import tempfile
 import shutil
@@ -33,15 +33,29 @@ LOGGER = logging.getLogger('test_recreation')
 
 def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
-    def timeout_decorator(item):
+    def timeout_decorator(target):
         """Wrap the original function."""
-        @functools.wraps(item)
-        def func_wrapper(self, *args, **kwargs):
+        work_queue = Queue.Queue()
+        result_queue = Queue.Queue()
+
+        def worker():
+            """Read one func,args,kwargs tuple and execute."""
+            func, args, kwargs = work_queue.get()
+            result = func(*args, **kwargs)
+            result_queue.put(result)
+
+        work_thread = threading.Thread(target=worker)
+        work_thread.daemon = True
+        work_thread.start()
+
+        @functools.wraps(target)
+        def func_wrapper(*args, **kwargs):
             """Closure for function."""
-            pool = multiprocessing.pool.ThreadPool(processes=1)
-            async_result = pool.apply_async(item, (self,) + args, kwargs)
-            # raises a TimeoutError if execution exceeds max_timeout
-            return async_result.get(max_timeout)
+            try:
+                work_queue.put((target, args, kwargs))
+                return result_queue.get(timeout=max_timeout)
+            except Queue.Empty:
+                raise RuntimeError("Timeout of %f exceeded" % max_timeout)
         return func_wrapper
     return timeout_decorator
 
@@ -82,8 +96,7 @@ class TestRecServer(unittest.TestCase):
     """Tests that set up local rec server on a port and call through."""
 
     def setUp(self):
-        """Setup multiprocessing and workspace."""
-        multiprocessing.freeze_support()
+        """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -153,67 +166,62 @@ class TestRecServer(unittest.TestCase):
                     'max_year': 2015,
                 }
 
-                server_process = multiprocessing.Process(
+                server_thread = threading.Thread(
                     target=recmodel_server.execute, args=(server_args,))
-                server_process.start()
+                server_thread.daemon = True
+                server_thread.start()
                 server_launched = True
                 break
             except:
                 LOGGER.warn("Can't start server process on port %d", port)
-                if server_process.is_alive():
-                    server_process.terminate()
         if not server_launched:
             self.fail("Server didn't start")
 
+        path = "PYRO:natcap.invest.recreation@localhost:%s" % port
+        LOGGER.info("Local server path %s", path)
+        recreation_server = Pyro4.Proxy(path)
+        aoi_path = os.path.join(
+            REGRESSION_DATA, 'test_aoi_for_subset.shp')
+        basename = os.path.splitext(aoi_path)[0]
+        aoi_archive_path = os.path.join(
+            self.workspace_dir, 'aoi_zipped.zip')
+        with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
+            for filename in glob.glob(basename + '.*'):
+                myzip.write(filename, os.path.basename(filename))
+
+        # convert shapefile to binary string for serialization
+        zip_file_binary = open(aoi_archive_path, 'rb').read()
+        date_range = (('2005-01-01'), ('2014-12-31'))
+        out_vector_filename = 'test_aoi_for_subset_pud.shp'
+
+        _, workspace_id = (
+            recreation_server.calc_photo_user_days_in_aoi(
+                zip_file_binary, date_range, out_vector_filename))
+        fetcher_args = {
+            'workspace_dir': self.workspace_dir,
+            'hostname': 'localhost',
+            'port': port,
+            'workspace_id': workspace_id,
+        }
         try:
-            path = "PYRO:natcap.invest.recreation@localhost:%s" % port
-            LOGGER.info("Local server path %s", path)
-            recreation_server = Pyro4.Proxy(path)
-            aoi_path = os.path.join(
-                REGRESSION_DATA, 'test_aoi_for_subset.shp')
-            basename = os.path.splitext(aoi_path)[0]
-            aoi_archive_path = os.path.join(
-                self.workspace_dir, 'aoi_zipped.zip')
-            with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
-                for filename in glob.glob(basename + '.*'):
-                    myzip.write(filename, os.path.basename(filename))
+            recmodel_workspace_fetcher.execute(fetcher_args)
+        except:
+            LOGGER.error(
+                "Server process failed (%s) is_alive=%s",
+                str(server_thread), server_thread.is_alive())
+            raise
 
-            # convert shapefile to binary string for serialization
-            zip_file_binary = open(aoi_archive_path, 'rb').read()
-            date_range = (('2005-01-01'), ('2014-12-31'))
-            out_vector_filename = 'test_aoi_for_subset_pud.shp'
-
-            _, workspace_id = (
-                recreation_server.calc_photo_user_days_in_aoi(
-                    zip_file_binary, date_range, out_vector_filename))
-            fetcher_args = {
-                'workspace_dir': self.workspace_dir,
-                'hostname': 'localhost',
-                'port': port,
-                'workspace_id': workspace_id,
-            }
-            try:
-                recmodel_workspace_fetcher.execute(fetcher_args)
-            except:
-                LOGGER.error(
-                    "Server process failed (%s) is_alive=%s",
-                    str(server_process), server_process.is_alive())
-                raise
-            server_process.terminate()
-
-            out_workspace_dir = os.path.join(
-                self.workspace_dir, 'workspace_zip')
-            os.makedirs(out_workspace_dir)
-            workspace_zip_path = os.path.join(
-                self.workspace_dir, workspace_id + '.zip')
-            zipfile.ZipFile(workspace_zip_path, 'r').extractall(
-                out_workspace_dir)
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-                aoi_path,
-                os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'),
-                1e-5)
-        finally:
-            server_process.terminate()
+        out_workspace_dir = os.path.join(
+            self.workspace_dir, 'workspace_zip')
+        os.makedirs(out_workspace_dir)
+        workspace_zip_path = os.path.join(
+            self.workspace_dir, workspace_id + '.zip')
+        zipfile.ZipFile(workspace_zip_path, 'r').extractall(
+            out_workspace_dir)
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+            aoi_path,
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'),
+            1e-5)
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @_timeout(100.0)
@@ -245,9 +253,10 @@ class TestRecServer(unittest.TestCase):
             'max_year': 2015,
         }
 
-        server_process = multiprocessing.Process(
+        server_thread = threading.Thread(
             target=recmodel_server.execute, args=(server_args,))
-        server_process.start()
+        server_thread.daemon = True
+        server_thread.start()
 
         client_args = {
             'aoi_path': os.path.join(
@@ -263,7 +272,6 @@ class TestRecServer(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
         recmodel_client.execute(client_args)
-        server_process.terminate()
 
         # testing for file existence seems reasonable since mostly we are
         # testing that a local server starts and a client connects to it
@@ -343,10 +351,10 @@ class TestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        poly_test_queue = multiprocessing.Queue()
+        poly_test_queue = Queue.Queue()
         poly_test_queue.put(0)
         poly_test_queue.put('STOP')
-        pud_poly_feature_queue = multiprocessing.Queue()
+        pud_poly_feature_queue = Queue.Queue()
         recmodel_server._calc_poly_pud(
             recreation_server.qt_pickle_filename,
             os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp'),
@@ -376,10 +384,10 @@ class TestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        poly_test_queue = multiprocessing.Queue()
+        poly_test_queue = Queue.Queue()
         poly_test_queue.put(0)
         poly_test_queue.put('STOP')
-        pud_poly_feature_queue = multiprocessing.Queue()
+        pud_poly_feature_queue = Queue.Queue()
         recmodel_server._calc_poly_pud(
             recreation_server.qt_pickle_filename,
             os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp'),
@@ -396,10 +404,10 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         csv_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
-        block_offset_size_queue = multiprocessing.Queue()
+        block_offset_size_queue = Queue.Queue()
         block_offset_size_queue.put((0, 2**10))
         block_offset_size_queue.put('STOP')
-        numpy_array_queue = multiprocessing.Queue()
+        numpy_array_queue = Queue.Queue()
         recmodel_server._parse_input_csv(
             block_offset_size_queue, csv_path, numpy_array_queue)
         val = numpy_array_queue.get()
@@ -439,9 +447,10 @@ class TestRecServer(unittest.TestCase):
             'max_points_per_node': 50,
         }
 
-        server_process = multiprocessing.Process(
+        server_thread = threading.Thread(
             target=recmodel_server.execute, args=(server_args,))
-        server_process.start()
+        server_thread.daemon = True
+        server_thread.start()
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
@@ -460,7 +469,6 @@ class TestRecServer(unittest.TestCase):
         }
 
         recmodel_client.execute(args)
-        server_process.terminate()
 
         RecreationRegressionTests._assert_regression_results_eq(
             args['workspace_dir'],
@@ -478,8 +486,6 @@ class TestLocalRecServer(unittest.TestCase):
 
     def setUp(self):
         """Setup workspace and server."""
-        multiprocessing.freeze_support()
-
         from natcap.invest.recreation import recmodel_server
         self.workspace_dir = tempfile.mkdtemp()
         self.recreation_server = recmodel_server.RecModel(
