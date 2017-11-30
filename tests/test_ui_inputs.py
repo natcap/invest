@@ -2693,8 +2693,8 @@ class ModelTests(_QtTest):
             model.dragEnterEvent(drag_event)
             self.assertFalse(drag_event.isAccepted())
         finally:
-            model_ui.close(prompt=False)
-            model_ui.destroy()
+            model.close(prompt=False)
+            model.destroy()
 
     def test_open_recent_menu(self):
         """UI Model: Check for correct behavior of the open-recent menu."""
