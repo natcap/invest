@@ -100,7 +100,7 @@ def _get_args(workspace, num_transitions=2, valuation=True):
     """Create and return arguements for CBC main model.
 
     Parameters:
-        workspace(string): Apath to a folder on disk.  Generated inputs will be
+        workspace(string): A path to a folder on disk.  Generated inputs will be
             saved to this directory.
         num_transitions=2 (int): The number of transitions to synthesize.
         valuation=True (bool): Whether to include parameters related to
