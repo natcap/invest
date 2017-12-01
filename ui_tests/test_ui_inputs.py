@@ -2393,7 +2393,7 @@ class ModelTests(_QtTest):
                 logfile.write(textwrap.dedent("""
                     07/20/2017 16:37:48  natcap.invest.ui.model INFO
                     Arguments for InVEST %s %s:
-                    suffix                           foo
+                    results_suffix                   foo
                     workspace_dir                    some_workspace_dir
 
                 """ % (model_ui.target.__module__, natcap.invest.__version__)))
