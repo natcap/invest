@@ -2222,11 +2222,11 @@ class ModelTests(_QtTest):
         try:
             args = {
                 'workspace_dir': 'new workspace!',
-                'suffix': 'a',
+                'results_suffix': 'a',
             }
             model_ui.load_args(args)
             self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
-            self.assertEqual(model_ui.suffix.value(), args['suffix'])
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -2238,11 +2238,11 @@ class ModelTests(_QtTest):
             model_ui.workspace.set_value('')
             args = {
                 'bad_key': 'something unexpected!',
-                'suffix': 'a',
+                'results_suffix': 'a',
             }
             model_ui.load_args(args)
             self.assertEqual(model_ui.workspace.value(), '')  # was never changed
-            self.assertEqual(model_ui.suffix.value(), args['suffix'])
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -2254,7 +2254,7 @@ class ModelTests(_QtTest):
             model_ui.workspace.set_value('')
             args = {
                 'workspace_dir': 'workspace',
-                'suffix': 'a',
+                'results_suffix': 'a',
             }
 
             def _raise_valueerror(new_value):
@@ -2264,7 +2264,7 @@ class ModelTests(_QtTest):
             model_ui.load_args(args)
 
             self.assertEqual(model_ui.workspace.value(), '')  # was never changed
-            self.assertEqual(model_ui.suffix.value(), args['suffix'])
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -2337,7 +2337,7 @@ class ModelTests(_QtTest):
         try:
             args = {
                 'workspace_dir': 'foodir',
-                'suffix': 'suffix',
+                'results_suffix': 'suffix',
             }
             datastack_filepath = os.path.join(self.workspace, 'paramset.json')
             datastack.build_parameter_set(
@@ -2349,7 +2349,7 @@ class ModelTests(_QtTest):
             model_ui.load_datastack(datastack_filepath)
 
             self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
-            self.assertEqual(model_ui.suffix.value(), args['suffix'])
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -2361,7 +2361,7 @@ class ModelTests(_QtTest):
         try:
             args = {
                 'workspace_dir': 'foodir',
-                'suffix': 'suffix',
+                'results_suffix': 'suffix',
             }
             datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
             datastack.build_datastack_archive(args, model_ui.target.__module__,
@@ -2377,7 +2377,7 @@ class ModelTests(_QtTest):
             model_ui.load_datastack(datastack_filepath)
 
             # Workspace isn't saved in a parameter archive, so just test suffix
-            self.assertEqual(model_ui.suffix.value(), args['suffix'])
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -2413,7 +2413,7 @@ class ModelTests(_QtTest):
         try:
             args = {
                 'workspace_dir': 'foodir',
-                'suffix': 'suffix',
+                'results_suffix': 'suffix',
             }
             datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
             datastack.build_datastack_archive(args, model_ui.target.__module__,
@@ -2642,7 +2642,7 @@ class ModelTests(_QtTest):
             with open(datastack_filepath, 'w') as sample_datastack:
                 sample_datastack.write(json.dumps(
                     {'args': {'workspace_dir': '/foo/bar',
-                              'suffix': 'baz'},
+                              'results_suffix': 'baz'},
                      'model_name': model.target.__module__,
                      'invest_version': 'testing'}))
 
