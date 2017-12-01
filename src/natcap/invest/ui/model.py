@@ -126,7 +126,7 @@ class OptionsDialog(QtWidgets.QDialog):
     """
 
     def __init__(self, title=None, modal=False, accept_text='save',
-                 reject_text='cancel'):
+                 reject_text='cancel', parent=None):
         """Initialize the OptionsDialog.
 
         Parameters:
@@ -142,7 +142,7 @@ class OptionsDialog(QtWidgets.QDialog):
         Returns:
             ``None``
         """
-        QtWidgets.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self, parent=parent)
         self._accept_text = ' ' + accept_text.strip()
         self._reject_text = ' ' + reject_text.strip()
         if title:
@@ -328,14 +328,14 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
 class SettingsDialog(OptionsDialog):
     """A dialog for global InVEST settings."""
 
-    def __init__(self):
+    def __init__(self, parent=None):
         """Initialize the SettingsDialog.
 
         Returns:
             ``None``
         """
         OptionsDialog.__init__(self, title='InVEST Settings',
-                               modal=True)
+                               modal=True, parent=parent)
         self.resize(600, 200)
 
         self.global_label = QtWidgets.QLabel(
@@ -424,9 +424,9 @@ class AboutDialog(QtWidgets.QDialog):
         None.
     """
 
-    def __init__(self):
+    def __init__(self, parent=None):
         """Initialize the AboutDialog."""
-        QtWidgets.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self, parent=parent)
         self.setWindowTitle('About InVEST')
         self.setLayout(QtWidgets.QVBoxLayout())
         label_text = textwrap.dedent(
@@ -931,9 +931,9 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.exit_code = None
 
         # dialogs
-        self.about_dialog = AboutDialog()
-        self.settings_dialog = SettingsDialog()
-        self.file_dialog = inputs.FileDialog()
+        self.about_dialog = AboutDialog(parent=self)
+        self.settings_dialog = SettingsDialog(parent=self)
+        self.file_dialog = inputs.FileDialog(parent=self)
 
         paramset_basename = self.target.__module__.split('.')[-1]
         self.datastack_options_dialog = DatastackOptionsDialog(
@@ -961,7 +961,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.settings_dialog.accepted.connect(_settings_saved_message)
 
         # Main operational widgets for the form
-        self._central_widget = QtWidgets.QWidget()
+        self._central_widget = QtWidgets.QWidget(parent=self)
         self.setCentralWidget(self._central_widget)
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,
@@ -976,7 +976,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.modelname = self.label
 
         # Format the text links at the top of the window.
-        self.links = QtWidgets.QLabel()
+        self.links = QtWidgets.QLabel(parent=self)
         self.links.setAlignment(QtCore.Qt.AlignRight)
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
@@ -986,7 +986,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self._central_widget.layout().addWidget(self.links)
         self.links.linkActivated.connect(self._check_local_docs)
 
-        self.form = inputs.Form()
+        self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
         self.run_dialog = inputs.FileSystemRunDialog()
 
@@ -1022,7 +1022,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             self.label)
 
         # Menu items.
-        self.file_menu = QtWidgets.QMenu('&File')
+        self.file_menu = QtWidgets.QMenu('&File', parent=self)
         self.file_menu.addAction(
             qtawesome.icon('fa.cog'),
             'Settings ...', self.settings_dialog.exec_,
@@ -1031,7 +1031,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             qtawesome.icon('fa.floppy-o'),
             'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
-        self.open_menu = QtWidgets.QMenu('Load parameters')
+        self.open_menu = QtWidgets.QMenu('Load parameters', parent=self)
         self.open_menu.setIcon(qtawesome.icon('fa.folder-open-o'))
         self.build_open_menu()
         self.file_menu.addMenu(self.open_menu)
@@ -1041,7 +1041,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtGui.QKeySequence('Ctrl+Q'))
         self.menuBar().addMenu(self.file_menu)
 
-        self.edit_menu = QtWidgets.QMenu('&Edit')
+        self.edit_menu = QtWidgets.QMenu('&Edit', parent=self)
         self.edit_menu.addAction(
             qtawesome.icon('fa.undo', color='red'),
             'Clear inputs', self.clear_inputs)
@@ -1051,13 +1051,13 @@ class InVESTModel(QtWidgets.QMainWindow):
             self.clear_local_settings)
         self.menuBar().addMenu(self.edit_menu)
 
-        self.dev_menu = QtWidgets.QMenu('&Development')
+        self.dev_menu = QtWidgets.QMenu('&Development', parent=self)
         self.dev_menu.addAction(
             qtawesome.icon('fa.file-code-o'),
             'Save to python script ...', self.save_to_python)
         self.menuBar().addMenu(self.dev_menu)
 
-        self.help_menu = QtWidgets.QMenu('&Help')
+        self.help_menu = QtWidgets.QMenu('&Help', parent=self)
         self.help_menu.addAction(
             qtawesome.icon('fa.info'),
             'About InVEST', self.about_dialog.exec_)
@@ -1614,6 +1614,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                 event.ignore()
             elif self.quit_confirm_dialog.checkbox.isChecked():
                 self.save_lastrun()
+                super(QtWidgets.QMainWindow, self).closeEvent(event)
             self.settings.setValue(
                 'remember_lastrun',
                 self.quit_confirm_dialog.checkbox.isChecked())
@@ -1722,7 +1723,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         if (event.mimeData().hasText() and
                 len(event.mimeData().urls()) == 1 and
-                is_probably_datastack(event.mimeData().urls()[0].path())):
+                is_probably_datastack(
+                    event.mimeData().urls()[0].toLocalFile())):
             LOGGER.info('Accepting drag enter event for "%s"',
                         event.mimeData().text())
             self.setStyleSheet(
@@ -1762,6 +1764,6 @@ class InVESTModel(QtWidgets.QMainWindow):
         Returns:
             None.
         """
-        path = event.mimeData().urls()[0].path()
+        path = event.mimeData().urls()[0].toLocalFile()
         self.setStyleSheet('')
         self.load_datastack(path)
