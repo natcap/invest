@@ -2374,6 +2374,11 @@ class ModelTests(_QtTest):
                 model_ui.datastack_archive_extract_dialog.accept()
 
             QtCore.QTimer.singleShot(25, _set_extraction_dir)
+
+            # close the archive progress dialog automatically when extraction
+            # finishes.
+            model_ui.datastack_progress_dialog.checkbox.setChecked(True)
+
             model_ui.load_datastack(datastack_filepath)
 
             # Workspace isn't saved in a parameter archive, so just test suffix
@@ -2498,6 +2503,10 @@ class ModelTests(_QtTest):
                     archive_path)
                 self.qt_app.processEvents()
                 model_ui.datastack_options_dialog.accept()
+
+            # close the archive progress dialog automatically when extraction
+            # finishes.
+            model_ui.datastack_progress_dialog.checkbox.setChecked(True)
 
             QtCore.QTimer.singleShot(25, _set_archive_options)
             model_ui._save_datastack_as()
