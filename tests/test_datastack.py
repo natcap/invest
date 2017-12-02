@@ -588,7 +588,50 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(stack_info, datastack.ParameterSet(
             expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
 
-    def test_mixed_path_separators(self):
+    def test_mixed_path_separators_in_paramset(self):
+        """Datastacks: parameter sets must handle windows and linux paths."""
+        from natcap.invest import datastack
+
+        args = {
+            'windows_path': os.path.join(self.workspace,
+                                         'dir1\\filepath1.txt'),
+            'linux_path': os.path.join(self.workspace,
+                                       'dir2/filepath2.txt'),
+        }
+        for filepath in args.values():
+            normalized_path = os.path.normpath(filepath.replace('\\', os.sep))
+            try:
+                os.makedirs(os.path.dirname(normalized_path))
+            except OSError:
+                pass
+
+            with open(normalized_path, 'w') as open_file:
+                open_file.write('the contents of this file do not matter.')
+
+        paramset_path = os.path.join(self.workspace, 'paramset.invest.json')
+        datastack.build_parameter_set(args, 'sample_model', paramset_path,
+                                      relative=True)
+
+        with open(paramset_path) as saved_parameters:
+            args = json.loads(saved_parameters.read())['args']
+            expected_args = {
+                'windows_path': os.path.join(u'dir1', u'filepath1.txt'),
+                'linux_path': os.path.join(u'dir2', u'filepath2.txt'),
+            }
+            self.assertEqual(expected_args, args)
+
+        expected_args = {
+            'windows_path': os.path.join(self.workspace, 'dir1',
+                                         'filepath1.txt'),
+            'linux_path': os.path.join(self.workspace, 'dir2',
+                                       'filepath2.txt'),
+        }
+
+        extracted_paramset = datastack.extract_parameter_set(paramset_path)
+        self.assertEqual(extracted_paramset.args, expected_args)
+
+
+    def test_mixed_path_separators_in_archive(self):
         """Datastacks: datastack archives must handle windows, linux paths."""
         from natcap.invest import datastack
 
