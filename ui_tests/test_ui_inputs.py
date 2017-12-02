@@ -2684,6 +2684,48 @@ class ModelTests(_QtTest):
             model.close(prompt=False)
             model.destroy()
 
+    def test_drag_n_drop_datastack_no_mime_text(self):
+        """UI Model: Verify drag-n-drop a datastack without MIME text."""
+        model = ModelTests.build_model()
+        try:
+            # Write a sample parameter set file to drop
+            datastack_filepath = os.path.join(self.workspace, 'datastack.invest.json')
+            with open(datastack_filepath, 'w') as sample_datastack:
+                sample_datastack.write(json.dumps(
+                    {'args': {'workspace_dir': '/foo/bar',
+                              'results_suffix': 'baz'},
+                     'model_name': model.target.__module__,
+                     'invest_version': 'testing'}))
+
+            # Deliberately not setting any text in the mimedata.  We should
+            # still be able to load the datastack.
+            mime_data = QtCore.QMimeData()
+            mime_data.setUrls([QtCore.QUrl.fromLocalFile(datastack_filepath)])
+
+            drag_event = QtGui.QDragEnterEvent(
+                model.pos(),
+                QtCore.Qt.CopyAction,
+                mime_data,
+                QtCore.Qt.LeftButton,
+                QtCore.Qt.NoModifier)
+            model.dragEnterEvent(drag_event)
+            self.assertTrue(drag_event.isAccepted())
+
+            event = QtGui.QDropEvent(
+                model.pos(),
+                QtCore.Qt.CopyAction,
+                mime_data,
+                QtCore.Qt.LeftButton,
+                QtCore.Qt.NoModifier)
+
+            # When the datastack is dropped, the datastack is loaded.
+            model.dropEvent(event)
+            self.assertEqual(model.workspace.value(), '/foo/bar')
+            self.assertEqual(model.suffix.value(), 'baz')
+        finally:
+            model.close(prompt=False)
+            model.destroy()
+
     def test_drag_n_drop_rejected_multifile(self):
         """UI Model: Drag-n-drop fails when dragging several files."""
         model = ModelTests.build_model()

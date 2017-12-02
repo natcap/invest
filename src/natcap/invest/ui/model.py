@@ -1891,8 +1891,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         Returns:
             None.
         """
-        if (event.mimeData().hasText() and
-                len(event.mimeData().urls()) == 1 and
+        if (len(event.mimeData().urls()) == 1 and
                 is_probably_datastack(
                     event.mimeData().urls()[0].toLocalFile())):
             LOGGER.info('Accepting drag enter event for "%s"',
