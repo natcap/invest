@@ -836,6 +836,7 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         self.layout().addWidget(self.buttonbox)
 
     def exec_build(self, args, model_name, datastack_path):
+        self.setWindowTitle('Creating archive')
         self.title.setText('<h2>Creating archive</h2>')
         self.executor = execution.Executor(
             target=datastack.build_datastack_archive,
@@ -845,6 +846,7 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         return self.exec_()
 
     def exec_extract(self, datastack_path, dest_dir_path):
+        self.setWindowTitle('Extracting archive')
         self.title.setText('<h2>Extracting archive</h2>')
         self.executor = execution.Executor(
             target=datastack.extract_datastack_archive,
