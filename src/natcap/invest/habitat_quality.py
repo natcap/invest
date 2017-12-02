@@ -18,6 +18,7 @@ from . import validation
 LOGGER = logging.getLogger('natcap.invest.habitat_quality')
 
 
+@profile
 def execute(args):
     """Habitat Quality.
 
