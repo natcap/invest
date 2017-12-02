@@ -874,6 +874,22 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         self.layout().addWidget(self.buttonbox)
 
     def exec_build(self, args, model_name, datastack_path):
+        """Build a datastack archive.
+
+        Presents a dialog with an indeterminate progress bar while the archive
+        is being built.  The actual processing happens in a separate thread of
+        control.
+
+        Parameters:
+            args (dict): The model arguments to archive.
+            model_name (string): The python-importable model identifier.
+            datastack_path (string): The path to the file on disk where the
+                datastack archive should be saved
+
+        Returns:
+            The exit code of the underlying implementation of
+            ``QDialog.exec_()``.
+        """
         self.setWindowTitle('Creating archive')
         self.title.setText('<h2>Creating archive</h2>')
         self.executor = execution.Executor(
@@ -884,6 +900,23 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         return self.exec_()
 
     def exec_extract(self, datastack_path, dest_dir_path):
+        """Extract a datastack archive.
+
+        Presents a dialog with an indeterminate progress bar while the archive
+        is being extracted.  The actual processing happens in a separate thread
+        of control.
+
+        Parameters:
+            datastack_path (string): The path to the datastack archive on disk
+                that should be extracted.
+            dest_dir_path (string): The path to the directory on disk where the
+                archive should be extracted to.
+
+        Returns:
+            The exit code of the underlying implementation of
+            ``QDialog.exec_()``.
+
+        """
         self.setWindowTitle('Extracting archive')
         self.title.setText('<h2>Extracting archive</h2>')
         self.executor = execution.Executor(
@@ -893,6 +926,7 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         return self.exec_()
 
     def _thread_finished(self):
+        """Slot for updating the UI when the processing thread finishes."""
         self.close_button.setEnabled(True)
         self.title.setText('<h2>Complete.</h2>')
         self.progressbar.setMaximum(1)  # stop the progress bar.
@@ -902,6 +936,18 @@ class DatastackProgressDialog(QtWidgets.QDialog):
             self.close()
 
     def exec_(self):
+        """Enter the dialog's event loop.
+
+        Overridden from ``QtWidgets.QDialog.exec_()``.  This method is not
+        intended to be used directly.  Use ``exec_build`` or ``exec_extract``
+        instead.
+
+        Raises:
+            RuntimeError when called directly, without the appropriate setup.
+
+        Returns:
+            The exit code of the underlying QDialog.
+        """
         self.close_button.setEnabled(False)
 
         if self.executor is None:
