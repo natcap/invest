@@ -827,14 +827,6 @@ class DatastackProgressDialog(QtWidgets.QDialog):
             parent=self)
         self.layout().addWidget(self.checkbox)
 
-        self.scrolling_log = inputs.LogMessagePane(parent=self)  # TODO: parent?
-        self.log_box = QtWidgets.QGroupBox('Details', parent=self)
-        self.log_box.setCheckable(True)
-        self.log_box.setChecked(False)
-        self.log_box.setLayout(QtWidgets.QVBoxLayout())
-        self.log_box.layout().addWidget(self.scrolling_log)
-        self.layout().addWidget(self.log_box)
-
         self.buttonbox = QtWidgets.QDialogButtonBox(parent=self)
         self.close_button = QtWidgets.QPushButton('Close', parent=self)
         self.close_button.setEnabled(False)  # disable until executor finishes.
@@ -876,18 +868,6 @@ class DatastackProgressDialog(QtWidgets.QDialog):
             raise RuntimeError(
                 'Call exec_build or exec_extract instead of exec_()')
 
-        #self.log_handler = inputs.QLogHandler(self.scrolling_log)
-
-        # set up logging to only print logging from Executor thread.
-        thread_filter = utils.ThreadFilter(self.executor.name)
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.NOTSET)
-
-        handler = logging.StreamHandler()
-        handler.addFilter(thread_filter)
-        handler.setLevel(logging.NOTSET)
-        root_logger.addHandler(handler)
-
         self.executor.finished.connect(self._thread_finished)
         self.executor.start()
 
@@ -895,7 +875,6 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         return_code = QtWidgets.QDialog.exec_(self)
         self.executor = None
         return return_code
-
 
 
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
