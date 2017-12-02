@@ -861,7 +861,7 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         self.layout().addWidget(self.progressbar)
 
         self.checkbox = QtWidgets.QCheckBox(
-            'Automatically close after the archive is successfully created',
+            'Automatically close when finished.',
             parent=self)
         self.layout().addWidget(self.checkbox)
 
