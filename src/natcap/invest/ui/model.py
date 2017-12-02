@@ -24,6 +24,7 @@ import qtawesome
 
 from . import inputs
 from . import usage
+from . import execution
 from .. import utils
 from .. import datastack
 from .. import validation
@@ -807,6 +808,96 @@ class DatastackArchiveExtractionDialog(OptionsDialog):
         return None
 
 
+class DatastackProgressDialog(QtWidgets.QDialog):
+    def __init__(self, parent):
+        QtWidgets.QDialog.__init__(self, parent=parent)
+
+        self.setLayout(QtWidgets.QVBoxLayout())
+        self.executor = None
+        self.title = QtWidgets.QLabel('', parent=self)
+        self.layout().addWidget(self.title)
+
+        self.progressbar = QtWidgets.QProgressBar(parent=self)  # indeterminate!
+        self.progressbar.setMinimum(0)
+        self.progressbar.setMaximum(0)
+        self.layout().addWidget(self.progressbar)
+
+        self.checkbox = QtWidgets.QCheckBox(
+            'Automatically close after the archive is successfully created',
+            parent=self)
+        self.layout().addWidget(self.checkbox)
+
+        self.scrolling_log = inputs.LogMessagePane(parent=self)  # TODO: parent?
+        self.log_box = QtWidgets.QGroupBox('Details', parent=self)
+        self.log_box.setCheckable(True)
+        self.log_box.setChecked(False)
+        self.log_box.setLayout(QtWidgets.QVBoxLayout())
+        self.log_box.layout().addWidget(self.scrolling_log)
+        self.layout().addWidget(self.log_box)
+
+        self.buttonbox = QtWidgets.QDialogButtonBox(parent=self)
+        self.close_button = QtWidgets.QPushButton('Close', parent=self)
+        self.close_button.setEnabled(False)  # disable until executor finishes.
+        self.close_button.clicked.connect(self.close)
+        self.buttonbox.addButton(self.close_button,
+                                 QtWidgets.QDialogButtonBox.AcceptRole)
+        self.layout().addWidget(self.buttonbox)
+
+    def exec_build(self, args, model_name, datastack_path):
+        self.title.setText('<h2>Creating archive</h2>')
+        self.executor = execution.Executor(
+            target=datastack.build_datastack_archive,
+            kwargs={'args': args,
+                    'model_name': model_name,
+                    'datastack_path': datastack_path})
+        return self.exec_()
+
+    def exec_extract(self, datastack_path, dest_dir_path):
+        self.title.setText('<h2>Extracting archive</h2>')
+        self.executor = execution.Executor(
+            target=datastack.extract_datastack_archive,
+            kwargs={'datastack_path': datastack_path,
+                    'dest_dir_path': dest_dir_path})
+        return self.exec_()
+
+    def _thread_finished(self):
+        self.close_button.setEnabled(True)
+        self.title.setText('<h2>Complete.</h2>')
+        self.progressbar.setMaximum(1)  # stop the progress bar.
+
+        if self.checkbox.isChecked():
+            self.checkbox.setChecked(False)  # reset to unchecked for next run
+            self.close()
+
+    def exec_(self):
+        self.close_button.setEnabled(False)
+
+        if self.executor is None:
+            raise RuntimeError(
+                'Call exec_build or exec_extract instead of exec_()')
+
+        #self.log_handler = inputs.QLogHandler(self.scrolling_log)
+
+        # set up logging to only print logging from Executor thread.
+        thread_filter = utils.ThreadFilter(self.executor.name)
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.NOTSET)
+
+        handler = logging.StreamHandler()
+        handler.addFilter(thread_filter)
+        handler.setLevel(logging.NOTSET)
+        root_logger.addHandler(handler)
+
+        self.executor.finished.connect(self._thread_finished)
+        self.executor.start()
+
+        # Enter the dialog's event loop
+        return_code = QtWidgets.QDialog.exec_(self)
+        self.executor = None
+        return return_code
+
+
+
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
     """A dialog for presenting errors from whole-model validation."""
 
@@ -934,6 +1025,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.about_dialog = AboutDialog(parent=self)
         self.settings_dialog = SettingsDialog(parent=self)
         self.file_dialog = inputs.FileDialog(parent=self)
+        self.datastack_progress_dialog = DatastackProgressDialog(parent=self)
 
         paramset_basename = self.target.__module__.split('.')[-1]
         self.datastack_options_dialog = DatastackOptionsDialog(
@@ -1237,7 +1329,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         LOGGER.info('Current parameters:\n%s', pprint.pformat(current_args))
 
         if datastack_opts.datastack_type == _DATASTACK_DATA_ARCHIVE:
-            datastack.build_datastack_archive(
+            self.datastack_progress_dialog.exec_build(
                 args=current_args,
                 model_name=self.target.__module__,
                 datastack_path=datastack_opts.archive_path
@@ -1402,8 +1494,14 @@ class InVESTModel(QtWidgets.QMainWindow):
             if extract_dir is None:
                 return
 
-            args = datastack.extract_datastack_archive(
-                datastack_path, extract_dir)
+            self.datastack_progress_dialog.exec_extract(datastack_path,
+                                                        extract_dir)
+
+            paramset = datastack.extract_parameter_set(
+                os.path.join(extract_dir,
+                             datastack.DATASTACK_PARAMETER_FILENAME))
+            args = paramset.args
+
             window_title_filename = os.path.basename(extract_dir)
         elif stack_type in ('json', 'logfile'):
             args = stack_info.args
