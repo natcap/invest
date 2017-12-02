@@ -139,6 +139,8 @@ class OptionsDialog(QtWidgets.QDialog):
                 button.
             reject_text='cancel' (string): The text of the dialog-rejection
                 button.
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
 
         Returns:
             ``None``
@@ -224,9 +226,14 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
     attribute.
     """
 
-    def __init__(self):
-        """Initialize the QuitConfirmDialog."""
-        QtWidgets.QMessageBox.__init__(self)
+    def __init__(self, parent=None):
+        """Initialize the QuitConfirmDialog.
+
+        Paremeters:
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
+        """
+        QtWidgets.QMessageBox.__init__(self, parent=parent)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText('<h2>Are you sure you want to quit?</h2>')
         self.setInformativeText(
@@ -259,17 +266,19 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
 class ConfirmDialog(QtWidgets.QMessageBox):
     """A message box for confirming something with the user."""
 
-    def __init__(self, title_text, body_text):
+    def __init__(self, title_text, body_text, parent=None):
         """Initialize the dialog.
 
         Parameters:
             title_text (string): The title of the dialog.
             body_text (string): The body text of the dialog.
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
 
         Returns:
             None.
         """
-        QtWidgets.QMessageBox.__init__(self)
+        QtWidgets.QMessageBox.__init__(self, parent=parent)
         self.setWindowFlags(QtCore.Qt.Dialog)
         self.setText('<h2>%s<h2>' % title_text)
         self.setInformativeText(body_text)
@@ -283,12 +292,14 @@ class ConfirmDialog(QtWidgets.QMessageBox):
 class ModelMismatchConfirmDialog(ConfirmDialog):
     """Confirm datastack load when it looks like the wrong model."""
 
-    def __init__(self, current_modelname):
+    def __init__(self, current_modelname, parent=None):
         """Initialize the dialog.
 
         Parameters:
             current_modelname (string): The modelname of the current
                 InVESTModel target.
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
 
         Returns:
             None.
@@ -304,7 +315,8 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
         ConfirmDialog.__init__(
             self,
             title_text='Are you sure this is the right model?',
-            body_text=self._body_text)
+            body_text=self._body_text,
+            parent=parent)
 
     def exec_(self, datastack_modelname):
         """Show the dialog and enter its event loop.
@@ -331,6 +343,10 @@ class SettingsDialog(OptionsDialog):
 
     def __init__(self, parent=None):
         """Initialize the SettingsDialog.
+
+        Parameters:
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
 
         Returns:
             ``None``
@@ -426,7 +442,12 @@ class AboutDialog(QtWidgets.QDialog):
     """
 
     def __init__(self, parent=None):
-        """Initialize the AboutDialog."""
+        """Initialize the AboutDialog.
+
+        Parameters:
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
+        """
         QtWidgets.QDialog.__init__(self, parent=parent)
         self.setWindowTitle('About InVEST')
         self.setLayout(QtWidgets.QVBoxLayout())
@@ -505,12 +526,14 @@ class AboutDialog(QtWidgets.QDialog):
 class LocalDocsMissingDialog(QtWidgets.QMessageBox):
     """A dialog to explain that local documentation can't be found."""
 
-    def __init__(self, local_docs_link):
+    def __init__(self, local_docs_link, parent=None):
         """Initialize the LocalDocsMissingDialog.
 
         Parameters:
             local_docs_link (string): The local path to the local HTML
                 documentation.
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
 
         Returns:
             ``None``
@@ -639,12 +662,14 @@ class DatastackOptionsDialog(OptionsDialog):
         An instance of :ref:DatastackSaveOpts namedtuple.
     """
 
-    def __init__(self, paramset_basename):
+    def __init__(self, paramset_basename, parent=None):
         """Initialize the DatastackOptionsDialog.
 
         Parameters:
             paramset_basename (string): The basename of the new parameter set
                 file.
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
 
         Returns:
             ``None``
@@ -653,7 +678,8 @@ class DatastackOptionsDialog(OptionsDialog):
                                title='Datastack options',
                                modal=True,
                                accept_text='Save datastack',
-                               reject_text='Cancel')
+                               reject_text='Cancel',
+                               parent=parent)
         self._container = inputs.Container(label='Datastack options')
         self.layout().addWidget(self._container)
         self.paramset_basename = paramset_basename
@@ -778,13 +804,19 @@ class DatastackOptionsDialog(OptionsDialog):
 class DatastackArchiveExtractionDialog(OptionsDialog):
     """A dialog for extracting a datastack archive."""
 
-    def __init__(self):
-        """Initialize the DatastackArchiveExtractionDialog."""
+    def __init__(self, parent=None):
+        """Initialize the DatastackArchiveExtractionDialog.
+
+        Parameters:
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
+        """
         OptionsDialog.__init__(self,
                                title='Extract datastack',
                                modal=True,
                                accept_text='Extract',
-                               reject_text='Cancel')
+                               reject_text='Cancel',
+                               parent=parent)
         self._container = inputs.Container(
             label='Datastack extraction parameters')
         self.layout().addWidget(self._container)
@@ -809,7 +841,13 @@ class DatastackArchiveExtractionDialog(OptionsDialog):
 
 
 class DatastackProgressDialog(QtWidgets.QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent=None):
+        """Initialize the DatastackProgressDialog.
+
+        Parameters:
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
+        """
         QtWidgets.QDialog.__init__(self, parent=parent)
 
         self.setLayout(QtWidgets.QVBoxLayout())
@@ -882,9 +920,14 @@ class DatastackProgressDialog(QtWidgets.QDialog):
 class WholeModelValidationErrorDialog(QtWidgets.QDialog):
     """A dialog for presenting errors from whole-model validation."""
 
-    def __init__(self):
-        """Initialize the WholeModelValidationErrorDialog."""
-        QtWidgets.QDialog.__init__(self)
+    def __init__(self, parent=None):
+        """Initialize the WholeModelValidationErrorDialog.
+
+        Parameters:
+            parent=None (QWidget or None): The parent of the dialog.  None if
+                no parent.
+        """
+        QtWidgets.QDialog.__init__(self, parent=parent)
         self.warnings = []
         self.setLayout(QtWidgets.QVBoxLayout())
 
@@ -1010,23 +1053,25 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         paramset_basename = self.target.__module__.split('.')[-1]
         self.datastack_options_dialog = DatastackOptionsDialog(
-            paramset_basename=paramset_basename)
-
+            paramset_basename=paramset_basename, parent=self)
         self.datastack_archive_extract_dialog = (
-            DatastackArchiveExtractionDialog())
-        self.quit_confirm_dialog = QuitConfirmDialog()
-        self.validation_report_dialog = WholeModelValidationErrorDialog()
-        self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc)
+            DatastackArchiveExtractionDialog(parent=self))
+
+        self.quit_confirm_dialog = QuitConfirmDialog(self)
+        self.validation_report_dialog = WholeModelValidationErrorDialog(self)
+        self.local_docs_missing_dialog = LocalDocsMissingDialog(self.localdoc,
+                                                                parent=self)
         self.input_overwrite_confirm_dialog = ConfirmDialog(
             title_text='Overwrite parameters?',
             body_text=('Loading a datastack will overwrite any unsaved '
-                       'parameters. Are you sure you want to continue?')
-        )
+                       'parameters. Are you sure you want to continue?'),
+            parent=self)
         self.workspace_overwrite_confirm_dialog = ConfirmDialog(
             title_text='Workspace exists!',
-            body_text='Overwrite files from a previous run?')
+            body_text='Overwrite files from a previous run?',
+            parent=self)
         self.model_mismatch_confirm_dialog = ModelMismatchConfirmDialog(
-            self.target.__module__)
+            self.target.__module__, parent=self)
 
         def _settings_saved_message():
             self.statusBar().showMessage('Settings saved',
