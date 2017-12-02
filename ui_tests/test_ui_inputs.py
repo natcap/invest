@@ -2668,7 +2668,8 @@ class ModelTests(_QtTest):
 
             # When the datastack is dropped, the datastack is loaded.
             model.dropEvent(event)
-            self.assertEqual(model.workspace.value(), '/foo/bar')
+            self.assertEqual(model.workspace.value(),
+                             os.path.normpath('/foo/bar'))
             self.assertEqual(model.suffix.value(), 'baz')
         finally:
             model.close(prompt=False)
