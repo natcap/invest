@@ -448,8 +448,10 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
-            if os.path.exists(args_param):
-                normalized_path = os.path.normpath(args_param)
+            possible_path = args_param.replace('\\', '/')
+            if os.path.exists(possible_path):
+                # Always save unix paths.
+                normalized_path = os.path.normpath(possible_path)
                 if relative:
                     # Handle special case where python assumes that '.'
                     # represents the CWD
@@ -497,6 +499,8 @@ def extract_parameter_set(paramset_path):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring) and len(args_param) > 0:
+            # Convert paths to whatever makes sense for the current OS.
+            args_param = os.path.normpath(args_param)
             expanded_param = os.path.expandvars(
                 os.path.expanduser(args_param))
             if os.path.isabs(expanded_param):
