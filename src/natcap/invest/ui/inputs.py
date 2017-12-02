@@ -245,12 +245,12 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
 
     message_received = QtCore.Signal(six.text_type)
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the LogMessagePane instance.
 
         Sets the stylesheet for the QPlainTextEdit, and sets it to read-only.
         """
-        QtWidgets.QPlainTextEdit.__init__(self)
+        QtWidgets.QPlainTextEdit.__init__(self, parent=parent)
 
         self.setReadOnly(True)
         self.setStyleSheet("QWidget { background-color: White; "
@@ -322,7 +322,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.statusAreaLabel = QtWidgets.QLabel(
             FileSystemRunDialog._build_status_area_label())
 
-        self.log_messages_pane = LogMessagePane()
+        self.log_messages_pane = LogMessagePane(parent=self)
         self.loghandler = QLogHandler(self.log_messages_pane)
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.NOTSET)
