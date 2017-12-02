@@ -11,16 +11,10 @@ class WindEnergy(model.InVESTModel):
             label=u'Wind Energy',
             target=wind_energy.execute,
             validator=wind_energy.validate,
-            localdoc=u'../documentation/wind_energy.html')
+            localdoc=u'../documentation/wind_energy.html',
+            suffix_args_key='suffix'
+        )
 
-        self.results_suffix = inputs.Text(
-            args_key=u'suffix',
-            helptext=(
-                u'A string that will be added to the end of the output file '
-                u'paths.'),
-            label=u'Results Suffix (Optional)',
-            validator=self.validator)
-        self.add_input(self.results_suffix)
         self.wind_data = inputs.File(
             args_key=u'wind_data_uri',
             helptext=(
@@ -310,9 +304,8 @@ class WindEnergy(model.InVESTModel):
             self.min_depth.args_key: self.min_depth.value(),
             self.max_depth.args_key: self.max_depth.value(),
             self.valuation_container.args_key: self.valuation_container.value(),
+            self.avg_grid_dist.args_key: self.avg_grid_dist.value(),
         }
-        if self.results_suffix.value():
-            args[self.results_suffix.args_key] = self.results_suffix.value()
         if self.aoi.value():
             args[self.aoi.args_key] = self.aoi.value()
         if self.land_polygon.value():
@@ -323,10 +316,11 @@ class WindEnergy(model.InVESTModel):
             args[self.max_distance.args_key] = self.max_distance.value()
         if self.grid_points.value():
             args[self.grid_points.args_key] = self.grid_points.value()
-        if self.valuation_container.value():
+
+        # Include these args if valuation is checked.
+        if args[self.valuation_container.args_key]:
             args[self.foundation_cost.args_key] = self.foundation_cost.value()
             args[self.discount_rate.args_key] = self.discount_rate.value()
-            args[self.avg_grid_dist.args_key] = self.avg_grid_dist.value()
             args[self.price_table.args_key] = self.price_table.value()
             args[self.wind_schedule.args_key] = self.wind_schedule.value()
             args[self.wind_price.args_key] = self.wind_price.value()

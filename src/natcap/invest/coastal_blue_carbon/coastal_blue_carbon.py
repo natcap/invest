@@ -8,13 +8,14 @@ import math
 import itertools
 import time
 import re
+import csv
 
 import numpy
 from osgeo import gdal
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing as geoprocess
+import pygeoprocessing
 
 from .. import validation
-from .. import utils as invest_utils
+from .. import utils
 
 # using largest negative 32-bit floating point number
 # reasons: practical limit for 32 bit floating point and most outputs should
@@ -23,6 +24,10 @@ NODATA_FLOAT = -16777216
 
 LOGGER = logging.getLogger(
     'natcap.invest.coastal_blue_carbon.coastal_blue_carbon')
+
+_INTERMEDIATE = {
+    'aligned_lulc_template': 'aligned_lulc_%s.tif',
+}
 
 _OUTPUT = {
     'carbon_stock': 'carbon_stock_at_%s.tif',
@@ -126,9 +131,10 @@ def execute(args):
     last_time = time.time()
 
     # Limit block size here to try to improve memory usage of the application.
-    block_iterator = enumerate(geoprocess.iterblocks(d['C_prior_raster'],
-                                                     largest_block=2**10))
-    C_nodata = geoprocess.get_nodata_from_uri(d['C_prior_raster'])
+    block_iterator = enumerate(pygeoprocessing.iterblocks(
+        d['C_prior_raster'], largest_block=2**10))
+    C_nodata = pygeoprocessing.get_raster_info(
+        d['C_prior_raster'])['nodata'][0]
 
     for block_idx, (offset_dict, C_prior) in block_iterator:
         current_time = time.time()
@@ -615,10 +621,13 @@ def get_inputs(args):
     }
 
     # Directories
-    args['results_suffix'] = invest_utils.make_suffix_string(
+    args['results_suffix'] = utils.make_suffix_string(
         args, 'results_suffix')
     outputs_dir = os.path.join(args['workspace_dir'], 'outputs_core')
-    geoprocess.create_directories([args['workspace_dir'], outputs_dir])
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    utils.make_directories([args['workspace_dir'],
+                            outputs_dir,
+                            intermediate_dir])
 
     # Rasters
     try:
@@ -645,19 +654,35 @@ def get_inputs(args):
 
     d['timesteps'] = d['snapshot_years'][-1] - d['snapshot_years'][0]
 
-    d['C_prior_raster'] = args['lulc_baseline_map_uri']
-
     try:
-        d['C_r_rasters'] = args['lulc_transition_maps_list']
+        transition_raster_paths = args['lulc_transition_maps_list']
     except KeyError:
-        d['C_r_rasters'] = []
+        transition_raster_paths = []
+
+    aligned_baseline_lulc_path = os.path.join(
+        intermediate_dir, 'aligned_lulc%s.tif' % args['results_suffix'])
+    aligned_transition_raster_paths = [
+        os.path.join(intermediate_dir, 'aligned_transition_%s%s.tif' % (
+            year, args['results_suffix']))
+        for year in d['transition_years']]
+    baseline_info = pygeoprocessing.get_raster_info(
+        args['lulc_baseline_map_uri'])
+
+    pygeoprocessing.align_and_resize_raster_stack(
+        [args['lulc_baseline_map_uri']] + transition_raster_paths,
+        [aligned_baseline_lulc_path] + aligned_transition_raster_paths,
+        ['nearest'] * (1 + len(aligned_transition_raster_paths)),
+        baseline_info['pixel_size'], 'intersection')
+
+    d['C_prior_raster'] = aligned_baseline_lulc_path
+    d['C_r_rasters'] = aligned_transition_raster_paths
 
     # Reclass Dictionaries
-    lulc_lookup_dict = geoprocess.get_lookup_from_table(
+    lulc_lookup_dict = utils.build_lookup_from_csv(
         args['lulc_lookup_uri'], 'lulc-class')
     lulc_to_code_dict = \
         dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items() if k)
-    initial_dict = geoprocess.get_lookup_from_table(
+    initial_dict = utils.build_lookup_from_csv(
             args['carbon_pool_initial_uri'], 'lulc-class')
 
     code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
@@ -710,20 +735,25 @@ def get_inputs(args):
     # Create Output Rasters
     d['File_Registry'] = _build_file_registry(
         d['C_prior_raster'],
+        d['C_r_rasters'],
         d['snapshot_years'],
         args['results_suffix'],
         d['do_economic_analysis'],
-        outputs_dir)
+        outputs_dir, intermediate_dir)
 
     return d
 
 
-def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
-                         do_economic_analysis, outputs_dir):
+def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
+                         results_suffix, do_economic_analysis, outputs_dir,
+                         intermediate_dir):
     """Build an output file registry.
 
     Args:
         C_prior_raster (str): template raster
+        transition_rasters (list): A list of GDAL-supported rasters
+            representing representing the landcover at transition years.  May
+            be an empty list.
         snapshot_years (list): years of provided snapshots to help with
             filenames
         results_suffix (str): the results file suffix
@@ -767,33 +797,50 @@ def _build_file_registry(C_prior_raster, snapshot_years, results_suffix,
     if do_economic_analysis:
         raster_registry_dict['NPV_raster'] = 'net_present_value.tif'
 
-    file_registry = invest_utils.build_file_registry(
-        [(raster_registry_dict, outputs_dir)], results_suffix)
+    file_registry = utils.build_file_registry(
+        [(raster_registry_dict, outputs_dir),
+         (_INTERMEDIATE, intermediate_dir)], results_suffix)
+
+    LOGGER.info('Aligning and clipping incoming datasets')
+    incoming_rasters = [C_prior_raster] + transition_rasters
+    # If an analysis year is defined, it's appended to the snapshot_years list,
+    # but won't have a corresponding raster.
+    aligned_lulc_files = [file_registry['aligned_lulc_template'] % year
+                          for year in snapshot_years[:len(incoming_rasters)]]
+    baseline_pixel_size = pygeoprocessing.get_raster_info(
+        C_prior_raster)['pixel_size']
+
+    pygeoprocessing.align_and_resize_raster_stack(
+        [C_prior_raster] + transition_rasters,
+        aligned_lulc_files,
+        ['nearest'] * len(aligned_lulc_files),
+        baseline_pixel_size,
+        'intersection')
 
     raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
-    num_temporal_rasters = sum([len(file_registry[key]) for key in raster_lists])
+    num_temporal_rasters = sum(
+        [len(file_registry[key]) for key in raster_lists])
     LOGGER.info('Creating %s temporal rasters', num_temporal_rasters)
     for index, raster_filepath in enumerate(itertools.chain(
             *[file_registry[key] for key in raster_lists])):
         LOGGER.info('Setting up temporal raster %s of %s at %s', index+1,
                     num_temporal_rasters, os.path.basename(raster_filepath))
-        geoprocess.new_raster_from_base_uri(
+        pygeoprocessing.new_raster_from_base(
             template_raster,
             raster_filepath,
-            'GTiff',
-            NODATA_FLOAT,
-            gdal.GDT_Float32)
+            gdal.GDT_Float32,
+            [NODATA_FLOAT])
+
     for raster_key in ['N_total_raster', 'NPV_raster']:
         try:
             filepath = file_registry[raster_key]
             LOGGER.info('Setting up valuation raster %s',
                         os.path.basename(filepath))
-            geoprocess.new_raster_from_base_uri(
+            pygeoprocessing.new_raster_from_base(
                 template_raster,
                 filepath,
-                'GTiff',
-                NODATA_FLOAT,
-                gdal.GDT_Float32)
+                gdal.GDT_Float32,
+                [NODATA_FLOAT])
         except KeyError:
             # KeyError raised when ``raster_key`` is not in the file registry.
             pass
@@ -822,9 +869,9 @@ def _get_lulc_trans_to_D_dicts(lulc_transition_uri, lulc_lookup_uri,
             ...
         }
     """
-    lulc_transition_dict = geoprocess.get_lookup_from_table(
+    lulc_transition_dict = utils.build_lookup_from_csv(
         lulc_transition_uri, 'lulc-class')
-    lulc_lookup_dict = geoprocess.get_lookup_from_table(
+    lulc_lookup_dict = utils.build_lookup_from_csv(
         lulc_lookup_uri, 'lulc-class')
     lulc_to_code_dict = \
         dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items())
@@ -860,7 +907,7 @@ def _create_transient_dict(carbon_pool_transient_uri):
         biomass_transient_dict (dict): transient biomass values
         soil_transient_dict (dict): transient soil values
     """
-    transient_dict = geoprocess.get_lookup_from_table(
+    transient_dict = utils.build_lookup_from_csv(
         carbon_pool_transient_uri, 'code')
 
     def _filter_dict_by_header(header_prefix):
@@ -889,7 +936,7 @@ def _get_price_table(price_table_uri, start_year, end_year):
     Returns:
         price_t (numpy.array): price for each year.
     """
-    price_dict = geoprocess.get_lookup_from_table(price_table_uri, 'year')
+    price_dict = utils.build_lookup_from_csv(price_table_uri, 'year')
 
     try:
         return numpy.array([price_dict[year]['price']
@@ -901,67 +948,124 @@ def _get_price_table(price_table_uri, start_year, end_year):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('lulc_lookup_uri', require=True):
-        # Implement validation for lulc_lookup_uri here
-        pass
+    """Validate an input dictionary for Coastal Blue Carbon.
 
-    if context.is_arg_complete('lulc_transition_matrix_uri', require=True):
-        # Implement validation for lulc_transition_matrix_uri here
-        pass
+    Parameters:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
 
-    if context.is_arg_complete('carbon_pool_initial_uri', require=True):
-        # Implement validation for carbon_pool_initial_uri here
-        pass
+    Returns:
+        A list of tuples where tuple[0] is an iterable of keys that the error
+        message applies to and tuple[1] is the string validation warning.
+    """
+    warnings = []
+    missing_keys = []
+    keys_without_value = []
+    for required_key in ('workspace_dir',
+                         'lulc_transition_matrix_uri',
+                         'carbon_pool_initial_uri',
+                         'carbon_pool_transient_uri',
+                         'lulc_baseline_map_uri',
+                         'do_price_table',
+                         'price',
+                         'interest_rate',
+                         'price_table_uri',
+                         'discount_rate'):
+        try:
+            if args[required_key] in ('', None):
+                keys_without_value.append(required_key)
+        except KeyError:
+            missing_keys.append(required_key)
 
-    if context.is_arg_complete('carbon_pool_transient_uri', require=True):
-        # Implement validation for carbon_pool_transient_uri here
-        pass
+    if len(missing_keys) > 0:
+        raise KeyError('Keys are missing, but required: %s'
+                       % ', '.join(missing_keys))
 
-    if context.is_arg_complete('lulc_baseline_map_uri', require=True):
-        # Implement validation for lulc_baseline_map_uri here
-        pass
+    if len(keys_without_value) > 0:
+        warnings.append((keys_without_value,
+                         'Parameter must have a value'))
 
-    if context.is_arg_complete('lulc_baseline_year', require=True):
-        # Implement validation for lulc_baseline_year here
-        pass
+    for csv_key, required_fields in (
+            ('lulc_lookup_uri', ('lulc-class', 'code',
+                                 'is_coastal_blue_carbon_habitat')),
+            ('lulc_transition_matrix_uri', ('lulc-class',)),
+            ('carbon_pool_initial_uri', ('biomass', 'soil')),
+            ('carbon_pool_transient_uri', ('code', 'lulc-class',
+                                           'biomass-yearly-accumulation',
+                                           'soil-yearly-accumulation',
+                                           'biomass-half-life',
+                                           'soil-half-life')),
+            ('price_table_uri', ('year', 'price'))):
+        try:
+            table = csv.reader(open(args[csv_key]))
+            headers = set([field.lower() for field in table.next()])
+            missing_headers = set(required_fields) - headers
+            if len(missing_headers) > 0:
+                warnings.append((
+                    [csv_key],
+                    ('Table is missing required columns: %s'
+                     % ', '.join(sorted(missing_headers)))))
+        except IOError:
+            warnings.append(([csv_key], 'File not found.'))
+        except csv.Error:
+            warnings.append(([csv_key], 'Could not open CSV'))
 
-    if context.is_arg_complete('lulc_transition_maps_list', require=False):
-        # Implement validation for lulc_transition_maps_list here
-        pass
+    if limit_to in ('lulc_baseline_map_uri', None):
+        with utils.capture_gdal_logging():
+            raster = gdal.Open(args['lulc_baseline_map_uri'])
+        if raster is None:
+            warnings.append((['lulc_baseline_map_uri'],
+                             ('Parameter must be a filepath to a '
+                              'GDAL-compatible raster file.')))
 
-    if context.is_arg_complete('lulc_transition_years_list', require=False):
-        # Implement validation for lulc_transition_years_list here
-        pass
+    for int_key in ('lulc_baseline_year', 'analysis_year'):
+        if limit_to not in (int_key, None):
+            continue
 
-    if context.is_arg_complete('analysis_year', require=False):
-        # Implement validation for analysis_year here
-        pass
+        try:
+            if args[int_key] not in ('', None):
+                int(args[int_key])
+        except KeyError:
+            # not all of these are required.
+            pass
+        except ValueError:
+            warnings.append(([int_key],
+                             'Parameter must be an integer.'))
 
-    if context.is_arg_complete('do_price_table', require=True):
-        # Implement validation for do_price_table here
-        pass
+    for float_key in ('price',
+                      'interest_rate',
+                      'discount_rate'):
+        if limit_to in (float_key, None):
+            try:
+                float(args[float_key])
+            except ValueError:
+                warnings.append(([float_key],
+                                'Parameter must be a number'))
 
-    if context.is_arg_complete('price', require=True):
-        # Implement validation for price here
-        pass
+    if limit_to in ('lulc_transition_maps_list', None):
+        with utils.capture_gdal_logging():
+            for index, raster_path in enumerate(
+                    args['lulc_transition_maps_list']):
+                raster = gdal.Open(raster_path)
+                if raster is None:
+                    warnings.append((['lulc_transition_maps_list'],
+                                    ('Raster %s must be a path to a '
+                                     'GDAL-compatible raster on disk.')
+                                     % index))
 
-    if context.is_arg_complete('interest_rate', require=True):
-        # Implement validation for interest_rate here
-        pass
+    if limit_to in ('lulc_transition_years_list', None):
+        for year in args['lulc_transition_years_list']:
+            try:
+                int(year)
+            except ValueError:
+                warnings.append((['lulc_transition_years_list'],
+                                 'Transition year %s must be an int.' % year))
 
-    if context.is_arg_complete('price_table_uri', require=True):
-        # Implement validation for price_table_uri here
-        pass
+    if limit_to in ('do_price_table', None):
+        if args['do_price_table'] not in (True, False):
+            warnings.append((['do_price_table'],
+                             'Parameter must be eithe True or False.'))
 
-    if context.is_arg_complete('discount_rate', require=True):
-        # Implement validation for discount_rate here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
+    return warnings

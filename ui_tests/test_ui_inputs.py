@@ -11,6 +11,9 @@ import time
 import tempfile
 import shutil
 import textwrap
+import imp
+import uuid
+import json
 
 import faulthandler
 faulthandler.enable()
@@ -28,28 +31,18 @@ if sys.version_info >= (3,):
 else:
     import mock
 
-try:
-    QApplication = QtGui.QApplication
-except AttributeError:
-    QApplication = QtWidgets.QApplication
-
-QT_APP = QApplication.instance()
-if QT_APP is None:
-    QT_APP = QApplication(sys.argv)
-
 LOGGER = logging.getLogger(__name__)
 
-
 @contextlib.contextmanager
-def wait_on_signal(signal, timeout=250):
+def wait_on_signal(qt_app, signal, timeout=250):
     """Block loop until signal emitted, or timeout (ms) elapses."""
     loop = QtCore.QEventLoop()
     signal.connect(loop.quit)
 
     try:
         yield
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
+        if qt_app.hasPendingEvents():
+            qt_app.processEvents()
     except Exception as error:
         LOGGER.exception('Error encountered while witing for signal %s',
                          signal)
@@ -62,18 +55,23 @@ def wait_on_signal(signal, timeout=250):
 
 
 class _QtTest(unittest.TestCase):
-    def tearDown(self):
-        """Wait for 50ms after each test; helps avoid segfaults."""
-        # Found this through programming my coincidence, but it appear to avoid
-        # the segfaulting issue on all the computers I've tried it on.
-        # I'd prefer to find the root problem of the segfault, but I'm OK with
-        # this because these segfaults only happen when I'm running the suite of
-        # unittests.  If something segfaults in the normal operation of
-        # the model, I will absolutely fix that.
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
-        #QTest.qWait(50)
+    def setUp(self):
+        """Set up a QAppplication on each test case."""
+        try:
+            QApplication = QtGui.QApplication
+        except AttributeError:
+            QApplication = QtWidgets.QApplication
 
+        self.qt_app = QApplication.instance()
+        if self.qt_app is None:
+            self.qt_app = QApplication(sys.argv)
+
+    def tearDown(self):
+        """Clear the QApplication's event queue."""
+        # After each test, empty the event queue.
+        # This should help to make sure that there aren't any event-based race
+        # conditions where a C/C++ object is deleted before a slot is called.
+        self.qt_app.sendPostedEvents()
 
 class _SettingsSandbox(_QtTest):
     def setUp(self):
@@ -109,6 +107,14 @@ class InVESTModelInputTest(_QtTest):
         input_instance = self.__class__.create_input(label='foo', helptext='bar')
         self.assertEqual(input_instance.helptext, 'bar')
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo')
+        if input_instance.__class__.__name__ == 'InVESTModelInput':
+            with self.assertRaises(NotImplementedError):
+                input_instance.clear()
+        else:
+            self.fail('Test class must reimplement this test method.')
+
     def test_interactive(self):
         input_instance = self.__class__.create_input(label='foo', interactive=True)
         self.assertEqual(input_instance.interactive, True)
@@ -138,7 +144,7 @@ class InVESTModelInputTest(_QtTest):
         callback = mock.MagicMock()
         input_instance.interactivity_changed.connect(callback)
 
-        with wait_on_signal(input_instance.interactivity_changed):
+        with wait_on_signal(self.qt_app, input_instance.interactivity_changed):
             try:
                 input_instance.value()
             except NotImplementedError:
@@ -179,7 +185,7 @@ class InVESTModelInputTest(_QtTest):
             try:
                 with self.assertRaises(NotImplementedError):
                     self.assertEqual(input_instance.value(), '')
-                    with wait_on_signal(input_instance.value_changed):
+                    with wait_on_signal(self.qt_app, input_instance.value_changed):
                         input_instance.set_value('foo')
                     callback.assert_called_with(u'foo')
             finally:
@@ -193,7 +199,7 @@ class InVESTModelInputTest(_QtTest):
         input_instance.value_changed.connect(callback)
 
         try:
-            with wait_on_signal(input_instance.value_changed):
+            with wait_on_signal(self.qt_app, input_instance.value_changed):
                 try:
                     input_instance.value()
                 except NotImplementedError:
@@ -209,7 +215,7 @@ class InVESTModelInputTest(_QtTest):
         callback = mock.MagicMock()
         input_instance.interactivity_changed.connect(callback)
 
-        with wait_on_signal(input_instance.interactivity_changed):
+        with wait_on_signal(self.qt_app, input_instance.interactivity_changed):
             try:
                 input_instance.value()
             except NotImplementedError:
@@ -247,7 +253,7 @@ class InVESTModelInputTest(_QtTest):
         if len(input_instance.widgets) > 0:  # only works if input has widgets
             self.assertEqual(input_instance.visible(), True)
 
-    def test_visiblity_when_shown(self):
+    def test_visibility_when_shown(self):
         from natcap.invest.ui import inputs
         container = inputs.Container(label='sample container')
         input_instance = self.__class__.create_input(label='foo',
@@ -294,6 +300,17 @@ class GriddedInputTest(InVESTModelInputTest):
         self.assertTrue(isinstance(input_instance.help_button,
                                    QtWidgets.QWidget))
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo')
+        # simulate successful validation completion.
+        input_instance._validation_finished([])
+        self.assertEqual(input_instance._valid, True)
+        input_instance.clear()
+        self.assertEqual(input_instance.valid_button.whatsThis(), '')
+        self.assertEqual(input_instance.valid_button.toolTip(), '')
+        self.assertEqual(input_instance._valid, None)
+        self.assertEqual(input_instance.sufficient, False)
+
     def test_validate_passes(self):
         #"""UI: Validation that passes should affect validity."""
         _validation_func = mock.MagicMock(return_value=[])
@@ -323,7 +340,7 @@ class GriddedInputTest(InVESTModelInputTest):
         with warnings.catch_warnings(record=True) as messages:
             input_instance._validate()
             time.sleep(0.25)  # wait for warnings to register
-        inputs.QT_APP.processEvents()
+        self.qt_app.processEvents()
 
         # Validation still passes
         self.assertEqual(input_instance.valid(), True)
@@ -359,7 +376,7 @@ class GriddedInputTest(InVESTModelInputTest):
         with warnings.catch_warnings(record=True) as messages:
             input_instance._validate()
             time.sleep(0.25)  # wait for warnings to register
-        inputs.QT_APP.processEvents()
+        self.qt_app.processEvents()
 
         # Validation still passes, but verify warning raised
         self.assertEqual(len(messages), 1)
@@ -441,7 +458,7 @@ class GriddedInputTest(InVESTModelInputTest):
         input_instance.hidden_changed.connect(callback)
         self.assertEqual(input_instance.hidden(), True)
 
-        with wait_on_signal(input_instance.hidden_changed):
+        with wait_on_signal(self.qt_app, input_instance.hidden_changed):
             input_instance.set_hidden(False)
 
         callback.assert_called_with(True)
@@ -521,7 +538,7 @@ class TextTest(GriddedInputTest):
 
         self.assertEqual(input_instance.value(), '')
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.set_value('foo')
 
         callback.assert_called_with(u'foo')
@@ -538,7 +555,7 @@ class TextTest(GriddedInputTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.textfield.setText('foo')
 
         callback.assert_called_with(u'foo')
@@ -594,6 +611,13 @@ class TextTest(GriddedInputTest):
         self.assertEqual(event.isAccepted(), True)
         self.assertEqual(input_instance.value(), 'Hello world!')
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='text')
+        input_instance.set_value('foo')
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), '')
+        self.assertEqual(input_instance.valid(), None)
+
 
 class PathTest(TextTest):
     @staticmethod
@@ -613,14 +637,23 @@ class PathTest(TextTest):
                 input_instance.textfield.pos()))
 
         def _click_out_of_contextmenu():
-            QT_APP.activePopupWidget().close()
+            # In case the popup isn't shown until after the callback is called,
+            # we should be sure to wait for when it is shown.
+            popup = None
+            while popup is None:
+                popup = self.qt_app.activePopupWidget()
+                try:
+                    popup.close()
+                except AttributeError:
+                    # When popup is None
+                    QTest.qWait(25)
 
         QtCore.QTimer.singleShot(25, _click_out_of_contextmenu)
         input_instance.textfield.contextMenuEvent(event)
 
         # simulate textchanged signal (expects a bool)
         input_instance.textfield._emit_textchanged(True)
-        QT_APP.processEvents()
+        self.qt_app.processEvents()
         _callback.assert_called_once()
 
     def test_path_selected(self):
@@ -629,6 +662,17 @@ class PathTest(TextTest):
         if input_instance.__class__.__name__ != '_Path':
             input_instance.path_select_button.path_selected.emit(u'/tmp/foo')
             self.assertTrue(input_instance.value(), '/tmp/foo')
+
+    def test_path_dialog_cancelled(self):
+        input_instance = self.__class__.create_input(label='foo')
+        # Only run this test on subclasses of path
+        if input_instance.__class__.__name__ != '_Path':
+            # initial value should not be overwritten by the new value.
+            input_instance.set_value('some_value')
+
+            # path is blank when the dialog was cancelled.
+            input_instance.path_select_button.path_selected.emit(u'')
+            self.assertTrue(input_instance.value(), 'some_value')
 
     def test_path_selected_cyrillic(self):
         input_instance = self.__class__.create_input(label='foo')
@@ -773,7 +817,7 @@ class CheckboxTest(GriddedInputTest):
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), False)
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.set_value(True)
 
         callback.assert_called_with(True)
@@ -783,10 +827,16 @@ class CheckboxTest(GriddedInputTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.value_changed.emit(True)
 
         callback.assert_called_with(True)
+
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='new_label')
+        input_instance.set_value(True)
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), False)
 
     def test_valid(self):
         input_instance = self.__class__.create_input(label='new_label')
@@ -810,7 +860,7 @@ class CheckboxTest(GriddedInputTest):
         with warnings.catch_warnings(record=True) as messages:
             input_instance._validate()
             time.sleep(0.25)  # wait for warnings to register
-        inputs.QT_APP.processEvents()
+        self.qt_app.processEvents()
 
         # Validation still passes, but verify warning raised
         self.assertEqual(len(messages), 1)
@@ -830,7 +880,7 @@ class CheckboxTest(GriddedInputTest):
         with warnings.catch_warnings(record=True) as messages:
             input_instance._validate()
             time.sleep(0.25)  # wait for warnings to register
-        inputs.QT_APP.processEvents()
+        self.qt_app.processEvents()
 
         # Validation still passes
         self.assertEqual(input_instance.valid(), True)
@@ -907,6 +957,22 @@ class DropdownTest(GriddedInputTest):
             label='label', options=(u'Þingvellir',))
         self.assertEqual(input_instance.options, [u'Þingvellir'])
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=('foo', 'bar', 'baz'))
+        input_instance.set_value('bar')
+        self.assertEqual(input_instance.value(), 'bar')
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), 'foo')
+
+    def test_clear_no_options(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=())
+        try:
+            input_instance.clear()
+        except Exception as e:
+            self.fail("Unexpected exception: %s" % repr(e))
+
     def test_set_value(self):
         input_instance = self.__class__.create_input(
             label='label', options=('foo', 'bar', 'baz'))
@@ -938,7 +1004,7 @@ class DropdownTest(GriddedInputTest):
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), u'foo')
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.set_value('bar')
 
         callback.assert_called_with('bar')
@@ -1027,13 +1093,20 @@ class ContainerTest(InVESTModelInputTest):
         input_instance.expanded = False
         self.assertEqual(input_instance.expanded, False)
 
+    def test_clear(self):
+        input_instance = self.__class__.create_input(label='foo',
+                                                     expandable=True)
+        input_instance.expanded = True
+        input_instance.clear()
+        self.assertEqual(input_instance.expanded, False)
+
     def test_value_changed_signal(self):
         input_instance = self.__class__.create_input(label='foo',
                                                      expandable=True)
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.value_changed.emit(True)
 
         callback.assert_called_with(True)
@@ -1046,7 +1119,7 @@ class ContainerTest(InVESTModelInputTest):
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), False)
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.set_value(True)
 
         callback.assert_called_with(True)
@@ -1129,7 +1202,7 @@ class MultiTest(ContainerTest):
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), [])
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.set_value(('aaa', 'bbb'))
 
         callback.assert_called_with(['aaa', 'bbb'])
@@ -1143,7 +1216,7 @@ class MultiTest(ContainerTest):
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), [])
 
-        with wait_on_signal(input_instance.value_changed):
+        with wait_on_signal(self.qt_app, input_instance.value_changed):
             input_instance.value_changed.emit(['aaa', 'bbb'])
 
         callback.assert_called_with(['aaa', 'bbb'])
@@ -1186,6 +1259,18 @@ class MultiTest(ContainerTest):
         input_instance.add_link.linkActivated.emit('add_new')
 
         self.assertEqual(input_instance.value(), [''])
+
+    def test_clear(self):
+        input_instance = self.__class__.create_input(
+            label='foo',
+            callable_=self.__class__.create_sample_callable(label='foo'))
+
+        # Add a few text inputs to this multi
+        for _ in xrange(3):
+            input_instance.add_item()
+
+        input_instance.clear()
+        self.assertEqual(input_instance.value(), [])
 
     def test_set_value_nonexpandable(self):
         pass
@@ -1240,10 +1325,10 @@ class FileButtonTest(_QtTest):
         button.path_selected.connect(_callback)
 
         QTest.mouseClick(button, QtCore.Qt.LeftButton)
-        QT_APP.processEvents()
+        self.qt_app.processEvents()
 
         _callback.assert_called_with('/some/path')
-        QT_APP.processEvents()
+        self.qt_app.processEvents()
 
     def test_button_title(self):
         from natcap.invest.ui.inputs import FileButton
@@ -1263,10 +1348,9 @@ class FolderButtonTest(_QtTest):
         button.path_selected.connect(_callback)
 
         QTest.mouseClick(button, QtCore.Qt.LeftButton)
-        QT_APP.processEvents()
+        self.qt_app.processEvents()
 
         _callback.assert_called_with('/some/path')
-        QT_APP.processEvents()
 
     def test_button_title(self):
         from natcap.invest.ui.inputs import FolderButton
@@ -1414,17 +1498,17 @@ class FormTest(_QtTest):
         QTest.mouseClick(form.run_button,
                          QtCore.Qt.LeftButton)
 
-        QT_APP.processEvents()
+        self.qt_app.processEvents()
         mock_object.assert_called_once()
 
     def test_run_noerror(self):
         form = FormTest.make_ui()
         def _target():
             return
-        with wait_on_signal(form.run_finished, timeout=250):
+        with wait_on_signal(self.qt_app, form.run_finished, timeout=250):
             form.run(target=_target)
 
-        QT_APP.processEvents()
+        self.qt_app.processEvents()
         # At the end of the run, the button should be visible.
         self.assertTrue(form.run_dialog.openWorkspaceButton.isVisible())
 
@@ -1453,7 +1537,7 @@ class FormTest(_QtTest):
         # patch open_workspace to avoid lots of open file dialogs.
         with mock.patch('natcap.invest.ui.inputs.open_workspace',
                         mock.MagicMock(return_value=None)) as open_workspace:
-            with wait_on_signal(form.run_finished):
+            with wait_on_signal(self.qt_app, form.run_finished):
                 form.run(target=target)
 
                 self.assertTrue(form.run_dialog.openWorkspaceCB.isVisible())
@@ -1463,13 +1547,11 @@ class FormTest(_QtTest):
                 form.run_dialog.openWorkspaceCB.setChecked(True)
                 self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
-
-        # close the window by pressing the back button.
-        QTest.mouseClick(form.run_dialog.backButton,
-                            QtCore.Qt.LeftButton)
-
+        def _close_modal_dialog():
+            # close the window by pressing the back button.
+            QTest.mouseClick(form.run_dialog.backButton,
+                                QtCore.Qt.LeftButton)
+        QtCore.QTimer.singleShot(25, _close_modal_dialog)
         open_workspace.assert_called_once()
 
     def test_run_prevent_dialog_close_esc(self):
@@ -1513,23 +1595,23 @@ class FormTest(_QtTest):
         target_mod = _SampleTarget().execute
         try:
             form.run(target=target_mod, kwargs={'args': {'a': 1}})
-            if QT_APP.hasPendingEvents():
-                QT_APP.processEvents()
+            if self.qt_app.hasPendingEvents():
+                self.qt_app.processEvents()
             self.assertTrue(form.run_dialog.isVisible())
             form.run_dialog.close()
-            if QT_APP.hasPendingEvents():
-                QT_APP.processEvents()
+            if self.qt_app.hasPendingEvents():
+                self.qt_app.processEvents()
             self.assertTrue(form.run_dialog.isVisible())
 
             # when the execute function finishes, pressing escape should
             # close the window.
             thread_event.set()
             form._thread.join()
-            if QT_APP.hasPendingEvents():
-                QT_APP.processEvents()
+            if self.qt_app.hasPendingEvents():
+                self.qt_app.processEvents()
             form.run_dialog.close()
-            if QT_APP.hasPendingEvents():
-                QT_APP.processEvents()
+            if self.qt_app.hasPendingEvents():
+                self.qt_app.processEvents()
             self.assertFalse(form.run_dialog.isVisible())
         except Exception as error:
             LOGGER.exception('Something failed')
@@ -1553,8 +1635,8 @@ class FormTest(_QtTest):
         form = FormTest.make_ui()
         form.run(target=target_mod, kwargs={'args': {}})
         form._thread.join()
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
 
         self.assertTrue('encountered' in form.run_dialog.messageArea.text())
 
@@ -1566,7 +1648,7 @@ class FormTest(_QtTest):
         form = FormTest.make_ui()
         form.show()
         self.assertTrue('border: None' in form.scroll_area.styleSheet())
-        form.update_scroll_border(50, 50)  # simulate form resize
+        form.scroll_area.update_scroll_border(50, 50)  # simulate form resize
         self.assertTrue(len(form.scroll_area.styleSheet()) == 0)
 
     def test_add_input(self):
@@ -1639,8 +1721,8 @@ class ExecutionTest(_QtTest):
         executor.start()
         thread_event.set()
         executor.join()
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
         callback.assert_called_once()
         target.assert_called_once()
         target.assert_called_with(*args, **kwargs)
@@ -1674,8 +1756,8 @@ class ExecutionTest(_QtTest):
         executor.start()
         thread_event.set()
         executor.join()
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
         callback.assert_called_once()
         target.assert_called_once()
         target.assert_called_with(*args, **kwargs)
@@ -1720,8 +1802,8 @@ class IntegrationTests(_QtTest):
         # When the checkbox is enabled, the container should become enabled,
         # but the container's contained widgets should still be noninteractive
         checkbox.set_value(True)
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
 
         self.assertTrue(container.interactive)
         self.assertFalse(container.expanded)
@@ -1731,8 +1813,8 @@ class IntegrationTests(_QtTest):
         # When the container is expanded, the contained input should become
         # interactive and visible
         container.set_value(True)
-        if QT_APP.hasPendingEvents():
-            QT_APP.processEvents()
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
 
         self.assertTrue(container.interactive)
         self.assertTrue(container.expanded)
@@ -1749,7 +1831,7 @@ class OptionsDialogTest(_QtTest):
         options_dialog = model.OptionsDialog()
         options_dialog.open()
         options_dialog.accept()
-        inputs.QT_APP.processEvents()
+        self.qt_app.processEvents()
 
     def test_postprocess_not_implemented(self):
         """UI OptionsDialog: postprocess() raises NotImplementedError."""
@@ -1788,7 +1870,7 @@ class SettingsDialogTest(_SettingsSandbox):
         settings_dialog.cache_directory.set_value('new_dir')
         QTest.mouseClick(settings_dialog.ok_button,
                          QtCore.Qt.LeftButton)
-        inputs.QT_APP.processEvents()
+        self.qt_app.processEvents()
         try:
             self.assertEqual(settings_dialog.cache_directory.value(),
                              'new_dir')
@@ -1796,18 +1878,20 @@ class SettingsDialogTest(_SettingsSandbox):
             settings_dialog.close()
 
 
-class ScenarioOptionsDialogTests(_QtTest):
+class DatastackOptionsDialogTests(_QtTest):
     def setUp(self):
+        _QtTest.setUp(self)
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
+        _QtTest.tearDown(self)
         shutil.rmtree(self.workspace)
 
-    def test_dialog_invalid_scenario_path(self):
-        """UI Scenario Options: verify scenario file validity."""
+    def test_dialog_invalid_datastack_path(self):
+        """UI Datastack Options: verify datastack file validity."""
         from natcap.invest.ui import model
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
         new_paramset_path = os.path.join(
             self.workspace, 'testdir1', 'test.invs.json')
@@ -1821,17 +1905,17 @@ class ScenarioOptionsDialogTests(_QtTest):
             self.assertFalse(options_dialog.save_parameters.valid())
 
     def test_dialog_return_value(self):
-        """UI Scenario Options: Verify return value of dialog."""
+        """UI Datastack Options: Verify return value of dialog."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         # set this option to ensure coverage of the slot
-        options_dialog.scenario_type.set_value(model._SCENARIO_DATA_ARCHIVE)
-        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
-        inputs.QT_APP.processEvents()
+        options_dialog.datastack_type.set_value(model._DATASTACK_DATA_ARCHIVE)
+        options_dialog.datastack_type.set_value(model._DATASTACK_PARAMETER_SET)
+        self.qt_app.processEvents()
 
         new_paramset_path = os.path.join(self.workspace, 'test.invs.json')
         options_dialog.save_parameters.set_value(new_paramset_path)
@@ -1843,25 +1927,35 @@ class ScenarioOptionsDialogTests(_QtTest):
         return_options = options_dialog.exec_()
 
         self.assertEqual(
-            model.ScenarioSaveOpts(
-                model._SCENARIO_PARAMETER_SET,  # scenario type
+            model.DatastackSaveOpts(
+                model._DATASTACK_PARAMETER_SET,  # datastack type
                 False,  # use relative paths
                 False,  # include workpace
-                new_paramset_path),  # scenario path
+                new_paramset_path),  # datastack path
             return_options)
 
+        # verify that the options have been cleared.
+        for input_obj, expected_value in (
+                (options_dialog.datastack_type,
+                 options_dialog.datastack_type.options[0]),
+                (options_dialog.use_relative_paths, False),
+                (options_dialog.include_workspace, False),
+                (options_dialog.save_parameters, '')):
+            self.assertEqual(input_obj.value(), expected_value)
+
+
     def test_dialog_cancelled(self):
-        """UI Scenario Options: Verify return value when dialog cancelled."""
+        """UI Datastack Options: Verify return value when dialog cancelled."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         # set this option to ensure coverage of the slot
-        options_dialog.scenario_type.set_value(model._SCENARIO_DATA_ARCHIVE)
-        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
-        inputs.QT_APP.processEvents()
+        options_dialog.datastack_type.set_value(model._DATASTACK_DATA_ARCHIVE)
+        options_dialog.datastack_type.set_value(model._DATASTACK_PARAMETER_SET)
+        self.qt_app.processEvents()
 
         def _press_accept():
             options_dialog.reject()
@@ -1872,19 +1966,19 @@ class ScenarioOptionsDialogTests(_QtTest):
         self.assertEqual(return_options, None)
 
     def test_dialog_savefile_validation_fails(self):
-        """UI Scenario Options: Verify validation fails when expected."""
+        """UI Datastack Options: Verify validation fails when expected."""
         from natcap.invest.ui import model
         from natcap.invest.ui import inputs
 
-        options_dialog = model.ScenarioOptionsDialog(
+        options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
 
         save_path_with_missing_dir = os.path.join(
             self.workspace, 'foo', 'parameters.invs.json')
 
-        options_dialog.scenario_type.set_value(model._SCENARIO_PARAMETER_SET)
+        options_dialog.datastack_type.set_value(model._DATASTACK_PARAMETER_SET)
         options_dialog.save_parameters.set_value(save_path_with_missing_dir)
-        inputs.QT_APP.processEvents()
+        self.qt_app.processEvents()
 
         self.assertFalse(options_dialog.save_parameters.valid())
 
@@ -1892,8 +1986,8 @@ class ScenarioOptionsDialogTests(_QtTest):
 
 class ModelTests(_QtTest):
     def setUp(self):
-        self.workspace = tempfile.mkdtemp()
         _QtTest.setUp(self)
+        self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
         _QtTest.tearDown(self)
@@ -1955,57 +2049,66 @@ class ModelTests(_QtTest):
             self.assertTrue(isinstance(suffix_input, inputs.Text))
         except AttributeError as missing_input:
             self.fail(str(missing_input))
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_lastrun(self):
         """UI Model: Check that lastrun saving/loading works."""
         model_ui = ModelTests.build_model()
+        try:
+            # Set input values and save the lastrun.
+            model_ui.workspace.set_value('foo')
+            model_ui.suffix.set_value('bar')
+            model_ui.save_lastrun()
 
-        # Set input values and save the lastrun.
-        model_ui.workspace.set_value('foo')
-        model_ui.suffix.set_value('bar')
-        model_ui.save_lastrun()
+            # change the input values
+            model_ui.workspace.set_value('new workspace')
+            model_ui.suffix.set_value('new suffix')
+            self.assertEqual(model_ui.workspace.value(), 'new workspace')
+            self.assertEqual(model_ui.suffix.value(), 'new suffix')
 
-        # change the input values
-        model_ui.workspace.set_value('new workspace')
-        model_ui.suffix.set_value('new suffix')
-        self.assertEqual(model_ui.workspace.value(), 'new workspace')
-        self.assertEqual(model_ui.suffix.value(), 'new suffix')
-
-        # load the values from lastrun and assert that the values are correct.
-        model_ui.load_lastrun()
-        self.assertEqual(model_ui.workspace.value(), 'foo')
-        self.assertEqual(model_ui.suffix.value(), 'bar')
+            # load the values from lastrun and assert that the values are correct.
+            model_ui.load_lastrun()
+            self.assertEqual(model_ui.workspace.value(), 'foo')
+            self.assertEqual(model_ui.suffix.value(), 'bar')
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_close_window_confirm(self):
         """UI Model: Close confirmation dialog 'remember lastrun' checkbox."""
         model_ui = ModelTests.build_model()
-        model_ui.show()
-        QTest.qWait(25)
+        try:
+            model_ui.show()
+            QTest.qWait(25)
 
-        threading_event = threading.Event()
+            threading_event = threading.Event()
 
-        def _tests():
-            # verify 'remember inputs' is checked by default.
-            self.assertTrue(model_ui.quit_confirm_dialog.checkbox.isChecked())
+            def _tests():
+                # verify 'remember inputs' is checked by default.
+                self.assertTrue(model_ui.quit_confirm_dialog.checkbox.isChecked())
 
-            # click yes.
-            QTest.mouseClick(
-                model_ui.quit_confirm_dialog.button(QtWidgets.QMessageBox.Yes),
-                QtCore.Qt.LeftButton)
+                # click yes.
+                QTest.mouseClick(
+                    model_ui.quit_confirm_dialog.button(QtWidgets.QMessageBox.Yes),
+                    QtCore.Qt.LeftButton)
 
-            threading_event.set()
+                threading_event.set()
 
-        QtCore.QTimer.singleShot(25, _tests)
-        model_ui.close()
-        QTest.qWait(25)
+            QtCore.QTimer.singleShot(25, _tests)
+            model_ui.close()
+            QTest.qWait(25)
 
-        threading_event.wait(0.5)
+            threading_event.wait(0.5)
 
-        # verify the 'remember inputs' state
-        self.assertEqual(model_ui.settings.value('remember_lastrun'),
-                         True)
-        self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
-        self.assertFalse(model_ui.isVisible())
+            # verify the 'remember inputs' state
+            self.assertEqual(model_ui.settings.value('remember_lastrun'),
+                             True)
+            self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
+            self.assertFalse(model_ui.isVisible())
+        finally:
+            model_ui.destroy()
 
     def test_close_window_cancel(self):
         """UI Model: Close confirmation dialog cancel"""
@@ -2023,11 +2126,14 @@ class ModelTests(_QtTest):
             threading_event.set()
 
         QtCore.QTimer.singleShot(25, _tests)
-
         model_ui.close()
-        threading_event.wait(0.5)
+        threading_event.wait()
+
         self.assertFalse(model_ui.quit_confirm_dialog.isVisible())
         self.assertTrue(model_ui.isVisible())
+        # then close it for real so it doesn't hang around
+        model_ui.close(prompt=False)
+        model_ui.destroy()
 
     def test_validation_passes(self):
         """UI Model: Check what happens when validation passes."""
@@ -2040,12 +2146,16 @@ class ModelTests(_QtTest):
             return []
 
         model_ui = ModelTests.build_model(_sample_validate)
-        model_ui.show()
+        try:
+            model_ui.show()
 
-        model_ui.validate(block=True)
-        inputs.QT_APP.processEvents()
-        self.assertEqual(len(model_ui.validation_report_dialog.warnings), 0)
-        self.assertTrue(model_ui.is_valid())
+            model_ui.validate(block=True)
+            self.qt_app.processEvents()
+            self.assertEqual(len(model_ui.validation_report_dialog.warnings), 0)
+            self.assertTrue(model_ui.is_valid())
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_validate_blocking(self):
         """UI Model: Validate that the blocking validation call works."""
@@ -2057,12 +2167,16 @@ class ModelTests(_QtTest):
             return [(('workspace_dir',), 'some error')]
 
         model_ui = ModelTests.build_model(_sample_validate)
-        model_ui.show()
+        try:
+            model_ui.show()
 
-        model_ui.validate(block=True)
-        inputs.QT_APP.processEvents()
-        self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
-        self.assertFalse(model_ui.is_valid())
+            model_ui.validate(block=True)
+            self.qt_app.processEvents()
+            self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
+            self.assertFalse(model_ui.is_valid())
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_validate_nonblocking(self):
         """UI Model: Validate that the nonblocking validation call works."""
@@ -2074,299 +2188,374 @@ class ModelTests(_QtTest):
             return [(('workspace_dir',), 'some error')]
 
         model_ui = ModelTests.build_model(_sample_validate)
-        model_ui.show()
+        try:
+            model_ui.show()
 
-        model_ui.validate(block=False)
-        inputs.QT_APP.processEvents()
-        self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
-        self.assertFalse(model_ui.is_valid())
+            model_ui.validate(block=False)
+            self.qt_app.processEvents()
+            self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
+            self.assertFalse(model_ui.is_valid())
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_assemble_args_not_implemented(self):
         """UI Model: Validate exception when assemble_args not implemented."""
         from natcap.invest.ui import model
 
         with self.assertRaises(NotImplementedError):
-            model_ui = model.InVESTModel(
-                label='foo',
-                target=lambda args: None,
-                validator=lambda args, limit_to=None: [],
-                localdoc='sometextfile.html'
-            )
-            model_ui.assemble_args()
+            try:
+                model_ui = model.InVESTModel(
+                    label='foo',
+                    target=lambda args: None,
+                    validator=lambda args, limit_to=None: [],
+                    localdoc='sometextfile.html'
+                )
+                model_ui.assemble_args()
+            finally:
+                model_ui.close(prompt=False)
+                model_ui.destroy()
 
     def test_load_args(self):
         """UI Model: Check that we can load args as expected."""
         model_ui = ModelTests.build_model()
-        args = {
-            'workspace_dir': 'new workspace!',
-            'suffix': 'a',
-        }
-        model_ui.load_args(args)
-        self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
-        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+        try:
+            args = {
+                'workspace_dir': 'new workspace!',
+                'results_suffix': 'a',
+            }
+            model_ui.load_args(args)
+            self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_load_args_bad_key(self):
         """UI Model: Check that we can handle loading of bad keys."""
         model_ui = ModelTests.build_model()
-        model_ui.workspace.set_value('')
-        args = {
-            'bad_key': 'something unexpected!',
-            'suffix': 'a',
-        }
-        model_ui.load_args(args)
-        self.assertEqual(model_ui.workspace.value(), '')  # was never changed
-        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+        try:
+            model_ui.workspace.set_value('')
+            args = {
+                'bad_key': 'something unexpected!',
+                'results_suffix': 'a',
+            }
+            model_ui.load_args(args)
+            self.assertEqual(model_ui.workspace.value(), '')  # was never changed
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_load_args_error(self):
         """UI Model: Check that we can handle errors when loading args."""
         model_ui = ModelTests.build_model()
-        model_ui.workspace.set_value('')
-        args = {
-            'workspace_dir': 'workspace',
-            'suffix': 'a',
-        }
+        try:
+            model_ui.workspace.set_value('')
+            args = {
+                'workspace_dir': 'workspace',
+                'results_suffix': 'a',
+            }
 
-        def _raise_valueerror(new_value):
-            raise ValueError('foo!')
+            def _raise_valueerror(new_value):
+                raise ValueError('foo!')
 
-        model_ui.workspace.set_value = _raise_valueerror
-        model_ui.load_args(args)
+            model_ui.workspace.set_value = _raise_valueerror
+            model_ui.load_args(args)
 
-        self.assertEqual(model_ui.workspace.value(), '')  # was never changed
-        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+            self.assertEqual(model_ui.workspace.value(), '')  # was never changed
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_run(self):
         """UI Model: Check that we can run the model."""
         from natcap.invest.ui import inputs
         model_ui = ModelTests.build_model()
-        model_ui.test_container = inputs.Container('test')
-        model_ui.add_input(model_ui.test_container)
+        try:
+            model_ui.test_container = inputs.Container('test')
+            model_ui.add_input(model_ui.test_container)
 
-        def _close_window():
-            # trigger whole-model validation for coverage of callback.
-            model_ui.workspace.set_value('foo')
+            def _close_window():
+                # trigger whole-model validation for coverage of callback.
+                model_ui.workspace.set_value('foo')
 
-            QT_APP.processEvents()
+                self.qt_app.processEvents()
 
+                model_ui.close(prompt=False)
+
+            model_ui.run()
+            self.assertTrue(model_ui.isVisible())
+        finally:
             model_ui.close(prompt=False)
-
-        model_ui.run()
-        self.assertTrue(model_ui.isVisible())
+            model_ui.destroy()
 
     def test_local_docs_from_hyperlink(self):
         """UI Model: Check that we can open the local docs missing dialog."""
         model_ui = ModelTests.build_model()
-        model_ui.run()
+        try:
+            model_ui.run()
 
-        def _check_dialog_and_close():
-            self.assertTrue(model_ui.local_docs_missing_dialog.isVisible())
-            model_ui.local_docs_missing_dialog.accept()
+            def _check_dialog_and_close():
+                self.assertTrue(model_ui.local_docs_missing_dialog.isVisible())
+                model_ui.local_docs_missing_dialog.accept()
 
-        QtCore.QTimer.singleShot(25, _check_dialog_and_close)
+            QtCore.QTimer.singleShot(25, _check_dialog_and_close)
 
-        # simulate a mouse click on the localdocs hyperlink.
-        model_ui.links.linkActivated.emit('localdocs')
+            # simulate a mouse click on the localdocs hyperlink.
+            model_ui.links.linkActivated.emit('localdocs')
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_local_docs_launch(self):
         """UI Model: Check that we can launch local documentation."""
         model_ui = ModelTests.build_model()
-        model_ui.run()
+        try:
+            model_ui.run()
 
-        if hasattr(QtCore, 'QDesktopServices'):
-            patch_object = mock.patch('qtpy.QtCore.QDesktopServices.openUrl')
-        else:
-            # PyQt5 changed the location of this.
-            patch_object = mock.patch('qtpy.QtGui.QDesktopServices.openUrl')
+            if hasattr(QtCore, 'QDesktopServices'):
+                patch_object = mock.patch('qtpy.QtCore.QDesktopServices.openUrl')
+            else:
+                # PyQt5 changed the location of this.
+                patch_object = mock.patch('qtpy.QtGui.QDesktopServices.openUrl')
 
-        # simulate a mouse click on the localdocs hyperlink.
-        with patch_object:
-            with mock.patch('os.path.exists', return_value=True):
-                # simulate about --> view documentation menu.
-                model_ui._check_local_docs('http://some_file_that_exists')
+            # simulate a mouse click on the localdocs hyperlink.
+            with patch_object:
+                with mock.patch('os.path.exists', return_value=True):
+                    # simulate about --> view documentation menu.
+                    model_ui._check_local_docs('http://some_file_that_exists')
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
-    def test_load_scenario_paramset(self):
-        """UI Model: Check that we can load a parameter set scenario."""
-        from natcap.invest import scenarios
-        args = {
-            'workspace_dir': 'foodir',
-            'suffix': 'suffix',
-        }
-        scenario_filepath = os.path.join(self.workspace, 'paramset.json')
-        scenarios.write_parameter_set(
-            scenario_filepath,
-            args=args,
-            name='test_model',
-            relative=False)
-
+    def test_load_datastack_paramset(self):
+        """UI Model: Check that we can load a parameter set datastack."""
+        from natcap.invest import datastack
         model_ui = ModelTests.build_model()
-        model_ui.load_scenario(scenario_filepath)
+        try:
+            args = {
+                'workspace_dir': 'foodir',
+                'results_suffix': 'suffix',
+            }
+            datastack_filepath = os.path.join(self.workspace, 'paramset.json')
+            datastack.build_parameter_set(
+                args=args,
+                model_name=model_ui.target.__module__,
+                paramset_path=datastack_filepath,
+                relative=False)
 
-        self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
-        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+            model_ui.load_datastack(datastack_filepath)
 
-    def test_load_scenario_archive(self):
+            self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_load_datastack_archive(self):
         """UI Model: Check that we can load a parameter archive."""
-        from natcap.invest import scenarios
-        args = {
-            'workspace_dir': 'foodir',
-            'suffix': 'suffix',
-        }
-        scenario_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        scenarios.build_scenario_archive(args, 'test_model', scenario_filepath)
-
-        extracted_archive = os.path.join(self.workspace, 'archive_dir')
+        from natcap.invest import datastack
         model_ui = ModelTests.build_model()
-        def _set_extraction_dir():
-            model_ui.scenario_archive_extract_dialog.extraction_point.set_value(
-                extracted_archive)
-            model_ui.scenario_archive_extract_dialog.accept()
+        try:
+            args = {
+                'workspace_dir': 'foodir',
+                'results_suffix': 'suffix',
+            }
+            datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
+            datastack.build_datastack_archive(args, model_ui.target.__module__,
+                                              datastack_filepath)
 
-        QtCore.QTimer.singleShot(25, _set_extraction_dir)
-        model_ui.load_scenario(scenario_filepath)
+            extracted_archive = os.path.join(self.workspace, 'archive_dir')
+            def _set_extraction_dir():
+                model_ui.datastack_archive_extract_dialog.extraction_point.set_value(
+                    extracted_archive)
+                model_ui.datastack_archive_extract_dialog.accept()
 
-        # Workspace isn't saved in a parameter archive, so just test suffix
-        self.assertEqual(model_ui.suffix.value(), args['suffix'])
+            QtCore.QTimer.singleShot(25, _set_extraction_dir)
 
-    def test_load_scenario_from_logfile(self):
+            # close the archive progress dialog automatically when extraction
+            # finishes.
+            model_ui.datastack_progress_dialog.checkbox.setChecked(True)
+
+            model_ui.load_datastack(datastack_filepath)
+
+            # Workspace isn't saved in a parameter archive, so just test suffix
+            self.assertEqual(model_ui.suffix.value(), args['results_suffix'])
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_load_datastack_from_logfile(self):
         """UI Model: Check that we can load parameters from a logfile."""
-        # write a sample logfile
-        logfile_path = os.path.join(self.workspace, 'logfile')
-        with open(logfile_path, 'w') as logfile:
-            logfile.write(textwrap.dedent("""
-                07/20/2017 16:37:48  natcap.invest.ui.model INFO
-                Arguments:
-                suffix                           foo
-                workspace_dir                    some_workspace_dir
-
-            """))
-
+        import natcap.invest
         model_ui = ModelTests.build_model()
-        model_ui.load_scenario(logfile_path)
+        try:
+            # write a sample logfile
+            logfile_path = os.path.join(self.workspace, 'logfile')
+            with open(logfile_path, 'w') as logfile:
+                logfile.write(textwrap.dedent("""
+                    07/20/2017 16:37:48  natcap.invest.ui.model INFO
+                    Arguments for InVEST %s %s:
+                    results_suffix                   foo
+                    workspace_dir                    some_workspace_dir
 
-        self.assertEqual(model_ui.workspace.value(), 'some_workspace_dir')
-        self.assertEqual(model_ui.suffix.value(), 'foo')
+                """ % (model_ui.target.__module__, natcap.invest.__version__)))
 
-    def test_load_scenario_extraction_dialog_cancelled(self):
-        """UI Model: coverage when user clicks cancel in scenario dialog."""
-        from natcap.invest import scenarios
-        args = {
-            'workspace_dir': 'foodir',
-            'suffix': 'suffix',
-        }
-        scenario_filepath = os.path.join(self.workspace, 'archive.tar.gz')
-        scenarios.build_scenario_archive(args, 'test_model', scenario_filepath)
+            model_ui.load_datastack(logfile_path)
+
+            self.assertEqual(model_ui.workspace.value(), 'some_workspace_dir')
+            self.assertEqual(model_ui.suffix.value(), 'foo')
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_load_datastack_extraction_dialog_cancelled(self):
+        """UI Model: coverage when user clicks cancel in datastack dialog."""
+        from natcap.invest import datastack
         model_ui = ModelTests.build_model()
+        try:
+            args = {
+                'workspace_dir': 'foodir',
+                'results_suffix': 'suffix',
+            }
+            datastack_filepath = os.path.join(self.workspace, 'archive.tar.gz')
+            datastack.build_datastack_archive(args, model_ui.target.__module__,
+                                              datastack_filepath)
 
-        def _cancel_dialog():
-            model_ui.scenario_archive_extract_dialog.reject()
+            def _cancel_dialog():
+                model_ui.datastack_archive_extract_dialog.reject()
 
-        QtCore.QTimer.singleShot(25, _cancel_dialog)
-        model_ui.load_scenario(scenario_filepath)
-        self.assertFalse(model_ui.isVisible())
+            QtCore.QTimer.singleShot(25, _cancel_dialog)
+            model_ui.load_datastack(datastack_filepath)
+            self.assertFalse(model_ui.isVisible())
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
-    def test_load_scenario_file_dialog_cancelled(self):
+    def test_load_datastack_file_dialog_cancelled(self):
         """UI Model: coverage for when the file select dialog is cancelled."""
         # I'm mocking up the file dialog because I can't figure out how to
         # programmatically press the cancel button in a way that works on both
         # mac and linux.
         with mock.patch('qtpy.QtWidgets.QFileDialog.getOpenFileName',
                         return_value=(None, None)):
-            model_ui = ModelTests.build_model()
-            model_ui.load_scenario()
+            try:
+                model_ui = ModelTests.build_model()
+                model_ui.load_datastack()
+            finally:
+                model_ui.close(prompt=False)
+                model_ui.destroy()
 
     def test_model_quickrun(self):
         """UI Model: Test the quickrun path through model.run()."""
         model_ui = ModelTests.build_model()
+        try:
+            def _confirm_workspace_overwrite():
+                # Just using dialog.accept() didn't work here, and I can't seem to
+                # figure out why.
+                QTest.mouseClick(
+                    model_ui.workspace_overwrite_confirm_dialog.button(
+                        QtWidgets.QMessageBox.Yes),
+                    QtCore.Qt.LeftButton)
 
-        def _update_workspace_value():
+            # this line used to be in a singleshot, but i don't see why we
+            # can't set it directly, works when i do it.
             model_ui.workspace.set_value(self.workspace)
+            # Need to wait a little longer on this one to compensate for other
+            # singleshot timers in model.run().
+            QtCore.QTimer.singleShot(1000, _confirm_workspace_overwrite)
+            model_ui.run(quickrun=True)
+            while model_ui.isVisible():
+                QTest.qWait(1000)
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
-        def _confirm_workspace_overwrite():
-            # Just using dialog.accept() didn't work here, and I can't seem to
-            # figure out why.
-            QTest.mouseClick(
-                model_ui.workspace_overwrite_confirm_dialog.button(
-                    QtWidgets.QMessageBox.Yes),
-                QtCore.Qt.LeftButton)
-
-        QtCore.QTimer.singleShot(25, _update_workspace_value)
-
-        # Need to wait a little longer on this one to compensate for other
-        # singleshot timers in model.run().
-        QtCore.QTimer.singleShot(100, _confirm_workspace_overwrite)
-        model_ui.run(quickrun=True)
-
-        while model_ui.isVisible():
-            QTest.qWait(25)
-
-    def test_save_scenario_cancel_coverage(self):
-        """UI Model: Test coverage for cancelling save scenario dialog."""
+    def test_save_datastack_cancel_coverage(self):
+        """UI Model: Test coverage for cancelling save datastack dialog."""
         model_ui = ModelTests.build_model()
+        try:
+            def _cancel_datastack_dialog():
+                model_ui.datastack_options_dialog.reject()
 
-        def _cancel_scenario_dialog():
-            model_ui.scenario_options_dialog.reject()
+            QtCore.QTimer.singleShot(25, _cancel_datastack_dialog)
+            model_ui._save_datastack_as()
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
-        QtCore.QTimer.singleShot(25, _cancel_scenario_dialog)
-        model_ui._save_scenario_as()
-
-    def test_save_scenario_as_archive(self):
+    def test_save_datastack_as_archive(self):
         """UI Model: Test coverage for saving parameter archives."""
         from natcap.invest.ui import model
         model_ui = ModelTests.build_model()
+        try:
 
-        starting_window_title = model_ui.windowTitle()
+            starting_window_title = model_ui.windowTitle()
 
-        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+            archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
-        def _set_archive_options():
-            model_ui.scenario_options_dialog.scenario_type.set_value(
-                model._SCENARIO_DATA_ARCHIVE)
-            model_ui.scenario_options_dialog.save_parameters.set_value(
-                archive_path)
-            QT_APP.processEvents()
-            model_ui.scenario_options_dialog.accept()
+            def _set_archive_options():
+                model_ui.datastack_options_dialog.datastack_type.set_value(
+                    model._DATASTACK_DATA_ARCHIVE)
+                model_ui.datastack_options_dialog.save_parameters.set_value(
+                    archive_path)
+                self.qt_app.processEvents()
+                model_ui.datastack_options_dialog.accept()
 
-        QtCore.QTimer.singleShot(25, _set_archive_options)
-        model_ui._save_scenario_as()
-        self.assertNotEqual(starting_window_title, model_ui.windowTitle())
+            # close the archive progress dialog automatically when extraction
+            # finishes.
+            model_ui.datastack_progress_dialog.checkbox.setChecked(True)
 
-    def test_save_scenario_as_parameter_set(self):
+            QtCore.QTimer.singleShot(25, _set_archive_options)
+            model_ui._save_datastack_as()
+            self.assertNotEqual(starting_window_title, model_ui.windowTitle())
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_save_datastack_as_parameter_set(self):
         """UI Model: Test coverage for saving parameter set."""
         from natcap.invest.ui import model
         model_ui = ModelTests.build_model()
+        try:
+            starting_window_title = model_ui.windowTitle()
 
-        starting_window_title = model_ui.windowTitle()
+            archive_path = os.path.join(self.workspace, 'parameters.invs.json')
 
-        archive_path = os.path.join(self.workspace, 'parameters.invs.json')
+            def _set_archive_options():
+                model_ui.datastack_options_dialog.datastack_type.set_value(
+                    model._DATASTACK_PARAMETER_SET)
+                model_ui.datastack_options_dialog.use_relative_paths.set_value(
+                    True)
+                model_ui.datastack_options_dialog.include_workspace.set_value(
+                    True)
+                model_ui.datastack_options_dialog.save_parameters.set_value(
+                    archive_path)
+                self.qt_app.processEvents()
+                model_ui.datastack_options_dialog.accept()
 
-        def _set_archive_options():
-            model_ui.scenario_options_dialog.scenario_type.set_value(
-                model._SCENARIO_PARAMETER_SET)
-            model_ui.scenario_options_dialog.use_relative_paths.set_value(
-                True)
-            model_ui.scenario_options_dialog.include_workspace.set_value(
-                True)
-            model_ui.scenario_options_dialog.save_parameters.set_value(
-                archive_path)
-            QT_APP.processEvents()
-            model_ui.scenario_options_dialog.accept()
-
-        QtCore.QTimer.singleShot(25, _set_archive_options)
-        model_ui._save_scenario_as()
-        self.assertNotEqual(starting_window_title, model_ui.windowTitle())
+            QtCore.QTimer.singleShot(25, _set_archive_options)
+            model_ui._save_datastack_as()
+            self.assertNotEqual(starting_window_title, model_ui.windowTitle())
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_settings_saved_message(self):
         """UI Model: Verify that saving settings posts status to statusbar."""
         model_ui = ModelTests.build_model()
-
-        def _save_settings():
+        try:
+            # this used to have a singleeshot to get the dialog to exec_, but
+            # open seems to work just fine
+            model_ui.settings_dialog.open()
             model_ui.settings_dialog.accept()
-
-        QtCore.QTimer.singleShot(25, _save_settings)
-        model_ui.settings_dialog.exec_()
-
-        QT_APP.processEvents()
-        self.assertEqual(model_ui.statusBar().currentMessage(), 'Settings saved')
+            self.assertEqual(
+                model_ui.statusBar().currentMessage(), 'Settings saved')
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_run_with_validation_errors(self):
         """UI Model: Verify coverage when validation errors before a run."""
@@ -2382,15 +2571,19 @@ class ModelTests(_QtTest):
             return context.warnings
 
         model_ui = ModelTests.build_model(_validate)
-        model_ui.workspace.set_value('')
-        model_ui.validate(block=True)
-        self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
+        try:
+            model_ui.workspace.set_value('')
+            model_ui.validate(block=True)
+            self.assertEqual(len(model_ui.validation_report_dialog.warnings), 1)
 
-        def _close_validation_report():
-            model_ui.validation_report_dialog.accept()
+            def _close_validation_report():
+                model_ui.validation_report_dialog.accept()
 
-        QtCore.QTimer.singleShot(25, _close_validation_report)
-        model_ui.execute_model()
+            QtCore.QTimer.singleShot(25, _close_validation_report)
+            model_ui.execute_model()
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
     def test_exception_raised_in_target(self):
         """UI Model: Verify coverage when exception raised in target."""
@@ -2398,26 +2591,347 @@ class ModelTests(_QtTest):
             raise Exception('foo!')
 
         model_ui = ModelTests.build_model(target_func=_target)
-        model_ui.workspace.set_value(os.path.join(self.workspace,
-                                                  'dir_not_there'))
-        QT_APP.processEvents()
+        try:
+            model_ui.workspace.set_value(os.path.join(self.workspace,
+                                                      'dir_not_there'))
+            self.qt_app.processEvents()
 
-        # Wait until the InVESTModel object is about to be deleted.
-        with wait_on_signal(model_ui.destroyed):
-            model_ui.execute_model()
+            # Wait until the InVESTModel object is about to be deleted.
+            with wait_on_signal(self.qt_app, model_ui.destroyed):
+                model_ui.execute_model()
 
-        self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+            self.assertEqual(str(model_ui.form._thread.exception), 'foo!')
+            model_ui.form.run_dialog.close()
+            model_ui.form.run_dialog.destroy()
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
-    def test_overwrite_reject(self):
+    def test_workspace_overwrite_reject(self):
         """UI Model: Verify coverage when overwrite dialog is rejected."""
 
         model_ui = ModelTests.build_model()
+        try:
+            def _cancel_workspace_overwrite():
+                model_ui.workspace_overwrite_confirm_dialog.reject()
 
-        def _cancel_workspace_overwrite():
-            model_ui.workspace_overwrite_confirm_dialog.reject()
+            QtCore.QTimer.singleShot(50, _cancel_workspace_overwrite)
+            model_ui.execute_model()
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
-        QtCore.QTimer.singleShot(50, _cancel_workspace_overwrite)
-        model_ui.execute_model()
+    def test_save_to_python(self):
+        """UI Model: Verify that we can make a python script from params."""
+
+        model_ui = ModelTests.build_model()
+        try:
+            python_file = os.path.join(self.workspace, 'python_script.py')
+
+            model_ui.save_to_python(python_file)
+
+            self.assertTrue(os.path.exists(python_file))
+
+            module_name = str(uuid.uuid4()) + 'testscript'
+            try:
+                module = imp.load_source(module_name, python_file)
+                self.assertEqual(module.args, model_ui.assemble_args())
+            finally:
+                del sys.modules[module_name]
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_drag_n_drop_datastack(self):
+        """UI Model: Verify that we can drag-n-drop a valid datastack."""
+        model = ModelTests.build_model()
+        try:
+            # Write a sample parameter set file to drop
+            datastack_filepath = os.path.join(self.workspace, 'datastack.invest.json')
+            with open(datastack_filepath, 'w') as sample_datastack:
+                sample_datastack.write(json.dumps(
+                    {'args': {'workspace_dir': '/foo/bar',
+                              'results_suffix': 'baz'},
+                     'model_name': model.target.__module__,
+                     'invest_version': 'testing'}))
+
+            mime_data = QtCore.QMimeData()
+            mime_data.setText('Some datastack')
+            mime_data.setUrls([QtCore.QUrl.fromLocalFile(datastack_filepath)])
+
+            drag_event = QtGui.QDragEnterEvent(
+                model.pos(),
+                QtCore.Qt.CopyAction,
+                mime_data,
+                QtCore.Qt.LeftButton,
+                QtCore.Qt.NoModifier)
+            model.dragEnterEvent(drag_event)
+            self.assertTrue(drag_event.isAccepted())
+
+            event = QtGui.QDropEvent(
+                model.pos(),
+                QtCore.Qt.CopyAction,
+                mime_data,
+                QtCore.Qt.LeftButton,
+                QtCore.Qt.NoModifier)
+
+            # When the datastack is dropped, the datastack is loaded.
+            model.dropEvent(event)
+            self.assertEqual(model.workspace.value(),
+                             os.path.normpath('/foo/bar'))
+            self.assertEqual(model.suffix.value(), 'baz')
+        finally:
+            model.close(prompt=False)
+            model.destroy()
+
+    def test_drag_n_drop_datastack_no_mime_text(self):
+        """UI Model: Verify drag-n-drop a datastack without MIME text."""
+        model = ModelTests.build_model()
+        try:
+            # Write a sample parameter set file to drop
+            datastack_filepath = os.path.join(self.workspace, 'datastack.invest.json')
+            with open(datastack_filepath, 'w') as sample_datastack:
+                sample_datastack.write(json.dumps(
+                    {'args': {'workspace_dir': '/foo/bar',
+                              'results_suffix': 'baz'},
+                     'model_name': model.target.__module__,
+                     'invest_version': 'testing'}))
+
+            # Deliberately not setting any text in the mimedata.  We should
+            # still be able to load the datastack.
+            mime_data = QtCore.QMimeData()
+            mime_data.setUrls([QtCore.QUrl.fromLocalFile(datastack_filepath)])
+
+            drag_event = QtGui.QDragEnterEvent(
+                model.pos(),
+                QtCore.Qt.CopyAction,
+                mime_data,
+                QtCore.Qt.LeftButton,
+                QtCore.Qt.NoModifier)
+            model.dragEnterEvent(drag_event)
+            self.assertTrue(drag_event.isAccepted())
+
+            event = QtGui.QDropEvent(
+                model.pos(),
+                QtCore.Qt.CopyAction,
+                mime_data,
+                QtCore.Qt.LeftButton,
+                QtCore.Qt.NoModifier)
+
+            # When the datastack is dropped, the datastack is loaded.
+            model.dropEvent(event)
+            self.assertEqual(model.workspace.value(),
+                             os.path.normpath('/foo/bar'))
+            self.assertEqual(model.suffix.value(), 'baz')
+        finally:
+            model.close(prompt=False)
+            model.destroy()
+
+    def test_drag_n_drop_rejected_multifile(self):
+        """UI Model: Drag-n-drop fails when dragging several files."""
+        model = ModelTests.build_model()
+        try:
+            mime_data = QtCore.QMimeData()
+            mime_data.setText('Some datastack')
+            mime_data.setUrls([QtCore.QUrl('/path/1'),
+                               QtCore.QUrl('/path/2')])
+
+            drag_event = QtGui.QDragEnterEvent(
+                model.pos(),
+                QtCore.Qt.CopyAction,
+                mime_data,
+                QtCore.Qt.LeftButton,
+                QtCore.Qt.NoModifier)
+            model.dragEnterEvent(drag_event)
+            self.assertFalse(drag_event.isAccepted())
+        finally:
+            model.close(prompt=False)
+            model.destroy()
+
+    def test_open_recent_menu(self):
+        """UI Model: Check for correct behavior of the open-recent menu."""
+        from natcap.invest import datastack
+
+        model_ui = ModelTests.build_model()
+        try:
+
+            datastack_created = []
+            for datastack_index in range(11):
+                datastack_path = os.path.join(self.workspace,
+                                              'datastack_%s.invest.json' %
+                                              datastack_index)
+                args = {
+                    'workspace_dir': 'workspace_%s' % datastack_index,
+                }
+
+                datastack.build_parameter_set(args,
+                                              model_ui.target.__module__,
+                                              datastack_path)
+                datastack_created.append(datastack_path)
+                model_ui.load_datastack(datastack_path)
+
+            previous_datastack_actions = []
+            for action in model_ui.open_menu.actions():
+                if action.isSeparator() or action is model_ui.open_file_action:
+                    continue
+                previous_datastack_actions.append(action.data())
+
+            # We should only have the 10 most recent datastack
+            self.assertEqual(len(previous_datastack_actions), 10)
+            self.assertEqual(max(previous_datastack_actions),
+                             max(datastack_created))
+
+            # The earliest datastack should have been booted off the list since
+            # we're only keeping the 10 most recent.
+            self.assertEqual(min(previous_datastack_actions),
+                             sorted(datastack_created)[1])
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_load_datastack_display_short_filepaths(self):
+        """UI Model: Check handling of long filepaths in open-recent menu."""
+        model_ui = ModelTests.build_model()
+        try:
+            # synthesize a recent datastack path by adding it to the right setting.
+            model_ui._add_to_open_menu('/foo.invest.json')
+
+            last_run_datastack_actions = []
+            for action in model_ui.open_menu.actions():
+                if action.isSeparator() or action is model_ui.open_file_action:
+                    continue
+                last_run_datastack_actions.append((action.text(), action.data()))
+
+            self.assertEqual(len(last_run_datastack_actions), 1)
+            self.assertTrue('/foo.invest.json' in last_run_datastack_actions[0][0])
+            self.assertEqual(last_run_datastack_actions[0][1], '/foo.invest.json')
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_load_datastack_display_long_filepaths(self):
+        """UI Model: Check handling of long filepaths in open-recent menu."""
+        model_ui = ModelTests.build_model()
+        try:
+            # synthesize a recent datastack path by adding it to the right setting.
+            deep_directory = os.path.join(*[str(uuid.uuid4()) for x in xrange(10)])
+            filepath = os.path.join(deep_directory, 'something.invest.json')
+            model_ui._add_to_open_menu(filepath)
+
+            last_run_datastack_actions = []
+            for action in model_ui.open_menu.actions():
+                if action.isSeparator() or action is model_ui.open_file_action:
+                    continue
+                last_run_datastack_actions.append((action.text(), action.data()))
+
+            self.assertEqual(len(last_run_datastack_actions), 1)
+            self.assertTrue('something.invest.json' in last_run_datastack_actions[0][0])
+            self.assertEqual(last_run_datastack_actions[0][1], filepath)
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_load_datastack_from_open_recent(self):
+        """UI Model: Check loading of datastack via open-recent menu."""
+        from natcap.invest import datastack
+        model_ui = ModelTests.build_model()
+        try:
+
+            datastack_filepath = os.path.join(self.workspace,
+                                              'datastack.invest.json')
+            args = {
+                'workspace_dir': 'workspace_foo',
+            }
+            datastack.build_parameter_set(args,
+                                          model_ui.target.__module__,
+                                          datastack_filepath)
+
+            model_ui.load_datastack(datastack_filepath)
+            self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
+            model_ui.workspace.set_value('some_other_workspace')
+            self.assertEqual(model_ui.workspace.value(), 'some_other_workspace')
+
+            last_run_datastack_actions = []
+            for action in model_ui.open_menu.actions():
+                if action.isSeparator() or action is model_ui.open_file_action:
+                    continue
+                last_run_datastack_actions.append(action)
+
+            # There should be exactly one recently-loaded datastack
+            self.assertEqual(len(last_run_datastack_actions), 1)
+            self.assertEqual(last_run_datastack_actions[0].data(), datastack_filepath)
+
+            # When we trigger the action and process events, the datastack should
+            # be loaded into the UI.
+            action = last_run_datastack_actions[0]
+            def _accept_parameter_overwrite():
+                QTest.mouseClick(
+                    model_ui.input_overwrite_confirm_dialog.button(
+                        QtWidgets.QMessageBox.Yes),
+                    QtCore.Qt.LeftButton)
+
+            QtCore.QTimer.singleShot(50, _accept_parameter_overwrite)
+            action.trigger()
+            self.qt_app.processEvents()
+
+            self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_clear_local_settings(self):
+        """UI Model: Check that we can clear local settings."""
+        model_ui = ModelTests.build_model()
+        try:
+            # write something to settings and check it's been saved
+            model_ui.save_lastrun()
+            self.assertEqual(model_ui.settings.allKeys(), ['lastrun'])
+
+            # clear settings and verify it's been cleared.
+            model_ui.clear_local_settings()
+            self.assertEqual(model_ui.settings.allKeys(), [])
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_reject_on_modelname_mismatch(self):
+        """UI Model: confirm when datastack modelname != model modelname."""
+        from natcap.invest.ui import model
+        from natcap.invest import datastack
+
+        filepath = os.path.join(self.workspace, 'paramset.json')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        datastack.build_parameter_set(args, 'test_model', filepath)
+
+        model_ui = ModelTests.build_model()
+        try:
+
+            def _confirm_datastack_load():
+                self.assertTrue(
+                    model_ui.model_mismatch_confirm_dialog.isVisible())
+
+                # Both the parameter's model name ('test_model') and the target
+                # model's module name ('test_ui_inputs') should be in the
+                # informative text.
+                info_text = model_ui.model_mismatch_confirm_dialog.informativeText()
+                self.assertTrue(model_ui.target.__module__ in info_text)
+                self.assertTrue('test_model' in info_text)
+
+                # Reject the dialog.
+                QTest.mouseClick(
+                    model_ui.model_mismatch_confirm_dialog.button(
+                        QtWidgets.QMessageBox.Cancel),
+                    QtCore.Qt.LeftButton)
+
+            QtCore.QTimer.singleShot(500, _confirm_datastack_load)
+
+            # Verify that we haven't changed anything when the dialog is cancelled.
+            previous_args = model_ui.assemble_args()
+            model_ui.load_datastack(filepath)
+            self.assertEqual(previous_args, model_ui.assemble_args())
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
 
 
 class ValidatorTest(_QtTest):
@@ -2435,3 +2949,83 @@ class ValidatorTest(_QtTest):
             return []
 
         validator.validate(target=_validate, args={})
+
+
+class IsProbablyDatastackTests(unittest.TestCase):
+    """Tests for our quick check for whether a file is a datastack."""
+
+    def setUp(self):
+        """Create a new workspace for each test."""
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up the workspace created for each test."""
+        shutil.rmtree(self.workspace)
+
+    def test_json_extension(self):
+        """Model UI datastack: invest.json extension is a datastack"""
+        from natcap.invest.ui import model
+
+        filepath = 'some_model.invest.json'
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_tar_gz_extension(self):
+        """Model UI datastack: invest.tar.gz extension is a datastack"""
+        from natcap.invest.ui import model
+
+        filepath = 'some_model.invest.tar.gz'
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_parameter_set(self):
+        """Model UI datastack: a parameter set should be a datastack."""
+        from natcap.invest.ui import model
+        from natcap.invest import datastack
+
+        filepath = os.path.join(self.workspace, 'paramset.json')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        datastack.build_parameter_set(args, 'test_model', filepath)
+
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_parameter_archive(self):
+        """Model UI datastack: a parameter archive should be a datastack."""
+        from natcap.invest.ui import model
+        from natcap.invest import datastack
+
+        filepath = os.path.join(self.workspace, 'paramset.tar.gz')
+        args = {'foo': 'foo', 'bar': 'bar'}
+        datastack.build_datastack_archive(args, 'test_model', filepath)
+
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_parameter_logfile(self):
+        """Model UI datastack: a logfile should be a datastack."""
+        from natcap.invest.ui import model
+
+        filepath = os.path.join(self.workspace, 'logfile.txt')
+        with open(filepath, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO
+                Arguments:
+                suffix                           foo
+                some_int                         1
+                some_float                       2.33
+                workspace_dir                    some_workspace_dir
+
+                07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
+            """))
+
+        self.assertTrue(model.is_probably_datastack(filepath))
+
+    def test_csv_not_a_parameter(self):
+        """Model UI datastack: a CSV is probably not a parameter set."""
+        from natcap.invest.ui import model
+
+        filepath = os.path.join(self.workspace, 'sample.csv')
+        with open(filepath, 'w') as sample_csv:
+            sample_csv.write('A,B,C\n')
+            sample_csv.write('"aaa","bbb","ccc"\n')
+
+        self.assertFalse(model.is_probably_datastack(filepath))
+
+

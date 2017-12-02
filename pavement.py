@@ -1934,6 +1934,21 @@ def check(options):
         ('PyQt4', lib_needed, 'PyQt4', None),
     ]
 
+    # Set the SIP API to v2 for Qt4 compatibility.
+    # If we can't import sip, then the import error issue should be handled by
+    # paver check.
+    try:
+        import sip
+        sip.setapi('QString', 2)
+        sip.setapi('QVariant', 2)
+        sip.setapi('QDate', 2)
+        sip.setapi('QDateTime', 2)
+        sip.setapi('QTextStream', 2)
+        sip.setapi('QTime', 2)
+        sip.setapi('QUrl', 2)
+    except ImportError:
+        pass
+
     try:
         # poster stores its version in a triple of ints
         import poster
@@ -3482,6 +3497,132 @@ def test(args):
     # run the tests within the virtualenv.
     _run_tests()
 
+
+@task
+@consume_args
+def test_ui(args):
+    """Run the suite of User Interface InVEST tests within a virtualenv.
+
+    When run, paver will determine whether InVEST needs to be installed into
+    the active virtualenv, creating the env if needed.  InVEST will be
+    installed into the virtualenv if:
+
+        * InVEST is not already installed into the virtualenv.
+        * The version of InVEST installed into the virtualenv is older than
+          what is currently available to be installed from the source tree.
+        * There are uncommitted changes in the source tree.
+
+    Default behavior is to run all tests contained in tests/*.py and
+    src/natcap/invest/tests/*.py.
+
+    If --jenkins is provided, xunit reports and extra logging will be produced.
+    If --with-data is provided, test data repos will be cloned.
+
+    --jenkins implies --with-data.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--jenkins', default=False, action='store_true',
+                        help='Use options that are useful for Jenkins reports')
+    parser.add_argument('--with-data', default=False, action='store_true',
+                        help=('Clone/update the data repo if needed.'))
+    parser.add_argument('nose_args', nargs='*',
+                        help=('Nosetests-compatible strings indicating '
+                              'filename[:classname[.testname]]'),
+                        metavar='TEST')
+    parsed_args = parser.parse_args(args)
+    print 'parsed args: ', parsed_args
+
+    if parsed_args.with_data or parsed_args.jenkins:
+        call_task('fetch', args=[REPOS_DICT['test-data'].local_path])
+        call_task('fetch', args=[REPOS_DICT['invest-data'].local_path])
+
+    compiler = None
+    if parsed_args.jenkins and platform.system() == 'Windows':
+        compiler = 'msvc'
+
+    @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
+    def _run_tests():
+        """
+        Run tests within a virtualenv.  If we're running with the --jenkins
+        flag, add a couple more options suitable for that environment.
+        """
+        _coverage_flags = (
+            '--with-coverage '
+            '--cover-package=natcap.invest '
+            '--cover-erase ')
+        if parsed_args.jenkins:
+            flags = _coverage_flags + (
+                '--with-xunit '
+                '--cover-xml '
+                '--cover-tests '
+                '--logging-filter=None '
+                '--nologcapture '
+            )
+        else:
+            flags = _coverage_flags + '--cover-html '
+
+        tests = glob.glob(os.path.join('ui_tests', '*.py'))
+        sh(('nosetests -vsP --nologcapture {opts} {tests}').format(
+                opts=flags,
+                tests=' '.join(tests)
+            ))
+
+    @paver.virtual.virtualenv(paver.easy.options.dev_env.envname)
+    def _update_invest():
+        """
+        Determine if InVEST needs to be updated based on known version strings.
+        If so, remove the existing installation of InVEST and reinstall.
+        Runs within the virtualenv.
+        """
+        # If there are uncommitted changes, or the installed version of InVEST
+        # differs from the local version, reinstall InVEST into the virtualenv.
+        changed_files = sh((
+            'hg status -a -m -r -d '
+            'src/natcap/invest/ pavement.py setup.py setup.cfg MANIFEST.in'),
+            capture=True)
+        print 'Changed files: ' + changed_files
+        changes_uncommitted = changed_files.strip() != ''
+        if not changes_uncommitted:
+            # If no uncommitted changes, check that the versions match.
+            # If versions don't match, reinstall.
+            try:
+                installed_version = sh(('python -c "import natcap.invest;'
+                                        'print natcap.invest.__version__"'),
+                                        capture=True)
+                local_version = sh('python setup.py --version', capture=True)
+            except BuildFailure:
+                # When natcap.invest is not installed, so force reinstall
+                installed_version = False
+                local_version = True
+        else:
+            # If changes are uncommitted, force reinstall.
+            installed_version = True
+            local_version = True
+
+        if changes_uncommitted or (installed_version != local_version):
+            try:
+                sh('pip uninstall -y natcap.invest')
+            except BuildFailure:
+                pass
+
+            if compiler:
+                compile_flags = 'build_ext --compiler=' + compiler
+            else:
+                compile_flags = ''
+            sh('python setup.py {flags} install'.format(flags=compile_flags))
+
+    # Build an env if needed.
+    if not os.path.exists(paver.easy.options.dev_env.envname):
+        if compiler:
+            opts = {'compiler': compiler}
+        else:
+            opts = {}
+        call_task('dev_env', options=opts)
+    else:
+        _update_invest()
+
+    # run the tests within the virtualenv.
+    _run_tests()
 
 @task
 @might_call('push')

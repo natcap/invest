@@ -175,7 +175,7 @@ for _modelname, _meta in _MODEL_UIS.iteritems():
 #       1.  If execute is parseable, just extract parameters from the docstring
 #           and allow each param to be provided as a CLI flag.
 #       2.  Allow parameters to be passed as a JSON file
-#       3.  Allow model to run with a scenario file.
+#       3.  Allow model to run with a datastack file.
 #       PS: Optionally, don't validate inputs, but do validate by default.
 
 
@@ -332,8 +332,8 @@ def main():
     parser.add_argument('-l', '--headless', action='store_true',
                         dest='headless',
                         help=('Attempt to run InVEST without its GUI.'))
-    parser.add_argument('-s', '--scenario', default=None, nargs='?',
-                        help='Run the specified model with this scenario')
+    parser.add_argument('-d', '--datastack', default=None, nargs='?',
+                        help='Run the specified model with this datastack')
     parser.add_argument('-w', '--workspace', default=None, nargs='?',
                         help='The workspace in which outputs will be saved')
 
@@ -409,13 +409,13 @@ def main():
         launcher.main()
 
     elif args.headless:
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         target_mod = _MODEL_UIS[args.model].pyname
         model_module = importlib.import_module(name=target_mod)
         LOGGER.info('imported target %s from %s',
                     model_module.__name__, model_module)
 
-        paramset = scenarios.read_parameter_set(args.scenario)
+        paramset = datastack.read_parameter_set(args.datastack)
 
         # prefer CLI option for workspace dir, but use paramset workspace if
         # the CLI options do not define a workspace.
@@ -429,13 +429,13 @@ def main():
                 parser.exit(DEFAULT_EXIT_CODE, (
                     'Workspace not defined. \n'
                     'Use --workspace to specify or add a '
-                    '"workspace_dir" parameter to your scenario.'))
+                    '"workspace_dir" parameter to your datastack.'))
 
         with utils.prepare_workspace(workspace,
                                      name=paramset.name,
                                      logging_level=log_level):
-            LOGGER.log(scenarios.ARGS_LOG_LEVEL,
-                       scenarios.format_args_dict(paramset.args))
+            LOGGER.log(datastack.ARGS_LOG_LEVEL,
+                       datastack.format_args_dict(paramset.args))
             if not args.validate:
                 LOGGER.info('Skipping validation by user request')
             else:
@@ -499,18 +499,18 @@ def main():
         # Instantiate the form
         model_form = getattr(module, classname)()
 
-        # load the scenario if one was provided
+        # load the datastack if one was provided
         try:
-            if args.scenario:
-                model_form.load_scenario(args.scenario)
+            if args.datastack:
+                model_form.load_datastack(args.datastack)
         except Exception as error:
-            # If we encounter an exception while loading the scenario, log the
+            # If we encounter an exception while loading the datastack, log the
             # exception (so it can be seen if we're running with appropriate
             # verbosity) and exit the argparse application with exit code 1 and
             # a helpful error message.
-            LOGGER.exception('Could not load scenario')
+            LOGGER.exception('Could not load datastack')
             parser.exit(DEFAULT_EXIT_CODE,
-                        'Could not load scenario: %s\n' % str(error))
+                        'Could not load datastack: %s\n' % str(error))
 
         if args.workspace:
             model_form.workspace.set_value(args.workspace)

@@ -83,8 +83,8 @@ class CropProductionTests(unittest.TestCase):
             landcover_crop_table.write(
                 'crop_name,lucode\nfakecrop,20\n')
 
-        errors = crop_production_percentile.validate(args)
-        self.assertEqual(len(errors), 1)
+        with self.assertRaises(ValueError):
+            crop_production_percentile.execute(args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
     @scm.skip_if_data_missing(MODEL_DATA_PATH)

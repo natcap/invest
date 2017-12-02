@@ -443,7 +443,7 @@ def build_lookup_from_csv(
         converted to lowercase unicde.  if `numerical_cast` all values
         that can be represented as floats are, otherwise unicode.
     """
-    with open(table_path) as table_file:
+    with open(table_path, 'rbU') as table_file:
         reader = csv.reader(table_file)
         header_row = reader.next()
         header_row = [unicode(x) for x in header_row]

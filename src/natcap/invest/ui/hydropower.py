@@ -104,7 +104,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.seasonality_constant)
         self.water_scarcity_container = inputs.Container(
-            args_key=u'water_scarcity_container',
+            args_key=u'calculate_water_scarcity',
             expandable=True,
             expanded=False,
             label=u'Water Scarcity')
@@ -126,7 +126,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.water_scarcity_container.add_input(self.demand_table)
         self.valuation_container = inputs.Container(
-            args_key=u'valuation_container',
+            args_key=u'calculate_valuation',
             expandable=True,
             expanded=False,
             label=u'Valuation')

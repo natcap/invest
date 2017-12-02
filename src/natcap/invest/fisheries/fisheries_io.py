@@ -526,7 +526,7 @@ def _verify_single_params(args, create_outputs=True):
                                             intermediate_dir])
 
     # Check that timesteps is positive integer
-    params_dict['total_timesteps'] = float(args['total_timesteps']) + 1
+    params_dict['total_timesteps'] = int(float(args['total_timesteps'])) + 1
 
     return params_dict
 
