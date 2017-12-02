@@ -126,7 +126,7 @@ def center_window(window_ptr):
 
 
 class Validator(QtCore.QObject):
-    """A class to manage alidating in a separate Qt thread."""
+    """A class to manage validating in a separate Qt thread."""
 
     started = QtCore.Signal()
     finished = QtCore.Signal(list)
@@ -138,8 +138,8 @@ class Validator(QtCore.QObject):
             parent (QtWidgets.QWidget): The parent qwidget.  This will be the
                 parent of the validation thread.
         """
+        # TODO: remove parent here?
         QtCore.QObject.__init__(self, parent)
-        self._validation_thread = QtCore.QThread(parent=self)
         self._validation_worker = None
 
     def in_progress(self):
@@ -148,7 +148,8 @@ class Validator(QtCore.QObject):
         Returns:
             is_running (bool): Whether the validation thread is running.
         """
-        return self._validation_thread.isRunning()
+        return False
+        #return self._validation_thread.isRunning()
 
     def validate(self, target, args, limit_to=None):
         """Validate the provided args with the provided target.
@@ -164,27 +165,14 @@ class Validator(QtCore.QObject):
         Returns:
             ``None``
         """
-        if self._validation_thread.isRunning():
-            self._validation_thread.wait()
         self.started.emit()
         self._validation_worker = ValidationWorker(
             target=target,
             args=args,
             limit_to=limit_to)
-        self._validation_worker.moveToThread(self._validation_thread)
-
-        @QtCore.Slot()
-        def _finished():
-            """Slot to process warnings and emit ``self.finished``."""
-            LOGGER.info('Finished validation for args_key %s', limit_to)
-            warnings_ = [w for w in self._validation_worker.warnings]
-
-            LOGGER.debug(warnings_)
-            self.finished.emit(warnings_)
-
-        self._validation_worker.finished.connect(self._validation_thread.quit)
-        self._validation_worker.finished.connect(_finished)
-        self._validation_worker.start()
+        self._validation_worker.run()
+        warnings_ = [w for w in self._validation_worker.warnings]
+        self.finished.emit(warnings_)
 
 
 class MessageArea(QtWidgets.QLabel):
@@ -257,12 +245,12 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
 
     message_received = QtCore.Signal(six.text_type)
 
-    def __init__(self):
+    def __init__(self, parent):
         """Initialize the LogMessagePane instance.
 
         Sets the stylesheet for the QPlainTextEdit, and sets it to read-only.
         """
-        QtWidgets.QPlainTextEdit.__init__(self)
+        QtWidgets.QPlainTextEdit.__init__(self, parent=parent)
 
         self.setReadOnly(True)
         self.setStyleSheet("QWidget { background-color: White; "
@@ -334,7 +322,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.statusAreaLabel = QtWidgets.QLabel(
             FileSystemRunDialog._build_status_area_label())
 
-        self.log_messages_pane = LogMessagePane()
+        self.log_messages_pane = LogMessagePane(parent=self)
         self.loghandler = QLogHandler(self.log_messages_pane)
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.NOTSET)
@@ -548,7 +536,10 @@ class InfoButton(QtWidgets.QPushButton):
                 to be here to match the signature the clicked signal expects.
         """
         QtWidgets.QWhatsThis.enterWhatsThisMode()
-        QtWidgets.QWhatsThis.showText(self.mapToGlobal(self.pos()),
+
+        # QtCore.QPoint(0, 0) maps to the top-left corner of this widget.
+        # mapToGlobal() turns that coordinate into a global coordinate.
+        QtWidgets.QWhatsThis.showText(self.mapToGlobal(QtCore.QPoint(0, 0)),
                                       self.whatsThis(), self)
 
 
@@ -563,6 +554,16 @@ class ValidButton(InfoButton):
         """
         InfoButton.__init__(self, *args, **kwargs)
         self.successful = True
+
+    def clear(self):
+        """Clear the icon, WhatsThis text and ToolTip text.
+
+        Returns:
+            None.
+        """
+        self.setIcon(QtGui.QIcon())  # clear the icon
+        self.setWhatsThis('')
+        self.setToolTip('')
 
     def set_errors(self, errors):
         """Set the error message and style based on the provided errors.
@@ -672,16 +673,18 @@ class ValidationWorker(QtCore.QObject):
             ``None``
         """
         # Target must adhere to InVEST validation API.
-        LOGGER.info(('Starting validation thread with target=%s, args=%s, '
-                     'limit_to=%s'), self.target, self.args, self.limit_to)
+        LOGGER.info(
+            'Starting validation thread with target=%s, args=%s, limit_to=%s',
+            self.target, self.args, self.limit_to)
         try:
-            self.warnings = self.target(self.args, limit_to=self.limit_to)
-            LOGGER.info('Validation thread returned warnings: %s',
-                        self.warnings)
+            self.warnings = self.target(
+                self.args, limit_to=self.limit_to)
+            LOGGER.info(
+                'Validation thread returned warnings: %s', self.warnings)
         except Exception as error:
             self.error = str(error)
-            LOGGER.exception('Validation: Error when validating %s:',
-                             self.target)
+            LOGGER.exception(
+                'Validation: Error when validating %s:', self.target)
         self._finished = True
         self.finished.emit()
 
@@ -689,14 +692,14 @@ class ValidationWorker(QtCore.QObject):
 class FileDialog(object):
     """A convenience wrapper for QtWidgets.QFileDialog."""
 
-    def __init__(self):
+    def __init__(self, parent=None):
         """Initialize the FileDialog instance.
 
         Returns:
             ``None``
         """
         object.__init__(self)
-        self.file_dialog = QtWidgets.QFileDialog()
+        self.file_dialog = QtWidgets.QFileDialog(parent=parent)
 
     def __del__(self):
         """Destructor for the FileDialog instance."""
@@ -1048,6 +1051,19 @@ class InVESTModelInput(QtCore.QObject):
             self.sufficient = new_sufficiency
             self.sufficiency_changed.emit(new_sufficiency)
 
+    def clear(self):
+        """Reset the input to an initial, 'blank' state.
+
+        This method must be reimplemented for each subclass.
+
+        Returns:
+            None.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError
+
     def visible(self):
         """Whether the input is supposed to be visible.
 
@@ -1201,15 +1217,14 @@ class GriddedInput(InVESTModelInput):
         Returns:
             ``None``
         """
-        InVESTModelInput.__init__(self, label=label, helptext=helptext,
-                       interactive=interactive, args_key=args_key)
+        InVESTModelInput.__init__(
+            self, label=label, helptext=helptext, interactive=interactive,
+            args_key=args_key)
 
         self._valid = None
         self.validator_ref = validator
         self._validator = Validator(self)
         self._validator.finished.connect(self._validation_finished)
-        self.validator_lock = threading.Lock()
-
 
         self.label_widget = QtWidgets.QLabel(self.label)
         self.hideable = hideable
@@ -1247,52 +1262,45 @@ class GriddedInput(InVESTModelInput):
         Validation is intended to be triggered by events in the UI and not by
         the user, hence the private function signature.
         """
-        try:
-            if self.validator_ref is not None:
-                LOGGER.info(
-                    'Validation: validator taken from self.validator_ref: %s',
-                    self.validator_ref)
-                validator_ref = self.validator_ref
-            else:
-                if self.args_key is None:
-                    LOGGER.info(
-                        ('Validation: No validator and no args_id defined; '
-                         'skipping.  Input assumed to be valid. %s'),
-                        self)
-                    self._validation_finished(validation_warnings=[])
-                    return
-                else:
-                    # args key defined, but a validator is not; input assumed
-                    # to be valid.
-                    warnings.warn(('Validation: args_key defined, but no '
-                                   'validator defined.  Input assumed to be '
-                                   'valid. %s') % self)
-                    self._validation_finished(validation_warnings=[])
-                    return
-
-            try:
-                args = self.parent().assemble_args()
-            except AttributeError:
-                # When self.parent() is not set, as in testing.
-                # self.parent() is only set when the InVESTModelInput is added to a
-                # layout.
-                args = {self.args_key: self.value()}
-
+        if self.validator_ref is not None:
             LOGGER.info(
-                ('Starting validation thread for %s with target:%s, args:%s, '
-                 'limit_to:%s'),
-                self, validator_ref, args, self.args_key)
+                'Validation: validator taken from self.validator_ref: %s',
+                self.validator_ref)
+            validator_ref = self.validator_ref
+        else:
+            if self.args_key is None:
+                LOGGER.info(
+                    ('Validation: No validator and no args_id defined; '
+                     'skipping.  Input assumed to be valid. %s'),
+                    self)
+                self._validation_finished(validation_warnings=[])
+                return
+            else:
+                # args key defined, but a validator is not; input assumed
+                # to be valid.
+                warnings.warn(('Validation: args_key defined, but no '
+                               'validator defined.  Input assumed to be '
+                               'valid. %s') % self)
+                self._validation_finished(validation_warnings=[])
+                return
 
-            # Prevent multiple self._validator.validate runs
-            self.validator_lock.acquire()
-            self._validator.validate(
-                target=validator_ref,
-                args=args,
-                limit_to=self.args_key)
-        except Exception:
-            LOGGER.exception('Error found when validating %s, releasing lock.',
-                             self)
-            raise
+        try:
+            args = self.parent().assemble_args()
+        except AttributeError:
+            # When self.parent() is not set, as in testing.
+            # self.parent() is only set when the InVESTModelInput is added to a
+            # layout.
+            args = {self.args_key: self.value()}
+
+        LOGGER.info(
+            ('Starting validation thread for %s with target:%s, args:%s, '
+             'limit_to:%s'),
+            self, validator_ref, args, self.args_key)
+
+        self._validator.validate(
+            target=validator_ref,
+            args=args,
+            limit_to=self.args_key)
 
     def _validation_finished(self, validation_warnings):
         """Interpret any validation errors and format them for the UI.
@@ -1333,15 +1341,6 @@ class GriddedInput(InVESTModelInput):
         self._valid = new_validity
         if current_validity != new_validity:
             self.validity_changed.emit(new_validity)
-        try:
-            # this releases the lock because the _validate thread must be
-            # complete
-            self.validator_lock.release()
-        except threading.ThreadError:
-            # It's possible this function was called just to wrap up an error
-            # and the lock wasn't acquired at all.  That's okay and pass
-            # through
-            pass
 
     def valid(self):
         """Check the validity of the input.
@@ -1349,9 +1348,17 @@ class GriddedInput(InVESTModelInput):
         Returns:
             The boolean validity of the input.
         """
-        self.validator_lock.acquire()
-        self.validator_lock.release()
         return self._valid
+
+    def clear(self):
+        """Reset validity, sufficiency and the valid button state.
+
+        Returns:
+            None.
+        """
+        self._valid = None
+        self.sufficient = False
+        self.valid_button.clear()
 
     @QtCore.Slot(int)
     def _hideability_changed(self, show_widgets):
@@ -1537,7 +1544,6 @@ class Text(GriddedInput):
         Returns:
             ``None``
         """
-
         try:
             if isinstance(value, (int, float)):
                 value = str(value)
@@ -1550,6 +1556,15 @@ class Text(GriddedInput):
             self.set_hidden(False)
 
         self.textfield.setText(value)
+
+    def clear(self):
+        """Reset the input to a 'blank' state.
+
+        Returns:
+            None.
+        """
+        self.textfield.clear()
+        GriddedInput.clear(self)
 
 
 class _Path(Text):
@@ -1706,6 +1721,19 @@ class _Path(Text):
             self.help_button,
         ]
 
+    def _handle_file_button_selection(self, value):
+        """Handle the case when the user presses 'cancel' in the file dialog.
+
+        Parameters:
+            value (string): The path selected.  This path will be ``''`` if the
+                dialog was cancelled.
+
+        Returns:
+            ``None``
+        """
+        if value != '':
+            self.textfield.setText(value)
+
 
 class Folder(_Path):
     """An InVESTModelInput for selecting a folder."""
@@ -1736,7 +1764,7 @@ class Folder(_Path):
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FolderButton('Select folder')
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(self._handle_file_button_selection)
 
         # index 3 is the column place right before the help button, after the
         # textfield.
@@ -1775,7 +1803,8 @@ class File(_Path):
         _Path.__init__(self, label, helptext, interactive, args_key,
                        hideable, validator=validator)
         self.path_select_button = FileButton('Select file')
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(
+            self._handle_file_button_selection)
 
         # Index 3 is the column to the right of the textfield, to the left of
         # the help button.
@@ -1816,7 +1845,8 @@ class SaveFile(_Path):
                        hideable, validator=validator)
         self.path_select_button = SaveFileButton('Select file',
                                                  default_savefile)
-        self.path_select_button.path_selected.connect(self.textfield.setText)
+        self.path_select_button.path_selected.connect(
+            self._handle_file_button_selection)
         self.widgets[3] = self.path_select_button
 
         if self.hideable:
@@ -1857,6 +1887,15 @@ class Checkbox(GriddedInput):
         self.widgets[0] = None  # No need for a valid button
         self.widgets[1] = self.checkbox  # replace label with checkbox
         self.satisfied = True
+
+    def clear(self):
+        """Clear the checkbox's input by setting to unchecked.
+
+        Returns:
+            None.
+        """
+        self.set_value(False)
+        GriddedInput.clear(self)
 
     def value(self):
         """Get the value of the checkbox.
@@ -1927,6 +1966,23 @@ class Dropdown(GriddedInput):
         # Init hideability if needed
         if self.hideable:
             self._hideability_changed(False)
+
+    def clear(self):
+        """Reset the dropdown to a 'blank' state.
+
+        If the dropdown has options set, the menu will be reset to the item at
+        index 0.  If there are no options, validity and sufficiency is reset
+        only.
+
+        Returns:
+            None.
+        """
+        try:
+            self.set_value(self.options[0])
+        except IndexError:
+            # When there are no options
+            pass
+        GriddedInput.clear(self)
 
     @QtCore.Slot(int)
     def _index_changed(self, newindex):
@@ -2094,7 +2150,18 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
 
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,  # horizontal
-            QtWidgets.QSizePolicy.MinimumExpanding)  # vertical
+            QtWidgets.QSizePolicy.Maximum)  # vertical
+
+    def clear(self):
+        """Reset the container to unchecked if it is checkable.
+
+        If the container is not checkable, nothing is done.
+
+        Returns:
+            None.
+        """
+        if self.expandable:
+            self.setChecked(False)
 
     @QtCore.Slot(bool)
     def _hide_widgets(self, check_state):
@@ -2128,7 +2195,6 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         """
         if self.isCheckable():
             self._hide_widgets(self.value())
-        self.resize(self.sizeHint())
 
     @property
     def expanded(self):
@@ -2348,7 +2414,7 @@ class Multi(Container):
         Returns:
             ``None``
         """
-        self.clear()
+        self.clear_layout()
         for input_value in values:
             new_input_instance = self.callable_()
             new_input_instance.set_value(input_value)
@@ -2435,16 +2501,26 @@ class Multi(Container):
                          1,  # row span
                          layout.columnCount())  # span all columns
 
+    def clear_layout(self):
+        """Remove all widgets within the multi from the layout.
+
+        Returns:
+            None.
+        """
+        layout = self.layout()
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(None)
+        self._append_add_link()
+
     def clear(self):
         """Clear all inputs that have been added to the Multi.
 
         Returns:
             ``None``
         """
-        layout = self.layout()
-        for i in reversed(range(layout.count())):
-            layout.itemAt(i).widget().setParent(None)
-        self._append_add_link()
+        self.clear_layout()
+        self.items = []
+        self.remove_buttons = []
 
     def remove(self, index):
         """Remove a specific input from the Multi.
@@ -2456,7 +2532,7 @@ class Multi(Container):
             ``None``
         """
         # clear all widgets from the layout.
-        self.clear()
+        self.clear_layout()
 
         self.items.pop(index)
         self.remove_buttons.pop(index)
@@ -2468,19 +2544,48 @@ class Multi(Container):
         self.value_changed.emit(self.value())
 
 
+class FormScrollArea(QtWidgets.QScrollArea):
+    """Object to contain scrollarea-related functionality."""
+
+    def __init__(self):
+        """Initialize the ScrollArea."""
+        QtWidgets.QScrollArea.__init__(self)
+        self.setWidgetResizable(True)
+        self.verticalScrollBar().rangeChanged.connect(
+            self.update_scroll_border)
+        self.update_scroll_border(
+            self.verticalScrollBar().minimum(),
+            self.verticalScrollBar().maximum())
+
+    def update_scroll_border(self, range_min, range_max):
+        """Show or hide the border of the scrolling area as needed.
+
+        Parameters:
+            range_min (int): The scroll area's range minimum.
+            range_max (int): The scroll area's range maximum.
+
+        Returns:
+            ``None``
+        """
+        if range_min == 0 and range_max == 0:
+            self.setStyleSheet("QScrollArea { border: None } ")
+        else:
+            self.setStyleSheet("")
+
+
 class Form(QtWidgets.QWidget):
     """A form that contains multiple InVESTModelInputs."""
 
     submitted = QtCore.Signal()
     run_finished = QtCore.Signal()
 
-    def __init__(self):
+    def __init__(self, parent=None):
         """Initialize the Form.
 
         Returns:
             ``None``
         """
-        QtWidgets.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self, parent=parent)
 
         # self._thread is redefined as an Executor when we run the target
         # callable.
@@ -2500,14 +2605,8 @@ class Form(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.Minimum)
 
         # Make the inputs container scrollable.
-        self.scroll_area = QtWidgets.QScrollArea()
+        self.scroll_area = FormScrollArea()
         self.layout().addWidget(self.scroll_area)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.verticalScrollBar().rangeChanged.connect(
-            self.update_scroll_border)
-        self.update_scroll_border(
-            self.scroll_area.verticalScrollBar().minimum(),
-            self.scroll_area.verticalScrollBar().maximum())
         self.scroll_area.setWidget(self.inputs)
 
         # set the sizehint of the inputs again ... needed after setting
@@ -2536,21 +2635,6 @@ class Form(QtWidgets.QWidget):
         # creating a bound method of Form to handle this.  Useful for MESH
         # demo.
         self.submitted.emit()
-
-    def update_scroll_border(self, range_min, range_max):
-        """Show or hide the border of the scrolling area as needed.
-
-        Parameters:
-            range_min (int): The scroll area's range minimum.
-            range_max (int): The scroll area's range maximum.
-
-        Returns:
-            ``None``
-        """
-        if range_min == 0 and range_max == 0:
-            self.scroll_area.setStyleSheet("QScrollArea { border: None } ")
-        else:
-            self.scroll_area.setStyleSheet("")
 
     def run(self, target, args=(), kwargs=None, window_title='',
             out_folder='/'):

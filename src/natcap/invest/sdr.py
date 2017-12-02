@@ -16,7 +16,7 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 
-import natcap.invest.pygeoprocessing_0_3_3
+import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 from . import utils
@@ -72,7 +72,10 @@ _TMP_BASE_FILES = {
     's_inverse_path': 's_inverse.tif',
     }
 
-NODATA_USLE = -1.0
+# Target nodata is for general rasters that are positive, and _IC_NODATA are
+# for rasters that are any range
+_TARGET_NODATA = -1.0
+_IC_NODATA = numpy.finfo('float32').min
 
 
 def execute(args):
@@ -110,7 +113,7 @@ def execute(args):
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    biophysical_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
+    biophysical_table = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode')
 
     # Test to see if c or p values are outside of 0..1
@@ -132,8 +135,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
-    natcap.invest.pygeoprocessing_0_3_3.create_directories(
-        [output_dir, intermediate_output_dir])
+    utils.make_directories([output_dir, intermediate_output_dir])
 
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
@@ -142,7 +144,7 @@ def execute(args):
 
     base_list = []
     aligned_list = []
-    for file_key in ['lulc', 'dem', 'erosivity', 'erodibility']:
+    for file_key in ['dem', 'lulc', 'erosivity', 'erodibility']:
         base_list.append(args[file_key + "_path"])
         aligned_list.append(f_reg["aligned_" + file_key + "_path"])
 
@@ -152,10 +154,13 @@ def execute(args):
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
 
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(args['dem_path'])
-    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
-        base_list, aligned_list, ['nearest'] * len(base_list), out_pixel_size,
-        'intersection', 0, aoi_uri=args['watersheds_path'])
+    dem_pixel_size = pygeoprocessing.get_raster_info(
+        args['dem_path'])['pixel_size']
+    pygeoprocessing.align_and_resize_raster_stack(
+        base_list, aligned_list, ['nearest'] * len(base_list),
+        dem_pixel_size, 'intersection',
+        base_vector_path_list=[args['watersheds_path']],
+        raster_align_index=0)
 
     LOGGER.info("calculating slope")
     natcap.invest.pygeoprocessing_0_3_3.calculate_slope(
@@ -320,12 +325,13 @@ def _calculate_ls_factor(
     Returns:
         None
     """
-    flow_accumulation_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        flow_accumulation_path)
-    slope_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(slope_path)
-    aspect_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(aspect_path)
+    slope_nodata = pygeoprocessing.get_raster_info(slope_path)['nodata'][0]
+    aspect_nodata = pygeoprocessing.get_raster_info(aspect_path)['nodata'][0]
 
-    cell_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(flow_accumulation_path)
+    flow_accumulation_info = pygeoprocessing.get_raster_info(
+        flow_accumulation_path)
+    flow_accumulation_nodata = flow_accumulation_info['nodata'][0]
+    cell_size = flow_accumulation_info['mean_pixel_size']
     cell_area = cell_size ** 2
 
     def ls_factor_function(aspect_angle, percent_slope, flow_accumulation):
@@ -343,7 +349,7 @@ def _calculate_ls_factor(
             (percent_slope != slope_nodata) &
             (flow_accumulation != flow_accumulation_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = NODATA_USLE
+        result[:] = _TARGET_NODATA
 
         # Determine the length of the flow path on the pixel
         xij = (numpy.abs(numpy.sin(aspect_angle[valid_mask])) +
@@ -391,10 +397,11 @@ def _calculate_ls_factor(
         return result
 
     # call vectorize datasets to calculate the ls_factor
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [aspect_path, slope_path, flow_accumulation_path], ls_factor_function,
-        out_ls_factor_path, gdal.GDT_Float32, NODATA_USLE, cell_size,
-        "intersection", dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in [
+            aspect_path, slope_path, flow_accumulation_path]],
+        ls_factor_function, out_ls_factor_path, gdal.GDT_Float32,
+        _TARGET_NODATA)
 
 
 def _calculate_rkls(
@@ -415,12 +422,15 @@ def _calculate_rkls(
     Returns:
         None
     """
-    ls_factor_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(ls_factor_path)
-    erosivity_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(erosivity_path)
-    erodibility_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(erodibility_path)
-    stream_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(stream_path)
+    erosivity_nodata = pygeoprocessing.get_raster_info(
+        erosivity_path)['nodata'][0]
+    erodibility_nodata = pygeoprocessing.get_raster_info(
+        erodibility_path)['nodata'][0]
+    stream_nodata = pygeoprocessing.get_raster_info(
+        stream_path)['nodata'][0]
 
-    cell_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(ls_factor_path)
+    cell_size = pygeoprocessing.get_raster_info(
+        ls_factor_path)['mean_pixel_size']
     cell_area_ha = cell_size ** 2 / 10000.0
 
     def rkls_function(ls_factor, erosivity, erodibility, stream):
@@ -439,11 +449,11 @@ def _calculate_rkls(
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
-            (ls_factor != ls_factor_nodata) &
+            (ls_factor != _TARGET_NODATA) &
             (erosivity != erosivity_nodata) &
             (erodibility != erodibility_nodata) & (stream != stream_nodata))
         valid_mask = nodata_mask & (stream == 0)
-        rkls[:] = NODATA_USLE
+        rkls[:] = _TARGET_NODATA
 
         rkls[valid_mask] = (
             ls_factor[valid_mask] * erosivity[valid_mask] *
@@ -455,10 +465,10 @@ def _calculate_rkls(
 
     # aligning with index 3 that's the stream and the most likely to be
     # aligned with LULCs
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [ls_factor_path, erosivity_path, erodibility_path, stream_path],
-        rkls_function, rkls_path, gdal.GDT_Float32, NODATA_USLE, cell_size,
-        "intersection", dataset_to_align_index=3, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in [
+            ls_factor_path, erosivity_path, erodibility_path, stream_path]],
+        rkls_function, rkls_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _threshold_slope(slope_path, out_thresholded_slope_path):
@@ -472,8 +482,7 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
     Returns:
         None
     """
-    slope_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(slope_path)
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(slope_path)
+    slope_nodata = pygeoprocessing.get_raster_info(slope_path)['nodata'][0]
 
     def threshold_slope(slope):
         """Convert slope to m/m and clamp at 0.005 and 1.0.
@@ -489,10 +498,9 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
         result[valid_slope] = slope_m
         return result
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [slope_path], threshold_slope, out_thresholded_slope_path,
-        gdal.GDT_Float64, slope_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(slope_path, 1)], threshold_slope, out_thresholded_slope_path,
+        gdal.GDT_Float32, slope_nodata)
 
 
 def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
@@ -513,13 +521,10 @@ def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
         """Add drainage mask to stream layer."""
         return numpy.where(drainage == 1, 1, stream)
 
-    stream_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(stream_path)
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(stream_path)
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [stream_path, drainage_path], add_drainage_op,
-        out_stream_and_drainage_path, gdal.GDT_Byte, stream_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
+    stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in [stream_path, drainage_path]], add_drainage_op,
+        out_stream_and_drainage_path, gdal.GDT_Byte, stream_nodata)
 
 
 def _calculate_w(
@@ -544,23 +549,21 @@ def _calculate_w(
         [(lulc_code, float(table['usle_c'])) for
          (lulc_code, table) in biophysical_table.items()])
 
-    natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
-        lulc_path, lulc_to_c, w_factor_path, gdal.GDT_Float64,
-        NODATA_USLE, exception_flag='values_required')
+    pygeoprocessing.reclassify_raster(
+        (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
+        _TARGET_NODATA, values_required=True)
 
     def threshold_w(w_val):
         """Threshold w to 0.001."""
         w_val_copy = w_val.copy()
-        nodata_mask = w_val == NODATA_USLE
+        nodata_mask = w_val == _TARGET_NODATA
         w_val_copy[w_val < 0.001] = 0.001
-        w_val_copy[nodata_mask] = NODATA_USLE
+        w_val_copy[nodata_mask] = _TARGET_NODATA
         return w_val_copy
 
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(lulc_path)
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [w_factor_path], threshold_w, out_thresholded_w_factor_path,
-        gdal.GDT_Float64, NODATA_USLE, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(w_factor_path, 1)], threshold_w, out_thresholded_w_factor_path,
+        gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
@@ -580,32 +583,28 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
     lulc_to_cp = dict(
         [(lulc_code, float(table['usle_c']) * float(table['usle_p'])) for
          (lulc_code, table) in biophysical_table.items()])
-    natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
-        lulc_path, lulc_to_cp, cp_factor_path, gdal.GDT_Float64,
-        NODATA_USLE, exception_flag='values_required')
+    pygeoprocessing.reclassify_raster(
+        (lulc_path, 1), lulc_to_cp, cp_factor_path, gdal.GDT_Float32,
+        _TARGET_NODATA, values_required=True)
 
 
 def _calculate_usle(
         rkls_path, cp_factor_path, drainage_raster_path, out_usle_path):
     """Calculate USLE, multiply RKLS by CP and set to 1 on drains."""
-    nodata_rkls = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(rkls_path)
-    nodata_cp = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        cp_factor_path)
 
     def usle_op(rkls, cp_factor, drainage):
         """Calculate USLE."""
         result = numpy.empty(rkls.shape)
-        result[:] = NODATA_USLE
-        valid_mask = (rkls != nodata_rkls) & (cp_factor != nodata_cp)
+        result[:] = _TARGET_NODATA
+        valid_mask = (rkls != _TARGET_NODATA) & (cp_factor != _TARGET_NODATA)
         result[valid_mask] = rkls[valid_mask] * cp_factor[valid_mask] * (
             1 - drainage[valid_mask])
         return result
 
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(rkls_path)
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [rkls_path, cp_factor_path, drainage_raster_path], usle_op,
-        out_usle_path, gdal.GDT_Float64, NODATA_USLE, out_pixel_size,
-        "intersection", dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in [
+            rkls_path, cp_factor_path, drainage_raster_path]], usle_op,
+        out_usle_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_bar_factor(
@@ -634,78 +633,72 @@ def _calculate_bar_factor(
     Returns:
         None.
     """
-    natcap.invest.pygeoprocessing_0_3_3.make_constant_raster_from_base_uri(
-        dem_path, 0.0, zero_absorption_source_path)
+    pygeoprocessing.new_raster_from_base(
+        dem_path, zero_absorption_source_path, gdal.GDT_Float32,
+        [_TARGET_NODATA], fill_value_list=[0.0])
 
-    flow_accumulation_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        flow_accumulation_path)
+    flow_accumulation_nodata = pygeoprocessing.get_raster_info(
+        flow_accumulation_path)['nodata'][0]
 
     natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
         flow_direction_path, dem_path, factor_path,
         zero_absorption_source_path, loss_path, accumulation_path,
         'flux_only')
 
-    bar_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(accumulation_path)
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(dem_path)
-
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
         result = numpy.empty(base_accumulation.shape)
         valid_mask = (
-            (base_accumulation != bar_nodata) &
+            (base_accumulation != _TARGET_NODATA) &
             (flow_accumulation != flow_accumulation_nodata))
-        result[:] = bar_nodata
+        result[:] = _TARGET_NODATA
         result[valid_mask] = (
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])
         return result
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [accumulation_path, flow_accumulation_path], bar_op, out_bar_path,
-        gdal.GDT_Float32, bar_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(accumulation_path, 1), (flow_accumulation_path, 1)], bar_op,
+        out_bar_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_d_up(
         w_bar_path, s_bar_path, flow_accumulation_path, out_d_up_path):
     """Calculate w_bar * s_bar * sqrt(flow accumulation * cell area)."""
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(w_bar_path)
-    cell_area = out_pixel_size ** 2
-    w_bar_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(w_bar_path)
-    s_bar_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(s_bar_path)
-    flow_accumulation_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        flow_accumulation_path)
+    cell_area = pygeoprocessing.get_raster_info(
+        w_bar_path)['mean_pixel_size'] ** 2
+    flow_accumulation_nodata = pygeoprocessing.get_raster_info(
+        flow_accumulation_path)['nodata'][0]
 
-    def d_up(w_bar, s_bar, flow_accumulation):
+    def d_up_op(w_bar, s_bar, flow_accumulation):
         """Calculate the d_up index.
 
         w_bar * s_bar * sqrt(upstream area)
 
         """
         valid_mask = (
-            (w_bar != w_bar_nodata) & (s_bar != s_bar_nodata) &
+            (w_bar != _TARGET_NODATA) & (s_bar != _TARGET_NODATA) &
             (flow_accumulation != flow_accumulation_nodata))
         d_up_array = numpy.empty(valid_mask.shape)
-        d_up_array[:] = NODATA_USLE
+        d_up_array[:] = _TARGET_NODATA
         d_up_array[valid_mask] = (
             w_bar[valid_mask] * s_bar[valid_mask] * numpy.sqrt(
                 flow_accumulation[valid_mask] * cell_area))
         return d_up_array
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [w_bar_path, s_bar_path, flow_accumulation_path], d_up, out_d_up_path,
-        gdal.GDT_Float32, NODATA_USLE, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in [
+            w_bar_path, s_bar_path, flow_accumulation_path]], d_up_op,
+        out_d_up_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_d_up_bare(
         s_bar_path, flow_accumulation_path, out_d_up_bare_path):
     """Calculate s_bar * sqrt(flow accumulation * cell area)."""
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(s_bar_path)
-    cell_area = out_pixel_size ** 2
-    s_bar_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(s_bar_path)
-    flow_accumulation_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        flow_accumulation_path)
+    cell_area = pygeoprocessing.get_raster_info(
+        s_bar_path)['mean_pixel_size'] ** 2
+    flow_accumulation_nodata = pygeoprocessing.get_raster_info(
+        flow_accumulation_path)['nodata'][0]
 
-    def d_up(s_bar, flow_accumulation):
+    def d_up_op(s_bar, flow_accumulation):
         """Calculate the bare d_up index.
 
         s_bar * sqrt(upstream area)
@@ -713,162 +706,138 @@ def _calculate_d_up_bare(
         """
         valid_mask = (
             (flow_accumulation != flow_accumulation_nodata) &
-            (s_bar != s_bar_nodata))
+            (s_bar != _TARGET_NODATA))
         d_up_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        d_up_array[:] = NODATA_USLE
+        d_up_array[:] = _TARGET_NODATA
         d_up_array[valid_mask] = (
             numpy.sqrt(flow_accumulation[valid_mask] * cell_area) *
             s_bar[valid_mask])
         return d_up_array
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [s_bar_path, flow_accumulation_path], d_up, out_d_up_bare_path,
-        gdal.GDT_Float32, NODATA_USLE, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(s_bar_path, 1), (flow_accumulation_path, 1)], d_up_op,
+        out_d_up_bare_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_inverse_ws_factor(
         thresholded_slope_path, thresholded_w_factor_path,
         out_ws_factor_inverse_path):
     """Calculate 1/(w*s)."""
-    slope_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(thresholded_slope_path)
-    w_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(thresholded_w_factor_path)
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-        thresholded_slope_path)
+    slope_nodata = pygeoprocessing.get_raster_info(
+        thresholded_slope_path)['nodata'][0]
 
     def ws_op(w_factor, s_factor):
         """Calculate the inverse ws factor."""
-        valid_mask = (w_factor != w_nodata) & (s_factor != slope_nodata)
+        valid_mask = (w_factor != _TARGET_NODATA) & (s_factor != slope_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = NODATA_USLE
+        result[:] = _TARGET_NODATA
         result[valid_mask] = (
             1.0 / (w_factor[valid_mask] * s_factor[valid_mask]))
         return result
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [thresholded_w_factor_path, thresholded_slope_path], ws_op,
-        out_ws_factor_inverse_path, gdal.GDT_Float32, NODATA_USLE,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(thresholded_w_factor_path, 1), (thresholded_slope_path, 1)], ws_op,
+        out_ws_factor_inverse_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_inverse_s_factor(
         thresholded_slope_path, out_s_factor_inverse_path):
     """Calculate 1/s."""
-    slope_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(thresholded_slope_path)
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-        thresholded_slope_path)
+
+    slope_nodata = pygeoprocessing.get_raster_info(
+        thresholded_slope_path)['nodata'][0]
 
     def s_op(s_factor):
         """Calculate the inverse s factor."""
         valid_mask = (s_factor != slope_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = NODATA_USLE
+        result[:] = _TARGET_NODATA
         result[valid_mask] = 1.0 / s_factor[valid_mask]
         return result
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [thresholded_slope_path], s_op,
-        out_s_factor_inverse_path, gdal.GDT_Float32, NODATA_USLE,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(thresholded_slope_path, 1)], s_op,
+        out_s_factor_inverse_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
     """Calculate log10(d_up/d_dn)."""
     # ic can be positive or negative, so float.min is a reasonable nodata value
-    ic_nodata = numpy.finfo('float32').min
-    d_up_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(d_up_path)
-    d_dn_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(d_dn_path)
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(d_up_path)
+    d_dn_nodata = pygeoprocessing.get_raster_info(d_dn_path)['nodata'][0]
 
     def ic_op(d_up, d_dn):
         """Calculate IC factor."""
         valid_mask = (
-            (d_up != d_up_nodata) & (d_dn != d_dn_nodata) & (d_dn != 0) &
+            (d_up != _TARGET_NODATA) & (d_dn != d_dn_nodata) & (d_dn != 0) &
             (d_up != 0))
         ic_array = numpy.empty(valid_mask.shape)
-        ic_array[:] = ic_nodata
-        ic_array[valid_mask] = numpy.log10(d_up[valid_mask] / d_dn[valid_mask])
+        ic_array[:] = _IC_NODATA
+        ic_array[valid_mask] = numpy.log10(
+            d_up[valid_mask] / d_dn[valid_mask])
         return ic_array
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [d_up_path, d_dn_path], ic_op, out_ic_factor_path,
-        gdal.GDT_Float32, ic_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(d_up_path, 1), (d_dn_path, 1)], ic_op, out_ic_factor_path,
+        gdal.GDT_Float32, _IC_NODATA)
 
 
 def _calculate_sdr(
         k_factor, ic_0, sdr_max, ic_path, stream_path, out_sdr_path):
     """Derive SDR from k, ic0, ic; 0 on the stream and clamped to sdr_max."""
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(stream_path)
-    ic_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(ic_path)
 
     def sdr_op(ic_factor, stream):
         """Calculate SDR factor."""
         valid_mask = (
-            (ic_factor != ic_nodata) & (stream != 1))
+            (ic_factor != _IC_NODATA) & (stream != 1))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = NODATA_USLE
+        result[:] = _TARGET_NODATA
         result[valid_mask] = (
             sdr_max / (1+numpy.exp((ic_0-ic_factor[valid_mask])/k_factor)))
         result[stream == 1] = 0.0
         return result
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [ic_path, stream_path], sdr_op, out_sdr_path,
-        gdal.GDT_Float32, NODATA_USLE, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(ic_path, 1), (stream_path, 1)], sdr_op, out_sdr_path,
+        gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
     """Calculate USLE * SDR."""
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(usle_path)
-    sdr_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(sdr_path)
-    usle_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(usle_path)
 
     def sed_export_op(usle, sdr):
         """Sediment export."""
-        valid_mask = (usle != usle_nodata) & (sdr != sdr_nodata)
+        valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = NODATA_USLE
+        result[:] = _TARGET_NODATA
         result[valid_mask] = usle[valid_mask] * sdr[valid_mask]
         return result
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [usle_path, sdr_path], sed_export_op, out_sed_export_path,
-        gdal.GDT_Float32, NODATA_USLE, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(usle_path, 1), (sdr_path, 1)], sed_export_op, out_sed_export_path,
+        gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_sed_retention_index(
         rkls_path, usle_path, sdr_path, sdr_max,
         out_sed_retention_index_path):
     """Calculate (rkls-usle) * sdr  / sdr_max."""
-    rkls_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(rkls_path)
-    usle_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(usle_path)
-    sdr_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(sdr_path)
 
     def sediment_index_op(rkls, usle, sdr_factor):
         """Calculate sediment retention index."""
         valid_mask = (
-            (rkls != rkls_nodata) & (usle != usle_nodata) &
-            (sdr_factor != sdr_nodata))
+            (rkls != _TARGET_NODATA) & (usle != _TARGET_NODATA) &
+            (sdr_factor != _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = nodata_sed_retention_index
+        result[:] = _TARGET_NODATA
         result[valid_mask] = (
             (rkls[valid_mask] - usle[valid_mask]) *
             sdr_factor[valid_mask] / sdr_max)
         return result
 
-    nodata_sed_retention_index = -1
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(rkls_path)
-
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [rkls_path, usle_path, sdr_path], sediment_index_op,
-        out_sed_retention_index_path, gdal.GDT_Float32,
-        nodata_sed_retention_index, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in [rkls_path, usle_path, sdr_path]],
+        sediment_index_op, out_sed_retention_index_path, gdal.GDT_Float32,
+        _TARGET_NODATA)
 
 
 def _calculate_sed_retention(
@@ -895,34 +864,29 @@ def _calculate_sed_retention(
     Returns:
         None
     """
-    rkls_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(rkls_path)
-    usle_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(usle_path)
-    stream_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(stream_path)
-    sdr_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(sdr_path)
+    stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
 
     def sediment_retention_bare_soil_op(
             rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
         """Subtract bare soil export from real landcover."""
         valid_mask = (
-            (rkls != rkls_nodata) & (usle != usle_nodata) &
-            (stream_factor != stream_nodata) & (sdr_factor != sdr_nodata) &
-            (sdr_factor_bare_soil != sdr_nodata))
+            (rkls != _TARGET_NODATA) & (usle != _TARGET_NODATA) &
+            (stream_factor != stream_nodata) &
+            (sdr_factor != _TARGET_NODATA) &
+            (sdr_factor_bare_soil != _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = nodata_sediment_retention
+        result[:] = _TARGET_NODATA
         result[valid_mask] = (
             rkls[valid_mask] * sdr_factor_bare_soil[valid_mask] -
             usle[valid_mask] * sdr_factor[valid_mask]) * (
                 1 - stream_factor[valid_mask])
         return result
 
-    nodata_sediment_retention = -1
-
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(rkls_path)
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [rkls_path, usle_path, stream_path, sdr_path, sdr_bare_soil_path],
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in [
+            rkls_path, usle_path, stream_path, sdr_path, sdr_bare_soil_path]],
         sediment_retention_bare_soil_op, out_sed_ret_bare_soil_path,
-        gdal.GDT_Float32, nodata_sediment_retention, out_pixel_size,
-        "intersection", dataset_to_align_index=0, vectorize_op=False)
+        gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _generate_report(
@@ -932,12 +896,12 @@ def _generate_report(
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
 
     field_summaries = {
-        'usle_tot': natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-            usle_path, watersheds_path, 'ws_id').total,
-        'sed_export': natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-            sed_export_path, watersheds_path, 'ws_id').total,
-        'sed_retent': natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-            sed_retention_path, watersheds_path, 'ws_id').total,
+        'usle_tot': pygeoprocessing.zonal_statistics(
+            (usle_path, 1), watersheds_path, 'ws_id'),
+        'sed_export': pygeoprocessing.zonal_statistics(
+            (sed_export_path, 1), watersheds_path, 'ws_id'),
+        'sed_retent': pygeoprocessing.zonal_statistics(
+            (sed_retention_path, 1), watersheds_path, 'ws_id'),
         }
 
     original_datasource = ogr.Open(watersheds_path)
@@ -960,7 +924,7 @@ def _generate_report(
         for field_name in field_summaries:
             ws_id = feature.GetFieldAsInteger('ws_id')
             feature.SetField(
-                field_name, float(field_summaries[field_name][ws_id]))
+                field_name, float(field_summaries[field_name][ws_id]['sum']))
         layer.SetFeature(feature)
     original_datasource.Destroy()
     datasource_copy.Destroy()
@@ -1008,13 +972,13 @@ def validate(args, limit_to=None):
             elif args[key] in ['', None]:
                 no_value_list.append(key)
 
-    if len(missing_key_list) > 0:
+    if missing_key_list:
         # if there are missing keys, we have raise KeyError to stop hard
         raise KeyError(
             "The following keys were expected in `args` but were missing " +
             ', '.join(missing_key_list))
 
-    if len(no_value_list) > 0:
+    if no_value_list:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
 

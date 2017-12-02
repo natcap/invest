@@ -360,13 +360,13 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
   file ..\..\HISTORY.rst
 
+  ; Copy over all the sample parameter files
+  File ..\..\data\invest-data\*.invs.json
+
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
   File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
   ; runmodel.bat is here to help automate testing the UIs.
   File runmodel.bat
-
-;  SetOutPath "$INSTDIR\${INVEST_3_FOLDER_x64}\"
-;  File /r /x *.hg* /x *.svn* ..\${INVEST_3_FOLDER_x64}\*
 
   SetOutPath "$INSTDIR\documentation"
   File /r /x *.hg* /x *.svn* ..\..\doc\users-guide\build\html\*

@@ -187,7 +187,7 @@ class CoastalBlueCarbon(model.InVESTModel):
     def _price_table_sufficiency_changed(self, new_sufficiency):
         self.price.set_interactive(not new_sufficiency)
         self.interest_rate.set_interactive(not new_sufficiency)
-        self.price_table_uri.set_interactive(not new_sufficiency)
+        self.price_table_uri.set_interactive(new_sufficiency)
 
     def assemble_args(self):
         args = {
@@ -214,10 +214,12 @@ class CoastalBlueCarbon(model.InVESTModel):
         }
 
         if self.do_economic_analysis.value():
-            args[self.do_price_table.args_key] = self.do_price_table.value()
             args[self.price.args_key] = self.price.value()
             args[self.interest_rate.args_key] = self.interest_rate.value()
-            args[self.price_table_uri.args_key] = self.price_table_uri.value()
             args[self.discount_rate.args_key] = self.discount_rate.value()
+
+            args[self.do_price_table.args_key] = self.do_price_table.value()
+            if self.do_price_table.value() == True:
+                args[self.price_table_uri.args_key] = self.price_table_uri.value()
 
         return args

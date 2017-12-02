@@ -12,78 +12,49 @@ import logging
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('invest-autotest.py')
 
-# Mapping of model keys to scenarios to run through the model's UI.
+# Mapping of model keys to datastacks to run through the model's UI.
 # Paths are assumed to be relative to the data root.
-SCENARIOS = {
-    'carbon': [os.path.join('carbon', 'carbon_willamette.invs.json')],
-    'coastal_blue_carbon': [
-        os.path.join('CoastalBlueCarbon', 'cbc_galveston_bay.invs.json')],
-    'coastal_blue_carbon_preprocessor': [
-        os.path.join('CoastalBlueCarbon', 'cbc_pre_galveston_bay.invs.json')],
-    'coastal_vulnerability': [
-        os.path.join('CoastalProtection', 'coastal_vuln_wcvi.invs.json')],
+DATASTACKS = {
+    'carbon': ['carbon_willamette.invs.json'],
+    'coastal_blue_carbon': ['cbc_galveston_bay.invs.json'],
+    'coastal_blue_carbon_preprocessor': ['cbc_pre_galveston_bay.invs.json'],
+    'coastal_vulnerability': ['coastal_vuln_wcvi.invs.json'],
     'crop_production_percentile': [
-        os.path.join('CropProduction', 'sample_user_data',
-                     'crop_production_percentile_demo.invs.json')],
+        'crop_production_percentile_demo.invs.json'],
     'crop_production_regression': [
-        os.path.join('CropProduction', 'sample_user_data',
-                     'crop_production_regression_demo.invs.json')],
-    'delineateit': [
-        os.path.join('Base_Data', 'Freshwater',
-                     'delineateit_willamette.invs.json')],
-    'finfish_aquaculture': [
-        os.path.join('Aquaculture',
-                     'atlantic_salmon_british_columbia.invs.json')],
+        'crop_production_regression_demo.invs.json'],
+    'delineateit': ['delineateit_willamette.invs.json'],
+    'finfish_aquaculture': ['atlantic_salmon_british_columbia.invs.json'],
     'fisheries': [
-        os.path.join('Fisheries', 'blue_crab_galveston_bay.invs.json'),
-        os.path.join('Fisheries', 'dungeness_crab_hood_canal.invs.json'),
-        os.path.join('Fisheries', 'spiny_lobster_belize.invs.json'),
-        os.path.join('Fisheries', 'white_shrimp_galveston_bay.invs.json'),
+        'blue_crab_galveston_bay.invs.json',
+        'dungeness_crab_hood_canal.invs.json',
+        'spiny_lobster_belize.invs.json',
+        'white_shrimp_galveston_bay.invs.json',
     ],
-    'fisheries_hst': [
-        os.path.join('Fisheries', 'fisheries_hst_demo.invs.json')],
-    'forest_carbon_edge_effect': [
-        os.path.join('forest_carbon_edge_effect',
-                     'forest_carbon_amazonia.invs.json')],
-    'globio': [os.path.join('globio', 'globio_demo.invs.json')],
-    'habitat_quality': [
-        os.path.join('HabitatQuality', 'habitat_quality_willamette.invs.json')],
-    'hra': [os.path.join('HabitatRiskAssess', 'hra_wcvi.invs.json')],
-    'habitat_risk_assessment_preprocessor': [
-        os.path.join('HabitatRiskAssess', 'hra_pre_wcvi.invs.json')],
-    'hydropower_water_yield': [
-        os.path.join('Hydropower', 'annual_water_yield_willamette.invs.json')],
-    'ndr': [
-        os.path.join('Base_Data', 'Freshwater',
-                     'ndr_n_p_willamette.invs.json')],
-    'overlap_analysis': [
-        os.path.join('OverlapAnalysis', 'overlap_wcvi.invs.json')],
-    'overlap_analysis_mz': [
-        os.path.join('OverlapAnalysis', 'overlap_mz_wcvi.invs.json')],
-    'pollination': [
-        os.path.join('pollination', 'pollination_willamette.invs.json')],
-    'recreation': [
-        os.path.join('recreation', 'recreation_andros.invs.json')],
-    'routedem': [
-        os.path.join('Base_Data', 'Freshwater',
-                     'routedem_willamette.invs.json')],
-    'scenario_generator_proximity': [
-        os.path.join('scenario_proximity',
-                     'scenario_proximity_amazonia.invs.json')],
-    'scenario_generator': [
-        os.path.join('ScenarioGenerator', 'scenario_generator_demo.invs.json')],
-    'scenic_quality': [
-        os.path.join('ScenicQuality', 'wind_turbines_wcvi.invs.json')],
-    'sdr': [
-        os.path.join('Base_Data', 'Freshwater', 'sdr_willamette.invs.json')],
-    'seasonal_water_yield': [
-        os.path.join('seasonal_water_yield', 'swy_willamette.invs.json')],
-    'wind_energy': [os.path.join('WindEnergy', 'new_england.invs.json')],
+    'fisheries_hst': ['fisheries_hst_demo.invs.json'],
+    'forest_carbon_edge_effect': ['forest_carbon_amazonia.invs.json'],
+    'globio': ['globio_demo.invs.json'],
+    'habitat_quality': ['habitat_quality_willamette.invs.json'],
+    'hra': ['hra_wcvi.invs.json'],
+    'habitat_risk_assessment_preprocessor': ['hra_pre_wcvi.invs.json'],
+    'hydropower_water_yield': ['annual_water_yield_willamette.invs.json'],
+    'ndr': ['ndr_n_p_willamette.invs.json'],
+    'overlap_analysis': ['overlap_wcvi.invs.json'],
+    'overlap_analysis_mz': ['overlap_mz_wcvi.invs.json'],
+    'pollination': ['pollination_willamette.invs.json'],
+    'recreation': ['recreation_andros.invs.json'],
+    'routedem': ['routedem_willamette.invs.json'],
+    'scenario_generator_proximity': ['scenario_proximity_amazonia.invs.json'],
+    'scenario_generator': ['scenario_generator_demo.invs.json'],
+    'scenic_quality': ['wind_turbines_wcvi.invs.json'],
+    'sdr': ['sdr_willamette.invs.json'],
+    'seasonal_water_yield': ['swy_willamette.invs.json'],
+    'wind_energy': ['new_england.invs.json'],
     'wave_energy': [
-        os.path.join('WaveEnergy', 'wave_energy_aquabuoy_wcvi.invs.json'),
-        os.path.join('WaveEnergy', 'wave_energy_owc_wcvi.invs.json'),
-        os.path.join('WaveEnergy', 'wave_energy_pelamis_wcvi.invs.json'),
-        os.path.join('WaveEnergy', 'wave_energy_wavedragon_wcvi.invs.json'),
+        'wave_energy_aquabuoy_wcvi.invs.json',
+        'wave_energy_owc_wcvi.invs.json',
+        'wave_energy_pelamis_wcvi.invs.json',
+        'wave_energy_wavedragon_wcvi.invs.json',
     ],
 }
 
@@ -98,11 +69,11 @@ def sh(command, capture=True):
         return p_stdout
 
 
-def run_model(modelname, binary, workspace, scenario, headless=False):
+def run_model(modelname, binary, workspace, datastack, headless=False):
     """Run an InVEST model, checking the error code of the process."""
     # Using a list here allows subprocess to handle escaping of paths.
     command = [binary, modelname, '--quickrun', '--workspace=%s' % workspace,
-               '-y', '--scenario=%s' % scenario]
+               '-y', '--datastack=%s' % datastack]
     if headless:
         command.append('--headless')
 
@@ -146,7 +117,7 @@ def main(user_args=None):
               'be ./data/invest-data/ or a directory at the same '
               'level. If executing from a built InVEST binary, this will be '
               'the current directory (".").  Default value: "."'
-              ))
+             ))
     parser.add_argument(
         '--workspace',
         default=tempfile.mkdtemp(),
@@ -163,17 +134,17 @@ def main(user_args=None):
     LOGGER.info('Running on %s CPUs', args.max_cpus)
 
     pairs = []
-    for name, scenarios in SCENARIOS.iteritems():
+    for name, datastacks in DATASTACKS.iteritems():
         if not name.startswith(args.prefix):
             continue
 
-        for scenario_index, scenario in enumerate(scenarios):
-            pairs.append((name, scenario, scenario_index))
+        for datastack_index, datastack in enumerate(datastacks):
+            pairs.append((name, datastack, datastack_index))
 
     pool = multiprocessing.Pool(processes=args.max_cpus)  # cpu_count()-1
     processes = []
-    for modelname, scenario, scenario_index in pairs:
-        scenario = os.path.join(args.cwd, scenario)
+    for modelname, datastack, datastack_index in pairs:
+        datastack = os.path.join(args.cwd, datastack)
 
         for headless in (True, False):
             headless_string = ''
@@ -184,25 +155,25 @@ def main(user_args=None):
             workspace = os.path.join(os.path.abspath(args.workspace),
                                      'autorun_%s_%s_%s' % (modelname,
                                                            headless_string,
-                                                           scenario_index))
+                                                           datastack_index))
             process = pool.apply_async(run_model, (modelname,
                                                    args.binary,
                                                    workspace,
-                                                   scenario,
+                                                   datastack,
                                                    headless))
-            processes.append((process, scenario, headless, workspace))
+            processes.append((process, datastack, headless, workspace))
 
     # get() blocks until the result is ready.
     model_results = {}
-    for _process, _scenario, _headless, _workspace in processes:
+    for _process, _datastack, _headless, _workspace in processes:
         result = _process.get()
-        model_results[(result[0], _scenario, _headless, _workspace)] = result[1:]
+        model_results[(result[0], _datastack, _headless, _workspace)] = result[1:]
 
     # add 10 for ' (headless)'
     max_width = max([len(key[0])+11 for key in model_results.keys()])
     failures = 0
 
-    scenario_width = max([len(key[1]) for key in model_results.keys()])
+    datastack_width = max([len(key[1]) for key in model_results.keys()])
 
     # record all statuses, sorted by the modelname, being sure to start on a
     # new line.
@@ -210,15 +181,15 @@ def main(user_args=None):
     status_messages += '\n%s %s %s\n' % (
         string.ljust('MODELNAME', max_width+1),
         string.ljust('EXIT CODE', 10),  # len('EXIT CODE')+1
-        'SCENARIO')
-    for (modelname, scenario, headless, _), exitcode in sorted(
+        'DATASTACK')
+    for (modelname, datastack, headless, _), exitcode in sorted(
             model_results.iteritems(), key=lambda x: x[0]):
         if headless:
             modelname += ' (headless)'
         status_messages += "%s %s %s\n" % (
             string.ljust(modelname, max_width+1),
             string.ljust(str(exitcode[0]), 10),
-            scenario)
+            datastack)
         if exitcode[0] > 0:
             failures += 1
 
@@ -227,10 +198,10 @@ def main(user_args=None):
         status_messages += '%s %s %s %s\n' % (
             string.ljust('MODELNAME', max_width+1),
             string.ljust('EXIT CODE', 10),
-            string.ljust('SCENARIO', scenario_width),
+            string.ljust('DATASTACK', datastack_width),
             'WORKSPACE'
         )
-        for (modelname, scenario, headless, workspace), exitcode in sorted(
+        for (modelname, datastack, headless, workspace), exitcode in sorted(
                 [(k, v) for (k, v) in model_results.iteritems()
                  if v[0] != 0],
                 key=lambda x: x[0]):
@@ -239,7 +210,7 @@ def main(user_args=None):
             status_messages += "%s %s %s %s\n" % (
                 string.ljust(modelname, max_width+1),
                 string.ljust(str(exitcode[0]), 10),
-                string.ljust(scenario, scenario_width),
+                string.ljust(datastack, datastack_width),
                 workspace
             )
 

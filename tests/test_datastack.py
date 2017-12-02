@@ -16,7 +16,7 @@ FW_DATA = os.path.join(DATA_DIR, 'Base_Data', 'Freshwater')
 POLLINATION_DATA = os.path.join(DATA_DIR, 'pollination')
 
 
-class ScenariosTest(unittest.TestCase):
+class DatastacksTest(unittest.TestCase):
     def setUp(self):
         self.workspace = tempfile.mkdtemp()
 
@@ -24,7 +24,7 @@ class ScenariosTest(unittest.TestCase):
         shutil.rmtree(self.workspace)
 
     def test_collect_simple_parameters(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         params = {
             'a': 1,
             'b': u'hello there',
@@ -34,7 +34,7 @@ class ScenariosTest(unittest.TestCase):
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
 
         with tarfile.open(archive_path) as tar:
@@ -43,20 +43,21 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(len(os.listdir(out_directory)), 3)
 
         self.assertEqual(
-            json.load(open(os.path.join(out_directory,
-                                        'parameters.json')))['args'],
+            json.load(open(
+                os.path.join(out_directory,
+                             datastack.DATASTACK_PARAMETER_FILENAME)))['args'],
             {'a': 1, 'b': u'hello there', 'c': u'plain bytestring', 'd': ''})
 
     @scm.skip_if_data_missing(FW_DATA)
     def test_collect_multipart_gdal_raster(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         params = {
             'raster': os.path.join(FW_DATA, 'dem'),
         }
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -65,7 +66,8 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
 
         self.assertEqual(len(archived_params), 1)
         pygeoprocessing.testing.assert_rasters_equal(
@@ -75,26 +77,25 @@ class ScenariosTest(unittest.TestCase):
     @scm.skip_if_data_missing(POLLINATION_DATA)
     def test_collect_geotiff(self):
         # Necessary test, as this is proving to be an issue.
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         params = {
             'raster': os.path.join(POLLINATION_DATA, 'landcover.tif'),
         }
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
 
         dest_dir = os.path.join(self.workspace, 'extracted_archive')
-        archived_params = scenarios.extract_scenario_archive(archive_path,
-                                                             dest_dir)
+        archived_params = datastack.extract_datastack_archive(archive_path,
+                                                              dest_dir)
         pygeoprocessing.testing.assert_rasters_equal(
             params['raster'],
             os.path.join(dest_dir, 'data', archived_params['raster']))
 
     @scm.skip_if_data_missing(FW_DATA)
     def test_collect_ogr_vector(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         source_vector_path = os.path.join(FW_DATA, 'watersheds.shp')
         source_vector = ogr.Open(source_vector_path)
-
 
         for format_name, extension in (('ESRI Shapefile', 'shp'),
                                        ('GeoJSON', 'geojson')):
@@ -112,8 +113,8 @@ class ScenariosTest(unittest.TestCase):
                                         'archive.invs.tar.gz')
 
             # Collect the vector's files into a single archive
-            scenarios.build_scenario_archive(params, 'sample_model',
-                                             archive_path)
+            datastack.build_datastack_archive(params, 'sample_model',
+                                              archive_path)
 
             # extract the archive
             out_directory = os.path.join(dest_dir, 'extracted_archive')
@@ -121,7 +122,9 @@ class ScenariosTest(unittest.TestCase):
                 tar.extractall(out_directory)
 
             archived_params = json.load(
-                open(os.path.join(out_directory, 'parameters.json')))['args']
+                open(os.path.join(
+                    out_directory,
+                    datastack.DATASTACK_PARAMETER_FILENAME)))['args']
             pygeoprocessing.testing.assert_vectors_equal(
                 params['vector'], os.path.join(out_directory,
                                                archived_params['vector']),
@@ -132,14 +135,14 @@ class ScenariosTest(unittest.TestCase):
 
     @scm.skip_if_data_missing(FW_DATA)
     def test_collect_ogr_table(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         params = {
             'table': os.path.join(DATA_DIR, 'carbon', 'carbon_pools_samp.csv'),
         }
 
         # Collect the raster's files into a single archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -147,7 +150,9 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(
+                out_directory,
+                datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         pygeoprocessing.testing.assert_csv_equal(
             params['table'], os.path.join(out_directory,
                                           archived_params['table'])
@@ -156,7 +161,7 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(len(archived_params), 1)  # sanity check
 
     def test_nonspatial_single_file(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
 
         params = {
             'some_file': os.path.join(self.workspace, 'foo.txt')
@@ -166,7 +171,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -174,7 +179,8 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         pygeoprocessing.testing.assert_text_equal(
             params['some_file'], os.path.join(out_directory,
                                               archived_params['some_file'])
@@ -183,7 +189,7 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(len(archived_params), 1)  # sanity check
 
     def test_data_dir(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         params = {
             'data_dir': os.path.join(self.workspace, 'data_dir')
         }
@@ -204,7 +210,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -212,7 +218,8 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         dest_datadir_digest = pygeoprocessing.testing.digest_folder(
             os.path.join(out_directory, archived_params['data_dir']))
 
@@ -222,7 +229,7 @@ class ScenariosTest(unittest.TestCase):
                 src_datadir_digest, dest_datadir_digest))
 
     def test_list_of_inputs(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         params = {
             'file_list': [
                 os.path.join(self.workspace, 'foo.txt'),
@@ -238,7 +245,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -246,7 +253,8 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
         dest_digest = pygeoprocessing.testing.digest_file_list(
             [os.path.join(out_directory, filename)
              for filename in archived_params['file_list']])
@@ -257,7 +265,7 @@ class ScenariosTest(unittest.TestCase):
                 src_digest, dest_digest))
 
     def test_duplicate_filepaths(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         params = {
             'foo': os.path.join(self.workspace, 'foo.txt'),
             'bar': os.path.join(self.workspace, 'foo.txt'),
@@ -267,7 +275,7 @@ class ScenariosTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -275,7 +283,8 @@ class ScenariosTest(unittest.TestCase):
             tar.extractall(out_directory)
 
         archived_params = json.load(
-            open(os.path.join(out_directory, 'parameters.json')))['args']
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
 
         # Assert that the archived 'foo' and 'bar' params point to the same
         # file.
@@ -289,7 +298,7 @@ class ScenariosTest(unittest.TestCase):
             len(os.listdir(os.path.join(out_directory, 'data'))), 1)
 
     def test_archive_extraction(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
         params = {
             'blank': '',
             'a': 1,
@@ -322,9 +331,9 @@ class ScenariosTest(unittest.TestCase):
 
         # collect parameters:
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        archive_params = scenarios.extract_scenario_archive(
+        archive_params = datastack.extract_datastack_archive(
             archive_path, out_directory)
         pygeoprocessing.testing.assert_rasters_equal(
             archive_params['raster'], params['raster'])
@@ -347,7 +356,7 @@ class ScenariosTest(unittest.TestCase):
             pygeoprocessing.testing.digest_file_list(params['file_list']))
 
     def test_nested_args_keys(self):
-        from natcap.invest import scenarios
+        from natcap.invest import datastack
 
         params = {
             'a': {
@@ -356,14 +365,14 @@ class ScenariosTest(unittest.TestCase):
         }
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        scenarios.build_scenario_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        archive_params = scenarios.extract_scenario_archive(
+        archive_params = datastack.extract_datastack_archive(
             archive_path, out_directory)
         self.assertEqual(archive_params, params)
 
-    def test_scenario_parameter_set(self):
-        from natcap.invest import scenarios, __version__
+    def test_datastack_parameter_set(self):
+        from natcap.invest import datastack, __version__
 
         params = {
             'a': 1,
@@ -387,10 +396,10 @@ class ScenariosTest(unittest.TestCase):
         paramset_filename = os.path.join(self.workspace, 'paramset.json')
 
         # Write the parameter set
-        scenarios.write_parameter_set(paramset_filename, params, modelname)
+        datastack.build_parameter_set(params, modelname, paramset_filename)
 
         # Read back the parameter set
-        args, invest_version, callable_name = scenarios.read_parameter_set(
+        args, callable_name, invest_version = datastack.extract_parameter_set(
             paramset_filename)
 
         # parameter set calculations normalizes all paths.
@@ -404,7 +413,7 @@ class ScenariosTest(unittest.TestCase):
         self.assertEqual(callable_name, modelname)
 
     def test_relative_parameter_set(self):
-        from natcap.invest import scenarios, __version__
+        from natcap.invest import datastack, __version__
 
         params = {
             'a': 1,
@@ -432,8 +441,8 @@ class ScenariosTest(unittest.TestCase):
         os.makedirs(params['data_dir'])
 
         # Write the parameter set
-        scenarios.write_parameter_set(
-            paramset_filename, params, modelname, relative=True)
+        datastack.build_parameter_set(
+            params, modelname, paramset_filename, relative=True)
 
         # Check that the written parameter set file contains relative paths
         raw_args = json.load(open(paramset_filename))['args']
@@ -445,21 +454,21 @@ class ScenariosTest(unittest.TestCase):
 
         # Read back the parameter set and verify the returned paths are
         # absolute
-        args, invest_version, callable_name = scenarios.read_parameter_set(
+        args, callable_name, invest_version = datastack.extract_parameter_set(
             paramset_filename)
 
         self.assertEqual(args, params)
         self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
-    def test_read_parameters_from_logfile(self):
-        """Scenarios: Verify we can read args from a logfile."""
-        from natcap.invest import scenarios
+    def test_extract_parameters_from_logfile(self):
+        """Datastacks: Verify we can read args from a logfile."""
+        from natcap.invest import datastack
         logfile_path = os.path.join(self.workspace, 'logfile')
         with open(logfile_path, 'w') as logfile:
             logfile.write(textwrap.dedent("""
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO
-                Arguments:
+                Arguments for InVEST some_model some_version:
                 suffix                           foo
                 some_int                         1
                 some_float                       2.33
@@ -468,16 +477,21 @@ class ScenariosTest(unittest.TestCase):
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
             """))
 
-        params = scenarios.read_parameters_from_logfile(logfile_path)
+        params = datastack.extract_parameters_from_logfile(logfile_path)
 
-        self.assertEqual(params, {u'suffix': u'foo',
-                                  u'some_int': 1,
-                                  u'some_float': 2.33,
-                                  u'workspace_dir': u'some_workspace_dir'})
+        expected_params = datastack.ParameterSet(
+            {u'suffix': u'foo',
+             u'some_int': 1,
+             u'some_float': 2.33,
+             u'workspace_dir': u'some_workspace_dir'},
+            'some_model',
+            'some_version')
 
-    def test_read_parameters_from_logfile_valueerror(self):
-        """Scenarios: verify that valuerror raised when no params found."""
-        from natcap.invest import scenarios
+        self.assertEqual(params, expected_params)
+
+    def test_extract_parameters_from_logfile_valueerror(self):
+        """Datastacks: verify that valuerror raised when no params found."""
+        from natcap.invest import datastack
         logfile_path = os.path.join(self.workspace, 'logfile')
         with open(logfile_path, 'w') as logfile:
             logfile.write(textwrap.dedent("""
@@ -486,22 +500,188 @@ class ScenariosTest(unittest.TestCase):
             """))
 
         with self.assertRaises(ValueError):
-            scenarios.read_parameters_from_logfile(logfile_path)
+            datastack.extract_parameters_from_logfile(logfile_path)
+
+    def test_get_datastack_info_archive(self):
+        """Datastacks: verify we can get info from an archive."""
+        import natcap.invest
+        from natcap.invest import datastack
+
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'd': '',
+        }
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        datastack.build_datastack_archive(params, 'sample_model', archive_path)
+
+        stack_type, stack_info = datastack.get_datastack_info(archive_path)
+
+        self.assertEqual(stack_type, 'archive')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            params, 'sample_model', natcap.invest.__version__))
+
+    def test_get_datatack_info_parameter_set(self):
+        import natcap.invest
+        from natcap.invest import datastack
+
+        params = {
+            'a': 1,
+            'b': u'hello there',
+            'c': 'plain bytestring',
+            'd': '',
+        }
+
+        json_path = os.path.join(self.workspace, 'archive.invs.json')
+        datastack.build_parameter_set(params, 'sample_model', json_path)
+
+        stack_type, stack_info = datastack.get_datastack_info(json_path)
+        self.assertEqual(stack_type, 'json')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            params, 'sample_model', natcap.invest.__version__))
+
+    def test_get_datastack_info_logfile_new_style(self):
+        import natcap.invest
+        from natcap.invest import datastack
+        args = {
+            'a': 1,
+            'b': 2.7,
+            'c': [1, 2, 3.55],
+            'd': 'hello, world!'
+        }
+
+        logfile_path = os.path.join(self.workspace, 'logfile.txt')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(datastack.format_args_dict(args, 'some_modelname'))
+
+        stack_type, stack_info = datastack.get_datastack_info(logfile_path)
+        self.assertEqual(stack_type, 'logfile')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            args, 'some_modelname', natcap.invest.__version__))
+
+    def test_get_datastack_info_logfile_iui_style(self):
+        from natcap.invest import datastack
+
+        logfile_path = os.path.join(self.workspace, 'logfile.txt')
+        with open(logfile_path, 'w') as logfile:
+            logfile.write(textwrap.dedent("""
+                Arguments:
+                suffix                           foo
+                some_int                         1
+                some_float                       2.33
+                workspace_dir                    some_workspace_dir
+
+                some other logging here.
+            """))
+
+        expected_args = {
+            'suffix': 'foo',
+            'some_int': 1,
+            'some_float': 2.33,
+            'workspace_dir': 'some_workspace_dir',
+        }
+
+        stack_type, stack_info = datastack.get_datastack_info(logfile_path)
+        self.assertEqual(stack_type, 'logfile')
+        self.assertEqual(stack_info, datastack.ParameterSet(
+            expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
+
+    def test_mixed_path_separators_in_paramset(self):
+        """Datastacks: parameter sets must handle windows and linux paths."""
+        from natcap.invest import datastack
+
+        args = {
+            'windows_path': os.path.join(self.workspace,
+                                         'dir1\\filepath1.txt'),
+            'linux_path': os.path.join(self.workspace,
+                                       'dir2/filepath2.txt'),
+        }
+        for filepath in args.values():
+            normalized_path = os.path.normpath(filepath.replace('\\', os.sep))
+            try:
+                os.makedirs(os.path.dirname(normalized_path))
+            except OSError:
+                pass
+
+            with open(normalized_path, 'w') as open_file:
+                open_file.write('the contents of this file do not matter.')
+
+        paramset_path = os.path.join(self.workspace, 'paramset.invest.json')
+        datastack.build_parameter_set(args, 'sample_model', paramset_path,
+                                      relative=True)
+
+        with open(paramset_path) as saved_parameters:
+            args = json.loads(saved_parameters.read())['args']
+            expected_args = {
+                'windows_path': os.path.join(u'dir1', u'filepath1.txt'),
+                'linux_path': os.path.join(u'dir2', u'filepath2.txt'),
+            }
+            self.assertEqual(expected_args, args)
+
+        expected_args = {
+            'windows_path': os.path.join(self.workspace, 'dir1',
+                                         'filepath1.txt'),
+            'linux_path': os.path.join(self.workspace, 'dir2',
+                                       'filepath2.txt'),
+        }
+
+        extracted_paramset = datastack.extract_parameter_set(paramset_path)
+        self.assertEqual(extracted_paramset.args, expected_args)
+
+
+    def test_mixed_path_separators_in_archive(self):
+        """Datastacks: datastack archives must handle windows, linux paths."""
+        from natcap.invest import datastack
+
+        args = {
+            'windows_path': os.path.join(self.workspace,
+                                         'dir1\\filepath1.txt'),
+            'linux_path': os.path.join(self.workspace,
+                                       'dir2/filepath2.txt'),
+        }
+        for filepath in args.values():
+            normalized_path = os.path.normpath(filepath.replace('\\', os.sep))
+            try:
+                os.makedirs(os.path.dirname(normalized_path))
+            except OSError:
+                pass
+
+            with open(normalized_path, 'w') as open_file:
+                open_file.write('the contents of this file do not matter.')
+
+        datastack_path = os.path.join(self.workspace, 'archive.invest.tar.gz')
+        datastack.build_datastack_archive(args, 'sample_model', datastack_path)
+
+        extraction_path = os.path.join(self.workspace, 'extracted_dir')
+        extracted_args = datastack.extract_datastack_archive(datastack_path,
+                                                             extraction_path)
+
+        expected_args = {
+            u'windows_path': os.path.join(extraction_path, 'data',
+                                          u'filepath1.txt'),
+            u'linux_path': os.path.join(extraction_path, u'data',
+                                        u'filepath2.txt'),
+        }
+        self.maxDiff = None  # show whole exception on failure
+        self.assertEqual(extracted_args, expected_args)
 
 
 class UtilitiesTest(unittest.TestCase):
     def test_print_args(self):
-        """Scenarios: verify that we format args correctly."""
-        from natcap.invest.scenarios import format_args_dict
+        """Datastacks: verify that we format args correctly."""
+        from natcap.invest.datastack import format_args_dict, __version__
 
         args_dict = {
             'some_arg': [1, 2, 3, 4],
             'foo': 'bar',
         }
 
-        args_string = format_args_dict(args_dict=args_dict)
+        args_string = format_args_dict(args_dict=args_dict,
+                                       model_name='test_model')
         expected_string = six.text_type(
-            'Arguments:\n'
+            'Arguments for InVEST test_model %s:\n'
             'foo      bar\n'
-            'some_arg [1, 2, 3, 4]\n')
+            'some_arg [1, 2, 3, 4]\n') % __version__
         self.assertEqual(args_string, expected_string)

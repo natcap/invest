@@ -148,12 +148,7 @@ def execute(args):
     out_nodata = -64329.0
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
-    try:
-        suffix = args['suffix']
-        if suffix != "" and not suffix.startswith('_'):
-            suffix = '_' + suffix
-    except KeyError:
-        suffix = ''
+    suffix = utils.make_suffix_string(args, 'suffix')
 
     # Create a list of the biophysical parameters we are looking for from the
     # input csv files
