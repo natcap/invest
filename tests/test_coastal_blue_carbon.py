@@ -176,7 +176,7 @@ def _get_args(workspace, num_transitions=2, valuation=True):
             'do_economic_analysis': True,
             'do_price_table': False,
             'price': 2.,
-            'interest_rate': 5.,
+            'inflation_rate': 5.,
             'price_table_uri': None,
             'discount_rate': 2.
         })
@@ -714,7 +714,7 @@ class TestModel(unittest.TestCase):
             'discount_rate': 6.0,
             'do_economic_analysis': True,
             'do_price_table': True,
-            'interest_rate': 3.0,
+            'inflation_rate': 3.0,
             'lulc_lookup_uri': os.path.join(
                 sample_data_path,
                 'inputs/lulc_lookup.csv'),
