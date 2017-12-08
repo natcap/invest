@@ -50,6 +50,22 @@ class SDRTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation(self):
+        """SDR test regular validation."""
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+
+        validate_result = sdr.validate(args, limit_to=None)
+        self.assertFalse(
+            validate_result,
+            "expected no failed validations instead got %s" % str(
+                validate_result))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_regression(self):
         """SDR base regression test on sample data.
 
