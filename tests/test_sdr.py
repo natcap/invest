@@ -66,6 +66,35 @@ class SDRTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation_missing_key(self):
+        """SDR test validation that's missing keys."""
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = {}
+        with self.assertRaises(KeyError) as context:
+            validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(
+            'The following keys were expected' in str(context.exception))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation_key_no_value(self):
+        """SDR test validation that's missing a value on a key."""
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        args['dem_path'] = ''
+        validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            'expected a validation error but didn\'t get one')
+
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_regression(self):
         """SDR base regression test on sample data.
 
