@@ -117,7 +117,7 @@ class SDRTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_sdr_validation_watershed_missing_ws_id(self):
-        """SDR test validation notices missing `ws_id` on watershed."""
+        """SDR test validation notices missing `ws_id` field on watershed."""
         from natcap.invest import sdr
 
         vector_driver = ogr.GetDriverByName("ESRI Shapefile")
@@ -154,7 +154,7 @@ class SDRTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_sdr_validation_watershed_missing_ws_id_value(self):
-        """SDR test validation notices missing `ws_id` value on watershed."""
+        """SDR test validation notices bad value in `ws_id` watershed."""
         from natcap.invest import sdr
 
         vector_driver = ogr.GetDriverByName("ESRI Shapefile")
