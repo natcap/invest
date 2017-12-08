@@ -995,6 +995,33 @@ def validate(args, limit_to=None):
             args['drainage_path'] not in ['', None]):
         file_type_list.append(('drainage_path', 'raster'))
 
+    if limit_to in ['watersheds_path', None]:
+        if os.path.exists(args['watersheds_path']):
+            try:
+                watersheds_vector = ogr.Open(args['watersheds_path'])
+                watersheds_layer = watersheds_vector.GetLayer()
+                watersheds_defn = watersheds_layer.GetLayerDefn()
+                if watersheds_defn.GetFieldIndex('ws_id') == -1:
+                    validation_error_list.append((
+                        ['watersheds_path'],
+                        'does not have a `ws_id` field defined.'))
+                else:
+                    for feature in watersheds_layer:
+                        try:
+                            value = feature.GetFieldAsString('ws_id')
+                            _ = int(value)  # value should be an integer
+                        except ValueError:
+                            validation_error_list.append((
+                                ['watersheds_path'],
+                                'feature %s has an invalid value of "%s" in '
+                                '\'ws_id\' column, it should be an integer '
+                                'value' % (str(feature.GetFID()), value)))
+            finally:
+                feature = None
+                watersheds_defn = None
+                watersheds_layer = None
+                watersheds_vector = None
+
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
         for key, key_type in file_type_list:
