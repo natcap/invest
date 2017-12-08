@@ -8,6 +8,7 @@ import sys
 import os
 import tempfile
 import logging
+import platform
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('invest-autotest.py')
@@ -72,10 +73,18 @@ def sh(command, capture=True):
 def run_model(modelname, binary, workspace, datastack, headless=False):
     """Run an InVEST model, checking the error code of the process."""
     # Using a list here allows subprocess to handle escaping of paths.
-    command = [binary, modelname, '--quickrun', '--workspace=%s' % workspace,
-               '-y', '--datastack=%s' % datastack]
+    command = [binary, '--workspace', workspace, '--datastack', datastack,
+               modelname]
     if headless:
         command.append('--headless')
+        command.append('--overwrite')
+    else:
+        command.append('--quickrun')
+
+    # Subprocess on linux/mac seems to prefer a list of args, but path escaping
+    # (by passing the command as a list) seems to work better on Windows.
+    if platform.system() != 'Windows':
+        command = ' '.join(command)
 
     try:
         subprocess.check_call(command, shell=True)
