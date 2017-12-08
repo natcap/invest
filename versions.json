@@ -1,7 +1,7 @@
 {
-    "data/invest-data": "169",
+    "data/invest-data": "170",
     "data/invest-test-data": "130",
-    "doc/users-guide": "fbf97910a6ab",
+    "doc/users-guide": "c90f25e30de3",
     "src/pygeoprocessing": "REQUIREMENTS_TXT:pygeoprocessing",
     "src/pyinstaller": {
         "Darwin": "v3.1.1",
