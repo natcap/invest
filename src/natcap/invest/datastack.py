@@ -500,9 +500,9 @@ def extract_parameter_set(paramset_path):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring) and len(args_param) > 0:
             # Convert paths to whatever makes sense for the current OS.
-            args_param = os.path.normpath(args_param)
             expanded_param = os.path.expandvars(
-                os.path.expanduser(args_param))
+                os.path.expanduser(
+                    os.path.normpath(args_param)))
             if os.path.isabs(expanded_param):
                 return expanded_param
             else:
