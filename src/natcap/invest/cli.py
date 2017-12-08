@@ -415,7 +415,7 @@ def main():
         LOGGER.info('imported target %s from %s',
                     model_module.__name__, model_module)
 
-        paramset = datastack.read_parameter_set(args.datastack)
+        paramset = datastack.extract_parameter_set(args.datastack)
 
         # prefer CLI option for workspace dir, but use paramset workspace if
         # the CLI options do not define a workspace.
@@ -432,10 +432,11 @@ def main():
                     '"workspace_dir" parameter to your datastack.'))
 
         with utils.prepare_workspace(workspace,
-                                     name=paramset.name,
+                                     name=paramset.model_name,
                                      logging_level=log_level):
             LOGGER.log(datastack.ARGS_LOG_LEVEL,
-                       datastack.format_args_dict(paramset.args))
+                       datastack.format_args_dict(paramset.args,
+                                                  paramset.model_name))
             if not args.validate:
                 LOGGER.info('Skipping validation by user request')
             else:
@@ -446,7 +447,7 @@ def main():
                 except AttributeError:
                     LOGGER.warn(
                         '%s does not have a defined validation function.',
-                        paramset.name)
+                        paramset.model_name)
                 finally:
                     if model_warnings:
                         LOGGER.warn('Warnings found: \n%s',
