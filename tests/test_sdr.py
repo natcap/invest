@@ -68,6 +68,26 @@ class SDRTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation_wrong_types(self):
+        """SDR test validation for wrong GIS types."""
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        # swap watershed and dem for different types
+        args['dem_path'], args['watersheds_path'] = (
+            args['watersheds_path'], args['dem_path'])
+        validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any")
+        self.assertTrue(all(
+            [x[1] in ['not a raster', 'not a vector']
+            for x in validate_result]))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_sdr_validation_missing_key(self):
         """SDR test validation that's missing keys."""
         from natcap.invest import sdr
