@@ -117,13 +117,13 @@ class CoastalBlueCarbon(model.InVESTModel):
         self.lulc_transition_maps_list = inputs.Multi(
             args_key=u'lulc_transition_maps_list',
             callable_=functools.partial(inputs.File, label="Input"),
-            label=u'Transition LULC Rasters (GDAL-supported)',
+            label=u'LULC Transition ("Snapshot") Rasters (GDAL-supported)',
             link_text=u'Add Another')
         self.add_input(self.lulc_transition_maps_list)
         self.lulc_transition_years_list = inputs.Multi(
             args_key=u'lulc_transition_years_list',
             callable_=functools.partial(inputs.Text, label="Input"),
-            label=u'Transition Years',
+            label=u'LULC Transition ("Snapshot") Years',
             link_text=u'Add Another')
         self.add_input(self.lulc_transition_years_list)
         self.analysis_year = inputs.Text(
