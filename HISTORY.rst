@@ -2,7 +2,7 @@
 
 .. Unreleased Changes
 
-Unreleased Changes
+3.4.1 (2017-12-11)
 ------------------
 * In the Coastal Blue Carbon model, the ``interest_rate`` parameter has been renamed to ``inflation_rate``.
 * Fixed issues with sample parameter sets for InVEST Habitat Quality, Habitat Risk Assessment, Coastal Blue Carbon, and Coastal Blue Carbon Preprocessors.  All sample parameter sets now have the correct paths to the model's input files, and correctly note the name of the model that they apply to.
