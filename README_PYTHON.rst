@@ -47,8 +47,10 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 
 {requirements}
 
-Additionally, ``PyQt4`` is required to use the ``invest`` cli, but is not
-required for development against ``natcap.invest``.
+Additionally, a python binding for Qt is needed to use the InVEST GUI, but is
+not required for development against ``natcap.invest``.  InVEST uses the
+interface library ``qtpy`` to support ``PyQt4``, ``PyQt5``, and ``PySide``.
+
 
 Installing from Source
 ----------------------
