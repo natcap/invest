@@ -117,13 +117,13 @@ class CoastalBlueCarbon(model.InVESTModel):
         self.lulc_transition_maps_list = inputs.Multi(
             args_key=u'lulc_transition_maps_list',
             callable_=functools.partial(inputs.File, label="Input"),
-            label=u'Transition LULC Rasters (GDAL-supported)',
+            label=u'LULC Transition ("Snapshot") Rasters (GDAL-supported)',
             link_text=u'Add Another')
         self.add_input(self.lulc_transition_maps_list)
         self.lulc_transition_years_list = inputs.Multi(
             args_key=u'lulc_transition_years_list',
             callable_=functools.partial(inputs.Text, label="Input"),
-            label=u'Transition Years',
+            label=u'LULC Transition ("Snapshot") Years',
             link_text=u'Add Another')
         self.add_input(self.lulc_transition_years_list)
         self.analysis_year = inputs.Text(
@@ -151,14 +151,12 @@ class CoastalBlueCarbon(model.InVESTModel):
             label=u'Price',
             validator=self.validator)
         self.do_economic_analysis.add_input(self.price)
-        self.interest_rate = inputs.Text(
-            args_key=u'interest_rate',
-            helptext=(
-                u"The interest rate on the price per Megatonne CO2e, "
-                u"compounded yearly."),
+        self.inflation_rate = inputs.Text(
+            args_key=u'inflation_rate',
+            helptext=u"Annual change in the price per unit of carbon",
             label=u'Interest Rate (%)',
             validator=self.validator)
-        self.do_economic_analysis.add_input(self.interest_rate)
+        self.do_economic_analysis.add_input(self.inflation_rate)
         self.price_table_uri = inputs.File(
             args_key=u'price_table_uri',
             helptext=(
@@ -186,7 +184,7 @@ class CoastalBlueCarbon(model.InVESTModel):
 
     def _price_table_sufficiency_changed(self, new_sufficiency):
         self.price.set_interactive(not new_sufficiency)
-        self.interest_rate.set_interactive(not new_sufficiency)
+        self.inflation_rate.set_interactive(not new_sufficiency)
         self.price_table_uri.set_interactive(new_sufficiency)
 
     def assemble_args(self):
@@ -215,7 +213,7 @@ class CoastalBlueCarbon(model.InVESTModel):
 
         if self.do_economic_analysis.value():
             args[self.price.args_key] = self.price.value()
-            args[self.interest_rate.args_key] = self.interest_rate.value()
+            args[self.inflation_rate.args_key] = self.inflation_rate.value()
             args[self.discount_rate.args_key] = self.discount_rate.value()
 
             args[self.do_price_table.args_key] = self.do_price_table.value()

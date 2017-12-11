@@ -2,7 +2,13 @@
 
 .. Unreleased Changes
 
-Unreleased Changes
+3.4.1 (2017-12-11)
+------------------
+* In the Coastal Blue Carbon model, the ``interest_rate`` parameter has been renamed to ``inflation_rate``.
+* Fixed issues with sample parameter sets for InVEST Habitat Quality, Habitat Risk Assessment, Coastal Blue Carbon, and Coastal Blue Carbon Preprocessors.  All sample parameter sets now have the correct paths to the model's input files, and correctly note the name of the model that they apply to.
+* Added better error checking to the SDR model for missing `ws_id` and invalid `ws_id` values such as `None` or some non-integer value. Also added tests for the `SDR` validation module.
+
+3.4.0 (2017-12-03)
 ------------------
 * Fixed an issue with most InVEST models where the suffix was not being reflected in the output filenames.  This was due to a bug in the InVEST UI, where the suffix args key was assumed to be ``'suffix'``.  Instances of ``InVESTModel`` now accept a keyword argument to defined the suffix args key.
 * Fixed an issue/bug in Seasonal Water Yield that would occur when a user provided a datastack that had nodata values overlapping with valid DEM locations. Previously this would generate an NaN for various biophysical values at that pixel and cascade it downslope. Now any question of nodata on a valid DEM pixel is treated as "0". This will make serious visual artifacts on the output, but should help users pinpoint the source of bad data rather than crash.

@@ -7,6 +7,7 @@ import os
 
 import numpy
 from osgeo import ogr
+from osgeo import osr
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
@@ -47,6 +48,146 @@ class SDRTests(unittest.TestCase):
             'workspace_dir': workspace_dir,
         }
         return args
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation(self):
+        """SDR test regular validation."""
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        args['drainage_path'] = os.path.join(
+            REGRESSION_DATA, 'sample_drainage.tif')
+        validate_result = sdr.validate(args, limit_to=None)
+        self.assertFalse(
+            validate_result,
+            "expected no failed validations instead got %s" % str(
+                validate_result))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation_wrong_types(self):
+        """SDR test validation for wrong GIS types."""
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        # swap watershed and dem for different types
+        args['dem_path'], args['watersheds_path'] = (
+            args['watersheds_path'], args['dem_path'])
+        validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any")
+        self.assertTrue(all(
+            [x[1] in ['not a raster', 'not a vector']
+            for x in validate_result]))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation_missing_key(self):
+        """SDR test validation that's missing keys."""
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = {}
+        with self.assertRaises(KeyError) as context:
+            validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(
+            'The following keys were expected' in str(context.exception))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation_key_no_value(self):
+        """SDR test validation that's missing a value on a key."""
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        args['dem_path'] = ''
+        validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            'expected a validation error but didn\'t get one')
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation_watershed_missing_ws_id(self):
+        """SDR test validation notices missing `ws_id` field on watershed."""
+        from natcap.invest import sdr
+
+        vector_driver = ogr.GetDriverByName("ESRI Shapefile")
+        test_watershed_path = os.path.join(
+            self.workspace_dir, 'watershed.shp')
+        vector = vector_driver.CreateDataSource(test_watershed_path)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        layer = vector.CreateLayer("watershed", srs, ogr.wkbPoint)
+        # forget to add a 'ws_id' field
+        layer.CreateField(ogr.FieldDefn("id", ogr.OFTInteger))
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetField("id", 0)
+        feature.SetGeometry(ogr.CreateGeometryFromWkt("POINT(-112.2 42.5)"))
+        layer.CreateFeature(feature)
+        feature = None
+        layer = None
+        vector = None
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        args['watersheds_path'] = test_watershed_path
+        validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            'expected a validation error but didn\'t get one')
+        self.assertTrue(
+            'does not have a `ws_id` field defined' in validate_result[0][1],
+            'expected a `ws_id` validation error, but got %s' % (
+                validate_result))
+
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_sdr_validation_watershed_missing_ws_id_value(self):
+        """SDR test validation notices bad value in `ws_id` watershed."""
+        from natcap.invest import sdr
+
+        vector_driver = ogr.GetDriverByName("ESRI Shapefile")
+        test_watershed_path = os.path.join(
+            self.workspace_dir, 'watershed.shp')
+        vector = vector_driver.CreateDataSource(test_watershed_path)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        layer = vector.CreateLayer("watershed", srs, ogr.wkbPoint)
+        # forget to add a 'ws_id' field
+        layer.CreateField(ogr.FieldDefn("ws_id", ogr.OFTInteger))
+        feature = ogr.Feature(layer.GetLayerDefn())
+        # intentionally not setting ws_id
+        feature.SetGeometry(ogr.CreateGeometryFromWkt("POINT(-112.2 42.5)"))
+        layer.CreateFeature(feature)
+        feature = None
+        layer = None
+        vector = None
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        args['watersheds_path'] = test_watershed_path
+
+        validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            'expected a validation error but didn\'t get one')
+        self.assertTrue(
+            'feature 0 has an invalid value of' in validate_result[0][1],
+            'expected an invalid `ws_id` value but got %s' % (
+                validate_result))
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -141,7 +282,7 @@ class SDRTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_usle_p_nan(self):
-        """SDR est expected exception for USLE_P not a number."""
+        """SDR test expected exception for USLE_P not a number."""
         from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown

@@ -176,7 +176,7 @@ def _get_args(workspace, num_transitions=2, valuation=True):
             'do_economic_analysis': True,
             'do_price_table': False,
             'price': 2.,
-            'interest_rate': 5.,
+            'inflation_rate': 5.,
             'price_table_uri': None,
             'discount_rate': 2.
         })
@@ -462,11 +462,11 @@ class TestPreprocessor(unittest.TestCase):
         sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
         raster_0_uri = os.path.join(
             sample_data_path,
-            'inputs/GBJC_2004_mean_Resample.tif')
+            'inputs/GBJC_2010_mean_Resample.tif')
         raster_1_uri = os.path.join(
-            sample_data_path, 'inputs/GBJC_2050_mean_Resample.tif')
+            sample_data_path, 'inputs/GBJC_2030_mean_Resample.tif')
         raster_2_uri = os.path.join(
-            sample_data_path, 'inputs/GBJC_2100_mean_Resample.tif')
+            sample_data_path, 'inputs/GBJC_2050_mean_Resample.tif')
         args = {
             'workspace_dir': _create_workspace(),
             'results_suffix': '150225',
@@ -714,24 +714,24 @@ class TestModel(unittest.TestCase):
             'discount_rate': 6.0,
             'do_economic_analysis': True,
             'do_price_table': True,
-            'interest_rate': 3.0,
+            'inflation_rate': 3.0,
             'lulc_lookup_uri': os.path.join(
                 sample_data_path,
                 'inputs/lulc_lookup.csv'),
             'lulc_baseline_map_uri': os.path.join(
                 sample_data_path,
-                'inputs/GBJC_2004_mean_Resample.tif'),
-            'lulc_baseline_year': 2004,
+                'inputs/GBJC_2010_mean_Resample.tif'),
+            'lulc_baseline_year': 2010,
             'lulc_transition_maps_list': [
                 os.path.join(
                     sample_data_path,
-                    'inputs/GBJC_2050_mean_Resample.tif'),
+                    'inputs/GBJC_2030_mean_Resample.tif'),
                 os.path.join(
                     sample_data_path,
-                    'inputs/GBJC_2100_mean_Resample.tif')],
-            'lulc_transition_years_list': [2050, 2100],
+                    'inputs/GBJC_2050_mean_Resample.tif')],
+            'lulc_transition_years_list': [2030, 2050],
             'price_table_uri': os.path.join(
-                sample_data_path, 'inputs/price_table.csv'),
+                sample_data_path, 'inputs/Price_table_SCC3.csv'),
             'lulc_transition_matrix_uri': os.path.join(
                 sample_data_path,
                 'outputs_preprocessor/transitions_sample.csv'),
@@ -751,9 +751,10 @@ class TestModel(unittest.TestCase):
         # those inputs would propagate to this raster.
         u = numpy.unique(npv_array)
         u.sort()
-        a = numpy.array([-3.935801e+04, -2.052500e+04, -1.788486e+04,
-                      -1.787341e+04, 0.0, 1.145100e+01, 3.2086045e+03,
-                      3.5199617e+03, 3.770121e+03], dtype=numpy.float32)
+        a = numpy.array([-76992.05, -40101.57, -34930., -34821.32,
+                         0., 108.68, 6975.94, 7201.22, 7384.99],
+                        dtype=numpy.float32)
+
         a.sort()
         numpy.testing.assert_array_almost_equal(u, a, decimal=2)
 

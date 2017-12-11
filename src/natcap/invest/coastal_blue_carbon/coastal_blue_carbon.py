@@ -88,7 +88,7 @@ def execute(args):
             is included in the arguments and to be used or a price and interest
             rate is provided and to be used instead.
         price (float): the price per Megatonne CO2 e at the base year.
-        interest_rate (float): the interest rate on the price per Megatonne
+        inflation_rate (float): the interest rate on the price per Megatonne
             CO2e, compounded yearly.  Provided as a percentage (e.g. 3.0 for
             3%).
         price_table_uri (bool): if `args['do_price_table']` is set to `True`
@@ -117,7 +117,7 @@ def execute(args):
             'do_economic_analysis': '<boolean>',
             'do_price_table': '<boolean>',
             'price': '<float>',
-            'interest_rate': '<float>',
+            'inflation_rate': '<float>',
             'price_table_uri': 'path/to/price_table',
             'discount_rate': '<float>'
         }
@@ -572,7 +572,7 @@ def get_inputs(args):
         do_price_table (bool): whether to use the price table for the economic
             component of the analysis
         price (float): the price of net sequestered carbon
-        interest_rate (float): the interest rate on the price of carbon
+        inflation_rate (float): the interest rate on the price of carbon
         price_table_uri (str): price table filepath
         discount_rate (float): the discount rate on future valuations of carbon
 
@@ -725,9 +725,9 @@ def get_inputs(args):
                 d['snapshot_years'][0],
                 d['snapshot_years'][-1])
         else:
-            interest_rate = float(args['interest_rate']) * 0.01
+            inflation_rate = float(args['inflation_rate']) * 0.01
             price = float(args['price'])
-            d['price_t'] = (1 + interest_rate) ** numpy.arange(
+            d['price_t'] = (1 + inflation_rate) ** numpy.arange(
                 0, float(d['timesteps'])+1) * price
 
         d['price_t'] /= (1 + discount_rate) ** numpy.arange(0, d['timesteps']+1)
@@ -970,7 +970,7 @@ def validate(args, limit_to=None):
                          'lulc_baseline_map_uri',
                          'do_price_table',
                          'price',
-                         'interest_rate',
+                         'inflation_rate',
                          'price_table_uri',
                          'discount_rate'):
         try:
@@ -1035,7 +1035,7 @@ def validate(args, limit_to=None):
                              'Parameter must be an integer.'))
 
     for float_key in ('price',
-                      'interest_rate',
+                      'inflation_rate',
                       'discount_rate'):
         if limit_to in (float_key, None):
             try:

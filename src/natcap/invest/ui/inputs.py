@@ -2414,7 +2414,7 @@ class Multi(Container):
         Returns:
             ``None``
         """
-        self.clear_layout()
+        self.clear()
         for input_value in values:
             new_input_instance = self.callable_()
             new_input_instance.set_value(input_value)
