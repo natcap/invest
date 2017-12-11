@@ -1009,11 +1009,39 @@ def validate(args, limit_to=None):
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
-                elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
-                    if vector is None:
+
+        if limit_to in ['watersheds_path', None]:
+            # checks that watersheds are a vector, that they have 'ws_id' and
+            # that all their fields are defined
+            if os.path.exists(args['watersheds_path']):
+                try:
+                    watersheds_vector = ogr.Open(args['watersheds_path'])
+                    if watersheds_vector is None:
                         validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
+                            (['watersheds_path'], 'not a vector'))
+                    else:
+                        watersheds_layer = watersheds_vector.GetLayer()
+                        watersheds_defn = watersheds_layer.GetLayerDefn()
+                        if watersheds_defn.GetFieldIndex('ws_id') == -1:
+                            validation_error_list.append((
+                                ['watersheds_path'],
+                                'does not have a `ws_id` field defined.'))
+                        else:
+                            for feature in watersheds_layer:
+                                try:
+                                    value = feature.GetFieldAsString('ws_id')
+                                    _ = int(value)  # value should be an integer
+                                except ValueError:
+                                    validation_error_list.append((
+                                        ['watersheds_path'],
+                                        'feature %s has an invalid value of '
+                                        '"%s" in \'ws_id\' column, it should '
+                                        'be an integer value' % (
+                                            str(feature.GetFID()), value)))
+                finally:
+                    feature = None
+                    watersheds_defn = None
+                    watersheds_layer = None
+                    watersheds_vector = None
 
     return validation_error_list

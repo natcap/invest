@@ -6,6 +6,7 @@ Unreleased Changes
 ------------------
 * In the Coastal Blue Carbon model, the ``interest_rate`` parameter has been renamed to ``inflation_rate``.
 * Fixed issues with sample parameter sets for InVEST Habitat Quality, Habitat Risk Assessment, Coastal Blue Carbon, and Coastal Blue Carbon Preprocessors.  All sample parameter sets now have the correct paths to the model's input files, and correctly note the name of the model that they apply to.
+* Added better error checking to the SDR model for missing `ws_id` and invalid `ws_id` values such as `None` or some non-integer value. Also added tests for the `SDR` validation module.
 
 3.4.0 (2017-12-03)
 ------------------
