@@ -2303,8 +2303,18 @@ class ModelTests(_QtTest):
 
             QtCore.QTimer.singleShot(25, _check_dialog_and_close)
 
+            if hasattr(QtCore, 'QDesktopServices'):
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtCore.QDesktopServices.openUrl')
+            else:
+                # PyQt5 changed the location of this.
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtGui.QDesktopServices.openUrl')
+
             # simulate a mouse click on the localdocs hyperlink.
-            model_ui.links.linkActivated.emit('localdocs')
+            with patch_object as patched_openurl:
+                # simulate a mouse click on the localdocs hyperlink.
+                model_ui._check_local_docs('localdocs')
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -2350,12 +2360,13 @@ class ModelTests(_QtTest):
                                           '.QtGui.QDesktopServices.openUrl')
 
             # simulate a mouse click on the localdocs hyperlink.
-            with patch_object:
-                with mock.patch('os.path.exists', return_value=True):
-                    # simulate about --> view documentation menu.
-                    model_ui._check_local_docs('http://some_file_that_exists')
+            with patch_object as patched_openurl:
+                # simulate forums link clicked
+                model_ui._check_local_docs(
+                    'https://forums.naturalcapitalproject.org')
 
-            patch_object.assert_called_once()
+            patched_openurl.assert_called_once_with(
+                QtCore.QUrl('https://forums.naturalcapitalproject.org'))
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
