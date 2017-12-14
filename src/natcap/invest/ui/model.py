@@ -1370,6 +1370,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         if link in (None, 'localdocs'):
             link = 'file://' + os.path.abspath(self.localdoc)
 
+        LOGGER.debug('Activating link: %s', link)
         if link.startswith(('http', 'ftp', 'file')):
             if os.path.exists(link.replace('file://', '')):
                 try:
