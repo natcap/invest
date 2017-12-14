@@ -2316,16 +2316,46 @@ class ModelTests(_QtTest):
             model_ui.run()
 
             if hasattr(QtCore, 'QDesktopServices'):
-                patch_object = mock.patch('qtpy.QtCore.QDesktopServices.openUrl')
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtCore.QDesktopServices.openUrl')
             else:
                 # PyQt5 changed the location of this.
-                patch_object = mock.patch('qtpy.QtGui.QDesktopServices.openUrl')
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtGui.QDesktopServices.openUrl')
+
+            # simulate a mouse click on the localdocs hyperlink.
+            with patch_object as patched_openurl:
+                with mock.patch('os.path.exists', return_value=True):
+                    # simulate about --> view documentation menu.
+                    model_ui._check_local_docs('http://some_file_that_exists')
+
+            patched_openurl.assert_called_once_with(
+                QtCore.QUrl('http://some_file_that_exists'))
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_forums_link_launch(self):
+        """UI Model: Check that we can link to the forums."""
+        model_ui = ModelTests.build_model()
+        try:
+            model_ui.run()
+
+            if hasattr(QtCore, 'QDesktopServices'):
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtCore.QDesktopServices.openUrl')
+            else:
+                # PyQt5 changed the location of this.
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtGui.QDesktopServices.openUrl')
 
             # simulate a mouse click on the localdocs hyperlink.
             with patch_object:
                 with mock.patch('os.path.exists', return_value=True):
                     # simulate about --> view documentation menu.
                     model_ui._check_local_docs('http://some_file_that_exists')
+
+            patch_object.assert_called_once()
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
