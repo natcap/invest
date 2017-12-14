@@ -96,7 +96,7 @@ def is_probably_datastack(filepath):
             return True
 
         # Is it a logfile?
-        if 'Arguments:' in ' '.join(opened_file.readlines(20)):
+        if 'Arguments' in ' '.join(opened_file.readlines(20)):
             return True
 
     try:
