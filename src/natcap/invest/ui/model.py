@@ -1374,7 +1374,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                                local_path)
                 self.local_docs_missing_dialog.exec_()
                 return
-            link = QtCore.QUrl.fromLocalFile(link)
+            link = QtCore.QUrl.fromLocalFile(local_path)
         else:
             link = QtCore.QUrl(link)
 
