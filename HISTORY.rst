@@ -2,6 +2,11 @@
 
 .. Unreleased Changes
 
+Unreleased Changes
+------------------
+* Fixed a cross-platform issue with the UI where logfiles could not be dropped onto UI windows.
+* Model arguments loaded from logfiles are now cast to their correct literal value.  This addresses an issue where some models containing boolean inputs could not have their parameters loaded from logfiles.
+
 3.4.1 (2017-12-11)
 ------------------
 * In the Coastal Blue Carbon model, the ``interest_rate`` parameter has been renamed to ``inflation_rate``.
