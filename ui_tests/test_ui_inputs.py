@@ -3058,6 +3058,20 @@ class IsProbablyDatastackTests(unittest.TestCase):
 
         self.assertTrue(model.is_probably_datastack(filepath))
 
+    def test_parameter_logfile_startswith_args(self):
+        """Model UI datastack: logfile starting with arguments is datastack."""
+        from natcap.invest.ui import model
+
+        filepath = os.path.join(self.workspace, 'logfile.txt')
+        with open(filepath, 'w') as logfile:
+            logfile.write(textwrap.dedent(
+                """Arguments:
+		   carbon_pools_path file_a.csv
+		   lulc_cur_path     file_b.tif
+		   workspace_dir     new_workspace_dir"""))
+	self.assertTrue(model.is_probably_datastack(filepath))
+
+
     def test_csv_not_a_parameter(self):
         """Model UI datastack: a CSV is probably not a parameter set."""
         from natcap.invest.ui import model

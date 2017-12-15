@@ -26,6 +26,7 @@ import codecs
 import pprint
 import collections
 import re
+import ast
 
 from osgeo import gdal
 from osgeo import ogr
@@ -594,13 +595,14 @@ def extract_parameters_from_logfile(logfile_path):
                     pass
             return value
 
-        if args_value.startswith('[') and args_value.endswith(']'):
-            # it's a list!  Just need to cast the types.
-            # fancy indexing excludes [ / ]
-            args_value = [_smart_cast(list_item) for list_item in
-                          args_value[1:-1].split(', ')]
-        else:
-            args_value = _smart_cast(args_value)
+        try:
+            # This will cast values appropriately for int, float, bool,
+            # nonetype, list.
+            args_value = ast.literal_eval(args_value)
+        except (ValueError, SyntaxError):
+            # If ast.literal_eval can't evaluate the string, keep the string
+            # as it is.
+            pass
 
         args_dict[args_key] = args_value
     return ParameterSet(args_dict, modelname, invest_version)
