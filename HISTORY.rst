@@ -2,7 +2,7 @@
 
 .. Unreleased Changes
 
-Unreleased Changes
+3.4.2 (2017-12-15)
 ------------------
 * Fixed a cross-platform issue with the UI where logfiles could not be dropped onto UI windows.
 * Model arguments loaded from logfiles are now cast to their correct literal value.  This addresses an issue where some models containing boolean inputs could not have their parameters loaded from logfiles.
