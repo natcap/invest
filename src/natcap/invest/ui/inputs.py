@@ -374,13 +374,14 @@ class FileSystemRunDialog(QtWidgets.QDialog):
             self.backButton, QtWidgets.QDialogButtonBox.AcceptRole)
 
         # connect the buttons to their callback functions.
-        self.backButton.clicked.connect(self.close_window)
+        self.backButton.clicked.connect(self.close)
 
         # add the buttonBox to the window.
         self.layout().addWidget(self.buttonBox)
 
         # Indicate that this window should be styled like a dialog.
         self.setWindowFlags(QtCore.Qt.Dialog)
+
 
     @staticmethod
     def _build_status_area_label():
@@ -470,18 +471,6 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         """
         open_workspace(self.out_folder)
 
-    def close_window(self):
-        """Close the window and reset the state of the process window.
-
-        Returns:
-            ``None``
-        """
-        self.openWorkspaceCB.setVisible(True)
-        self.openWorkspaceButton.setVisible(False)
-        self.messageArea.clear()
-        self.cancel = False
-        self.done(0)
-
     def reject(self):
         """Reject the dialog.
 
@@ -505,6 +494,11 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         if self.is_executing:
             event.ignore()
         else:
+            self.openWorkspaceCB.setVisible(True)
+            self.openWorkspaceButton.setVisible(False)
+            self.messageArea.clear()
+            self.cancel = False
+
             QtWidgets.QDialog.closeEvent(self, event)
 
 
