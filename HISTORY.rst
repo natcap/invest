@@ -5,6 +5,7 @@
 Unreleased Changes
 ------------------
 * Fixing an issue with the documentation and forums links on the InVEST model windows.  The links now correctly link to the documentation page or forums as needed.
+* Fixing an issue with the ``FileSystemRunDialog`` where pressing the 'X' button in the corner of the window would close the window, but not reset its state.  The window's state is now reset whenever the window is closed (and the window cannot be closed when the model is running)
 
 3.4.1 (2017-12-11)
 ------------------
