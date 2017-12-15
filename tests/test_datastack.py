@@ -549,7 +549,8 @@ class DatastacksTest(unittest.TestCase):
             'a': 1,
             'b': 2.7,
             'c': [1, 2, 3.55],
-            'd': 'hello, world!'
+            'd': 'hello, world!',
+            'e': False,
         }
 
         logfile_path = os.path.join(self.workspace, 'logfile.txt')

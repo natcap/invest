@@ -2303,8 +2303,18 @@ class ModelTests(_QtTest):
 
             QtCore.QTimer.singleShot(25, _check_dialog_and_close)
 
+            if hasattr(QtCore, 'QDesktopServices'):
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtCore.QDesktopServices.openUrl')
+            else:
+                # PyQt5 changed the location of this.
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtGui.QDesktopServices.openUrl')
+
             # simulate a mouse click on the localdocs hyperlink.
-            model_ui.links.linkActivated.emit('localdocs')
+            with patch_object as patched_openurl:
+                # simulate a mouse click on the localdocs hyperlink.
+                model_ui._check_local_docs('localdocs')
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -2316,16 +2326,47 @@ class ModelTests(_QtTest):
             model_ui.run()
 
             if hasattr(QtCore, 'QDesktopServices'):
-                patch_object = mock.patch('qtpy.QtCore.QDesktopServices.openUrl')
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtCore.QDesktopServices.openUrl')
             else:
                 # PyQt5 changed the location of this.
-                patch_object = mock.patch('qtpy.QtGui.QDesktopServices.openUrl')
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtGui.QDesktopServices.openUrl')
 
             # simulate a mouse click on the localdocs hyperlink.
-            with patch_object:
+            with patch_object as patched_openurl:
                 with mock.patch('os.path.exists', return_value=True):
                     # simulate about --> view documentation menu.
                     model_ui._check_local_docs('http://some_file_that_exists')
+
+            patched_openurl.assert_called_once_with(
+                QtCore.QUrl('http://some_file_that_exists'))
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_forums_link_launch(self):
+        """UI Model: Check that we can link to the forums."""
+        model_ui = ModelTests.build_model()
+        try:
+            model_ui.run()
+
+            if hasattr(QtCore, 'QDesktopServices'):
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtCore.QDesktopServices.openUrl')
+            else:
+                # PyQt5 changed the location of this.
+                patch_object = mock.patch('natcap.invest.ui.inputs'
+                                          '.QtGui.QDesktopServices.openUrl')
+
+            # simulate a mouse click on the localdocs hyperlink.
+            with patch_object as patched_openurl:
+                # simulate forums link clicked
+                model_ui._check_local_docs(
+                    'https://forums.naturalcapitalproject.org')
+
+            patched_openurl.assert_called_once_with(
+                QtCore.QUrl('https://forums.naturalcapitalproject.org'))
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -3017,6 +3058,20 @@ class IsProbablyDatastackTests(unittest.TestCase):
 
         self.assertTrue(model.is_probably_datastack(filepath))
 
+    def test_parameter_logfile_startswith_args(self):
+        """Model UI datastack: logfile starting with arguments is datastack."""
+        from natcap.invest.ui import model
+
+        filepath = os.path.join(self.workspace, 'logfile.txt')
+        with open(filepath, 'w') as logfile:
+            logfile.write(textwrap.dedent(
+                """Arguments:
+		   carbon_pools_path file_a.csv
+		   lulc_cur_path     file_b.tif
+		   workspace_dir     new_workspace_dir"""))
+	self.assertTrue(model.is_probably_datastack(filepath))
+
+
     def test_csv_not_a_parameter(self):
         """Model UI datastack: a CSV is probably not a parameter set."""
         from natcap.invest.ui import model
@@ -3029,3 +3084,38 @@ class IsProbablyDatastackTests(unittest.TestCase):
         self.assertFalse(model.is_probably_datastack(filepath))
 
 
+class FileSystemRunDialogTests(_QtTest):
+    def setUp(self):
+        _QtTest.setUp(self)
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        _QtTest.tearDown(self)
+        shutil.rmtree(self.workspace)
+
+    def test_window_close(self):
+        from natcap.invest.ui import inputs
+
+        dialog = inputs.FileSystemRunDialog()
+        dialog.show()
+        dialog.start('Window title', self.workspace)
+        self.qt_app.processEvents()
+
+        # Try to close the dialog, verify that it did not close.
+        dialog.close()  # This shouldn't do anything.
+        self.qt_app.processEvents()
+        self.assertTrue(dialog.isVisible())
+
+        # Finish the dialog, verify it is no longer visible.
+        dialog.finish(None)  # None = no exception encountered.
+        dialog.close()  # this should work now.
+        self.qt_app.processEvents()
+        self.assertFalse(dialog.isVisible())
+
+        # launch the window again and verify that the things that should have
+        # been cleared have been cleared.
+        dialog.show()
+        self.assertTrue(dialog.openWorkspaceCB.isVisible())
+        self.assertFalse(dialog.openWorkspaceButton.isVisible())
+        self.assertEqual(dialog.messageArea.text(), '')
+        self.assertEqual(dialog.cancel, False)
