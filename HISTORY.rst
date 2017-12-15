@@ -5,6 +5,7 @@
 Unreleased Changes
 ------------------
 * Fixed an issue where the Pollination Model's UI required a farm polygon. It should have been optional and now it is.
+* Fixing an issue with the documentation and forums links on the InVEST model windows.  The links now correctly link to the documentation page or forums as needed.
 
 3.4.1 (2017-12-11)
 ------------------
