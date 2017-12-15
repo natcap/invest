@@ -98,7 +98,7 @@ class Pollination(model.InVESTModel):
                 u"biophysical and guild table.  Any areas that overlap "
                 u"the landcover map will replace nesting substrate "
                 u"suitability with this value.  Ranges from 0..1."),
-            label=u'Farm Vector (Vector)',
+            label=u'Farm Vector (Vector) (optional)',
             validator=self.validator)
         self.add_input(self.farm_vector_path)
 
