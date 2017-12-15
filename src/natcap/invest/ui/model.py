@@ -1710,7 +1710,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             @QtCore.Slot()
             def _quickrun_close_model():
                 # exit with an error code that matches exception status of run.
-                self.form.run_dialog.close_window()
+                self.form.run_dialog.close()
                 self.close(prompt=False)
 
             self.form.run_finished.connect(_quickrun_close_model)

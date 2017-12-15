@@ -8,6 +8,7 @@ Unreleased Changes
 * Model arguments loaded from logfiles are now cast to their correct literal value.  This addresses an issue where some models containing boolean inputs could not have their parameters loaded from logfiles.
 * Fixed an issue where the Pollination Model's UI required a farm polygon. It should have been optional and now it is.
 * Fixing an issue with the documentation and forums links on the InVEST model windows.  The links now correctly link to the documentation page or forums as needed.
+* Fixing an issue with the ``FileSystemRunDialog`` where pressing the 'X' button in the corner of the window would close the window, but not reset its state.  The window's state is now reset whenever the window is closed (and the window cannot be closed when the model is running)
 
 3.4.1 (2017-12-11)
 ------------------
