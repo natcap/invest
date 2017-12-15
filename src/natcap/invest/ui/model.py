@@ -1370,16 +1370,22 @@ class InVESTModel(QtWidgets.QMainWindow):
 
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
-            link = 'file://' + os.path.abspath(self.localdoc)
-
-        if link.startswith(('http', 'ftp', 'file')):
-            if os.path.exists(link.replace('file://', '')):
-                try:
-                    QtCore.QDesktopServices.openUrl(link)
-                except AttributeError:
-                    QtGui.QDesktopServices.openUrl(QtCore.QUrl(link))
-            else:
+            local_path = os.path.abspath(self.localdoc)
+            if not os.path.exists(local_path):
+                LOGGER.warning('Could not find local docs path %s',
+                               local_path)
                 self.local_docs_missing_dialog.exec_()
+                return
+            link = QtCore.QUrl.fromLocalFile(local_path)
+        else:
+            link = QtCore.QUrl(link)
+
+        LOGGER.debug('Activating link: %s', link)
+        # Qt4 and Qt5 hvae QDesktopServices located in different places.
+        try:
+            QtCore.QDesktopServices.openUrl(link)
+        except AttributeError:
+            QtGui.QDesktopServices.openUrl(link)
 
     def _save_datastack_as(self):
         """Save the current set of inputs as a datastack.
