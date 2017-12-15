@@ -1348,8 +1348,7 @@ def validate(args, limit_to=None):
             'workspace_dir',
             'landcover_raster_path',
             'guild_table_path',
-            'landcover_biophysical_table_path',
-            'farm_vector_path']:
+            'landcover_biophysical_table_path']:
         if limit_to is None or limit_to == key:
             if key not in args:
                 missing_key_list.append(key)
@@ -1369,8 +1368,7 @@ def validate(args, limit_to=None):
     for key in [
             'landcover_raster_path',
             'guild_table_path',
-            'landcover_biophysical_table_path',
-            'farm_vector_path']:
+            'landcover_biophysical_table_path']:
         if (limit_to is None or limit_to == key) and (
                 not os.path.exists(args[key])):
             validation_error_list.append(
@@ -1381,7 +1379,8 @@ def validate(args, limit_to=None):
         for key, key_type in [
                 ('landcover_raster_path', 'raster'),
                 ('farm_vector_path', 'vector')]:
-            if (limit_to is None or limit_to == key) and key in args:
+            if ((limit_to is None or limit_to == key) and
+                    key in args and args[key] != ''):
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))

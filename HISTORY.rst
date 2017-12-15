@@ -2,6 +2,10 @@
 
 .. Unreleased Changes
 
+Unreleased Changes
+------------------
+* Fixed an issue where the Pollination Model's UI required a farm polygon. It should have been optional and now it is.
+
 3.4.1 (2017-12-11)
 ------------------
 * In the Coastal Blue Carbon model, the ``interest_rate`` parameter has been renamed to ``inflation_rate``.
