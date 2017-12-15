@@ -3070,3 +3070,31 @@ class IsProbablyDatastackTests(unittest.TestCase):
         self.assertFalse(model.is_probably_datastack(filepath))
 
 
+class FileSystemRunDialogTests(_QtTest):
+    def setUp(self):
+        _QtTest.setUp(self)
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        _QtTest.tearDown(self)
+        shutil.rmtree(self.workspace)
+
+
+    def test_window_close(self):
+        from natcap.invest.ui import inputs
+
+        dialog = inputs.FileSystemRunDialog()
+        dialog.show()
+        dialog.start('Window title', self.workspace)
+        self.qt_app.processEvents()
+
+        # Try to close the dialog, verify that it did not close.
+        dialog.close()  # This shouldn't do anything.
+        self.qt_app.processEvents()
+        self.assertTrue(dialog.isVisible())
+
+        # Finish the dialog, verify it is no longer visible.
+        dialog.finish(None)  # None = no exception encountered.
+        dialog.close()  # this should work now.
+        self.qt_app.processEvents()
+        self.assertFalse(dialog.isVisible())

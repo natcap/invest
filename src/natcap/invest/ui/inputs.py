@@ -382,7 +382,6 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         # Indicate that this window should be styled like a dialog.
         self.setWindowFlags(QtCore.Qt.Dialog)
 
-
     @staticmethod
     def _build_status_area_label():
         """Build the status area label.
