@@ -2,6 +2,10 @@
 
 .. Unreleased Changes
 
+Unreleased Changes
+------------------
+* Fixing an issue with the documentation and forums links on the InVEST model windows.  The links now correctly link to the documentation page or forums as needed.
+
 3.4.1 (2017-12-11)
 ------------------
 * In the Coastal Blue Carbon model, the ``interest_rate`` parameter has been renamed to ``inflation_rate``.
