@@ -3083,18 +3083,29 @@ class FileSystemRunDialogTests(_QtTest):
     def test_window_close(self):
         from natcap.invest.ui import inputs
 
-        dialog = inputs.FileSystemRunDialog()
-        dialog.show()
-        dialog.start('Window title', self.workspace)
-        self.qt_app.processEvents()
+        try:
+            dialog = inputs.FileSystemRunDialog()
+            dialog.show()
+            dialog.start('Window title', self.workspace)
+            self.qt_app.processEvents()
 
-        # Try to close the dialog, verify that it did not close.
-        dialog.close()  # This shouldn't do anything.
-        self.qt_app.processEvents()
-        self.assertTrue(dialog.isVisible())
+            # Try to close the dialog, verify that it did not close.
+            dialog.close()  # This shouldn't do anything.
+            self.qt_app.processEvents()
+            self.assertTrue(dialog.isVisible())
 
-        # Finish the dialog, verify it is no longer visible.
-        dialog.finish(None)  # None = no exception encountered.
-        dialog.close()  # this should work now.
-        self.qt_app.processEvents()
-        self.assertFalse(dialog.isVisible())
+            # Finish the dialog, verify it is no longer visible.
+            dialog.finish(None)  # None = no exception encountered.
+            dialog.close()  # this should work now.
+            self.qt_app.processEvents()
+            self.assertFalse(dialog.isVisible())
+
+            # launch the window again and verify that the things that should have
+            # been cleared have been cleared.
+            dialog.show()
+            self.assertTrue(dialog.openWorkspaceCB.isVisible())
+            self.assertFalse(dialog.openWorkspaceButton.isVisible())
+            self.assertEqual(dialog.messageArea.text(), '')
+            self.assertEqual(dialog.cancel, False)
+        finally:
+            dialog.destroy()
