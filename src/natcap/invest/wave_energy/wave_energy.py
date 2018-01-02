@@ -538,11 +538,11 @@ def execute(args):
     smlpm = float(machine_econ['smlpm'])
 
     # The NPV is for a 25 year period
-    year = 25.0
+    year = 25
 
     # A numpy array of length 25, representing the npv of a farm for
     # each year
-    time = np.linspace(0.0, year - 1.0, year)
+    time = np.linspace(0, year - 1, year)
 
     # The discount rate calculation for the npv equations
     rho = 1.0 / (1.0 + drate)
