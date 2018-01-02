@@ -1012,7 +1012,8 @@ def validate(args, limit_to=None):
             # that all their fields are defined
             if os.path.exists(args['watersheds_path']):
                 try:
-                    watersheds_vector = gdal.OpenEx(args['watersheds_path'])
+                    watersheds_vector = gdal.OpenEx(
+                        args['watersheds_path'], gdal.OF_VECTOR)
                     if watersheds_vector is None:
                         validation_error_list.append(
                             (['watersheds_path'], 'not a vector'))
