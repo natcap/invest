@@ -2603,8 +2603,8 @@ def copy_datasource_uri(shape_uri, copy_uri):
         os.remove(copy_uri)
 
     shape = gdal.OpenEx(shape_uri)
-    drv = ogr.GetDriverByName('ESRI Shapefile')
-    drv.CopyDataSource(shape, copy_uri)
+    drv = shape.GetDriver()
+    drv.CreateCopy(copy_uri, shape)
 
 
 def create_directories(directory_list):

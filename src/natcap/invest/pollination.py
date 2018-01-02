@@ -777,13 +777,13 @@ def _create_farm_result_vector(
     Returns:
         None.
     """
-    esri_driver = ogr.GetDriverByName("ESRI Shapefile")
     base_vector = gdal.OpenEx(base_vector_path)
     base_layer = base_vector.GetLayer()
     base_defn = base_layer.GetLayerDefn()
 
-    target_vector = esri_driver.CopyDataSource(
-        base_vector, target_vector_path)
+    driver = base_vector.GetDriver()
+    target_vector = driver.CreateCopy(
+        target_vector_path, base_vector)
     target_layer = target_vector.GetLayer()
     target_layer.CreateField(ogr.FieldDefn(fid_field_id, ogr.OFTInteger))
     for feature in target_layer:

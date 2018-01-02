@@ -200,8 +200,8 @@ def execute(args):
             file_registry['local_aoi_path'])
     else:
         aoi_vector = gdal.OpenEx(args['aoi_path'])
-        driver = ogr.GetDriverByName('ESRI Shapefile')
-        driver.CopyDataSource(aoi_vector, file_registry['local_aoi_path'])
+        driver = aoi_vector.GetDriver()
+        driver.CreateCopy(file_registry['local_aoi_path'], aoi_vector)
         # hard destroying the object just in case.  during testing I sometimes
         # had issues with shapefiles being unable to delete, __swig_destroy__
         # alleviated that
@@ -473,12 +473,12 @@ def _build_regression_coefficients(
         response_polygons_lookup[response_feature.GetFID()] = feature_polygon
     response_layer = None
 
-    driver = ogr.GetDriverByName('ESRI Shapefile')
+    driver = response_vector.GetDriver()
     if os.path.exists(out_coefficient_vector_path):
         driver.DeleteDataSource(out_coefficient_vector_path)
 
-    out_coefficent_vector = driver.CopyDataSource(
-        response_vector, out_coefficient_vector_path)
+    out_coefficent_vector = driver.CreateCopy(
+        out_coefficient_vector_path, response_vector)
     ogr.DataSource.__swig_destroy__(response_vector)
     response_vector = None
 
@@ -546,13 +546,13 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
     Returns:
         fid_field (string): name of FID field added to output vector_path
     """
-    driver = ogr.GetDriverByName('ESRI Shapefile')
     vector = gdal.OpenEx(vector_path)
+    driver = vector.GetDriver()
     if os.path.exists(out_fid_index_vector_path):
         os.remove(out_fid_index_vector_path)
 
-    fid_indexed_vector = driver.CopyDataSource(
-        vector, out_fid_index_vector_path)
+    fid_indexed_vector = driver.CreateCopy(
+        out_fid_index_vector_path, vector)
     fid_indexed_layer = fid_indexed_vector.GetLayer()
 
     # make a random field name

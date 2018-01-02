@@ -350,10 +350,8 @@ class RecModel(object):
 
         # Copy the input shapefile into the designated output folder
         LOGGER.info('Creating a copy of the input shapefile')
-        esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-        LOGGER.debug(out_aoi_pud_path)
-        pud_aoi_vector = esri_driver.CopyDataSource(
-            aoi_vector, out_aoi_pud_path)
+        driver = aoi_vector.GetDriver()
+        pud_aoi_vector = driver.CreateCopy(out_aoi_pud_path, aoi_vector)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
         pud_id_suffix_list = [
             'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',

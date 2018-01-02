@@ -774,12 +774,10 @@ def _aggregate_recharge(
             aggregate_vector_path)
         os.remove(aggregate_vector_path)
 
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_aoi_vector = gdal.OpenEx(aoi_path)
 
-    esri_driver.CopyDataSource(
-        original_aoi_vector, aggregate_vector_path)
-    esri_driver = None
+    driver = original_aoi_vector.GetDriver()
+    driver.CreateCopy(aggregate_vector_path, original_aoi_vector)
     ogr.DataSource.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
     aggregate_vector = gdal.OpenEx(aggregate_vector_path, 1)

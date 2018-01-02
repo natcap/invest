@@ -287,9 +287,9 @@ def execute(args):
         if os.path.isfile(summary_aoi_uri):
             os.remove(summary_aoi_uri)
         # Copy the input shapefile into the designated output folder
-        esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-        datasource_copy = esri_driver.CopyDataSource(
-            original_datasource, summary_aoi_uri)
+        driver = original_datasource.GetDriver()
+        datasource_copy = driver.CreateCopy(
+            summary_aoi_uri, original_datasource)
         layer = datasource_copy.GetLayer()
         msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
         msa_summary_field_def.SetWidth(24)

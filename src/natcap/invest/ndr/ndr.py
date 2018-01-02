@@ -453,10 +453,10 @@ def execute(args):
     # delete it then copy the input shapefile into the designated output folder
     if os.path.isfile(watershed_output_datasource_uri):
         os.remove(watershed_output_datasource_uri)
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+    driver = original_datasource.GetDriver()
     original_datasource = gdal.OpenEx(args['watersheds_path'])
-    output_datasource = esri_driver.CopyDataSource(
-        original_datasource, watershed_output_datasource_uri)
+    output_datasource = driver.CreateCopy(
+        watershed_output_datasource_uri, original_datasource)
     output_layer = output_datasource.GetLayer()
 
     # need this for low level route_flux function

@@ -241,13 +241,13 @@ def _aggregate_carbon_map(
     Returns:
         None
     """
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_serviceshed_datasource = gdal.OpenEx(aoi_uri)
+    driver = original_serviceshed_datasource.GetDriver()
 
     if os.path.exists(aoi_datasource_filename):
         os.remove(aoi_datasource_filename)
-    serviceshed_result = esri_driver.CopyDataSource(
-        original_serviceshed_datasource, aoi_datasource_filename)
+    serviceshed_result = driver.CreateCopy(
+        aoi_datasource_filename, original_serviceshed_datasource)
     original_serviceshed_datasource = None
     serviceshed_layer = serviceshed_result.GetLayer()
 

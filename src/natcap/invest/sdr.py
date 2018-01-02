@@ -893,8 +893,6 @@ def _generate_report(
         watersheds_path, usle_path, sed_export_path, sed_retention_path,
         watershed_results_sdr_path):
     """Create shapefile with USLE, sed export, and sed retention fields."""
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-
     field_summaries = {
         'usle_tot': pygeoprocessing.zonal_statistics(
             (usle_path, 1), watersheds_path, 'ws_id'),
@@ -908,8 +906,9 @@ def _generate_report(
     # Delete if existing shapefile with the same name and path
     if os.path.isfile(watershed_results_sdr_path):
         os.remove(watershed_results_sdr_path)
-    datasource_copy = esri_driver.CopyDataSource(
-        original_datasource, watershed_results_sdr_path)
+    driver = original_datasource.GetDriver()
+    datasource_copy = driver.CreateCopy(
+        watershed_results_sdr_path, original_datasource)
     layer = datasource_copy.GetLayer()
 
     for field_name in field_summaries:

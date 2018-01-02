@@ -99,8 +99,8 @@ def execute(args):
         os.remove(out_path)
 
     curr_shp_file = gdal.OpenEx(args['ff_farm_file'])
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
+    driver = curr_shp_file.GetDriver()
+    sf_copy = driver.CreateCopy(out_path, curr_shp_file)
     layer = sf_copy.GetLayer()
 
     #This adds the number of cycles completed by each farm to their shapefile
