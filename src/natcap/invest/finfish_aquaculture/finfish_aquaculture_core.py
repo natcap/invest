@@ -10,6 +10,7 @@ import datetime
 import logging
 
 from osgeo import ogr
+from osgeo import gdal
 import matplotlib
 matplotlib.use('AGG')  # Use the Anti-Grain Geometry back-end (for PNG files)
 import matplotlib.pyplot as plt

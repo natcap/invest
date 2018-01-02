@@ -205,7 +205,7 @@ def execute(args):
         # hard destroying the object just in case.  during testing I sometimes
         # had issues with shapefiles being unable to delete, __swig_destroy__
         # alleviated that
-        ogr.DataSource.__swig_destroy__(aoi_vector)
+        gdal.Dataset.__swig_destroy__(aoi_vector)
         aoi_vector = None
 
     basename = os.path.splitext(file_registry['local_aoi_path'])[0]
@@ -418,7 +418,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
                 poly_feature = ogr.Feature(grid_layer_defn)
                 poly_feature.SetGeometry(poly)
                 grid_layer.CreateFeature(poly_feature)
-    ogr.DataSource.__swig_destroy__(vector)
+    gdal.Dataset.__swig_destroy__(vector)
 
 
 def _build_regression_coefficients(
@@ -479,7 +479,7 @@ def _build_regression_coefficients(
 
     out_coefficent_vector = driver.CreateCopy(
         out_coefficient_vector_path, response_vector)
-    ogr.DataSource.__swig_destroy__(response_vector)
+    gdal.Dataset.__swig_destroy__(response_vector)
     response_vector = None
 
     out_coefficent_layer = out_coefficent_vector.GetLayer()
@@ -531,7 +531,7 @@ def _build_regression_coefficients(
             out_coefficent_layer.SetFeature(feature)
     out_coefficent_layer = None
     out_coefficent_vector.SyncToDisk()
-    ogr.DataSource.__swig_destroy__(out_coefficent_vector)
+    gdal.Dataset.__swig_destroy__(out_coefficent_vector)
     out_coefficent_vector = None
 
 
@@ -566,7 +566,7 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
 
     fid_indexed_vector.SyncToDisk()
     fid_indexed_layer = None
-    ogr.DataSource.__swig_destroy__(fid_indexed_vector)
+    gdal.Dataset.__swig_destroy__(fid_indexed_vector)
 
     return fid_field
 
@@ -796,7 +796,7 @@ def _ogr_to_geometry_list(vector_path):
         geometry_list.append(shapely_geometry)
         feature_geometry = None
     layer = None
-    ogr.DataSource.__swig_destroy__(vector)
+    gdal.Dataset.__swig_destroy__(vector)
     return geometry_list
 
 
@@ -975,7 +975,7 @@ def _calculate_scenario(
 
     scenario_coefficent_layer = None
     scenario_coefficent_vector.SyncToDisk()
-    ogr.DataSource.__swig_destroy__(scenario_coefficent_vector)
+    gdal.Dataset.__swig_destroy__(scenario_coefficent_vector)
     scenario_coefficent_vector = None
 
 

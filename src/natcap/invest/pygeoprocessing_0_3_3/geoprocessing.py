@@ -1008,7 +1008,7 @@ def aggregate_raster_values_uri(
                 "couldn't remove file %s. Exception %s", filename, str(error))
 
     subset_layer = None
-    ogr.DataSource.__swig_destroy__(subset_layer_datasouce)
+    gdal.Dataset.__swig_destroy__(subset_layer_datasouce)
     subset_layer_datasouce = None
     try:
         shutil.rmtree(layer_dir)
@@ -2116,7 +2116,7 @@ def align_dataset_list(
 
         # Close and clean up datasource
         aoi_layer = None
-        ogr.DataSource.__swig_destroy__(aoi_datasource)
+        gdal.Dataset.__swig_destroy__(aoi_datasource)
         aoi_datasource = None
 
         # Clean up datasets

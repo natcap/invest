@@ -363,8 +363,8 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
                 feat = layer.GetNextFeature()
                 feat_regression = layer_regression.GetNextFeature()
     finally:
-        ogr.DataSource.__swig_destroy__(shape)
-        ogr.DataSource.__swig_destroy__(shape_regression)
+        gdal.Dataset.__swig_destroy__(shape)
+        gdal.Dataset.__swig_destroy__(shape_regression)
         shape = None
         shape_regression = None
 

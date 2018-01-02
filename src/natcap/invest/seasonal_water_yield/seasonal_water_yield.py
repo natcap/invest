@@ -778,7 +778,7 @@ def _aggregate_recharge(
 
     driver = original_aoi_vector.GetDriver()
     driver.CreateCopy(aggregate_vector_path, original_aoi_vector)
-    ogr.DataSource.__swig_destroy__(original_aoi_vector)
+    gdal.Dataset.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
     aggregate_vector = gdal.OpenEx(aggregate_vector_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
@@ -830,7 +830,7 @@ def _aggregate_recharge(
         serviceshed_defn.GetFieldIndex(poly_id_field))
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
-    ogr.DataSource.__swig_destroy__(aggregate_vector)
+    gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
 
 
