@@ -19,6 +19,7 @@ import Pyro4
 import numpy
 from osgeo import ogr
 from osgeo import osr
+from osgeo import gdal
 import shapely.ops
 import shapely.wkt
 import shapely.geometry
@@ -420,6 +421,7 @@ class RecModel(object):
         LOGGER.info('done with polygon test, syncing to disk')
         pud_aoi_layer = None
         pud_aoi_vector.SyncToDisk()
+        pud_aoi_vector = None
 
         LOGGER.info('returning out shapefile path')
         return out_aoi_pud_path, monthly_table_path

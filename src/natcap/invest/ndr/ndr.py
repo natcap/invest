@@ -453,8 +453,8 @@ def execute(args):
     # delete it then copy the input shapefile into the designated output folder
     if os.path.isfile(watershed_output_datasource_uri):
         os.remove(watershed_output_datasource_uri)
-    driver = original_datasource.GetDriver()
     original_datasource = gdal.OpenEx(args['watersheds_path'])
+    driver = original_datasource.GetDriver()
     output_datasource = driver.CreateCopy(
         watershed_output_datasource_uri, original_datasource)
     output_layer = output_datasource.GetLayer()
