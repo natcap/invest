@@ -134,7 +134,7 @@ class TestRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(100.0)
+    @_timeout(15.0)
     def test_workspace_fetcher(self):
         """Recreation test workspace fetcher on a local Pyro4 empty server."""
         from natcap.invest.recreation import recmodel_server
@@ -224,7 +224,7 @@ class TestRecServer(unittest.TestCase):
             1e-5)
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(100.0)
+    @_timeout(15.0)
     def test_empty_server(self):
         """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
@@ -416,7 +416,7 @@ class TestRecServer(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(200.0)
+    @_timeout(15.0)
     def test_regression_local_server(self):
         """Recreation base regression test on sample data on local server.
 
@@ -633,7 +633,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(200.0)
+    @_timeout(15.0)
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
 
