@@ -199,7 +199,7 @@ def execute(args):
             args['aoi_path'], args['grid_type'], float(args['cell_size']),
             file_registry['local_aoi_path'])
     else:
-        aoi_vector = gdal.OpenEx(args['aoi_path'])
+        aoi_vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
         driver = aoi_vector.GetDriver()
         driver.CreateCopy(file_registry['local_aoi_path'], aoi_vector)
         aoi_vector = None
@@ -301,8 +301,8 @@ def execute(args):
         file_path = file_registry[file_id]
         try:
             if file_path.endswith('.shp') and os.path.exists(file_path):
-                driver = ogr.GetDriverByName('ESRI Shapefile')
-                driver.DeleteDataSource(file_path)
+                driver = gdal.GetDriverByName('ESRI Shapefile')
+                driver.Delete(file_path)
             else:
                 os.remove(file_path)
         except OSError:
@@ -329,11 +329,11 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     Returns:
         None
     """
-    driver = ogr.GetDriverByName('ESRI Shapefile')
+    driver = gdal.GetDriverByName('ESRI Shapefile')
     if os.path.exists(out_grid_vector_path):
-        driver.DeleteDataSource(out_grid_vector_path)
+        driver.Delete(out_grid_vector_path)
 
-    vector = gdal.OpenEx(vector_path)
+    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
     vector_layer = vector.GetLayer()
     spat_ref = vector_layer.GetSpatialRef()
 
@@ -345,7 +345,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     original_polygon = shapely.prepared.prep(
         shapely.ops.cascaded_union(original_vector_shapes))
 
-    out_grid_vector = driver.CreateDataSource(out_grid_vector_path)
+    out_grid_vector = driver.Create(
+        out_grid_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     grid_layer = out_grid_vector.CreateLayer(
         'grid', spat_ref, ogr.wkbPolygon)
     grid_layer_defn = grid_layer.GetLayerDefn()
@@ -458,7 +459,7 @@ def _build_regression_coefficients(
     Returns:
         None
     """
-    response_vector = gdal.OpenEx(response_vector_path)
+    response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
     response_layer = response_vector.GetLayer()
     response_polygons_lookup = {}  # maps FID to prepared geometry
     for response_feature in response_layer:
@@ -470,7 +471,7 @@ def _build_regression_coefficients(
 
     driver = response_vector.GetDriver()
     if os.path.exists(out_coefficient_vector_path):
-        driver.DeleteDataSource(out_coefficient_vector_path)
+        driver.Delete(out_coefficient_vector_path)
 
     out_coefficent_vector = driver.CreateCopy(
         out_coefficient_vector_path, response_vector)
@@ -524,7 +525,7 @@ def _build_regression_coefficients(
             feature.SetField(str(predictor_id), value)
             out_coefficent_layer.SetFeature(feature)
     out_coefficent_layer = None
-    out_coefficent_vector.SyncToDisk()
+    out_coefficent_vector.FlushCache()
     out_coefficent_vector = None
 
 
@@ -539,7 +540,7 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
     Returns:
         fid_field (string): name of FID field added to output vector_path
     """
-    vector = gdal.OpenEx(vector_path)
+    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
     driver = vector.GetDriver()
     if os.path.exists(out_fid_index_vector_path):
         os.remove(out_fid_index_vector_path)
@@ -557,7 +558,7 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
         feature.SetField(fid_field, fid)
         fid_indexed_layer.SetFeature(feature)
 
-    fid_indexed_vector.SyncToDisk()
+    fid_indexed_vector.FlushCache()
     fid_indexed_layer = None
     fid_indexed_vector = None
 
@@ -778,7 +779,7 @@ def _ogr_to_geometry_list(vector_path):
         list of shapely geometry objects representing the features in the
         `vector_path` layer.
     """
-    vector = gdal.OpenEx(vector_path)
+    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
     layer = vector.GetLayer()
     geometry_list = []
     for feature in layer:
@@ -824,7 +825,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         dof: degrees of freedom
         se_est: standard error estimate on coefficients
     """
-    coefficent_vector = gdal.OpenEx(coefficient_vector_path)
+    coefficent_vector = gdal.OpenEx(coefficient_vector_path, gdal.OF_VECTOR)
     coefficent_layer = coefficent_vector.GetLayer()
 
     # Loop through each feature and build up the dictionary representing the
@@ -939,7 +940,8 @@ def _calculate_scenario(
             predictor_id_list, predictor_coefficents))
 
     # Open for writing
-    scenario_coefficent_vector = gdal.OpenEx(scenario_results_path, 1)
+    scenario_coefficent_vector = gdal.OpenEx(
+        scenario_results_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
     scenario_coefficent_layer = scenario_coefficent_vector.GetLayer()
 
     # delete the response ID if it's already there because it must have been
@@ -967,7 +969,7 @@ def _calculate_scenario(
         scenario_coefficent_layer.SetFeature(feature)
 
     scenario_coefficent_layer = None
-    scenario_coefficent_vector.SyncToDisk()
+    scenario_coefficent_vector.FlushCache()
     scenario_coefficent_vector = None
 
 
@@ -1053,7 +1055,7 @@ def _validate_same_projection(base_vector_path, table_path):
     data_paths = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
         table_path, 'path')
 
-    base_vector = gdal.OpenEx(base_vector_path)
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
     base_ref = osr.SpatialReference(base_layer.GetSpatialRef().ExportToWkt())
     base_layer = None
@@ -1067,7 +1069,7 @@ def _validate_same_projection(base_vector_path, table_path):
             """Empty error handler to avoid stderr output."""
             pass
         gdal.PushErrorHandler(error_handler)
-        raster = gdal.OpenEx(path)
+        raster = gdal.OpenEx(path, gdal.OF_RASTER)
         gdal.PopErrorHandler()
         if raster is not None:
             projection_as_str = raster.GetProjection()
@@ -1075,7 +1077,7 @@ def _validate_same_projection(base_vector_path, table_path):
             ref.ImportFromWkt(projection_as_str)
             raster = None
         else:
-            vector = gdal.OpenEx(path)
+            vector = gdal.OpenEx(path, gdal.OF_VECTOR)
             if vector is None:
                 raise ValueError("%s did not load", path)
             layer = vector.GetLayer()
@@ -1212,13 +1214,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
+                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))
