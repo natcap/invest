@@ -1008,7 +1008,6 @@ def aggregate_raster_values_uri(
                 "couldn't remove file %s. Exception %s", filename, str(error))
 
     subset_layer = None
-    gdal.Dataset.__swig_destroy__(subset_layer_datasouce)
     subset_layer_datasouce = None
     try:
         shutil.rmtree(layer_dir)

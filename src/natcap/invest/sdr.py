@@ -925,8 +925,6 @@ def _generate_report(
             feature.SetField(
                 field_name, float(field_summaries[field_name][ws_id]['sum']))
         layer.SetFeature(feature)
-    original_datasource.Destroy()
-    datasource_copy.Destroy()
 
 
 @validation.invest_validator
