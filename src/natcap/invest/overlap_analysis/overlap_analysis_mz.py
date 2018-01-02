@@ -5,7 +5,7 @@ analysis.
 from __future__ import absolute_import
 import os
 
-from osgeo import ogr
+from osgeo import gdal
 
 from natcap.invest.overlap_analysis import overlap_analysis_mz_core
 from natcap.invest.overlap_analysis import overlap_core

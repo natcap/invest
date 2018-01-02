@@ -7,7 +7,6 @@ import shutil
 import fnmatch
 
 import numpy
-from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from osgeo import gdal
 from scipy import ndimage
