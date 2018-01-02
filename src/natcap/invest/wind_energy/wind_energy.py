@@ -1910,7 +1910,7 @@ def pixel_size_based_on_coordinate_transform_uri(
     Returns:
         result (tuple): (pixel_width_meters, pixel_height_meters)
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
     pixel_size_y = geo_tran[5]
@@ -1997,7 +1997,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('bathymetry_uri', None):
         with utils.capture_gdal_logging():
-            raster = gdal.Open(args['bathymetry_uri'])
+            raster = gdal.OpenEx(args['bathymetry_uri'])
         if raster is None:
             warnings.append((['bathymetry_uri'],
                              ('Parameter must be a path to a GDAL-compatible '

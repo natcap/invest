@@ -506,7 +506,7 @@ def _calculate_tropical_forest_edge_carbon_map(
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         edge_distance_uri, tropical_forest_edge_carbon_map_uri, 'GTiff',
         CARBON_MAP_NODATA, gdal.GDT_Float32, fill_value=CARBON_MAP_NODATA)
-    edge_carbon_dataset = gdal.Open(
+    edge_carbon_dataset = gdal.OpenEx(
         tropical_forest_edge_carbon_map_uri, gdal.GA_Update)
     edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
     edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
@@ -722,7 +722,7 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))

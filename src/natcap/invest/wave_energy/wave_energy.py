@@ -1411,7 +1411,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         returns - a list of values corresponding to the percentiles
             from the percentiles list
     """
-    raster = gdal.Open(raster_uri, gdal.GA_ReadOnly)
+    raster = gdal.OpenEx(raster_uri, gdal.GA_ReadOnly)
 
     def numbers_from_file(fle):
         """Generates an iterator from a file by loading all the numbers
@@ -1508,7 +1508,7 @@ def count_pixels_groups(raster_uri, group_values):
     # Initialize a list that will hold pixel counts for each group
     pixel_count = np.zeros(len(group_values))
 
-    dataset = gdal.Open(raster_uri, gdal.GA_ReadOnly)
+    dataset = gdal.OpenEx(raster_uri, gdal.GA_ReadOnly)
     band = dataset.GetRasterBand(1)
 
     n_rows = dataset.RasterYSize
@@ -1573,7 +1573,7 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
         pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
             height in meters)
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     # Get the first points (x, y) from geoTransform
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
@@ -1611,7 +1611,7 @@ def _create_rat(dataset_path, attr_dict, column_name):
            {integer_id_1: value_1, ... integer_id_n: value_n}
         column_name (string): a string for the column name that maps the values
     """
-    dataset = gdal.Open(dataset_path, gdal.GA_Update)
+    dataset = gdal.OpenEx(dataset_path, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
     rat = gdal.RasterAttributeTable()
     rat.SetRowCount(len(attr_dict))
@@ -1735,7 +1735,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('dem_uri', None):
         with utils.capture_gdal_logging():
-            raster = gdal.Open(args['dem_uri'])
+            raster = gdal.OpenEx(args['dem_uri'])
         if raster is None:
             warnings.append((
                 ['dem_uri'],

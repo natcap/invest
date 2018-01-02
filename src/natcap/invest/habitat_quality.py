@@ -490,7 +490,7 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
         if not os.path.exists(full_path):
             continue
         try:
-            dataset = gdal.Open(full_path, gdal.GA_ReadOnly)
+            dataset = gdal.OpenEx(full_path, gdal.GA_ReadOnly)
             break
         except ValueError:
             # If GDAL can't open the raster, our GDAL error handler will be
@@ -687,7 +687,7 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))

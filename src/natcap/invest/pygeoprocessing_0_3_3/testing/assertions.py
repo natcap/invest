@@ -125,8 +125,8 @@ def assert_rasters_equal(
         if not os.path.exists(uri):
             raise IOError('File "%s" not found on disk' % uri)
 
-    a_dataset = gdal.Open(a_uri)
-    b_dataset = gdal.Open(b_uri)
+    a_dataset = gdal.OpenEx(a_uri)
+    b_dataset = gdal.OpenEx(b_uri)
 
     try:
         if a_dataset.RasterXSize != b_dataset.RasterXSize:

@@ -94,7 +94,7 @@ def get_nodata_from_uri(dataset_uri):
     Returns:
         nodata: nodata value for dataset band 1
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
     if nodata is not None:
@@ -117,7 +117,7 @@ def get_datatype_from_uri(dataset_uri):
 
     Returns:
         datatype: datatype for dataset band 1"""
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     band = dataset.GetRasterBand(1)
     datatype = band.DataType
 
@@ -138,7 +138,7 @@ def get_row_col_from_uri(dataset_uri):
     Returns:
         rows_cols (tuple): 2-tuple (n_row, n_col) from dataset_uri
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     n_rows = dataset.RasterYSize
     n_cols = dataset.RasterXSize
 
@@ -161,7 +161,7 @@ def calculate_raster_stats_uri(dataset_uri):
         None
     """
 
-    dataset = gdal.Open(dataset_uri, gdal.GA_Update)
+    dataset = gdal.OpenEx(dataset_uri, gdal.GA_Update)
 
     for band_number in range(dataset.RasterCount):
         band = dataset.GetRasterBand(band_number + 1)
@@ -184,7 +184,7 @@ def get_statistics_from_uri(dataset_uri):
 
     """
 
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     band = dataset.GetRasterBand(1)
     statistics = band.GetStatistics(0, 1)
 
@@ -210,7 +210,7 @@ def get_cell_size_from_uri(dataset_uri):
     """
 
     srs = osr.SpatialReference()
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     if dataset is None:
         raise IOError(
             'File not found or not valid dataset type at: %s' % dataset_uri)
@@ -248,7 +248,7 @@ def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
     Returns:
         result (tuple): (pixel_width_meters, pixel_height_meters)
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     result = pixel_size_based_on_coordinate_transform(dataset, *args, **kwargs)
 
     # Close and clean up dataset
@@ -624,7 +624,7 @@ def vectorize_points_uri(
     """
 
     datasource = ogr.Open(shapefile_uri)
-    output_raster = gdal.Open(output_uri, 1)
+    output_raster = gdal.OpenEx(output_uri, 1)
     vectorize_points(
         datasource, field, output_raster, interpolation=interpolation)
 
@@ -768,7 +768,7 @@ def aggregate_raster_values_uri(
         raster_nodata, out_pixel_size, "union",
         dataset_to_align_index=0, aoi_uri=shapefile_uri,
         assert_datasets_projected=False, vectorize_op=False)
-    clipped_raster = gdal.Open(clipped_raster_uri)
+    clipped_raster = gdal.OpenEx(clipped_raster_uri)
 
     # This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1
@@ -777,7 +777,7 @@ def aggregate_raster_values_uri(
         clipped_raster_uri, mask_uri, 'GTiff', mask_nodata,
         gdal.GDT_Int32, fill_value=mask_nodata)
 
-    mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
+    mask_dataset = gdal.OpenEx(mask_uri, gdal.GA_Update)
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     rasterize_layer_args = {
@@ -1085,7 +1085,7 @@ def clip_dataset_uri(
     Returns:
         None
     """
-    source_dataset = gdal.Open(source_dataset_uri)
+    source_dataset = gdal.OpenEx(source_dataset_uri)
 
     band = source_dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
@@ -1116,7 +1116,7 @@ def create_rat_uri(dataset_uri, attr_dict, column_name):
            {integer_id_1: value_1, ... integer_id_n: value_n}
         column_name (string): a string for the column name that maps the values
     """
-    dataset = gdal.Open(dataset_uri, gdal.GA_Update)
+    dataset = gdal.OpenEx(dataset_uri, gdal.GA_Update)
     create_rat(dataset, attr_dict, column_name)
 
     # Make sure the dataset is closed and cleaned up
@@ -1169,7 +1169,7 @@ def get_raster_properties_uri(dataset_uri):
             width (w-e pixel resolution), height (n-s pixel resolution),
             XSize, YSize
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     value = get_raster_properties(dataset)
 
     # Make sure the dataset is closed and cleaned up
@@ -1237,7 +1237,7 @@ def reproject_dataset_uri(
     output_type = get_datatype_from_uri(original_dataset_uri)
     out_nodata = get_nodata_from_uri(original_dataset_uri)
 
-    original_dataset = gdal.Open(original_dataset_uri)
+    original_dataset = gdal.OpenEx(original_dataset_uri)
 
     original_wkt = original_dataset.GetProjection()
 
@@ -1434,7 +1434,7 @@ def unique_raster_values_uri(dataset_uri):
     Returns:
         value (list): a list of dataset's unique non-nodata values
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     value = unique_raster_values(dataset)
 
     # Close and clean up dataset
@@ -1479,7 +1479,7 @@ def get_rat_as_dictionary_uri(dataset_uri):
         value (dictionary): a 2D dictionary where the first key is the column
             name and second is the row number
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     value = get_rat_as_dictionary(dataset)
 
     # Close and clean up dataset
@@ -1619,7 +1619,7 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
         memory_array (memmap numpy array): a memmap numpy array of the data
             contained in the first band of dataset_uri
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     band = dataset.GetRasterBand(1)
     n_rows = dataset.RasterYSize
     n_cols = dataset.RasterXSize
@@ -1721,7 +1721,7 @@ def assert_datasets_in_same_projection(dataset_uri_list):
         DifferentProjections: if at least one of the datasets is in
             a different projection
     """
-    dataset_list = [gdal.Open(dataset_uri) for dataset_uri in dataset_uri_list]
+    dataset_list = [gdal.OpenEx(dataset_uri) for dataset_uri in dataset_uri_list]
     dataset_projections = []
 
     unprojected_datasets = set()
@@ -1768,7 +1768,7 @@ def get_bounding_box(dataset_uri):
             [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
             projected coordinates
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
 
     geotransform = dataset.GetGeoTransform()
     n_cols = dataset.RasterXSize
@@ -1833,7 +1833,7 @@ def resize_and_resample_dataset_uri(
         "lanczos": gdal.GRA_Lanczos
         }
 
-    original_dataset = gdal.Open(original_dataset_uri)
+    original_dataset = gdal.OpenEx(original_dataset_uri)
     original_band = original_dataset.GetRasterBand(1)
     original_nodata = original_band.GetNoDataValue()
 
@@ -2068,7 +2068,7 @@ def align_dataset_list(
 
     # If there's an AOI, mask it out
     if aoi_uri is not None:
-        first_dataset = gdal.Open(dataset_out_uri_list[0])
+        first_dataset = gdal.OpenEx(dataset_out_uri_list[0])
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
         gdal.Dataset.__swig_destroy__(first_dataset)
@@ -2079,7 +2079,7 @@ def align_dataset_list(
             dataset_out_uri_list[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte,
             fill_value=0)
 
-        mask_dataset = gdal.Open(mask_uri, gdal.GA_Update)
+        mask_dataset = gdal.OpenEx(mask_uri, gdal.GA_Update)
         mask_band = mask_dataset.GetRasterBand(1)
         aoi_datasource = ogr.Open(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
@@ -2092,7 +2092,7 @@ def align_dataset_list(
         mask_row = numpy.zeros((1, n_cols), dtype=numpy.int8)
 
         out_dataset_list = [
-            gdal.Open(uri, gdal.GA_Update) for uri in dataset_out_uri_list]
+            gdal.OpenEx(uri, gdal.GA_Update) for uri in dataset_out_uri_list]
         out_band_list = [
             dataset.GetRasterBand(1) for dataset in out_dataset_list]
         nodata_out_list = [
@@ -2285,12 +2285,12 @@ def vectorize_datasets(
             assert_datasets_projected=assert_datasets_projected,
             all_touched=all_touched)
         aligned_datasets = [
-            gdal.Open(filename, gdal.GA_ReadOnly) for filename in
+            gdal.OpenEx(filename, gdal.GA_ReadOnly) for filename in
             dataset_out_uri_list]
     else:
         # otherwise the input datasets are already aligned
         aligned_datasets = [
-            gdal.Open(filename, gdal.GA_ReadOnly) for filename in
+            gdal.OpenEx(filename, gdal.GA_ReadOnly) for filename in
             dataset_uri_list]
 
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
@@ -2566,7 +2566,7 @@ def get_geotransform_uri(dataset_uri):
     Returns:
         geotransform: a dataset geotransform list
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     geotransform = dataset.GetGeoTransform()
     gdal.Dataset.__swig_destroy__(dataset)
     return geotransform
@@ -2732,7 +2732,7 @@ def get_dataset_projection_wkt_uri(dataset_uri):
     Returns:
         proj_wkt (string): WKT describing the GDAL dataset project
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     proj_wkt = dataset.GetProjection()
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
@@ -2752,7 +2752,7 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
     Returns:
         itemfreq (dict): values to count.
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
 
@@ -2791,7 +2791,7 @@ def rasterize_layer_uri(
     Returns:
         None
     """
-    dataset = gdal.Open(raster_uri, gdal.GA_Update)
+    dataset = gdal.OpenEx(raster_uri, gdal.GA_Update)
     shapefile = ogr.Open(shapefile_uri)
     layer = shapefile.GetLayer()
 
@@ -2830,7 +2830,7 @@ def make_constant_raster_from_base_uri(
     new_raster_from_base_uri(
         base_dataset_uri, out_uri, 'GTiff', nodata_value,
         dataset_type)
-    base_dataset = gdal.Open(out_uri, gdal.GA_Update)
+    base_dataset = gdal.OpenEx(out_uri, gdal.GA_Update)
     base_band = base_dataset.GetRasterBand(1)
     base_band.Fill(constant_value)
 
@@ -3055,9 +3055,9 @@ def convolve_2d_uri(signal_path, kernel_path, output_path):
     s_nodata = get_nodata_from_uri(s_path)
     k_nodata = get_nodata_from_uri(k_path)
 
-    signal_ds = gdal.Open(signal_path)
+    signal_ds = gdal.OpenEx(signal_path)
     signal_band = signal_ds.GetRasterBand(1)
-    output_ds = gdal.Open(output_path, gdal.GA_Update)
+    output_ds = gdal.OpenEx(output_path, gdal.GA_Update)
     output_band = output_ds.GetRasterBand(1)
 
     def _fft_cache(fshape, xoff, yoff, data_block):
@@ -3225,7 +3225,7 @@ def tile_dataset_uri(in_uri, out_uri, blocksize):
     Returns:
         None
     """
-    dataset = gdal.Open(in_uri)
+    dataset = gdal.OpenEx(in_uri)
     band = dataset.GetRasterBand(1)
     datatype_out = band.DataType
     nodata_out = get_nodata_from_uri(in_uri)
@@ -3296,7 +3296,7 @@ def iterblocks(
         If `offset_only` is True, the function returns only the block data and
             does not attempt to read binary data from the raster.
     """
-    dataset = gdal.Open(raster_uri)
+    dataset = gdal.OpenEx(raster_uri)
 
     if band_list is None:
         band_list = range(1, dataset.RasterCount + 1)

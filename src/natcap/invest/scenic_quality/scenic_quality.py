@@ -31,7 +31,7 @@ def old_reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
 
        return - nothing"""
 
-    original_dataset = gdal.Open(original_dataset_uri)
+    original_dataset = gdal.OpenEx(original_dataset_uri)
     reproject_dataset(original_dataset, *args, **kwargs)
 
     geoprocessing.calculate_raster_stats_uri(original_dataset_uri)
@@ -49,7 +49,7 @@ def reproject_dataset_uri(original_dataset_uri, output_wkt, output_uri,
 
        return projected dataset"""
 
-    original_dataset = gdal.Open(original_dataset_uri)
+    original_dataset = gdal.OpenEx(original_dataset_uri)
 
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
@@ -130,7 +130,7 @@ def reclassify_quantile_dataset_uri( \
     geoprocessing.calculate_raster_stats_uri(dataset_out_uri)
 
 def get_data_type_uri(ds_uri):
-    raster_ds = gdal.Open(ds_uri)
+    raster_ds = gdal.OpenEx(ds_uri)
     band = raster_ds.GetRasterBand(1)
     raster_data_type = band.DataType
     band = None
@@ -168,14 +168,14 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     #J_uri = geoprocessing.temporary_filename()
     geoprocessing.new_raster_from_base_uri(in_dem_uri, I_uri, 'GTiff', \
         -32768., gdal.GDT_Float32, fill_value = -32768.)
-    I_raster = gdal.Open(I_uri, gdal.GA_Update)
+    I_raster = gdal.OpenEx(I_uri, gdal.GA_Update)
     I_band = I_raster.GetRasterBand(1)
     I_band.WriteArray(I)
     I_band = None
     I_raster = None
     geoprocessing.new_raster_from_base_uri(in_dem_uri, J_uri, 'GTiff', \
         -32768., gdal.GDT_Float32, fill_value = -32768.)
-    J_raster = gdal.Open(J_uri, gdal.GA_Update)
+    J_raster = gdal.OpenEx(J_uri, gdal.GA_Update)
     J_band = J_raster.GetRasterBand(1)
     J_band.WriteArray(J)
     J_band = None
@@ -184,7 +184,7 @@ def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
     GT = geoprocessing.get_geotransform_uri(in_dem_uri)
 
     # Open the input URI and extract the numpy array
-    input_raster = gdal.Open(in_dem_uri)
+    input_raster = gdal.OpenEx(in_dem_uri)
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
     input_raster = None
 
@@ -214,7 +214,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     coefficient = 1.0 # Used to weight the importance of individual viewsheds
     height = 0.0 # Per viewpoint height offset--updated as we read file info
 
-    #input_raster = gdal.Open(in_dem_uri)
+    #input_raster = gdal.OpenEx(in_dem_uri)
     #input_band = input_raster.GetRasterBand(1)
     #input_array = input_band.ReadAsArray()
     #input_band = None
@@ -673,9 +673,9 @@ def execute(args):
                                        ["bilinear", "bilinear"],
                                        1)
 
-        pop = gdal.Open(pop_vs_uri)
+        pop = gdal.OpenEx(pop_vs_uri)
         pop_band = pop.GetRasterBand(1)
-        vs = gdal.Open(viewshed_uri)
+        vs = gdal.OpenEx(viewshed_uri)
         vs_band = vs.GetRasterBand(1)
 
         affected_pop = 0
@@ -826,7 +826,7 @@ def validate(args, limit_to=None):
 
         try:
             with utils.capture_gdal_logging():
-                raster = gdal.Open(args[raster_key])
+                raster = gdal.OpenEx(args[raster_key])
                 if raster is None:
                     warnings.append(
                         ([raster_key],

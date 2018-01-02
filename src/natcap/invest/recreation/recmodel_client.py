@@ -1075,7 +1075,7 @@ def _validate_same_projection(base_vector_path, table_path):
             """Empty error handler to avoid stderr output."""
             pass
         gdal.PushErrorHandler(error_handler)
-        raster = gdal.Open(path)
+        raster = gdal.OpenEx(path)
         gdal.PopErrorHandler()
         if raster is not None:
             projection_as_str = raster.GetProjection()
@@ -1220,7 +1220,7 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))

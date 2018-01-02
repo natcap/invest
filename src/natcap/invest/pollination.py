@@ -739,7 +739,7 @@ def _rasterize_vector_onto_base(
     Returns:
         None.
     """
-    base_raster = gdal.Open(base_raster_path)
+    base_raster = gdal.OpenEx(base_raster_path)
     raster_driver = base_raster.GetDriver()
     target_raster = raster_driver.CreateCopy(target_raster_path, base_raster)
     base_raster = None
@@ -1386,7 +1386,7 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))

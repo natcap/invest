@@ -219,7 +219,7 @@ def ndr_eff_calculation(
         flow_direction_uri, processed_cell_uri, 'GTiff', processed_cell_nodata,
         gdal.GDT_Byte, fill_value=0)
 
-    processed_cell_ds = gdal.Open(processed_cell_uri, gdal.GA_Update)
+    processed_cell_ds = gdal.OpenEx(processed_cell_uri, gdal.GA_Update)
     processed_cell_band = processed_cell_ds.GetRasterBand(1)
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
@@ -232,30 +232,30 @@ def ndr_eff_calculation(
 
     cdef deque[int] visit_stack
 
-    stream_ds = gdal.Open(stream_uri)
+    stream_ds = gdal.OpenEx(stream_uri)
     stream_band = stream_ds.GetRasterBand(1)
     cdef float stream_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         stream_uri)
     cdef float cell_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(stream_uri)
 
-    effective_retention_ds = gdal.Open(effective_retention_uri, gdal.GA_Update)
+    effective_retention_ds = gdal.OpenEx(effective_retention_uri, gdal.GA_Update)
     effective_retention_band = effective_retention_ds.GetRasterBand(1)
 
-    retention_eff_lulc_ds = gdal.Open(retention_eff_lulc_uri)
+    retention_eff_lulc_ds = gdal.OpenEx(retention_eff_lulc_uri)
     retention_eff_lulc_band = retention_eff_lulc_ds.GetRasterBand(1)
 
-    crit_len_ds = gdal.Open(crit_len_uri)
+    crit_len_ds = gdal.OpenEx(crit_len_uri)
     crit_len_band = crit_len_ds.GetRasterBand(1)
 
     outflow_weights_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
     outflow_direction_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
     natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
-    outflow_weights_ds = gdal.Open(outflow_weights_uri)
+    outflow_weights_ds = gdal.OpenEx(outflow_weights_uri)
     outflow_weights_band = outflow_weights_ds.GetRasterBand(1)
     cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_weights_uri)
-    outflow_direction_ds = gdal.Open(outflow_direction_uri)
+    outflow_direction_ds = gdal.OpenEx(outflow_direction_uri)
     outflow_direction_band = outflow_direction_ds.GetRasterBand(1)
     cdef int outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_direction_uri)

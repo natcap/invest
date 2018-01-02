@@ -787,7 +787,7 @@ def aggregate_multi_rasters_uri(
         0,
         dataset_to_bound_index=0)
 
-    rast_ds_list = [gdal.Open(uri) for uri in temp_rast_uris]
+    rast_ds_list = [gdal.OpenEx(uri) for uri in temp_rast_uris]
     rast_bands = [ds.GetRasterBand(1) for ds in rast_ds_list]
 
     # Now iterate through every cell of the aOI, and concat everything that's
@@ -1269,7 +1269,7 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
 
     Returns nothing.
     '''
-    raster = gdal.Open(raster_uri)
+    raster = gdal.OpenEx(raster_uri)
     driver = ogr.GetDriverByName("ESRI Shapefile")
     ds = driver.CreateDataSource(out_uri)
 
@@ -1857,7 +1857,7 @@ def copy_raster(in_uri, out_uri):
     into out_raster.
     '''
 
-    raster = gdal.Open(in_uri)
+    raster = gdal.OpenEx(in_uri)
     drv = gdal.GetDriverByName('GTiff')
     drv.CreateCopy(out_uri, raster)
 

@@ -76,7 +76,7 @@ def _collect_spatial_files(filepath, data_dir):
     # that instead of the individual file.
 
     with utils.capture_gdal_logging():
-        raster = gdal.Open(filepath)
+        raster = gdal.OpenEx(filepath)
         if raster is not None:
             new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
             driver = raster.GetDriver()

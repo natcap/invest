@@ -120,7 +120,7 @@ def _calculate_args_bounding_box(args_dict):
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
-                    raster = gdal.Open(arg)
+                    raster = gdal.OpenEx(arg)
                     if raster is not None:
                         return True
             return False
