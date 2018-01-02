@@ -1354,73 +1354,71 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
 
-    # loop through all the layers in the orginal_datasource
-    for original_layer in original_datasource:
+    original_layer = original_datasource.GetLayer()
+    # Get the original_layer definition which holds needed attribute values
+    original_layer_dfn = original_layer.GetLayerDefn()
 
-        # Get the original_layer definition which holds needed attribute values
-        original_layer_dfn = original_layer.GetLayerDefn()
+    # Create the new layer for output_datasource using same name and
+    # geometry type from original_datasource, but different projection
+    output_layer = output_datasource.CreateLayer(
+        original_layer_dfn.GetName(), output_sr,
+        original_layer_dfn.GetGeomType())
 
-        # Create the new layer for output_datasource using same name and
-        # geometry type from original_datasource, but different projection
-        output_layer = output_datasource.CreateLayer(
-            original_layer_dfn.GetName(), output_sr,
-            original_layer_dfn.GetGeomType())
+    # Get the number of fields in original_layer
+    original_field_count = original_layer_dfn.GetFieldCount()
 
-        # Get the number of fields in original_layer
-        original_field_count = original_layer_dfn.GetFieldCount()
+    # For every field, create a duplicate field and add it to the new
+    # shapefiles layer
+    for fld_index in range(original_field_count):
+        original_field = original_layer_dfn.GetFieldDefn(fld_index)
+        output_field = ogr.FieldDefn(
+            original_field.GetName(), original_field.GetType())
+        output_layer.CreateField(output_field)
 
-        # For every field, create a duplicate field and add it to the new
-        # shapefiles layer
-        for fld_index in range(original_field_count):
-            original_field = original_layer_dfn.GetFieldDefn(fld_index)
-            output_field = ogr.FieldDefn(
-                original_field.GetName(), original_field.GetType())
-            output_layer.CreateField(output_field)
+    original_layer.ResetReading()
 
-        original_layer.ResetReading()
+    # Get the spatial reference of the original_layer to use in transforming
+    original_sr = original_layer.GetSpatialRef()
 
-        # Get the spatial reference of the original_layer to use in transforming
-        original_sr = original_layer.GetSpatialRef()
+    # Create a coordinate transformation
+    coord_trans = osr.CoordinateTransformation(original_sr, output_sr)
 
-        # Create a coordinate transformation
-        coord_trans = osr.CoordinateTransformation(original_sr, output_sr)
+    # Copy all of the features in original_layer to the new shapefile
+    error_count = 0
+    for original_feature in original_layer:
+        geom = original_feature.GetGeometryRef()
 
-        # Copy all of the features in original_layer to the new shapefile
-        error_count = 0
-        for original_feature in original_layer:
-            geom = original_feature.GetGeometryRef()
+        # Transform the geometry into format desired for the new projection
+        error_code = geom.Transform(coord_trans)
+        if error_code != 0: # error
+            # this could be caused by an out of range transformation
+            # whatever the case, don't put the transformed poly into the
+            # output set
+            error_count += 1
+            continue
 
-            # Transform the geometry into format desired for the new projection
-            error_code = geom.Transform(coord_trans)
-            if error_code != 0: # error
-                # this could be caused by an out of range transformation
-                # whatever the case, don't put the transformed poly into the
-                # output set
-                error_count += 1
-                continue
+        # Copy original_datasource's feature and set as new shapes feature
+        output_feature = ogr.Feature(
+            feature_def=output_layer.GetLayerDefn())
+        output_feature.SetFrom(original_feature)
+        output_feature.SetGeometry(geom)
 
-            # Copy original_datasource's feature and set as new shapes feature
-            output_feature = ogr.Feature(
-                feature_def=output_layer.GetLayerDefn())
-            output_feature.SetFrom(original_feature)
-            output_feature.SetGeometry(geom)
+        # For all the fields in the feature set the field values from the
+        # source field
+        for fld_index2 in range(output_feature.GetFieldCount()):
+            original_field_value = original_feature.GetField(fld_index2)
+            output_feature.SetField(fld_index2, original_field_value)
 
-            # For all the fields in the feature set the field values from the
-            # source field
-            for fld_index2 in range(output_feature.GetFieldCount()):
-                original_field_value = original_feature.GetField(fld_index2)
-                output_feature.SetField(fld_index2, original_field_value)
+        output_layer.CreateFeature(output_feature)
+        output_feature = None
 
-            output_layer.CreateFeature(output_feature)
-            output_feature = None
-
-            original_feature = None
-        if error_count > 0:
-            LOGGER.warn(
-                '%d features out of %d were unable to be transformed and are'
-                ' not in the output dataset at %s', error_count,
-                original_layer.GetFeatureCount(), output_uri)
-        original_layer = None
+        original_feature = None
+    if error_count > 0:
+        LOGGER.warn(
+            '%d features out of %d were unable to be transformed and are'
+            ' not in the output dataset at %s', error_count,
+            original_layer.GetFeatureCount(), output_uri)
+    original_layer = None
 
     return output_datasource
 
