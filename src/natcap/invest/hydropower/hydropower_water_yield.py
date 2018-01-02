@@ -662,7 +662,7 @@ def compute_watershed_valuation(watersheds_uri, val_dict):
 
         returns - Nothing
     """
-    ws_ds = ogr.Open(watersheds_uri, 1)
+    ws_ds = gdal.OpenEx(watersheds_uri, 1)
     ws_layer = ws_ds.GetLayer()
 
     # The field names for the new attributes
@@ -724,7 +724,7 @@ def compute_rsupply_volume(watershed_results_uri):
             values from
 
         returns - Nothing"""
-    ws_ds = ogr.Open(watershed_results_uri, 1)
+    ws_ds = gdal.OpenEx(watershed_results_uri, 1)
     ws_layer = ws_ds.GetLayer()
 
     # The field names for the new attributes
@@ -840,7 +840,7 @@ def compute_water_yield_volume(shape_uri, pixel_area):
             raster.
 
         returns - Nothing"""
-    shape = ogr.Open(shape_uri, 1)
+    shape = gdal.OpenEx(shape_uri, 1)
     layer = shape.GetLayer()
 
     # The field names for the new attributes
@@ -889,7 +889,7 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, key):
 
         returns - nothing"""
 
-    shape = ogr.Open(shape_uri, 1)
+    shape = gdal.OpenEx(shape_uri, 1)
     layer = shape.GetLayer()
 
     # Create the new field
@@ -936,7 +936,7 @@ def _extract_vector_table_by_key(vector_path, key_field):
             form {key_field_0: {field_0: value0, field_1: value1}...}
     """
     # Pull apart the vector
-    vector = ogr.Open(vector_path)
+    vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
     layer_def = layer.GetLayerDefn()
 
@@ -1049,7 +1049,7 @@ def validate(args, limit_to=None):
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

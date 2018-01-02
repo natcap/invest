@@ -516,7 +516,7 @@ def create_raster_from_vector_extents_uri(
     Returns:
         dataset (gdal.Dataset): gdal dataset
     """
-    datasource = ogr.Open(shapefile_uri)
+    datasource = gdal.OpenEx(shapefile_uri)
     create_raster_from_vector_extents(
         pixel_size, pixel_size, gdal_format, nodata_out_value, output_uri,
         datasource)
@@ -623,7 +623,7 @@ def vectorize_points_uri(
         None
     """
 
-    datasource = ogr.Open(shapefile_uri)
+    datasource = gdal.OpenEx(shapefile_uri)
     output_raster = gdal.OpenEx(output_uri, 1)
     vectorize_points(
         datasource, field, output_raster, interpolation=interpolation)
@@ -778,7 +778,7 @@ def aggregate_raster_values_uri(
         gdal.GDT_Int32, fill_value=mask_nodata)
 
     mask_dataset = gdal.OpenEx(mask_uri, gdal.GA_Update)
-    shapefile = ogr.Open(shapefile_uri)
+    shapefile = gdal.OpenEx(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
     rasterize_layer_args = {
         'options': [],
@@ -1321,7 +1321,7 @@ def reproject_datasource_uri(original_dataset_uri, output_wkt, output_uri):
     Return:
         None
     """
-    original_dataset = ogr.Open(original_dataset_uri)
+    original_dataset = gdal.OpenEx(original_dataset_uri)
     _ = reproject_datasource(original_dataset, output_wkt, output_uri)
 
 
@@ -1797,7 +1797,7 @@ def get_datasource_bounding_box(datasource_uri):
             [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
             projected coordinates
     """
-    datasource = ogr.Open(datasource_uri)
+    datasource = gdal.OpenEx(datasource_uri)
     layer = datasource.GetLayer(0)
     extent = layer.GetExtent()
     # Reindex datasource extents into the upper left/lower right coordinates
@@ -2081,7 +2081,7 @@ def align_dataset_list(
 
         mask_dataset = gdal.OpenEx(mask_uri, gdal.GA_Update)
         mask_band = mask_dataset.GetRasterBand(1)
-        aoi_datasource = ogr.Open(aoi_uri)
+        aoi_datasource = gdal.OpenEx(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
         if all_touched:
             option_list = ["ALL_TOUCHED=TRUE"]
@@ -2321,7 +2321,7 @@ def vectorize_datasets(
             aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte,
             fill_value=0, dataset_options=dataset_options)
         mask_band = mask_dataset.GetRasterBand(1)
-        aoi_datasource = ogr.Open(aoi_uri)
+        aoi_datasource = gdal.OpenEx(aoi_uri)
         aoi_layer = aoi_datasource.GetLayer()
         if all_touched:
             option_list = ["ALL_TOUCHED=TRUE"]
@@ -2530,7 +2530,7 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
             form {key_field_0: {field_0: value0, field_1: value1}...}
     """
     # Pull apart the datasource
-    datasource = ogr.Open(datasource_uri)
+    datasource = gdal.OpenEx(datasource_uri)
     layer = datasource.GetLayer()
     layer_def = layer.GetLayerDefn()
 
@@ -2581,7 +2581,7 @@ def get_spatial_ref_uri(datasource_uri):
     Returns:
         spat_ref: a spatial reference
     """
-    shape_datasource = ogr.Open(datasource_uri)
+    shape_datasource = gdal.OpenEx(datasource_uri)
     layer = shape_datasource.GetLayer()
     spat_ref = layer.GetSpatialRef()
     return spat_ref
@@ -2602,7 +2602,7 @@ def copy_datasource_uri(shape_uri, copy_uri):
     if os.path.isfile(copy_uri):
         os.remove(copy_uri)
 
-    shape = ogr.Open(shape_uri)
+    shape = gdal.OpenEx(shape_uri)
     drv = ogr.GetDriverByName('ESRI Shapefile')
     drv.CopyDataSource(shape, copy_uri)
 
@@ -2792,7 +2792,7 @@ def rasterize_layer_uri(
         None
     """
     dataset = gdal.OpenEx(raster_uri, gdal.GA_Update)
-    shapefile = ogr.Open(shapefile_uri)
+    shapefile = gdal.OpenEx(shapefile_uri)
     layer = shapefile.GetLayer()
 
     gdal.RasterizeLayer(
@@ -2851,7 +2851,7 @@ def calculate_disjoint_polygon_set(shapefile_uri):
     Returns:
         subset_list (list): list of sets of FIDs from shapefile_uri
     """
-    shapefile = ogr.Open(shapefile_uri)
+    shapefile = gdal.OpenEx(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
 
     poly_intersect_lookup = {}

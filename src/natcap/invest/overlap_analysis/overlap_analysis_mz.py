@@ -48,7 +48,7 @@ def execute(args):
 
     #We are passing in the AOI shapefile, as well as the dimension that we want
     #the raster pixels to be.
-    mz_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
+    mz_args['zone_layer_file'] = gdal.OpenEx(args['zone_layer_loc'])
 
     file_dict = overlap_core.get_files_dict(args['overlap_data_dir_loc'])
 
@@ -92,7 +92,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('zone_layer_loc', None):
         with utils.capture_gdal_logging():
-            vector = ogr.Open(args['zone_layer_loc'])
+            vector = gdal.OpenEx(args['zone_layer_loc'])
             if vector is None:
                 warnings.append((['zone_layer_loc'],
                                  ('Parameter must be a path to an '

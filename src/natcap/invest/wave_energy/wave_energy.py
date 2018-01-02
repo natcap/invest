@@ -349,7 +349,7 @@ def execute(args):
         # cause the global biophysical run to crash
         tmp_dem_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
 
-        clipped_wave_shape = ogr.Open(point_shape_uri, 1)
+        clipped_wave_shape = gdal.OpenEx(point_shape_uri, 1)
         dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(dataset_uri)
         dem_matrix = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.load_memory_mapped_array(
             dataset_uri, tmp_dem_path, array_type=None)
@@ -590,7 +590,7 @@ def execute(args):
             land_to_grid_dist - a numpy array of distance values
 
             returns - Nothing"""
-        wave_data_shape = ogr.Open(wave_shape_uri, 1)
+        wave_data_shape = gdal.OpenEx(wave_shape_uri, 1)
         wave_data_layer = wave_data_shape.GetLayer(0)
         # Add three new fields to the shapefile that will store
         # the distances
@@ -654,7 +654,7 @@ def execute(args):
 
             returns - Nothing"""
 
-        wave_points = ogr.Open(wave_points_uri, 1)
+        wave_points = gdal.OpenEx(wave_points_uri, 1)
         wave_data_layer = wave_points.GetLayer()
         # Add Net Present Value field, Total Captured Wave Energy field,
         # and Units field to shapefile
@@ -801,7 +801,7 @@ def get_points_geometries(shape_uri):
               geometries.
     """
     point = []
-    shape = ogr.Open(shape_uri)
+    shape = gdal.OpenEx(shape_uri)
     layer = shape.GetLayer(0)
     feat = layer.GetNextFeature()
     while feat is not None:
@@ -924,7 +924,7 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
 
         returns - A tuple of the x and y pixel sizes of the global DEM
               given in the units of what 'shape' is projected in"""
-    shape = ogr.Open(shape_path)
+    shape = gdal.OpenEx(shape_path)
 
     # Get a point in the clipped shape to determine output grid size
     feat = shape.GetLayer(0).GetNextFeature()
@@ -1133,7 +1133,7 @@ def wave_power(shape_uri):
             wave farm
 
         returns - Nothing"""
-    shape = ogr.Open(shape_uri, 1)
+    shape = gdal.OpenEx(shape_uri, 1)
 
     # Sea water density constant (kg/m^3)
     swd = 1028
@@ -1213,8 +1213,8 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(output_path)
 
-    shape_to_clip = ogr.Open(shape_to_clip_path)
-    binding_shape = ogr.Open(binding_shape_path)
+    shape_to_clip = gdal.OpenEx(shape_to_clip_path)
+    binding_shape = gdal.OpenEx(binding_shape_path)
 
     input_layer = shape_to_clip.GetLayer()
     binding_layer = binding_shape.GetLayer()
@@ -1376,7 +1376,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         returns - Nothing"""
 
     cap_we_field = 'CAPWE_MWHY'
-    wave_shape = ogr.Open(wave_shape_uri, 1)
+    wave_shape = gdal.OpenEx(wave_shape_uri, 1)
     wave_layer = wave_shape.GetLayer()
     # Create a new field for the shapefile
     field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
@@ -1690,7 +1690,7 @@ def validate(args, limit_to=None):
         try:
             if args['aoi_uri'] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = ogr.Open(args['aoi_uri'])
+                    vector = gdal.OpenEx(args['aoi_uri'])
                     layer = vector.GetLayer()
                     geometry_type = layer.GetGeomType()
                     if geometry_type != ogr.wkbPolygon:

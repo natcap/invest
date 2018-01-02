@@ -98,7 +98,7 @@ def execute(args):
         # Remove so we can re-create.
         os.remove(out_path)
 
-    curr_shp_file = ogr.Open(args['ff_farm_file'])
+    curr_shp_file = gdal.OpenEx(args['ff_farm_file'])
     driver = ogr.GetDriverByName('ESRI Shapefile')
     sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
     layer = sf_copy.GetLayer()

@@ -273,7 +273,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('aoi_uri', None):
         with utils.capture_gdal_logging():
-            dataset = ogr.Open(args['aoi_uri'])
+            dataset = gdal.OpenEx(args['aoi_uri'])
         if dataset is None:
             warnings.append(
                 (['aoi_uri'],

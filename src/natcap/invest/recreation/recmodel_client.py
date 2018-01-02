@@ -199,7 +199,7 @@ def execute(args):
             args['aoi_path'], args['grid_type'], float(args['cell_size']),
             file_registry['local_aoi_path'])
     else:
-        aoi_vector = ogr.Open(args['aoi_path'])
+        aoi_vector = gdal.OpenEx(args['aoi_path'])
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.CopyDataSource(aoi_vector, file_registry['local_aoi_path'])
         # hard destroying the object just in case.  during testing I sometimes
@@ -337,7 +337,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     if os.path.exists(out_grid_vector_path):
         driver.DeleteDataSource(out_grid_vector_path)
 
-    vector = ogr.Open(vector_path)
+    vector = gdal.OpenEx(vector_path)
     vector_layer = vector.GetLayer()
     spat_ref = vector_layer.GetSpatialRef()
 
@@ -463,7 +463,7 @@ def _build_regression_coefficients(
     Returns:
         None
     """
-    response_vector = ogr.Open(response_vector_path)
+    response_vector = gdal.OpenEx(response_vector_path)
     response_layer = response_vector.GetLayer()
     response_polygons_lookup = {}  # maps FID to prepared geometry
     for response_feature in response_layer:
@@ -547,7 +547,7 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
         fid_field (string): name of FID field added to output vector_path
     """
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    vector = ogr.Open(vector_path)
+    vector = gdal.OpenEx(vector_path)
     if os.path.exists(out_fid_index_vector_path):
         os.remove(out_fid_index_vector_path)
 
@@ -785,7 +785,7 @@ def _ogr_to_geometry_list(vector_path):
         list of shapely geometry objects representing the features in the
         `vector_path` layer.
     """
-    vector = ogr.Open(vector_path)
+    vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
     geometry_list = []
     for feature in layer:
@@ -831,7 +831,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         dof: degrees of freedom
         se_est: standard error estimate on coefficients
     """
-    coefficent_vector = ogr.Open(coefficient_vector_path)
+    coefficent_vector = gdal.OpenEx(coefficient_vector_path)
     coefficent_layer = coefficent_vector.GetLayer()
 
     # Loop through each feature and build up the dictionary representing the
@@ -946,7 +946,7 @@ def _calculate_scenario(
             predictor_id_list, predictor_coefficents))
 
     # Open for writing
-    scenario_coefficent_vector = ogr.Open(scenario_results_path, 1)
+    scenario_coefficent_vector = gdal.OpenEx(scenario_results_path, 1)
     scenario_coefficent_layer = scenario_coefficent_vector.GetLayer()
 
     # delete the response ID if it's already there because it must have been
@@ -1061,7 +1061,7 @@ def _validate_same_projection(base_vector_path, table_path):
     data_paths = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
         table_path, 'path')
 
-    base_vector = ogr.Open(base_vector_path)
+    base_vector = gdal.OpenEx(base_vector_path)
     base_layer = base_vector.GetLayer()
     base_ref = osr.SpatialReference(base_layer.GetSpatialRef().ExportToWkt())
     base_layer = None
@@ -1083,7 +1083,7 @@ def _validate_same_projection(base_vector_path, table_path):
             ref.ImportFromWkt(projection_as_str)
             raster = None
         else:
-            vector = ogr.Open(path)
+            vector = gdal.OpenEx(path)
             if vector is None:
                 raise ValueError("%s did not load", path)
             layer = vector.GetLayer()
@@ -1226,7 +1226,7 @@ def validate(args, limit_to=None):
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

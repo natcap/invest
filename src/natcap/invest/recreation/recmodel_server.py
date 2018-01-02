@@ -226,7 +226,7 @@ class RecModel(object):
             a path to an ESRI shapefile copy of `aoi_path` updated with a
             "PUD" field which contains the metric per polygon.
         """
-        aoi_vector = ogr.Open(aoi_path)
+        aoi_vector = gdal.OpenEx(aoi_path)
         # append a _pud to the aoi filename
         out_aoi_pud_path = os.path.join(workspace_path, out_vector_filename)
 
@@ -661,7 +661,7 @@ def _calc_poly_pud(
     local_qt = pickle.load(open(local_qt_pickle_path, 'rb'))
     LOGGER.info('local qt load took %.2fs', time.time() - start_time)
 
-    aoi_vector = ogr.Open(aoi_path)
+    aoi_vector = gdal.OpenEx(aoi_path)
     aoi_layer = aoi_vector.GetLayer()
 
     for poly_id in iter(poly_test_queue.get, 'STOP'):

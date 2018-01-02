@@ -998,7 +998,7 @@ def _create_results_aoi(vars_dict):
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
 
     # Append attributes to Shapefile
-    ds = ogr.Open(output_aoi_uri, update=1)
+    ds = gdal.OpenEx(output_aoi_uri, update=1)
     layer = ds.GetLayer()
 
     # Set Harvest

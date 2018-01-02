@@ -242,7 +242,7 @@ def _aggregate_carbon_map(
         None
     """
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    original_serviceshed_datasource = ogr.Open(aoi_uri)
+    original_serviceshed_datasource = gdal.OpenEx(aoi_uri)
 
     if os.path.exists(aoi_datasource_filename):
         os.remove(aoi_datasource_filename)
@@ -441,7 +441,7 @@ def _build_spatial_index(
         tropical_forest_edge_carbon_model_shapefile_uri, lulc_projection_wkt,
         carbon_model_reproject_uri)
 
-    model_shape_ds = ogr.Open(carbon_model_reproject_uri)
+    model_shape_ds = gdal.OpenEx(carbon_model_reproject_uri)
     model_shape_layer = model_shape_ds.GetLayer()
 
     kd_points = []
@@ -728,7 +728,7 @@ def validate(args, limit_to=None):
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

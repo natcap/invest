@@ -297,7 +297,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
 
     # The model extracts each viewpoint from the shapefile
     point_list = []
-    shapefile = ogr.Open(in_structure_uri)
+    shapefile = gdal.OpenEx(in_structure_uri)
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
@@ -396,14 +396,14 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
         visibility_uri, gdal.GDT_Float64, -1., cell_size, "union", vectorize_op=False)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
-    shapefile = ogr.Open(fs_uri, 1)
+    shapefile = gdal.OpenEx(fs_uri, 1)
     layer = shapefile.GetLayer()
     new_field = ogr.FieldDefn(field_name, field_type)
     layer.CreateField(new_field)
     shapefile = None
 
 def add_id_feature_set_uri(fs_uri, id_name):
-    shapefile = ogr.Open(fs_uri, 1)
+    shapefile = gdal.OpenEx(fs_uri, 1)
     message = "Failed to open " + fs_uri + ": can't add new field."
     assert shapefile is not None, message
     layer = shapefile.GetLayer()
@@ -417,7 +417,7 @@ def add_id_feature_set_uri(fs_uri, id_name):
     shapefile = None
 
 def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
-    shapefile = ogr.Open(fs_uri, 1)
+    shapefile = gdal.OpenEx(fs_uri, 1)
     layer = shapefile.GetLayer()
 
     for feature_id in xrange(layer.GetFeatureCount()):
@@ -427,7 +427,7 @@ def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
     shapefile = None
 
 def get_count_feature_set_uri(fs_uri):
-    shapefile = ogr.Open(fs_uri)
+    shapefile = gdal.OpenEx(fs_uri)
     layer = shapefile.GetLayer()
     count = layer.GetFeatureCount()
     shapefile = None
@@ -810,7 +810,7 @@ def validate(args, limit_to=None):
 
         try:
             with utils.capture_gdal_logging():
-                vector = ogr.Open(args[vector_key])
+                vector = gdal.OpenEx(args[vector_key])
                 if vector is None:
                     warnings.append(
                         ([vector_key],

@@ -775,14 +775,14 @@ def _aggregate_recharge(
         os.remove(aggregate_vector_path)
 
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    original_aoi_vector = ogr.Open(aoi_path)
+    original_aoi_vector = gdal.OpenEx(aoi_path)
 
     esri_driver.CopyDataSource(
         original_aoi_vector, aggregate_vector_path)
     esri_driver = None
     ogr.DataSource.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
-    aggregate_vector = ogr.Open(aggregate_vector_path, 1)
+    aggregate_vector = gdal.OpenEx(aggregate_vector_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
 
     # make an identifying id per polygon that can be used for aggregation
@@ -957,7 +957,7 @@ def validate(args, limit_to=None):
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

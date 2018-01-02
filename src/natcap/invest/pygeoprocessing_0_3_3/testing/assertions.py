@@ -237,8 +237,8 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
         if not os.path.exists(uri):
             raise IOError('File "%s" not found on disk' % uri)
 
-    shape = ogr.Open(a_uri)
-    shape_regression = ogr.Open(b_uri)
+    shape = gdal.OpenEx(a_uri)
+    shape_regression = gdal.OpenEx(b_uri)
 
     try:
         # Check that the shapefiles have the same number of layers

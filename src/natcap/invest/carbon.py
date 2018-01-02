@@ -489,7 +489,7 @@ def validate(args, limit_to=None):
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

@@ -210,7 +210,7 @@ class FinfishAquaculture(model.InVESTModel):
     def _load_colnames(self, new_interactivity):
         if new_interactivity:
             new_vector_path = self.farm_location.value()
-            new_vector = ogr.Open(new_vector_path)
+            new_vector = gdal.OpenEx(new_vector_path)
             new_layer = new_vector.GetLayer()
             colnames = [defn.GetName() for defn in new_layer.schema]
             self.farm_identifier.set_options(colnames)

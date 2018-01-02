@@ -678,7 +678,7 @@ def execute(args):
                 (total_pollinator_abundance_index_path, 1),
                 target_farm_result_path, fid_field_id))
 
-    target_farm_vector = ogr.Open(target_farm_result_path, 1)
+    target_farm_vector = gdal.OpenEx(target_farm_result_path, 1)
     target_farm_layer = target_farm_vector.GetLayer()
 
     # aggregate results per farm
@@ -744,7 +744,7 @@ def _rasterize_vector_onto_base(
     target_raster = raster_driver.CreateCopy(target_raster_path, base_raster)
     base_raster = None
 
-    vector = ogr.Open(base_vector_path)
+    vector = gdal.OpenEx(base_vector_path)
     layer = vector.GetLayer()
 
     if filter_string is not None:
@@ -778,7 +778,7 @@ def _create_farm_result_vector(
         None.
     """
     esri_driver = ogr.GetDriverByName("ESRI Shapefile")
-    base_vector = ogr.Open(base_vector_path)
+    base_vector = gdal.OpenEx(base_vector_path)
     base_layer = base_vector.GetLayer()
     base_defn = base_layer.GetLayerDefn()
 
@@ -901,7 +901,7 @@ def _parse_scenario_variables(args):
     farm_vector = None
     if farm_vector_path is not None:
         LOGGER.info('Checking that farm polygon has expected headers')
-        farm_vector = ogr.Open(farm_vector_path)
+        farm_vector = gdal.OpenEx(farm_vector_path)
         farm_layer = farm_vector.GetLayer()
         if farm_layer.GetGeomType() not in [
                 ogr.wkbPolygon, ogr.wkbMultiPolygon]:
@@ -1392,7 +1392,7 @@ def validate(args, limit_to=None):
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

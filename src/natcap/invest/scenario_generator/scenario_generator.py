@@ -1532,7 +1532,7 @@ def execute(args):
             "Overriding pixels using values from field %s...",
             args["override_field"])
 
-        datasource = ogr.Open(args["override"])
+        datasource = gdal.OpenEx(args["override"])
         layer = datasource.GetLayer()
         dataset = gdal.OpenEx(scenario_uri, 1)
 
@@ -1795,7 +1795,7 @@ def validate(args, limit_to=None):
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

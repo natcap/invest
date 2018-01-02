@@ -390,7 +390,7 @@ def create_weighted_raster(
         max_intra_weights = {}
         for layer_uri in layers_dict:
             layer_name = os.path.splitext(os.path.basename(layer_uri))[0]
-            datasource = ogr.Open(layer_uri)
+            datasource = gdal.OpenEx(layer_uri)
             layer = datasource.GetLayer()
             for feature in layer:
                 attribute = feature.items()[intra_name]
@@ -699,7 +699,7 @@ def validate(args, limit_to=None):
         try:
             if args[vector_key] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = ogr.Open(args[vector_key])
+                    vector = gdal.OpenEx(args[vector_key])
                     if vector is None:
                         warnings.append(([vector_key],
                                          ('Parameter must be a path to an '

@@ -904,7 +904,7 @@ def _generate_report(
             (sed_retention_path, 1), watersheds_path, 'ws_id'),
         }
 
-    original_datasource = ogr.Open(watersheds_path)
+    original_datasource = gdal.OpenEx(watersheds_path)
     # Delete if existing shapefile with the same name and path
     if os.path.isfile(watershed_results_sdr_path):
         os.remove(watershed_results_sdr_path)
@@ -1015,7 +1015,7 @@ def validate(args, limit_to=None):
             # that all their fields are defined
             if os.path.exists(args['watersheds_path']):
                 try:
-                    watersheds_vector = ogr.Open(args['watersheds_path'])
+                    watersheds_vector = gdal.OpenEx(args['watersheds_path'])
                     if watersheds_vector is None:
                         validation_error_list.append(
                             (['watersheds_path'], 'not a vector'))

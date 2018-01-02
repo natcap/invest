@@ -108,7 +108,7 @@ def _collect_spatial_files(filepath, data_dir):
             raster = None
             return new_path
 
-        vector = ogr.Open(filepath)
+        vector = gdal.OpenEx(filepath)
         if vector is not None:
             # OGR also reads CSVs; verify this IS actually a vector
             driver = vector.GetDriver()

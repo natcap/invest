@@ -2778,7 +2778,7 @@ def delineate_watershed(
     snapped_outlet_points_layer = snapped_outlet_points_datasource.CreateLayer(
         'snapped_outlet_points', output_sr, ogr.wkbPoint)
 
-    outlet_ds = ogr.Open(outlet_shapefile_uri)
+    outlet_ds = gdal.OpenEx(outlet_shapefile_uri)
     outlet_layer = outlet_ds.GetLayer()
     outlet_defn = outlet_layer.GetLayerDefn()
     for index in xrange(outlet_defn.GetFieldCount()):
