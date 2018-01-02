@@ -2847,153 +2847,153 @@ def delineate_watershed(
     stream_ds = gdal.OpenEx(stream_uri)
     stream_band = stream_ds.GetRasterBand(1)
     count = 0
-    for layer in outlet_ds:
-        n_points_left = layer.GetFeatureCount()
-        for point_feature in layer:
-            point_geometry = point_feature.GetGeometryRef()
-            point = point_geometry.GetPoint()
-            x_index = (point[0] - geotransform[0]) // geotransform[1]
-            y_index = (point[1] - geotransform[3]) // geotransform[5]
-            if x_index < 0 or x_index >= n_cols or y_index < 0 or y_index > n_rows:
-                LOGGER.warn('Encountered a point that was outside the bounds of the DEM %s', point_geometry)
+    layer = outlet_ds.GetLayer()
+    n_points_left = layer.GetFeatureCount()
+    for point_feature in layer:
+        point_geometry = point_feature.GetGeometryRef()
+        point = point_geometry.GetPoint()
+        x_index = (point[0] - geotransform[0]) // geotransform[1]
+        y_index = (point[1] - geotransform[3]) // geotransform[5]
+        if x_index < 0 or x_index >= n_cols or y_index < 0 or y_index > n_rows:
+            LOGGER.warn('Encountered a point that was outside the bounds of the DEM %s', point_geometry)
+            continue
+        n_points_left -= 1
+
+        if snap_distance > 0:
+            x_center = x_index
+            y_center = y_index
+            x_left = x_index - snap_distance
+            if x_left < 0:
+                x_left = 0
+            y_top = y_index - snap_distance
+            if y_top < 0:
+                y_top = 0
+            x_right = x_index + snap_distance
+            if x_right >= n_cols:
+                x_right = n_cols - 1
+            y_bottom = y_index + snap_distance
+            if y_bottom >= n_rows:
+                y_bottom = n_rows - 1
+
+            #snap to the nearest stream pixel
+            stream_window = stream_band.ReadAsArray(
+                int(x_left), int(y_top), int(x_right - x_left),
+                int(y_bottom - y_top))
+            row_indexes, col_indexes = numpy.nonzero(
+                stream_window == 1)
+            if row_indexes.size > 0:
+                #calc euclidan distance
+                distance_array = (
+                    (row_indexes - stream_window.shape[0] / 2) ** 2 +
+                    (col_indexes - stream_window.shape[1] / 2) **2) ** 0.5
+
+                #closest element
+                min_index = numpy.argmin(distance_array)
+                min_row = row_indexes[min_index]
+                min_col = col_indexes[min_index]
+                offset_row = min_row - (y_center - y_top)
+                offset_col = min_col - (x_center - x_left)
+
+                y_index += offset_row
+                x_index += offset_col
+
+            point_geometry = ogr.Geometry(ogr.wkbPoint)
+            point_geometry.AddPoint(
+                geotransform[0] + (x_index + 0.5) * geotransform[1],
+                geotransform[3] + (y_index + 0.5) * geotransform[5])
+
+            # Get the output Layer's Feature Definition
+            feature_def = snapped_outlet_points_layer.GetLayerDefn()
+            snapped_point_feature = ogr.Feature(feature_def)
+            snapped_point_feature.SetGeometry(point_geometry)
+
+            for index in xrange(point_feature.GetFieldCount()):
+                snapped_point_feature.SetField(
+                    index, point_feature.GetField(index))
+            snapped_outlet_points_layer.CreateFeature(snapped_point_feature)
+
+        work_stack.push(y_index * n_cols + x_index)
+        count += 1
+        while work_stack.size() > 0:
+            time(&current_time)
+            if current_time - last_time > 5.0:
+                LOGGER.info(
+                    'work_stack_size=%d, n_outlet_points_left=%d',
+                    work_stack.size(), n_points_left)
+                last_time = current_time
+
+            current_index = work_stack.top()
+            work_stack.pop()
+            with cython.cdivision(True):
+                global_row = current_index / n_cols
+                global_col = current_index % n_cols
+
+            block_cache.update_cache(
+                global_row, global_col, &row_index, &col_index,
+                &row_block_offset, &col_block_offset)
+
+            if watershed_block[
+                    row_index, col_index, row_block_offset,
+                    col_block_offset] == 1:
                 continue
-            n_points_left -= 1
 
-            if snap_distance > 0:
-                x_center = x_index
-                y_center = y_index
-                x_left = x_index - snap_distance
-                if x_left < 0:
-                    x_left = 0
-                y_top = y_index - snap_distance
-                if y_top < 0:
-                    y_top = 0
-                x_right = x_index + snap_distance
-                if x_right >= n_cols:
-                    x_right = n_cols - 1
-                y_bottom = y_index + snap_distance
-                if y_bottom >= n_rows:
-                    y_bottom = n_rows - 1
+            watershed_block[
+                row_index, col_index, row_block_offset,
+                col_block_offset] = 1
+            cache_dirty[row_index, col_index] = 1
 
-                #snap to the nearest stream pixel
-                stream_window = stream_band.ReadAsArray(
-                    int(x_left), int(y_top), int(x_right - x_left),
-                    int(y_bottom - y_top))
-                row_indexes, col_indexes = numpy.nonzero(
-                    stream_window == 1)
-                if row_indexes.size > 0:
-                    #calc euclidan distance
-                    distance_array = (
-                        (row_indexes - stream_window.shape[0] / 2) ** 2 +
-                        (col_indexes - stream_window.shape[1] / 2) **2) ** 0.5
+            for direction_index in xrange(8):
+                #get percent flow from neighbor to current cell
+                neighbor_row = global_row + row_offsets[direction_index]
+                neighbor_col = global_col + col_offsets[direction_index]
 
-                    #closest element
-                    min_index = numpy.argmin(distance_array)
-                    min_row = row_indexes[min_index]
-                    min_col = col_indexes[min_index]
-                    offset_row = min_row - (y_center - y_top)
-                    offset_col = min_col - (x_center - x_left)
-
-                    y_index += offset_row
-                    x_index += offset_col
-
-                point_geometry = ogr.Geometry(ogr.wkbPoint)
-                point_geometry.AddPoint(
-                    geotransform[0] + (x_index + 0.5) * geotransform[1],
-                    geotransform[3] + (y_index + 0.5) * geotransform[5])
-
-                # Get the output Layer's Feature Definition
-                feature_def = snapped_outlet_points_layer.GetLayerDefn()
-                snapped_point_feature = ogr.Feature(feature_def)
-                snapped_point_feature.SetGeometry(point_geometry)
-
-                for index in xrange(point_feature.GetFieldCount()):
-                    snapped_point_feature.SetField(
-                        index, point_feature.GetField(index))
-                snapped_outlet_points_layer.CreateFeature(snapped_point_feature)
-
-            work_stack.push(y_index * n_cols + x_index)
-            count += 1
-            while work_stack.size() > 0:
-                time(&current_time)
-                if current_time - last_time > 5.0:
-                    LOGGER.info(
-                        'work_stack_size=%d, n_outlet_points_left=%d',
-                        work_stack.size(), n_points_left)
-                    last_time = current_time
-
-                current_index = work_stack.top()
-                work_stack.pop()
-                with cython.cdivision(True):
-                    global_row = current_index / n_cols
-                    global_col = current_index % n_cols
-
-                block_cache.update_cache(
-                    global_row, global_col, &row_index, &col_index,
-                    &row_block_offset, &col_block_offset)
-
-                if watershed_block[
-                        row_index, col_index, row_block_offset,
-                        col_block_offset] == 1:
+                #See if neighbor out of bounds
+                if (neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols):
                     continue
 
-                watershed_block[
-                    row_index, col_index, row_block_offset,
-                    col_block_offset] = 1
-                cache_dirty[row_index, col_index] = 1
+                block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
+                #if neighbor inflows
+                neighbor_direction = outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                if neighbor_direction == outflow_direction_nodata:
+                    continue
 
-                for direction_index in xrange(8):
-                    #get percent flow from neighbor to current cell
-                    neighbor_row = global_row + row_offsets[direction_index]
-                    neighbor_col = global_col + col_offsets[direction_index]
+                #check if the cell flows directly, or is one index off
+                if (inflow_offsets[direction_index] != neighbor_direction and
+                        ((inflow_offsets[direction_index] - 1) % 8) != neighbor_direction):
+                    #then neighbor doesn't inflow into current cell
+                    continue
 
-                    #See if neighbor out of bounds
-                    if (neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols):
-                        continue
+                #Calculate the outflow weight
+                outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
 
-                    block_cache.update_cache(neighbor_row, neighbor_col, &neighbor_row_index, &neighbor_col_index, &neighbor_row_block_offset, &neighbor_col_block_offset)
-                    #if neighbor inflows
-                    neighbor_direction = outflow_direction_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
-                    if neighbor_direction == outflow_direction_nodata:
-                        continue
+                if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
+                    outflow_weight = 1.0 - outflow_weight
 
-                    #check if the cell flows directly, or is one index off
-                    if (inflow_offsets[direction_index] != neighbor_direction and
-                            ((inflow_offsets[direction_index] - 1) % 8) != neighbor_direction):
-                        #then neighbor doesn't inflow into current cell
-                        continue
+                if outflow_weight <= 0.0:
+                    continue
 
-                    #Calculate the outflow weight
-                    outflow_weight = outflow_weights_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset]
+                work_stack.push(neighbor_row * n_cols + neighbor_col)
 
-                    if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
-                        outflow_weight = 1.0 - outflow_weight
-
-                    if outflow_weight <= 0.0:
-                        continue
-
-                    work_stack.push(neighbor_row * n_cols + neighbor_col)
-
-            block_cache.flush_cache()
-            original_feature_count = working_watershed_layer.GetFeatureCount()
-            gdal.Polygonize(
-                watershed_band, watershed_band, working_watershed_layer, 0,
-                ["8CONNECTED=8"])
-            #get the last n features and add the point field values
-            #to the polygon feature
-            n_added = (
-                working_watershed_layer.GetFeatureCount() -
-                original_feature_count)
-            for added_feature_index in xrange(n_added):
-                watershed_feature = working_watershed_layer.GetFeature(
-                    working_watershed_layer.GetFeatureCount() - 1 -
-                    added_feature_index)
-                for index in xrange(point_feature.GetFieldCount()):
-                    watershed_feature.SetField(
-                        index+1, point_feature.GetField(index))
-                working_watershed_layer.SetFeature(watershed_feature)
-                watershed_feature = None
-            watershed_band.Fill(watershed_nodata)
+        block_cache.flush_cache()
+        original_feature_count = working_watershed_layer.GetFeatureCount()
+        gdal.Polygonize(
+            watershed_band, watershed_band, working_watershed_layer, 0,
+            ["8CONNECTED=8"])
+        #get the last n features and add the point field values
+        #to the polygon feature
+        n_added = (
+            working_watershed_layer.GetFeatureCount() -
+            original_feature_count)
+        for added_feature_index in xrange(n_added):
+            watershed_feature = working_watershed_layer.GetFeature(
+                working_watershed_layer.GetFeatureCount() - 1 -
+                added_feature_index)
+            for index in xrange(point_feature.GetFieldCount()):
+                watershed_feature.SetField(
+                    index+1, point_feature.GetField(index))
+            working_watershed_layer.SetFeature(watershed_feature)
+            watershed_feature = None
+        watershed_band.Fill(watershed_nodata)
 
     watershed_datasource = output_driver.CreateDataSource(
         watershed_out_uri)
