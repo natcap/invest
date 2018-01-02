@@ -815,7 +815,7 @@ def _create_farm_result_vector(
     target_layer.CreateField(wild_pol_farm_yield_field_defn)
 
     target_layer = None
-    target_vector.SyncToDisk()
+    target_vector.FlushCache()
     target_vector = None
 
 
