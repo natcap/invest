@@ -125,8 +125,8 @@ def assert_rasters_equal(
         if not os.path.exists(uri):
             raise IOError('File "%s" not found on disk' % uri)
 
-    a_dataset = gdal.OpenEx(a_uri)
-    b_dataset = gdal.OpenEx(b_uri)
+    a_dataset = gdal.OpenEx(a_uri, gdal.OF_RASTER)
+    b_dataset = gdal.OpenEx(b_uri, gdal.OF_RASTER)
 
     try:
         if a_dataset.RasterXSize != b_dataset.RasterXSize:
@@ -237,8 +237,8 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
         if not os.path.exists(uri):
             raise IOError('File "%s" not found on disk' % uri)
 
-    shape = gdal.OpenEx(a_uri)
-    shape_regression = gdal.OpenEx(b_uri)
+    shape = gdal.OpenEx(a_uri, gdal.OF_VECTOR)
+    shape_regression = gdal.OpenEx(b_uri, gdal.OF_VECTOR)
 
     try:
         # Check that the shapefiles have the same number of layers
@@ -355,8 +355,10 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
                     reg_feature_fid = feat_regression.GetFID()
                     raise AssertionError(
                         'Geometries are not equal in feature %s, '
-                        'regression feature %s in layer %s' % (
-                            feature_fid, reg_feature_fid, layer_num))
+                        'regression feature %s in layer %s %s %s' % (
+                            feature_fid, reg_feature_fid, layer_num,
+                            geom.ExportToWkt(),
+                            geom_regression.ExportToWkt()))
 
                 feat = None
                 feat_regression = None
