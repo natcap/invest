@@ -198,7 +198,7 @@ def assert_rasters_equal(
         b_dataset = None
 
 
-def assert_vectors_equal(a_uri, b_uri, field_tolerance):
+def assert_vectors_equal(a_uri, b_uri):
     """Assert that the vectors at a_uri and b_uri are equal to each other.
 
     This assertion method asserts the equality of these vector
@@ -222,8 +222,6 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
     Args:
         a_uri (string): a URI to an OGR vector
         b_uri (string): a URI to an OGR vector
-        field_tolerance (int or float): The relative numerical tolerance to
-            which field values should be asserted.
 
     Raises:
         IOError: Raised if one of the input files is not found on disk.
@@ -318,9 +316,7 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
                         try:
                             float_field = float(field)
                             float_field_regression = float(field_regression)
-                            assert_close(
-                                float_field, float_field_regression,
-                                field_tolerance)
+                            assert_close(float_field, float_field_regression)
                         except (ValueError, TypeError):
                             # ValueError happens when strings cast to float
                             # TypeError when casting non-string or non-number.
