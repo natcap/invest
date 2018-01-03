@@ -20,8 +20,8 @@ from . import utils
 # decimal numbers.  See https://en.wikipedia.org/wiki/Machine_epsilon for more
 # information on machine epsilons.  This is the default allowable relative
 # error due to rounding for our assertions.
-REL_TOL_DEFAULT = 1e-09
-ABS_TOL_DEFAULT = 0.0
+REL_TOL_DEFAULT = 1e-5
+ABS_TOL_DEFAULT = 1e-8
 LOGGER = logging.getLogger('pygeoprocessing.testing.assertions')
 
 

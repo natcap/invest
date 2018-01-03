@@ -183,7 +183,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         exp_results = [.15, .1, .05, .05]
 
         for dist_a, dist_b in zip(results, exp_results):
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(dist_a, dist_b, 1e-9)
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(
+                dist_a, dist_b)
 
     def test_add_field_to_shape_given_list(self):
         """WindEnergy: testing 'add_field_to_shape_given_list' function."""
@@ -229,7 +230,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field_name)
                     natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(
-                        results[pt_id][field_name], field_val, 1e-9)
+                        results[pt_id][field_name], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field_name)
@@ -414,11 +415,11 @@ class WindEnergyUnitTests(unittest.TestCase):
         result = wind_energy.pixel_size_based_on_coordinate_transform_uri(
             raster_path, coord_trans, point)
 
-        expected_res = (5576.152641937137, 1166.6139341676608)
+        expected_res = (5553.93306384, 1187.37081348)
 
         # Compare
         for res, exp in zip(result, expected_res):
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(res, exp, 1e-9)
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(res, exp)
 
     def test_calculate_distances_grid(self):
         """WindEnergy: testing 'calculate_distances_grid' function."""
