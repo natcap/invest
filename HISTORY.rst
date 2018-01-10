@@ -1,6 +1,9 @@
 .. :changelog:
 
 .. Unreleased Changes
+Unreleased Changes
+------------------
+* InVEST now uses GDAL 2.2.3. Thus any API users of InVEST will need to use a GDAL version >= 2.0.
 
 3.4.2 (2017-12-15)
 ------------------
