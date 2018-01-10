@@ -133,8 +133,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field_name)
                     natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(
-                        expected_results[ws_id][field_name], field_val,
-                        rel_tol=1e-9)
+                        expected_results[ws_id][field_name], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field_name)
@@ -200,22 +199,19 @@ class HydropowerRegressionTests(unittest.TestCase):
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, raster_path))
 
         vector_results = ['watershed_results_wyield.shp']
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'valuation', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'valuation', vector_path))
 
         table_results = ['watershed_results_wyield.csv']
         for table_path in table_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'valuation', table_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, 'valuation', table_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -232,21 +228,19 @@ class HydropowerRegressionTests(unittest.TestCase):
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path), rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, raster_path))
 
         vector_results = ['watershed_results_wyield.shp']
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'water_yield', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'water_yield', vector_path))
 
         table_results = ['watershed_results_wyield.csv']
         for table_path in table_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'water_yield', table_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, 'water_yield', table_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -266,24 +260,21 @@ class HydropowerRegressionTests(unittest.TestCase):
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, raster_path))
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'water_yield', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'water_yield', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
         for table_path in table_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'water_yield', table_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, 'water_yield', table_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -304,22 +295,19 @@ class HydropowerRegressionTests(unittest.TestCase):
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, raster_path))
 
         vector_results = ['watershed_results_wyield.shp']
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'scarcity', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'scarcity', vector_path))
 
         table_results = ['watershed_results_wyield.csv']
         for table_path in table_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'scarcity', table_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, 'scarcity', table_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -342,24 +330,21 @@ class HydropowerRegressionTests(unittest.TestCase):
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, raster_path))
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'scarcity', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'scarcity', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
         for table_path in table_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'scarcity', table_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, 'scarcity', table_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -386,23 +371,21 @@ class HydropowerRegressionTests(unittest.TestCase):
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path),
-                rel_tol=1e-9)
+                os.path.join(REGRESSION_DATA, raster_path))
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'valuation', vector_path),
-                field_tolerance=1e-9)
+                os.path.join(REGRESSION_DATA, 'valuation', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
         for table_path in table_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'valuation', table_path), 1e-9)
+                os.path.join(REGRESSION_DATA, 'valuation', table_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
