@@ -114,8 +114,7 @@ class HRATests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'ecosys_risk_euc_lin.tif'),
             os.path.join(
-                self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
-            1e-6)
+                self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)

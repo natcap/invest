@@ -1,5 +1,4 @@
 """InVEST Recreation model tests."""
-
 import datetime
 import glob
 import zipfile
@@ -220,8 +219,7 @@ class TestRecServer(unittest.TestCase):
             out_workspace_dir)
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'),
-            1e-5)
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     @_timeout(30.0)
@@ -322,7 +320,7 @@ class TestRecServer(unittest.TestCase):
         expected_vector_path = os.path.join(
             REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            expected_vector_path, result_vector_path, 1e-5)
+            expected_vector_path, result_vector_path)
 
         # ensure the remote workspace is as expected
         workspace_zip_binary = recreation_server.fetch_workspace_aoi(
@@ -334,7 +332,7 @@ class TestRecServer(unittest.TestCase):
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1e-5)
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -681,7 +679,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'square_grid_vector_path.shp')
 
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 0.0)
+            out_grid_vector_path, expected_grid_vector_path)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -709,14 +707,14 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'trivial_regression_coefficients.shp')
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1e-5)
+            out_grid_vector_path, expected_grid_vector_path)
 
         out_scenario_path = os.path.join(
             self.workspace_dir, 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'trivial_scenario_results.shp')
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_scenario_path, expected_scenario_path, 1e-5)
+            out_scenario_path, expected_scenario_path)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -735,7 +733,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 0.0)
+            out_grid_vector_path, expected_grid_vector_path)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -810,7 +808,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 0.0)
+            out_grid_vector_path, expected_grid_vector_path)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -848,7 +846,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_coefficient_vector_path, expected_coeff_vector_path, 1e-4)
+            out_coefficient_vector_path, expected_coeff_vector_path)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
