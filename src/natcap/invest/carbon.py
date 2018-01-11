@@ -6,7 +6,6 @@ import os
 import time
 
 from osgeo import gdal
-from osgeo import ogr
 import numpy
 import natcap.invest.pygeoprocessing_0_3_3
 
