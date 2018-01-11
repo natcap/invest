@@ -798,7 +798,7 @@ def aggregate_raster_values_uri(
                 (shapefile_uri, shapefile_field))
 
         field_def = layer_d.GetFieldDefn(field_index)
-        if  'Integer' not in field_def.GetTypeName():
+        if field_def.GetTypeName() not in ['Integer', 'Integer64']:
             raise TypeError(
                 'Can only aggregate by integer based fields, requested '
                 'field is of type  %s' % field_def.GetTypeName())
