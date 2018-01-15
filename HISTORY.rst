@@ -1,6 +1,9 @@
 .. :changelog:
 
 .. Unreleased Changes
+Unreleased Changes
+------------------
+* Added a UI keyboard shortcut for showing documentation. On Mac OSX, this will be Command-?. On Windows, GNOME and KDE, this will be F1.
 
 3.4.2 (2017-12-15)
 ------------------

@@ -1229,7 +1229,8 @@ class InVESTModel(QtWidgets.QMainWindow):
             'About InVEST', self.about_dialog.exec_)
         self.help_menu.addAction(
             qtawesome.icon('fa.external-link'),
-            'View documentation', self._check_local_docs)
+            'View documentation', self._check_local_docs,
+            QtGui.QKeySequence(QtGui.QKeySequence.HelpContents))
         self.menuBar().addMenu(self.help_menu)
 
     def build_open_menu(self):
