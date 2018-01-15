@@ -112,7 +112,7 @@ def _collect_spatial_files(filepath, data_dir):
         if vector is not None:
             # OGR also reads CSVs; verify this IS actually a vector
             driver = gdal.GetDriverByName('ESRI Shapefile')
-            if driver.GetName() == 'CSV':
+            if driver.ShortName == 'CSV':
                 driver = None
                 vector = None
                 return None
