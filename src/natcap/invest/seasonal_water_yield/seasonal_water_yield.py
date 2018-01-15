@@ -774,9 +774,9 @@ def _aggregate_recharge(
             aggregate_vector_path)
         os.remove(aggregate_vector_path)
 
-    original_aoi_vector = gdal.OpenEx(aoi_path)
+    original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
 
-    driver = original_aoi_vector.GetDriver()
+    driver = gdal.GetDriverByName('ESRI Shapefile')
     driver.CreateCopy(aggregate_vector_path, original_aoi_vector)
     gdal.Dataset.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None

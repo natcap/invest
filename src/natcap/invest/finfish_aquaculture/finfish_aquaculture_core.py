@@ -99,8 +99,8 @@ def execute(args):
         # Remove so we can re-create.
         os.remove(out_path)
 
-    curr_shp_file = gdal.OpenEx(args['ff_farm_file'])
-    driver = curr_shp_file.GetDriver()
+    curr_shp_file = gdal.OpenEx(args['ff_farm_file'], gdal.OF_RASTER)
+    driver = gdal.GetDriverByName('GTiff')
     sf_copy = driver.CreateCopy(out_path, curr_shp_file)
     layer = sf_copy.GetLayer()
 

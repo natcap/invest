@@ -200,7 +200,7 @@ def execute(args):
             file_registry['local_aoi_path'])
     else:
         aoi_vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
-        driver = aoi_vector.GetDriver()
+        driver = gdal.GetDriverByName('ESRI Shapefile')
         driver.CreateCopy(file_registry['local_aoi_path'], aoi_vector)
         aoi_vector = None
 
@@ -469,7 +469,7 @@ def _build_regression_coefficients(
         response_polygons_lookup[response_feature.GetFID()] = feature_polygon
     response_layer = None
 
-    driver = response_vector.GetDriver()
+    driver = gdal.GetDriverByName('ESRI Shapefile')
     if os.path.exists(out_coefficient_vector_path):
         driver.Delete(out_coefficient_vector_path)
 
@@ -541,7 +541,7 @@ def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
         fid_field (string): name of FID field added to output vector_path
     """
     vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-    driver = vector.GetDriver()
+    driver = gdal.GetDriverByName('ESRI Shapefile')
     if os.path.exists(out_fid_index_vector_path):
         os.remove(out_fid_index_vector_path)
 

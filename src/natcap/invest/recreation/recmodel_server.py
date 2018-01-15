@@ -351,7 +351,7 @@ class RecModel(object):
 
         # Copy the input shapefile into the designated output folder
         LOGGER.info('Creating a copy of the input shapefile')
-        driver = aoi_vector.GetDriver()
+        driver = gdal.GetDriverByName('ESRI Shapefile')
         pud_aoi_vector = driver.CreateCopy(out_aoi_pud_path, aoi_vector)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
         pud_id_suffix_list = [

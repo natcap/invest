@@ -739,8 +739,8 @@ def _rasterize_vector_onto_base(
     Returns:
         None.
     """
-    base_raster = gdal.OpenEx(base_raster_path)
-    raster_driver = base_raster.GetDriver()
+    base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
+    raster_driver = gdal.GetDriverByName('GTiff')
     target_raster = raster_driver.CreateCopy(target_raster_path, base_raster)
     base_raster = None
 
@@ -777,11 +777,10 @@ def _create_farm_result_vector(
     Returns:
         None.
     """
-    base_vector = gdal.OpenEx(base_vector_path)
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
-    base_defn = base_layer.GetLayerDefn()
 
-    driver = base_vector.GetDriver()
+    driver = gdal.GetDriverByName('ESRI Shapefile')
     target_vector = driver.CreateCopy(
         target_vector_path, base_vector)
     target_layer = target_vector.GetLayer()

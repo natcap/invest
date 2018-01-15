@@ -280,14 +280,14 @@ def execute(args):
     # ensure that aoi_uri is defined and it's not an empty string
     if 'aoi_uri' in args and len(args['aoi_uri']) > 0:
         # copy the aoi to an output shapefile
-        original_datasource = gdal.OpenEx(args['aoi_uri'])
+        original_datasource = gdal.OpenEx(args['aoi_uri'], gdal.OF_VECTOR)
         summary_aoi_uri = os.path.join(
             output_dir, 'aoi_summary%s.shp' % file_suffix)
         # Delete if existing shapefile with the same name
         if os.path.isfile(summary_aoi_uri):
             os.remove(summary_aoi_uri)
         # Copy the input shapefile into the designated output folder
-        driver = original_datasource.GetDriver()
+        driver = gdal.GetDriverByName('ESRI Shapefile')
         datasource_copy = driver.CreateCopy(
             summary_aoi_uri, original_datasource)
         layer = datasource_copy.GetLayer()

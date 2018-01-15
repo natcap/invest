@@ -241,8 +241,8 @@ def _aggregate_carbon_map(
     Returns:
         None
     """
-    original_serviceshed_datasource = gdal.OpenEx(aoi_uri)
-    driver = original_serviceshed_datasource.GetDriver()
+    original_serviceshed_datasource = gdal.OpenEx(aoi_uri, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
 
     if os.path.exists(aoi_datasource_filename):
         os.remove(aoi_datasource_filename)

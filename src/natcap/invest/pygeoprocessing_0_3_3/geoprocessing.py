@@ -2599,8 +2599,8 @@ def copy_datasource_uri(shape_uri, copy_uri):
     if os.path.isfile(copy_uri):
         os.remove(copy_uri)
 
-    shape = gdal.OpenEx(shape_uri)
-    drv = shape.GetDriver()
+    shape = gdal.OpenEx(shape_uri, gdal.OF_VECTOR)
+    drv = gdal.GetDriverByName('ESRI Shapefile')
     drv.CreateCopy(copy_uri, shape)
 
 

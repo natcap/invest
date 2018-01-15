@@ -76,10 +76,10 @@ def _collect_spatial_files(filepath, data_dir):
     # that instead of the individual file.
 
     with utils.capture_gdal_logging():
-        raster = gdal.OpenEx(filepath)
+        raster = gdal.OpenEx(filepath, gdal.OF_RASTER)
         if raster is not None:
             new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
-            driver = raster.GetDriver()
+            driver = gdal.GetDriverByName('GTiff')
             LOGGER.info('[%s] Saving new raster to %s',
                         driver.LongName, new_path)
             # driver.CreateCopy returns None if there's an error
@@ -108,10 +108,10 @@ def _collect_spatial_files(filepath, data_dir):
             raster = None
             return new_path
 
-        vector = gdal.OpenEx(filepath)
+        vector = gdal.OpenEx(filepath, gdal.OF_VECTOR)
         if vector is not None:
             # OGR also reads CSVs; verify this IS actually a vector
-            driver = vector.GetDriver()
+            driver = gdal.GetDriverByName('ESRI Shapefile')
             if driver.GetName() == 'CSV':
                 driver = None
                 vector = None

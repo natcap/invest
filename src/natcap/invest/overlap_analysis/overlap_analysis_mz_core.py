@@ -7,6 +7,7 @@ import os
 import logging
 
 from osgeo import ogr
+from osgeo import gdal
 
 LOGGER = logging.getLogger('natcap.invest.overlap_analysis.mz_core')
 
@@ -51,7 +52,7 @@ def execute(args):
     #This creates a new shapefile that is a copy of the old one, but at the path
     #location. That way we can edit without worrying about changing the Input
     #file.
-    driver = zone_shape_old.GetDriver()
+    driver = gdal.GetDriverByName('ESRI Shapefile')
     mz_freq_shape = driver.CreateCopy(path, zone_shape_old)
 
     mz_freq_layer = mz_freq_shape.GetLayer()

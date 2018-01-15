@@ -902,11 +902,11 @@ def _generate_report(
             (sed_retention_path, 1), watersheds_path, 'ws_id'),
         }
 
-    original_datasource = gdal.OpenEx(watersheds_path)
+    original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     # Delete if existing shapefile with the same name and path
     if os.path.isfile(watershed_results_sdr_path):
         os.remove(watershed_results_sdr_path)
-    driver = original_datasource.GetDriver()
+    driver = gdal.GetDriverByName('ESRI Shapefile')
     datasource_copy = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
     layer = datasource_copy.GetLayer()
