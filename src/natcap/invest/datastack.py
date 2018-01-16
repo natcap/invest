@@ -85,9 +85,8 @@ def _collect_spatial_files(filepath, data_dir):
             # driver.CreateCopy returns None if there's an error
             # Common case: driver does not have Create() method implemented
             # ESRI Arc/Binary Grids are a great example of this.
-            if not driver.CreateCopy(new_path, raster, strict=1):
-                LOGGER.info('Manually copying raster files to %s',
-                            new_path)
+            if not driver.CreateCopy(new_path, raster):
+                LOGGER.info('Manually copying raster files to %s', new_path)
                 new_files = []
                 for filename in raster.GetFileList():
                     if os.path.isdir(filename):
@@ -96,8 +95,7 @@ def _collect_spatial_files(filepath, data_dir):
                         continue
 
                     new_filename = os.path.join(
-                        new_path,
-                        os.path.basename(filename))
+                        new_path, os.path.basename(filename))
                     shutil.copyfile(filename, new_filename)
                     new_files.append(new_filename)
 
@@ -111,15 +109,14 @@ def _collect_spatial_files(filepath, data_dir):
         vector = gdal.OpenEx(filepath, gdal.OF_VECTOR)
         if vector is not None:
             # OGR also reads CSVs; verify this IS actually a vector
-            driver = gdal.GetDriverByName('ESRI Shapefile')
-            if driver.ShortName == 'CSV':
-                driver = None
+            if vector.GetDriver().ShortName == 'CSV':
                 vector = None
                 return None
 
             new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
+            driver = gdal.GetDriverByName('ESRI Shapefile')
             LOGGER.info('[%s] Saving new vector to %s',
-                        driver.GetName(), new_path)
+                        driver.ShortName, new_path)
             new_vector = driver.CreateCopy(new_path, vector)
 
             # This is needed for copying GeoJSON files, and presumably other
@@ -128,7 +125,7 @@ def _collect_spatial_files(filepath, data_dir):
                 new_path = os.path.join(new_path,
                                         os.path.basename(filepath))
                 new_vector = driver.CreateCopy(new_path, vector)
-            new_vector.SyncToDisk()
+            new_vector.FlushCache()
             driver = None
             vector = None
             return new_path
@@ -284,8 +281,8 @@ def build_datastack_archive(args, model_name, datastack_path):
         args (dict): The arguments dictionary to include in the datastack.
         model_name (string): The python-importable module string of the model
             these args are for.
-        datastack_path (string): The path to where the datastack archive should
-            be written.
+        datastack_path (string): The path to where the datastack archive
+            should be written.
 
     Returns:
         ``None``
@@ -399,14 +396,15 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
     arguments_dict = json.load(open(
         os.path.join(dest_dir_path, DATASTACK_PARAMETER_FILENAME)))['args']
 
-    def _recurse(args_param):
+    def _rewrite_paths(args_param):
+        """Converts paths in `args_param` to paths in `dest_dir_path."""
         if isinstance(args_param, dict):
             _args = {}
             for key, value in args_param.iteritems():
-                _args[key] = _recurse(value)
+                _args[key] = _rewrite_paths(value)
             return _args
         elif isinstance(args_param, list):
-            return [_recurse(param) for param in args_param]
+            return [_rewrite_paths(param) for param in args_param]
         elif isinstance(args_param, basestring):
             # Special case: if the value is blank, return an empty string
             # rather than assuming it's the CWD.
@@ -421,7 +419,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
                 return os.path.normpath(data_path)
         return args_param
 
-    new_args = _recurse(arguments_dict)
+    new_args = _rewrite_paths(arguments_dict)
     LOGGER.debug('Expanded parameters as \n%s', pprint.pformat(new_args))
     return new_args
 
