@@ -301,7 +301,7 @@ def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
-    iGT = gdal.InvGeoTransform(GT)[1]
+    iGT = gdal.InvGeoTransform(GT)
     feature_count = layer.GetFeatureCount()
     viewshed_uri_list = []
     print('Number of viewpoints: ' + str(feature_count))
